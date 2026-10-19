@@ -1,10 +1,13 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -17,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// timestamps a re-offered call overwrites. This report reads the call's own recorded changes instead: the agent's leg
 /// answering and the call ending, each hold and resume, each offer's ring, and each queue's measured wait.
 /// </remarks>
-public sealed class CallHandlingReportProvider : ContactCenterReportBase
+public sealed class CallHandlingReportProvider : ContactCenterReportBase, IReport
 {
     private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileManager _agentManager;
@@ -51,16 +54,19 @@ public sealed class CallHandlingReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-call-handling";
+    public static string Name => "contact-center-call-handling";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Talk, hold, ring and queue wait"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CallHandlingReportProvider>("Talk, hold, ring and queue wait");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Talk time with hold taken out, hold, ring time and missed offers by agent, and the real queue wait and abandons by queue, from the calls' recorded changes."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CallHandlingReportProvider>("Talk time with hold taken out, hold, ring time and missed offers by agent, and the real queue wait and abandons by queue, from the calls' recorded changes.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.AgentPerformance;
+    public static string Category => ReportsConstants.Categories.AgentPerformance;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

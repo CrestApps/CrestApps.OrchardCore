@@ -98,6 +98,11 @@ public class OrderRefundInputModel
     public string Reason { get; set; }
 
     public bool Restock { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the refund is given to the buyer as store credit, rather than back to how they paid.
+    /// </summary>
+    public bool AsStoreCredit { get; set; }
 }
 
 public class OrderCancelInputModel

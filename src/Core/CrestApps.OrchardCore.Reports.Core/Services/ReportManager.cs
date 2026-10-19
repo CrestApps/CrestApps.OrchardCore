@@ -1,79 +1,51 @@
+using Microsoft.Extensions.Options;
+
 namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>
-/// Provides the default implementation of <see cref="IReportManager"/> over the registered reports.
+/// The default <see cref="IReportManager"/>, built from the reports of <see cref="ReportOptions"/>. It lists them from
+/// their descriptors, and creates a report from the services of the scope only when it is run.
 /// </summary>
 public sealed class ReportManager : IReportManager
 {
-    private readonly IReadOnlyList<IReport> _reports;
-    private readonly Dictionary<string, IReport> _byName;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IReadOnlyList<ReportDescriptor> _reports;
+    private readonly Dictionary<string, ReportDescriptor> _byName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportManager"/> class.
     /// </summary>
-    /// <param name="reports">The registered reports.</param>
-    public ReportManager(IEnumerable<IReport> reports)
-        : this(reports, [])
+    /// <param name="options">The registered reports.</param>
+    /// <param name="serviceProvider">The services of the scope, which reports are created from.</param>
+    public ReportManager(IOptions<ReportOptions> options, IServiceProvider serviceProvider)
     {
-    }
+        ArgumentNullException.ThrowIfNull(options);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReportManager"/> class.
-    /// </summary>
-    /// <param name="reports">The reports registered individually.</param>
-    /// <param name="reportProviders">The providers that each contribute a family of reports.</param>
-    public ReportManager(
-        IEnumerable<IReport> reports,
-        IEnumerable<IReportProvider> reportProviders)
-    {
-        _byName = new Dictionary<string, IReport>(StringComparer.OrdinalIgnoreCase);
+        _serviceProvider = serviceProvider;
+        _reports = options.Value.Reports;
+        _byName = new Dictionary<string, ReportDescriptor>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var report in reports)
+        foreach (var report in _reports)
         {
-            AddReport(report);
-        }
-
-        foreach (var reportProvider in reportProviders)
-        {
-            foreach (var report in reportProvider.GetReports())
+            if (!_byName.TryAdd(report.Name, report))
             {
-                AddReport(report);
+                throw new InvalidOperationException($"More than one report is registered with the name '{report.Name}'.");
             }
         }
-
-        _reports = _byName.Values
-            .OrderBy(report => report.Category, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(report => report.DisplayName.Value, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<IReport> GetReports()
+    public IReadOnlyList<ReportDescriptor> GetReports() => _reports;
+
+    /// <inheritdoc/>
+    public ReportDescriptor GetDescriptor(string name)
     {
-        return _reports;
+        return string.IsNullOrEmpty(name) ? null : _byName.GetValueOrDefault(name);
     }
 
     /// <inheritdoc/>
-    public IReport FindByName(string name)
+    public IReportRunner GetReport(string name)
     {
-        if (string.IsNullOrEmpty(name))
-        {
-            return null;
-        }
-
-        return _byName.GetValueOrDefault(name);
-    }
-
-    private void AddReport(IReport report)
-    {
-        if (string.IsNullOrEmpty(report.Name))
-        {
-            return;
-        }
-
-        if (!_byName.TryAdd(report.Name, report))
-        {
-            throw new InvalidOperationException($"A report named '{report.Name}' is already registered.");
-        }
+        return GetDescriptor(name)?.Factory(_serviceProvider);
     }
 }

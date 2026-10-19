@@ -268,4 +268,25 @@ internal sealed class InteractionIndexMigrations : DataMigration
 
         return 8;
     }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>CreatedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 9;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(
+            SchemaBuilder,
+            "IDX_InteractionIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "CreatedUtc", "Id");
+    }
 }

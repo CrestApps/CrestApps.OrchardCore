@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Customers.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CheckoutLoyaltyViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="form-label">@Model.ProgramName</div>
+
+        @if (Model.IsApplied)
+        {
+            <div class="d-flex align-items-start gap-2">
+                <span class="flex-grow-1 small">
+                    <span class="text-success">@T["{0} paid with your points", ProductPriceFormatter.Format(Model.Used, Model.Currency)]</span>
+                    <span class="text-body-secondary d-block">@T["You have {0:N0} points.", Model.Points]</span>
+                </span>
+                <button type="submit"
+                        class="btn btn-link btn-sm p-0"
+                        name="@CheckoutConstants.FormActions.FieldName"
+                        value="@(CheckoutConstants.FormActions.RemoveTenderPrefix + LoyaltyService.TenderKey + ":" + Model.AccountId)"
+                        formnovalidate>@T["Remove"]</button>
+            </div>
+        }
+        else if (Model.PointsNeeded.HasValue)
+        {
+            <p class="small mb-0">@T["You have {0:N0} points. Spend them once you have {1:N0}.", Model.Points, Model.PointsNeeded.Value]</p>
+        }
+        else
+        {
+            <p class="small mb-2">@T["You have {0:N0} points, worth {1}.", Model.Points, ProductPriceFormatter.Format(Model.Value, Model.Currency)]</p>
+            <button type="submit"
+                    class="btn btn-outline-secondary btn-sm"
+                    name="@CheckoutConstants.FormActions.FieldName"
+                    value="@(CheckoutConstants.FormActions.ApplyTender + ":" + LoyaltyService.TenderKey)"
+                    formnovalidate>@T["Use my points"]</button>
+        }
+    </div>
+</div>

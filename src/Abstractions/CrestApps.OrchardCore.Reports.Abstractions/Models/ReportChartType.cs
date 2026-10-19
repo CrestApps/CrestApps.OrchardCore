@@ -19,4 +19,19 @@ public enum ReportChartType
     /// Renders values as a doughnut chart.
     /// </summary>
     Doughnut,
+
+    /// <summary>
+    /// Renders values as a pie chart.
+    /// </summary>
+    Pie,
+
+    /// <summary>
+    /// Renders values as a filled line (area) chart.
+    /// </summary>
+    Area,
+
+    /// <summary>
+    /// Renders values as a horizontal bar chart.
+    /// </summary>
+    HorizontalBar,
 }

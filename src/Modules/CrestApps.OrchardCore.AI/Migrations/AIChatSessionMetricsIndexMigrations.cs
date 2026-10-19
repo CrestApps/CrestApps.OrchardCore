@@ -1,5 +1,6 @@
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
@@ -34,7 +35,9 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
 
         await SchemaBuilder.CreateAIChatSessionMetricsSchemaAsync(_option, options);
 
-        return 4;
+        await CreateReportIndexAsync();
+
+        return 5;
     }
 
     /// <summary>
@@ -61,5 +64,26 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
         await SchemaBuilder.AddAIChatSessionMetricsCompletionCountColumnAsync(_option);
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>SessionStartedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 5;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<AIChatSessionMetricsIndex>(
+            SchemaBuilder,
+            "IDX_AIChatSessionMetricsIndex_Report",
+            _option.AICollectionName,
+            "SessionStartedUtc", "Id");
     }
 }

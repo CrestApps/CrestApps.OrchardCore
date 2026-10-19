@@ -17,6 +17,6 @@ public sealed class DialerPacedReportsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IReport, DialerActivityReportProvider>();
+        services.AddReport<DialerActivityReportProvider>();
     }
 }

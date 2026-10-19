@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
@@ -5,7 +6,9 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -18,7 +21,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// so the two are independent measurements of the same day. A day reconciles when they agree exactly and no state
 /// change is missing from the record; any other day is flagged, and the report counts them.
 /// </remarks>
-public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterReportBase
+public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterReportBase, IReport
 {
     private const string FlagColor = "#B42318";
 
@@ -58,16 +61,19 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-payroll-reconciled-timecard";
+    public static string Name => "contact-center-payroll-reconciled-timecard";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Reconciled payroll timecard"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ReconciledPayrollTimecardReportProvider>("Reconciled payroll timecard");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per agent per day, signed-in time beside the time in each state to the second, with a check that flags every day that does not add up."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ReconciledPayrollTimecardReportProvider>("Per agent per day, signed-in time beside the time in each state to the second, with a check that flags every day that does not add up.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.WorkforcePayroll;
+    public static string Category => ReportsConstants.Categories.WorkforcePayroll;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

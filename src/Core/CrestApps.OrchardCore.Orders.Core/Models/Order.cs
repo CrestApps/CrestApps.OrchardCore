@@ -59,6 +59,12 @@ public sealed class Order : CatalogItem
     public List<OrderDiscount> Discounts { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets what balances the buyer held, such as a gift card or store credit, paid toward
+    /// <see cref="Total"/>. The rest was charged by the payment provider.
+    /// </summary>
+    public List<OrderTender> Tenders { get; set; } = [];
+
+    /// <summary>
     /// Gets the total of the discounts.
     /// </summary>
     public decimal DiscountTotal
@@ -412,6 +418,28 @@ public sealed class OrderDiscount
     /// Gets or sets the key of the discount provider that gave it, such as <c>Coupons</c>.
     /// </summary>
     public string ProviderKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the discount took something off: the goods bought now, the first billing cycle, or shipping.
+    /// </summary>
+    public Checkout.Models.DiscountTarget Target { get; set; }
+}
+
+/// <summary>
+/// Part of an order's total paid from a balance the buyer held, such as a gift card or store credit.
+/// </summary>
+public sealed class OrderTender
+{
+    public string ProviderKey { get; set; }
+
+    public string Reference { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer saw, such as "Gift card ending 4F2K".
+    /// </summary>
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
 }
 
 /// <summary>

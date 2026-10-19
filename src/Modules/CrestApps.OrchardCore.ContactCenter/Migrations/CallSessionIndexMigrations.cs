@@ -513,4 +513,25 @@ internal sealed class CallSessionIndexMigrations : DataMigration
 
         return 6;
     }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>CreatedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 7;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
+            SchemaBuilder,
+            "IDX_CallSessionIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "CreatedUtc", "Id");
+    }
 }

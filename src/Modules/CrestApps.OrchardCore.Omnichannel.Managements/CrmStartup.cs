@@ -37,6 +37,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -92,7 +93,14 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped<CrmCatalogSeeder>();
         services.AddScoped<LeadStatusFlagService>();
         services.AddScoped<LeadRatingProvider>();
-        services.AddScoped<LeadImportProvider>();
+
+        // Without the content import feature no past import waits to be recorded on its leads, and the import history
+        // tables do not exist, so the imports still being indexed are not looked up. CrmContentTransferStartup
+        // registers the provider that looks them up.
+        services.AddScoped(serviceProvider => new LeadImportProvider(
+            serviceProvider.GetRequiredService<ISession>(),
+            serviceProvider.GetRequiredService<ILocalClock>(),
+            serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>()));
         services.AddScoped<CrmAccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 
@@ -177,6 +185,9 @@ public sealed class CrmContentTransferStartup : StartupBase
 
         // Only a tenant with the import feature has past imports to record on their leads.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LeadImportBackfillBackgroundTask>());
+
+        // Until that backfill finishes, the imports it has not reached yet are listed from the import history.
+        services.Replace(ServiceDescriptor.Scoped<LeadImportProvider, LeadImportProvider>());
     }
 }
 
@@ -191,9 +202,9 @@ public sealed class CrmReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadFunnelReportProvider>()
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadConversionReportProvider>()
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.OpportunityPipelineReportProvider>();
+            .AddReport<Reports.LeadFunnelReportProvider>()
+            .AddReport<Reports.LeadConversionReportProvider>()
+            .AddReport<Reports.OpportunityPipelineReportProvider>();
     }
 }
 

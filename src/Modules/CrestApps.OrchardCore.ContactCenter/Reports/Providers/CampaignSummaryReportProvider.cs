@@ -1,4 +1,6 @@
 using System.Globalization;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
@@ -9,7 +11,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -22,7 +26,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// report, so on the same records the two reports give the same numbers. The period decides which records are counted;
 /// where those records stand with the dialer is true of right now, whatever the period.
 /// </remarks>
-public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
+public sealed class CampaignSummaryReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// How many distinct attempt counts the attempts distribution shows before it groups the rest.
@@ -53,16 +57,19 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-campaign-summary";
+    public static string Name => "contact-center-campaign-summary";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Campaign summary"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CampaignSummaryReportProvider>("Campaign summary");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per-campaign completed-versus-pending progress across the activity inventory, with the pending records split by what the dialer can do with them right now."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CampaignSummaryReportProvider>("Per-campaign completed-versus-pending progress across the activity inventory, with the pending records split by what the dialer can do with them right now.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.CrmCampaigns;
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

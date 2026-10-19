@@ -91,6 +91,33 @@ public sealed class CouponEditViewModel
     /// </summary>
     public int? MaxRedemptionsPerCustomer { get; set; }
 
+    public CouponMethod Method { get; set; }
+
+    public bool OnlyGeneratedCodes { get; set; }
+
+    [BindNever]
+    public int GeneratedCodes { get; set; }
+
+    [BindNever]
+    public int UsedGeneratedCodes { get; set; }
+
+    [BindNever]
+    public string DiscountLinkUrl { get; set; }
+
+    public int? MinimumQuantity { get; set; }
+
+    public int? BuyQuantity { get; set; }
+
+    public int? GetQuantity { get; set; }
+
+    public int? MaxApplicationsPerOrder { get; set; }
+
+    public bool CombinesWithProductDiscounts { get; set; }
+
+    public bool CombinesWithOrderDiscounts { get; set; }
+
+    public bool CombinesWithShippingDiscounts { get; set; }
+
     /// <summary>
     /// Gets or sets what other modules add to the editor, such as the products a coupon is limited to.
     /// </summary>

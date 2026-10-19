@@ -72,6 +72,15 @@ Below the details, **Account** links to the customer's account when they have on
 
 If someone else saved the customer while you were editing, your changes aren't saved and you're asked to review theirs first.
 
+## Store credit and points
+
+With the **Store Credit** and **Loyalty Points** features on, a customer's page has two more sections below **Orders**:
+
+- **Store credit** shows what the store owes the customer in each currency, or *No store credit.*, a form to give or take away credit, and the latest changes with their reasons.
+- A section named after your rewards program, such as **Rewards**, shows the customer's points and what they're worth, such as *1,250 points worth $12.50*, a form to give or take away points, and the latest changes.
+
+Both need **Manage customers** to change, and a reason for every change. Only customers with an account have them: a guest's page says so instead of showing the form. See [Store credit, loyalty points and referrals](store-credit-and-rewards.md).
+
 ## Addresses
 
 A customer keeps an address book of up to 20 addresses, such as a home and an office. One can be the **default billing** address and one the **default shipping** address; they're the ones offered first when the customer buys.
@@ -126,7 +135,7 @@ A signed-in customer manages their own details under **My Account**, with the **
 
 The first time a user opens **My Account**, their customer record is made from their account, just as it is on their first order.
 
-On the storefront the same details are on **Account details** and **Addresses** in the buyer's account; see [The buyer's account](carts-and-orders.md#the-buyers-account).
+On the storefront the same details are on **Account details** and **Addresses** in the buyer's account; see [The buyer's account](carts-and-orders.md#the-buyers-account). With Store Credit, Loyalty Points or Referrals on, the account also has **Store credit**, **Rewards** and **Refer a friend**.
 
 ## Try it with the sample store
 
@@ -136,3 +145,4 @@ The **Product listing: online store sample** recipe (**Configuration > Recipes**
 
 - [Carts and orders](carts-and-orders.md)
 - [Transactions](transactions.md)
+- [Store credit, loyalty points and referrals](store-credit-and-rewards.md)

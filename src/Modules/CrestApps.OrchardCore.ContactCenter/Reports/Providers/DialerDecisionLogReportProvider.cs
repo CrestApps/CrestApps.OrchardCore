@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
+using OrchardCore.Localization;
 using System.Globalization;
 using System.Text.Json;
 using CrestApps.Core.Services;
@@ -12,6 +14,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -25,7 +28,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// It reads the decision log's indexed columns to filter and count, and reads the events themselves only for the rows
 /// it lists. A routing decision that routing repeated identically is one event that counts every time it was made.
 /// </remarks>
-public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase
+public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// The most decisions listed one by one on screen.
@@ -89,16 +92,19 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-dialer-decision-log";
+    public static string Name => "contact-center-dialer-decision-log";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Dialer decision log"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<DialerDecisionLogReportProvider>("Dialer decision log");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Every routing decision and dial suppression: the activity, queue, campaign and agents it was about, the outcome and the reason, counts by reason, and queues with work due now that routing has gone quiet on."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<DialerDecisionLogReportProvider>("Every routing decision and dial suppression: the activity, queue, campaign and agents it was about, the outcome and the reason, counts by reason, and queues with work due now that routing has gone quiet on.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.QueueRouting;
+    public static string Category => ReportsConstants.Categories.QueueRouting;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

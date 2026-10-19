@@ -124,18 +124,12 @@ public sealed class TimecardTimeZoneTests
             Mock.Of<IInteractionEventStore>(),
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<ICatalogManager<OmnichannelCampaign>>(),
-            new AgentWorkforceReportDefinition(
-                "contact-center-agent-daily-timecard",
-                () => new LocalizedString("name", "Daily agent timecard"),
-                () => new LocalizedString("description", "Daily agent timecard"),
-                AgentWorkforceReportKind.DailyTimecard,
-                "Workforce",
-                []),
+            AgentWorkforceReportKind.DailyTimecard,
             Mock.Of<IContactCenterReportCapabilityGuard>(),
             new FormattingLocalizer<AgentWorkforceReportProvider>(),
             Mock.Of<IClock>(),
             Mock.Of<ILocalClock>(),
-            new ContactCenterReportingOptions(),
+            Options.Create(new ContactCenterReportingOptions()),
             summaryReader: null);
 
         // Act

@@ -1,0 +1,27 @@
+@model ReportViewsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportViewsIndex" title="@T["Report Views"]">
+        <breadcrumb-item id="ReportDesignsIndex" action="Index" controller="ReportDesigns" area="CrestApps.OrchardCore.Reports">@T["Report Builder"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p class="text-muted">@T["A view is a reusable data set: it joins, filters, and calculates data once, and reports and other views read its result columns as fields."]</p>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body text-end">
+        <a class="btn btn-secondary create" asp-route="ReportViewsCreate">@T["Add View"]</a>
+    </div>
+</div>
+
+<admin-list name="ReportViews" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> There are no views yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["View"]" />
+        <admin-list-column name="Refresh" position="30" title="@T["Refresh"]" width="auto" />
+        <admin-list-column name="Details" position="40" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

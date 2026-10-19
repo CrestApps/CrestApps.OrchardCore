@@ -51,9 +51,9 @@ public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<Che
 
                 // A wallet sheet must show what is being paid, so the buttons are offered only when there is a
                 // positive amount due now to show.
-                if (invoice.GrandTotal > 0m && !string.IsNullOrEmpty(currency))
+                if (invoice.AmountDue > 0m && !string.IsNullOrEmpty(currency))
                 {
-                    model.WalletAmount = StripeCurrency.ToMinorUnits(invoice.GrandTotal, currency);
+                    model.WalletAmount = StripeCurrency.ToMinorUnits(invoice.AmountDue, currency);
                     model.WalletCurrency = currency.ToLowerInvariant();
                 }
             }

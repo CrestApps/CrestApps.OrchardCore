@@ -10,17 +10,22 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
-internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
+internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
+    private static readonly string[] _filterNames =
+    [
+        ContactCenterReportFilter.AgentId,
+    ];
+
     private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
-    private readonly AgentWorkforceReportDefinition _definition;
+    private readonly AgentWorkforceReportKind _kind;
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
     private readonly IClock _clock;
@@ -32,39 +37,29 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         IInteractionEventStore eventStore,
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
-        AgentWorkforceReportDefinition definition,
+        AgentWorkforceReportKind kind,
         IContactCenterReportCapabilityGuard capabilityGuard,
-        IStringLocalizer stringLocalizer,
+        IStringLocalizer<AgentWorkforceReportProvider> stringLocalizer,
         IClock clock,
         ILocalClock localClock,
-        ContactCenterReportingOptions reportingOptions,
+        IOptions<ContactCenterReportingOptions> reportingOptions,
         IAgentTimeSummaryReader summaryReader)
     {
         _eventStore = eventStore;
         _agentManager = agentManager;
         _campaignManager = campaignManager;
-        _definition = definition;
+        _kind = kind;
         _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
         _clock = clock;
         _localClock = localClock;
-        _reportingOptions = reportingOptions ?? new ContactCenterReportingOptions();
+        _reportingOptions = reportingOptions.Value;
         _summaryReader = summaryReader;
     }
 
-    public string Name => _definition.Name;
+    public IReadOnlyCollection<string> FilterNames => _filterNames;
 
-    public LocalizedString DisplayName => _definition.DisplayName();
-
-    public LocalizedString Description => _definition.Description();
-
-    public string Category => _definition.Category;
-
-    public Permission Permission => ContactCenterPermissions.ViewReports;
-
-    public IReadOnlyCollection<string> FilterNames => _definition.FilterNames;
-
-    public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_definition.Kind);
+    public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_kind);
 
     /// <summary>
     /// The most presence-audit rows listed in the browser, so an unfiltered wide period stays readable and renders in
@@ -115,7 +110,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         IReadOnlyList<AgentStateTimeline> timelines = [];
         IReadOnlyList<AgentPresenceInterval> intervals;
 
-        if (!filtered && _summaryReader is not null && ReadsSummaries(_definition.Kind))
+        if (!filtered && _summaryReader is not null && ReadsSummaries(_kind))
         {
             // Every agent over a period: whole days come from their daily summaries, and only the rest is read from
             // the log. One agent's period is a seek on the aggregate index, so it is always read from the log.
@@ -142,7 +137,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
                 campaign => campaign.DisplayText ?? campaign.ItemId,
                 StringComparer.Ordinal);
 
-        return _definition.Kind switch
+        return _kind switch
         {
             AgentWorkforceReportKind.TimeSummary => BuildTimeSummary(intervals, agents),
             AgentWorkforceReportKind.DailyTimecard => BuildDailyTimecard(intervals, agents, timeZone),

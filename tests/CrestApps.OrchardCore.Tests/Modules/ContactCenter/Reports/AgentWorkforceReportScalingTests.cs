@@ -242,18 +242,12 @@ public sealed class AgentWorkforceReportScalingTests
             eventStore,
             Agents(),
             campaigns.Object,
-            new AgentWorkforceReportDefinition(
-                "workforce-" + kind,
-                () => new LocalizedString("name", kind.ToString()),
-                () => new LocalizedString("description", kind.ToString()),
-                kind,
-                "Workforce",
-                []),
+            kind,
             guard.Object,
             new PassThroughStringLocalizer<AgentWorkforceReportProvider>(),
             Mock.Of<IClock>(clock => clock.UtcNow == _now),
             Mock.Of<ILocalClock>(),
-            options,
+            Options.Create(options),
             summaryReader);
     }
 

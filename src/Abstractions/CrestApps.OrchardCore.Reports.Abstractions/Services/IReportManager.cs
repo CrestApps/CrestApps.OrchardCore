@@ -6,15 +6,22 @@ namespace CrestApps.OrchardCore.Reports.Services;
 public interface IReportManager
 {
     /// <summary>
-    /// Lists every registered report, ordered by category and display name.
+    /// Lists the descriptors of every registered report, without creating the reports.
     /// </summary>
-    /// <returns>The registered reports.</returns>
-    IReadOnlyList<IReport> GetReports();
+    /// <returns>The registered reports, in the order they were registered.</returns>
+    IReadOnlyList<ReportDescriptor> GetReports();
 
     /// <summary>
-    /// Finds a registered report by its technical name.
+    /// Finds the descriptor of a registered report by its technical name.
     /// </summary>
     /// <param name="name">The report technical name.</param>
-    /// <returns>The matching report, or <see langword="null"/> when none is registered.</returns>
-    IReport FindByName(string name);
+    /// <returns>The descriptor, or <see langword="null"/> when no report has that name.</returns>
+    ReportDescriptor GetDescriptor(string name);
+
+    /// <summary>
+    /// Creates a registered report, to run it.
+    /// </summary>
+    /// <param name="name">The report technical name.</param>
+    /// <returns>The report, or <see langword="null"/> when no report has that name.</returns>
+    IReportRunner GetReport(string name);
 }

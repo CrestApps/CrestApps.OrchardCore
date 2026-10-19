@@ -64,5 +64,5 @@ public sealed class ListingStartup : StartupBase
 public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IReport, ProductReviewsReport>();
+        => services.AddReport<ProductReviewsReport>();
 }

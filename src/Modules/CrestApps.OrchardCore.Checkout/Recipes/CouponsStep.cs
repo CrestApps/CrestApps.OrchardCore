@@ -82,9 +82,14 @@ internal sealed class CouponsStep : NamedRecipeStepHandler
 
     internal static string Validate(Coupon coupon)
     {
-        if (coupon.Kind == CouponKind.Percentage && coupon.Percentage is <= 0m or > 100m)
+        if (coupon.Kind is CouponKind.Percentage or CouponKind.BuyXGetY && coupon.Percentage is <= 0m or > 100m)
         {
-            return "a percentage coupon needs a Percentage between 1 and 100.";
+            return "a percentage or buy X get Y coupon needs a Percentage between 1 and 100.";
+        }
+
+        if (coupon.Kind == CouponKind.BuyXGetY && (coupon.BuyQuantity < 1 || coupon.GetQuantity < 1))
+        {
+            return "a buy X get Y coupon needs a BuyQuantity and a GetQuantity of 1 or more.";
         }
 
         if (coupon.Kind == CouponKind.FixedAmount && (coupon.Amount <= 0m || string.IsNullOrWhiteSpace(coupon.Currency)))
@@ -108,12 +113,23 @@ internal sealed class CouponsStep : NamedRecipeStepHandler
     private static void Copy(Coupon source, Coupon target)
     {
         target.Code = source.Code.Trim();
+        target.Method = source.Method;
+        target.OnlyGeneratedCodes = source.OnlyGeneratedCodes;
         target.Description = source.Description;
         target.Kind = source.Kind;
-        target.Percentage = source.Kind == CouponKind.Percentage ? source.Percentage : 0m;
+        target.Percentage = source.Kind is CouponKind.Percentage or CouponKind.BuyXGetY ? source.Percentage : 0m;
         target.Amount = source.Kind == CouponKind.FixedAmount ? source.Amount : 0m;
         target.Currency = source.Kind == CouponKind.FixedAmount ? source.Currency?.Trim().ToUpperInvariant() : null;
-        target.Target = source.Kind == CouponKind.FreeShipping ? DiscountTarget.OneTime : source.Target;
+        target.Target = source.Kind is CouponKind.FreeShipping or CouponKind.BuyXGetY ? DiscountTarget.OneTime : source.Target;
+        target.BuyQuantity = source.BuyQuantity;
+        target.GetQuantity = source.GetQuantity;
+        target.MaxApplicationsPerOrder = source.MaxApplicationsPerOrder;
+        target.BuyProductIds = [.. source.BuyProductIds ?? []];
+        target.BuyCategoryIds = [.. source.BuyCategoryIds ?? []];
+        target.MinimumQuantity = source.MinimumQuantity;
+        target.CombinesWithProductDiscounts = source.CombinesWithProductDiscounts;
+        target.CombinesWithOrderDiscounts = source.CombinesWithOrderDiscounts;
+        target.CombinesWithShippingDiscounts = source.CombinesWithShippingDiscounts;
         target.IsEnabled = source.IsEnabled;
         target.StartsUtc = source.StartsUtc;
         target.EndsUtc = source.EndsUtc;

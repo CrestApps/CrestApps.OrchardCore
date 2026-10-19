@@ -1,0 +1,19 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="AccountStoreCredit" title="@T["Store credit"]">
+        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
+    </breadcrumb>
+</zone>
+
+<div class="container my-4">
+    <div class="row g-4">
+        <div class="col-lg-3">
+            @await DisplayAsync(await New.CommerceAccountNavigation())
+        </div>
+        <div class="col-lg-9 commerce-account">
+            <h1 class="h3 mb-3">@T["Store credit"]</h1>
+            @await DisplayAsync(Model)
+        </div>
+    </div>
+</div>

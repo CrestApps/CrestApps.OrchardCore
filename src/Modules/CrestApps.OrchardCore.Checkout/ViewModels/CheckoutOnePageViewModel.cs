@@ -28,6 +28,11 @@ public sealed class CheckoutOnePageViewModel
     public bool ShowsPayment { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the order has nothing left to pay, such as when a gift card or a code covers it.
+    /// </summary>
+    public bool NothingToPay { get; set; }
+
+    /// <summary>
     /// Gets or sets whether what is on the page has to be saved before paying, such as after a mistake was pointed
     /// out.
     /// </summary>

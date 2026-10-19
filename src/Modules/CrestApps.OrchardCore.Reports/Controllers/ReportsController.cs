@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -21,6 +22,7 @@ public sealed class ReportsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ReportDisplayValueResolver _displayValueResolver;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsController"/> class.
@@ -31,13 +33,15 @@ public sealed class ReportsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor used to bind the filter from the request.</param>
     /// <param name="displayValueResolver">The resolver for typed report values.</param>
+    /// <param name="localizerFactory">The factory that localizes the names of the reports.</param>
     public ReportsController(
         IReportManager reportManager,
         IReportExportManager exportManager,
         IDisplayManager<ReportFilter> filterDisplayManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        ReportDisplayValueResolver displayValueResolver)
+        ReportDisplayValueResolver displayValueResolver,
+        IStringLocalizerFactory localizerFactory)
     {
         _reportManager = reportManager;
         _exportManager = exportManager;
@@ -45,6 +49,7 @@ public sealed class ReportsController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayValueResolver = displayValueResolver;
+        _localizerFactory = localizerFactory;
     }
 
     /// <summary>
@@ -54,7 +59,7 @@ public sealed class ReportsController : Controller
     [Admin("Reports", "Reports")]
     public async Task<IActionResult> Index()
     {
-        var accessible = new List<IReport>();
+        var accessible = new List<ReportDescriptor>();
 
         foreach (var report in _reportManager.GetReports())
         {
@@ -66,7 +71,10 @@ public sealed class ReportsController : Controller
 
         return View(new ReportsIndexViewModel
         {
-            Reports = accessible,
+            Reports = accessible
+                .OrderBy(report => report.Category, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(report => _localizerFactory.Localize(report.DisplayName).Value, StringComparer.CurrentCultureIgnoreCase)
+                .ToList(),
         });
     }
 
@@ -78,28 +86,28 @@ public sealed class ReportsController : Controller
     [Admin("Reports/view/{id}", "ReportsDisplay")]
     public async Task<IActionResult> Display(string id)
     {
-        var report = _reportManager.FindByName(id);
+        var descriptor = _reportManager.GetDescriptor(id);
 
-        if (report is null)
+        if (descriptor is null)
         {
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, report.Permission))
+        if (!await _authorizationService.AuthorizeAsync(User, descriptor.Permission))
         {
             return Forbid();
         }
 
-        var filter = await BuildFilterAsync(id);
+        var filter = await BuildFilterAsync(descriptor.Name);
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
-        var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
-        document.Title = report.DisplayName.Value;
+        var document = await _reportManager.GetReport(descriptor.Name).RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        document.Title = _localizerFactory.Localize(descriptor.DisplayName).Value;
 
         await _displayValueResolver.ResolveNonTableValuesAsync(document);
 
         return View(new ReportDisplayViewModel
         {
-            Report = report,
+            Report = descriptor,
             ExportFormats = _exportManager.GetFormats(),
             FilterShape = filterShape,
             Document = document,
@@ -115,7 +123,7 @@ public sealed class ReportsController : Controller
     [Admin("Reports/view/{id}/export/{format?}", "ReportsExport")]
     public async Task<IActionResult> Export(string id, string format)
     {
-        var report = _reportManager.FindByName(id);
+        var report = _reportManager.GetDescriptor(id);
 
         if (report is null)
         {
@@ -127,21 +135,21 @@ public sealed class ReportsController : Controller
             return Forbid();
         }
 
-        var exportFormat = _exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
+        var exportFormat = _exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
 
         if (exportFormat is null)
         {
             return NotFound();
         }
 
-        var filter = await BuildFilterAsync(id);
-        var document = await report.RunAsync(new ReportContext(filter, ReportRunMode.Export), HttpContext.RequestAborted);
-        document.Title = report.DisplayName.Value;
+        var filter = await BuildFilterAsync(report.Name);
+        var document = await _reportManager.GetReport(report.Name).RunAsync(new ReportContext(filter, ReportRunMode.Export), HttpContext.RequestAborted);
+        document.Title = _localizerFactory.Localize(report.DisplayName).Value;
 
         await _displayValueResolver.ResolveAsync(document);
-        var content = exportFormat.Serialize(document);
+        var content = _exportManager.GetFormat(exportFormat.Name).Serialize(document);
         var range = filter.GetDateRange();
-        var fileName = $"{id}-{range.FromUtc:yyyyMMdd}-to-{range.ToUtc:yyyyMMdd}.{exportFormat.FileExtension}";
+        var fileName = $"{report.Name}-{range.FromUtc:yyyyMMdd}-to-{range.ToUtc:yyyyMMdd}{exportFormat.Extension}";
 
         return File(content, exportFormat.ContentType, fileName);
     }

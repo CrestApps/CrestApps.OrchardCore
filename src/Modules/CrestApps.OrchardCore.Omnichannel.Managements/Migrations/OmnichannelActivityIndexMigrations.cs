@@ -118,7 +118,9 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 9;
+        await CreateReportIndexAsync();
+
+        return 10;
     }
 
     /// <summary>
@@ -355,5 +357,26 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 9;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>CreatedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom9Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 10;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_Report",
+            OmnichannelConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -12,7 +15,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Reports;
 /// The product performance report: succeeded transactions grouped by product (content type) into a
 /// revenue and tax table, with a top-products-by-revenue bar breakdown.
 /// </summary>
-public sealed class ProductPerformanceReport : SubscriptionReportBase
+public sealed class ProductPerformanceReport : SubscriptionReportBase, IReport
 {
     private const int TopProductCount = 10;
 
@@ -34,13 +37,19 @@ public sealed class ProductPerformanceReport : SubscriptionReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "product-performance";
+    public static string Name => "product-performance";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Product performance"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ProductPerformanceReport>("Product performance");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Revenue, transaction volume, and tax grouped by subscription product, highlighting the top products by revenue."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ProductPerformanceReport>("Revenue, transaction volume, and tax grouped by subscription product, highlighting the top products by revenue.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

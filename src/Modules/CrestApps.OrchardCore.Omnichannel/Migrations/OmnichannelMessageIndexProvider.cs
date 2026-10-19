@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -43,7 +44,9 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
 
         await CreateProviderMessageIdIndexAsync();
 
-        return 3;
+        await CreateReportIndexAsync();
+
+        return 4;
     }
 
     /// <summary>
@@ -96,5 +99,26 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
                 "ProviderMessageId"),
                 collection: OmnichannelConstants.CollectionName
         );
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>CreatedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 4;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelMessageIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelMessageIndex_Report",
+            OmnichannelConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model ReportEventViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ReportIds">@T["Reports"]</label>
+    <div class="ocat-end">
+        <select class="selectpicker show-tick" asp-for="ReportIds" multiple data-width="100%" data-live-search="true" data-actions-box="true" title="@T["Every report"]">
+            @foreach (var report in Model.Reports)
+            {
+                <option value="@report.Value" selected="@Model.ReportIds.Contains(report.Value)">@report.Text</option>
+            }
+        </select>
+        <span class="hint">@T["Start the workflow only for these reports. Leave empty for every report."]</span>
+    </div>
+</div>
+
+<p class="text-muted small">@T["The workflow input holds ReportId, ReportTitle, UserName, Source (Admin, Shared or Link), FilterValues, and RowCount, Format or VersionNumber, read in Liquid as {0}.", "{{ Workflow.Input.ReportId }}"]</p>

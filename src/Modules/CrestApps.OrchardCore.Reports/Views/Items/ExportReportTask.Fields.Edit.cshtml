@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model ExportReportTaskViewModel
+
+<partial name="_ReportWorkflowTaskFields" model="Model" />
+
+<div class="ocat-wrapper" asp-validation-class-for="Format">
+    <label class="ocat-label" asp-for="Format">@T["Format"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Format" asp-items="Model.Formats"></select>
+        <span asp-validation-for="Format"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MediaFolder">
+    <label class="ocat-label" asp-for="MediaFolder">@T["Media folder"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="MediaFolder" />
+        <span asp-validation-for="MediaFolder"></span>
+        <span class="hint">@T["Optional. Saves the file in this folder of the media library, such as reports/daily, and puts its Path and Url in the output. Needs the Media feature. Leave empty to keep the file in the output only, as Base64."]</span>
+    </div>
+</div>

@@ -171,10 +171,22 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             .Where(discount => discount.Amount > 0m)
             .Select(discount => new OrderDiscount
             {
-                Code = discount.Code,
+                Code = discount.IsAutomatic ? null : discount.Code,
                 Description = discount.Description,
                 Amount = discount.Amount,
                 ProviderKey = discount.ProviderKey,
+                Target = discount.Target,
+            })];
+
+        // What a gift card or store credit paid toward the total, so the order shows how it was paid.
+        order.Tenders = [.. (invoice.Tenders ?? [])
+            .Where(tender => tender.Amount > 0m)
+            .Select(tender => new OrderTender
+            {
+                ProviderKey = tender.ProviderKey,
+                Reference = tender.Reference,
+                Description = tender.Description,
+                Amount = tender.Amount,
             })];
 
         // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's

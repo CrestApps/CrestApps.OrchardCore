@@ -23,6 +23,10 @@ public static class CustomersConstants
     /// </summary>
     public const string SettingsGroupId = "customers";
 
+    public const string LoyaltySettingsGroupId = "loyalty";
+
+    public const string ReferralSettingsGroupId = "referrals";
+
     public static class Recipes
     {
         /// <summary>
@@ -36,5 +40,11 @@ public static class CustomersConstants
         public const string Customers = "CrestApps.OrchardCore.Customers";
 
         public const string CheckoutDetails = "CrestApps.OrchardCore.Customers.CheckoutDetails";
+
+        public const string StoreCredit = "CrestApps.OrchardCore.Customers.StoreCredit";
+
+        public const string Loyalty = "CrestApps.OrchardCore.Customers.Loyalty";
+
+        public const string Referrals = "CrestApps.OrchardCore.Customers.Referrals";
     }
 }
