@@ -1,32 +1,63 @@
 @using CrestApps.OrchardCore.Checkout
 @using CrestApps.OrchardCore.Checkout.ViewModels
+@using CrestApps.OrchardCore.Products.Core.Services
 @model CouponViewModel
 
 <div class="card mb-3">
     <div class="card-body">
         <label asp-for="Code" class="form-label">@T["Promotion code"]</label>
 
-        @* Applying a code is its own submit. The pay button hands the form to the payment script, which
-           never posts it, so a code typed here would otherwise be dropped and the customer charged full
-           price with no error shown. *@
-        <div class="input-group">
-            <input asp-for="Code" class="form-control" autocomplete="off" placeholder="@T["Enter a code"]" />
-            <button type="submit"
-                    class="btn btn-outline-secondary"
-                    name="@CheckoutConstants.FormActions.FieldName"
-                    value="@CheckoutConstants.FormActions.ApplyCoupon"
-                    formnovalidate>@T["Apply"]</button>
-        </div>
+        @if (Model.Applied.Count > 0)
+        {
+            <ul class="list-unstyled mb-2">
+                @foreach (var applied in Model.Applied)
+                {
+                    <li class="d-flex align-items-start gap-2 py-1">
+                        <span class="badge text-bg-light border font-monospace mt-1">@applied.Code</span>
+                        <span class="flex-grow-1 small">
+                            @if (applied.Amount > 0)
+                            {
+                                <span class="text-success">@T["{0} off", ProductPriceFormatter.Format(applied.Amount, Model.Currency)]</span>
+                            }
+                            else if (!string.IsNullOrEmpty(applied.GaveWayTo))
+                            {
+                                <span class="text-body-secondary">@T["Not used: it can't be combined with {0}.", applied.GaveWayTo]</span>
+                            }
+                            else
+                            {
+                                <span class="text-body-secondary">@T["Nothing off this order."]</span>
+                            }
+                        </span>
+                        @* Removing a code is its own submit too, so the step is shown again with the new total. *@
+                        <button type="submit"
+                                class="btn btn-link btn-sm p-0"
+                                name="@CheckoutConstants.FormActions.FieldName"
+                                value="@(CheckoutConstants.FormActions.RemoveCouponPrefix + applied.Code)"
+                                formnovalidate
+                                aria-label="@T["Remove the code {0}", applied.Code]">@T["Remove"]</button>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (Model.CanAddMore)
+        {
+            @* Applying a code is its own submit. The pay button hands the form to the payment script, which
+               never posts it, so a code typed here would otherwise be dropped and the customer charged full
+               price with no error shown. *@
+            <div class="input-group">
+                <input asp-for="Code" class="form-control" autocomplete="off" placeholder="@(Model.Applied.Count > 0 ? T["Add another code"] : T["Enter a code"])" value="" />
+                <button type="submit"
+                        class="btn btn-outline-secondary"
+                        name="@CheckoutConstants.FormActions.FieldName"
+                        value="@CheckoutConstants.FormActions.ApplyCoupon"
+                        formnovalidate>@T["Apply"]</button>
+            </div>
+        }
 
         <span asp-validation-for="Code"></span>
 
-        @if (Model.AppliedAmount > 0)
-        {
-            <div class="text-success small mt-2">
-                @T["{0} {1} off applied.", Model.Currency, Model.AppliedAmount.ToString("0.00")]
-            </div>
-        }
-        else
+        @if (Model.Applied.Count == 0)
         {
             <div class="form-text">@T["Optional. Leave blank if you do not have one."]</div>
         }

@@ -203,6 +203,26 @@ Each use is a `CouponRedemption` in the coupon collection (`CouponRedemptionInde
 
 Applying codes is throttled per address (`IPaymentAttemptLimiter`, scope `coupon-code`), since short codes can be guessed.
 
+### Several codes and combining rules
+
+A checkout carries up to `CheckoutCoupon.MaxCodes` (5) codes in `CheckoutCoupon.Codes` (a session saved before that used `Code`, which `GetCodes()` still reads). `CouponCheckoutFlowDisplayDriver` adds a code on **Apply** and takes one off for the form action `remove-coupon:{code}` (`CheckoutConstants.FormActions.RemoveCouponPrefix`).
+
+Every `DiscountLine` has a kind, `DiscountClass` (`Product`, `Order` or `Shipping`; when a provider leaves `Class` null it's worked out from `Target` and `LineItemIds`), and `CombinesWith`, the `DiscountCombination` flags of the kinds it can be used with. A provider that says nothing combines with everything, as before. `DefaultCheckoutDiscountService.Choose` keeps every discount when each pair can be combined (each allows the other's kind); otherwise it searches the subsets of up to 12 candidates for the compatible set that takes off the most (ties keep the earlier set), and past that takes the largest first. What's left goes to `CheckoutInvoice.SkippedDiscounts`, each with `GaveWayTo`, the description of a kept discount it can't be combined with. A coupon's kind is `Coupon.DiscountClass` (free shipping is `Shipping`; one limited to products, and every buy X get Y offer, is `Product`; else `Order`), and its `CombinesWithProductDiscounts`, `CombinesWithOrderDiscounts` and `CombinesWithShippingDiscounts` make `Coupon.CombinesWith`.
+
+### Automatic discounts
+
+`Coupon.Method` is `CouponMethod.Code` or `CouponMethod.Automatic`. `CouponIndex.IsAutomatic` (migration version 3) lets `ICouponStore.ListAutomaticAsync` find the enabled automatic coupons, which `CouponDiscountProvider` offers on every invoice when they're redeemable, in scope, not in `CheckoutCoupon.Declined`, and `ICouponRedemptionService.GetAvailabilityAsync` says they're available to this buyer. Their lines have `DiscountLine.IsAutomatic`, keep the coupon's code (holds, uses and limits work by code as for any coupon), and show the description; `OrderCheckoutHandler` records them on the order with no code. When `CouponHoldPaymentGate` can't hold one, it adds its code to `CheckoutCoupon.Declined`, so rebuilding the invoice doesn't put it back. An automatic coupon's code entered by hand is refused (`Coupon.CanBeTyped`).
+
+### Buy X get Y and minimum quantities
+
+A `CouponKind.BuyXGetY` coupon has `BuyQuantity`, `GetQuantity`, `Percentage` (off each item got), `MaxApplicationsPerOrder`, and `BuyProductIds`/`BuyCategoryIds` for what counts as bought; `ProductIds`/`CategoryIds` choose what's got. `Coupon.GetBuyXGetYDiscount` expands the one-time lines into units, and each time the offer applies takes the cheapest units that can be got and the dearest remaining units that can be bought; a unit is used once. The line carries `DiscountLine.LineShares`, what it takes off each line, and `Allocate` spreads the discount by those shares rather than by line totals, so tax sees the discount on the free item's line. `Coupon.MinimumQuantity` counts the units of the lines a coupon counts (the bought lines for buy X get Y).
+
+### Discount links and generated codes
+
+`GET discount/{code}` (`DiscountLinkController`) stores a redeemable code a buyer can type in the `orchard-discount-code` cookie (`CheckoutConstants.DiscountLinkCookieName`, HTTP-only, the tenant's path, seven days) and redirects to `redirect` when it's a local path, with the tenant's path base added when it's missing, or to the home page. `DiscountLinkCheckoutHandler.ActivatingAsync` adds the cookie's code to each new checkout's `CheckoutCoupon`, except one that settles an existing balance.
+
+`ICouponStore.GenerateCodesAsync` makes `CouponCode` documents in the coupon collection (`CouponCodeIndex`, migration version 4): a random eight-character code from an alphabet without 0, O, 1 or I after an optional prefix, its own `MaxRedemptions` and `RedemptionCount`, and the coupon's id. Codes are drawn again when they clash with each other or with codes in use. `CouponStore.GetByCodeAsync` falls back to the generated codes and returns the coupon with the code's code, uses and limit and `Coupon.GeneratedCodeId` set; the store's `ICatalog<Coupon>.UpdateAsync` writes that coupon's `RedemptionCount` to the `CouponCode`, never over the coupon. So holds, limits, redemptions and returns work per code without changes. `Coupon.OnlyGeneratedCodes` turns the coupon's own code off (`Coupon.CanBeTyped`). The coupons list reads only `Coupon` documents, so thousands of codes don't slow it. `CouponsAdminController.ExportCodes` downloads them as CSV; deleting a coupon deletes its codes (`DeleteGeneratedCodesAsync`).
+
 ### Coupons in recipes and deployments
 
 The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`.
@@ -260,6 +280,108 @@ The default provider then runs every **`ICheckoutTaxProfileHandler`**, at checko
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
 determination. Settling an outstanding [transaction](transactions) does this: the transaction already carries its
 own tax, and paying it is not a new sale.
+
+## Balances that pay after tax
+
+A **tender** is part of a checkout's total paid from a balance the buyer holds rather than charged by a payment provider: a [gift card](carts-and-orders#gift-cards), [store credit](customers#store-credit) or [loyalty points](customers#loyalty-points). It is not a discount. Tax is worked out on the full price first, and a tender then pays toward the total, tax included, like a second way to pay. The seam ships with the Checkout feature and does nothing until a feature registers an `ICheckoutTenderProvider`.
+
+| Type | Role |
+| --- | --- |
+| `ICheckoutTenderProvider` | One kind of balance. Says which of its balances the buyer chose and what's on them, and moves money on and off them. |
+| `ICheckoutTenderService` (`DefaultCheckoutTenderService`) | Decides how much each chosen balance pays, and takes it off what the payment provider charges. |
+| `ICheckoutTenderLedger` (`CheckoutTenderLedger`) | Holds what each balance pays while the buyer pays the rest, takes it off when the checkout completes, lets it go when it doesn't, and puts it back for a refund. |
+| `TenderHoldPaymentGate` | An `ICheckoutPaymentGate` that holds the balances before a payment begins. |
+| `TenderCheckoutHandler` | A checkout handler that redeems the holds while completing and releases them on cancel, failure and expiry. |
+
+### Providers
+
+| `ICheckoutTenderProvider` member | Responsibility |
+| --- | --- |
+| `Key` | The stable key recorded on every `TenderLine` it gives, such as `gift-card`, `store-credit` or `loyalty-points`. |
+| `GetTendersAsync(CheckoutTenderContext)` | Returns a `TenderLine` for each of its balances in `context.References` that can pay this checkout, with `Amount` set to everything on it. A balance in another currency, disabled or expired is left out. `CheckoutTenderContext` carries the `Invoice` (tax already applied), the `Flow` and the `References` the buyer chose, in order. |
+| `GetBalanceAsync(reference, currency)` | What's on a balance now, or `null` when it can't pay at all. The ledger asks it under the balance's lock. |
+| `DebitAsync(reference, amount, currency, flow)` | Takes the amount off, once per checkout, under the balance's lock. |
+| `CreditAsync(reference, amount, currency, reason)` | Puts an amount back, such as for a refund, under the balance's lock. |
+
+A `TenderLine` has `ProviderKey`, `Reference` (which balance pays, such as the gift card's item id, never a secret the buyer typed), `Description` (what the buyer sees, such as *Gift card ending 4F2K*), `Amount` (tax included) and `TaxAmount` (the part of `Amount` that is tax).
+
+The balances a buyer chose are stored on the session as a `CheckoutTenderSelection`: `Choices`, a list of `CheckoutTenderChoice` (`ProviderKey`, `Reference`) in the order they were chosen, with `Add`, `Remove` and `For(providerKey)`. The selection is what the buyer asked for; `CheckoutInvoice.Tenders` is what the balances actually pay, worked out again every time the invoice is rebuilt.
+
+### Applying them to the invoice
+
+`CheckoutInvoiceBuilder` applies discounts, then tax, then `ICheckoutTenderService.ApplyTendersAsync`. `DefaultCheckoutTenderService`:
+
+1. Clears `CheckoutInvoice.Tenders`, and stops there for a session that settles an existing balance (`SettlesExistingBalance`), saves a payment method for later charges (`SavePaymentMethod`), has no selection, or has nothing to pay now (`InitialPaymentAmount` of zero).
+2. Asks each provider for the lines of the references chosen with its key. A provider that throws is logged and skipped, so the buyer pays the rest by card rather than being stopped.
+3. In the buyer's order, gives each line the smaller of what's on it, less what other checkouts hold (`ICheckoutTenderLedger.GetHeldByOthersAsync`), and what's left to pay, rounded with `Money.Round`. Lines that would pay nothing are dropped.
+4. Takes what they pay off `InitialPaymentAmount`. `GrandTotal` stays the full total.
+5. Lets the payment provider carry the tax first: only the tax the remaining charge can't hold, `Math.Max(0, TaxAmount - InitialPaymentAmount)`, is spread over the tenders in proportion to what they pay, into `TenderLine.TaxAmount`, the last tender taking what rounding leaves.
+
+Tenders never pay a recurring obligation: the agreement the provider sets up is always for the full cycle amount.
+
+The invoice exposes the result through computed members that aren't serialized: `TenderTotal` (what the tenders pay), `TenderTaxAmount` (their share of the tax) and `AmountDue` (`GrandTotal - TenderTotal`, never below zero). `DefaultCheckoutEngine.GetObligationAmounts` charges the one-time obligation `InitialPaymentAmount`, with a tax of `Math.Min(Math.Max(0, TaxAmount - TenderTaxAmount), gross)`, so the payment the provider reports still splits into the amount and the tax the invoice expects. For example, $90 of goods with $10 tax and a $95 gift card: the card is charged $5, all of it tax, and the gift card carries the other $5 of tax.
+
+`CheckoutInvoiceSummary` shows **Total** (`GrandTotal`), a line per tender and **Due now** (`AmountDue`) when there are tenders, and **Due now** alone otherwise. The Stripe panel offers wallet buttons for `AmountDue`.
+
+### The ledger
+
+`CheckoutTenderLedger` keeps one `CheckoutTenderHold` per checkout and balance (`ItemId`, `SessionId`, `ProviderKey`, `Reference`, `Description`, `Currency`, `Amount`, `ReturnedAmount`, `Status`, `CreatedUtc`, `RedeemedUtc`), indexed by `CheckoutTenderHoldIndex`, which `CheckoutTenderMigrations` creates with indexes on the provider key, reference and status, and on the session and status. `Status` is `Held`, `Redeemed` or `Released`.
+
+Every change to a balance takes the lock `CheckoutTenderLocks.GetKey(providerKey, reference)` (`TENDER_{providerKey}_{reference}`): the ledger's, and a provider's own, such as a staff adjustment. The ledger commits each hold before letting the lock go, so the second of two checkouts spending the same money sees what the first holds.
+
+| `ICheckoutTenderLedger` member | What it does |
+| --- | --- |
+| `GetHeldByOthersAsync` | How much of a balance other checkouts hold now. |
+| `HoldAsync(flow, tender)` | Under the balance's lock, asks the provider's `GetBalanceAsync` and holds `tender.Amount` when that much is left once other holds are counted. Returns a `TenderAvailability`: `Available`, `Insufficient` (less is left), `Unavailable` (it can't pay at all) or `Busy` (the lock couldn't be taken). |
+| `ReleaseOthersAsync(sessionId, keep)` | Lets go of the checkout's holds on balances no longer on its invoice. |
+| `RedeemAsync(flow)` | Calls `DebitAsync` for each hold and marks it `Redeemed`. A hold is taken even when its lock can't be had, with a warning logged, because the hold already kept the money for this checkout. Safe to call again. |
+| `ReleaseAsync(sessionId)` | Marks every hold of the checkout `Released`. |
+| `GetRedeemedAsync(sessionId)` | What was taken for a checkout and not put back yet. |
+| `ReturnAsync(sessionId, amount, reason)` | Puts up to `amount` back through `CreditAsync`, the balance used last first, recording `ReturnedAmount`. Returns how much went back. |
+
+### Holding, redeeming and releasing
+
+`TenderHoldPaymentGate` is registered after `CouponHoldPaymentGate`, so it holds what's left after a code comes off. Inside the checkout's lock, just before a payment begins, or before a checkout with nothing to pay completes, it releases the holds on balances the buyer took off, then holds each tender on the invoice:
+
+- `Busy` refuses the payment with *We couldn't reserve … just now. Please try again.*
+- `Insufficient` rebuilds the invoice, which uses what's left on the balance, and refuses with `InvoiceChanged` and *… has less on it than when it was applied, so it pays less. Check what's left to pay, then pay again.*
+- `Unavailable` takes the balance off the `CheckoutTenderSelection`, rebuilds the invoice, and refuses with `InvoiceChanged` and *… can't be used any more, so it was taken off. Check what's left to pay, then pay again.*
+
+Each message names the tender by its `Description`. As with coupons, the payment script loads the page again with the new total.
+
+`TenderCheckoutHandler.CompletingAsync` calls `RedeemAsync` while completing, not after, so taking the balances is committed with the completion: when it fails, the checkout isn't complete and the reconciliation sweep tries again. `CanceledAsync`, `FailedAsync` and `ExpiredAsync` call `ReleaseAsync`. A hold has no expiry of its own: an abandoned checkout lets go of its holds when the sweep expires it after **Session lifetime**.
+
+### Superseded payment attempts
+
+A buyer can begin a card payment, go back, apply a gift card and pay again. The attempt begun for the old total must not be resumed, because it would charge what the invoice no longer asks for. `PaymentAttempt.IsSuperseded` marks an attempt that was set aside and never charged.
+
+- In `BeginPaymentAsync`, an existing `Created` or `Pending` attempt whose `ExpectedAmount` or `ExpectedTaxAmount` doesn't match `GetObligationAmounts` for the current invoice is superseded, and a new attempt is made for the new total.
+- In `TryCompleteAsync`, a checkout whose invoice now has no obligations supersedes its `Created` and `Pending` attempts, so they neither keep it waiting nor get charged.
+
+`TrySupersedeAsync` asks the provider first (`VerifyAsync`) about a `Pending` attempt the provider was already given. An attempt the provider says succeeded, or one it couldn't be asked about, stands, with a warning logged, so a payment the buyer finished in another tab is never dropped. Otherwise the attempt becomes `Canceled`, with `IsSuperseded` and the failure reason *The total changed before it was paid.* `CheckoutReconciliationService` leaves superseded attempts out of the checkout's payments.
+
+### Nothing left to pay
+
+When the tenders (or a code) cover everything, `CheckoutObligations.GetExpectedObligationIds` is empty. The payment step shows *No payment is required to complete this checkout.* instead of the payment methods, and the submit button reads **Place order** instead of **Pay now**, on the stepped layout (`CheckoutFlowButtons`) and on one page (`CheckoutOnePageViewModel.NothingToPay`). The post completes through `TryCompleteAsync`, which runs the payment gates with no provider key, so the balances are held before the checkout completes.
+
+### The payment step
+
+Each provider's box is a `CheckoutFlowDisplayDriver` for the payment step in its own module, rendered in the `Aside` zone under the promotion code box. A box posts one of two form actions, which `CheckoutController` saves and shows again, like applying a coupon, without taking a payment:
+
+- `CheckoutConstants.FormActions.ApplyTender` (`apply-tender`). The controller accepts any action that starts with it, so a provider can name its own button, such as `apply-tender:store-credit`.
+- `CheckoutConstants.FormActions.RemoveTenderPrefix` (`remove-tender:`) followed by the provider key, a colon and the reference, such as `remove-tender:gift-card:` and the card's item id.
+
+The driver adds or removes the choice on the `CheckoutTenderSelection`, puts it back on the session and rebuilds the invoice through `CheckoutInvoiceBuilder.BuildAsync`, so the buyer sees what the balance pays before they pay. Gift cards, store credit and points render at `Aside:6`, `Aside:7` and `Aside:8`.
+
+### Refunds
+
+What a balance paid is refundable too. The [Orders](carts-and-orders#managing-an-order) feature counts each redeemed hold's `Amount - ReturnedAmount` as refundable, and `OrderOperationsService.RefundAsync` refunds the card first (`RefundPaymentsAsync`, then `RefundTransactionsAsync`), and only what's left goes back on the balances (`RefundTendersAsync`, through `ICheckoutTenderLedger.ReturnAsync`).
+
+### Adding a kind of balance
+
+1. Implement `ICheckoutTenderProvider` and register it as a scoped service. Keep every change to your balance, staff adjustments included, under `CheckoutTenderLocks.GetKey(Key, reference)`.
+2. Add a `CheckoutFlowDisplayDriver` for `CheckoutConstants.PaymentStepKey` that adds your references to the session's `CheckoutTenderSelection` on `apply-tender` and removes them on `remove-tender:` with your key and the reference, then rebuilds the invoice.
+3. Read what was paid from `CheckoutInvoice.Tenders`; the Orders feature copies it to `Order.Tenders`. The checkout holds, redeems, releases and returns the money through your provider, so never change a balance from a checkout handler yourself.
 
 ## The checkout engine
 
@@ -369,7 +491,7 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 - The begin endpoint drops the saved-card keys (`savePaymentMethod`, `offSession`, `savedCustomerReference`, `savedPaymentMethodReference`) from the provider data the browser sends. Only server code decides whether a card is kept, and nothing a browser sends can spend a card kept earlier.
 - A session whose `CheckoutSession.SavePaymentMethod` is set (server code sets it, for example when a customer chooses to pay a balance in [installments](installment-plans#installments-at-checkout)) keeps the payment method for later charges without the customer: the payment step offers only providers with `SupportsSavedPaymentMethods`, tells the customer the card is saved, and renders each provider panel with `CheckoutFlowPaymentMethod.SavePaymentMethod`; `ICheckoutEngine.BeginPaymentAsync` refuses any other provider and adds `CheckoutPaymentDataKeys.SavePaymentMethod` to the provider data itself.
 
-A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
+A customer who owes nothing (a free plan, a balance already covered, or an order a gift card or a code pays in full) completes without being asked for a payment method at all; the button reads **Place order**. See [Nothing left to pay](#nothing-left-to-pay).
 
 ### Payment methods a checkout can rule out
 
@@ -475,6 +597,7 @@ To use the framework in your own module:
 5. To add a gateway, implement **`ICheckoutPaymentProvider`**, register it, and add an `IDisplayDriver<CheckoutFlowPaymentMethod>` for its panel (grouped with `.OnGroup(yourProviderKey)`); the framework's reconciliation and ledger handle the safety guarantees for you.
 6. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
 7. To let a gateway bill on a cycle, also implement **`ICheckoutRecurringPaymentProvider`** under the same provider key. Implementations must be idempotent on the attempt's idempotency key, so a retried begin resumes the same agreement instead of creating a second one and billing the customer twice.
+8. To let buyers pay with a balance they hold, such as a voucher or a wallet, implement **`ICheckoutTenderProvider`**; see [Adding a kind of balance](#adding-a-kind-of-balance).
 
 ## Related
 

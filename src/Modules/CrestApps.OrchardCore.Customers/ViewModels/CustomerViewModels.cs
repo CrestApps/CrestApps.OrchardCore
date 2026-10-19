@@ -58,6 +58,12 @@ public class CustomerEditViewModel
     [BindNever]
     public string CustomerId { get; set; }
 
+    /// <summary>
+    /// Gets or sets what other features add to the customer's page, such as their store credit.
+    /// </summary>
+    [BindNever]
+    public global::OrchardCore.DisplayManagement.IShape Sections { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 

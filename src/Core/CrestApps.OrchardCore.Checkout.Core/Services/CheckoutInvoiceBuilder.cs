@@ -19,6 +19,7 @@ public sealed class CheckoutInvoiceBuilder
     private readonly ISiteService _siteService;
     private readonly ICheckoutDiscountService _discountService;
     private readonly ICheckoutTaxService _taxService;
+    private readonly ICheckoutTenderService _tenderService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckoutInvoiceBuilder"/> class.
@@ -26,14 +27,17 @@ public sealed class CheckoutInvoiceBuilder
     /// <param name="siteService">The site service used to read the fallback currency.</param>
     /// <param name="discountService">The discount service applied before tax.</param>
     /// <param name="taxService">The tax service, authoritative for what tax is owed.</param>
+    /// <param name="tenderService">The balances, such as gift cards, that pay part of the total after tax.</param>
     public CheckoutInvoiceBuilder(
         ISiteService siteService,
         ICheckoutDiscountService discountService,
-        ICheckoutTaxService taxService)
+        ICheckoutTaxService taxService,
+        ICheckoutTenderService tenderService = null)
     {
         _siteService = siteService;
         _discountService = discountService;
         _taxService = taxService;
+        _tenderService = tenderService;
     }
 
     /// <summary>
@@ -139,6 +143,13 @@ public sealed class CheckoutInvoiceBuilder
         // grand total to the amount due now; otherwise it determines the tax, records the tax lines, folds
         // exclusive tax into the up-front charge, and captures an immutable snapshot on the invoice.
         await _taxService.ApplyTaxAsync(invoice, flow);
+
+        // Balances the buyer holds, such as a gift card, pay after tax: tax is owed on the full price, and they pay
+        // part of the total like a second way to pay, taken off what the payment provider charges.
+        if (_tenderService is not null)
+        {
+            await _tenderService.ApplyTendersAsync(invoice, flow);
+        }
 
         flow.Session.Put(invoice);
     

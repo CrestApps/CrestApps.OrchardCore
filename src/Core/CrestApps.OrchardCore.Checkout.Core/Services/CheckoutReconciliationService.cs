@@ -43,7 +43,9 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
 
         var result = new CheckoutReconciliationResult();
 
-        var attempts = (await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken)).ToList();
+        // An attempt set aside because the total changed before it was paid was never charged, and a new one stands
+        // for its obligation, if the invoice still has one.
+        var attempts = (await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken)).Where(attempt => !attempt.IsSuperseded).ToList();
 
         foreach (var attempt in attempts)
         {

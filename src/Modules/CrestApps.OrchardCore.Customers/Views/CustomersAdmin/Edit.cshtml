@@ -196,6 +196,11 @@
     </div>
 }
 
+@if (Model.Sections is not null)
+{
+    @await DisplayAsync(Model.Sections)
+}
+
 @if (!Model.IsNew)
 {
     <div class="mt-5">

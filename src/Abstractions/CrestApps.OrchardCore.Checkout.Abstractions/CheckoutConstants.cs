@@ -8,6 +8,16 @@ public static class CheckoutConstants
     /// <summary>
     /// The YesSql collection the coupon catalog is stored in.
     /// </summary>
+    /// <summary>
+    /// The cookie a discount link keeps its code in until the buyer checks out.
+    /// </summary>
+    public const string DiscountLinkCookieName = "orchard-discount-code";
+
+    /// <summary>
+    /// The most unique codes generated for a coupon at once.
+    /// </summary>
+    public const int MaxGeneratedCodes = 5000;
+
     public const string CouponCollectionName = "Coupon";
 
     /// <summary>
@@ -74,6 +84,21 @@ public static class CheckoutConstants
         /// Saves the entered promotion code and re-renders the step with the recalculated invoice.
         /// </summary>
         public const string ApplyCoupon = "apply-coupon";
+
+        /// <summary>
+        /// Takes one promotion code off, the one after the prefix, and re-renders the step.
+        /// </summary>
+        public const string RemoveCouponPrefix = "remove-coupon:";
+
+        /// <summary>
+        /// Applies a balance, such as a gift card, to the checkout and shows the step again.
+        /// </summary>
+        public const string ApplyTender = "apply-tender";
+
+        /// <summary>
+        /// Takes a balance off the checkout: the provider key and the reference follow, separated by a colon.
+        /// </summary>
+        public const string RemoveTenderPrefix = "remove-tender:";
 
         /// <summary>
         /// Saves what was changed on a one-page checkout and shows it again with the new total, instead of paying.

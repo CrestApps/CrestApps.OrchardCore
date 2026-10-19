@@ -69,6 +69,7 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<CouponMigrations>()
             .AddIndexProvider<CouponIndexProvider>()
+            .AddIndexProvider<CouponCodeIndexProvider>()
             .AddIndexProvider<CouponRedemptionIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
@@ -76,8 +77,18 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, DiscountLinkCheckoutHandler>();
         services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
         services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
+
+        // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
+        // an ICheckoutTenderProvider. Its gate runs after the coupons', so it holds what's left after a code comes off.
+        services.AddScoped<ICheckoutTenderService, DefaultCheckoutTenderService>();
+        services.AddScoped<ICheckoutTenderLedger, CheckoutTenderLedger>();
+        services.AddScoped<ICheckoutPaymentGate, TenderHoldPaymentGate>();
+        services.AddScoped<ICheckoutHandler, TenderCheckoutHandler>();
+        services.AddDataMigration<CheckoutTenderMigrations>()
+            .AddIndexProvider<CheckoutTenderHoldIndexProvider>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();

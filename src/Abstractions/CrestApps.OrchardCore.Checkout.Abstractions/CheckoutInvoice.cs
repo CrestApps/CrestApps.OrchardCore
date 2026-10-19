@@ -82,6 +82,40 @@ public sealed class CheckoutInvoice
     public IList<Models.DiscountLine> Discounts { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the discounts that would have applied but were left out because they can't be combined with the
+    /// ones that did, each with what it gave way to, so the buyer can be told.
+    /// </summary>
+    public IList<Models.DiscountLine> SkippedDiscounts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets what balances the buyer holds pay toward the total, such as a gift card or store credit, after
+    /// tax. What they pay is already taken off <see cref="InitialPaymentAmount"/>, the one-time amount the payment
+    /// provider charges; <see cref="GrandTotal"/> stays the full total.
+    /// </summary>
+    public IList<Models.TenderLine> Tenders { get; set; } = [];
+
+    /// <summary>
+    /// Gets how much the balances in <see cref="Tenders"/> pay.
+    /// </summary>
+    [JsonIgnore]
+    public decimal TenderTotal
+        => Tenders?.Sum(tender => tender.Amount) ?? 0m;
+
+    /// <summary>
+    /// Gets the part of the tax the balances in <see cref="Tenders"/> pay.
+    /// </summary>
+    [JsonIgnore]
+    public decimal TenderTaxAmount
+        => Tenders?.Sum(tender => tender.TaxAmount) ?? 0m;
+
+    /// <summary>
+    /// Gets what is left to pay now, once the balances in <see cref="Tenders"/> have paid their part.
+    /// </summary>
+    [JsonIgnore]
+    public decimal AmountDue
+        => Math.Max(0m, GrandTotal - TenderTotal);
+
+    /// <summary>
     /// The total taken off before tax.
     /// </summary>
     public decimal DiscountTotal

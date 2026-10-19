@@ -43,7 +43,7 @@
         @foreach (var discount in invoice.Discounts ?? [])
         {
             <div class="d-flex justify-content-between text-success">
-                <span>@if (string.IsNullOrEmpty(discount.Code)) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
+                <span>@if (string.IsNullOrEmpty(discount.Code) || discount.IsAutomatic) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
                 <span>&minus;@Format(discount.Amount)</span>
             </div>
         }
@@ -66,9 +66,34 @@
             }
         }
 
-        <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
-            <span>@T["Due now"]</span>
-            <span>@Format(invoice.GrandTotal)</span>
-        </div>
+        @* A gift card or store credit pays after tax, like a second way to pay: the total stays what it is, and what is
+           left to pay now is shown under the balances that pay toward it. *@
+        @if (invoice.Tenders is { Count: > 0 })
+        {
+            <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
+                <span>@T["Total"]</span>
+                <span>@Format(invoice.GrandTotal)</span>
+            </div>
+
+            @foreach (var tender in invoice.Tenders)
+            {
+                <div class="d-flex justify-content-between text-success">
+                    <span>@tender.Description</span>
+                    <span>&minus;@Format(tender.Amount)</span>
+                </div>
+            }
+
+            <div class="d-flex justify-content-between fw-semibold border-top pt-2 mt-2">
+                <span>@T["Due now"]</span>
+                <span>@Format(invoice.AmountDue)</span>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
+                <span>@T["Due now"]</span>
+                <span>@Format(invoice.GrandTotal)</span>
+            </div>
+        }
     </div>
 </div>

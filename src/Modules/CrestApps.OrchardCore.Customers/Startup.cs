@@ -116,3 +116,68 @@ public sealed class CheckoutDetailsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Store credit: given to customers by hand or as a refund, and paying toward their checkouts after tax.
+/// </summary>
+[Feature(CustomersConstants.Features.StoreCredit)]
+public sealed class StoreCreditStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<StoreCreditMigrations>()
+            .AddIndexProvider<Indexes.StoreCreditAccountIndexProvider>();
+        services.AddScoped<IStoreCreditStore, StoreCreditStore>();
+        services.AddScoped<StoreCreditService>();
+        services.AddScoped<StoreCreditTenderProvider>();
+        services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
+        services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, StoreCreditCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<Customer, CustomerStoreCreditDisplayDriver>();
+        services.AddNavigationProvider<StoreCreditAccountMenu>();
+    }
+}
+
+/// <summary>
+/// Loyalty points: earned on orders, taken back on cancels and refunds, and spent toward checkouts after tax.
+/// </summary>
+[Feature(CustomersConstants.Features.Loyalty)]
+public sealed class LoyaltyStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<LoyaltyMigrations>()
+            .AddIndexProvider<Indexes.LoyaltyAccountIndexProvider>();
+        services.AddScoped<ILoyaltyStore, LoyaltyStore>();
+        services.AddScoped<LoyaltyService>();
+        services.AddScoped<LoyaltyTenderProvider>();
+        services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyTenderProvider>());
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler, LoyaltyOrderEventHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, LoyaltyCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<Customer, CustomerLoyaltyDisplayDriver>();
+        services.AddSiteDisplayDriver<LoyaltySettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(CustomersConstants.LoyaltySettingsGroupId, CustomerPermissions.ManageCustomers);
+        services.AddNavigationProvider<LoyaltyAccountMenu>();
+        services.AddNavigationProvider<LoyaltySettingsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Referrals: a link per customer, a discount for the friend, and a reward for the customer on the friend's first order.
+/// </summary>
+[Feature(CustomersConstants.Features.Referrals)]
+public sealed class ReferralsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<ReferralMigrations>()
+            .AddIndexProvider<Indexes.ReferralProfileIndexProvider>();
+        services.AddScoped<IReferralStore, ReferralStore>();
+        services.AddScoped<ReferralService>();
+        services.AddScoped<ICheckoutHandler, ReferralCheckoutHandler>();
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler, ReferralOrderEventHandler>();
+        services.AddSiteDisplayDriver<ReferralSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
+        services.AddNavigationProvider<ReferralAccountMenu>();
+        services.AddNavigationProvider<ReferralSettingsAdminMenu>();
+    }
+}

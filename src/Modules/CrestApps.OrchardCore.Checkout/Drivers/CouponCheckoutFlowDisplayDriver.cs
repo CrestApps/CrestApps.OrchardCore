@@ -82,17 +82,31 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
             return Task.FromResult<IDisplayResult>(null);
         }
 
-        var applied = flow.Session.TryGet<CheckoutCoupon>(out var coupon) ? coupon : null;
+        var codes = flow.Session.TryGet<CheckoutCoupon>(out var coupon) ? coupon.GetCodes() : [];
 
         return Task.FromResult<IDisplayResult>(Initialize<CouponViewModel>("CheckoutCoupon", model =>
         {
-            model.Code = applied?.Code;
-
             // The invoice is what actually reduced, so it is what the box reports. Saying a code is applied
             // because it was accepted, when it took nothing off, would be a lie the customer discovers at
-            // the total.
-            model.AppliedAmount = flow.Session.TryGet<CheckoutInvoice>(out var invoice) ? invoice.DiscountTotal : 0m;
+            // the total; a code that gave way to a discount it can't be combined with says so.
+            var invoice = flow.Session.TryGet<CheckoutInvoice>(out var built) ? built : null;
+
+            model.AppliedAmount = invoice?.DiscountTotal ?? 0m;
             model.Currency = invoice?.Currency;
+            model.CanAddMore = codes.Count < CheckoutCoupon.MaxCodes;
+            model.Applied = [.. codes.Select(code =>
+            {
+                var discount = invoice?.Discounts?.FirstOrDefault(entry => Matches(entry, code));
+                var skipped = discount is null ? invoice?.SkippedDiscounts?.FirstOrDefault(entry => Matches(entry, code)) : null;
+
+                return new AppliedCouponViewModel
+                {
+                    Code = code,
+                    Description = discount?.Description ?? skipped?.Description,
+                    Amount = discount?.Amount ?? 0m,
+                    GaveWayTo = skipped?.GaveWayTo,
+                };
+            })];
         }).Location("Aside:5"));
     }
 
@@ -110,16 +124,27 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var applied = flow.Session.TryGet<CheckoutCoupon>(out var existing) ? existing : new CheckoutCoupon();
+        var action = _httpContextAccessor.HttpContext?.Request.HasFormContentType == true
+            ? _httpContextAccessor.HttpContext.Request.Form[CheckoutConstants.FormActions.FieldName].ToString()
+            : null;
+
+        // Each code has its own Remove button, which is how a customer takes one off.
+        if (action?.StartsWith(CheckoutConstants.FormActions.RemoveCouponPrefix, StringComparison.Ordinal) == true)
+        {
+            if (applied.Remove(action[CheckoutConstants.FormActions.RemoveCouponPrefix.Length..]))
+            {
+                flow.Session.Put(applied);
+                await _invoiceBuilder.BuildAsync(flow);
+            }
+
+            return await EditStepAsync(flow, context);
+        }
+
         var code = model.Code?.Trim();
 
         if (string.IsNullOrEmpty(code))
         {
-            // Clearing the box removes the coupon, which is how a customer takes one off.
-            if (flow.Session.Properties?.Remove(nameof(CheckoutCoupon)) == true)
-            {
-                await _invoiceBuilder.BuildAsync(flow);
-            }
-
             return await EditStepAsync(flow, context);
         }
 
@@ -134,6 +159,13 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
         }
 
         var coupon = await _couponStore.GetByCodeAsync(code);
+
+        // An automatic discount's code is never typed; it applies by itself when the order qualifies. A coupon that
+        // only takes the codes generated for it doesn't take its own.
+        if (coupon is { CanBeTyped: false })
+        {
+            coupon = null;
+        }
         var availability = coupon is null || !coupon.IsRedeemable(_clock.UtcNow)
             ? CouponAvailability.Unavailable
             : await _redemptions.GetAvailabilityAsync(coupon, flow);
@@ -158,9 +190,13 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
             // works again.
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code is no longer available."]);
         }
+        else if (!applied.Add(coupon.Code))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["A checkout takes up to {0} codes. Remove one to add another.", CheckoutCoupon.MaxCodes]);
+        }
         else
         {
-            flow.Session.Put(new CheckoutCoupon { Code = coupon.Code });
+            flow.Session.Put(applied);
 
             // The invoice is rebuilt here rather than at completion, so the customer sees what the code
             // actually took off before they agree to pay. A discount the customer cannot see until after
@@ -170,6 +206,10 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 
         return await EditStepAsync(flow, context);
     }
+
+    private static bool Matches(DiscountLine discount, string code)
+        => string.Equals(discount.ProviderKey, Core.Services.CouponDiscountProvider.ProviderKey, StringComparison.Ordinal) &&
+            string.Equals(discount.Code, code, StringComparison.OrdinalIgnoreCase);
 
     private static bool RefusesDiscounts(CheckoutFlow flow)
         => flow.Session is CheckoutSession { SettlesExistingBalance: true, AcceptsDiscountsOnBalance: false };

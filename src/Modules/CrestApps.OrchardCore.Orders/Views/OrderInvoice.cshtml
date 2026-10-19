@@ -132,6 +132,14 @@
                 <th colspan="2" class="text-end d-sm-none">@T["Total"]</th>
                 <th class="text-end text-nowrap">@Format(order.Total ?? order.Subtotal)</th>
             </tr>
+            @foreach (var tender in order.Tenders ?? [])
+            {
+                <tr>
+                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Paid with {0}", tender.Description]</th>
+                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Paid with {0}", tender.Description]</th>
+                    <td class="text-end text-nowrap">@Format(tender.Amount)</td>
+                </tr>
+            }
             @if (order.RefundedAmount > 0)
             {
                 <tr>

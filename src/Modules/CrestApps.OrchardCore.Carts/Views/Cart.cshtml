@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.Carts.Core
 @using CrestApps.OrchardCore.Products.Core.Services
+@using OrchardCore.ContentManagement
 
 @model CartViewModel
 
@@ -86,10 +87,15 @@
                             <div class="d-flex align-items-start gap-2">
                                 @if (line.IsAvailable && line.MaxQuantity > 1)
                                 {
+                                    // A product sold in packs steps by its pack size, as on its own page.
+                                    var packSize = line.ContentItem is not null && line.ContentItem.TryGet<CrestApps.OrchardCore.Products.Core.Models.ProductPart>(out var productPart) && productPart.QuantityStep is > 1
+                                        ? productPart.QuantityStep.Value
+                                        : 1;
+
                                     <form method="post" asp-route="@CartConstants.RouteNames.Update" class="d-flex gap-1" id="@formId">
                                         <input type="hidden" name="lineId" value="@line.Line.LineId" />
                                         <label class="visually-hidden" for="@(formId)-quantity">@T["Quantity of {0}", line.Title]</label>
-                                        <input type="number" name="quantity" id="@(formId)-quantity" min="0" max="@line.MaxQuantity" value="@line.Line.Quantity" class="form-control form-control-sm" style="width: 5rem" />
+                                        <input type="number" name="quantity" id="@(formId)-quantity" min="0" max="@line.MaxQuantity" step="@packSize" value="@line.Line.Quantity" class="form-control form-control-sm" style="width: 5rem" />
                                         <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Update"]</button>
                                     </form>
                                 }

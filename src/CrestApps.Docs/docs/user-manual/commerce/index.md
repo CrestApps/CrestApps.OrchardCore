@@ -23,9 +23,11 @@ This video walks through the commerce features, from connecting Stripe to refund
 | **Product listings** | Publish pages that list your products with filters, sorting, search and a page for each product, for a shop, homes, cars or your plans. | [Product listings](product-listings.md) |
 | **Taxes** | Charge the right tax for what you sell and where your customers are. | [Taxes](taxes.md) |
 | **Coupons** | Give customers a discount code to enter at checkout. | [Coupons](coupons.md) |
+| **Gift cards** | Sell gift cards, or give them by hand, and let buyers pay part or all of an order with one. | [Gift cards](gift-cards.md) |
 | **Carts and orders** | Let shoppers fill a cart and check out, then follow, refund or cancel each order, print its invoice and packing slip, and create orders for buyers to pay. | [Carts and orders](carts-and-orders.md) |
 | **Returns** | Let buyers ask to send items back for a refund or an exchange, and approve, receive and restock them. | [Returns and exchanges](returns.md) |
 | **Customers** | Keep the people and businesses who buy from you, with their addresses, orders and tax exemption. | [Customers](customers.md) |
+| **Store credit, points and referrals** | Give customers store credit, such as a refund as credit, reward what they buy with loyalty points, and reward them for referring friends. | [Store credit, loyalty points and referrals](store-credit-and-rewards.md) |
 | **Inventory** | Count your stock in one or more locations, hold it while a buyer pays, stop selling what has run out, take pre-orders, email shoppers when it's back, and order more from suppliers. | [Inventory](inventory.md) |
 | **Shipping** | Choose where you ship, the methods buyers can pick and what each costs, offer store pickup and local delivery, quote carriers' rates and buy their labels, and record shipments. | [Shipping](shipping.md) |
 | **Digital downloads** | Sell files such as ebooks; buyers download them after paying through links that expire. | [Digital downloads](digital-downloads.md) |
@@ -42,9 +44,9 @@ This video walks through the commerce features, from connecting Stripe to refund
 
 | Menu | What is there |
 | --- | --- |
-| **Commerce** | **Orders**, **My Orders**, **Returns**, **Customers**, **Inventory**, **Purchase orders**, **Shipping**, **Reviews**, **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Currencies** and **Taxation**. |
+| **Commerce** | **Orders**, **My Orders**, **Returns**, **Customers**, **Inventory**, **Purchase orders**, **Shipping**, **Reviews**, **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Gift cards**, **Currencies** and **Taxation**. |
 | **Subscriptions** | **Agreements**, **My Plans**, **Installment Plans**, **Site provisioning** and **My Sites**. |
-| **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Orders**, **Returns**, **Inventory**, **Shipping**, **Downloads**, **Reviews**, **Customers**, **Transactions** (reminders), **Receipts** and **Pay Later**. |
+| **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Orders**, **Returns**, **Inventory**, **Shipping**, **Downloads**, **Reviews**, **Customers**, **Rewards**, **Referrals**, **Transactions** (reminders), **Receipts** and **Pay Later**. |
 
 You only see the menus your role allows, and only for the features your site has turned on. Customers open **My Plans**, **My Sites** and **My Transactions** with their own account; they need no other admin access, and the rest of the admin stays closed to them.
 
@@ -55,7 +57,7 @@ You only see the menus your role allows, and only for the features your site has
 | Role | What they do | Pages for them |
 | --- | --- | --- |
 | **Administrator** | Turns on the commerce features, connects Stripe, sets up currencies, taxes and settings. | [Payment providers](payment-providers.md), [Products and currencies](products-and-currencies.md), [Taxes](taxes.md) |
-| **Store manager** | Creates plans, coupons and payment plans, follows up on what customers owe, and issues refunds. | [Subscriptions](subscriptions.md), [Coupons](coupons.md), [Installment plans](installment-plans.md), [Transactions](transactions.md), [Payments and refunds](payments-and-refunds.md) |
+| **Store manager** | Creates plans, coupons, gift cards and payment plans, follows up on what customers owe, and issues refunds, to the card or as store credit. | [Subscriptions](subscriptions.md), [Coupons](coupons.md), [Gift cards](gift-cards.md), [Store credit, loyalty points and referrals](store-credit-and-rewards.md), [Installment plans](installment-plans.md), [Transactions](transactions.md), [Payments and refunds](payments-and-refunds.md) |
 | **Customer** | Buys online, pays invoices from a link, and manages their own plans, sites and balances. | [Checkout](checkout.md), [Invoices and receipts](invoices-and-receipts.md), [Transactions](transactions.md#my-transactions-for-customers) |
 
 ## How the pieces fit together
