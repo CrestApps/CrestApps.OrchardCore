@@ -116,3 +116,23 @@ public sealed class CheckoutDetailsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Store credit: given to customers by hand or as a refund, and paying toward their checkouts after tax.
+/// </summary>
+[Feature(CustomersConstants.Features.StoreCredit)]
+public sealed class StoreCreditStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<StoreCreditMigrations>()
+            .AddIndexProvider<Indexes.StoreCreditAccountIndexProvider>();
+        services.AddScoped<IStoreCreditStore, StoreCreditStore>();
+        services.AddScoped<StoreCreditService>();
+        services.AddScoped<StoreCreditTenderProvider>();
+        services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
+        services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, StoreCreditCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<Customer, CustomerStoreCreditDisplayDriver>();
+        services.AddNavigationProvider<StoreCreditAccountMenu>();
+    }
+}

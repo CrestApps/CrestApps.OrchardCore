@@ -164,7 +164,7 @@ public sealed class CheckoutController : Controller
         // the customer's money the moment they asked to see a discount.
         if (Request.Form[CheckoutConstants.FormActions.FieldName] is { Count: > 0 } action &&
             (string.Equals(action, CheckoutConstants.FormActions.ApplyCoupon, StringComparison.Ordinal) ||
-             string.Equals(action, CheckoutConstants.FormActions.ApplyTender, StringComparison.Ordinal) ||
+             action.ToString().StartsWith(CheckoutConstants.FormActions.ApplyTender, StringComparison.Ordinal) ||
              string.Equals(action, CheckoutConstants.FormActions.Update, StringComparison.Ordinal) ||
              action.ToString().StartsWith(CheckoutConstants.FormActions.RemoveCouponPrefix, StringComparison.Ordinal) ||
              action.ToString().StartsWith(CheckoutConstants.FormActions.RemoveTenderPrefix, StringComparison.Ordinal)))

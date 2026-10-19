@@ -36,5 +36,7 @@ public static class CustomersConstants
         public const string Customers = "CrestApps.OrchardCore.Customers";
 
         public const string CheckoutDetails = "CrestApps.OrchardCore.Customers.CheckoutDetails";
+
+        public const string StoreCredit = "CrestApps.OrchardCore.Customers.StoreCredit";
     }
 }

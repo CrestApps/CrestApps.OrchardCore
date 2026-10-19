@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Customers.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CheckoutStoreCreditViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="form-label">@T["Store credit"]</div>
+
+        @if (Model.IsApplied)
+        {
+            <div class="d-flex align-items-start gap-2">
+                <span class="flex-grow-1 small">
+                    <span class="text-success">@T["{0} used", ProductPriceFormatter.Format(Model.Used, Model.Currency)]</span>
+                    <span class="text-body-secondary d-block">@T["{0} left after this order", ProductPriceFormatter.Format(Math.Max(0m, Model.Available - Model.Used), Model.Currency)]</span>
+                </span>
+                @* Taking the credit off is its own submit, so the step is shown again with what's left to pay. *@
+                <button type="submit"
+                        class="btn btn-link btn-sm p-0"
+                        name="@CheckoutConstants.FormActions.FieldName"
+                        value="@(CheckoutConstants.FormActions.RemoveTenderPrefix + StoreCreditService.TenderKey + ":" + Model.AccountId)"
+                        formnovalidate>@T["Remove"]</button>
+            </div>
+        }
+        else
+        {
+            <p class="small mb-2">@T["You have {0} of store credit.", ProductPriceFormatter.Format(Model.Available, Model.Currency)]</p>
+            <button type="submit"
+                    class="btn btn-outline-secondary btn-sm"
+                    name="@CheckoutConstants.FormActions.FieldName"
+                    value="@(CheckoutConstants.FormActions.ApplyTender + ":" + StoreCreditService.TenderKey)"
+                    formnovalidate>@T["Use my store credit"]</button>
+        }
+    </div>
+</div>

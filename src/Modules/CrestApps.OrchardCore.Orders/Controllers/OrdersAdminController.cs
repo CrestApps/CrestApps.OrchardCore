@@ -303,7 +303,7 @@ public sealed class OrdersAdminController : Controller
             return NotFound();
         }
 
-        var result = await operations.RefundAsync(order, model?.Amount, model?.Reason, model?.Restock == true, User.Identity?.Name, HttpContext.RequestAborted);
+        var result = await operations.RefundAsync(order, model?.Amount, model?.Reason, model?.Restock == true, User.Identity?.Name, model?.AsStoreCredit == true, HttpContext.RequestAborted);
 
         await NotifyAsync(result, result.Refunded > 0m ? H["Refunded {0}.", ProductPriceFormatter.Format(result.Refunded, order.Currency)] : null);
 

@@ -38,6 +38,14 @@
                         <label class="form-check-label" for="refund-restock">@T["Put the items back in stock"]</label>
                         <span class="hint dashed">@T["Only when everything is refunded: after a partial refund the customer keeps the goods."]</span>
                     </div>
+                    @if (money.CanRefundAsStoreCredit)
+                    {
+                        <div class="form-check mb-3">
+                            <input id="refund-store-credit" name="AsStoreCredit" type="checkbox" value="true" class="form-check-input" />
+                            <label class="form-check-label" for="refund-store-credit">@T["Give it as store credit"]</label>
+                            <span class="hint dashed">@T["Added to the buyer's store credit to spend later, instead of going back to how they paid."]</span>
+                        </div>
+                    }
                     <button type="submit" class="btn btn-outline-primary">@T["Refund"]</button>
                 </form>
             }

@@ -26,6 +26,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = CustomersConstants.Features.StoreCredit,
+    Name = "Store Credit",
+    Description = "Gives customers store credit, by hand or as a refund, that pays toward their orders when they're signed in.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CustomersConstants.Features.Customers,
+        OrderConstants.Features.Orders,
+    ]
+)]
+
+[assembly: Feature(
     Id = CustomersConstants.Features.CheckoutDetails,
     Name = "Checkout details",
     Description = "Asks buyers for the store's own details at checkout, such as a gift message or a delivery note. Add the fields to the Checkout details content type; what the buyer enters is kept on the order.",
