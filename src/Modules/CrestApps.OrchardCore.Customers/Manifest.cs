@@ -50,6 +50,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = CustomersConstants.Features.Referrals,
+    Name = "Referrals",
+    Description = "Gives each signed-in customer a referral link: friends who open it can get a discount on their first order, and the customer is rewarded with store credit or points, set up under Settings > Commerce > Referrals.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CustomersConstants.Features.Customers,
+        OrderConstants.Features.Orders,
+    ]
+)]
+
+[assembly: Feature(
     Id = CustomersConstants.Features.CheckoutDetails,
     Name = "Checkout details",
     Description = "Asks buyers for the store's own details at checkout, such as a gift message or a delivery note. Add the fields to the Checkout details content type; what the buyer enters is kept on the order.",

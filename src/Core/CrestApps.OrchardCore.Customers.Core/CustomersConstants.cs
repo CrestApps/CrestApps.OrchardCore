@@ -25,6 +25,8 @@ public static class CustomersConstants
 
     public const string LoyaltySettingsGroupId = "loyalty";
 
+    public const string ReferralSettingsGroupId = "referrals";
+
     public static class Recipes
     {
         /// <summary>
@@ -42,5 +44,7 @@ public static class CustomersConstants
         public const string StoreCredit = "CrestApps.OrchardCore.Customers.StoreCredit";
 
         public const string Loyalty = "CrestApps.OrchardCore.Customers.Loyalty";
+
+        public const string Referrals = "CrestApps.OrchardCore.Customers.Referrals";
     }
 }

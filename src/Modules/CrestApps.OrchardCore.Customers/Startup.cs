@@ -160,3 +160,24 @@ public sealed class LoyaltyStartup : StartupBase
         services.AddNavigationProvider<LoyaltySettingsAdminMenu>();
     }
 }
+
+/// <summary>
+/// Referrals: a link per customer, a discount for the friend, and a reward for the customer on the friend's first order.
+/// </summary>
+[Feature(CustomersConstants.Features.Referrals)]
+public sealed class ReferralsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<ReferralMigrations>()
+            .AddIndexProvider<Indexes.ReferralProfileIndexProvider>();
+        services.AddScoped<IReferralStore, ReferralStore>();
+        services.AddScoped<ReferralService>();
+        services.AddScoped<ICheckoutHandler, ReferralCheckoutHandler>();
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler, ReferralOrderEventHandler>();
+        services.AddSiteDisplayDriver<ReferralSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
+        services.AddNavigationProvider<ReferralAccountMenu>();
+        services.AddNavigationProvider<ReferralSettingsAdminMenu>();
+    }
+}
