@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 to 4 built, 2026-10-19 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, and [Phase 4 as built](#phase-4-as-built)); phases 5 to 12 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 4 built, 2026-10-19 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built) and [Phase 5 as built](#phase-5-as-built)); phases 6 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -80,15 +80,15 @@ column refers to the delivery plan below.
 
 | Feature | WooCommerce | Shopify | Us | Slice |
 | --- | --- | --- | --- | --- |
-| Automatic discounts without a code | Ext | Core | No | PD1 |
-| Buy X get Y, bulk and volume discounts | Ext | Core | No | PD1 |
-| Rules for combining discounts | Ext | Core | No: one coupon per checkout | PD1 |
-| Codes applied from a link | Ext | Core | No | PD1 |
-| Generated single-use codes in bulk | Ext | Core | No | PD1 |
-| Gift cards, bought and redeemed, with balances | Ext | Core | No | PD2 |
-| Store credit | Ext | Core | No | PD2 |
-| Loyalty points and rewards | Ext | App | No | PD3 |
-| Referral and affiliate programs | Ext | App | No | PD3 |
+| Automatic discounts without a code | Ext | Core | Yes (phase 5) | PD1 |
+| Buy X get Y, bulk and volume discounts | Ext | Core | Yes (phase 5): buy X get Y, minimum quantities; tier prices from phase 3 | PD1 |
+| Rules for combining discounts | Ext | Core | Yes (phase 5): up to five codes, product, order and shipping classes | PD1 |
+| Codes applied from a link | Ext | Core | Yes (phase 5) | PD1 |
+| Generated single-use codes in bulk | Ext | Core | Yes (phase 5) | PD1 |
+| Gift cards, bought and redeemed, with balances | Ext | Core | Yes (phase 5) | PD2 |
+| Store credit | Ext | Core | Yes (phase 5), including refunds as store credit | PD2 |
+| Loyalty points and rewards | Ext | App | Yes (phase 5): points earned and spent; no tiers or perks | PD3 |
+| Referral and affiliate programs | Ext | App | Partial (phase 5): customer referrals; no affiliate commissions | PD3 |
 
 ### Checkout and conversion
 
@@ -283,7 +283,7 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | **2. Payments** (built, but PayPal, Square, PB2) | PB1 PayPal, a second card gateway, bank transfer and cash on delivery, saved cards for one-time purchases; PB2 express buttons on product and cart pages, buy now pay later; PB3 fraud scoring, disputes on orders | One store takes PayPal, Stripe and bank transfer; a disputed Stripe payment shows on its order and in a report. |
 | **3. Merchandising** (built) | PC1 scheduled sales, upsells, cross-sells, related, recently viewed, order bumps and post-purchase offers; PC2 grouped, external, bundles, product options; PC3 quantity rules, tier and group pricing, comparison; PC4 CSV import and export, migration importers | A bundle with a personalized part sells at a tier price to a wholesale group, and a WooCommerce product export imports with its variants. |
 | **4. Fulfillment** (built, but return labels) | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
-| **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
+| **5. Promotions and loyalty** (built) | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
 | **6. Headless API and point of sale** (pulled forward) | PA2 storefront and admin JSON APIs on Orchard Core's OpenAPI module, outgoing webhooks; PI2 sales channel and location on orders, reports by location, registers and shifts, split and cash tender, card readers, receipts | A phone app signed in as a cashier at one of several shops sells an item in person, taking part in cash and the rest on a card reader; the stock comes off that shop, the order shows the shop, register and cashier, and the day's sales report splits by shop. |
 | **7. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
 | **8. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
@@ -371,6 +371,27 @@ Not built yet, and why:
 - **Return labels** (PF2, PF4). A label for the buyer to send items back needs the return's parcel and the buyer's address as the sender; it fits on `ICarrierProvider`, now that a test account has verified outbound labels.
 - **Several parcels per shipment, and package presets.** A label is one parcel in the default box with the weight staff enter; carts are quoted the same way.
 
+## Phase 5 as built
+
+One branch, a commit per slice:
+
+- **PD1 several codes and combining rules.** A checkout carries up to five codes. Every discount is a product, order or shipping discount and says which kinds it combines with (`DiscountLine.Class`, `CombinesWith`); when they can't all be used, `DefaultCheckoutDiscountService.Choose` keeps the compatible set that takes off the most, and the others show what they gave way to. A coupon's editor has **Combines with**.
+- **PD1 automatic discounts, buy X get Y and minimum quantities.** A coupon can apply by itself (`CouponMethod.Automatic`, found through `CouponIndex.IsAutomatic`), with its uses held and limited like a code's. A buy X get Y offer discounts the cheapest qualifying items for every so many bought, and its discount lands on those lines (`DiscountLine.LineShares`), so tax follows. Any coupon can require a minimum quantity.
+- **PD1 discount links and generated codes.** `discount/{code}` keeps a code in a cookie for the next checkout. Unique codes are generated for a coupon as `CouponCode` documents with their own uses, behind `ICouponStore`, and downloaded as CSV; the coupon's own code can be turned off.
+- **PD2 the balance seam.** `ICheckoutTenderProvider` lets balances pay after tax toward the one-time amount, with the payment provider charging the rest (or nothing: an order a balance covers completes without one, and its button reads **Place order**). `CheckoutTenderLedger` holds each balance under its lock while the buyer pays, takes it while the checkout completes, lets it go when it doesn't, and puts it back on a refund after the card. A payment begun for an older total is set aside once the provider confirms nothing was paid.
+- **PD2 gift cards.** A Gift Cards feature in Orders: a Gift card product type that issues and emails a card per unit bought (off while a bank transfer is owed, turned off with a canceled or fully refunded order), cards issued by staff, the gift card list, each card's balance changes and activity, and the cards on orders, invoices and emails.
+- **PD2 store credit.** A Store Credit feature in Customers: credit per customer and currency, given by staff or as an order's refund (**Give it as store credit**), spent by a signed-in buyer at checkout, and shown on their account. The customer's admin page gained a display hook (`DetailAdmin`) other features add to.
+- **PD3 loyalty points.** A Loyalty Points feature: points on goods after discounts (not shipping, tax, or what points paid), taken back with cancels and refunds, spent at checkout at what a point is worth, under **Settings > Commerce > Rewards**, with a Rewards account page.
+- **PD3 referrals.** A Referrals feature: a link per customer, a single-use code of the store's chosen coupon for the friend, and store credit or points for the customer on the friend's first order, taken back if it's canceled.
+
+The exit gate holds: a gift card pays part of an order that also has an automatic buy X get Y discount and a free-shipping code under the combining rules, with Stripe charging the rest, verified on the test site with a test card, and refunded to the card first, then the gift card.
+
+Not built yet, and why:
+
+- **Loyalty tiers, perks and points expiry.** The program earns and spends; tiers and expiry wait for a store that asks.
+- **Affiliate commissions.** Referrals reward customers with credit or points; paying affiliates money belongs with the marketplace payouts in phase 12.
+- **Rewards for orders paid later.** Points and referral rewards are given when an order is placed, including one paid by bank transfer, and taken back if it's canceled; waiting for the money needs an event when an offline payment arrives.
+
 ## Headless API and point of sale (phase 6, planned)
 
 A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.
@@ -404,7 +425,7 @@ Until they are answered, the work goes ahead on the default in the last column.
 | P-D3 | Carrier rates and labels: one aggregator (EasyPost or Shippo) or carriers one by one? | Aggregator first (fewer contracts, faster) / per carrier | Aggregator first |
 | P-D4 | Email campaigns: build them, or integrate with Mailchimp or Klaviyo? | Integrate first / build on the omnichannel email channel | Integrate first |
 | P-D5 | Point of sale: a web POS page, or a native app? | Web POS first / native | Answered: a native or mobile app over the API first; a web POS, if built, is one more client of the same API |
-| P-D10 | Can the POS sell while offline? | Online only first / offline with sync | Online only first: offline sales need the API to accept orders made earlier without overselling, which comes after |
+| P-D10 | Can the POS sell while offline? | Online only first / offline with sync | Answered: online only first; offline sales, which need the API to accept orders made earlier without overselling, come after |
 | P-D6 | Second card gateway after PayPal | Square / Adyen / Authorize.net | Square |
 | P-D7 | Shopper currency conversion: live exchange rates from a provider, or rates the store sets? | Store-set rates first / provider | Store-set rates first |
 | P-D8 | Flights and supplier hotel rooms (PL3): which supplier API, or out of scope? | Duffel (flights) / Amadeus (flights and hotels) / out of scope | Later: after PL1, supplier chosen then |

@@ -115,25 +115,40 @@ public sealed class StoreCreditService
 
         if (account is null)
         {
-            // A first credit makes the account; nothing can be spending it yet, so no lock is needed.
             if (amount <= 0m)
             {
                 return null;
             }
 
-            account = new StoreCreditAccount
+            // A first credit makes the account, under the customer's lock, so two credits at once make one account.
+            var (creating, created) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+
+            if (!created)
             {
-                ItemId = IdGenerator.GenerateId(),
-                CustomerId = customerId,
-                Currency = currency,
-            };
+                return null;
+            }
 
-            account.ChangeBalance(amount, reason, _clock.UtcNow, sessionId, actor);
+            await using (creating)
+            {
+                account = await _store.FindAsync(customerId, currency, cancellationToken);
 
-            await _store.CreateAsync(account, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+                if (account is null)
+                {
+                    account = new StoreCreditAccount
+                    {
+                        ItemId = IdGenerator.GenerateId(),
+                        CustomerId = customerId,
+                        Currency = currency,
+                    };
 
-            return account;
+                    account.ChangeBalance(amount, reason, _clock.UtcNow, sessionId, actor);
+
+                    await _store.CreateAsync(account, cancellationToken);
+                    await _session.SaveChangesAsync(cancellationToken);
+
+                    return account;
+                }
+            }
         }
 
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));

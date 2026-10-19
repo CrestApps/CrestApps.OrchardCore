@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.Customers.Controllers;
 public sealed class StoreCreditAdminController : Controller
 {
     private readonly ICustomerStore _customerStore;
+    private readonly IStoreCreditStore _store;
     private readonly StoreCreditService _storeCredit;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -26,12 +27,14 @@ public sealed class StoreCreditAdminController : Controller
 
     public StoreCreditAdminController(
         ICustomerStore customerStore,
+        IStoreCreditStore store,
         StoreCreditService storeCredit,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IHtmlLocalizer<StoreCreditAdminController> htmlLocalizer)
     {
         _customerStore = customerStore;
+        _store = store;
         _storeCredit = storeCredit;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -78,7 +81,7 @@ public sealed class StoreCreditAdminController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(amount < 0m
+            await _notifier.ErrorAsync(amount < 0m && await _store.FindAsync(customer.ItemId, currency, HttpContext.RequestAborted) is null
                 ? H["The customer has no store credit in {0} to take away.", currency]
                 : H["The customer's store credit is being used at a checkout right now. Try again in a moment."]);
         }

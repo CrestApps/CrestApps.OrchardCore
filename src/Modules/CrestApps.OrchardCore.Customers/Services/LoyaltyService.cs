@@ -128,7 +128,16 @@ public sealed class LoyaltyService
     /// Returns what <paramref name="points"/> are worth, to the cent below.
     /// </summary>
     public static decimal GetValue(int points, LoyaltySettings settings, string currency)
-        => settings.PointValue <= 0m ? 0m : Math.Floor(points * settings.PointValue * 100m) / 100m;
+    {
+        if (settings.PointValue <= 0m)
+        {
+            return 0m;
+        }
+
+        var factor = (decimal)Math.Pow(10, Payments.CurrencyScale.GetDecimalPlaces(currency));
+
+        return Math.Floor(points * settings.PointValue * factor) / factor;
+    }
 
     /// <summary>
     /// Returns how many points pay <paramref name="amount"/>, rounded up.
@@ -153,13 +162,29 @@ public sealed class LoyaltyService
                 return null;
             }
 
-            account = new LoyaltyAccount { ItemId = IdGenerator.GenerateId(), CustomerId = customerId };
-            account.ChangePoints(points, kind, reason, _clock.UtcNow, orderId, actor: actor);
+            // A first change makes the account, under the customer's lock, so two at once make one account.
+            var (creating, created) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
 
-            await _store.CreateAsync(account, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+            if (!created)
+            {
+                return null;
+            }
 
-            return account;
+            await using (creating)
+            {
+                account = await _store.FindByCustomerAsync(customerId, cancellationToken);
+
+                if (account is null)
+                {
+                    account = new LoyaltyAccount { ItemId = IdGenerator.GenerateId(), CustomerId = customerId };
+                    account.ChangePoints(points, kind, reason, _clock.UtcNow, orderId, actor: actor);
+
+                    await _store.CreateAsync(account, cancellationToken);
+                    await _session.SaveChangesAsync(cancellationToken);
+
+                    return account;
+                }
+            }
         }
 
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));

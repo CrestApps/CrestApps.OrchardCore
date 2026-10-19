@@ -41,12 +41,14 @@ public sealed class StoreCreditAccount : CatalogItem
     /// </summary>
     public void ChangeBalance(decimal amount, string reason, DateTime utcNow, string sessionId = null, string actor = null)
     {
+        var before = Balance;
+
         Balance = Money.Round(Math.Max(0m, Balance + amount), Currency);
         Activity ??= [];
         Activity.Add(new StoreCreditActivity
         {
             CreatedUtc = utcNow,
-            Amount = amount,
+            Amount = Balance - before,
             Balance = Balance,
             Reason = reason,
             SessionId = sessionId,

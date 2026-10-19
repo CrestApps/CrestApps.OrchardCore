@@ -104,18 +104,21 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
             return;
         }
 
-        var friendName = string.IsNullOrWhiteSpace(order.CustomerName) ? friendEmail : order.CustomerName;
-        var reward = await RewardAsync(referrer, settings, order, S["Referred {0}, who placed order {1}", friendName, order.OrderNumber], cancellationToken);
-
-        profile.Referrals.Add(new ReferralRecord
+        // The referrer sees a friend by their first name only.
+        var friendName = string.IsNullOrWhiteSpace(order.CustomerName) ? friendEmail.Split('@')[0] : order.CustomerName.Trim().Split(' ')[0];
+        var record = new ReferralRecord
         {
             FriendEmail = friendEmail,
             FriendName = friendName,
             OrderId = order.ItemId,
             OrderNumber = order.OrderNumber,
-            Reward = reward,
             CreatedUtc = _clock.UtcNow,
-        });
+        };
+
+        record.Reward = await RewardAsync(referrer, settings, order, record, S["Referred {0}, who placed order {1}", friendName, order.OrderNumber], cancellationToken);
+        profile.Referrals.Add(record);
+
+        var reward = record.Reward;
 
         await _store.UpdateAsync(profile, cancellationToken);
         await _serviceProvider.GetRequiredService<IOrderService>().AddNoteAsync(
@@ -141,16 +144,15 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         }
 
         // The friend's order didn't happen, so neither does the reward; the friend can be referred again.
-        var settings = await _siteService.GetSettingsAsync<ReferralSettings>();
         var reason = S["Order {0}, which {1} was referred for, was canceled", order.OrderNumber, record.FriendName].Value;
 
-        if (record.Reward is not null && settings.RewardKind == ReferralRewardKind.StoreCredit && _serviceProvider.GetService<StoreCreditService>() is { } storeCredit)
+        if (record.RewardKind == ReferralRewardKind.StoreCredit && record.RewardAmount > 0m && _serviceProvider.GetService<StoreCreditService>() is { } storeCredit)
         {
-            await storeCredit.ChangeAsync(referrer.ItemId, order.Currency, -settings.RewardAmount, reason, actor: null, cancellationToken: cancellationToken);
+            await storeCredit.ChangeAsync(referrer.ItemId, record.RewardCurrency ?? order.Currency, -record.RewardAmount, reason, actor: null, cancellationToken: cancellationToken);
         }
-        else if (record.Reward is not null && settings.RewardKind == ReferralRewardKind.Points && _serviceProvider.GetService<LoyaltyService>() is { } loyalty)
+        else if (record.RewardKind == ReferralRewardKind.Points && record.RewardPoints > 0 && _serviceProvider.GetService<LoyaltyService>() is { } loyalty)
         {
-            await loyalty.ChangeAsync(referrer.ItemId, -settings.RewardPoints, LoyaltyActivityKind.Reversed, reason, cancellationToken: cancellationToken);
+            await loyalty.ChangeAsync(referrer.ItemId, -record.RewardPoints, LoyaltyActivityKind.Reversed, reason, cancellationToken: cancellationToken);
         }
 
         profile.Referrals.Remove(record);
@@ -158,19 +160,32 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
     }
 
     // Returns what the referrer was given, or null when the store gives nothing, or can't: the reward's feature is off.
-    private async Task<string> RewardAsync(Customer referrer, ReferralSettings settings, Order order, string reason, CancellationToken cancellationToken)
+    private async Task<string> RewardAsync(Customer referrer, ReferralSettings settings, Order order, ReferralRecord record, string reason, CancellationToken cancellationToken)
     {
         switch (settings.RewardKind)
         {
             case ReferralRewardKind.StoreCredit when settings.RewardAmount > 0m && !string.IsNullOrEmpty(referrer.UserId) && _serviceProvider.GetService<StoreCreditService>() is { } storeCredit:
-                return await storeCredit.ChangeAsync(referrer.ItemId, order.Currency, settings.RewardAmount, reason, actor: null, cancellationToken: cancellationToken) is null
-                    ? null
-                    : S["{0} store credit", ProductPriceFormatter.Format(settings.RewardAmount, order.Currency)].Value;
+                if (await storeCredit.ChangeAsync(referrer.ItemId, order.Currency, settings.RewardAmount, reason, actor: null, cancellationToken: cancellationToken) is null)
+                {
+                    return null;
+                }
+
+                record.RewardKind = ReferralRewardKind.StoreCredit;
+                record.RewardAmount = settings.RewardAmount;
+                record.RewardCurrency = order.Currency;
+
+                return S["{0} store credit", ProductPriceFormatter.Format(settings.RewardAmount, order.Currency)].Value;
 
             case ReferralRewardKind.Points when settings.RewardPoints > 0 && !string.IsNullOrEmpty(referrer.UserId) && _serviceProvider.GetService<LoyaltyService>() is { } loyalty:
-                return await loyalty.ChangeAsync(referrer.ItemId, settings.RewardPoints, LoyaltyActivityKind.Adjusted, reason, cancellationToken: cancellationToken) is null
-                    ? null
-                    : S["{0:N0} points", settings.RewardPoints].Value;
+                if (await loyalty.ChangeAsync(referrer.ItemId, settings.RewardPoints, LoyaltyActivityKind.Adjusted, reason, cancellationToken: cancellationToken) is null)
+                {
+                    return null;
+                }
+
+                record.RewardKind = ReferralRewardKind.Points;
+                record.RewardPoints = settings.RewardPoints;
+
+                return S["{0:N0} points", settings.RewardPoints].Value;
 
             default:
                 return null;

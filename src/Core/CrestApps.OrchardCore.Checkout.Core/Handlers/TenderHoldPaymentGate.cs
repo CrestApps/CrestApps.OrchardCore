@@ -48,7 +48,7 @@ public sealed class TenderHoldPaymentGate : ICheckoutPaymentGate
 
             if (availability == TenderAvailability.Busy)
             {
-                context.Refuse(S["We couldn't reserve your {0} just now. Please try again.", tender.Description]);
+                context.Refuse(S["We couldn't reserve {0} just now. Please try again.", tender.Description]);
 
                 return;
             }
@@ -64,8 +64,8 @@ public sealed class TenderHoldPaymentGate : ICheckoutPaymentGate
 
             context.InvoiceChanged = true;
             context.Refuse(availability == TenderAvailability.Insufficient
-                ? S["Your {0} has less on it than when you applied it, so it pays less. Check what's left to pay, then pay again.", tender.Description]
-                : S["Your {0} can't be used any more, so it was taken off. Check what's left to pay, then pay again.", tender.Description]);
+                ? S["{0} has less on it than when it was applied, so it pays less. Check what's left to pay, then pay again.", tender.Description]
+                : S["{0} can't be used any more, so it was taken off. Check what's left to pay, then pay again.", tender.Description]);
 
             return;
         }

@@ -48,6 +48,17 @@ public sealed class ReferralRecord
     /// </summary>
     public string Reward { get; set; }
 
+    /// <summary>
+    /// Gets or sets what kind of reward was given, so a canceled order takes back exactly that.
+    /// </summary>
+    public ReferralRewardKind RewardKind { get; set; }
+
+    public decimal RewardAmount { get; set; }
+
+    public string RewardCurrency { get; set; }
+
+    public int RewardPoints { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 }
 

@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.Customers.Controllers;
 public sealed class LoyaltyAdminController : Controller
 {
     private readonly ICustomerStore _customerStore;
+    private readonly ILoyaltyStore _store;
     private readonly LoyaltyService _loyalty;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -26,12 +27,14 @@ public sealed class LoyaltyAdminController : Controller
 
     public LoyaltyAdminController(
         ICustomerStore customerStore,
+        ILoyaltyStore store,
         LoyaltyService loyalty,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IHtmlLocalizer<LoyaltyAdminController> htmlLocalizer)
     {
         _customerStore = customerStore;
+        _store = store;
         _loyalty = loyalty;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -72,7 +75,7 @@ public sealed class LoyaltyAdminController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(points < 0
+            await _notifier.ErrorAsync(points < 0 && await _store.FindByCustomerAsync(customer.ItemId, HttpContext.RequestAborted) is null
                 ? H["The customer has no points to take away."]
                 : H["The customer's points are being used at a checkout right now. Try again in a moment."]);
         }

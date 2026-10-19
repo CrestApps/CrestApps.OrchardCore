@@ -1,13 +1,15 @@
 ---
 sidebar_label: Carts and Orders
 title: Carts and Orders
-description: Shopping carts for products sold online, thin orders that check a cart out through the Checkout framework and record what was bought, orders the store creates for buyers to pay, printable invoices and packing slips, and returns.
-user_manual: user-manual/commerce/carts-and-orders
+description: Shopping carts for products sold online, thin orders that check a cart out through the Checkout framework and record what was bought, orders the store creates for buyers to pay, printable invoices and packing slips, returns, and gift cards.
+user_manual:
+  - user-manual/commerce/carts-and-orders
+  - user-manual/commerce/gift-cards
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns) |
+| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns), `CrestApps.OrchardCore.Orders.GiftCards` (Gift Cards) |
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
@@ -73,7 +75,7 @@ The cart page shows **Checkout** when the Orders feature is enabled. Checking ou
 3. cancels earlier unpaid orders made from the same cart, so the customer pays for what the cart holds now;
 4. starts a checkout session whose reference is the order (`CheckoutReferenceTypes.Order`) and sends the customer to it.
 
-`OrderCheckoutHandler` bills one line per order line, with its quantity, SKU, tax category, tax classification and product type, so each line is taxed as what it is, and with its product and the categories it was in when ordered (`OrderLine.CategoryIds`, every taxonomy term on the product), so a coupon limited to some products or categories finds it. A canceled order gives back the coupon uses of its checkout (`ICouponRedemptionService.ReturnAsync`). It refuses to complete a checkout that bills nothing. When the checkout completes, the order is marked **Paid** with the total and tax that were charged and the discounts it was given (`Order.Discounts`, each with its code, description, amount and provider, and `Order.DiscountTotal`), so its lines, discounts, shipping and tax add up to what was paid. What was bought is taken out of the cart, matching each line's product, price and variant; anything added to the cart after checking out stays in it. An order replaced by a newer one is still marked paid if its own checkout completes, because that payment bought it.
+`OrderCheckoutHandler` bills one line per order line, with its quantity, SKU, tax category, tax classification and product type, so each line is taxed as what it is, and with its product and the categories it was in when ordered (`OrderLine.CategoryIds`, every taxonomy term on the product), so a coupon limited to some products or categories finds it. A canceled order gives back the coupon uses of its checkout (`ICouponRedemptionService.ReturnAsync`). It refuses to complete a checkout that bills nothing. When the checkout completes, the order is marked **Paid** with the total and tax that were charged and the discounts it was given (`Order.Discounts`, each an `OrderDiscount` with its code, description, amount, provider and `Target`, the `DiscountTarget` it came off: the goods bought now, the first cycle or shipping; and `Order.DiscountTotal`), so its lines, discounts, shipping and tax add up to what was paid. What balances such as a gift card, store credit or points paid toward the total (`CheckoutInvoice.Tenders`, see [Balances that pay after tax](checkout#balances-that-pay-after-tax)) is copied to `Order.Tenders`, one `OrderTender` each (`ProviderKey`, `Reference`, `Description`, `Amount`); `Order.Total` stays the full total, and the rest was charged by the payment provider. The order's admin and customer pages, its invoice and its confirmation email show each as *Paid with* and its description. What was bought is taken out of the cart, matching each line's product, price and variant; anything added to the cart after checking out stays in it. An order replaced by a newer one is still marked paid if its own checkout completes, because that payment bought it.
 
 The checkout's confirmation page shows the order number.
 
@@ -129,6 +131,30 @@ The **Returns** feature (`CrestApps.OrchardCore.Orders.Returns`) adds buyer-requ
 
 Exchanges are closed by the store once it has sent the replacement; no replacement order is created. Returns start with the buyer; the store's own refunds and restocking stay on the order's page.
 
+### Gift cards
+
+The **Gift Cards** feature (`CrestApps.OrchardCore.Orders.GiftCards`, depends on Orders and `OrchardCore.Title`) sells gift cards as products, issues them by hand, and lets them pay toward checkouts through the checkout's [tender seam](checkout#balances-that-pay-after-tax), after tax.
+
+**The card.** A `GiftCard` (`Orders.Core`, a `CatalogItem` in the `Orders` collection) has a `Code`, `InitialValue`, `Balance`, `Currency`, `IsEnabled`, `ExpiresUtc`, `RecipientName`, `RecipientEmail`, a staff-only `Note`, the `OrderId` and `OrderNumber` that bought it, and `Activity`: one `GiftCardActivity` per change (`CreatedUtc`, `Amount`, `Balance` after, `Reason`, `SessionId`, `Actor`). `ChangeBalance(amount, reason, utcNow, sessionId, actor)` is the only way the balance moves; it never goes below zero and always writes the activity. `CanPay(utcNow, currency)` is true for an enabled card with money on it, not expired, in that currency. `LastCharacters` is the last four characters of the code, which is all a buyer or the list sees.
+
+**Codes.** `GiftCardCodes.Generate()` makes 16 random characters (`RandomNumberGenerator`) from an alphabet without 0, O, 1 or I, in groups of four (`Format`). `Normalize` keeps letters and digits in capitals, which is how codes are stored in the index and looked up, so dashes, spaces and case don't matter. A code typed by staff is 8 to 32 letters and digits.
+
+**Storage.** `IGiftCardStore` (`GiftCardStore`, with concurrency checks) adds `GetByCodeAsync`, `ListByOrderAsync` and `PageAsync(GiftCardQuery, skip, take)`. `GiftCardIndex` (in the `Orders` collection, `GiftCardMigrations`) holds the normalized code, the last characters, the recipient's email in lower case, the balance, currency, enabled flag, expiry, order and creation time, with indexes on the code, the item id, the last characters and the order. `GiftCardQuery.Search` matches a full 16-character code exactly, else the last characters or part of the email; `Status` is a `GiftCardStatusFilter` (`All`, `Active`, `UsedUp`, `Expired`, `Disabled`).
+
+**Issuing and adjusting.** `GiftCardService.IssueAsync(value, currency, reason, configure, code, actor)` makes a card, with a new code unless one is given (and returns `null` when a given code is taken). `AdjustAsync(itemId, amount, reason, actor)` changes the balance under `CheckoutTenderLocks.GetKey(OrderConstants.GiftCardTenderKey, itemId)`, the lock the checkout's ledger takes, and returns `null` when the lock is busy.
+
+**Paying with a card.** `GiftCardTenderProvider` is the `ICheckoutTenderProvider` with the key `gift-card` (`OrderConstants.GiftCardTenderKey`). Its lines are the chosen cards that `CanPay` in the invoice's currency, described as *Gift card ending 4F2K* (`Describe`). `DebitAsync` writes *Spent at checkout* with the checkout's session id, even for a card disabled since it was held; `CreditAsync` writes the refund's reason, or *Refunded*. `GiftCardCheckoutFlowDisplayDriver` renders the `CheckoutGiftCard` shape at `Aside:6` of the payment step, except on a checkout that settles an existing balance or saves a payment method, and when nothing is left to pay and no card is applied. On `apply-tender` it looks the code up, rate limited per address through `IPaymentAttemptLimiter` (scope `gift-card-code`), checks it (*That gift card code is not recognized.*, *That gift card can't be used.*, *That gift card has expired.*, *That gift card has nothing left on it.*, *That gift card is in EUR, and this order is in USD.*), adds the card's item id to the `CheckoutTenderSelection` and rebuilds the invoice; a card the rebuilt invoice doesn't use gets *That gift card is being used at another checkout right now, or there's nothing left to pay.* `remove-tender:gift-card:` and the item id takes it off.
+
+**Selling cards.** The migration attaches `GiftCardPart` (an empty marker part, **Gift card**) and creates a `GiftCard` content type (`OrderConstants.GiftCardContentType`): `TitlePart`, `ProductPart` with `ProductType.Digital` and the checkout currency as its default currency, and `GiftCardPart`. Any product type with the part sells cards. `GiftCardOrderEventHandler.PaidAsync` issues one card per unit of each line whose content type has the part and a price above zero, worth the line's `UnitPrice` in the order's currency, to the order's `CustomerName` and `CustomerEmail`, and emails each one through `GiftCardEmailSender`. It never issues twice for an order (`ListByOrderAsync`). For an order `OrderOperationsService.IsOwedAsync` says is still owed, such as a bank transfer, the cards are issued disabled with a note to turn them on once paid, and not emailed. Each card adds an event note to the order.
+
+**Cancels and refunds.** `CanceledAsync`, and `RefundedAsync` once `RefundStatus` is `Refunded`, turn off each card the order bought that is enabled and still holds its `InitialValue`, and note why on the card. A card someone has spent from is left for staff.
+
+**Email.** `GiftCardEmailSender.SendAsync(card, message)` sends the card to `RecipientEmail` through `IEmailService`, when one is registered: the value (the current balance), the code, the optional personal message, how to use it, the expiry and a link to the store, all HTML-encoded. It returns whether the email went.
+
+**Admin.** `GiftCardsAdminController` (`Admin/gift-cards`, permission `ManageGiftCards`, menu **Commerce > Gift cards**) lists cards through an `AdminList` (`GiftCardDisplayDriver` renders the row in both `SummaryAdmin` and `SummaryAdminGrid`) with a search in the action bar and the status filter in the toolbar (`GiftCardsAdminListFilters`). `create` issues a card and can email it; `edit/{itemId}` shows the whole code, the balance, the order that bought it and the activity, and saves the recipient, expiry, note and `IsEnabled`; `adjust/{itemId}` posts an `amount` and a required `reason` to `AdjustAsync`; `email/{itemId}` sends the card again.
+
+`GiftCardPermissionsProvider` declares **Manage gift cards** (`OrderPermissions.ManageGiftCards`), given to Administrator by default.
+
 ### Order statuses
 
 | Status | Meaning |
@@ -163,7 +189,8 @@ An order holds lines, not money. The payment, its tax, the payment attempts and 
 
 A user with `ManageOrders` manages an order from its page, through `OrderOperationsService`:
 
-- **Refund** gives back an amount, or everything still refundable. Money paid online at checkout is refunded through `ICheckoutRefundService`, newest payment first; money paid later is refunded through `ITransactionCommandService.RefundAsync` on the order's Pay Later transaction. A refund waiting to be settled by hand blocks another one.
+- **Refund** gives back an amount, or everything still refundable. Money paid online at checkout is refunded through `ICheckoutRefundService`, newest payment first; money paid later is refunded through `ITransactionCommandService.RefundAsync` on the order's Pay Later transaction. What a gift card, store credit or points paid is refunded last (`RefundTendersAsync`), through `ICheckoutTenderLedger.ReturnAsync`, the balance used last first, and recorded as an `OrderRefund` whose `RefundId` starts with `tender:`, with a note naming the balances. `GetMoneyAsync` counts what the checkout's redeemed holds can still return (`Amount - ReturnedAmount`) as refundable. A refund waiting to be settled by hand blocks another one.
+- **Refund as store credit.** `RefundAsync(order, amount, reason, restock, actorName, asStoreCredit, cancellationToken)` with `asStoreCredit` gives the whole amount to the buyer through `IOrderStoreCreditRefunder` (in `Orders.Core`, implemented by the [Store Credit](customers#store-credit) feature) instead of to how they paid: nothing is refunded at a gateway, the amount is recorded as an `OrderRefund` whose `RefundId` starts with `store-credit:` (so `RefundedAmount` and `RefundStatus` follow, and `OrderRefundedContext` reaches the order event handlers), and a note says *Gave … back as store credit.* `GetMoneyAsync` takes those refunds off what is refundable, and sets `OrderMoney.CanRefundAsStoreCredit` when a refunder is registered and `CanRefundAsync` says the buyer has an account; the order page's refund form then shows **Give it as store credit** (`OrderRefundInputModel.AsStoreCredit`). When the credit can't be given, nothing is refunded and the form says why.
 - **Cancel** refunds everything when asked, cancels what Pay Later still has to collect (`ITransactionCommandService.CancelAsync`), cancels the order as `CanceledByStore`, lets go of an unpaid order's checkout (so its coupon use and stock go back), and with **Put the items back in stock** returns what a paid order sold (`IInventoryService.RestockAsync`).
 - **Send the confirmation again** re-sends the order confirmation (`OrderConfirmationSender`).
 - **Notes** (`Order.Notes`) are what the store writes and what happened: each refund, cancellation and resend adds an event note with who did it.
@@ -226,6 +253,7 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 | **Commerce > My Orders**: the signed-in customer's own orders | `ViewOwnOrders` | Authenticated |
 | **Create order**, an order's **Invoice**, **Packing slip** and **Add items** | `ManageOrders` | Administrator |
 | **Commerce > Returns** and **Settings > Commerce > Returns** (Returns feature) | `ManageOrders` | Administrator |
+| **Commerce > Gift cards** (Gift Cards feature) | `ManageGiftCards` | Administrator |
 
 ## Stock
 

@@ -62,7 +62,9 @@ public sealed class GiftCardEmailSender
         var greeting = string.IsNullOrWhiteSpace(card.RecipientName) ? S["Hello,"].Value : S["Hello {0},", card.RecipientName].Value;
         var intro = S["You've been given a gift card worth {0} to spend at {1}.", value, site.SiteName].Value;
         var howTo = S["At checkout, enter the code under Gift card and click Apply. It pays toward your order, and what's left stays on the card for next time."].Value;
-        var expires = card.ExpiresUtc.HasValue ? S["It can be used until {0:d}.", card.ExpiresUtc.Value].Value : null;
+        var expires = card.ExpiresUtc.HasValue
+            ? S["It can be used until {0:d}.", (await _serviceProvider.GetRequiredService<global::OrchardCore.Modules.ILocalClock>().ConvertToLocalAsync(DateTime.SpecifyKind(card.ExpiresUtc.Value, DateTimeKind.Utc))).DateTime].Value
+            : null;
 
         var text = new StringBuilder()
             .AppendLine(greeting)

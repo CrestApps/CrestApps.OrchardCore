@@ -11,28 +11,31 @@ namespace CrestApps.OrchardCore.Customers.Navigation;
 /// </summary>
 public sealed class LoyaltyAccountMenu : INavigationProvider
 {
+    private readonly Services.LoyaltyService _loyalty;
+
     internal readonly IStringLocalizer S;
 
-    public LoyaltyAccountMenu(IStringLocalizer<LoyaltyAccountMenu> stringLocalizer)
+    public LoyaltyAccountMenu(Services.LoyaltyService loyalty, IStringLocalizer<LoyaltyAccountMenu> stringLocalizer)
     {
+        _loyalty = loyalty;
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    public async ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
     {
         if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
         {
-            return ValueTask.CompletedTask;
+            return;
         }
 
+        var programName = (await _loyalty.GetSettingsAsync()).ProgramName;
+
         builder
-            .Add(S["Rewards"], "65", rewards => rewards
+            .Add(new LocalizedString(programName, programName), "65", rewards => rewards
                 .Id("account-rewards")
                 .AddClass("fa-solid fa-star")
                 .Action("Index", "LoyaltyAccount", new { area = "CrestApps.OrchardCore.Customers" })
                 .Permission(CustomerPermissions.ManageOwnCustomerProfile));
-
-        return ValueTask.CompletedTask;
     }
 }
 

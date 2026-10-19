@@ -102,9 +102,7 @@ public sealed class GiftCardStore : DocumentCatalog<GiftCard, GiftCardIndex>, IG
             var normalized = GiftCardCodes.Normalize(search);
             var email = search.ToLowerInvariant();
 
-            cards = normalized?.Length == GiftCardCodes.Length
-                ? cards.Where(index => index.NormalizedCode == normalized)
-                : cards.Where(index => index.LastCharacters == normalized || index.RecipientEmail.Contains(email));
+            cards = cards.Where(index => index.NormalizedCode == normalized || index.LastCharacters == normalized || index.RecipientEmail.Contains(email));
         }
 
         cards = query.Status switch

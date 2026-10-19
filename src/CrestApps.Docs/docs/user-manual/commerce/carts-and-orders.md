@@ -50,6 +50,8 @@ Unpaid orders don't stay open for ever. When a checkout is canceled, declined or
 
 Open an order to see what was bought, the quantities and prices, any discount such as a promotion code, the tax and the total paid, each refund and what's left, when it was placed and paid, who placed it, and the address it was billed to.
 
+When a [gift card](gift-cards.md), [store credit or points](store-credit-and-rewards.md) paid part of the order, a line under the total says so, such as *Paid with Gift card ending 4F2K* and the amount; the rest was charged to the card or the other payment method. The invoice and the confirmation email show the same lines.
+
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
 
 An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **Payment due** in the list, on its page and in the buyer's account until you record the payment.
@@ -85,7 +87,11 @@ Buyers print their own invoice too: an **Invoice** button on their order's page,
 3. Tick **Put the items back in stock** only when you refund everything: after a partial refund the customer keeps the goods.
 4. Click **Refund**.
 
-The money goes back the way it was paid: to the card or wallet for an order paid online, or through its transaction for an order paid with Pay Later. The order shows *Partially refunded* or *Refunded*, and the refund in its totals. A payment method that can't refund by itself records the refund for you to settle by hand on the [Refunds page](payments-and-refunds.md). Refunds made from the payment screens show on the order too.
+The money goes back the way it was paid: to the card or wallet for an order paid online, or through its transaction for an order paid with Pay Later. When a gift card, store credit or points paid part of the order, the card is refunded first, up to what it was charged, and what's left goes back on the gift card, the store credit or the points last; the notes say, for example, *Put $20 back on Gift card ending 4F2K.* The order shows *Partially refunded* or *Refunded*, and the refund in its totals. A payment method that can't refund by itself records the refund for you to settle by hand on the [Refunds page](payments-and-refunds.md). Refunds made from the payment screens show on the order too.
+
+With the Store Credit feature on, and a buyer who has an account, the form also has **Give it as store credit**: *Added to the buyer's store credit to spend later, instead of going back to how they paid.* Tick it to give the whole amount as store credit, in the order's currency. Nothing goes back to the card; the order counts it as refunded, and the notes say *Gave $20 back as store credit.* See [Refund as store credit](store-credit-and-rewards.md#refund-as-store-credit).
+
+Refunding an order that bought [gift cards](gift-cards.md#refunds-and-cancellations) in full turns off the cards nobody has spent from yet. A refund also takes back the [loyalty points](store-credit-and-rewards.md#how-points-are-earned-and-taken-back) the order earned, in proportion to what was refunded.
 
 ### Cancel an order
 
@@ -93,7 +99,7 @@ The money goes back the way it was paid: to the card or wallet for an order paid
 2. For a paid order, leave **Refund everything paid** ticked to give the money back, and **Put the items back in stock** ticked to return what it sold to stock.
 3. Click **Cancel order** and confirm.
 
-What a Pay Later order still owes is canceled, so the customer isn't reminded to pay it. A promotion code the order used can be used again. A canceled order can't be reopened.
+What a Pay Later order still owes is canceled, so the customer isn't reminded to pay it. A promotion code the order used can be used again. Refunding everything paid includes putting back what a gift card, store credit or points paid. Gift cards the order bought are turned off when nobody has spent from them, the points it earned are taken back, and so is a [referral reward](store-credit-and-rewards.md#when-the-customer-is-rewarded) it earned someone. A canceled order can't be reopened.
 
 ### Send the confirmation again
 
@@ -174,6 +180,9 @@ A signed-in buyer opens **My account** from the user menu, or `/account` on your
 | **Addresses** | Their address book: add, edit, delete, and pick the default billing and shipping addresses. | Customers |
 | **Account details** | Whether they buy for themselves or a business, their name, phone and marketing consent, and a link to change their password. | Customers |
 | **Payment methods** | The cards they saved at checkout, to remove one. | Stripe |
+| **Store credit** | Their store credit and each change to it. See [Store credit](store-credit-and-rewards.md#store-credit). | Store Credit |
+| **Rewards** | Their loyalty points, what they're worth, and how they earn and spend them. See [Loyalty points](store-credit-and-rewards.md#loyalty-points). | Loyalty Points |
+| **Refer a friend** | Their referral link, and the friends who bought through it. See [Referrals](store-credit-and-rewards.md#referrals). | Referrals |
 
 ### An account from the confirmation
 
@@ -200,6 +209,6 @@ Link to **Track your order** and **Find my order** from your site's footer or he
 
 ## Order confirmations
 
-When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total and the billing address. It goes to the email given at checkout, once per order.
+When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total, what a gift card, store credit or points paid toward it, and the billing address. It goes to the email given at checkout, once per order.
 
 Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.

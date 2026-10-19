@@ -68,7 +68,14 @@ public sealed class ReferralController : Controller
 
         var referrer = await _customerStore.FindByIdAsync(profile.CustomerId);
 
-        if (referrer is null || (!string.IsNullOrEmpty(referrer.UserId) && string.Equals(referrer.UserId, User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, StringComparison.Ordinal)))
+        if (referrer is null)
+        {
+            await _notifier.WarningAsync(H["That referral link isn't valid."]);
+
+            return Redirect(home);
+        }
+
+        if (!string.IsNullOrEmpty(referrer.UserId) && string.Equals(referrer.UserId, User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, StringComparison.Ordinal))
         {
             await _notifier.InformationAsync(H["This is your own referral link. Share it with friends: you're rewarded for their first order."]);
 
