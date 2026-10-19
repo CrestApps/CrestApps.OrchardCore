@@ -21,4 +21,25 @@ public sealed class InventorySettings
     /// Orchard Core's Notifications feature.
     /// </summary>
     public string[] LowStockNotificationRoles { get; set; } = ["Administrator"];
+
+    /// <summary>
+    /// Gets or sets the places stock is kept, in the order orders take units from them. The default location, where
+    /// stock counted before there were locations is, is always one of them; see <see cref="GetLocations"/>.
+    /// </summary>
+    public List<InventoryLocation> Locations { get; set; } = [];
+
+    /// <summary>
+    /// Gets the locations, the default one included even when it was never named.
+    /// </summary>
+    public IReadOnlyList<InventoryLocation> GetLocations()
+    {
+        var locations = (Locations ?? []).Where(location => !string.IsNullOrEmpty(location?.LocationId)).ToList();
+
+        if (!locations.Any(location => location.LocationId == InventoryConstants.DefaultLocationId))
+        {
+            locations.Insert(0, new InventoryLocation { LocationId = InventoryConstants.DefaultLocationId, Name = "Main location" });
+        }
+
+        return locations;
+    }
 }

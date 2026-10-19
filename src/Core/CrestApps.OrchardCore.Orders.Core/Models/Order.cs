@@ -401,6 +401,12 @@ public sealed class OrderShipping
     public decimal Amount { get; set; }
 
     /// <summary>
+    /// Gets or sets the location the order is fulfilled from, such as the shop it's picked up at, or
+    /// <see langword="null"/> to let inventory choose.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
     /// Gets whether the buyer picks the order up rather than having it shipped.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]

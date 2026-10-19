@@ -61,6 +61,12 @@ public sealed class PickupLocation
     public decimal Fee { get; set; }
 
     /// <summary>
+    /// Gets or sets the inventory location the order's units come from, or <see langword="null"/> to let inventory
+    /// choose.
+    /// </summary>
+    public string StockLocationId { get; set; }
+
+    /// <summary>
     /// Gets the location as an address, which taxes and the order's pages read.
     /// </summary>
     public CrestApps.OrchardCore.Addresses.Models.Address ToAddress()

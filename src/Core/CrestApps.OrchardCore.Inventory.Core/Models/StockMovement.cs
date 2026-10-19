@@ -23,6 +23,16 @@ public sealed class StockMovement : CatalogItem
     /// </summary>
     public int OnHandAfter { get; set; }
 
+    /// <summary>
+    /// Gets or sets the location the units came in or went out at, or <see langword="null"/> for the default location.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the purchase order the units were received for, or <see langword="null"/>.
+    /// </summary>
+    public string PurchaseOrderId { get; set; }
+
     public string Reason { get; set; }
 
     /// <summary>
@@ -63,4 +73,9 @@ public enum StockMovementKind
     /// Units sold came back.
     /// </summary>
     Returned = 4,
+
+    /// <summary>
+    /// Units moved from one location to another: one movement out of the first and one into the second.
+    /// </summary>
+    Transferred = 5,
 }

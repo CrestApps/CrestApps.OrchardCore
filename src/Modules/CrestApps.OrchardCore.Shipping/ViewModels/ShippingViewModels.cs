@@ -44,6 +44,12 @@ public class ShippingSettingsViewModel
     public bool SendShippedEmails { get; set; }
 
     public List<PickupLocationViewModel> PickupLocations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the inventory locations a pickup location's units can come from; empty without Inventory.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<SelectListItem> StockLocations { get; set; } = [];
 }
 
 public class PickupLocationViewModel
@@ -65,6 +71,8 @@ public class PickupLocationViewModel
     public string Instructions { get; set; }
 
     public decimal Fee { get; set; }
+
+    public string StockLocationId { get; set; }
 
     /// <summary>
     /// Gets or sets whether the location is to be removed.

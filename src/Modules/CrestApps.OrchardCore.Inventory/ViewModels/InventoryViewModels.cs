@@ -39,6 +39,22 @@ public class InventorySettingsViewModel
 
     [BindNever]
     public IReadOnlyList<string> Roles { get; set; } = [];
+
+    public List<InventoryLocationViewModel> Locations { get; set; } = [];
+}
+
+public class InventoryLocationViewModel
+{
+    public string LocationId { get; set; }
+
+    public string Name { get; set; }
+
+    public string Address { get; set; }
+
+    public bool Remove { get; set; }
+
+    [BindNever]
+    public bool IsDefault { get; set; }
 }
 
 public class InventoryIndexOptions
@@ -101,10 +117,30 @@ public class StockItemViewModel
     public AdjustStockViewModel Adjust { get; set; } = new();
 
     public CountStockViewModel Count { get; set; } = new();
+
+    public TransferStockViewModel Transfer { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the locations, with any no longer listed that still hold units of the item.
+    /// </summary>
+    public IReadOnlyList<InventoryLocation> Locations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the locations listed in the settings, which units can be received at, counted at and moved to.
+    /// </summary>
+    public IReadOnlyList<InventoryLocation> ListedLocations { get; set; } = [];
+
+    public bool HasLocations
+        => Locations.Count > 1;
+
+    public string LocationName(string locationId)
+        => Locations.FirstOrDefault(location => location.LocationId == (string.IsNullOrEmpty(locationId) ? CrestApps.OrchardCore.Inventory.Core.InventoryConstants.DefaultLocationId : locationId))?.Name ?? locationId;
 }
 
 public class AdjustStockViewModel
 {
+    public string LocationId { get; set; }
+
     public StockMovementKind Kind { get; set; } = StockMovementKind.Received;
 
     public int Quantity { get; set; }
@@ -114,7 +150,20 @@ public class AdjustStockViewModel
 
 public class CountStockViewModel
 {
+    public string LocationId { get; set; }
+
     public int? Count { get; set; }
+
+    public string Reason { get; set; }
+}
+
+public class TransferStockViewModel
+{
+    public string FromLocationId { get; set; }
+
+    public string ToLocationId { get; set; }
+
+    public int? Quantity { get; set; }
 
     public string Reason { get; set; }
 }

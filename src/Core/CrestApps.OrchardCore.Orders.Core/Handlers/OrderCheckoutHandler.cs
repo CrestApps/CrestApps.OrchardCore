@@ -187,6 +187,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
                 Name = shipping.Name,
                 Description = shipping.Description,
                 Amount = shipping.Amount,
+                LocationId = shipping.LocationId,
             };
         }
 

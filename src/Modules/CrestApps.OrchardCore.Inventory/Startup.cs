@@ -54,6 +54,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IStockItemStore, StockItemStore>();
         services.AddScoped<IStockMovementStore, StockMovementStore>();
         services.AddScoped<IInventoryService, DefaultInventoryService>();
+        services.AddScoped<InventoryLocationService>();
+        services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
+        services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<InventoryProductSynchronizer>();
         services.AddScoped<InventorySyncService>();
         services.AddScoped<StockCountImporter>();

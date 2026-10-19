@@ -123,7 +123,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
                 PickupLocationId = location.LocationId,
                 Address = pickupAddress,
                 RateId = PickupRateId(location),
-            }, pickupAddress, CreatePickupRate(location));
+            }, pickupAddress, CreatePickupRate(location), location.StockLocationId);
 
             await _invoiceBuilder.BuildAsync(flow);
 
@@ -197,7 +197,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             Address = address,
             RateId = rate.RateId,
             SaveAddress = saved is null && customer is not null && model.SaveAddress,
-        }, address, rate);
+        }, address, rate, stockLocationId: null);
 
         await _invoiceBuilder.BuildAsync(flow);
 
@@ -205,7 +205,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
     }
 
     // Keeps the buyer's choice, where the order goes and how, and adds what it costs to the invoice.
-    private void Choose(ICheckoutFlowSession session, ShippingCheckoutStep step, Address address, ShippingRate rate)
+    private void Choose(ICheckoutFlowSession session, ShippingCheckoutStep step, Address address, ShippingRate rate, string stockLocationId)
     {
         session.SavedSteps[ShippingConstants.CheckoutStepKey] = JObject.FromObject(step);
 
@@ -219,6 +219,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             Name = rate.Name,
             Description = rate.Description,
             Amount = rate.Amount,
+            LocationId = stockLocationId,
         });
 
         // Shipping is a line of the invoice, taxed as shipping where the order goes.

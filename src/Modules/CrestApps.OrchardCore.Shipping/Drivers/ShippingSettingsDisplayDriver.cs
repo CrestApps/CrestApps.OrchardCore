@@ -1,8 +1,10 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -22,16 +24,19 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IEnumerable<IFulfillmentLocationProvider> _fulfillmentLocations;
 
     internal readonly IStringLocalizer S;
 
     public ShippingSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IEnumerable<IFulfillmentLocationProvider> fulfillmentLocations,
         IStringLocalizer<ShippingSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _fulfillmentLocations = fulfillmentLocations;
         S = stringLocalizer;
     }
 
@@ -39,7 +44,7 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
         => ShippingConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, ShippingSettings settings, BuildEditorContext context)
-        => Initialize<ShippingSettingsViewModel>("ShippingSettings_Edit", model =>
+        => Initialize<ShippingSettingsViewModel>("ShippingSettings_Edit", async model =>
         {
             model.WeightUnit = settings.WeightUnit;
             model.ShippingClasses = string.Join(Environment.NewLine, settings.ShippingClasses ?? []);
@@ -57,8 +62,10 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
                     Country = location.Country,
                     Instructions = location.Instructions,
                     Fee = location.Fee,
+                    StockLocationId = location.StockLocationId,
                 })
                 .ToList();
+            model.StockLocations = await GetStockLocationsAsync();
 
             // A blank row to add a location with, while there is room for one.
             if (model.PickupLocations.Count < MaxPickupLocations)
@@ -132,10 +139,23 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
                 Country = row.Country?.Trim().ToUpperInvariant(),
                 Instructions = Trim(row.Instructions),
                 Fee = Math.Max(0, row.Fee),
+                StockLocationId = Trim(row.StockLocationId),
             });
         }
 
         return locations.DistinctBy(location => location.LocationId, StringComparer.Ordinal).Take(MaxPickupLocations).ToList();
+    }
+
+    private async Task<IReadOnlyList<SelectListItem>> GetStockLocationsAsync()
+    {
+        var items = new List<SelectListItem>();
+
+        foreach (var provider in _fulfillmentLocations)
+        {
+            items.AddRange((await provider.GetLocationsAsync()).Select(location => new SelectListItem(location.Name, location.LocationId)));
+        }
+
+        return items;
     }
 
     private static bool IsBlank(PickupLocationViewModel row)

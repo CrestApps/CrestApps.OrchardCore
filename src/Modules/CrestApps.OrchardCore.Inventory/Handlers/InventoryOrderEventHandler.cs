@@ -70,9 +70,14 @@ public sealed class InventoryOrderEventHandler : OrderEventHandlerBase
         }
     }
 
-    // A bundle holds and sells its parts, so many units of each as the bundles hold.
+    // A bundle holds and sells its parts, so many units of each as the bundles hold. An order fulfilled from a
+    // location, such as the shop it's picked up at, would rather its units came from there.
     internal static IEnumerable<StockRequest> ToRequests(Order order)
-        => order.Lines.SelectMany(line => line.BundleItems is { Count: > 0 } items
-            ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * line.Quantity))
-            : [new StockRequest(line.ContentItemId, line.VariantId, line.Quantity)]);
+    {
+        var locationId = order.Shipping?.LocationId;
+
+        return order.Lines.SelectMany(line => line.BundleItems is { Count: > 0 } items
+            ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * line.Quantity, locationId))
+            : [new StockRequest(line.ContentItemId, line.VariantId, line.Quantity, locationId)]);
+    }
 }
