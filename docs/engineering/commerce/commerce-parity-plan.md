@@ -233,6 +233,43 @@ terms, so F3 is built in phase 7 (PH1) and reused here.
 (Amadeus, Duffel, hotel channel managers). That's an integration that searches, holds and tickets through the
 supplier's API, built on F1 and F3 once a supplier is chosen (P-D8).
 
+## Verticals: the foundations they share
+
+Stores ask for more than retail: rentals, events, directories, marketplaces, restaurants, courses, real estate,
+memberships, gig work, automotive, wellness, software, donations, procurement, venues, creative work and
+communities. Orchard Core's content model already shapes any catalog, and the checkout engine already sells more than
+cart orders (ledger balances, subscriptions, whole sites). What each vertical lacks comes down to a few foundations,
+each reused many times, so they're built once rather than per vertical.
+
+| Foundation | What it is | Verticals it serves | Where |
+| --- | --- | --- | --- |
+| F1 Line details | Typed details on a cart line, with handlers that check, price, describe and copy them | Every configured purchase: personalization, bookings, tickets, food orders, quotes | PL0 |
+| F2 Dated capacity | Capacity per product and slot (a departure, a night, a time) with holds | Rentals and leasing, events, venues and facilities, classes, appointments, restaurant reservations and order-ahead slots, test drives | PL0 |
+| F3 Order payment schedules | A deposit now, the rest on dates, on the ledger, with reminders and saved-card charges | Travel, rentals and leases, tuition plans, real estate deposits, B2B net terms, big-ticket items | PH1 |
+| F4 Multi-party money | Vendors, commissions, payouts (Stripe Connect), escrow released on milestones or delivery, disputes between parties | Marketplaces, freelance and gig platforms, creative and specialty marketplaces, venue hosts | PM1 |
+| F5 Listings people post | Front-end submission of content, moderation, expiry and renewal, paid upgrades (featured, bumped), map and radius search | Directories, classifieds, real estate, automotive, job boards, community listings | PO1 |
+| F6 Tickets and attendees | One ticket per unit with its attendee, a QR code, check-in, transfer and resale rules | Events and experiences, classes and courses, conferences | PL1 |
+| F7 Fulfillment per product type | Fulfillment flows beyond shipping: services with their own status (CC-D5), kitchen and pickup status, rentals out and returned with damage charges | Services, restaurants and food, rentals, repairs, healthcare packages | PL1 |
+
+How each vertical lands on them, and what stays an integration:
+
+| Vertical | Today | Builds on | Integration, not built |
+| --- | --- | --- | --- |
+| Software and digital services | Subscriptions, whole sites sold and provisioned per tenant, downloads | Usage-based billing on the AI usage metering | |
+| Membership and subscriptions | Recurring plans, installments, Content Access Control | PL2 purchase-gated access | |
+| Donations and fundraising | Buyer-chosen amounts, recurring giving through subscriptions | PO2 campaigns with goals and progress, tax receipts, tributes, Gift Aid | |
+| Directories, classifieds, real estate | Faceted listings, listed-only products, inquiry mode, CRM leads and opportunities | F5, map search | Property feeds (MLS/IDX) |
+| Automotive and transportation | Listings, inquiry, CRM, contact center and dialer | F5, F2 test drives, F3 deposits | Vehicle data (VIN decoding) |
+| Rentals, leasing, venues and facilities | Variants and stock as a stand-in | F2, F3, F7 (deposits held and returned, damage charges) | |
+| Events, tickets and experiences | Variants per date with stock as seats | F2, F6 | |
+| Education and training | Subscriptions, installments, downloads | F2 classes, F6 enrollment, F3 tuition plans | Learning platforms for courses and progress |
+| Healthcare and wellness | Contact center; appointments with F2 | F2, F3 packages, intake forms (Orchard Forms) | Clinical records. Commerce records keep no medical data, and no compliance (such as HIPAA) is claimed |
+| Restaurants and food | Products, add-ons, local pickup (PF3) | F1, F2 order-ahead slots, F7 kitchen status, delivery zones, tips | Delivery networks, kitchen printers |
+| Marketplaces, freelance, gig, creative | None multi-party | F4, F5 vendor storefronts, F7 service delivery | |
+| B2B procurement, supplier catalogs | Business customers, exemption certificates, Pay Later | Phase 7, approval workflows and budgets (PH3) | Punchout (cXML, OCI) to buyers' procurement systems (PH3) |
+| Travel and hospitality | Departures as variants | F1, F2, F3, PL1 | Flights and supplier hotels (PL3, P-D8) |
+| Community and activity platforms | Users, content, notifications, omnichannel messaging | Commerce joins through memberships, events and payouts | Groups, feeds and member messaging aren't commerce |
+
 ## Delivery plan
 
 Ordered by how much a store owner notices the gap. Each slice is a commit on one branch per phase and one PR per
@@ -246,11 +283,11 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | **4. Fulfillment** | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
 | **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
 | **6. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
-| **7. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
+| **7. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
 | **8. Marketing and analytics** | PJ1 editable emails, review requests with photos; PJ2 campaigns, segments; PJ3 wishlists, automation templates; PK1 cohorts, dashboards, scheduled reports, alerts | A segment of lapsed buyers gets a win-back campaign, and the owner gets a weekly sales report by email. |
 | **9. Channels and POS** | PI1 Google and Meta feeds, marketplace channels; PI2 point of sale | A product sold in person updates stock online, and the product feed passes Google Merchant Center validation. |
 | **10. Other models** | PL0 F1 line details and handlers, F2 dated capacity (add-ons move onto F1); PL1 bookings: departures, nightly stays, time slots, occupancy pricing, date search, traveler forms, cancellation policies, request to book, payment-method fees, services, rentals; PL2 memberships; PL3 supplier inventory (flights, hotel rooms) | A tour departure sells its last two seats as a double room with insurance on a 15% deposit, the balance is charged to the saved card 45 days before departure, and a cancellation refunds by the policy; a booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
-| **11. Marketplace** | PM1 vendors, commissions, payouts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect. |
+| **11. Marketplace and listings** | PM1 F4 vendors, commissions, payouts, escrow and milestones; PO1 F5 listings people post, moderation, expiry, paid upgrades, map search; PO2 fundraising campaigns, tax receipts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect; a visitor posts a listing, pays to feature it, and it expires after its term. |
 | **12. Setup and ecosystem** | PN1 setup guide, commerce theme, staff presets; PN2 extension guide | A new owner goes from a blank site to a first test sale through the guide without reading the docs. |
 
 ## Phase 1 as built
