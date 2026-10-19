@@ -1,12 +1,14 @@
 ---
 sidebar_label: Coupons
 title: Coupons
-description: Create promotion codes that take a percentage or a fixed amount off a purchase, limit when and how often they work, and see how buyers apply them at checkout.
+description: Create promotion codes and automatic discounts, buy X get Y offers, discount links and unique single-use codes, decide which discounts combine, and see how buyers get them at checkout.
 technical_manual:
   - modules/checkout
 ---
 
-A **coupon** is a promotion code a buyer types at checkout to get a discount, for example *SPRING10* for 10% off. Each coupon takes a percentage or a fixed amount off, or makes shipping free. It applies to the one-time amount or the first billing cycle of a subscription. It can be limited by dates, a usage limit, uses per customer, a minimum or maximum order amount, and some products or categories.
+A **coupon** is a discount: a promotion code a buyer types at checkout, for example *SPRING10* for 10% off, or an **automatic discount** that applies by itself to every order that qualifies. Each coupon takes a percentage or a fixed amount off, makes shipping free, or is a **buy X get Y** offer such as *buy 2, get the third free*. It applies to the one-time amount or the first billing cycle of a subscription. It can be limited by dates, a usage limit, uses per customer, a minimum or maximum order amount or quantity, and some products or categories.
+
+A buyer can use several codes on one order. Each coupon says which other kinds of discount it **combines with**; when they can't all be used together, the buyer gets the combination that takes off the most. You can also share a code as a **discount link**, or **generate unique codes**, such as single-use codes for cards or emails.
 
 | | |
 | --- | --- |
@@ -26,14 +28,14 @@ A **coupon** is a promotion code a buyer types at checkout to get a discount, fo
 - The status filter in the list header (**Filter by status**) shows **Any status**, **Active**, **Not available** or **Disabled** coupons.
 - The header counts the coupons on the page and in total.
 
-Each coupon shows its code (click it to edit), a status badge and a row of details:
+Each coupon shows its code (click it to edit), or for an automatic discount its description and an **Automatic** badge, then a status badge and a row of details:
 
 | Shown | What it means |
 | --- | --- |
 | **Active** | Enabled and usable right now. |
 | **Not available** | Enabled, but not usable right now: its start date has not come yet, its end date has passed, or its usage limit is used up. |
 | **Disabled** | Turned off. Buyers who type it are told it is no longer available. |
-| Discount | The percentage, such as *10%*, the currency and amount, such as *USD 5.00*, or **Free shipping**. |
+| Discount | The percentage, such as *10%*, the currency and amount, such as *USD 5.00*, **Free shipping**, or a buy X get Y offer, such as *Buy 2, get 1 free*. |
 | Applies to | **One-time amount**, **First cycle** or **Shipping**. |
 | Used | How many times it has been used, for example *3 of 100 used*, or *3 used* when there is no limit. |
 | Valid until | The end date, or **No end date**, which is highlighted. |
@@ -48,30 +50,81 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 ## Create a coupon
 
 1. Open **Commerce > Coupons** and click **Add coupon**.
-2. Enter a **Code** and, optionally, a **Description**.
-3. Pick the **Discount type** and fill in **Percentage**, or **Amount** and **Currency**.
-4. Choose what the coupon **Applies to**, and set any limits.
-5. Leave **Enabled** ticked and click **Create**. The message *The coupon was created.* confirms it.
+2. Under **How it's applied**, choose **The customer enters a code** or **Automatically, on every order that qualifies**.
+3. Enter a **Code** and, optionally, a **Description**. An automatic discount needs a description, because that's what the buyer sees; its code is optional.
+4. Pick the **Discount type** and fill in **Percentage**, or **Amount** and **Currency**, or what the customer buys and gets.
+5. Choose what the coupon **Applies to**, what it **Combines with**, and set any limits.
+6. Leave **Enabled** ticked and click **Create**. The message *The coupon was created.* confirms it.
 
 | Field | What it does |
 | --- | --- |
-| **Code** | What the buyer types. Capital letters do not matter: *spring10* and *SPRING10* are the same code. Required, and two coupons cannot share a code. |
+| **How it's applied** | **The customer enters a code**, or **Automatically, on every order that qualifies**. See [Automatic discounts](#automatic-discounts). |
+| **Code** | What the buyer types. Capital letters do not matter: *spring10* and *SPRING10* are the same code. Required for a code the buyer types, and two coupons cannot share a code. For an automatic discount it's optional: nobody types it, and one is made up when you leave it blank. |
+| **Only the generated codes work** | For a code the buyer types: the coupon's own code is refused, and only the [unique codes generated for it](#generate-unique-codes) work. Use it to name a campaign whose codes go one to each customer. |
 | **Description** | Shown on the buyer's invoice, for example *Spring sale*. |
-| **Discount type** | **Percentage** takes a share off. **Fixed amount** takes a set amount off. **Free shipping** takes off the shipping charged at checkout, whatever the method. |
-| **Percentage** | For **Percentage**: a number from 1 to 100. It is taken off the items bought, not off shipping. |
+| **Discount type** | **Percentage** takes a share off. **Fixed amount** takes a set amount off. **Free shipping** takes off the shipping charged at checkout, whatever the method. **Buy X get Y** makes some items cheaper or free for every so many bought; see [Buy X get Y](#buy-x-get-y). |
+| **Percentage** | For **Percentage**: a number from 1 to 100. It is taken off the items bought, not off shipping. For **Buy X get Y**: what's taken off each item the customer gets; 100 makes them free. |
+| **Customer buys** / **Customer gets** / **Times per order** | For **Buy X get Y**: how many qualifying items are bought, how many items are then discounted, and the most times the offer applies to one order (blank for as often as the order allows). |
 | **Amount** | For **Fixed amount**: how much to take off. Never more than the amount it applies to. |
 | **Currency** | For **Fixed amount**: the three-letter currency code, such as *USD*. Required for a fixed amount. The coupon takes nothing off a purchase in another currency. |
 | **Applies to** | **The one-time amount** discounts the part of the purchase that is paid once. **The first billing cycle** discounts the first payment of a subscription only; later cycles are charged in full. |
 | **Minimum amount** | Optional. Below this amount the coupon does nothing. Only the items count toward it, not shipping. |
 | **Maximum amount** | Optional. Above this amount the coupon does nothing, for example a code meant for small orders. Only the items count. |
+| **Minimum quantity** | Optional. How many of the items the coupon counts the order needs, for example *3* for "buy 3 or more and save 10%". A coupon limited to some products counts only those. |
 | **Usage limit** | Optional. How many purchases can use the coupon in total. Leave blank for unlimited. |
 | **Uses per customer** | Optional. How many times one customer can use it. A customer is their account, or the email a guest checks out with. |
 | **Valid from (UTC)** / **Valid until (UTC)** | Optional dates and times, in UTC, between which the coupon works. The end must come after the start. |
 | **Enabled** | Clear it to stop the coupon working without deleting it. |
+| **Combines with** | Which other kinds of discount can be used on the same order: **Product discounts**, **Order discounts** and **Shipping discounts**. See [Combine discounts](#combine-discounts). |
 
 A use is counted when a purchase that used the coupon completes, not when the buyer applies the code. While a buyer is paying, one use is **held** for them, so two buyers can't both get a code's last use: the second is told before paying that it ran out, and sees the new total. A use held by a checkout that is canceled or left unfinished is let go, and a use of an order that is canceled is given back.
 
 A coupon never takes anything off shipping. Its discount is shared among the items in proportion to their prices, and tax is charged on what is left of each one, so a buyer is never taxed on money the coupon took off. The order, its page and its confirmation email show the discount next to the code.
+
+### Automatic discounts
+
+An automatic discount needs no code. It applies by itself to every checkout that meets its conditions: its dates, minimums, products and categories, and who it's for. The order summary shows it by its description, for example *Summer sale −USD 12.00*, and the order, its page and its confirmation email show it the same way.
+
+Its usage limit and uses per customer work as for a code. A buyer who has had it as often as it allows one customer, or a discount whose last use has gone, doesn't see it at checkout. If its last use goes while the buyer is paying, the payment doesn't go through: the page shows the order again without it, with the new total, and says *The Summer sale discount ran out before you paid, so it was taken off.* It stays off that checkout.
+
+A buyer who types an automatic discount's code is told *That code is not recognized.* It applies anyway when the order qualifies.
+
+### Buy X get Y
+
+A **Buy X get Y** coupon makes some items cheaper or free for every so many bought, for example *buy 2, get 1 free* (**Customer buys** 2, **Customer gets** 1, **Percentage** 100), or *buy a pair of shoes, get socks half price*.
+
+- **What the customer buys** chooses the products and categories that count toward the items bought. Leave both blank to count any item.
+- **What the customer gets** chooses the items that are discounted. Leave both blank for any item.
+- The cheapest items the customer can get are the ones discounted, and the dearest of the rest pay for them. On three shirts, *buy 2, get 1 free* makes the cheapest one free; on six, the two cheapest, unless **Times per order** is 1.
+- An item counts once: it is either bought or got.
+- The discount comes off the discounted items only, so their tax is worked out on what's left of them.
+
+The **Minimum amount** and **Minimum quantity** count the items bought.
+
+### Combine discounts
+
+Every discount is one of three kinds: a **product discount** (limited to some products or categories, and every buy X get Y offer), an **order discount** (off the whole order), or a **shipping discount** (free shipping). Under **Combines with**, tick the kinds a coupon can be used with. Two discounts are used together only when each allows the other's kind. A new coupon combines with nothing until you tick something.
+
+When the discounts on an order can't all be used together, the buyer gets the combination that takes off the most. Each code that isn't used stays in the **Promotion code** box with *Not used: it can't be combined with Summer sale.*, naming the discount it gave way to, so the buyer can remove it.
+
+For example, an automatic *buy 2, get the cheapest free* that combines with shipping discounts, and *FREESHIP* that combines with product discounts, are used together. A *WELCOME10* that combines with nothing then gives way to whichever takes off more.
+
+### Share a discount link
+
+A coupon's page shows its **Discount link**, for example *https://example.com/discount/SPRING10*. Whoever opens it gets the code taken off at checkout, without typing it, for the next seven days on that browser. The page says *The code SPRING10 will be taken off at checkout.* A code that isn't available says *The code SPRING10 isn't available.*
+
+The link opens the home page. To land somewhere else, add `?redirect=` and a page on your site, for example *https://example.com/discount/SPRING10?redirect=/cart*. A page on another site is ignored.
+
+### Generate unique codes
+
+To give each customer their own code, for example single-use codes printed on cards or sent one per email, generate them from a coupon:
+
+1. Create the coupon with the discount and rules the codes share. Tick **Only the generated codes work** if its own code shouldn't work.
+2. Save it, then under **Share and generate codes** on its page, enter **How many** (up to 5,000 at a time), an optional **Prefix** such as *VIP-*, and **Uses per code** (1 for single-use; blank for no limit).
+3. Click **Generate codes**. The message *Generated 100 codes.* confirms it, and the page shows how many codes there are and how many have been used.
+4. Click **Download them (CSV)** for a file with every code, how often it was used, its limit and when it was made.
+
+Codes are eight letters and digits after the prefix, without 0, O, 1 or I, which are easy to misread. Each code shares the coupon's discount, dates, limits per customer, products and who it's for, and has its own uses: a single-use code that was used is used up, while the others still work. Changing or disabling the coupon changes or disables all its codes. Deleting it deletes them.
 
 ### Limit who and what a coupon is for
 
@@ -112,15 +165,15 @@ To pause a coupon, clear **Enabled** and save. To end a campaign on a date, set 
 1. In the list, click **Delete** next to the coupon.
 2. Confirm with **Delete** in the dialog *Are you sure you want to delete this coupon?*
 
-Buyers can no longer use the code. If you may want it again, clear **Enabled** instead.
+Buyers can no longer use the code, nor any code generated for it. If you may want it again, clear **Enabled** instead.
 
 ## Copy coupons to another site
 
-Coupons can travel in a deployment plan: add the **Coupons** step to export every coupon, with its discount, dates, limits, products and categories, but not how often it was used. Importing it on the other site updates the coupons with the same codes, and adds the rest.
+Coupons can travel in a deployment plan: add the **Coupons** step to export every coupon, with its discount, dates, limits, combining rules, products and categories, but not how often it was used, nor the codes generated for it. Importing it on the other site updates the coupons with the same codes, and adds the rest.
 
 ## How a buyer applies a coupon
 
-On the **Payment** step of the checkout, the buyer types the code in **Promotion code** and clicks **Apply**. The order summary updates before they pay, and the box confirms the discount, for example *USD 10.00 off applied.* See [Apply a promotion code](checkout.md#apply-a-promotion-code) for the messages a buyer can see.
+On the **Payment** step of the checkout, the buyer types the code in **Promotion code** and clicks **Apply**. The order summary updates before they pay, and the box lists each code with what it took off, for example *$10 off*. A buyer can add up to five codes, and remove each one. An automatic discount needs nothing from the buyer. See [Apply a promotion code](checkout.md#apply-a-promotion-code) for the messages a buyer can see.
 
 ## If you see an error when saving
 
@@ -136,3 +189,8 @@ On the **Payment** step of the checkout, the buyer types the code in **Promotion
 | *Leave the limit blank for no limit, or enter a number greater than zero.* | Fix **Uses per customer**. |
 | *Leave the limit blank for unlimited, or enter a number greater than zero.* | Fix the **Usage limit**. |
 | *Enter the customer's email address, or leave it blank.* | Fix **Only for the customer with email**. |
+| *An automatic discount needs a description. It's what the buyer sees.* | Enter a **Description**. |
+| *Enter how many items the customer buys, 1 or more.* / *Enter how many items the customer gets, 1 or more.* | Fix **Customer buys** or **Customer gets**. |
+| *Leave the minimum blank, or enter a number greater than zero.* | Fix **Minimum quantity**. |
+| *Generate between 1 and 5000 codes at a time.* | Fix **How many**. |
+| *A prefix is up to 12 letters, digits or dashes.* | Fix the **Prefix**. |

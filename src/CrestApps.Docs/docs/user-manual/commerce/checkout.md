@@ -84,13 +84,15 @@ If the card's bank asks the cardholder to approve the payment, the approval wind
 
 The **Promotion code** box sits under the order summary on the **Payment** step.
 
-1. Type the code in **Enter a code**. Capital letters do not matter.
+1. Type the code in **Enter a code** (or **Add another code** once one is applied). Capital letters do not matter.
 2. Click **Apply**. The page refreshes the order summary; no payment is taken.
-3. When the code takes money off, the box shows the amount, for example *USD 10.00 off applied.*, and the summary shows the new total.
+3. The box lists each code with what it took off, for example *$10 off*, and the summary shows the new total.
 
-The summary lists the discount as *Discount (CODE)*. It comes off the items, never shipping, and tax is worked out on the discounted prices.
+The summary lists a code's discount as *Discount (CODE)*, and an automatic discount by its description, such as *Summer sale*; an automatic discount needs no code. A discount comes off the items, unless it is free shipping, and tax is worked out on the discounted prices.
 
-To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.* A buyer who has used a code as often as it allows one customer sees *You have already used that code as many times as it allows.* Trying many codes in a row shows *Too many codes were tried. Wait a few minutes, then try again.*
+A buyer can apply up to five codes; a sixth shows *A checkout takes up to 5 codes. Remove one to add another.* When codes can't all be used together, the buyer gets the combination that takes off the most, and a code that isn't used shows *Not used: it can't be combined with* and the discount it gave way to. A code accepted that takes nothing off this order shows *Nothing off this order.* A buyer who opened a [discount link](coupons.md#share-a-discount-link) finds its code already in the box.
+
+To remove a code, click **Remove** next to it. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code limited to other payments or another customer shows *That code can't be used for this payment.* A buyer who has used a code as often as it allows one customer sees *You have already used that code as many times as it allows.* Trying many codes in a row shows *Too many codes were tried. Wait a few minutes, then try again.*
 
 If a code runs out or stops working while the buyer is paying, for example someone else took its last use, the payment does not go through. The page shows the order again without the code, with the new total, and says why, for example *The code LAST1 ran out before you paid, so it was taken off. Check your new total, then pay again.*
 

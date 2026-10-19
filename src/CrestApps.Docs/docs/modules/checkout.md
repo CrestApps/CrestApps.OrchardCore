@@ -203,6 +203,26 @@ Each use is a `CouponRedemption` in the coupon collection (`CouponRedemptionInde
 
 Applying codes is throttled per address (`IPaymentAttemptLimiter`, scope `coupon-code`), since short codes can be guessed.
 
+### Several codes and combining rules
+
+A checkout carries up to `CheckoutCoupon.MaxCodes` (5) codes in `CheckoutCoupon.Codes` (a session saved before that used `Code`, which `GetCodes()` still reads). `CouponCheckoutFlowDisplayDriver` adds a code on **Apply** and takes one off for the form action `remove-coupon:{code}` (`CheckoutConstants.FormActions.RemoveCouponPrefix`).
+
+Every `DiscountLine` has a kind, `DiscountClass` (`Product`, `Order` or `Shipping`; when a provider leaves `Class` null it's worked out from `Target` and `LineItemIds`), and `CombinesWith`, the `DiscountCombination` flags of the kinds it can be used with. A provider that says nothing combines with everything, as before. `DefaultCheckoutDiscountService.Choose` keeps every discount when each pair can be combined (each allows the other's kind); otherwise it searches the subsets of up to 12 candidates for the compatible set that takes off the most (ties keep the earlier set), and past that takes the largest first. What's left goes to `CheckoutInvoice.SkippedDiscounts`, each with `GaveWayTo`, the description of a kept discount it can't be combined with. A coupon's kind is `Coupon.DiscountClass` (free shipping is `Shipping`; one limited to products, and every buy X get Y offer, is `Product`; else `Order`), and its `CombinesWithProductDiscounts`, `CombinesWithOrderDiscounts` and `CombinesWithShippingDiscounts` make `Coupon.CombinesWith`.
+
+### Automatic discounts
+
+`Coupon.Method` is `CouponMethod.Code` or `CouponMethod.Automatic`. `CouponIndex.IsAutomatic` (migration version 3) lets `ICouponStore.ListAutomaticAsync` find the enabled automatic coupons, which `CouponDiscountProvider` offers on every invoice when they're redeemable, in scope, not in `CheckoutCoupon.Declined`, and `ICouponRedemptionService.GetAvailabilityAsync` says they're available to this buyer. Their lines have `DiscountLine.IsAutomatic`, keep the coupon's code (holds, uses and limits work by code as for any coupon), and show the description; `OrderCheckoutHandler` records them on the order with no code. When `CouponHoldPaymentGate` can't hold one, it adds its code to `CheckoutCoupon.Declined`, so rebuilding the invoice doesn't put it back. An automatic coupon's code entered by hand is refused (`Coupon.CanBeTyped`).
+
+### Buy X get Y and minimum quantities
+
+A `CouponKind.BuyXGetY` coupon has `BuyQuantity`, `GetQuantity`, `Percentage` (off each item got), `MaxApplicationsPerOrder`, and `BuyProductIds`/`BuyCategoryIds` for what counts as bought; `ProductIds`/`CategoryIds` choose what's got. `Coupon.GetBuyXGetYDiscount` expands the one-time lines into units, and each time the offer applies takes the cheapest units that can be got and the dearest remaining units that can be bought; a unit is used once. The line carries `DiscountLine.LineShares`, what it takes off each line, and `Allocate` spreads the discount by those shares rather than by line totals, so tax sees the discount on the free item's line. `Coupon.MinimumQuantity` counts the units of the lines a coupon counts (the bought lines for buy X get Y).
+
+### Discount links and generated codes
+
+`GET discount/{code}` (`DiscountLinkController`) stores a redeemable code a buyer can type in the `orchard-discount-code` cookie (`CheckoutConstants.DiscountLinkCookieName`, HTTP-only, the tenant's path, seven days) and redirects to `redirect` when it's a local path, with the tenant's path base added when it's missing, or to the home page. `DiscountLinkCheckoutHandler.ActivatingAsync` adds the cookie's code to each new checkout's `CheckoutCoupon`, except one that settles an existing balance.
+
+`ICouponStore.GenerateCodesAsync` makes `CouponCode` documents in the coupon collection (`CouponCodeIndex`, migration version 4): a random eight-character code from an alphabet without 0, O, 1 or I after an optional prefix, its own `MaxRedemptions` and `RedemptionCount`, and the coupon's id. Codes are drawn again when they clash with each other or with codes in use. `CouponStore.GetByCodeAsync` falls back to the generated codes and returns the coupon with the code's code, uses and limit and `Coupon.GeneratedCodeId` set; the store's `ICatalog<Coupon>.UpdateAsync` writes that coupon's `RedemptionCount` to the `CouponCode`, never over the coupon. So holds, limits, redemptions and returns work per code without changes. `Coupon.OnlyGeneratedCodes` turns the coupon's own code off (`Coupon.CanBeTyped`). The coupons list reads only `Coupon` documents, so thousands of codes don't slow it. `CouponsAdminController.ExportCodes` downloads them as CSV; deleting a coupon deletes its codes (`DeleteGeneratedCodesAsync`).
+
 ### Coupons in recipes and deployments
 
 The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`.
