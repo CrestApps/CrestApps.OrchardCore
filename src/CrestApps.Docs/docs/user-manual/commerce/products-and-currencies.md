@@ -179,6 +179,11 @@ Products import and export like any other content, with the **Content Transfer**
 
 Each product is a row, and its product details are columns: the price, compare-at and sale prices with the sale's dates, SKU, currency, the address of a product sold elsewhere, quantity rules, the options and variants, the category and brand by name, and the stock. Download a template from the import page to see them all. An export has the same columns, so you can change prices in a spreadsheet and import the file back.
 
+Rows are matched to your products by SKU, the product's own or a variant's, so an import doesn't add a product twice:
+
+- A row whose SKU is already in your store updates that product when the file has the **ContentItemId** column, as an export has. Without that column, the row is skipped and the import says why.
+- A row whose SKU an earlier row of the file used is skipped, with the row it repeats.
+
 To move from another store, export your products from Shopify (**Products > Export**) or WooCommerce (**Products > Export**) and import the file as your product type. It's read as it is:
 
 - **Variants** come in when the type has the **Product variants** part with options of the same names, such as *Size*. Otherwise the product comes in as one product, from its lowest price, with the stock of all its variants.

@@ -1,13 +1,13 @@
 ---
 sidebar_label: Carts and Orders
 title: Carts and Orders
-description: Shopping carts for products sold online, and thin orders that check a cart out through the Checkout framework and record what was bought.
+description: Shopping carts for products sold online, thin orders that check a cart out through the Checkout framework and record what was bought, orders the store creates for buyers to pay, printable invoices and packing slips, and returns.
 user_manual: user-manual/commerce/carts-and-orders
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders` |
+| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns) |
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
@@ -90,12 +90,50 @@ Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, 
 - **Account from the confirmation.** `OrderConfirmationDisplayDriver` gives a guest's confirmation an `OrderAccountClaims` token (data protection, two hours, one order) when registration is open and the order has an email. `POST orders/create-account` (`OrderCreateAccount`) makes the user from the order's email, honouring `RegistrationOptions.UsersMustValidateEmail` and `UsersAreModerated`, sets `Order.UserId`, signs in and redirects to the account's order page. It is rate limited and refuses an email that already has an account.
 - **Recovery emails.** `CheckoutRecoveryBackgroundTask` (every 15 minutes) runs `CheckoutRecoveryService.SendDueAsync` when `OrderSettings.SendRecoveryEmails` is on. An order is due when it awaits payment untouched, or was canceled because the buyer left (`CheckoutCanceled`, `CheckoutExpired`, `Abandoned` or `PaymentFailed`), longer ago than `RecoveryDelayHours` and within a week, has lines, has no `RecoveryEmailSentUtc`, and no paid order with the same email came after it. The email comes from the order, or from the checkout's `CheckoutContactInfo` for an order not yet paid. `CheckoutRecoveryLinks` signs the link (`orders/resume/{token}`, route `OrderResume`, fourteen days) from the site's base URL; the link resumes a pending checkout or rebuilds the cart.
 - **Account pages.** `account/orders` (`AccountOrders`) and `account/orders/{orderId}` (`AccountOrder`) list and show the signed-in user's orders through the same order shapes as the guest view (`OrderConstants.DisplayTypes.Detail`). An order of another user is not found.
+- **Track your order.** `GET/POST orders/track` (`OrdersTrack`, `OrderViewController.Track`) takes an order number and the email it was placed with, and redirects to the order's signed link (`IOrderLinkService.CreateUrlAsync`) when both match a paid order. Posts carry the `find-order` rate-limit group and are limited per IP through `IPaymentAttemptLimiter` (`track-order`); anything else shows the same *couldn't find* answer. The Find my order page links to it.
+
+### Invoices and packing slips
+
+`OrderDocumentBuilder` builds an `OrderDocumentViewModel` for the `OrderInvoice` and `OrderPackingSlip` shapes, both overridable in Razor or Liquid. The header (name, logo, address, email, phone, website, footer) is read from the `ReceiptSettings` site settings as JSON, so the Receipts module needn't be on; without them it's the site name. Addresses are formatted with `IAddressFormatter` when the Addresses feature provides one.
+
+- **Invoice** (`BuildInvoiceAsync`): billed to, ships to (or *Pick up at*), each line with SKU, quantity, unit price and amount, the discounts, shipping, tax, total, refunded and amount due, and a status (*Paid*, *Payment due*, *Refunded*, *Canceled*).
+- **Packing slip** (`BuildPackingSlipAsync(order, shipped, shipmentNumber)`): the order's goods (downloads and services left out), or the lines named by `shipped` (line id to quantity) with the shipment's number; no prices.
+
+| Route | Name | Who |
+| --- | --- | --- |
+| `Admin/orders/{orderId}/invoice` | `OrdersInvoice` | `ManageOrders` |
+| `Admin/orders/{orderId}/packing-slip?lines=lineId:qty,…&shipment=N` | `OrdersPackingSlip` | `ManageOrders`; the Shipping module links each shipment's slip |
+| `account/orders/{orderId}/invoice` | `AccountOrderInvoice` | The order's own user, with `ViewOwnOrders` |
+| `orders/view/{token}/invoice` | `GuestOrderInvoice` | Anyone with the order's signed link |
+
+Drafts aren't printed; canceled orders print for the store only. The page around the document prints the `.order-document-print-area` alone.
+
+### Orders the store creates
+
+`DraftOrderService` puts an order together for a buyer, such as from a phone call. It prices the chosen products as a cart for the buyer's account when their email has one (so their own prices apply), creates the order through `IOrderService.CreateFromCartAsync`, and keeps it as a `Draft` with an `Order.Invoice` (`OrderInvoice`: `CreatedBy`, `Note`, `DueUtc`, `SentUtc`, and `AddsToOrderId`/`AddsToOrderNumber` for items added to a paid order). Shipping and tax come at checkout.
+
+- **Admin** (`DraftOrdersAdminController`, `ManageOrders`): `Admin/orders/drafts/create` (`OrdersCreate`; `?addsToOrderId=` from a paid order's **Add items**), `Admin/orders/{orderId}/edit` (`OrdersEdit`, while it's a draft) and `Admin/orders/{orderId}/send-invoice` (`OrdersSendInvoice`).
+- **Editing.** `IOrderService.ReplaceLinesAsync(order, pricing)` replaces a draft's lines with a priced cart's and calls each `IOrderEventHandler.LinesChangedAsync`; a handler that refuses (Inventory, short of stock) leaves the old lines and returns the problems. An order awaiting payment can't be changed.
+- **Invoice email.** `SendInvoiceAsync` emails *Your order … is ready to pay* with the lines, subtotal, note, due date and a **Review and pay** link to `orders/view/{token}/pay`, sets `SentUtc` and adds a note. It needs an `IEmailService` and the order's signed link.
+- **Paying.** `OrderPayController` serves `orders/view/{token}/pay` (`GuestOrderPay`) and `account/orders/{orderId}/pay` (`AccountOrderPay`): it opens the order's pending checkout, or starts one (`CheckoutReferenceTypes.Order`). `OrderCheckoutHandler` fills in the checkout's `CheckoutContactInfo` from the order, and puts an invoiced order whose checkout failed, was canceled or expired back to `Draft`, so its link pays it again. `AbandonedOrderSweeper` leaves invoiced orders alone. The guest and account order pages show a sent draft with its note, due date and **Pay now**.
+
+### Returns
+
+The **Returns** feature (`CrestApps.OrchardCore.Orders.Returns`) adds buyer-requested returns. An `OrderReturn` (in the `Orders` collection, `OrderReturnIndex` on number, order, user, status and date) has a `Number` (such as `R-261019-K3QZ`), the order, the buyer, `Lines` (`OrderReturnLine`: order `LineId`, title, SKU, quantity, the unit price paid, `Reason`, `Restocked`), a `Resolution` (`Refund` or `Exchange`, with `ExchangeFor`), the buyer's `Comment`, the store's `StoreMessage`, `RefundedAmount`, `RestockLocationId`, and a `Status`: `Requested`, `Approved`, `Received`, `Completed`, `Rejected` or `Canceled` (withdrawn by the buyer).
+
+- **Policy.** `OrderReturnPolicy.GetReturnable(order, returns)` gives the units of each good (`ProductType.Good` or undefined) not covered by an active return; `IsOpen(order, settings, utcNow)` is true for a paid order within `ReturnSettings.WindowDays` of `PaidUtc`. `UnitPriceOf(line)` is the line total over its quantity, add-ons and line discounts included.
+- **Buyer.** `account/orders/{orderId}/return` (`AccountOrderReturn`) and `orders/view/{token}/return` (`GuestOrderReturn`) show the `OrderReturnRequest` shape and post the request; `…/returns/{returnId}/withdraw` withdraws one still `Requested`. `OrderReturnsDisplayDriver` adds `OrderReturns_Detail` (the buyer's returns, with **Return items** and the return instructions once approved) to a paid order's `Detail` display, and `OrderReturns_DetailAdmin` to the store's.
+- **Store.** `ReturnsAdminController` (`Admin/returns`, `ManageOrders`) lists returns through an `AdminList` with a status filter and search by return or order number, and acts through `OrderReturnService`: `approve`, `reject` (with a message), `receive` (the lines to restock and an optional location), `refund` (an amount, through `OrderOperationsService.RefundAsync` without restocking, then `Completed`) and `exchanged`. Each step adds an order note, and `OrderReturnEmailSender` emails the buyer (requested, approved, declined, refunded, exchanged); a failed send is logged and never undoes the step.
+- **Restocking.** Receiving calls each `IOrderEventHandler.ReturnedAsync` with an `OrderReturnedContext` (the order, the return, `Lines` of `OrderReturnedLine(Line, Quantity, Restock)`, `LocationId`, actor) in the same unit of work. Inventory puts the restocked lines back with `IInventoryService.RestockAsync(orderId, lines, locationId, …)`.
+- **Settings.** `ReturnSettings` (**Settings > Commerce > Returns**, group `returns`, `ManageOrders`): `WindowDays` (30, 1 to 365), `Reasons` (up to 20), `AllowExchanges` (true) and `Instructions`.
+
+Exchanges are closed by the store once it has sent the replacement; no replacement order is created. Returns start with the buyer; the store's own refunds and restocking stay on the order's page.
 
 ### Order statuses
 
 | Status | Meaning |
 | --- | --- |
-| Draft | Made from a cart, not yet sent to the checkout. |
+| Draft | Made from a cart, not yet sent to the checkout, or put together by the store for a buyer to pay (`Order.Invoice` set). |
 | Awaiting payment | Its checkout started and has not completed. |
 | Paid | Its checkout completed. |
 | Canceled | Ended, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired`, `Abandoned` (no checkout was left that could pay it), `Unavailable` (an order event handler refused it, such as for want of stock) or `CanceledByStore` (from the order's page, with the store's `CancelNote`). |
@@ -108,8 +146,14 @@ Money given back is tracked beside the status, so everything that checks for a p
 - `PaidAsync` runs in `OrderCheckoutHandler.CompletingAsync`, in the unit of work that marks the order paid, so a handler that throws rolls the completion back for the checkout to retry.
 - `CanceledAsync` runs when an order is canceled. `context.Restock` says whether what it sold goes back into stock.
 - `RefundedAsync` (a default interface method) runs after a refund is recorded on the order; `context.Restock` is true only when the store asked for it and everything is now refunded.
+- `LinesChangedAsync` (a default interface method) runs when a draft's lines are replaced (`IOrderService.ReplaceLinesAsync`), with `OrderLinesChangedContext.PreviousLines`; `context.Refuse(problem)` keeps the old lines.
+- `ReturnedAsync` (a default interface method) runs when a return's items arrive, with `OrderReturnedContext`; see [Returns](#returns).
 
-Inventory uses them to hold, sell and release stock. The cart's checkout commits the new order before the checkout starts, and shows *Someone else is buying the same items right now* when that commit hits a concurrency conflict.
+`OrderEventHandlerBase` has virtual no-op versions of each. Inventory uses them to hold, sell, release and restock stock.
+
+**Where an order is fulfilled from.** `OrderShipping.LocationId` names the location an order is fulfilled from, such as the shop it's picked up at (`OrderShipping.IsPickup`, provider `Pickup`), copied from `CheckoutShippingInfo.LocationId`; `null` lets inventory choose. `IFulfillmentLocationProvider` (Orders.Core) lists the places orders can be fulfilled from as `FulfillmentLocation(LocationId, Name)`; Inventory implements it with its stock locations, which Shipping offers as a pickup location's **Stock comes from**.
+
+**Pre-orders.** `OrderLine.ShipsFromUtc` keeps the release date of a pre-ordered line as it was when the order was placed (from `CartPricing` lines), shown on the order pages. The cart's checkout commits the new order before the checkout starts, and shows *Someone else is buying the same items right now* when that commit hits a concurrency conflict.
 
 **Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order (a paid one only with `CanceledByStore`), records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
 
@@ -180,13 +224,16 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 | --- | --- | --- |
 | **Commerce > Orders**: every order, searchable by order number or customer email, with a status filter | `ManageOrders` | Administrator |
 | **Commerce > My Orders**: the signed-in customer's own orders | `ViewOwnOrders` | Authenticated |
+| **Create order**, an order's **Invoice**, **Packing slip** and **Add items** | `ManageOrders` | Administrator |
+| **Commerce > Returns** and **Settings > Commerce > Returns** (Returns feature) | `ManageOrders` | Administrator |
 
 ## Stock
 
 Products' `IProductAvailabilityProvider` says what can be bought; Inventory provides one, and without it every product can always be bought.
 
 - **Cart.** `CartService` asks for each line with the cart's id. An out-of-stock product that doesn't take backorders is refused (*Mug is out of stock.*), and a line's `MaxQuantity` is capped at what's available. Adding or updating beyond that says *Only 3 of Mug left.*, and a priced line over it gets the problem *Only 3 left. Lower the quantity to check out.*, which stops the checkout.
-- **Add to cart.** `AddToCartDisplayDriver` shows the product's or each variant's availability: *In stock*, *Only N left* at or below the threshold, *Out of stock* (which turns the button off) or *Available on backorder*. The quantity is capped at what's available.
+- **Add to cart.** `AddToCartDisplayDriver` shows the product's or each variant's availability: *In stock*, *Only N left* at or below the threshold, *Out of stock* (which turns the button off), *Available on backorder*, or *Pre-order: ships* with the date (`ProductAvailabilityStatus.Preorder`, a backorder with a `ReleaseDateUtc` to come), where the button reads **Pre-order**. The quantity is capped at what's available.
+- **Pre-order dates.** `CartService` copies a pre-order's `ReleaseDateUtc` onto the priced line (`CartPricing` line `ShipsFromUtc`), which the cart, the mini cart and the order show.
 - **Variant picker.** The `product-variant-picker` script reads each variant's `data-availability`, `data-availability-tone` and `data-buyable`, and updates the line and the button as options change.
 
 ## Checkout line details
@@ -195,7 +242,7 @@ Carts are the first checkout source with several products, so a `BillingItem` ca
 
 ## Not included
 
-Saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature, stock with [Inventory](inventory), and shipping charges with [Shipping](shipping), which fills in `Order.ShippingAddress`, `Order.Shipping` and `Order.FulfillmentStatus`. Other modules add sections to the order pages through `IDisplayManager<Order>`, in the display types `OrderConstants.DisplayTypes.DetailAdmin` and `Detail`.
+Saved carts, carts with recurring prices, and changing a paid order's lines: items are added to a paid order as a new order for the buyer to pay (**Add items**), and taken off through a return or a refund. Customer records and address books come with the [Customers](customers) feature, stock with [Inventory](inventory), and shipping charges with [Shipping](shipping), which fills in `Order.ShippingAddress`, `Order.Shipping` and `Order.FulfillmentStatus`. Other modules add sections to the order pages through `IDisplayManager<Order>`, in the display types `OrderConstants.DisplayTypes.DetailAdmin` and `Detail`.
 
 ## Getting started
 

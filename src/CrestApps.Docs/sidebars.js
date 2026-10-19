@@ -139,6 +139,7 @@ const sidebars = {
                 'user-manual/commerce/taxes',
                 'user-manual/commerce/coupons',
                 'user-manual/commerce/carts-and-orders',
+                'user-manual/commerce/returns',
                 'user-manual/commerce/customers',
                 'user-manual/commerce/inventory',
                 'user-manual/commerce/shipping',
