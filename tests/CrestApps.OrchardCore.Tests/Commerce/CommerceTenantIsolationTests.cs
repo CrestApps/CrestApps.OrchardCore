@@ -150,7 +150,7 @@ public sealed class CommerceTenantIsolationTests
     private static async Task<IStore> CouponStoreAsync(string path)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
-        store.RegisterIndexes([new CouponIndexProvider(), new CouponRedemptionIndexProvider()]);
+        store.RegisterIndexes([new CouponIndexProvider(), new CouponCodeIndexProvider(), new CouponRedemptionIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(CheckoutConstants.CouponCollectionName, TestContext.Current.CancellationToken);
 
@@ -159,6 +159,8 @@ public sealed class CommerceTenantIsolationTests
         var migration = new CouponMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) };
         await migration.CreateAsync();
         await migration.UpdateFrom1Async();
+        await migration.UpdateFrom2Async();
+        await migration.UpdateFrom3Async();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;
