@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -98,6 +99,12 @@ public sealed class Order : CatalogItem
     public OrderShipping Shipping { get; set; }
 
     /// <summary>
+    /// Gets or sets what the buyer entered in the store's own checkout fields, as the content of a Checkout details
+    /// item, or <see langword="null"/> when the store asks for none.
+    /// </summary>
+    public JsonObject CheckoutDetails { get; set; }
+
+    /// <summary>
     /// Gets or sets how much of the order has been shipped, or <see langword="null"/> when nothing in it ships or
     /// nothing records shipments.
     /// </summary>
@@ -113,6 +120,12 @@ public sealed class Order : CatalogItem
     /// Gets or sets when the order confirmation was emailed to the customer, so it is sent once.
     /// </summary>
     public DateTime? ConfirmationSentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the buyer was emailed a link back to this order's checkout after leaving it unpaid, or
+    /// <see langword="null"/> when they weren't.
+    /// </summary>
+    public DateTime? RecoveryEmailSentUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when the order's personal details were removed, at the customer's request or after the retention
@@ -146,6 +159,23 @@ public sealed class Order : CatalogItem
     public List<OrderRefund> Refunds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the disputes, or chargebacks, the payer opened against the order's payment, oldest first.
+    /// </summary>
+    public List<OrderDispute> Disputes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how risky the gateway's fraud checks rated the order's payment, or <see langword="null"/> when it
+    /// doesn't rate payments.
+    /// </summary>
+    public OrderPaymentRisk PaymentRisk { get; set; }
+
+    /// <summary>
+    /// Gets whether a dispute against the order's payment is still open.
+    /// </summary>
+    public bool HasOpenDispute
+        => Disputes?.Any(dispute => !dispute.IsClosed) == true;
+
+    /// <summary>
     /// Gets how much was given back.
     /// </summary>
     public decimal RefundedAmount
@@ -160,8 +190,9 @@ public sealed class Order : CatalogItem
             : Total.HasValue && RefundedAmount >= Total.Value ? OrderRefundStatus.Refunded : OrderRefundStatus.PartiallyRefunded;
 
     /// <summary>
-    /// Removes who the order was for: the name, email and phone, and the billing address but its country and region,
-    /// which tax records need. The lines, totals and dates stay for the store's accounts.
+    /// Removes who the order was for: the name, email and phone, what was entered in the store's checkout fields, and the
+    /// billing address but its country and region, which tax records need. The lines, totals and dates stay for the
+    /// store's accounts.
     /// </summary>
     public void Anonymize(DateTime now)
     {
@@ -170,6 +201,7 @@ public sealed class Order : CatalogItem
         CustomerPhone = null;
         BillingAddress = BillingAddress is null ? null : new Address { Country = BillingAddress.Country, Region = BillingAddress.Region };
         ShippingAddress = ShippingAddress is null ? null : new Address { Country = ShippingAddress.Country, Region = ShippingAddress.Region };
+        CheckoutDetails = null;
         AnonymizedUtc ??= now;
         ModifiedUtc = now;
     }
@@ -235,6 +267,18 @@ public sealed class OrderLine
     /// to some categories.
     /// </summary>
     public string[] CategoryIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the add-ons the buyer chose for the line, such as an engraving, which <see cref="UnitPrice"/>
+    /// includes.
+    /// </summary>
+    public List<OrderLineAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the products a bundle line is made of, per bundle, as the bundle was when the order was placed.
+    /// Stock is held and sold from them, not from the bundle.
+    /// </summary>
+    public List<OrderLineBundleItem> BundleItems { get; set; } = [];
 }
 
 /// <summary>
@@ -379,4 +423,39 @@ public enum OrderStatus
     /// Replaced by a newer order from the same cart before it was paid.
     /// </summary>
     Canceled = 3,
+}
+
+/// <summary>
+/// An add-on chosen for an order line, as it read when the order was placed.
+/// </summary>
+public sealed class OrderLineAddOn
+{
+    public string AddOnId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the add-on was called, such as "Engraving".
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer typed, or <see langword="null"/> for a ticked box.
+    /// </summary>
+    public string Value { get; set; }
+
+    /// <summary>
+    /// Gets or sets the extra price per unit it cost.
+    /// </summary>
+    public decimal Price { get; set; }
+}
+
+/// <summary>
+/// A product in a bundle line, and how many of it each bundle holds.
+/// </summary>
+public sealed class OrderLineBundleItem
+{
+    public string ContentItemId { get; set; }
+
+    public string Title { get; set; }
+
+    public int Quantity { get; set; }
 }

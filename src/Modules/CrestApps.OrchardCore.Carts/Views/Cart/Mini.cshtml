@@ -1,0 +1,10 @@
+@model IShape
+
+@* The slide-out mini cart's fragment, loaded from cart/mini. Its content is the MiniCart shape, so a theme overrides
+   MiniCart to change it. *@
+@{
+    // A fragment a script loads into the page, so it has no layout and no breadcrumb.
+    Layout = null;
+}
+
+@await DisplayAsync(Model)

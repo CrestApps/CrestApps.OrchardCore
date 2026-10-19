@@ -126,6 +126,19 @@ Whether a product can be bought online, and how its price is shown (shown, *Call
 
 Every combination of filters has its own address, so visitors can bookmark it, share it and use the Back button. Filters apply as soon as they change on wide screens.
 
+## Recommend products
+
+With the **Product Recommendations** feature, each product's editor has **Upsells** and **Cross-sells** pickers:
+
+- **Upsells**, better or bigger choices, show on the product's page as *You may also like*.
+- **Cross-sells**, things that go with the product, show in the cart as *Frequently bought together* and on the order's confirmation as *Goes well with your order*.
+
+The product's page also shows **Related products** from its categories and the products the visitor **viewed recently**, kept in their browser.
+
+## Let visitors compare products
+
+With the **Product Comparison** feature, cards and product pages have a **Compare** tick box. Visitors tick up to four products, and a bar at the bottom of the page opens a page that sets them side by side: prices, stock and a row per specification. On a phone the comparison scrolls sideways.
+
 ## Sites in several languages
 
 On a site with several languages, translate your products and listing pages with Orchard Core's localization as usual. A listing shows the products of the visitor's language, plus products that are not translated at all, and a product's page links back to the listing in its own language.

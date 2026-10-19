@@ -1,4 +1,10 @@
 @model OrderDownloadsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     // With the tenant's prefix: a redirect to the path alone would land on another tenant.
@@ -27,7 +33,7 @@
                             }
                             @if (entitlement.ExpiresUtc.HasValue)
                             {
-                                <span> · @T["works until {0:d}", entitlement.ExpiresUtc.Value]</span>
+                                <span> · @T["works until {0:d}", await LocalAsync(entitlement.ExpiresUtc.Value)]</span>
                             }
                         </div>
                         @switch (download.Problem)

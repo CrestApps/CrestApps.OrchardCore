@@ -50,4 +50,14 @@ public class StripeCheckoutPaymentMethodViewModel
     /// Gets or sets the lower-case ISO currency code of <see cref="WalletAmount"/>.
     /// </summary>
     public string WalletCurrency { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the buyer is signed in and may keep the card or pay with a saved one.
+    /// </summary>
+    public bool CanUseSavedCards { get; set; }
+
+    /// <summary>
+    /// Gets or sets the signed-in buyer's saved cards.
+    /// </summary>
+    public IReadOnlyList<Services.StripeSavedCard> SavedCards { get; set; } = [];
 }

@@ -1,10 +1,17 @@
 @using CrestApps.OrchardCore.Checkout.Models
 @using CrestApps.OrchardCore.Payments
-@model IReadOnlyList<CouponRedemption>
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 <h5 class="mt-4">@T["Recent uses"]</h5>
 
-@if (Model.Count == 0)
+@if (Model.Redemptions.Count == 0)
 {
     <p class="text-muted">@T["Nobody has used this coupon yet."]</p>
 }
@@ -22,10 +29,11 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var redemption in Model)
+                @foreach (var redemption in Model.Redemptions)
                 {
+                    Model.References.TryGetValue(redemption.ReferenceType + "|" + redemption.ReferenceId, out var reference);
                     <tr>
-                        <td>@((redemption.RedeemedUtc ?? redemption.CreatedUtc).ToString("yyyy-MM-dd HH:mm")) UTC</td>
+                        <td class="text-nowrap">@((await LocalAsync(redemption.RedeemedUtc ?? redemption.CreatedUtc)).ToString("g"))</td>
                         <td>
                             @switch (redemption.Status)
                             {
@@ -44,7 +52,20 @@ else
                             }
                         </td>
                         <td>@(redemption.CustomerEmail ?? redemption.CustomerId ?? T["Unknown"].Value)</td>
-                        <td>@redemption.ReferenceType @redemption.ReferenceId</td>
+                        <td>
+                            @if (reference is null)
+                            {
+                                @T["{0} {1}", redemption.ReferenceType, redemption.ReferenceId]
+                            }
+                            else if (string.IsNullOrEmpty(reference.Url))
+                            {
+                                @reference.Text
+                            }
+                            else
+                            {
+                                <a href="@reference.Url">@reference.Text</a>
+                            }
+                        </td>
                         <td class="text-end">@redemption.Currency @CurrencyScale.Format(redemption.Amount, redemption.Currency)</td>
                     </tr>
                 }

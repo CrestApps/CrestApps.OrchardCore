@@ -70,6 +70,9 @@ public sealed class InventoryOrderEventHandler : OrderEventHandlerBase
         }
     }
 
-    private static IEnumerable<StockRequest> ToRequests(Order order)
-        => order.Lines.Select(line => new StockRequest(line.ContentItemId, line.VariantId, line.Quantity));
+    // A bundle holds and sells its parts, so many units of each as the bundles hold.
+    internal static IEnumerable<StockRequest> ToRequests(Order order)
+        => order.Lines.SelectMany(line => line.BundleItems is { Count: > 0 } items
+            ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * line.Quantity))
+            : [new StockRequest(line.ContentItemId, line.VariantId, line.Quantity)]);
 }

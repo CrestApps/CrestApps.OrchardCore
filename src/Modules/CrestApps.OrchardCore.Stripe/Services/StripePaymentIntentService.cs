@@ -139,6 +139,11 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             // without them: the bank is told up front that future charges will follow.
             paymentIntentOptions.SetupFutureUsage = "off_session";
         }
+        else if (model.SaveForOnSessionUse)
+        {
+            // Kept for the customer's own later purchases, which they confirm themselves.
+            paymentIntentOptions.SetupFutureUsage = "on_session";
+        }
 
         var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions, model.ToRequestOptions());
 
@@ -216,7 +221,11 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
         ArgumentNullException.ThrowIfNull(model);
         ArgumentException.ThrowIfNullOrEmpty(model.PaymentIntentId);
 
-        var paymentIntent = await _paymentIntentService.GetAsync(model.PaymentIntentId);
+        // The latest charge carries Radar's fraud rating, which the store sees on the order.
+        var paymentIntent = await _paymentIntentService.GetAsync(model.PaymentIntentId, new PaymentIntentGetOptions
+        {
+            Expand = ["latest_charge"],
+        });
 
         return ToDetails(paymentIntent);
     }
@@ -253,6 +262,8 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Currency = paymentIntent.Currency,
             LiveMode = paymentIntent.Livemode,
             LatestChargeId = paymentIntent.LatestChargeId,
+            RiskLevel = paymentIntent.LatestCharge?.Outcome?.RiskLevel is { Length: > 0 } level && level != "not_assessed" && level != "unknown" ? level : null,
+            RiskScore = paymentIntent.LatestCharge?.Outcome?.RiskScore is > 0 and var score ? (int)score : null,
             CustomerId = paymentIntent.CustomerId,
             PaymentMethodId = paymentIntent.PaymentMethodId,
             SetupFutureUsage = paymentIntent.SetupFutureUsage,

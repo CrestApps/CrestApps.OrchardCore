@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductCardStripViewModel
+
+@*
+    A strip of product cards under a heading, such as "You may also like". It shows nothing when there are no cards.
+*@
+
+@if (Model.Cards.Count > 0)
+{
+    <section class="product-card-strip mt-5" aria-label="@Model.Heading">
+        <h2 class="h4 mb-3">@Model.Heading</h2>
+        <partial name="ProductCardStripCards" model="Model" />
+    </section>
+}

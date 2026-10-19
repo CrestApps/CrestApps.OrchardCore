@@ -24,6 +24,8 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using CrestApps.OrchardCore.Downloads.Reports;
+using CrestApps.OrchardCore.Reports;
 
 namespace CrestApps.OrchardCore.Downloads;
 
@@ -56,6 +58,7 @@ public sealed class Startup : StartupBase
 
         services.AddSiteDisplayDriver<DownloadSettingsDisplayDriver>();
         services.AddNavigationProvider<DownloadSettingsAdminMenu>();
+        services.AddNavigationProvider<DownloadsAccountMenu>();
         services.AddPermissionProvider<DownloadsPermissionsProvider>();
         services.AddSiteSettingsPermission(DownloadsConstants.SettingsGroupId, DownloadsPermissions.ManageDownloads);
     }
@@ -69,4 +72,14 @@ public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
         => services.AddRecipeExecutionStep<DigitalFilesStep>();
+}
+
+/// <summary>
+/// Adds the downloads report to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IReport, DownloadsReport>();
 }

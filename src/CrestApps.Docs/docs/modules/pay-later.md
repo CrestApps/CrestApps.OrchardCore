@@ -58,7 +58,18 @@ Each cycle is created exactly once. The sweep takes a lock on the one commitment
 
 ### Configuring the payment term
 
-Under **Settings → Commerce → Pay Later** you can set the **net term (days)** — how many days after checkout a recorded Pay Later balance is due. The due date drives the reminder cadence configured in the [Transactions](transactions) settings. A value of `0` records the balance with no due date.
+Under **Settings → Commerce → Offline payments** you can set the **net term (days)** — how many days after checkout a recorded Pay Later balance is due. The due date drives the reminder cadence configured in the [Transactions](transactions) settings. A value of `0` records the balance with no due date. `PayLaterSettings.Enabled` (on by default) turns the option off without disabling the feature.
+
+## Bank transfer and cash on delivery
+
+The feature also ships two one-time offline methods on the same base, **`OfflineCheckoutPaymentProvider`**, which records a commitment without a gateway (`DefersPayment`, `ReportsAuthoritativeAmount = false`) and leaves a balance due when its settings say:
+
+| Provider | Key | Available | Settings |
+| --- | --- | --- | --- |
+| `BankTransferCheckoutPaymentProvider` | `bank-transfer` | When `BankTransferSettings.Enabled` and its `Instructions` are set | `Enabled`, `Instructions` (the bank details), `NetTermDays` (default 7) |
+| `CashOnDeliveryCheckoutPaymentProvider` | `cash-on-delivery` | When `CashOnDeliverySettings.Enabled` and the checkout has a `CheckoutShippingInfo` address | `Enabled`, `Instructions` |
+
+Each implements `ICheckoutPaymentProviderAvailability`, so the payment step leaves it out of a checkout it doesn't apply to and the checkout engine refuses to begin a payment with it, and `ICheckoutPaymentProviderDescription` for the line under its name. `PayLaterTransactionCheckoutHandler` records the balance of any `OfflineCheckoutPaymentProvider` (each registered as one), titled after the order (`ICheckoutReferenceDescriber`), with the provider's key as the transaction source. `OfflinePaymentConfirmationDisplayDriver` puts the bank details and the reference on the confirmation, and, with Orders, `OrderOfflinePaymentDisplayDriver` shows what is still owed on the order's pages: how to pay for the buyer, and a **Record payment** link to the transaction for the store.
 
 ## Enabling the feature
 

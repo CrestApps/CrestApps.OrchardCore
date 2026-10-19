@@ -57,7 +57,7 @@ public sealed class OrderConfirmationEmailBuilder
 
         foreach (var line in order.Lines)
         {
-            var title = string.IsNullOrEmpty(line.PriceName) ? line.Title : $"{line.Title} ({line.PriceName})";
+            var title = OrderLineText.Describe(line);
 
             text.AppendLine($"{line.Quantity} × {title}  {Money(line.LineTotal)}");
             html.Append("<tr>")

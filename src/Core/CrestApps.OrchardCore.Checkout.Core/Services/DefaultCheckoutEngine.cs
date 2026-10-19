@@ -187,7 +187,9 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             var provider = _providerResolver.GetProvider(options.ProviderKey);
 
-            if (provider is null)
+            // A provider the store turned off, or one this checkout can't use, is refused here too: the payment step
+            // leaves it out, but a request can name any provider.
+            if (provider is null || !await CheckoutPaymentMethodSelector.IsAvailableAsync(provider, session, cancellationToken))
             {
                 return PaymentBeginOutcome.Failure("The selected payment method is not available.");
             }

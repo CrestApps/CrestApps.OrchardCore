@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.PayLater.Models;
 public sealed class PayLaterSettings
 {
     /// <summary>
+    /// Gets or sets whether Pay Later is offered at checkout. On by default, as it was before it could be turned off.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the number of days a Pay Later balance is allowed before it is due. When greater than
     /// zero the outstanding transaction is created with a due date this many days after checkout, which
     /// drives the reminder cadence. A value of 0 leaves the balance without a due date. Defaults to 30.

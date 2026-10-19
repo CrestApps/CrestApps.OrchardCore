@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -58,9 +59,17 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();
         services.AddNavigationProvider<OrdersAdminMenu>();
+        services.AddNavigationProvider<OrdersAccountMenu>();
+        services.AddSingleton<OrderAccountClaims>();
+        services.AddScoped<CheckoutRecoveryLinks>();
+        services.AddScoped<CheckoutRecoveryService>();
+        services.AddSingleton<IBackgroundTask, CheckoutRecoveryBackgroundTask>();
         services.AddDisplayDriver<Order, OrderDisplayDriver>();
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
+
+        // The order bump on the payment step: one tick adds the product the store offers before paying.
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, OrderBumpCheckoutFlowDisplayDriver>();
 
         // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
         services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
@@ -73,6 +82,15 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
         services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
+
+        // A dispute reported by a gateway is recorded on its order, and shown on its page and in the orders list.
+        services.AddScoped<CrestApps.OrchardCore.Payments.IPaymentEvent, OrderDisputeRecorder>();
+        services.AddDisplayDriver<Order, OrderDisputesDisplayDriver>();
+
+        // The fraud rating of an order's payment, kept on the order, shown on its page and in the orders list.
+        services.AddScoped<ICheckoutHandler, OrderPaymentRiskCheckoutHandler>();
+        services.AddDisplayDriver<Order, OrderPaymentRiskDisplayDriver>();
+        services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
 
@@ -96,13 +114,18 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<OrderReportReader>();
+        services.AddScoped<ProductCategoryNames>();
         services
             .AddScoped<IReport, OrderSalesReport>()
+            .AddScoped<IReport, OrderCategorySalesReport>()
+            .AddScoped<IReport, OrderCustomersReport>()
+            .AddScoped<IReport, CheckoutConversionReport>()
             .AddScoped<IReport, OrderProductSalesReport>()
             .AddScoped<IReport, OrderCountrySalesReport>()
             .AddScoped<IReport, OrderTaxReport>()
             .AddScoped<IReport, OrderDiscountsReport>()
             .AddScoped<IReport, OrderRefundsReport>()
+            .AddScoped<IReport, OrderDisputesReport>()
             .AddScoped<IReport, UnfulfilledOrdersReport>();
     }
 }

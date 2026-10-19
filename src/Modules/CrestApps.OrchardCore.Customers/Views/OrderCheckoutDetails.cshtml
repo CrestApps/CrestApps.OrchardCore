@@ -1,0 +1,60 @@
+@using System.IO
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Html
+@using OrchardCore.ContentManagement.Metadata.Models
+@using OrchardCore.DisplayManagement.Zones
+@model CheckoutDetailsViewModel
+
+@*
+    What the buyer entered in the store's checkout fields, on the order's pages: each field's name and value. A field's
+    display template shows only its value, so the name comes from the field's definition, and a field left empty is
+    left out.
+*@
+
+@{
+    var zones = ((IZoneHolding)Model.Content).Zones;
+    var entries = new List<(string Name, IHtmlContent Value)>();
+
+    foreach (var zoneName in new[] { "Content", "Parts" })
+    {
+        if (zones[zoneName] is not IShape zone)
+        {
+            continue;
+        }
+
+        foreach (var item in zone.Items)
+        {
+            var value = await DisplayAsync(item);
+
+            using var writer = new StringWriter();
+            value.WriteTo(writer, HtmlEncoder.Default);
+
+            var text = System.Text.RegularExpressions.Regex.Replace(writer.ToString(), "<[^>]*>", string.Empty);
+
+            if (string.IsNullOrWhiteSpace(System.Net.WebUtility.HtmlDecode(text)))
+            {
+                continue;
+            }
+
+            var definition = item.GetType().GetProperty("PartFieldDefinition")?.GetValue(item) as ContentPartFieldDefinition;
+
+            entries.Add((definition?.DisplayName(), value));
+        }
+    }
+}
+
+@if (entries.Count > 0)
+{
+    <div class="card mt-4 mb-4">
+        <div class="card-header">@T["Order details"]</div>
+        <div class="card-body checkout-details">
+            <dl class="row mb-0">
+                @foreach (var entry in entries)
+                {
+                    <dt class="col-sm-4">@entry.Name</dt>
+                    <dd class="col-sm-8">@entry.Value</dd>
+                }
+            </dl>
+        </div>
+    </div>
+}

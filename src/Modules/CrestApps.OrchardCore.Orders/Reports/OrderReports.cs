@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -143,6 +144,8 @@ public sealed class OrderSalesReport : OrderReportBase
             [
                 new ReportMetric(S["Orders"].Value, ReportFormat.Number(totals.Orders)),
                 new ReportMetric(S["Items sold"].Value, ReportFormat.Number(totals.Units)),
+                new ReportMetric(S["Average order value"].Value, Money(totals.AverageOrderValue, currency), S["What was charged, over the orders."].Value),
+                new ReportMetric(S["Items per order"].Value, totals.ItemsPerOrder.ToString("0.0", CultureInfo.CurrentCulture)),
                 new ReportMetric(S["Gross sales"].Value, Money(totals.Gross, currency), S["The lines, before discounts, shipping and tax."].Value),
                 new ReportMetric(S["Discounts"].Value, Money(totals.Discounts, currency)),
                 new ReportMetric(S["Shipping"].Value, Money(totals.Shipping, currency)),
@@ -182,6 +185,7 @@ public sealed class OrderSalesReport : OrderReportBase
                 new ReportColumn(S["Shipping"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Tax"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Total charged"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Average order value"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Refunded"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Net"].Value, ReportColumnAlign.End),
             ], rows));
@@ -200,6 +204,7 @@ public sealed class OrderSalesReport : OrderReportBase
             Money(totals.Shipping, totals.Currency),
             Money(totals.Tax, totals.Currency),
             Money(totals.Total, totals.Currency),
+            Money(totals.AverageOrderValue, totals.Currency),
             Money(totals.Refunded, totals.Currency),
             Money(totals.Net, totals.Currency),
         ], emphasize);
@@ -216,6 +221,15 @@ public sealed class OrderProductSalesReport : OrderReportBase
     }
 
     public override string Name => "order-product-sales";
+
+    private string KindName(ProductType productType)
+        => productType switch
+        {
+            ProductType.Good => S["Goods"].Value,
+            ProductType.Digital => S["Digital"].Value,
+            ProductType.Service => S["Services"].Value,
+            _ => S["Other"].Value,
+        };
 
     public override LocalizedString DisplayName => S["Sales by product"];
 
@@ -256,6 +270,20 @@ public sealed class OrderProductSalesReport : OrderReportBase
             new ReportColumn(S["Units"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Sales"].Value, ReportColumnAlign.End),
         ], rows));
+
+        document.Add(ReportSection.ForTable(S["By kind of product"].Value,
+        [
+            new ReportColumn(S["Kind"].Value),
+            new ReportColumn(S["Orders"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Units"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Sales"].Value, ReportColumnAlign.End),
+        ], [.. OrderReportAggregator.ByProductType(orders).Select(type => new ReportRow(
+        [
+            KindName(type.ProductType),
+            ReportFormat.Number(type.Orders),
+            ReportFormat.Number(type.Units),
+            Money(type.Sales, type.Currency),
+        ]))]));
 
         return document;
     }
@@ -469,6 +497,73 @@ public sealed class OrderRefundsReport : OrderReportBase
             entry.Order.OrderNumber,
             entry.Refund.Reason ?? string.Empty,
             Money(entry.Refund.Amount, entry.Order.Currency),
+        ]))]));
+
+        return document;
+    }
+}
+
+/// <summary>
+/// The disputes, or chargebacks, payers opened in the period, with the ones still needing a response first.
+/// </summary>
+public sealed class OrderDisputesReport : OrderReportBase
+{
+    // A dispute comes after the payment: disputes of orders paid up to this long before the period are found.
+    private static readonly TimeSpan _disputeWindow = TimeSpan.FromDays(180);
+
+    public OrderDisputesReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderDisputesReport> stringLocalizer)
+        : base(reader, siteService, clock, stringLocalizer)
+    {
+    }
+
+    public override string Name => "order-disputes";
+
+    public override LocalizedString DisplayName => S["Disputes"];
+
+    public override LocalizedString Description => S["The payments disputed with the payer's bank in the period, open ones first, for orders paid up to 180 days before it."];
+
+    public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    {
+        var (from, to) = GetPeriod(context);
+        var orders = await ReadPaidAsync(from - _disputeWindow, to, cancellationToken);
+        var timeZone = await GetTimeZoneAsync();
+        var disputes = orders
+            .SelectMany(order => (order.Disputes ?? []).Select(dispute => (Order: order, Dispute: dispute)))
+            .Where(entry => entry.Dispute.CreatedUtc >= from && entry.Dispute.CreatedUtc < to)
+            .OrderBy(entry => entry.Dispute.IsClosed)
+            .ThenByDescending(entry => entry.Dispute.CreatedUtc)
+            .ToList();
+
+        var document = new ReportDocument { Title = DisplayName.Value };
+        var metrics = new List<ReportMetric>
+        {
+            new(S["Disputes"].Value, ReportFormat.Number(disputes.Count)),
+            new(S["Still open"].Value, ReportFormat.Number(disputes.Count(entry => !entry.Dispute.IsClosed))),
+            new(S["Won"].Value, ReportFormat.Number(disputes.Count(entry => entry.Dispute.Status == "won"))),
+            new(S["Lost"].Value, ReportFormat.Number(disputes.Count(entry => entry.Dispute.Status == "lost"))),
+        };
+
+        foreach (var currency in disputes.GroupBy(entry => entry.Dispute.Currency ?? entry.Order.Currency ?? string.Empty))
+        {
+            metrics.Add(new ReportMetric(S["Disputed ({0})", currency.Key].Value, Money(currency.Sum(entry => entry.Dispute.Amount), currency.Key)));
+        }
+
+        document.Add(ReportSection.ForMetrics(S["Summary"].Value, metrics));
+
+        document.Add(ReportSection.ForTable(S["Disputes"].Value,
+        [
+            new ReportColumn(S["Opened"].Value),
+            new ReportColumn(S["Order"].Value),
+            new ReportColumn(S["Why"].Value),
+            new ReportColumn(S["Status"].Value),
+            new ReportColumn(S["Amount"].Value, ReportColumnAlign.End),
+        ], [.. disputes.Select(entry => new ReportRow(
+        [
+            Day(entry.Dispute.CreatedUtc, timeZone),
+            entry.Order.OrderNumber,
+            Services.OrderDisputeText.Reason(S, entry.Dispute.Reason),
+            Services.OrderDisputeText.Status(S, entry.Dispute.Status),
+            Money(entry.Dispute.Amount, entry.Dispute.Currency ?? entry.Order.Currency),
         ]))]));
 
         return document;

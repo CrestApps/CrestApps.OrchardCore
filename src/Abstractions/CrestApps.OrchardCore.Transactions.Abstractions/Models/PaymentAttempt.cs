@@ -116,6 +116,17 @@ public sealed class PaymentAttempt : CatalogItem
     public string FailureReason { get; set; }
 
     /// <summary>
+    /// Gets or sets how risky the gateway's fraud checks rated the payment: <c>normal</c>, <c>elevated</c> or
+    /// <c>highest</c>, or <see langword="null"/> when it doesn't rate payments.
+    /// </summary>
+    public string RiskLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the gateway's fraud score of the payment, from 0 to 99, when it gives one.
+    /// </summary>
+    public int? RiskScore { get; set; }
+
+    /// <summary>
     /// The UTC time the attempt was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

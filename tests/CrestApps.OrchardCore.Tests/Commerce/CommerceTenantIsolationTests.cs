@@ -206,8 +206,11 @@ public sealed class CommerceTenantIsolationTests
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((Mock.Of<ILocker>(), true));
 
+        // The cache expires entries by the real clock, so the window has to start now: a fixed date in the past would
+        // expire every count as soon as it was written.
+        var now = DateTime.UtcNow;
         var clock = new Mock<IClock>();
-        clock.Setup(value => value.UtcNow).Returns(_now);
+        clock.Setup(value => value.UtcNow).Returns(now);
 
         return new PaymentAttemptLimiter(
             cache,

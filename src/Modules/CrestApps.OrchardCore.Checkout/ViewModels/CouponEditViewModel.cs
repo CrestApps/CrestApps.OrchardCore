@@ -104,6 +104,13 @@ public sealed class CouponEditViewModel
     public IReadOnlyList<CouponRedemption> Redemptions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets how each use's reference reads, by <c>{ReferenceType}|{ReferenceId}</c>, from the
+    /// <see cref="Services.ICheckoutReferenceDescriber"/>s.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyDictionary<string, Services.CheckoutReferenceDescription> References { get; set; } = new Dictionary<string, Services.CheckoutReferenceDescription>();
+
+    /// <summary>
     /// Gets or sets how many uses checkouts hold right now.
     /// </summary>
     [BindNever]

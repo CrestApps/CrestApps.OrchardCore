@@ -1,11 +1,12 @@
-@* A plan that can't be sold right now, for example because it has no price in any currency. Nothing is charged, and
-   no account or site is created; the site's log says what the administrator needs to fix. *@
+@using OrchardCore.DisplayManagement
+@model IShape
+
 <zone Name="Title">
     <breadcrumb name="SubscriptionsUnavailable" title="@T["Plan unavailable"]" />
 </zone>
 
 <div class="container my-4" style="max-width: 640px;">
     <h1 class="h3 mb-3">@T["This plan can't be bought right now"]</h1>
-    <p>@T["Nothing was charged. Please try again later, or contact us."]</p>
-    <a href="@Url.Content("~/")" class="btn btn-primary">@T["Back to the home page"]</a>
+
+    @await DisplayAsync(Model)
 </div>

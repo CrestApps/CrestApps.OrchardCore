@@ -59,11 +59,13 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
 
         // Only providers that can actually settle what this invoice owes are offered. Offering one that
         // cannot would let the customer select it and only discover the mismatch when payment is refused.
-        var eligible = CheckoutPaymentMethodSelector.GetEligible(
-            _providers,
-            obligations,
-            flow.Session is CheckoutSession { SettlesExistingBalance: true },
-            savesPaymentMethod);
+        var eligible = await CheckoutPaymentMethodSelector.GetAvailableAsync(
+            CheckoutPaymentMethodSelector.GetEligible(
+                _providers,
+                obligations,
+                flow.Session is CheckoutSession { SettlesExistingBalance: true },
+                savesPaymentMethod),
+            flow.Session);
 
         var selected = CheckoutPaymentMethodSelector.ResolveDefault(eligible, settings.DefaultPaymentMethod);
 
@@ -79,9 +81,11 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
                 Title = provider.DisplayName,
                 HasProcessor = CheckoutPaymentMethodSelector.IsGateway(provider),
                 IsDefault = string.Equals(provider.Key, selected, StringComparison.OrdinalIgnoreCase),
-                Description = CheckoutPaymentMethodSelector.IsGateway(provider)
-                    ? S["Pay securely online and confirm immediately."].Value
-                    : S["Confirm now and pay later."].Value,
+                Description = provider is ICheckoutPaymentProviderDescription described && !string.IsNullOrEmpty(described.Description)
+                    ? described.Description
+                    : CheckoutPaymentMethodSelector.IsGateway(provider)
+                        ? S["Pay securely online and confirm immediately."].Value
+                        : S["Confirm now and pay later."].Value,
             })],
         };
 

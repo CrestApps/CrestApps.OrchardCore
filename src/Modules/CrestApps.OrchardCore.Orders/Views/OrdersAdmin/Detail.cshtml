@@ -2,9 +2,18 @@
 @using CrestApps.OrchardCore.Products.Core.Services
 
 @model OrderDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var order = Model.Order;
+
+    // An order paid offline, such as by bank transfer, is placed before the money arrives.
+    var owed = order.Status == OrderStatus.Paid && Model.Money?.Outstanding > 0;
     string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
 }
 
@@ -32,7 +41,14 @@
                         @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
                     }
                     @await Html.PartialAsync("_OrderRefundStatus", order.RefundStatus)
-                    @await Html.PartialAsync("_OrderStatus", order.Status)
+                    @if (owed)
+                    {
+                        <span class="badge text-bg-warning">@T["Payment due"]</span>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_OrderStatus", order.Status)
+                    }
                 </span>
             </div>
             @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
@@ -41,29 +57,29 @@
                     @switch (cancelReason)
                     {
                         case OrderCancelReason.Replaced:
-                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.PaymentFailed:
-                            @T["Canceled {0:g}: the payment was declined.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the payment was declined.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutCanceled:
-                            @T["Canceled {0:g}: the checkout was canceled.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the checkout was canceled.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutExpired:
-                            @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
+                            @T["Canceled {0:g}: nobody finished the checkout in time.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.Unavailable:
-                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CanceledByStore:
-                            @T["Canceled {0:g} by the store.", order.CanceledUtc]
+                            @T["Canceled {0:g} by the store.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             @if (!string.IsNullOrEmpty(order.CancelNote))
                             {
                                 <span>@order.CancelNote</span>
                             }
                             break;
                         default:
-                            @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
+                            @T["Canceled {0:g}: no checkout was left that could pay for it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                     }
                 </div>
@@ -85,6 +101,20 @@
                                 }
                                 <span>@T["{0} × {1}", line.Quantity, Format(line.UnitPrice)]</span>
                             </div>
+                            @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
+                            {
+                                <div class="small text-break"><span class="fa-solid fa-box-open text-body-secondary me-1" aria-hidden="true"></span>@T["Includes {0}", contents]</div>
+                            }
+                            @foreach (var addOn in line.AddOns ?? [])
+                            {
+                                <div class="small text-break">
+                                    <span class="fa-solid fa-pen-to-square text-body-secondary me-1" aria-hidden="true"></span>@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)
+                                    @if (addOn.Price > 0)
+                                    {
+                                        <span class="text-muted">(+@Format(addOn.Price))</span>
+                                    }
+                                </div>
+                            }
                         </div>
                         <div class="text-nowrap fw-semibold">@Format(line.LineTotal)</div>
                     </li>
@@ -119,14 +149,14 @@
                 @if (order.Total.HasValue)
                 {
                     <div class="d-flex justify-content-between fw-semibold border-top mt-2 pt-2">
-                        <span>@T["Total paid"]</span>
+                        <span>@(owed ? T["Total"] : T["Total paid"])</span>
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
                 @foreach (var refund in order.Refunds ?? [])
                 {
                     <div class="d-flex justify-content-between text-info">
-                        <span>@T["Refunded {0:d}", refund.CreatedUtc]</span>
+                        <span>@T["Refunded {0:d}", await LocalAsync(refund.CreatedUtc)]</span>
                         <span>&minus;@Format(refund.Amount)</span>
                     </div>
                 }
@@ -163,11 +193,11 @@
                     <dt>@T["Order number"]</dt>
                     <dd>@order.OrderNumber</dd>
                     <dt>@T["Placed"]</dt>
-                    <dd>@order.CreatedUtc.ToString("f")</dd>
-                    @if (order.PaidUtc.HasValue)
+                    <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
+                    @if (order.PaidUtc.HasValue && !owed)
                     {
                         <dt>@T["Paid"]</dt>
-                        <dd>@order.PaidUtc.Value.ToString("f")</dd>
+                        <dd>@((await LocalAsync(order.PaidUtc.Value)).ToString("f"))</dd>
                     }
                     @if (order.ShippingAddress is not null)
                     {

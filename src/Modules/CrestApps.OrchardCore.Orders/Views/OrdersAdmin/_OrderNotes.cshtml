@@ -1,4 +1,10 @@
 @model OrderDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var order = Model.Order;
@@ -25,7 +31,7 @@
                     <li class="border-top pt-2 mt-2">
                         <div class="small text-muted">
                             <i class="@(note.Kind == OrderNoteKind.Event ? "fa-solid fa-bolt" : "fa-regular fa-note-sticky") me-1" aria-hidden="true"></i>
-                            @note.CreatedUtc.ToString("g") ·
+                            @((await LocalAsync(note.CreatedUtc)).ToString("g")) ·
                             @if (string.IsNullOrEmpty(note.AuthorName))
                             {
                                 @T["The site"]

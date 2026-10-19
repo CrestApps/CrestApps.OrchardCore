@@ -17,6 +17,8 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using CrestApps.OrchardCore.Reviews.Reports;
+using CrestApps.OrchardCore.Reports;
 
 namespace CrestApps.OrchardCore.Reviews;
 
@@ -53,4 +55,14 @@ public sealed class ListingStartup : StartupBase
         services.AddScoped<IProductSearchDocumentContributor, ReviewSearchDocumentContributor>();
         services.AddScoped<IProductListingEntryProvider, ReviewListingEntryProvider>();
     }
+}
+
+/// <summary>
+/// Adds the product reviews report to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IReport, ProductReviewsReport>();
 }

@@ -8,6 +8,9 @@
     var currency = invoice.Currency;
 
     string Format(decimal amount) => $"{currency} {CurrencyScale.Format(amount, currency)}";
+
+    // The total is ruled off only from lines above it; with none, it sits alone.
+    var hasBreakdown = (invoice.Discounts?.Count ?? 0) > 0 || invoice.TaxAmount > 0m;
 }
 
 <div class="card mb-4">
@@ -63,7 +66,7 @@
             }
         }
 
-        <div class="d-flex justify-content-between fw-semibold border-top pt-2 mt-2">
+        <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
             <span>@T["Due now"]</span>
             <span>@Format(invoice.GrandTotal)</span>
         </div>
