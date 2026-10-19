@@ -16,8 +16,18 @@
 }
 
 
-<h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
-<p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+    <div>
+        <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
+        <p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.InvoiceUrl))
+    {
+        <a class="btn btn-outline-secondary btn-sm" href="@Model.InvoiceUrl">
+            <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
+        </a>
+    }
+</div>
 
 @if (!string.IsNullOrEmpty(Model.PayUrl))
 {

@@ -68,6 +68,12 @@
                         </div>
                     </div>
                     <div class="text-nowrap d-flex gap-1">
+                        @* The shipment's packing slip: its lines and number, printed from the order. *@
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="@Url.Action("PackingSlip", "OrdersAdmin", new { area = "CrestApps.OrchardCore.Orders", orderId = Model.Order.ItemId, shipment = shipment.Number, lines = string.Join(",", shipment.Lines.Select(line => line.LineId + ":" + line.Quantity)) })"
+                           title="@T["Packing slip"]">
+                            <i class="fa-solid fa-box" aria-hidden="true"></i><span class="visually-hidden">@T["Packing slip for shipment {0}", shipment.Number]</span>
+                        </a>
                         @if (shipment.Status == ShipmentStatus.Shipped)
                         {
                             <form asp-controller="ShipmentsAdmin" asp-action="Deliver" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">

@@ -81,6 +81,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+
+        // The order's invoice and packing slip, to print.
+        services.AddScoped<OrderDocumentBuilder>();
         services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
 
         // A dispute reported by a gateway is recorded on its order, and shown on its page and in the orders list.

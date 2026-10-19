@@ -87,7 +87,27 @@ public sealed class OrderViewController : Controller
             model.Sections = sections;
             model.PayUrl = payUrl;
             model.RegisterUrl = registerUrl;
+            model.InvoiceUrl = Url.RouteUrl("GuestOrderInvoice", new { token });
         }));
+    }
+
+    /// <summary>
+    /// The invoice of an order opened from its signed link, to print or save as a PDF.
+    /// </summary>
+    [HttpGet("orders/view/{token}/invoice", Name = "GuestOrderInvoice")]
+    public async Task<IActionResult> Invoice(string token, [FromServices] OrderDocumentBuilder documents)
+    {
+        var orderId = _orderLinks.GetOrderId(token);
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
+
+        if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
+        {
+            return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
+        }
+
+        var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
+
+        return View(await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => OrdersAdminController.Copy(document, model)));
     }
 
     [HttpGet("orders/find", Name = OrderConstants.RouteNames.Find)]

@@ -95,6 +95,28 @@ public sealed class AccountOrdersController : Controller
             model.Sections = sections;
             model.PayUrl = payUrl;
             model.InAccount = true;
+            model.InvoiceUrl = Url.RouteUrl("AccountOrderInvoice", new { orderId = order.ItemId });
         }));
+    }
+
+    /// <summary>
+    /// The buyer's invoice for their order, to print or save as a PDF.
+    /// </summary>
+    [HttpGet("account/orders/{orderId}/invoice", Name = "AccountOrderInvoice")]
+    public async Task<IActionResult> Invoice(string orderId, [FromServices] OrderDocumentBuilder documents)
+    {
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
+
+        if (order is null ||
+            order.Status is OrderStatus.Draft or OrderStatus.Canceled ||
+            !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
+            !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
+        {
+            return NotFound();
+        }
+
+        var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
+
+        return View(await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => OrdersAdminController.Copy(document, model)));
     }
 }

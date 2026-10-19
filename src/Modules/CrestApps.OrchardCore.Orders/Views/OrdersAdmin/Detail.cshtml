@@ -30,6 +30,15 @@
     </breadcrumb>
 </zone>
 
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Invoice" asp-route-orderId="@order.ItemId">
+        <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
+    </a>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="PackingSlip" asp-route-orderId="@order.ItemId">
+        <i class="fa-solid fa-box" aria-hidden="true"></i> @T["Packing slip"]
+    </a>
+</div>
+
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="card">

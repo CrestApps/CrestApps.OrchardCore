@@ -1,0 +1,21 @@
+@model IShape
+
+@{
+    var document = (OrderDocumentViewModel)Model;
+    var page = new OrderDocumentPageViewModel
+    {
+        Order = document.Order,
+        PrintLabel = T["Print invoice"].Value,
+        BackUrl = Url.RouteUrl("AccountOrder", new { orderId = document.Order.ItemId }),
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="AccountOrderInvoice" title="@T["Invoice for {0}", document.Order.OrderNumber]" />
+</zone>
+
+<partial name="_OrderDocumentActions" model="page" />
+
+<div class="order-document-print-area">
+    @await DisplayAsync(Model)
+</div>

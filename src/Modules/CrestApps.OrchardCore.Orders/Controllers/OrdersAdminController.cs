@@ -115,6 +115,80 @@ public sealed class OrdersAdminController : Controller
         return File(bytes, "text/csv", $"orders-{TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone):yyyy-MM-dd}.csv");
     }
 
+    /// <summary>
+    /// The order's invoice, to print or save as a PDF.
+    /// </summary>
+    [Admin("orders/{orderId}/invoice", "OrdersInvoice")]
+    public async Task<IActionResult> Invoice(string orderId, [FromServices] OrderDocumentBuilder documents)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OrderPermissions.ManageOrders))
+        {
+            return Forbid();
+        }
+
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
+
+        if (order is null || order.Status == OrderStatus.Draft)
+        {
+            return NotFound();
+        }
+
+        var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
+
+        return View("Document", new OrderDocumentPageViewModel
+        {
+            Order = order,
+            IsAdmin = true,
+            PrintLabel = S["Print invoice"],
+            Document = await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => Copy(document, model)),
+        });
+    }
+
+    /// <summary>
+    /// The order's packing slip: its goods, or one shipment's lines ("lineId:quantity" pairs) with its number.
+    /// </summary>
+    [Admin("orders/{orderId}/packing-slip", "OrdersPackingSlip")]
+    public async Task<IActionResult> PackingSlip(string orderId, string lines, string shipment, [FromServices] OrderDocumentBuilder documents)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OrderPermissions.ManageOrders))
+        {
+            return Forbid();
+        }
+
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
+
+        if (order is null || order.Status == OrderStatus.Draft)
+        {
+            return NotFound();
+        }
+
+        var document = await documents.BuildPackingSlipAsync(order, OrderDocumentBuilder.ParseLines(lines), string.IsNullOrWhiteSpace(shipment) ? null : shipment.Trim());
+
+        return View("Document", new OrderDocumentPageViewModel
+        {
+            Order = order,
+            IsAdmin = true,
+            PrintLabel = S["Print packing slip"],
+            Document = await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderPackingSlip", model => Copy(document, model)),
+        });
+    }
+
+    internal static void Copy(OrderDocumentViewModel from, OrderDocumentViewModel to)
+    {
+        to.Order = from.Order;
+        to.Header = from.Header;
+        to.Title = from.Title;
+        to.Placed = from.Placed;
+        to.Paid = from.Paid;
+        to.BilledTo = from.BilledTo;
+        to.ShipsTo = from.ShipsTo;
+        to.Lines = from.Lines;
+        to.Discounts = from.Discounts;
+        to.AmountDue = from.AmountDue;
+        to.Status = from.Status;
+        to.ShipmentNumber = from.ShipmentNumber;
+    }
+
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
