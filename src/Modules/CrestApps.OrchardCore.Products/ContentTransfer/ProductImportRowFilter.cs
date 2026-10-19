@@ -91,6 +91,7 @@ public sealed class ProductImportRowFilter : IContentImportRowFilter
             if (_seen.TryGetValue(sku, out var earlier) && earlier != context.RowIndex)
             {
                 context.SkipReason = S["The SKU '{0}' is on row {1} of the file already.", sku, earlier];
+                context.SkipCategory = S["SKU repeated in the file"];
 
                 return Task.FromResult(true);
             }
@@ -108,6 +109,7 @@ public sealed class ProductImportRowFilter : IContentImportRowFilter
             if (!context.Columns.Contains(nameof(ContentItem.ContentItemId)))
             {
                 context.SkipReason = S["A product with the SKU '{0}' is in the store already. To update it, add the ContentItemId column, as an export has.", skus[0]];
+                context.SkipCategory = S["SKU already in the store"];
 
                 return Task.FromResult(true);
             }

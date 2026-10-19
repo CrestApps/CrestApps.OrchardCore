@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
@@ -41,6 +43,10 @@ public sealed class ContentTransferEntryDisplayDriver : DisplayDriver<ContentTra
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
                 .RenderWhen(() => Task.FromResult(!string.IsNullOrWhiteSpace(entry.Error))),
+            View("ContentTransferEntry_ErrorCategories_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:8")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Records:10")
+                .RenderWhen(() => Task.FromResult(entry.TryGet<ImportFileProcessStatsPart>(out var statsPart) && statsPart.ErrorCategories?.Count > 0)),
             View("ContentTransferEntriesProgress_SummaryAdmin", new ContentTransferEntryViewModel(entry))
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:10")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:10"),
