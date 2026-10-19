@@ -89,7 +89,7 @@ public sealed class GroupedProductsDisplayDriver : ContentPartDisplayDriver<Prod
                 continue;
             }
 
-            var productPart = item.As<ProductPart>();
+            var productPart = item.TryGet<ProductPart>(out var found) ? found : new ProductPart();
 
             // An external product is listed with the link to where it's sold.
             if (!string.IsNullOrWhiteSpace(productPart.ExternalUrl))

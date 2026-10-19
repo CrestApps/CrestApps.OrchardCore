@@ -119,7 +119,7 @@ public sealed class ProductBundleDisplayDriver : ContentPartDisplayDriver<Produc
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Items), S["{0} is sold in variants, so it can't be part of a bundle. Choose a product without variants.", withVariants.DisplayText]);
         }
 
-        if (parts.Values.FirstOrDefault(item => item.Has<ProductBundlePart>() && item.As<ProductBundlePart>().Items is { Count: > 0 }) is { } nested)
+        if (parts.Values.FirstOrDefault(item => item.TryGet<ProductBundlePart>(out var inner) && inner.Items is { Count: > 0 }) is { } nested)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Items), S["{0} is a bundle itself. A bundle is made of single products.", nested.DisplayText]);
         }

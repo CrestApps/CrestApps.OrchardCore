@@ -123,7 +123,7 @@ public sealed class OrderBumpCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriv
 
         // A product sold in variants or with a required add-on has a choice to make, which the payment step can't.
         if ((item.TryGet<ProductVariantsPart>(out var variants) && variants.HasVariants) ||
-            item.As<ProductPart>()?.AddOns.Any(addOn => addOn.Required) == true)
+            (item.TryGet<ProductPart>(out var productPart) && productPart.AddOns.Any(addOn => addOn.Required)))
         {
             return (settings, null);
         }
