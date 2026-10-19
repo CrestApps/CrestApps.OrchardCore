@@ -157,7 +157,9 @@ public sealed class CheckoutController : Controller
         // Some buttons on a step submit the form to change the step rather than to leave it: applying a
         // promotion code is one. Those save and re-render, because completing the checkout here would take
         // the customer's money the moment they asked to see a discount.
-        if (string.Equals(Request.Form[CheckoutConstants.FormActions.FieldName], CheckoutConstants.FormActions.ApplyCoupon, StringComparison.Ordinal))
+        if (Request.Form[CheckoutConstants.FormActions.FieldName] is { Count: > 0 } action &&
+            (string.Equals(action, CheckoutConstants.FormActions.ApplyCoupon, StringComparison.Ordinal) ||
+             string.Equals(action, CheckoutConstants.FormActions.Update, StringComparison.Ordinal)))
         {
             await _sessionStore.SaveAsync(session);
 

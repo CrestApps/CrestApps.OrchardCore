@@ -121,6 +121,31 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
         var now = _clock.UtcNow;
 
+        // An order bump the buyer added on the payment step, and paid for, becomes a line of the order, so it's
+        // sold from stock, shipped and reported like the rest.
+        if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutOrderBump>(session, out var bump) &&
+            invoice.LineItems.Any(item => item.ItemId == CheckoutOrderBump.BillingItemId) &&
+            !order.Lines.Exists(line => line.LineId == CheckoutOrderBump.BillingItemId))
+        {
+            order.Lines.Add(new OrderLine
+            {
+                LineId = CheckoutOrderBump.BillingItemId,
+                ContentItemId = bump.ContentItemId,
+                ContentItemVersionId = bump.ContentItemVersionId,
+                ContentType = bump.ContentType,
+                Title = bump.Title,
+                Sku = bump.Sku,
+                Quantity = 1,
+                UnitPrice = bump.UnitPrice,
+                LineTotal = bump.UnitPrice,
+                ProductType = bump.ProductType,
+                TaxCategoryCode = bump.TaxCategoryCode,
+                TaxClassificationCode = bump.TaxClassificationCode,
+                CategoryIds = bump.CategoryIds ?? [],
+            });
+            order.Subtotal += bump.UnitPrice;
+        }
+
         // An order replaced by a newer one from the same cart is still what this payment bought.
         order.Status = OrderStatus.Paid;
         order.PaidUtc = now;
@@ -257,6 +282,25 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
     private static bool IsOrder(CheckoutSession session)
         => string.Equals(session?.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal);
+
+    /// <summary>
+    /// The billing line of an order bump, as the order's lines are billed.
+    /// </summary>
+    public static BillingItem ToBillingItem(CheckoutOrderBump bump)
+        => ToBillingItem(new OrderLine
+        {
+            LineId = CheckoutOrderBump.BillingItemId,
+            ContentItemId = bump.ContentItemId,
+            Title = bump.Title,
+            Sku = bump.Sku,
+            Quantity = 1,
+            UnitPrice = bump.UnitPrice,
+            LineTotal = bump.UnitPrice,
+            ProductType = bump.ProductType,
+            TaxCategoryCode = bump.TaxCategoryCode,
+            TaxClassificationCode = bump.TaxClassificationCode,
+            CategoryIds = bump.CategoryIds ?? [],
+        });
 
     private static BillingItem ToBillingItem(OrderLine line)
         => new()

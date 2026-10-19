@@ -146,6 +146,29 @@ public class OrderCreateAccountViewModel
     public string ConfirmPassword { get; set; }
 }
 
+/// <summary>
+/// The order bump on the payment step.
+/// </summary>
+public class OrderBumpViewModel
+{
+    public bool Accept { get; set; }
+
+    [BindNever]
+    public string Headline { get; set; }
+
+    [BindNever]
+    public string Title { get; set; }
+
+    [BindNever]
+    public string Price { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's own price, shown struck through when the offer is cheaper.
+    /// </summary>
+    [BindNever]
+    public string ListPrice { get; set; }
+}
+
 public class OrderSettingsViewModel
 {
     public bool SendConfirmations { get; set; }
@@ -153,6 +176,18 @@ public class OrderSettingsViewModel
     public bool SendRecoveryEmails { get; set; }
 
     public int RecoveryDelayHours { get; set; } = 1;
+
+    public string OrderBumpProductId { get; set; }
+
+    public decimal? OrderBumpPercentOff { get; set; }
+
+    public string OrderBumpHeadline { get; set; }
+
+    [BindNever]
+    public string ProductSearchEndpoint { get; set; }
+
+    [BindNever]
+    public string InitialOrderBumpJson { get; set; }
 
     /// <summary>
     /// Gets or sets whether the site has the base URL recovery emails link back through.

@@ -68,6 +68,9 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
 
+        // The order bump on the payment step: one tick adds the product the store offers before paying.
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, OrderBumpCheckoutFlowDisplayDriver>();
+
         // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
         services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
 

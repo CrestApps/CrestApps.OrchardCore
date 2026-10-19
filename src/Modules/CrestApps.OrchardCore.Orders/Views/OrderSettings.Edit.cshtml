@@ -37,6 +37,48 @@
     </div>
 </div>
 
+<h5 class="mt-4">@T["Order bump"]</h5>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.OrderBumpProductId)">@T["Product offered"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.OrderBumpProductId),
+            inputName = Html.NameFor(model => model.OrderBumpProductId),
+            endpoint = Model.ProductSearchEndpoint,
+            initialItemsJson = Model.InitialOrderBumpJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Choose a product"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products match."].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Optional. Offered on the payment step of every order that doesn't already have it: one tick adds it before paying. Choose something small that goes with most orders. Clear it to stop the offer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OrderBumpPercentOff">
+    <label asp-for="OrderBumpPercentOff" class="ocat-label">@T["Discount"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="OrderBumpPercentOff" type="number" min="0" max="99" step="0.01" class="form-control" />
+            <span class="input-group-text">%</span>
+        </div>
+        <span class="hint">@T["Optional. How much less it costs as an add-on to the order, such as 20."]</span>
+        <span asp-validation-for="OrderBumpPercentOff"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="OrderBumpHeadline" class="ocat-label">@T["Headline"]</label>
+    <div class="ocat-end">
+        <input asp-for="OrderBumpHeadline" class="form-control" maxlength="120" placeholder="@T["Add this to your order?"]" />
+        <span class="hint">@T["Optional. What the offer says above the product."]</span>
+    </div>
+</div>
+
 <script at="Foot">
     (function () {
         var toggle = document.querySelector('[data-recovery-toggle]');
