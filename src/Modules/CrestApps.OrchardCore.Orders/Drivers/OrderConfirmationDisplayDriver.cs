@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -19,14 +20,17 @@ public sealed class OrderConfirmationDisplayDriver : DisplayDriver<CheckoutFlow>
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
     private readonly OrderAccountClaims _accountClaims;
+    private readonly IContentManager _contentManager;
 
     public OrderConfirmationDisplayDriver(
         IOrderStore orderStore,
         IOrderLinkService orderLinks,
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator,
-        OrderAccountClaims accountClaims)
+        OrderAccountClaims accountClaims,
+        IContentManager contentManager)
     {
+        _contentManager = contentManager;
         _orderStore = orderStore;
         _orderLinks = orderLinks;
         _httpContextAccessor = httpContextAccessor;
@@ -51,7 +55,7 @@ public sealed class OrderConfirmationDisplayDriver : DisplayDriver<CheckoutFlow>
             return null;
         }
 
-        return Initialize<OrderConfirmationViewModel>("OrderConfirmation", async confirmation =>
+        return Combine(Initialize<OrderConfirmationViewModel>("OrderConfirmation", async confirmation =>
         {
             confirmation.OrderId = order.ItemId;
             confirmation.OrderNumber = order.OrderNumber;
@@ -71,6 +75,11 @@ public sealed class OrderConfirmationDisplayDriver : DisplayDriver<CheckoutFlow>
                     confirmation.ReturnUrl = httpContext.Request.PathBase + httpContext.Request.Path;
                 }
             }
-        }).Location("Confirmation", "Content:0");
+        }).Location("Confirmation", "Content:0"),
+        Initialize<OrderConfirmationOffersViewModel>("OrderConfirmationOffers", async offers =>
+        {
+            // What goes with what was just bought, offered while the buyer is still here.
+            offers.Products = [.. await _contentManager.GetAsync(order.Lines.Select(line => line.ContentItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal), VersionOptions.Published)];
+        }).Location("Confirmation", "Content:20"));
     }
 }

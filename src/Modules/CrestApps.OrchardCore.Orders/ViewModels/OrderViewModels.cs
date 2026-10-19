@@ -99,6 +99,14 @@ public class OrderCancelInputModel
     public bool Restock { get; set; }
 }
 
+/// <summary>
+/// The products a confirmation page offers next: what goes with what was just bought.
+/// </summary>
+public class OrderConfirmationOffersViewModel
+{
+    public IList<global::OrchardCore.ContentManagement.ContentItem> Products { get; set; } = [];
+}
+
 public class OrderConfirmationViewModel
 {
     public string OrderId { get; set; }

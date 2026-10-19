@@ -14,7 +14,7 @@
     var ids = ProductRecommendationService.GetCrossSellIds(products);
     var strip = new ProductCardStripViewModel
     {
-        Heading = T["Frequently bought together"].Value,
+        Heading = Model.Heading as string ?? T["Frequently bought together"].Value,
         Cards = ids.Count == 0 ? [] : await Listing.BuildCardsAsync(ids),
     };
 }
