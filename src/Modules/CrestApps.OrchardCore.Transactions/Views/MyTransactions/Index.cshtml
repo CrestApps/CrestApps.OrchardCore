@@ -1,4 +1,5 @@
-@model MyTransactionsPageViewModel
+@using OrchardCore.DisplayManagement
+@model IShape
 
 <zone Name="Title">
     <breadcrumb name="TransactionsStatement" title="@T["Balances and invoices"]">
@@ -12,25 +13,9 @@
             @await DisplayAsync(await New.CommerceAccountNavigation())
         </div>
         <div class="col-lg-9">
-    <h1 class="h3 mb-3">@T["Balances and invoices"]</h1>
+            <h1 class="h3 mb-3">@T["Balances and invoices"]</h1>
 
-    <form method="get" action="@Url.RouteUrl(TransactionsConstants.RouteNames.Statement)" class="row g-2 align-items-center mb-3" role="search">
-        <div class="col-sm">
-            <label for="my-transactions-search" class="visually-hidden">@T["Search by description"]</label>
-            <input id="my-transactions-search" name="search" type="search" class="form-control" value="@Model.Search" placeholder="@T["Search by description"]" autocomplete="off" />
-        </div>
-        <div class="col-sm-auto">
-            <div class="form-check">
-                <input id="my-transactions-outstanding" name="outstanding" type="checkbox" class="form-check-input" value="true" checked="@Model.Outstanding" />
-                <label for="my-transactions-outstanding" class="form-check-label">@T["Only what I owe"]</label>
-            </div>
-        </div>
-        <div class="col-sm-auto">
-            <button type="submit" class="btn btn-outline-primary">@T["Filter"]</button>
-        </div>
-    </form>
-
-    @await DisplayAsync(Model.Statement)
+            @await DisplayAsync(Model)
         </div>
     </div>
 </div>

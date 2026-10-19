@@ -14,7 +14,8 @@ namespace CrestApps.OrchardCore.Orders.Controllers;
 
 /// <summary>
 /// The signed-in customer's orders on the storefront account: the list, and each order with what other modules add
-/// to it, such as its downloads and shipments.
+/// to it, such as its downloads and shipments. Each page's content is a shape (<c>AccountOrders</c>, <c>AccountOrder</c>)
+/// that a theme can override.
 /// </summary>
 [Authorize]
 public sealed class AccountOrdersController : Controller
@@ -58,12 +59,14 @@ public sealed class AccountOrdersController : Controller
             }
         }
 
-        return View(new AccountOrdersViewModel
+        var pagerShape = count > PageSize ? await _shapeFactory.PagerAsync(pager, count) : null;
+
+        return View(await _shapeFactory.CreateAsync<AccountOrdersViewModel>("AccountOrders", model =>
         {
-            Orders = orders,
-            OwedOrderIds = owed,
-            Pager = count > PageSize ? await _shapeFactory.PagerAsync(pager, count) : null,
-        });
+            model.Orders = orders;
+            model.OwedOrderIds = owed;
+            model.Pager = pagerShape;
+        }));
     }
 
     [HttpGet("account/orders/{orderId}", Name = "AccountOrder")]
@@ -83,12 +86,15 @@ public sealed class AccountOrdersController : Controller
             return NotFound();
         }
 
-        return View(new OrderViewViewModel
+        var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
+        var payUrl = order.Status == OrderStatus.Canceled ? null : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+
+        return View(await _shapeFactory.CreateAsync<OrderViewViewModel>("AccountOrder", model =>
         {
-            Order = order,
-            Sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail),
-            PayUrl = order.Status == OrderStatus.Canceled ? null : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order),
-            InAccount = true,
-        });
+            model.Order = order;
+            model.Sections = sections;
+            model.PayUrl = payUrl;
+            model.InAccount = true;
+        }));
     }
 }

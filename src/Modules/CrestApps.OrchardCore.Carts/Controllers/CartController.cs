@@ -62,11 +62,14 @@ public sealed class CartController : Controller
         var cart = await _cartService.GetCurrentAsync(HttpContext.RequestAborted);
         var pricing = await _cartService.PriceAsync(cart, HttpContext.RequestAborted);
 
-        return PartialView("MiniCart", new CartViewModel
+        // The fragment is the MiniCart shape, so a theme changes it by overriding that shape.
+        var shape = await _shapeFactory.CreateAsync<CartViewModel>("MiniCart", model =>
         {
-            Pricing = pricing,
-            CheckoutUrl = Url.RouteUrl(CartConstants.RouteNames.Checkout),
+            model.Pricing = pricing;
+            model.CheckoutUrl = Url.RouteUrl(CartConstants.RouteNames.Checkout);
         });
+
+        return PartialView(shape);
     }
 
     [HttpPost("cart/add", Name = CartConstants.RouteNames.Add)]

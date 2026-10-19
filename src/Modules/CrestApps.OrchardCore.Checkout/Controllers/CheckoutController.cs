@@ -28,6 +28,7 @@ public sealed class CheckoutController : Controller
     private readonly ICheckoutEngine _engine;
     private readonly IDisplayManager<CheckoutFlow> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IShapeFactory _shapeFactory;
     private readonly INotifier _notifier;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
@@ -42,6 +43,7 @@ public sealed class CheckoutController : Controller
     /// <param name="engine">The checkout engine that owns every money-moving transition.</param>
     /// <param name="displayManager">The display manager that renders the flow's steps.</param>
     /// <param name="updateModelAccessor">The accessor supplying the current model updater.</param>
+    /// <param name="shapeFactory">The shape factory that builds the pages a theme can override.</param>
     /// <param name="notifier">The notifier used to surface checkout messages.</param>
     /// <param name="siteService">The site service, which holds how the checkout is laid out.</param>
     /// <param name="clock">The clock used to stamp session changes.</param>
@@ -52,6 +54,7 @@ public sealed class CheckoutController : Controller
         ICheckoutEngine engine,
         IDisplayManager<CheckoutFlow> displayManager,
         IUpdateModelAccessor updateModelAccessor,
+        IShapeFactory shapeFactory,
         INotifier notifier,
         ISiteService siteService,
         IClock clock,
@@ -62,6 +65,7 @@ public sealed class CheckoutController : Controller
         _engine = engine;
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
+        _shapeFactory = shapeFactory;
         _notifier = notifier;
         _siteService = siteService;
         _clock = clock;
@@ -363,13 +367,14 @@ public sealed class CheckoutController : Controller
 
         var returnInfo = CheckoutReturnInfo.GetFrom(session);
 
-        return View("Ended", new CheckoutEndedViewModel
+        // The page is the CheckoutEnded shape, so a theme can override it.
+        return View("Ended", await _shapeFactory.CreateAsync<CheckoutEndedViewModel>("CheckoutEnded", model =>
         {
-            SessionId = session.SessionId,
-            Status = session.Status,
-            ReturnUrl = returnInfo?.ReturnUrl,
-            ReturnText = returnInfo?.ReturnText,
-        });
+            model.SessionId = session.SessionId;
+            model.Status = session.Status;
+            model.ReturnUrl = returnInfo?.ReturnUrl;
+            model.ReturnText = returnInfo?.ReturnText;
+        }));
     }
 
     // A checkout is still the customer's to look at while it is waiting on its provider. Serving only

@@ -336,13 +336,13 @@ One branch, a commit per slice:
 - **PC3 quantity rules, tier and group pricing.** Minimum, maximum and pack sizes; volume discounts; role discounts.
 - **PC3 comparison.** A **Product Comparison** feature: up to four products side by side.
 - **PC4 CSV import and export, migration importers.** A **Product Import and Export** feature reading Shopify and WooCommerce exports and writing Shopify's format; an orders CSV export from the Orders list.
+- **Storefront theming.** The account pages, guest order and pay pages, the mini cart, the comparison page and the confirmation's thanks were plain views; each is now a named shape a theme overrides in Razor or Liquid, and a test keeps new pages that way.
 - **Found in testing.** Orders paid offline read *Paid*; they now read *Payment due* until paid, and the owed note no longer names Pay Later for every method.
 
 Not built yet, and why:
 
 - **File uploads as add-ons** (PC2). An uploaded file needs storage outside the media library, virus scanning and a retention rule before buyers can send one; it fits the F1 line details foundation (PL0).
 - **Image import** (PC4). Downloading images from the addresses in an export means fetching from servers a file names, which needs an allow-list and size limits to be safe; product photos are added in the media library.
-- **Storefront shapes everywhere.** The account pages, the mini cart and the comparison page were plain views; they become shapes in this phase's last slice so a theme can override every storefront page in Liquid.
 
 ## Decisions needed
 

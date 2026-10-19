@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Transactions.Controllers;
 
@@ -19,6 +20,7 @@ public sealed class TransactionPayController : Controller
 {
     private readonly ITransactionPayLinkService _payLinks;
     private readonly ITransactionManager _transactionManager;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IStringLocalizer S;
 
@@ -27,14 +29,17 @@ public sealed class TransactionPayController : Controller
     /// </summary>
     /// <param name="payLinks">The service that reads the signed pay links.</param>
     /// <param name="transactionManager">The transaction manager.</param>
+    /// <param name="shapeFactory">The shape factory that builds the page a theme can override.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionPayController(
         ITransactionPayLinkService payLinks,
         ITransactionManager transactionManager,
+        IShapeFactory shapeFactory,
         IStringLocalizer<TransactionPayController> stringLocalizer)
     {
         _payLinks = payLinks;
         _transactionManager = transactionManager;
+        _shapeFactory = shapeFactory;
         S = stringLocalizer;
     }
 
@@ -49,18 +54,22 @@ public sealed class TransactionPayController : Controller
 
         if (transaction is null)
         {
-            return View("Invalid");
+            return View("Invalid", await _shapeFactory.CreateAsync("TransactionPayInvalid"));
         }
 
         var invoiceBuilder = HttpContext.RequestServices.GetService<ITransactionInvoiceBuilder>();
 
-        return View(new TransactionPayViewModel
+        var invoice = invoiceBuilder is null ? null : await invoiceBuilder.BuildAsync(transaction, HttpContext.RequestAborted);
+        var canPay = IsPayable(transaction) && HttpContext.RequestServices.GetService<ICheckoutEngine>() is not null;
+
+        // The page's content is the TransactionPay shape, so a theme can override it.
+        return View(await _shapeFactory.CreateAsync<TransactionPayViewModel>("TransactionPay", model =>
         {
-            Token = token,
-            Transaction = transaction,
-            Invoice = invoiceBuilder is null ? null : await invoiceBuilder.BuildAsync(transaction, HttpContext.RequestAborted),
-            CanPay = IsPayable(transaction) && HttpContext.RequestServices.GetService<ICheckoutEngine>() is not null,
-        });
+            model.Token = token;
+            model.Transaction = transaction;
+            model.Invoice = invoice;
+            model.CanPay = canPay;
+        }));
     }
 
     /// <summary>
@@ -75,7 +84,7 @@ public sealed class TransactionPayController : Controller
 
         if (transaction is null)
         {
-            return View("Invalid");
+            return View("Invalid", await _shapeFactory.CreateAsync("TransactionPayInvalid"));
         }
 
         var engine = HttpContext.RequestServices.GetService<ICheckoutEngine>();
