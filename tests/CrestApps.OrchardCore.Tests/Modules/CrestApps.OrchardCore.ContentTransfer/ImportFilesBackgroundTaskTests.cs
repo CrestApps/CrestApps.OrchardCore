@@ -54,6 +54,7 @@ public sealed class ImportFilesBackgroundTaskTests
         Assert.Empty(existingRows);
         Assert.Empty(pendingRows);
         Assert.Equal("Skipped by the test filter.", progressPart.ErrorMessages[2]);
+        Assert.Equal([2], progressPart.ErrorCategories["Test reason"]);
     }
 
     [Fact]
@@ -121,6 +122,74 @@ public sealed class ImportFilesBackgroundTaskTests
         ImportFilesBackgroundTask.AddRowError(progressPart, 1, "Second attempt.");
 
         Assert.Equal("Second attempt.", progressPart.ErrorMessages[1]);
+    }
+
+    [Fact]
+    public void AddRowError_CountsEveryFailedRowByCategory_PastTheStoredMessages()
+    {
+        // Arrange
+        // Only the first 1000 failed rows kept their reason, so a list with more failures could not tell how many
+        // of its numbers were on a national do-not-call registry and how many were duplicates.
+        var progressPart = new ImportFileProcessStatsPart();
+        var registryRows = ImportFileProcessStatsPart.MaxStoredErrorMessages + 250;
+
+        // Act
+        for (var rowIndex = 1; rowIndex <= registryRows; rowIndex++)
+        {
+            ImportFilesBackgroundTask.AddRowError(progressPart, rowIndex, $"Row {rowIndex} is on a registry.", "On a national do-not-call registry");
+        }
+
+        for (var rowIndex = registryRows + 1; rowIndex <= registryRows + 40; rowIndex++)
+        {
+            ImportFilesBackgroundTask.AddRowError(progressPart, rowIndex, $"Row {rowIndex} is a duplicate.", "Already in the database");
+        }
+
+        ImportFilesBackgroundTask.AddRowError(progressPart, registryRows + 41, "No category.");
+
+        // Assert
+        Assert.Equal(registryRows + 41, progressPart.Errors.Count);
+        Assert.Equal(ImportFileProcessStatsPart.MaxStoredErrorMessages, progressPart.ErrorMessages.Count);
+        Assert.Equal(registryRows, progressPart.ErrorCategories["On a national do-not-call registry"].Count);
+        Assert.Equal(40, progressPart.ErrorCategories["Already in the database"].Count);
+        Assert.Contains(registryRows + 40, progressPart.ErrorCategories["Already in the database"]);
+        Assert.Equal(2, progressPart.ErrorCategories.Count);
+    }
+
+    [Fact]
+    public void AddRowError_MovesARowToTheCategoryItFailedWithLast()
+    {
+        // Arrange
+        var progressPart = new ImportFileProcessStatsPart();
+        ImportFilesBackgroundTask.AddRowError(progressPart, 7, "First attempt.", "Already in the database");
+
+        // Act
+        // A resumed run that reads the row again may fail it for another reason.
+        ImportFilesBackgroundTask.AddRowError(progressPart, 7, "Second attempt.", "Did not pass validation");
+
+        // Assert
+        Assert.False(progressPart.ErrorCategories.ContainsKey("Already in the database"));
+        Assert.Equal([7], progressPart.ErrorCategories["Did not pass validation"]);
+    }
+
+    [Fact]
+    public void RemoveRowError_ForgetsTheRow_AndItsCategory()
+    {
+        // Arrange
+        var progressPart = new ImportFileProcessStatsPart();
+        ImportFilesBackgroundTask.AddRowError(progressPart, 3, "Failed.", "Did not pass validation");
+        ImportFilesBackgroundTask.AddRowError(progressPart, 4, "Failed.", "Did not pass validation");
+
+        // Act
+        ImportFilesBackgroundTask.RemoveRowError(progressPart, 3);
+
+        // Assert
+        Assert.Equal([4], progressPart.Errors);
+        Assert.False(progressPart.ErrorMessages.ContainsKey(3));
+        Assert.Equal([4], progressPart.ErrorCategories["Did not pass validation"]);
+
+        ImportFilesBackgroundTask.RemoveRowError(progressPart, 4);
+
+        Assert.Empty(progressPart.ErrorCategories);
     }
 
     [Fact]
@@ -205,6 +274,7 @@ public sealed class ImportFilesBackgroundTaskTests
             }
 
             context.SkipReason = "Skipped by the test filter.";
+            context.SkipCategory = "Test reason";
 
             return Task.FromResult(true);
         }

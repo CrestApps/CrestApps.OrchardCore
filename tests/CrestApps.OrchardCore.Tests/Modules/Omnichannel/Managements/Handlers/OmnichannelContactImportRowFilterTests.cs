@@ -161,9 +161,11 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         Assert.True(await filter.ShouldSkipRowAsync(rowContexts[1]));
         Assert.Contains("already appeared earlier in the import file", rowContexts[1].SkipReason);
+        Assert.Equal("Repeated in the import file", rowContexts[1].SkipCategory);
 
         Assert.True(await filter.ShouldSkipRowAsync(rowContexts[2]));
         Assert.Contains("already exists in the database", rowContexts[2].SkipReason);
+        Assert.Equal("Already in the database", rowContexts[2].SkipCategory);
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
@@ -294,6 +296,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
+        Assert.Equal("On a national do-not-call registry", rowContext.SkipCategory);
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
@@ -535,6 +538,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
+        Assert.Equal("On a national do-not-call registry", rowContext.SkipCategory);
         Assert.Contains(
             lookupBatches,
             batch => batch.Contains(PhoneNumber.FromE164("+12502000003")));

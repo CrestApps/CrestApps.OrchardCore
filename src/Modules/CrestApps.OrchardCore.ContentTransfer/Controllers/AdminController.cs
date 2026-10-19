@@ -891,6 +891,19 @@ public sealed class AdminController : Controller, IUpdateModel
         var outputStream = new MemoryStream();
         statsPart.ErrorMessages ??= [];
 
+        var categoryByRow = new Dictionary<int, string>();
+
+        if (statsPart.ErrorCategories != null)
+        {
+            foreach (var (category, rows) in statsPart.ErrorCategories)
+            {
+                foreach (var row in rows)
+                {
+                    categoryByRow[row] = category;
+                }
+            }
+        }
+
         // Read as the import read it, so a reshaped file's failed rows are the rows that failed.
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
 
@@ -922,7 +935,10 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 if (!statsPart.ErrorMessages.TryGetValue(rowIndex, out var errorMessage))
                 {
-                    errorMessage = S["The row failed to import. Error details are kept for the first {0} failed rows only.", ImportFileProcessStatsPart.MaxStoredErrorMessages];
+                    // Past the stored messages, the row's reason is the kind of error it was recorded with.
+                    errorMessage = categoryByRow.TryGetValue(rowIndex, out var category)
+                        ? category
+                        : S["The row failed to import. Error details are kept for the first {0} failed rows only.", ImportFileProcessStatsPart.MaxStoredErrorMessages];
                 }
 
                 var values = rowValues.ToList();

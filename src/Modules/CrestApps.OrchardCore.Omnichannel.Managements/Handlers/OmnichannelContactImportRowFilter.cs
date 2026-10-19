@@ -184,6 +184,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (HasConflictingExistingOwner(entry, contentItemId))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already exists in the database.";
+                    context.SkipCategory = "Already in the database";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -199,6 +200,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (HasConflictingSeenOwner(entry.NormalizedNumber, contentItemId))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already appeared earlier in the import file.";
+                    context.SkipCategory = "Repeated in the import file";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -226,6 +228,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             catch (DoNotCallScreeningException ex)
             {
                 context.SkipReason = ex.Message;
+                context.SkipCategory = "Do-not-call check failed";
 
                 _logger.LogError(
                     ex,
@@ -244,6 +247,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (!entry.Canonical.HasValue)
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' could not be read as a phone number, so it could not be checked against a national do-not-call registry.";
+                    context.SkipCategory = "Not a readable phone number";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -277,6 +281,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (doNotCallNumbers.Contains(entry.Canonical))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' is registered on a national do-not-call registry.";
+                    context.SkipCategory = "On a national do-not-call registry";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {

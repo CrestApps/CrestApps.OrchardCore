@@ -37,4 +37,11 @@ public sealed class ContentImportRowFilterContext
     /// Gets or sets the reason the row should be skipped.
     /// </summary>
     public string SkipReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short name for the kind of reason the row was skipped, the same for every row skipped for that
+    /// reason, such as "On a national do-not-call registry". The import counts the rows skipped for each kind and
+    /// keeps the kind of every skipped row, while <see cref="SkipReason"/> is kept for a limited number of rows only.
+    /// </summary>
+    public string SkipCategory { get; set; }
 }
