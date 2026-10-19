@@ -25,6 +25,7 @@ public static class ShippingServiceCollectionExtensions
         services.AddScoped<IShippingRateProvider, FreeShippingProvider>();
         services.AddScoped<IShippingRateProvider, LocalDeliveryShippingProvider>();
         services.AddScoped<IShippingRateProvider, CarrierShippingRateProvider>();
+        services.AddScoped<ICarrierProviderResolver, DefaultCarrierProviderResolver>();
 
         return services;
     }

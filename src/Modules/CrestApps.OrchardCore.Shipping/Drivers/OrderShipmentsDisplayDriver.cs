@@ -23,7 +23,7 @@ internal sealed class OrderShipmentsDisplayDriver : DisplayDriver<Order>
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IEnumerable<ICarrierService> _carriers;
+    private readonly ICarrierProviderResolver _carriers;
 
     public OrderShipmentsDisplayDriver(
         IShipmentStore shipments,
@@ -31,7 +31,7 @@ internal sealed class OrderShipmentsDisplayDriver : DisplayDriver<Order>
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IEnumerable<ICarrierService> carriers)
+        ICarrierProviderResolver carriers)
     {
         _carriers = carriers;
         _shipments = shipments;
@@ -80,10 +80,7 @@ internal sealed class OrderShipmentsDisplayDriver : DisplayDriver<Order>
             model.CanFulfill = canFulfill;
             model.Carriers = [.. ((await _siteService.GetSettingsAsync<ShippingSettings>()).Carriers ?? []).Select(carrier => carrier.Name)];
 
-            foreach (var carrier in _carriers)
-            {
-                model.CanBuyLabels |= canFulfill && await carrier.IsConfiguredAsync();
-            }
+            model.CanBuyLabels = canFulfill && await _carriers.GetDefaultAsync() is not null;
             model.Remaining = order.Lines
                 .Where(line => remaining.ContainsKey(line.LineId))
                 .Select(line => new ShipmentLineChoice

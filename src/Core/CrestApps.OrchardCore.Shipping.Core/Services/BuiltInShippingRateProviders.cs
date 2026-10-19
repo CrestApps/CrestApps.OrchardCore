@@ -151,7 +151,7 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
 {
     private static readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(10);
 
-    private readonly IEnumerable<ICarrierService> _carriers;
+    private readonly ICarrierProviderResolver _carriers;
     private readonly ISiteService _siteService;
     private readonly IMemoryCache _cache;
     private readonly ILogger _logger;
@@ -159,7 +159,7 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
     internal readonly IStringLocalizer S;
 
     public CarrierShippingRateProvider(
-        IEnumerable<ICarrierService> carriers,
+        ICarrierProviderResolver carriers,
         ISiteService siteService,
         IMemoryCache cache,
         ILogger<CarrierShippingRateProvider> logger,
@@ -182,7 +182,7 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
     {
         var settings = context.Method.GetOrCreate<CarrierRateSettings>();
         var shipping = await _siteService.GetSettingsAsync<ShippingSettings>();
-        var carrier = await FindCarrierAsync();
+        var carrier = await _carriers.GetDefaultAsync();
 
         if (carrier is null || shipping.ShipFrom is null || context.Request.Destination is null)
         {
@@ -233,7 +233,7 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
             .Select(rate =>
             {
                 var amount = Math.Round((rate.Amount * (1 + (settings.MarkupPercent / 100m))) + settings.MarkupAmount, 2, MidpointRounding.AwayFromZero);
-                var shippingRate = context.CreateRate(amount, $"{rate.Carrier}-{rate.Service}".ToLowerInvariant(), $"{rate.Carrier} {Humanize(rate.Service)}");
+                var shippingRate = context.CreateRate(amount, $"{rate.Carrier}-{rate.Service}".ToLowerInvariant(), $"{rate.Carrier} {DescribeService(rate.Carrier, rate.Service)}");
 
                 return rate.DeliveryDays is { } days
                     ? new ShippingRate
@@ -255,25 +255,35 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
         return offered.Length > 0 ? offered : Fallback(context, settings);
     }
 
-    private async Task<ICarrierService> FindCarrierAsync()
-    {
-        foreach (var carrier in _carriers)
-        {
-            if (await carrier.IsConfiguredAsync())
-            {
-                return carrier;
-            }
-        }
-
-        return null;
-    }
-
     private static IReadOnlyList<ShippingRate> Fallback(ShippingRateContext context, CarrierRateSettings settings)
         => settings.FallbackAmount is { } amount ? [context.CreateRate(amount)] : [];
 
-    // Carriers name services in their own code, such as "GroundAdvantage" or "2ndDayAir".
-    public static string Humanize(string service)
-        => string.IsNullOrEmpty(service)
-            ? service
-            : System.Text.RegularExpressions.Regex.Replace(service.Replace('_', ' '), "(?<=[a-z])(?=[A-Z0-9])|(?<=[0-9])(?=[A-Z][a-z])", " ").Trim();
+    /// <summary>
+    /// Gets a service's name as buyers read it. Carriers name services in their own code, such as "GroundAdvantage",
+    /// "2ndDayAir" or "FEDEX_2_DAY_AM", which reads "Ground Advantage", "2nd Day Air" and "2 Day AM" (the carrier's own
+    /// name, shown beside it, isn't repeated).
+    /// </summary>
+    public static string DescribeService(string carrier, string service)
+    {
+        if (string.IsNullOrWhiteSpace(service))
+        {
+            return service;
+        }
+
+        var text = System.Text.RegularExpressions.Regex.Replace(service.Replace('_', ' '), "(?<=[a-z])(?=[A-Z0-9])|(?<=[0-9])(?=[A-Z][a-z])", " ").Trim();
+
+        // A code in capitals reads in title case, with short words such as AM kept as they are.
+        if (!text.Any(char.IsLower))
+        {
+            text = string.Join(' ', text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(word => word.Length > 2 && word.All(char.IsLetter) ? char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant() : word));
+        }
+
+        if (!string.IsNullOrWhiteSpace(carrier) && text.StartsWith(carrier.Trim() + " ", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text[(carrier.Trim().Length + 1)..];
+        }
+
+        return text.Trim();
+    }
 }

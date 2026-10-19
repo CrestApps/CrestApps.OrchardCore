@@ -399,20 +399,36 @@ public class ShippingRatesTestViewModel
 
 public class EasyPostSettingsViewModel
 {
+    public bool IsEnabled { get; set; }
+
     public string ApiKey { get; set; }
-
-    public bool RemoveApiKey { get; set; }
-
-    public string WebhookSecret { get; set; }
 
     [BindNever]
     public bool HasApiKey { get; set; }
 
-    [BindNever]
-    public bool HasWebhookSecret { get; set; }
-
+    /// <summary>
+    /// Gets or sets the address tracking updates are registered for, or <see langword="null"/> while none is.
+    /// </summary>
     [BindNever]
     public string WebhookUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address tracking updates would be registered for, or <see langword="null"/> when the site has
+    /// no public base URL.
+    /// </summary>
+    [BindNever]
+    public string PublicWebhookUrl { get; set; }
+}
+
+public class CarrierProviderSettingsViewModel
+{
+    public string DefaultProvider { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<SelectListItem> Providers { get; set; } = [];
+
+    [BindNever]
+    public bool HasProviders { get; set; }
 }
 
 public class CarrierRateSettingsViewModel
