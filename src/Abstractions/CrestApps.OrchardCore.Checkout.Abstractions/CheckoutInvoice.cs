@@ -82,6 +82,12 @@ public sealed class CheckoutInvoice
     public IList<Models.DiscountLine> Discounts { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the discounts that would have applied but were left out because they can't be combined with the
+    /// ones that did, each with what it gave way to, so the buyer can be told.
+    /// </summary>
+    public IList<Models.DiscountLine> SkippedDiscounts { get; set; } = [];
+
+    /// <summary>
     /// The total taken off before tax.
     /// </summary>
     public decimal DiscountTotal

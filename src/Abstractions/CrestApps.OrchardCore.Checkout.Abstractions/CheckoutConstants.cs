@@ -76,6 +76,11 @@ public static class CheckoutConstants
         public const string ApplyCoupon = "apply-coupon";
 
         /// <summary>
+        /// Takes one promotion code off, the one after the prefix, and re-renders the step.
+        /// </summary>
+        public const string RemoveCouponPrefix = "remove-coupon:";
+
+        /// <summary>
         /// Saves what was changed on a one-page checkout and shows it again with the new total, instead of paying.
         /// </summary>
         public const string Update = "update";

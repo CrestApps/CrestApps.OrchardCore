@@ -101,6 +101,39 @@ public sealed class Coupon : CatalogItem
     public int? MaxRedemptionsPerCustomer { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the coupon can be used with discounts off some products.
+    /// </summary>
+    public bool CombinesWithProductDiscounts { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the coupon can be used with discounts off the order.
+    /// </summary>
+    public bool CombinesWithOrderDiscounts { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the coupon can be used with discounts off shipping.
+    /// </summary>
+    public bool CombinesWithShippingDiscounts { get; set; }
+
+    /// <summary>
+    /// Gets the kind of discount the coupon is: off shipping, off some products, or off the order.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DiscountClass DiscountClass
+        => Kind == CouponKind.FreeShipping || Target == DiscountTarget.Shipping
+            ? DiscountClass.Shipping
+            : HasItemLimits ? DiscountClass.Product : DiscountClass.Order;
+
+    /// <summary>
+    /// Gets the kinds of discount the coupon can be used with.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DiscountCombination CombinesWith
+        => (CombinesWithProductDiscounts ? DiscountCombination.Product : DiscountCombination.None) |
+            (CombinesWithOrderDiscounts ? DiscountCombination.Order : DiscountCombination.None) |
+            (CombinesWithShippingDiscounts ? DiscountCombination.Shipping : DiscountCombination.None);
+
+    /// <summary>
     /// Gets or sets the products the coupon is limited to (their content item ids). With
     /// <see cref="CategoryIds"/>, a line qualifies when it is one of these products or in one of those categories.
     /// </summary>

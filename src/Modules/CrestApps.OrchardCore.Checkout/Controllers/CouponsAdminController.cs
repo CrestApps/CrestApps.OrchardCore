@@ -296,6 +296,9 @@ public sealed class CouponsAdminController : Controller
             MinimumAmount = coupon.MinimumAmount,
             MaximumAmount = coupon.MaximumAmount,
             MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
+            CombinesWithProductDiscounts = coupon.CombinesWithProductDiscounts,
+            CombinesWithOrderDiscounts = coupon.CombinesWithOrderDiscounts,
+            CombinesWithShippingDiscounts = coupon.CombinesWithShippingDiscounts,
             RedemptionCount = coupon.RedemptionCount,
             Sources = string.Join(", ", coupon.Sources ?? []),
             ReferenceTypes = string.Join(", ", coupon.ReferenceTypes ?? []),
@@ -569,6 +572,9 @@ public sealed class CouponsAdminController : Controller
         coupon.MinimumAmount = model.MinimumAmount;
         coupon.MaximumAmount = model.MaximumAmount;
         coupon.MaxRedemptionsPerCustomer = model.MaxRedemptionsPerCustomer;
+        coupon.CombinesWithProductDiscounts = model.CombinesWithProductDiscounts;
+        coupon.CombinesWithOrderDiscounts = model.CombinesWithOrderDiscounts;
+        coupon.CombinesWithShippingDiscounts = model.CombinesWithShippingDiscounts;
         coupon.Sources = SplitList(model.Sources);
         coupon.ReferenceTypes = SplitList(model.ReferenceTypes);
         coupon.CustomerId = TrimToNull(model.CustomerId);

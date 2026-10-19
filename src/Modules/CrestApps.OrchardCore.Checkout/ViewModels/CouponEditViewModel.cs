@@ -91,6 +91,12 @@ public sealed class CouponEditViewModel
     /// </summary>
     public int? MaxRedemptionsPerCustomer { get; set; }
 
+    public bool CombinesWithProductDiscounts { get; set; }
+
+    public bool CombinesWithOrderDiscounts { get; set; }
+
+    public bool CombinesWithShippingDiscounts { get; set; }
+
     /// <summary>
     /// Gets or sets what other modules add to the editor, such as the products a coupon is limited to.
     /// </summary>

@@ -65,7 +65,19 @@ public sealed class CouponHoldPaymentGate : ICheckoutPaymentGate
             }
 
             // The code comes off and the invoice is rebuilt without it, so what the buyer pays next is the new total.
-            session.Properties?.Remove(nameof(CheckoutCoupon));
+            if (session.TryGet<CheckoutCoupon>(out var applied))
+            {
+                applied.Remove(discount.Code);
+
+                if (applied.GetCodes().Count == 0)
+                {
+                    session.Properties?.Remove(nameof(CheckoutCoupon));
+                }
+                else
+                {
+                    session.Put(applied);
+                }
+            }
 
             await _invoiceBuilder.BuildAsync(context.Flow);
 

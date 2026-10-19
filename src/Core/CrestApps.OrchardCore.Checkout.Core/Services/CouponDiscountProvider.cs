@@ -54,14 +54,21 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
     /// <inheritdoc/>
     public async Task<IReadOnlyList<DiscountLine>> GetDiscountsAsync(CheckoutDiscountContext context, CancellationToken cancellationToken = default)
     {
-        var coupon = await ResolveAsync(context?.Flow, cancellationToken);
+        var discounts = new List<DiscountLine>();
 
-        if (coupon is null)
+        foreach (var coupon in await ResolveAsync(context?.Flow, cancellationToken))
         {
-            return [];
+            if (Discount(context.Invoice, coupon) is { } discount)
+            {
+                discounts.Add(discount);
+            }
         }
 
-        var invoice = context.Invoice;
+        return discounts;
+    }
+
+    private static DiscountLine Discount(CheckoutInvoice invoice, Coupon coupon)
+    {
 
         // The coupon reduces whichever part of the invoice it targets, so a first-cycle offer never touches
         // a setup fee and a one-time coupon never halves a recurring charge. Shipping is not part of it, so a
@@ -92,24 +99,24 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
 
         if (amount <= 0m)
         {
-            return [];
+            return null;
         }
 
-        return
-        [
-            new DiscountLine
-            {
-                ProviderKey = ProviderKey,
-                Code = coupon.Code,
-                Description = string.IsNullOrEmpty(coupon.Description) ? coupon.Code : coupon.Description,
-                Amount = amount,
-                Target = coupon.EffectiveTarget,
-                LineItemIds = lineItemIds,
-            },
-        ];
+        return new DiscountLine
+        {
+            ProviderKey = ProviderKey,
+            Code = coupon.Code,
+            Description = string.IsNullOrEmpty(coupon.Description) ? coupon.Code : coupon.Description,
+            Amount = amount,
+            Target = coupon.EffectiveTarget,
+            LineItemIds = lineItemIds,
+            Class = coupon.DiscountClass,
+            CombinesWith = coupon.CombinesWith,
+        };
     }
 
     /// <inheritdoc/>
+
     public async Task RedeemAsync(CheckoutDiscountRedemptionContext context, CancellationToken cancellationToken = default)
     {
         foreach (var discount in context?.Discounts ?? [])
@@ -123,24 +130,31 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
         }
     }
 
-    private async Task<Coupon> ResolveAsync(CheckoutFlow flow, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Coupon>> ResolveAsync(CheckoutFlow flow, CancellationToken cancellationToken)
     {
-        if (flow?.Session is null || !flow.Session.TryGet<CheckoutCoupon>(out var applied) || string.IsNullOrEmpty(applied.Code))
+        if (flow?.Session is null || !flow.Session.TryGet<CheckoutCoupon>(out var applied))
         {
-            return null;
+            return [];
         }
 
-        var coupon = await _couponStore.GetByCodeAsync(applied.Code, cancellationToken);
+        var coupons = new List<Coupon>();
 
-        // A code that has expired, been disabled, or run out between being entered and the invoice being
-        // rebuilt simply stops applying. The customer sees the full price rather than an error, because the
-        // invoice is rebuilt on every step and an error there would block a purchase they can still make. A coupon
-        // limited to some sources, reference types or one customer applies only to a checkout that matches.
-        if (coupon is null || !coupon.IsRedeemable(_clock.UtcNow) || !await _scopeEvaluator.IsInScopeAsync(coupon, flow, cancellationToken))
+        foreach (var code in applied.GetCodes())
         {
-            return null;
+            var coupon = await _couponStore.GetByCodeAsync(code, cancellationToken);
+
+            // A code that has expired, been disabled, or run out between being entered and the invoice being
+            // rebuilt simply stops applying. The customer sees the full price rather than an error, because the
+            // invoice is rebuilt on every step and an error there would block a purchase they can still make. A
+            // coupon limited to some sources, reference types or one customer applies only to a checkout that
+            // matches.
+            if (coupon is not null && coupon.IsRedeemable(_clock.UtcNow) && await _scopeEvaluator.IsInScopeAsync(coupon, flow, cancellationToken) &&
+                !coupons.Any(entry => entry.ItemId == coupon.ItemId))
+            {
+                coupons.Add(coupon);
+            }
         }
 
-        return coupon;
+        return coupons;
     }
 }

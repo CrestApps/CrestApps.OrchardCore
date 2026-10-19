@@ -111,6 +111,27 @@
     </div>
 </div>
 
+<h5 class="mt-2">@T["Combines with"]</h5>
+<p class="text-muted">@T["Which other discounts can be used on the same order. When discounts can't all be used together, the buyer gets the combination that takes off the most, and is told which code wasn't used."]</p>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="CombinesWithProductDiscounts" class="form-check-input" />
+        <label asp-for="CombinesWithProductDiscounts" class="form-check-label">@T["Product discounts"]</label>
+        <span class="hint dashed">@T["Discounts limited to some products or categories."]</span>
+    </div>
+    <div class="form-check">
+        <input asp-for="CombinesWithOrderDiscounts" class="form-check-input" />
+        <label asp-for="CombinesWithOrderDiscounts" class="form-check-label">@T["Order discounts"]</label>
+        <span class="hint dashed">@T["Discounts off the whole order."]</span>
+    </div>
+    <div class="form-check">
+        <input asp-for="CombinesWithShippingDiscounts" class="form-check-input" />
+        <label asp-for="CombinesWithShippingDiscounts" class="form-check-label">@T["Shipping discounts"]</label>
+        <span class="hint dashed">@T["Free or cheaper shipping."]</span>
+    </div>
+</div>
+
 <h5 class="mt-2">@T["Who and what it is for"]</h5>
 <p class="text-muted">@T["Optional. Leave these blank for a code anyone can use on any checkout. A code that is limited is refused everywhere else."]</p>
 
