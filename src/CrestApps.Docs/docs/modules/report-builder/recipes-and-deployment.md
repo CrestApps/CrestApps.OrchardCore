@@ -10,7 +10,9 @@ Designed reports and reusable views move between sites with a deployment plan an
 
 ## Export with a deployment plan
 
-Add the **Designed Reports and Views** step to a deployment plan to export every designed report and view. Each item is written with its owner's user name, and share links are never exported.
+Add the **Designed Reports and Views** step to a deployment plan. With **Include all reports and views** on (the default), it exports every designed report and view, including the ones created after the plan. Turn it off to pick the reports and views to export: the views the picked reports and views read are exported with them, so they run on the other site.
+
+Each item is written with its owner's user name, and share links are never exported. A plan saved before reports could be picked keeps exporting all of them.
 
 ## Import with the `ReportDesigns` recipe step
 

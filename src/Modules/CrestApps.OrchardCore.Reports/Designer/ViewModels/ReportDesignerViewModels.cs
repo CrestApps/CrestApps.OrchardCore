@@ -249,3 +249,45 @@ public class ReportFiltersViewModel
     /// </summary>
     public bool SimpleControls { get; set; }
 }
+
+/// <summary>
+/// The view model of the designed reports deployment step's editor.
+/// </summary>
+public class ReportDesignsDeploymentStepViewModel
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether every report and view is exported.
+    /// </summary>
+    public bool IncludeAll { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reports that can be picked.
+    /// </summary>
+    public ReportDesignsDeploymentEntryViewModel[] Reports { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the views that can be picked.
+    /// </summary>
+    public ReportDesignsDeploymentEntryViewModel[] Views { get; set; } = [];
+}
+
+/// <summary>
+/// A report or view that the deployment step's editor lists.
+/// </summary>
+public class ReportDesignsDeploymentEntryViewModel
+{
+    /// <summary>
+    /// Gets or sets the identifier of the report or view.
+    /// </summary>
+    public string ItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the title of the report or view.
+    /// </summary>
+    public string DisplayText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether it is exported.
+    /// </summary>
+    public bool IsSelected { get; set; }
+}
