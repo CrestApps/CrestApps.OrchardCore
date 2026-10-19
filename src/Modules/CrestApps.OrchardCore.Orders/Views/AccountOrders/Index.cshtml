@@ -44,7 +44,14 @@
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
-                                    <partial name="_OrderStatus" model="order.Status" />
+                                    @if (Model.OwedOrderIds.Contains(order.ItemId))
+                                    {
+                                        <span class="badge text-bg-warning">@T["Payment due"]</span>
+                                    }
+                                    else
+                                    {
+                                        <partial name="_OrderStatus" model="order.Status" />
+                                    }
                                     <span class="fw-semibold text-nowrap">@ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)</span>
                                 </div>
                             </div>

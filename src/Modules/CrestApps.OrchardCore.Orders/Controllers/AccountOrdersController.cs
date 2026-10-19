@@ -33,7 +33,7 @@ public sealed class AccountOrdersController : Controller
     }
 
     [HttpGet("account/orders", Name = "AccountOrders")]
-    public async Task<IActionResult> Index(PagerParameters pagerParameters)
+    public async Task<IActionResult> Index(PagerParameters pagerParameters, [FromServices] OrderOperationsService operations)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
         {
@@ -47,9 +47,21 @@ public sealed class AccountOrdersController : Controller
             Statuses = [OrderStatus.AwaitingPayment, OrderStatus.Paid, OrderStatus.Canceled],
         }, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
+        // An order paid offline reads as owed until the money arrives.
+        var owed = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var order in orders)
+        {
+            if (await operations.IsOwedAsync(order, HttpContext.RequestAborted))
+            {
+                owed.Add(order.ItemId);
+            }
+        }
+
         return View(new AccountOrdersViewModel
         {
             Orders = orders,
+            OwedOrderIds = owed,
             Pager = count > PageSize ? await _shapeFactory.PagerAsync(pager, count) : null,
         });
     }

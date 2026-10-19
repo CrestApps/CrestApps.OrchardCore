@@ -11,6 +11,9 @@
 
 @{
     var order = Model.Order;
+
+    // An order paid offline, such as by bank transfer, is placed before the money arrives.
+    var owed = order.Status == OrderStatus.Paid && Model.Money?.Outstanding > 0;
     string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
 }
 
@@ -38,7 +41,14 @@
                         @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
                     }
                     @await Html.PartialAsync("_OrderRefundStatus", order.RefundStatus)
-                    @await Html.PartialAsync("_OrderStatus", order.Status)
+                    @if (owed)
+                    {
+                        <span class="badge text-bg-warning">@T["Payment due"]</span>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_OrderStatus", order.Status)
+                    }
                 </span>
             </div>
             @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
@@ -135,7 +145,7 @@
                 @if (order.Total.HasValue)
                 {
                     <div class="d-flex justify-content-between fw-semibold border-top mt-2 pt-2">
-                        <span>@T["Total paid"]</span>
+                        <span>@(owed ? T["Total"] : T["Total paid"])</span>
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
@@ -180,7 +190,7 @@
                     <dd>@order.OrderNumber</dd>
                     <dt>@T["Placed"]</dt>
                     <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
-                    @if (order.PaidUtc.HasValue)
+                    @if (order.PaidUtc.HasValue && !owed)
                     {
                         <dt>@T["Paid"]</dt>
                         <dd>@((await LocalAsync(order.PaidUtc.Value)).ToString("f"))</dd>

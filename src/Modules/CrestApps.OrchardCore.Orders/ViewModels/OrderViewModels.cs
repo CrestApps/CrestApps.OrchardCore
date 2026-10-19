@@ -187,6 +187,11 @@ public class AccountOrdersViewModel
 {
     public IReadOnlyList<Order> Orders { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the orders still owed, such as ones paid by bank transfer before the money arrives.
+    /// </summary>
+    public ISet<string> OwedOrderIds { get; set; } = new HashSet<string>();
+
     public IShape Pager { get; set; }
 }
 
