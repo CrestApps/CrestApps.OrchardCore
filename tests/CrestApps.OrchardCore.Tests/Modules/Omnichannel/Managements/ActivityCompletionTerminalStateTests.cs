@@ -173,6 +173,7 @@ public sealed class ActivityCompletionTerminalStateTests
                 new UserManager<IUser>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null),
                 new Mock<IDisplayNameProvider>().Object,
                 [],
+                TestContactMethods.Accessor,
                 stringLocalizer.Object,
                 htmlLocalizer.Object);
 

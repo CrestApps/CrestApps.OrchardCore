@@ -412,6 +412,7 @@ public sealed class SmsConclusionDispositionTests
             session.Object,
             clock.Object,
             localClock.Object,
+            TestContactMethods.Accessor,
             NullLogger<DefaultSubjectActionExecutor>.Instance);
     }
 

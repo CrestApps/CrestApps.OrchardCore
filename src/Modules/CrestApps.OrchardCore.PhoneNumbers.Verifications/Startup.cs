@@ -183,6 +183,7 @@ public sealed class OmnichannelContactVerificationStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactMethods();
         services.AddScoped<IContentHandler, OmnichannelContactPhoneNumberVerificationHandler>();
     }
 }
