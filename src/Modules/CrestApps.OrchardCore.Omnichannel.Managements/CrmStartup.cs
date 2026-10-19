@@ -101,6 +101,7 @@ public sealed class CrmStartup : StartupBase
         services.AddTransient<IContentsAdminListFilterProvider, CrmContentsAdminListFilterProvider>();
         services.AddShapeTableProvider<AccountListPartShapeTableProvider>();
 
+        services.AddContactMethods();
         services.AddScoped<ILeadConversionService, LeadConversionService>();
         services.AddScoped<LeadMatchFinder>();
         services.AddScoped<IUnattendedLeadConverter, UnattendedLeadConverter>();

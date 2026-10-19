@@ -624,6 +624,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public ContactMethodsOptions() { }
         public System.Collections.Generic.Dictionary<string, System.Type> Providers { get; }
+        public System.Collections.Generic.Dictionary<string, System.Type> Writers { get; }
         public bool UsesContactMethodsBag(string contentType) { }
     }
     public sealed class ContactPhoneNumber
@@ -1591,6 +1592,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         CrestApps.OrchardCore.Omnichannel.Core.Models.ContactMethodSet GetContactMethods(OrchardCore.ContentManagement.ContentItem contact);
     }
+    public interface IContactMethodsWriter
+    {
+        System.Threading.Tasks.Task<bool> TryAddEmailAddressAsync(OrchardCore.ContentManagement.ContentItem contact, string emailAddress);
+        System.Threading.Tasks.Task<bool> TryAddPhoneNumberAsync(OrchardCore.ContentManagement.ContentItem contact, CrestApps.OrchardCore.Omnichannel.Core.Models.ContactPhoneNumber phoneNumber);
+        System.Threading.Tasks.Task<bool> TrySetEmailAddressAsync(OrchardCore.ContentManagement.ContentItem contact, string emailAddress);
+    }
     public interface IContactOptOutResolver
     {
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);
@@ -1855,12 +1862,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public static bool ApplySubjectFields(OrchardCore.ContentManagement.ContentItem subject, System.Collections.Generic.IDictionary<string, string> values, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "Part",
                 "Field"})] System.Collections.Generic.List<System.ValueTuple<string, string>> fields) { }
-        public static string GetContactEmail(OrchardCore.ContentManagement.ContentItem contact) { }
         [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "Part",
                 "Field"})]
         public static System.Collections.Generic.List<System.ValueTuple<string, string>> GetSubjectTextFields(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition typeDefinition) { }
-        public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.ContentItem contact, string email) { }
+        public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsWriter contactMethodsWriter, OrchardCore.ContentManagement.ContentItem contact, string email) { }
     }
     public sealed class SmsProviderRefusalScope : System.IDisposable
     {
