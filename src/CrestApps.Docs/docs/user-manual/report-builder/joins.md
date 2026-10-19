@@ -39,16 +39,18 @@ When you add a second data set that is not linked this way, the builder suggests
 1. Open the **Data model** tab. Each data set is a card listing its columns; key columns are marked with a key and listed first. Drag a card by its title to move it.
 2. Drag a column from one card onto the matching column of another card, such as the order's *Customer* onto the customer's **Content item id**. A line now connects the two columns.
 3. To match on more than one column, drag another pair. Every pair must be equal for two rows to match.
-4. Click the line or its badge to open the join on the right, then pick which rows to keep.
+4. Click the line or its badge to open the join on the right, then pick its **Join type**. The badge shows the join type, such as **Inner join**.
 
 ## Choose which rows to keep
 
-| Choice | Keeps |
-| --- | --- |
-| **Only rows that match on both sides** | Customers that have orders, with each of their orders. |
-| **All rows before, matching rows of this data set** | Every customer, with their orders when they have any. |
-| **All rows of this data set, matching rows before** | Every order, with its customer when one matches. |
-| **All rows of both sides** | Everything from both data sets. |
+The **Join type** names each join the way databases do, followed by the rows it keeps. A data set added to a report is joined to the data sets it references with an inner join; change the type when you need the rows that don't match too.
+
+| Join type | Rows it keeps | Example: customers, then their orders |
+| --- | --- | --- |
+| **Inner join** | Only rows that match on both sides | Customers that have orders, with each of their orders. |
+| **Left join** | All rows before, matching rows of this data set | Every customer, with their orders when they have any. |
+| **Right join** | All rows of this data set, matching rows before | Every order, with its customer when one matches. |
+| **Full join** | All rows of both sides | Everything from both data sets. |
 
 "Before" means the data sets added earlier: data sets are joined in the order you added them. Rows with an empty value in a matching column never match.
 
@@ -56,7 +58,7 @@ When you add a second data set that is not linked this way, the builder suggests
 
 On the **Design** tab, the **Joins** row above **Columns** lists every join; a red join still needs matching columns. Click a join there to change it in **Properties**:
 
-- **Join type** is the choice of rows to keep.
+- **Join type** is the kind of join, and so the rows it keeps.
 - **Matching columns** lists each pair: a **Column of the data sets before** and a **Column of the joined data set**.
 - **Add matching columns** adds another pair.
 

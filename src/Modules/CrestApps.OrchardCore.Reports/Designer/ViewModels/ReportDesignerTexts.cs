@@ -154,7 +154,10 @@ public static class ReportDesignerTexts
             ["Column of the data sets before"] = S["Column of the data sets before"].Value,
             ["Column of the joined data set"] = S["Column of the joined data set"].Value,
             ["to"] = S["to"].Value,
-            ["Keep"] = S["Keep"].Value,
+            ["Inner join"] = S["Inner join"].Value,
+            ["Left join"] = S["Left join"].Value,
+            ["Right join"] = S["Right join"].Value,
+            ["Full join"] = S["Full join"].Value,
             ["Only rows that match on both sides"] = S["Only rows that match on both sides"].Value,
             ["All rows before, matching rows of this data set"] = S["All rows before, matching rows of this data set"].Value,
             ["All rows of this data set, matching rows before"] = S["All rows of this data set, matching rows before"].Value,
@@ -454,10 +457,10 @@ public static class ReportDesignerTexts
 
         return new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["Inner"] = S["Matching rows"].Value,
-            ["Left"] = S["Keep all before"].Value,
-            ["Right"] = S["Keep all of this"].Value,
-            ["Full"] = S["Keep all rows"].Value,
+            ["Inner"] = S["Inner join"].Value,
+            ["Left"] = S["Left join"].Value,
+            ["Right"] = S["Right join"].Value,
+            ["Full"] = S["Full join"].Value,
         };
     }
 

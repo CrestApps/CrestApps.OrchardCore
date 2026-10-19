@@ -1421,23 +1421,23 @@
 			if (!join.conditions.length) conditions.appendChild(h("div", { className: "alert alert-warning small py-2 mb-0" }, app.t("Add the columns that must match.")));
 			return [
 				h("p", { className: "small text-muted" }, app.t("Joins") + " ", h("strong", null, app.dataSetLabel(alias)), " " + app.t("to") + " ", h("strong", null, earlier.map(app.dataSetLabel).join(", ")), "."),
-				h("label", { className: "form-label small mb-1" }, app.t("Keep")),
+				h("label", { className: "form-label small mb-1" }, app.t("Join type")),
 				ui.select([
 					{
 						value: "Inner",
-						text: app.t("Only rows that match on both sides")
+						text: app.t("Inner join") + " — " + app.t("Only rows that match on both sides")
 					},
 					{
 						value: "Left",
-						text: app.t("All rows before, matching rows of this data set")
+						text: app.t("Left join") + " — " + app.t("All rows before, matching rows of this data set")
 					},
 					{
 						value: "Right",
-						text: app.t("All rows of this data set, matching rows before")
+						text: app.t("Right join") + " — " + app.t("All rows of this data set, matching rows before")
 					},
 					{
 						value: "Full",
-						text: app.t("All rows of both sides")
+						text: app.t("Full join") + " — " + app.t("All rows of both sides")
 					}
 				], join.type, {
 					className: "form-select form-select-sm mb-3",
