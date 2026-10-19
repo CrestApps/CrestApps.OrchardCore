@@ -41,8 +41,8 @@
 
 <div class="row g-3 mb-3">
     <div class="col-sm-6">
-        <div class="small text-body-secondary text-uppercase">@T["Ship to"]</div>
-        @if (Model.ShipsTo.Count > 0)
+        <div class="small text-body-secondary text-uppercase">@(order.Shipping?.IsPickup == true ? T["Picked up by"] : T["Ship to"])</div>
+        @if (Model.ShipsTo.Count > 0 && order.Shipping?.IsPickup != true)
         {
             @foreach (var line in Model.ShipsTo)
             {
@@ -61,8 +61,12 @@
     @if (!string.IsNullOrEmpty(order.Shipping?.Name))
     {
         <div class="col-sm-6">
-            <div class="small text-body-secondary text-uppercase">@T["Shipping method"]</div>
+            <div class="small text-body-secondary text-uppercase">@(order.Shipping.IsPickup ? T["Pickup"] : T["Shipping method"])</div>
             <div>@order.Shipping.Name</div>
+            @if (order.Shipping.IsPickup && !string.IsNullOrEmpty(order.Shipping.Description))
+            {
+                <div class="small">@order.Shipping.Description</div>
+            }
         </div>
     }
 </div>

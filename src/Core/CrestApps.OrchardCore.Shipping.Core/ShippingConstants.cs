@@ -51,5 +51,12 @@ public static class ShippingConstants
         /// Nothing to pay, optionally only above an order subtotal.
         /// </summary>
         public const string Free = "Free";
+
+        public const string LocalDelivery = "LocalDelivery";
+
+        /// <summary>
+        /// The provider name an order picked up from one of the store's locations carries.
+        /// </summary>
+        public const string Pickup = Orders.Core.Models.OrderShipping.PickupProviderName;
     }
 }

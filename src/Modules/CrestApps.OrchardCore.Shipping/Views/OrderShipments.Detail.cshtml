@@ -6,15 +6,20 @@
         => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
 }
 
+@{
+    var isPickup = Model.Order.Shipping?.IsPickup == true;
+    var statusData = new ViewDataDictionary(ViewData) { ["IsPickup"] = isPickup };
+}
+
 <div class="card mt-4 mb-3">
-    <div class="card-header">@T["Shipments"]</div>
+    <div class="card-header">@(isPickup ? T["Pickup"] : T["Shipments"])</div>
     <ul class="list-group list-group-flush">
         @foreach (var shipment in Model.Shipments)
         {
             <li class="list-group-item">
                 <div class="d-flex justify-content-between align-items-center gap-2">
-                    <span class="fw-semibold">@T["Shipment {0}", shipment.Number]</span>
-                    @await Html.PartialAsync("_ShipmentStatus", shipment.Status)
+                    <span class="fw-semibold">@(isPickup ? T["Pickup {0}", shipment.Number] : T["Shipment {0}", shipment.Number])</span>
+                    @await Html.PartialAsync("_ShipmentStatus", shipment.Status, statusData)
                 </div>
                 <div class="small">@string.Join(", ", shipment.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</div>
                 @if (!string.IsNullOrEmpty(shipment.TrackingUrl))
@@ -27,9 +32,13 @@
                 {
                     <div class="small text-muted">@T["{0} tracking number: {1}", shipment.Carrier ?? T["Carrier"].Value, shipment.TrackingNumber]</div>
                 }
-                @if (shipment.ShippedUtc is { } shipped)
+                @if (isPickup && shipment.DeliveredUtc is { } pickedUp)
                 {
-                    <div class="small text-muted">@T["Shipped {0:D}", await LocalAsync(shipped)]</div>
+                    <div class="small text-muted">@T["Picked up {0:D}", await LocalAsync(pickedUp)]</div>
+                }
+                else if (shipment.ShippedUtc is { } shipped)
+                {
+                    <div class="small text-muted">@(isPickup ? T["Ready since {0:D}", await LocalAsync(shipped)] : T["Shipped {0:D}", await LocalAsync(shipped)])</div>
                 }
             </li>
         }

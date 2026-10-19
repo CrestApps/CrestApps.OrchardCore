@@ -380,6 +380,12 @@ public sealed class OrderDiscount
 /// </summary>
 public sealed class OrderShipping
 {
+    /// <summary>
+    /// The provider name of an order the buyer picks up from one of the store's locations, rather than having it
+    /// shipped. Its shipping address is then the location's.
+    /// </summary>
+    public const string PickupProviderName = "Pickup";
+
     public string MethodId { get; set; }
 
     public string RateId { get; set; }
@@ -393,6 +399,13 @@ public sealed class OrderShipping
     public string Description { get; set; }
 
     public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets whether the buyer picks the order up rather than having it shipped.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsPickup
+        => string.Equals(ProviderName, PickupProviderName, StringComparison.Ordinal);
 }
 
 public enum OrderFulfillmentStatus

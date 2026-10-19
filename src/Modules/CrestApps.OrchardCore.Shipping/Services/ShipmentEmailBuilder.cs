@@ -7,7 +7,8 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Shipping.Services;
 
 /// <summary>
-/// The email that tells the buyer a shipment left: what's in it, the carrier, and where to follow it.
+/// The email that tells the buyer a shipment left: what's in it, the carrier, and where to follow it. For an order
+/// picked up from the store, that it's ready to collect, and where.
 /// </summary>
 public sealed class ShipmentEmailBuilder
 {
@@ -26,9 +27,14 @@ public sealed class ShipmentEmailBuilder
         ArgumentNullException.ThrowIfNull(order);
         ArgumentNullException.ThrowIfNull(shipment);
 
-        var greeting = string.IsNullOrWhiteSpace(order.CustomerName)
-            ? S["Good news: a shipment from your order {0} is on its way.", order.OrderNumber].Value
-            : S["Good news, {0}: a shipment from your order {1} is on its way.", order.CustomerName, order.OrderNumber].Value;
+        var isPickup = order.Shipping?.IsPickup == true;
+        var greeting = isPickup
+            ? string.IsNullOrWhiteSpace(order.CustomerName)
+                ? S["Good news: your order {0} is ready for pickup.", order.OrderNumber].Value
+                : S["Good news, {0}: your order {1} is ready for pickup.", order.CustomerName, order.OrderNumber].Value
+            : string.IsNullOrWhiteSpace(order.CustomerName)
+                ? S["Good news: a shipment from your order {0} is on its way.", order.OrderNumber].Value
+                : S["Good news, {0}: a shipment from your order {1} is on its way.", order.CustomerName, order.OrderNumber].Value;
 
         var text = new StringBuilder().AppendLine(greeting).AppendLine();
         var html = new StringBuilder()
@@ -43,6 +49,19 @@ public sealed class ShipmentEmailBuilder
         }
 
         html.Append("</ul>");
+
+        if (isPickup)
+        {
+            var where = string.Join(", ", new[] { order.ShippingAddress?.Name, order.ShippingAddress?.AddressLine1, order.ShippingAddress?.City }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+            var collect = string.IsNullOrEmpty(where) ? null : S["Collect it from {0}.", where].Value;
+
+            foreach (var paragraph in new[] { collect, order.Shipping.Description }.Where(value => !string.IsNullOrWhiteSpace(value)))
+            {
+                text.AppendLine().AppendLine(paragraph);
+                html.Append("<p>").Append(_encoder.Encode(paragraph)).Append("</p>");
+            }
+        }
 
         if (!string.IsNullOrEmpty(shipment.Carrier) || !string.IsNullOrEmpty(shipment.TrackingNumber))
         {
@@ -74,7 +93,9 @@ public sealed class ShipmentEmailBuilder
 
         html.Append("</div>");
 
-        return new ShipmentEmail(S["Your order {0} has shipped", order.OrderNumber].Value, text.ToString(), html.ToString());
+        var subject = isPickup ? S["Your order {0} is ready for pickup", order.OrderNumber] : S["Your order {0} has shipped", order.OrderNumber];
+
+        return new ShipmentEmail(subject.Value, text.ToString(), html.ToString());
     }
 }
 

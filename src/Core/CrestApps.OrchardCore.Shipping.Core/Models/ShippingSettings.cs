@@ -24,6 +24,62 @@ public sealed class ShippingSettings
     /// Gets or sets whether the buyer gets an email, with the tracking link, when a shipment is marked shipped.
     /// </summary>
     public bool SendShippedEmails { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the store's locations buyers can pick their order up from, instead of having it shipped.
+    /// </summary>
+    public List<PickupLocation> PickupLocations { get; set; } = [];
+}
+
+/// <summary>
+/// A place buyers pick orders up from, such as a shop, with what to know when they come and what it costs.
+/// </summary>
+public sealed class PickupLocation
+{
+    public string LocationId { get; set; }
+
+    public string Name { get; set; }
+
+    public string AddressLine1 { get; set; }
+
+    public string City { get; set; }
+
+    public string Region { get; set; }
+
+    public string PostalCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the two-letter country code.
+    /// </summary>
+    public string Country { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer is told, such as opening hours or "ready in 2 hours".
+    /// </summary>
+    public string Instructions { get; set; }
+
+    public decimal Fee { get; set; }
+
+    /// <summary>
+    /// Gets the location as an address, which taxes and the order's pages read.
+    /// </summary>
+    public CrestApps.OrchardCore.Addresses.Models.Address ToAddress()
+        => new()
+        {
+            Name = Name,
+            AddressLine1 = AddressLine1,
+            City = City,
+            Region = Region,
+            PostalCode = PostalCode,
+            Country = Country,
+        };
+
+    /// <summary>
+    /// Gets the location's address on one line.
+    /// </summary>
+    public string Describe()
+        => string.Join(", ", new[] { AddressLine1, City, string.Join(" ", new[] { Region, PostalCode }.Where(value => !string.IsNullOrWhiteSpace(value))) }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
 }
 
 /// <summary>

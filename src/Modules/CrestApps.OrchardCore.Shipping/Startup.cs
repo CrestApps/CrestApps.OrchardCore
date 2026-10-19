@@ -54,7 +54,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ShippingMethod, ShippingMethodDisplayDriver>()
             .AddDisplayDriver<ShippingMethod, FlatRateMethodDisplayDriver>()
             .AddDisplayDriver<ShippingMethod, TableRateMethodDisplayDriver>()
-            .AddDisplayDriver<ShippingMethod, FreeShippingMethodDisplayDriver>();
+            .AddDisplayDriver<ShippingMethod, FreeShippingMethodDisplayDriver>()
+            .AddDisplayDriver<ShippingMethod, LocalDeliveryMethodDisplayDriver>();
 
         services.AddSiteDisplayDriver<ShippingSettingsDisplayDriver>();
 

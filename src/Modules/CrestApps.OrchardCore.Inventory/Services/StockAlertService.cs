@@ -149,7 +149,7 @@ public sealed class StockAlertService
                 Subject = subject,
                 TextBody = text,
                 HtmlBody = html,
-            });
+            }, cancellationToken: cancellationToken);
 
             if (!result.Succeeded)
             {

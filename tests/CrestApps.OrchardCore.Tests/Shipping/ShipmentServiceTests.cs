@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -140,6 +141,27 @@ public sealed class ShipmentServiceTests
 
         Assert.Null(DefaultShipmentService.GetFulfillmentStatus(order, []));
         Assert.Empty(DefaultShipmentService.GetRemaining(order, []));
+    }
+
+    [Fact]
+    public void AnOrderPickedUp_IsEmailedAsReadyForPickup_WithWhereAndWhatToKnow()
+    {
+        var order = new Order
+        {
+            OrderNumber = "261018-PICK01",
+            CustomerName = "Sam",
+            ShippingAddress = new Address { Name = "Downtown store", AddressLine1 = "1 Main St", City = "Seattle", Country = "US" },
+            Shipping = new OrderShipping { ProviderName = OrderShipping.PickupProviderName, Name = "Pick up at Downtown store", Description = "Bring your order number." },
+        };
+        var shipment = new Shipment { Lines = [new ShipmentLine { LineId = "cap", Title = "Contoso Cap", Quantity = 1 }] };
+
+        var email = new ShipmentEmailBuilder(HtmlEncoder.Default, new PassThroughStringLocalizer<ShipmentEmailBuilder>()).Build(order, shipment);
+
+        Assert.True(order.Shipping.IsPickup);
+        Assert.Equal("Your order 261018-PICK01 is ready for pickup", email.Subject);
+        Assert.Contains("Collect it from Downtown store, 1 Main St, Seattle.", email.Text);
+        Assert.Contains("Bring your order number.", email.Html);
+        Assert.DoesNotContain("on its way", email.Text);
     }
 
     [Fact]

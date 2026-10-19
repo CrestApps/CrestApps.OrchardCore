@@ -23,6 +23,7 @@ public static class ShippingServiceCollectionExtensions
         services.AddScoped<IShippingRateProvider, FlatRateShippingProvider>();
         services.AddScoped<IShippingRateProvider, TableRateShippingProvider>();
         services.AddScoped<IShippingRateProvider, FreeShippingProvider>();
+        services.AddScoped<IShippingRateProvider, LocalDeliveryShippingProvider>();
 
         return services;
     }

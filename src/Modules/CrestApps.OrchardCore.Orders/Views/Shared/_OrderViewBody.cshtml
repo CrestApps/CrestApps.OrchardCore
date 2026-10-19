@@ -86,7 +86,7 @@
                 @if (order.Shipping is not null)
                 {
                     <tr>
-                        <th scope="row" colspan="2" class="text-end fw-normal">@T["Shipping ({0})", order.Shipping.Name]</th>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@(order.Shipping.IsPickup ? order.Shipping.Name : T["Shipping ({0})", order.Shipping.Name].Value)</th>
                         <td class="text-end">@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</td>
                     </tr>
                 }
@@ -121,7 +121,7 @@
 
 @if (shipsTo is { Count: > 0 })
 {
-    <h2 class="h6">@T["Ships to"]</h2>
+    <h2 class="h6">@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</h2>
     <address>
         @for (var i = 0; i < shipsTo.Count; i++)
         {
@@ -132,6 +132,10 @@
             }
         }
     </address>
+    @if (order.Shipping?.IsPickup == true && !string.IsNullOrEmpty(order.Shipping.Description))
+    {
+        <p class="small text-body-secondary">@order.Shipping.Description</p>
+    }
 }
 
 @if (billedTo is { Count: > 0 })

@@ -61,12 +61,12 @@
     @if (Model.ShipsTo.Count > 0)
     {
         <div class="col-sm-6">
-            <div class="small text-body-secondary text-uppercase">@T["Ships to"]</div>
+            <div class="small text-body-secondary text-uppercase">@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</div>
             @foreach (var line in Model.ShipsTo)
             {
                 <div>@line</div>
             }
-            @if (!string.IsNullOrEmpty(order.Shipping?.Name))
+            @if (!string.IsNullOrEmpty(order.Shipping?.Name) && !order.Shipping.IsPickup)
             {
                 <div class="small text-body-secondary mt-1">@order.Shipping.Name</div>
             }

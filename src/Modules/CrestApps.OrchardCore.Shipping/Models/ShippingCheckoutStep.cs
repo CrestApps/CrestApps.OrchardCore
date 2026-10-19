@@ -17,6 +17,11 @@ public sealed class ShippingCheckoutStep
     public string RateId { get; set; }
 
     /// <summary>
+    /// Gets or sets the store location the buyer picks the order up from, or <see langword="null"/> when it's shipped.
+    /// </summary>
+    public string PickupLocationId { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a signed-in buyer asked to keep the address they entered in their address book.
     /// </summary>
     public bool SaveAddress { get; set; }

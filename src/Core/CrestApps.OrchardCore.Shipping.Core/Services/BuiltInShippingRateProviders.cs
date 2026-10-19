@@ -106,3 +106,36 @@ public sealed class FreeShippingProvider : IShippingRateProvider
         return Task.FromResult<IReadOnlyList<ShippingRate>>(context.Request.Subtotal >= settings.MinimumSubtotal ? [context.CreateRate(0)] : []);
     }
 }
+
+/// <summary>
+/// Delivery by the store itself to the postal codes it covers, for a fee, optionally free from an order subtotal.
+/// </summary>
+public sealed class LocalDeliveryShippingProvider : IShippingRateProvider
+{
+    internal readonly IStringLocalizer S;
+
+    public LocalDeliveryShippingProvider(IStringLocalizer<LocalDeliveryShippingProvider> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public string Name => ShippingConstants.Providers.LocalDelivery;
+
+    public LocalizedString DisplayName => S["Local delivery"];
+
+    public LocalizedString Description => S["Delivered by the store to the postal codes it covers, for a fee, optionally free from an order subtotal."];
+
+    public Task<IReadOnlyList<ShippingRate>> GetRatesAsync(ShippingRateContext context, CancellationToken cancellationToken = default)
+    {
+        var settings = context.Method.GetOrCreate<LocalDeliverySettings>();
+
+        if (!settings.Covers(context.Request.Destination?.PostalCode) || context.Request.Subtotal < settings.MinimumSubtotal)
+        {
+            return Task.FromResult<IReadOnlyList<ShippingRate>>([]);
+        }
+
+        var amount = settings.FreeFromSubtotal is { } free && context.Request.Subtotal >= free ? 0m : settings.Amount;
+
+        return Task.FromResult<IReadOnlyList<ShippingRate>>([context.CreateRate(amount)]);
+    }
+}

@@ -42,6 +42,45 @@ public class ShippingSettingsViewModel
     public string Carriers { get; set; }
 
     public bool SendShippedEmails { get; set; }
+
+    public List<PickupLocationViewModel> PickupLocations { get; set; } = [];
+}
+
+public class PickupLocationViewModel
+{
+    public string LocationId { get; set; }
+
+    public string Name { get; set; }
+
+    public string AddressLine1 { get; set; }
+
+    public string City { get; set; }
+
+    public string Region { get; set; }
+
+    public string PostalCode { get; set; }
+
+    public string Country { get; set; }
+
+    public string Instructions { get; set; }
+
+    public decimal Fee { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the location is to be removed.
+    /// </summary>
+    public bool Remove { get; set; }
+}
+
+public class LocalDeliverySettingsViewModel
+{
+    public string PostalCodes { get; set; }
+
+    public decimal Amount { get; set; }
+
+    public decimal? FreeFromSubtotal { get; set; }
+
+    public decimal MinimumSubtotal { get; set; }
 }
 
 public class OrderShipmentsViewModel
@@ -227,6 +266,14 @@ public class EditShippingMethodViewModel
 public class ShippingCheckoutStepViewModel
 {
     public string AddressId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the store location chosen to pick the order up from, or empty to have it shipped.
+    /// </summary>
+    public string PickupLocationId { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<PickupLocation> PickupLocations { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether the ways to ship were just shown for the address, for the buyer to choose from.
