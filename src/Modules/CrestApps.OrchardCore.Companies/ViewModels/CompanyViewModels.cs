@@ -95,6 +95,16 @@ public class CompanyAccountViewModel
     public decimal Owed { get; set; }
 
     public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the orders waiting for an admin's approval, for an admin.
+    /// </summary>
+    public IReadOnlyList<Order> Approvals { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets what the company's paid orders came to this month, when it has a monthly budget.
+    /// </summary>
+    public decimal? SpentThisMonth { get; set; }
 }
 
 public class PriceListsIndexViewModel

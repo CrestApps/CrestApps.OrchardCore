@@ -79,6 +79,24 @@
     </div>
 }
 
+@if (order.Approval is { } approval && order.Status is not (OrderStatus.Paid or OrderStatus.Canceled))
+{
+    <div class="alert @(approval.Status == OrderApprovalStatus.Approved ? "alert-success" : "alert-info")" role="status">
+        @if (approval.Status == OrderApprovalStatus.Pending)
+        {
+            @T["Waiting for approval: {0}. We'll email you when it's decided.", approval.Reason]
+        }
+        else if (approval.Status == OrderApprovalStatus.Approved)
+        {
+            @T["{0} approved this order. Pay it to place it.", approval.DecidedBy]
+        }
+        @if (!string.IsNullOrWhiteSpace(approval.Note))
+        {
+            <span class="d-block small mt-1" style="white-space: pre-line">@approval.Note</span>
+        }
+    </div>
+}
+
 @if (!string.IsNullOrEmpty(Model.PayUrl))
 {
     <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">

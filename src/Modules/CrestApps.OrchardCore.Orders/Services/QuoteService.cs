@@ -56,11 +56,12 @@ public sealed class QuoteService
     }
 
     /// <summary>
-    /// Returns whether an order can be paid as far as its quote goes: it has none, or the store sent it and it hasn't
-    /// expired.
+    /// Returns whether an order can be paid as far as its quote and approval go: a quote the store sent that hasn't
+    /// expired, and no approval it's waiting for or was refused.
     /// </summary>
     public static bool CanPay(Order order, DateTime utcNow)
-        => order?.Quote is not { } quote || quote.Status == OrderQuoteStatus.Accepted || quote.CanAccept(utcNow);
+        => (order?.Quote is not { } quote || quote.Status == OrderQuoteStatus.Accepted || quote.CanAccept(utcNow)) &&
+            order?.Approval?.Status is not (OrderApprovalStatus.Pending or OrderApprovalStatus.Rejected);
 
     /// <summary>
     /// Returns whether the buyer can still turn the order's quote down: asked for or sent, and not being paid.

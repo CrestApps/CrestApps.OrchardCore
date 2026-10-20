@@ -269,7 +269,7 @@ internal static class OrderAccountApiEndpoints
         var order = string.IsNullOrEmpty(orderId) ? null : await orders.FindByIdAsync(orderId, httpContext.RequestAborted);
 
         return order is null ||
-            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null && order.Quote is null) ||
+            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null && order.Quote is null && order.Approval is null) ||
             (paidOnly && order.Status != OrderStatus.Paid) ||
             !string.Equals(order.UserId, httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
             !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ViewOwnOrders)

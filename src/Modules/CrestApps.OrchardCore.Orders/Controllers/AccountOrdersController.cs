@@ -72,7 +72,7 @@ public sealed class AccountOrdersController : Controller
         return View(await _shapeFactory.CreateAsync<AccountOrdersViewModel>("AccountOrders", model =>
         {
             model.Orders = orders;
-            model.Open = [.. drafts.Where(draft => draft.Quote is not null || draft.Invoice?.SentUtc is not null)];
+            model.Open = [.. drafts.Where(draft => draft.Quote is not null || draft.Approval is not null || draft.Invoice?.SentUtc is not null)];
             model.OwedOrderIds = owed;
             model.Pager = pagerShape;
         }));
@@ -89,7 +89,7 @@ public sealed class AccountOrdersController : Controller
         // Only the customer's own placed orders open here, and orders the store sent them to pay; anything else reads
         // as not found.
         if (order is null ||
-            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null && order.Quote is null) ||
+            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null && order.Quote is null && order.Approval is null) ||
             !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
             !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
         {

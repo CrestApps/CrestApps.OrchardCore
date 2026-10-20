@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Companies.Models;
+using CrestApps.OrchardCore.Companies.Controllers;
 using CrestApps.OrchardCore.Companies.Services;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -37,6 +39,17 @@ internal static class CompanyApiEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Saves the Company step of a company buyer's checkout: the purchase order number, required when the company says so.");
+
+        account.MapGet("account/company/approvals", ListApprovalsAsync)
+            .WithName("ListMyCompanyApprovals")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithSummary("Lists the company's orders waiting for an admin's approval, for a company admin.");
+
+        account.MapPost("account/company/approvals/{orderId}", DecideAsync)
+            .WithName("DecideMyCompanyApproval")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithSummary("Approves or rejects an order waiting for a company admin's approval. A rejected order is canceled.");
 
         checkout.MapPost("checkout/{id}/account", ApplyAccountAsync)
             .WithName("ApplyCheckoutAccount")
@@ -91,7 +104,7 @@ internal static class CompanyApiEndpoints
             return ApiProblems.NotFound("This checkout isn't for a company.");
         }
 
-        var problems = await step.SaveAsync(session, request?.PurchaseOrderNumber, httpContext.RequestAborted);
+        var problems = await step.SaveAsync(session, request?.PurchaseOrderNumber, request?.RequestApproval == true, httpContext.RequestAborted);
 
         if (problems.Count > 0)
         {
@@ -101,6 +114,46 @@ internal static class CompanyApiEndpoints
         await store.SaveAsync(session, httpContext.RequestAborted);
 
         return TypedResults.Ok(CheckoutApi.Read(session));
+    }
+
+    private static async Task<Results<Ok<IReadOnlyList<ApiCompanyApproval>>, ProblemHttpResult>> ListApprovalsAsync(HttpContext httpContext, CompanyService companies, IOrderStore orders)
+    {
+        var (company, buyer) = await companies.GetCurrentAsync(httpContext.RequestAborted);
+
+        if (company is null || buyer?.Role != CompanyBuyerRole.Admin)
+        {
+            return ApiProblems.NotFound("You aren't an admin of a company.");
+        }
+
+        var waiting = await CompanyAccountController.ListApprovalsAsync(orders, company.ItemId, httpContext.RequestAborted);
+
+        return TypedResults.Ok<IReadOnlyList<ApiCompanyApproval>>(waiting
+            .Select(order => new ApiCompanyApproval(order.ItemId, order.OrderNumber, ApiMoney.From(order.Approval.Amount, order.Approval.Currency), order.Approval.Reason, order.Approval.RequestedBy, order.Approval.RequestedUtc))
+            .ToList());
+    }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> DecideAsync(
+        string orderId,
+        ApiCompanyDecision decision,
+        HttpContext httpContext,
+        CompanyService companies,
+        IOrderStore orders,
+        CompanyApprovalService approvals)
+    {
+        var (company, buyer) = await companies.GetCurrentAsync(httpContext.RequestAborted);
+
+        if (company is null || buyer?.Role != CompanyBuyerRole.Admin ||
+            await orders.FindByIdAsync(orderId, httpContext.RequestAborted) is not { } order || order.CompanyId != company.ItemId)
+        {
+            return ApiProblems.NotFound();
+        }
+
+        if (!await approvals.DecideAsync(order, decision?.Approve == true, buyer.UserName ?? buyer.Email, decision?.Note, httpContext.RequestAborted))
+        {
+            return ApiProblems.Conflict(ApiProblems.Codes.Unsupported, "The order isn't waiting for approval.");
+        }
+
+        return TypedResults.NoContent();
     }
 
     private static async Task<Results<Ok<ApiCheckout>, ProblemHttpResult>> ApplyAccountAsync(
@@ -181,4 +234,20 @@ public sealed record ApiCompanyLocation(string Id, string Name, ApiAddress Addre
 public sealed class ApiCompanyStepRequest
 {
     public string PurchaseOrderNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to ask the company's admins to approve an order that needs it. The answer is then a
+    /// problem on <c>approval</c> saying it was sent; the order is paid from the buyer's orders once approved.
+    /// </summary>
+    public bool RequestApproval { get; set; }
 }
+
+/// <summary>
+/// An order waiting for a company admin's approval.
+/// </summary>
+public sealed record ApiCompanyApproval(string OrderId, string OrderNumber, ApiMoney Amount, string Reason, string RequestedBy, DateTime RequestedUtc);
+
+/// <summary>
+/// A company admin's decision on an order.
+/// </summary>
+public sealed record ApiCompanyDecision(bool Approve, string Note);

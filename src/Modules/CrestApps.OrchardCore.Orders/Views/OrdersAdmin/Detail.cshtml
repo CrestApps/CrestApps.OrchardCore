@@ -157,6 +157,16 @@
                                 <span>@order.CancelNote</span>
                             }
                             break;
+                        case OrderCancelReason.Declined:
+                            @T["Canceled {0:g}: the buyer turned the quote down.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
+                            break;
+                        case OrderCancelReason.Rejected:
+                            @T["Canceled {0:g}: {1} rejected it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc), order.Approval?.DecidedBy ?? T["the approver"].Value]
+                            @if (!string.IsNullOrEmpty(order.Approval?.Note))
+                            {
+                                <span>@order.Approval.Note</span>
+                            }
+                            break;
                         default:
                             @T["Canceled {0:g}: no checkout was left that could pay for it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;

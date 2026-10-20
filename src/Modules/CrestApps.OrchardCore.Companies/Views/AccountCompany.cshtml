@@ -11,15 +11,46 @@
 
 <h1 class="h3 mb-3">@Model.Company.Name</h1>
 
+@if (Model.Approvals.Count > 0)
+{
+    <div class="card border-warning mb-3">
+        <div class="card-header">@T.Plural(Model.Approvals.Count, "1 order waiting for your approval", "{0} orders waiting for your approval")</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var waiting in Model.Approvals)
+            {
+                <li class="list-group-item">
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <div>
+                            <div class="fw-semibold">@T["Order {0}", waiting.OrderNumber] &middot; @ProductPriceFormatter.Format(waiting.Approval.Amount, waiting.Approval.Currency)</div>
+                            <div class="small text-body-secondary">@T["{0} asked {1}: {2}.", waiting.Approval.RequestedBy, await DateAsync(waiting.Approval.RequestedUtc), waiting.Approval.Reason]</div>
+                            <div class="small">@string.Join(", ", waiting.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</div>
+                        </div>
+                        <form method="post" action="@Url.RouteUrl("AccountCompanyDecide", new { orderId = waiting.ItemId })" class="d-flex flex-wrap align-items-start gap-2 no-multisubmit">
+                            @Html.AntiForgeryToken()
+                            <input name="note" class="form-control form-control-sm" style="max-width: 16rem;" maxlength="1000" placeholder="@T["Note to the buyer (optional)"]" aria-label="@T["Note to the buyer"]" />
+                            <button type="submit" name="approve" value="true" class="btn btn-sm btn-success">@T["Approve"]</button>
+                            <button type="submit" name="approve" value="false" class="btn btn-sm btn-outline-danger">@T["Reject"]</button>
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
 <div class="row g-3 mb-3">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-body">
                 <div class="text-body-secondary small">@T["You buy as"]</div>
                 <div class="fs-5">@(Model.Buyer.Role == CompanyBuyerRole.Admin ? T["An admin"] : T["A buyer"])</div>
-                @if (Model.Buyer.OrderLimit is { } limit)
+                @if (Model.Buyer.OrderLimit is { } limit && Model.Buyer.Role != CompanyBuyerRole.Admin)
                 {
                     <div class="small text-body-secondary">@T["Orders over {0} need an admin's approval.", ProductPriceFormatter.Format(limit, Model.Currency)]</div>
+                }
+                @if (Model.Company.MonthlyBudget is { } budget)
+                {
+                    <div class="small text-body-secondary">@T["Monthly budget: {0}, {1} spent this month.", ProductPriceFormatter.Format(budget, Model.Currency), ProductPriceFormatter.Format(Model.SpentThisMonth ?? 0m, Model.Currency)]</div>
                 }
                 @if (!string.IsNullOrEmpty(Model.Company.TaxId))
                 {

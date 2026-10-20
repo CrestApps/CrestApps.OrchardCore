@@ -74,7 +74,7 @@ public sealed class CompaniesTests
         var order = new Order { ItemId = "order-1" };
         var orders = new Mock<IOrderStore>();
         orders.Setup(store => store.FindByIdAsync("order-1", It.IsAny<CancellationToken>())).ReturnsAsync(order);
-        var step = new CompanyCheckoutStepService(Companies(company), orders.Object, new PassThroughStringLocalizer<CompanyCheckoutStepService>());
+        var step = new CompanyCheckoutStepService(Companies(company), orders.Object, Approvals(orders.Object), new PassThroughStringLocalizer<CompanyCheckoutStepService>());
         var session = Flow().Session as CheckoutSession;
 
         var missing = await step.SaveAsync(session, " ", TestContext.Current.CancellationToken);
@@ -87,6 +87,99 @@ public sealed class CompaniesTests
         Assert.Equal("PO-77812", CompanyCheckoutStepService.GetPurchaseOrderNumber(session));
     }
 
+    [Fact]
+    public async Task AnOrderOverABuyersLimit_OrPastTheMonthlyBudget_NeedsApproval_ButNotAnAdmins()
+    {
+        var company = Company(new CompanyTerms());
+        var buyer = new CompanyBuyer { UserId = "buyer-2", Role = CompanyBuyerRole.Buyer, OrderLimit = 50m };
+        var admin = company.Buyers[0];
+        var orders = PaidThisMonth(80m);
+        var approvals = Approvals(orders.Object);
+
+        Assert.Contains("order limit", await approvals.GetReasonAsync(company, buyer, 60m, "USD", cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Null(await approvals.GetReasonAsync(company, buyer, 50m, "USD", cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Null(await approvals.GetReasonAsync(company, admin, 600m, "USD", cancellationToken: TestContext.Current.CancellationToken));
+
+        company.MonthlyBudget = 100m;
+
+        Assert.Equal(80m, await approvals.GetSpentThisMonthAsync(company, "USD", cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("monthly budget", await approvals.GetReasonAsync(company, buyer, 30m, "USD", cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Null(await approvals.GetReasonAsync(company, buyer, 20m, "USD", cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task TheCompanyStep_SendsAnOrderForApproval_AndPassesOnceItsApproved()
+    {
+        var company = Company(new CompanyTerms());
+        company.Buyers.Add(new CompanyBuyer { UserId = "buyer-2", UserName = "sam", Role = CompanyBuyerRole.Buyer, OrderLimit = 50m });
+
+        var order = new Order { ItemId = "order-1", OrderNumber = "261020-APPRV1", Status = OrderStatus.AwaitingPayment };
+        var orders = PaidThisMonth(0m);
+        orders.Setup(store => store.FindByIdAsync("order-1", It.IsAny<CancellationToken>())).ReturnsAsync(order);
+
+        var approvals = Approvals(orders.Object);
+        var step = new CompanyCheckoutStepService(Companies(company, "buyer-2"), orders.Object, approvals, new PassThroughStringLocalizer<CompanyCheckoutStepService>());
+        var session = Flow("buyer-2").Session as CheckoutSession;
+        session.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 60m });
+
+        Assert.Contains("approval", (await step.SaveAsync(session, null, requestApproval: false, TestContext.Current.CancellationToken)).Keys);
+        Assert.Null(order.Approval);
+
+        Assert.Contains("approval", (await step.SaveAsync(session, null, requestApproval: true, TestContext.Current.CancellationToken)).Keys);
+        Assert.Equal(OrderApprovalStatus.Pending, order.Approval.Status);
+        Assert.Equal(60m, order.Approval.Amount);
+        Assert.NotNull(order.Invoice);
+        Assert.False(CrestApps.OrchardCore.Orders.Services.QuoteService.CanPay(order, DateTime.UtcNow));
+        Assert.Null(CompanyCheckoutStepService.GetPurchaseOrderNumber(session));
+
+        Assert.True(await approvals.DecideAsync(order, approve: true, "admin", "OK for this one", TestContext.Current.CancellationToken));
+        Assert.True(CrestApps.OrchardCore.Orders.Services.QuoteService.CanPay(order, DateTime.UtcNow));
+        Assert.Empty(await step.SaveAsync(session, "PO-1", requestApproval: false, TestContext.Current.CancellationToken));
+
+        // An order that grows past what was approved needs approval again.
+        session.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 75m });
+
+        Assert.Contains("approval", (await step.SaveAsync(session, "PO-1", requestApproval: false, TestContext.Current.CancellationToken)).Keys);
+    }
+
+    private static Mock<IOrderStore> PaidThisMonth(decimal total)
+    {
+        var orders = new Mock<IOrderStore>();
+        IReadOnlyList<Order> paid = total > 0m ? [new Order { ItemId = "paid-1", Currency = "USD", Subtotal = total, Total = total, Status = OrderStatus.Paid }] : [];
+        orders.Setup(store => store.PageAsync(It.IsAny<OrderQuery>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((paid.Count, paid));
+
+        return orders;
+    }
+
+    private static CompanyApprovalService Approvals(IOrderStore orders)
+    {
+        var orderService = new Mock<IOrderService>();
+        orderService.Setup(service => service.CancelAsync(It.IsAny<Order>(), It.IsAny<OrderCancelReason>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var clock = new Mock<global::OrchardCore.Modules.IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(DateTime.UtcNow);
+
+        return new CompanyApprovalService(
+            orders,
+            orderService.Object,
+            SiteService(),
+            Mock.Of<IServiceProvider>(),
+            clock.Object,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<CompanyApprovalService>.Instance,
+            new PassThroughStringLocalizer<CompanyApprovalService>());
+    }
+
+    private static ISiteService SiteService()
+    {
+        var site = new Mock<ISite>();
+        site.Setup(value => value.GetOrCreate<CheckoutSettings>()).Returns(new CheckoutSettings { Currency = "USD" });
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+
+        return siteService.Object;
+    }
+
     private static Company Company(CompanyTerms terms)
         => new()
         {
@@ -96,22 +189,22 @@ public sealed class CompaniesTests
             Buyers = [new CompanyBuyer { UserId = BuyerId, Role = CompanyBuyerRole.Admin }],
         };
 
-    private static CheckoutFlow Flow()
+    private static CheckoutFlow Flow(string ownerId = BuyerId)
         => new(new CheckoutSession
         {
             SessionId = "session-1",
-            OwnerId = BuyerId,
+            OwnerId = ownerId,
             ReferenceType = CheckoutReferenceTypes.Order,
             ReferenceId = "order-1",
         });
 
-    private static CompanyService Companies(Company company)
+    private static CompanyService Companies(Company company, string userId = BuyerId)
     {
         var store = new Mock<ICompanyStore>();
-        store.Setup(value => value.FindByBuyerAsync(BuyerId, It.IsAny<CancellationToken>())).ReturnsAsync(company);
+        store.Setup(value => value.FindByBuyerAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync(company);
         store.Setup(value => value.FindByIdAsync(company.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(company);
 
-        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, BuyerId)], "test")) };
+        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "test")) };
 
         return new CompanyService(store.Object, new HttpContextAccessor { HttpContext = httpContext });
     }

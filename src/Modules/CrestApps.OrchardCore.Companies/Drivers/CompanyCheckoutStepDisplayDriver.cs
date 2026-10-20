@@ -29,11 +29,15 @@ internal sealed class CompanyCheckoutStepDisplayDriver : CheckoutFlowDisplayDriv
             return null;
         }
 
+        var (approval, reason) = await _step.GetApprovalAsync(flow.Session);
+
         return Initialize<CompanyCheckoutStepViewModel>("CompanyCheckoutStep", model =>
         {
             model.CompanyName = company.Name;
             model.IsRequired = company.Terms?.RequirePurchaseOrder == true;
             model.PurchaseOrderNumber ??= CompanyCheckoutStepService.GetPurchaseOrderNumber(flow.Session);
+            model.ApprovalReason = reason;
+            model.Approval = approval;
         }).Location("Content:5");
     }
 
@@ -46,11 +50,11 @@ internal sealed class CompanyCheckoutStepDisplayDriver : CheckoutFlowDisplayDriv
 
         var model = new CompanyCheckoutStepViewModel();
 
-        await context.Updater.TryUpdateModelAsync(model, Prefix, value => value.PurchaseOrderNumber);
+        await context.Updater.TryUpdateModelAsync(model, Prefix, value => value.PurchaseOrderNumber, value => value.RequestApproval);
 
-        foreach (var (_, problem) in await _step.SaveAsync(flow.Session, model.PurchaseOrderNumber))
+        foreach (var (field, problem) in await _step.SaveAsync(flow.Session, model.PurchaseOrderNumber, model.RequestApproval))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PurchaseOrderNumber), problem);
+            context.Updater.ModelState.AddModelError(Prefix, field == "approval" ? nameof(model.RequestApproval) : nameof(model.PurchaseOrderNumber), problem);
         }
 
         return await EditStepAsync(flow, context);
@@ -64,4 +68,16 @@ public class CompanyCheckoutStepViewModel
     public string CompanyName { get; set; }
 
     public bool IsRequired { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the buyer asks a company admin to approve the order.
+    /// </summary>
+    public bool RequestApproval { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the order needs approval it doesn't have, or none.
+    /// </summary>
+    public string ApprovalReason { get; set; }
+
+    public Orders.Core.Models.OrderApproval Approval { get; set; }
 }

@@ -45,6 +45,8 @@ public sealed class Startup : StartupBase
 
         // The Company step: the purchase order number, before payment.
         services.AddScoped<CompanyCheckoutStepService>();
+        services.AddScoped<CompanyApprovalService>();
+        services.AddScoped<ICheckoutPaymentGate, CompanyApprovalPaymentGate>();
         services.AddScoped<ICheckoutHandler, CompanyCheckoutHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CompanyCheckoutStepDisplayDriver>();
 

@@ -97,6 +97,12 @@ public sealed class Order : CatalogItem
     public OrderQuote Quote { get; set; }
 
     /// <summary>
+    /// Gets or sets the approval the order needs before it's paid, such as from a company admin for an order over the
+    /// buyer's limit, or none.
+    /// </summary>
+    public OrderApproval Approval { get; set; }
+
+    /// <summary>
     /// Gets or sets the buyer's purchase order number: their own reference for the order, printed on its invoice.
     /// </summary>
     public string PurchaseOrderNumber { get; set; }
@@ -649,6 +655,55 @@ public sealed class OrderQuote
     /// </summary>
     public bool CanAccept(DateTime utcNow)
         => Status == OrderQuoteStatus.Sent && (ExpiresUtc is null || ExpiresUtc > utcNow);
+}
+
+/// <summary>
+/// Someone's approval an order needs before it's paid: why, who asked, and what they decided.
+/// </summary>
+public sealed class OrderApproval
+{
+    public OrderApprovalStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the order needs it, such as being over the buyer's limit.
+    /// </summary>
+    public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total asked about, in <see cref="Currency"/>; an order that grows past it needs approval again.
+    /// </summary>
+    public decimal Amount { get; set; }
+
+    public string Currency { get; set; }
+
+    public DateTime RequestedUtc { get; set; }
+
+    public string RequestedBy { get; set; }
+
+    public DateTime? DecidedUtc { get; set; }
+
+    public string DecidedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the approver said, such as why they rejected it.
+    /// </summary>
+    public string Note { get; set; }
+
+    /// <summary>
+    /// Returns whether it was approved for a total of at least <paramref name="total"/>.
+    /// </summary>
+    public bool Covers(decimal total, string currency)
+        => Status == OrderApprovalStatus.Approved && total <= Amount &&
+            string.Equals(currency, Currency, StringComparison.OrdinalIgnoreCase);
+}
+
+public enum OrderApprovalStatus
+{
+    Pending,
+
+    Approved,
+
+    Rejected,
 }
 
 public enum OrderQuoteStatus

@@ -26,6 +26,10 @@
                         {
                             <span class="badge text-bg-secondary">@T["Asked for"]</span>
                         }
+                        else if (open.Approval is { Status: CrestApps.OrchardCore.Orders.Core.Models.OrderApprovalStatus.Pending })
+                        {
+                            <span class="badge text-bg-secondary">@T["Waiting for approval"]</span>
+                        }
                         else
                         {
                             <span class="badge text-bg-warning">@T["Ready to pay"]</span>
