@@ -1,0 +1,13 @@
+@model CrestApps.OrchardCore.Marketplace.ViewModels.VendorPartViewModel
+
+<div class="mb-3">
+    <label asp-for="VendorId" class="form-label">@T["Vendor"]</label>
+    <select asp-for="VendorId" class="form-select" style="max-width: 28rem;">
+        <option value="">@T["The store itself"]</option>
+        @foreach (var (id, name) in Model.Vendors)
+        {
+            <option value="@id" selected="@(id == Model.VendorId)">@name</option>
+        }
+    </select>
+    <span class="hint">@T["The seller this product is sold for. They're paid for its sales, less the store's commission, once each sale is released."]</span>
+</div>

@@ -1,0 +1,14 @@
+@model ClassifiedPartViewModel
+
+@* A posted listing's place, and whether it's featured, on its page and its card. *@
+
+<div class="classified-meta small text-body-secondary mb-2">
+    @if (Model.IsFeatured)
+    {
+        <span class="badge text-bg-warning me-1">@T["Featured"]</span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Place))
+    {
+        <span><span class="fa-solid fa-location-dot me-1" aria-hidden="true"></span>@Model.Place</span>
+    }
+</div>

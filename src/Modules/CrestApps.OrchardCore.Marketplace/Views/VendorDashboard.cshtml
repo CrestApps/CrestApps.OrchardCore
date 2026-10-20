@@ -1,0 +1,110 @@
+@model VendorDashboardViewModel
+
+@* What a vendor has earned and been paid, on its admin page and on its own vendor page. *@
+
+@{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+}
+
+<div class="row g-3 mb-4">
+    @if (Model.Totals.Count == 0)
+    {
+        <div class="col-12"><p class="text-body-secondary mb-0">@T["No sales yet."]</p></div>
+    }
+    @foreach (var (currency, held, available, paidOut) in Model.Totals)
+    {
+        <div class="col-12 col-md-4">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-body-secondary">@T["Held ({0})", currency]</div>
+                <div class="fs-4">@ProductPriceFormatter.Format(held, currency)</div>
+                <div class="small text-body-secondary">@T["Released when the hold ends and the order is fulfilled."]</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-body-secondary">@T["Ready to pay out ({0})", currency]</div>
+                <div class="fs-4">@ProductPriceFormatter.Format(available, currency)</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-body-secondary">@T["Paid out ({0})", currency]</div>
+                <div class="fs-4">@ProductPriceFormatter.Format(paidOut, currency)</div>
+            </div></div>
+        </div>
+    }
+</div>
+
+<h5>@T["Sales"]</h5>
+<div class="table-responsive mb-4">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>@T["Order"]</th>
+                <th>@T["Item"]</th>
+                <th class="text-end">@T["Paid"]</th>
+                <th class="text-end">@T["Commission"]</th>
+                <th class="text-end">@T["Earned"]</th>
+                <th>@T["Status"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var earning in Model.Earnings)
+            {
+                <tr>
+                    <td>@earning.OrderNumber</td>
+                    <td>@(earning.Kind == VendorEarningKind.Refund ? T["Refund: {0}", earning.Title] : (object)earning.Title)</td>
+                    <td class="text-end">@ProductPriceFormatter.Format(earning.Gross, earning.Currency)</td>
+                    <td class="text-end">@ProductPriceFormatter.Format(earning.Commission, earning.Currency) <span class="text-body-secondary small">(@earning.CommissionPercent.ToString("0.##", culture)%)</span></td>
+                    <td class="text-end">@ProductPriceFormatter.Format(earning.Net, earning.Currency)</td>
+                    <td>
+                        @switch (earning.Status)
+                        {
+                            case VendorEarningStatus.Held:
+                                <span class="badge text-bg-warning">@(earning.AwaitsFulfillment ? T["Held until {0:d} and fulfilled", earning.HoldUntilUtc] : T["Held until {0:d}", earning.HoldUntilUtc])</span>
+                                break;
+                            case VendorEarningStatus.Available:
+                                <span class="badge text-bg-info">@T["Ready to pay out"]</span>
+                                break;
+                            default:
+                                <span class="badge text-bg-success">@T["Paid out"]</span>
+                                break;
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<h5>@T["Payouts"]</h5>
+@if (Model.Payouts.Count == 0)
+{
+    <p class="text-body-secondary">@T["No payouts yet."]</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>@T["Date"]</th>
+                    <th>@T["Order"]</th>
+                    <th class="text-end">@T["Amount"]</th>
+                    <th>@T["Status"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var payout in Model.Payouts)
+                {
+                    <tr>
+                        <td>@payout.CreatedUtc.ToString("d", culture)</td>
+                        <td>@payout.OrderNumber</td>
+                        <td class="text-end">@ProductPriceFormatter.Format(payout.Amount, payout.Currency)</td>
+                        <td>@(payout.Status == VendorPayoutStatus.Paid ? T["Sent to Stripe"] : T["Failed: {0}", payout.Failure])</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

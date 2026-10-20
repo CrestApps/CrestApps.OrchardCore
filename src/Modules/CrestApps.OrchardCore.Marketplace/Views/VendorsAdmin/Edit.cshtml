@@ -1,0 +1,56 @@
+@model VendorEditViewModel
+
+@{
+    var isNew = ViewData["IsNew"] is true;
+}
+
+<zone Name="Title">
+    <breadcrumb name="VendorsEdit" title="@(isNew ? T["Add vendor"] : T["Edit vendor"])">
+        <breadcrumb-item id="Vendors" action="Index" controller="VendorsAdmin" area="@MarketplaceConstants.Feature" permission="@MarketplacePermissions.ManageMarketplace.Name">@T["Vendors"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" maxlength="120" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label">@T["Email"]</label>
+        <input asp-for="Email" type="email" class="form-control" maxlength="254" />
+        <span class="hint">@T["Where Stripe's setup and the vendor's notices go."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="UserNames" class="form-label">@T["People who run it"]</label>
+        <textarea asp-for="UserNames" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Their usernames, one per line or separated by commas. They see the vendor's sales and payouts, and set up its payouts, under Vendor in their account."]</span>
+        <span asp-validation-for="UserNames" class="text-danger"></span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="CommissionPercent" class="form-label">@T["Commission (%)"]</label>
+            <input asp-for="CommissionPercent" inputmode="decimal" class="form-control" placeholder="@T["The store's"]" />
+            <span asp-validation-for="CommissionPercent" class="text-danger"></span>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Country" class="form-label">@T["Country"]</label>
+            <input asp-for="Country" class="form-control" maxlength="2" placeholder="US" />
+        </div>
+        <div class="col-12 col-md-4">
+            <label asp-for="Status" class="form-label">@T["Status"]</label>
+            <select asp-for="Status" class="form-select">
+                <option value="@VendorStatus.Active">@T["Active"]</option>
+                <option value="@VendorStatus.Suspended">@T["Suspended: nothing is paid out"]</option>
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">@T["Save"]</button>
+    <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+</form>

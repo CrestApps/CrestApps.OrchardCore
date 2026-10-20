@@ -1,0 +1,19 @@
+@model ClassifiedUpgradePartViewModel
+
+<fieldset class="mb-3">
+    <legend class="h6">@T["Listing upgrade"]</legend>
+    <div class="row g-2">
+        <div class="col-12 col-md-6">
+            <label asp-for="Kind" class="form-label">@T["What it does"]</label>
+            <select asp-for="Kind" class="form-select">
+                <option value="@ClassifiedUpgradeKind.Feature">@T["Features the listing: shown first, with a badge"]</option>
+                <option value="@ClassifiedUpgradeKind.Bump">@T["Bumps the listing to the top, as if just posted"]</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Days" class="form-label">@T["Days featured"]</label>
+            <input asp-for="Days" type="number" min="1" max="365" class="form-control" />
+        </div>
+    </div>
+    <span class="hint">@T["Posters buy it for one of their listings from My listings in their account."]</span>
+</fieldset>

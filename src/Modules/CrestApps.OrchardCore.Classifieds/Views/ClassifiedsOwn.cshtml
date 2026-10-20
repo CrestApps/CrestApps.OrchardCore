@@ -1,0 +1,84 @@
+@model ClassifiedOwnViewModel
+
+@* A poster's own listings: where each is, renewing it, and upgrading it. *@
+
+@{
+    var now = DateTime.UtcNow;
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+}
+
+@if (Model.Types.Count > 0)
+{
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        @foreach (var (contentType, displayName) in Model.Types)
+        {
+            <a class="btn btn-primary btn-sm" href="@Url.RouteUrl("ClassifiedPost", new { contentType })">@T["Post a {0}", displayName]</a>
+        }
+    </div>
+}
+
+@if (Model.Listings.Count == 0)
+{
+    <p class="text-body-secondary">@T["You haven't posted anything yet."]</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var item in Model.Listings)
+        {
+            var part = item.TryGet<ClassifiedPart>(out var classified) ? classified : new ClassifiedPart();
+            var featured = part.FeaturedUntilUtc > now;
+
+            <div class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <div>
+                        <span class="fw-semibold">@item.DisplayText</span>
+                        @switch (part.Status)
+                        {
+                            case ClassifiedStatus.Pending:
+                                <span class="badge text-bg-warning">@T["Waiting for approval"]</span>
+                                break;
+                            case ClassifiedStatus.Approved:
+                                <span class="badge text-bg-success">@T["Up until {0:d}", part.ExpiresUtc]</span>
+                                break;
+                            case ClassifiedStatus.Rejected:
+                                <span class="badge text-bg-danger">@T["Not approved"]</span>
+                                break;
+                            default:
+                                <span class="badge text-bg-secondary">@T["Expired"]</span>
+                                break;
+                        }
+                        @if (featured)
+                        {
+                            <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc]</span>
+                        }
+                        @if (part.Status == ClassifiedStatus.Rejected && !string.IsNullOrEmpty(part.RejectReason))
+                        {
+                            <div class="small text-danger">@part.RejectReason</div>
+                        }
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("ClassifiedEdit", new { contentItemId = item.ContentItemId })">@T["Edit"]</a>
+                        @if (part.Status == ClassifiedStatus.Expired || (part.Status == ClassifiedStatus.Approved && part.ExpiresUtc < now.AddDays(7)))
+                        {
+                            <form method="post" action="@Url.RouteUrl("ClassifiedRenew", new { contentItemId = item.ContentItemId })">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-primary btn-sm">@T["Renew"]</button>
+                            </form>
+                        }
+                        @if (part.Status == ClassifiedStatus.Approved)
+                        {
+                            foreach (var (productId, title, upgrade) in Model.Upgrades)
+                            {
+                                <form method="post" action="@Url.RouteUrl("ClassifiedUpgrade", new { contentItemId = item.ContentItemId, productId })">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-warning btn-sm">@title</button>
+                                </form>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

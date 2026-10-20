@@ -1,0 +1,36 @@
+@model CrestApps.OrchardCore.Marketplace.ViewModels.MarketplaceSettingsViewModel
+
+<div class="mb-3">
+    <label asp-for="CommissionPercent" class="form-label">@T["Commission (%)"]</label>
+    <input asp-for="CommissionPercent" inputmode="decimal" class="form-control" style="max-width: 10rem;" />
+    <span class="hint">@T["What the store keeps of each vendor's sale, after discounts. A vendor can have its own."]</span>
+    <span asp-validation-for="CommissionPercent" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="HoldDays" class="form-label">@T["Days held"]</label>
+    <input asp-for="HoldDays" type="number" min="0" max="365" class="form-control" style="max-width: 10rem;" />
+    <span class="hint">@T["How long a sale is held after it's paid, such as for returns, before the vendor can be paid for it."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="ReleaseOnFulfillment" type="checkbox" class="form-check-input" />
+        <label asp-for="ReleaseOnFulfillment" class="form-check-label">@T["Hold a sale of goods until its order is fulfilled"]</label>
+        <span class="hint dashed">@T["Untick it to release goods after the days held alone. Services and downloads are released after the days held."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="AutomaticPayouts" type="checkbox" class="form-check-input" />
+        <label asp-for="AutomaticPayouts" class="form-check-label">@T["Pay vendors out by themselves"]</label>
+        <span class="hint dashed">@T["What's released is paid out within the hour. Untick it to pay out from each vendor's page."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DefaultCountry" class="form-label">@T["Vendors' country"]</label>
+    <input asp-for="DefaultCountry" class="form-control" maxlength="2" style="max-width: 6rem;" />
+    <span class="hint">@T["The country, as two letters such as US, a vendor's Stripe account is made in when the vendor names none."]</span>
+</div>

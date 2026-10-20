@@ -1,0 +1,35 @@
+@model FundraisingCampaignPartViewModel
+
+<div class="mb-3">
+    <label asp-for="Goal" class="form-label">@T["Goal"]</label>
+    <input asp-for="Goal" inputmode="decimal" class="form-control" style="max-width: 12rem;" />
+    <span class="hint">@T["What the campaign raises toward, in the product's currency. Leave it empty for no goal."]</span>
+    <span asp-validation-for="Goal" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="SuggestedAmounts" class="form-label">@T["Suggested amounts"]</label>
+    <input asp-for="SuggestedAmounts" class="form-control" style="max-width: 20rem;" />
+    <span class="hint">@T["The amounts offered as buttons, separated by commas, such as 25, 50, 100. Donors can also enter their own."]</span>
+    <span asp-validation-for="SuggestedAmounts" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MinimumAmount" class="form-label">@T["Least donation"]</label>
+    <input asp-for="MinimumAmount" inputmode="decimal" class="form-control" style="max-width: 10rem;" />
+    <span asp-validation-for="MinimumAmount" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="EndsUtc" class="form-label">@T["Ends (UTC)"]</label>
+    <input asp-for="EndsUtc" type="datetime-local" step="1" class="form-control" style="max-width: 16rem;" />
+    <span class="hint">@T["When it stops taking donations. Leave it empty for no end."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="TaxDeductible" type="checkbox" class="form-check-input" />
+        <label asp-for="TaxDeductible" class="form-check-label">@T["Donations get a tax receipt"]</label>
+        <span class="hint dashed">@T["Donors are emailed a receipt with your organization's tax ID, and find it in their account."]</span>
+    </div>
+</div>

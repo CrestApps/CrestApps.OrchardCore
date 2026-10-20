@@ -1,0 +1,38 @@
+@model CampaignProgressViewModel
+
+@*
+    How far a campaign is toward its goal: what's been given, by how many, and the days left.
+*@
+
+@{
+    var progress = Model.Progress;
+    var raised = ProductPriceFormatter.Format(progress.Raised, progress.Currency);
+}
+
+<div class="fundraising-progress mb-3 w-100">
+    @if (progress.Goal > 0m)
+    {
+        <div class="progress mb-1" role="progressbar" aria-label="@T["Raised toward the goal"]" aria-valuenow="@progress.Percent" aria-valuemin="0" aria-valuemax="100" style="height: .75rem;">
+            <div class="progress-bar bg-success" style="width: @(progress.Percent)%"></div>
+        </div>
+        <div class="small">
+            <strong>@raised</strong> @T["raised of {0}", ProductPriceFormatter.Format(progress.Goal, progress.Currency)]
+        </div>
+    }
+    else
+    {
+        <div class="small"><strong>@raised</strong> @T["raised"]</div>
+    }
+
+    <div class="small text-body-secondary">
+        @T.Plural(progress.Donors, "1 donor", "{0} donors")
+        @if (Model.Ended)
+        {
+            <span>· @T["Ended"]</span>
+        }
+        else if (progress.DaysLeft is { } days)
+        {
+            <span>· @T.Plural(days, "1 day left", "{0} days left")</span>
+        }
+    </div>
+</div>

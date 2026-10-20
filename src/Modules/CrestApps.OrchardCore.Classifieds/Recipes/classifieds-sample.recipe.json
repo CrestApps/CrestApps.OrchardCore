@@ -1,0 +1,97 @@
+{
+  "name": "ClassifiedsSample",
+  "displayName": "Classifieds sample",
+  "description": "Adds a Classified Ad type that signed-in visitors post from the site, approved by a moderator and up for 30 days, and a $5 upgrade that features an ad for 7 days. Visitors post from My listings in their account; moderators approve under Content > Posted listings; anyone finds them at /listings.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "classifieds",
+    "listings",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Contents",
+        "OrchardCore.Title",
+        "OrchardCore.Autoroute",
+        "OrchardCore.Html",
+        "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Carts",
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Classifieds"
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "ClassifiedAd",
+          "DisplayName": "Classified Ad",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": false, "Pattern": "ads/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "2", "DisplayName": "Description" } } },
+            { "PartName": "ClassifiedPart", "Name": "ClassifiedPart", "Settings": { "ContentTypePartSettings": { "Position": "3" }, "ClassifiedPartSettings": { "TermDays": 30, "RequireApproval": true } } }
+          ]
+        },
+        {
+          "Name": "ListingUpgrade",
+          "DisplayName": "Listing Upgrade",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "ProductPartSettings": { "Type": "Service", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Show" } } },
+            { "PartName": "ClassifiedUpgradePart", "Name": "ClassifiedUpgradePart", "Settings": { "ContentTypePartSettings": { "Position": "2" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "4clsfdupg0feature7days000a",
+          "ContentItemVersionId": "4clsfdupg0feature7days000b",
+          "ContentType": "ListingUpgrade",
+          "DisplayText": "Feature it for 7 days",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Feature it for 7 days" },
+          "ProductPart": { "Price": 5, "Currency": "USD", "Sku": "AD-FEATURE-7", "IsPurchasable": true },
+          "ClassifiedUpgradePart": { "Kind": 0, "Days": 7 }
+        }
+      ]
+    }
+  ]
+}

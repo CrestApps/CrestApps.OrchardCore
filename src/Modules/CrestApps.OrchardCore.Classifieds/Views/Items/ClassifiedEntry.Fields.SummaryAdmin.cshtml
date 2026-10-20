@@ -1,0 +1,4 @@
+@model ShapeViewModel<ClassifiedEntry>
+
+<a href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.Value.ContentItemId })">@Model.Value.Title</a>
+<span class="text-body-secondary">@T["{0}, by {1}", Model.Value.ContentType, Model.Value.OwnerName ?? "?"]</span>

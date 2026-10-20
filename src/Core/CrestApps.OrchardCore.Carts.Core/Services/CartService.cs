@@ -516,6 +516,7 @@ public sealed class CartService : ICartService
                 PriceChanged = !currencyChanged && resolved.Price is not null && unitPrice != line.AddedUnitPrice,
                 AddOns = evaluated is null ? ProductAddOns.Describe(resolved.ProductPart, line.AddOns) : evaluated.AddOns,
                 Details = evaluated?.Details ?? [],
+                ExcludeFromDiscounts = evaluated?.ExcludeFromDiscounts == true,
                 Problem = problem,
             });
         }

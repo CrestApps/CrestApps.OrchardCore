@@ -1,0 +1,4 @@
+@model ShapeViewModel<Vendor>
+
+<a asp-action="Detail" asp-controller="VendorsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["View"]</a>
+<a asp-action="Edit" asp-controller="VendorsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Edit"]</a>

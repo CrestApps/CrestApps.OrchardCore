@@ -358,7 +358,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             Quantity = line.Quantity,
 
             // A price staff agreed, such as on a quote, is the price: promotions don't come off it too.
-            ExcludeFromDiscounts = line.QuotedUnitPrice is not null,
+            ExcludeFromDiscounts = line.QuotedUnitPrice is not null || line.ExcludeFromDiscounts,
             PriceId = line.PriceId,
             Sku = line.Sku,
             TaxCategoryCode = line.TaxCategoryCode,

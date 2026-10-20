@@ -1,0 +1,11 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="ClassifiedPost" title="@T["Post a listing"]">
+        <breadcrumb-item id="ClassifiedsSearch" title="@T["Listings"]" href="@Url.RouteUrl("ClassifiedsSearch")" />
+    </breadcrumb>
+</zone>
+
+<div class="container my-4" style="max-width: 48rem;">
+    @await DisplayAsync(Model)
+</div>
