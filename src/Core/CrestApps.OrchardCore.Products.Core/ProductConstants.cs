@@ -27,6 +27,8 @@ public static class ProductConstants
         /// <summary>
         /// The catalog API: products, priced for the caller, with their variants and stock, under <c>api/commerce/v1</c>.
         /// </summary>
+        public const string Feeds = "CrestApps.OrchardCore.Products.Feeds";
+
         public const string Api = "CrestApps.OrchardCore.Products.Api";
 
     }

@@ -83,6 +83,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Feeds,
+    Name = "Product Feeds",
+    Description = "Publishes the store's products as a Google Merchant Center feed, which Meta and TikTok catalogs read too, and as CSV: prices in any market's currency, photos, availability, sale prices and variants, with a Product Feed part for brands and GTINs, and what Merchant Center would refuse shown before it does.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        ProductConstants.Feature.ModuleId,
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Api,
     Name = "Catalog API",
     Description = "Lists and gets products over the commerce JSON API, priced for the caller, with their variants, add-ons and stock. Enable OpenAPI to document it.",
