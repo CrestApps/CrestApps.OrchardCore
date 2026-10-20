@@ -491,6 +491,59 @@ public sealed class DefaultSubjectActionExecutorTests
         contentManager.Verify(x => x.PublishAsync(It.IsAny<ContentItem>()), Times.Never);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_DispositionNamesALeadStatus_MovesTheLeadWithNoActionWired()
+    {
+        // Arrange
+        // The platform completes a call to a dead number on its own, with a disposition no subject wires actions to,
+        // so the lead used to stay "Open - Not Contacted" for ever. The status set on the disposition applies anyway.
+        var contentManager = new Mock<IContentManager>();
+        var otherSubjectAction = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+        otherSubjectAction.SubjectContentType = "OtherSubject";
+        var executor = CreateExecutor(otherSubjectAction, new Mock<ISession>(), contentManager: contentManager);
+
+        var contact = new ContentItem();
+        contact.Alter<LeadPart>(part => part.StatusId = "open");
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Disposition.Put(new SetLeadStatusActionMetadata { StatusId = "closed" });
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("closed", GetLeadStatusId(contact));
+        contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SubjectActionNamesALeadStatus_TakesPrecedenceOverTheDisposition()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+        action.Put(new SetLeadStatusActionMetadata { StatusId = "nurturing" });
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, new Mock<ISession>(), contentManager: contentManager);
+
+        var contact = new ContentItem();
+        contact.Alter<LeadPart>(part => part.StatusId = "open");
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Disposition.Put(new SetLeadStatusActionMetadata { StatusId = "closed" });
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("nurturing", GetLeadStatusId(contact));
+        contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
+    }
+
+    private static string GetLeadStatusId(ContentItem contact)
+        => contact.TryGet<LeadPart>(out var part) ? part.StatusId : null;
+
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
         Mock<ISession> session,

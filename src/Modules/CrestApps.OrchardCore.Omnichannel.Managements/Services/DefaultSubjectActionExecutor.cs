@@ -93,6 +93,25 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         {
             await ExecuteActionAsync(action, context);
         }
+
+        await ApplyDispositionLeadStatusAsync(context, actions);
+    }
+
+    /// <summary>
+    /// Moves the lead to the status the disposition itself names, so a disposition applies in every subject -- including
+    /// one the platform picked on its own, such as a number not in service, which no subject wires actions to. A subject
+    /// action for the disposition that names a status of its own takes precedence.
+    /// </summary>
+    private Task ApplyDispositionLeadStatusAsync(SubjectActionExecutionContext context, SubjectAction[] actions)
+    {
+        if (!context.Disposition.TryGet<SetLeadStatusActionMetadata>(out var metadata) ||
+            string.IsNullOrEmpty(metadata.StatusId) ||
+            actions.Any(action => action.TryGet<SetLeadStatusActionMetadata>(out var actionMetadata) && !string.IsNullOrEmpty(actionMetadata.StatusId)))
+        {
+            return Task.CompletedTask;
+        }
+
+        return ApplyLeadStatusAsync(metadata.StatusId, context.Contact);
     }
 
     private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
@@ -373,19 +392,23 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     /// Moves the activity's lead to the status the action names. It does nothing for a contact, for a lead that was
     /// already converted, or for an action that names no status.
     /// </summary>
-    private async Task ApplyLeadStatusAsync(SubjectAction action, ContentItem contact)
+    private Task ApplyLeadStatusAsync(SubjectAction action, ContentItem contact)
+        => action.TryGet<SetLeadStatusActionMetadata>(out var metadata)
+            ? ApplyLeadStatusAsync(metadata.StatusId, contact)
+            : Task.CompletedTask;
+
+    private async Task ApplyLeadStatusAsync(string statusId, ContentItem contact)
     {
         if (contact is null ||
-            !action.TryGet<SetLeadStatusActionMetadata>(out var metadata) ||
-            string.IsNullOrEmpty(metadata.StatusId) ||
+            string.IsNullOrEmpty(statusId) ||
             !contact.TryGet<LeadPart>(out var leadPart) ||
             leadPart.IsConverted ||
-            string.Equals(leadPart.StatusId, metadata.StatusId, StringComparison.Ordinal))
+            string.Equals(leadPart.StatusId, statusId, StringComparison.Ordinal))
         {
             return;
         }
 
-        contact.Alter<LeadPart>(part => part.StatusId = metadata.StatusId);
+        contact.Alter<LeadPart>(part => part.StatusId = statusId);
 
         await _contentManager.UpdateAsync(contact);
 
