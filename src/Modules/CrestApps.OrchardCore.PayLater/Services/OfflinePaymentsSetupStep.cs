@@ -37,6 +37,7 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
     {
         var bankTransfer = await _siteService.GetSettingsAsync<BankTransferSettings>();
         var cashOnDelivery = await _siteService.GetSettingsAsync<CashOnDeliverySettings>();
+        var payLater = await _siteService.GetSettingsAsync<PayLaterSettings>();
         var offered = new List<string>();
 
         if (bankTransfer.Enabled && !string.IsNullOrWhiteSpace(bankTransfer.Instructions))
@@ -49,11 +50,19 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
             offered.Add(S["cash on delivery"]);
         }
 
+        var done = offered.Count > 0;
+
+        // Pay later is on unless turned off, so the owner sees that anyone can order on an invoice.
+        if (payLater.Enabled)
+        {
+            offered.Add(S["pay later, on an invoice due in {0} days", payLater.NetTermDays]);
+        }
+
         return new StoreSetupStepDescription
         {
             Title = S["Take bank transfers"],
             Description = S["Lets customers order now and pay from their bank. The order waits until you mark it paid, when the money arrives. Enter what they need to pay you, such as your bank's name and your account number."],
-            IsDone = offered.Count > 0,
+            IsDone = done,
             IsOptional = true,
             Status = offered.Count == 0 ? null : S["Customers can pay by {0}.", string.Join(", ", offered)],
             Url = $"~/{_adminOptions.AdminUrlPrefix}/Settings/{PayLaterConstants.SettingsGroupId}",
