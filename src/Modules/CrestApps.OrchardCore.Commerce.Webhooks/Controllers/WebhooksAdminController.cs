@@ -391,7 +391,7 @@ public sealed class WebhooksAdminController : Controller
         }
 
         // An address of the site's own network (a private, link-local or loopback IP) isn't another system's.
-        if (IPAddress.TryParse(uri.Host.Trim('[', ']'), out var literal) && IsInternal(literal))
+        if (IPAddress.TryParse(uri.Host.Trim('[', ']'), out var literal) && WebhookNetwork.IsInternal(literal))
         {
             return isDevelopment && uri.Scheme == Uri.UriSchemeHttp && IPAddress.IsLoopback(literal);
         }
@@ -404,28 +404,6 @@ public sealed class WebhooksAdminController : Controller
         return isDevelopment &&
             uri.Scheme == Uri.UriSchemeHttp &&
             (uri.IsLoopback || (IPAddress.TryParse(uri.Host, out var address) && IPAddress.IsLoopback(address)));
-    }
-
-    private static bool IsInternal(IPAddress address)
-    {
-        if (IPAddress.IsLoopback(address) || address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6UniqueLocal)
-        {
-            return true;
-        }
-
-        if (address.IsIPv4MappedToIPv6)
-        {
-            address = address.MapToIPv4();
-        }
-
-        var bytes = address.GetAddressBytes();
-
-        return bytes.Length == 4 &&
-            (bytes[0] == 10 ||
-             (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-             (bytes[0] == 192 && bytes[1] == 168) ||
-             (bytes[0] == 169 && bytes[1] == 254) ||
-             bytes[0] == 0);
     }
 
     private void Apply(WebhookEditViewModel model, WebhookSubscription subscription)

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Commerce.Webhooks.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks.Navigation;
 using CrestApps.OrchardCore.Commerce.Webhooks.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -32,9 +33,10 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, WebhookDeliveriesBackgroundTask>();
 
         // A receiver that doesn't answer in time is tried again later rather than holding a worker.
-        // Redirects aren't followed: an https address the merchant approved mustn't send events somewhere else.
+        // Redirects aren't followed: an https address the merchant approved mustn't send events somewhere else. And a
+        // host that resolves to the site's own network is refused when it's called, not only when it's saved.
         services.AddHttpClient(WebhookConstants.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15))
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+            .ConfigurePrimaryHttpMessageHandler(serviceProvider => WebhookNetwork.CreateHandler(serviceProvider.GetRequiredService<IHostEnvironment>().IsDevelopment()));
 
         services.AddPermissionProvider<WebhookPermissionProvider>();
         services.AddNavigationProvider<WebhooksAdminMenu>();

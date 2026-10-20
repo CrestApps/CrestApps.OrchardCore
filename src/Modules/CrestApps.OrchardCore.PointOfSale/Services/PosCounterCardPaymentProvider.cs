@@ -11,8 +11,8 @@ namespace CrestApps.OrchardCore.PointOfSale.Services;
 
 /// <summary>
 /// A card taken on the store's own card terminal, beside the register. The terminal has already charged the card when
-/// staff record it, so the payment is confirmed at once. It's offered only for a register's sale, to staff allowed to
-/// sell there.
+/// staff record it, so the payment is confirmed at once. It's offered only for a register's sale; the point-of-sale API
+/// checks that the caller may sell at its register before paying.
 /// </summary>
 public sealed class PosCounterCardPaymentProvider : ICheckoutPaymentProvider, ICheckoutPaymentProviderAvailability, ICheckoutPaymentProviderDescription, ICheckoutPaymentRefundProvider
 {

@@ -87,7 +87,7 @@ internal static class ShippingCheckoutApiEndpoints
             return ApiProblems.NotFound("The order this checkout pays for is gone.");
         }
 
-        return TypedResults.Ok(ToRates(quote, session));
+        return TypedResults.Ok<IReadOnlyList<ApiShippingRate>>(ToRates(quote, session));
     }
 
     private static async Task<Results<Ok<ApiCheckout>, ValidationProblem, ProblemHttpResult>> SaveAsync(
@@ -127,7 +127,7 @@ internal static class ShippingCheckoutApiEndpoints
         return TypedResults.Ok(CheckoutApi.Read(session));
     }
 
-    private static IReadOnlyList<ApiShippingRate> ToRates(ShippingQuote quote, CheckoutSession session)
+    private static List<ApiShippingRate> ToRates(ShippingQuote quote, CheckoutSession session)
     {
         var fallback = session.TryGet<CheckoutInvoice>(out var invoice) ? invoice.Currency : session.Currency;
 

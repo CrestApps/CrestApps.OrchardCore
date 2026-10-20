@@ -1,10 +1,13 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.PointOfSale.Models;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.PointOfSale.Services;
 
@@ -16,10 +19,16 @@ public sealed class PosShiftService
     // A shift's sales are read in pages this big when it's counted.
     private const int PageSize = 200;
 
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+
     private readonly IRegisterStore _registers;
     private readonly IRegisterShiftStore _shifts;
     private readonly IOrderStore _orders;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IDistributedLock _distributedLock;
+    private readonly global::YesSql.ISession _session;
+    private readonly ISiteService _siteService;
     private readonly IClock _clock;
 
     public PosShiftService(
@@ -27,12 +36,18 @@ public sealed class PosShiftService
         IRegisterShiftStore shifts,
         IOrderStore orders,
         IAuthorizationService authorizationService,
+        IDistributedLock distributedLock,
+        global::YesSql.ISession session,
+        ISiteService siteService,
         IClock clock)
     {
         _registers = registers;
         _shifts = shifts;
         _orders = orders;
         _authorizationService = authorizationService;
+        _distributedLock = distributedLock;
+        _session = session;
+        _siteService = siteService;
         _clock = clock;
     }
 
@@ -64,11 +79,23 @@ public sealed class PosShiftService
     }
 
     /// <summary>
-    /// Opens a shift at a register with the cash put in its drawer. Returns <see langword="null"/> when one is open.
+    /// Opens a shift at a register with the cash put in its drawer. Returns <see langword="null"/> when one is open, or
+    /// another is being opened there now.
     /// </summary>
     public async Task<RegisterShift> OpenAsync(Register register, decimal openingFloat, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(register);
+
+        // One shift at a time: the check and the save happen under the register's lock, so two tills opening it at
+        // once can't both succeed.
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync($"POS_SHIFT_OPEN_{register.ItemId}", _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
 
         if (await _shifts.FindOpenAsync(register.ItemId, cancellationToken) is not null)
         {
@@ -81,7 +108,8 @@ public sealed class PosShiftService
             RegisterId = register.ItemId,
             RegisterName = register.Name,
             LocationId = register.LocationId,
-            Currency = register.Currency,
+            // A register without its own currency sells in the store's, so its drawer is counted in it.
+            Currency = register.Currency ?? (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency,
             Status = RegisterShiftStatus.Open,
             OpenedByUserId = user.FindFirstValue(ClaimTypes.NameIdentifier),
             OpenedByName = GetName(user),
@@ -90,6 +118,7 @@ public sealed class PosShiftService
         };
 
         await _shifts.CreateAsync(shift, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
 
         return shift;
     }

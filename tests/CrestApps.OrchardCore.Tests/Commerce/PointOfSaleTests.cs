@@ -16,6 +16,13 @@ namespace CrestApps.OrchardCore.Tests.Commerce;
 /// </summary>
 public sealed class PointOfSaleTests
 {
+    [Fact]
+    public void ManagingRegisters_LetsStaffSell_ButSellingDoesntLetThemManage()
+    {
+        Assert.Contains(PosPermissions.ManageRegisters, PosPermissions.SellAtRegister.ImpliedBy);
+        Assert.DoesNotContain(PosPermissions.SellAtRegister, PosPermissions.ManageRegisters.ImpliedBy ?? []);
+    }
+
     [Theory]
     [InlineData(20, "USD", "2000")]
     [InlineData(12.5, "USD", "1250")]
@@ -43,8 +50,8 @@ public sealed class PointOfSaleTests
         var counter = new CheckoutSession { SessionId = "counter" };
         counter.Put(new CheckoutCounterSale { RegisterId = "register-1" });
 
-        var none = await provider.GetTendersAsync(new CheckoutTenderContext(invoice, new CheckoutFlow(online), ["2000"]));
-        var some = await provider.GetTendersAsync(new CheckoutTenderContext(invoice, new CheckoutFlow(counter), ["2000"]));
+        var none = await provider.GetTendersAsync(new CheckoutTenderContext(invoice, new CheckoutFlow(online), ["2000"]), TestContext.Current.CancellationToken);
+        var some = await provider.GetTendersAsync(new CheckoutTenderContext(invoice, new CheckoutFlow(counter), ["2000"]), TestContext.Current.CancellationToken);
 
         Assert.Empty(none);
         Assert.Equal(20m, some.Single().Amount);

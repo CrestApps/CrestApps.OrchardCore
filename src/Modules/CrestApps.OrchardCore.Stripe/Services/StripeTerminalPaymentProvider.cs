@@ -145,6 +145,10 @@ public sealed class StripeTerminalPaymentProvider : ICheckoutPaymentProvider, IC
                 },
                 "canceled" => new PaymentVerificationResult { Status = PaymentStatus.Failed, Currency = attempt.Currency },
 
+                // A declined card puts the payment back to wanting a card, with the decline as its last error; the
+                // till then takes the card again as a new payment.
+                "requires_payment_method" when paymentIntent.LastPaymentError is not null => new PaymentVerificationResult { Status = PaymentStatus.Failed, Currency = attempt.Currency },
+
                 // Waiting for the card on the reader, or for the bank.
                 _ => new PaymentVerificationResult { Status = PaymentStatus.Unknown, Currency = attempt.Currency },
             };

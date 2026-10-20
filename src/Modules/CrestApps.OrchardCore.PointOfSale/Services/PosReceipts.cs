@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.PointOfSale.Api;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,7 +61,7 @@ internal static class PosReceipts
             TaxAmount = order.TaxAmount ?? 0m,
             Total = order.Total ?? order.Subtotal,
             Status = order.Status == OrderStatus.Paid ? ReceiptStatus.Paid : ReceiptStatus.Due,
-            Notes = string.Join(" · ", GetPayments(order).Select(payment => $"{payment.Method}: {payment.Amount:0.00}")),
+            Notes = string.Join(" · ", GetPayments(order).Select(payment => $"{payment.Method}: {ProductPriceFormatter.Format(payment.Amount, order.Currency)}")),
         });
 
         return renderer.Render(document);

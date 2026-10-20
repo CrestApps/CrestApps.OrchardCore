@@ -10,7 +10,6 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
 using CrestApps.OrchardCore.Inventory.Endpoints;
-using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;

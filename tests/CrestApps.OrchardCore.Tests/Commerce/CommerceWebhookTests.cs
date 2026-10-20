@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Commerce.Api;
@@ -68,6 +70,31 @@ public sealed class CommerceWebhookTests
     [InlineData("https://localhost/hook", false, false)]
     public void Events_ArePostedOnlyOverHttps_OrToThisMachineWhileDeveloping(string url, bool isDevelopment, bool allowed)
         => Assert.Equal(allowed, WebhooksAdminController.IsAllowedUrl(url, isDevelopment));
+
+    [Theory]
+    [InlineData("127.0.0.1", true)]
+    [InlineData("10.1.2.3", true)]
+    [InlineData("172.20.0.1", true)]
+    [InlineData("192.168.0.10", true)]
+    [InlineData("169.254.169.254", true)]
+    [InlineData("::1", true)]
+    [InlineData("fd00::1", true)]
+    [InlineData("::ffff:10.0.0.1", true)]
+    [InlineData("8.8.8.8", false)]
+    [InlineData("172.32.0.1", false)]
+    public void AnAddressOfTheSitesOwnNetwork_IsInternal(string address, bool isInternal)
+        => Assert.Equal(isInternal, WebhookNetwork.IsInternal(IPAddress.Parse(address)));
+
+    [Fact]
+    public async Task AHostOnTheSitesOwnNetwork_IsRefusedWhenCalled()
+    {
+        // A hostname passes when it's saved; the connection is what refuses it, whatever it resolves to.
+        using var client = new HttpClient(WebhookNetwork.CreateHandler(allowLoopback: false));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("http://localhost:1/hook", TestContext.Current.CancellationToken));
+
+        Assert.Contains("own network", exception.Message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void ARetry_GetsBackTheGuestTokenAndLocation_TheFirstAnswerHadInItsHeaders()

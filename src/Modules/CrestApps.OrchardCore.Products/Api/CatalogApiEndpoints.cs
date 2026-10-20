@@ -193,8 +193,8 @@ internal sealed class CatalogApiProductReader
         var cancellationToken = httpContext.RequestAborted;
         var now = _clock.UtcNow;
         var currency = document.Currency;
-        var part = item.As<ProductPart>();
-        var variantsPart = item.As<ProductVariantsPart>();
+        var part = item.TryGet<ProductPart>(out var productPart) ? productPart : null;
+        var variantsPart = item.TryGet<ProductVariantsPart>(out var variantsPartValue) ? variantsPartValue : null;
         var variants = variantsPart?.GetAvailable().ToList() ?? [];
 
         var stockKeys = variants.Count > 0
@@ -215,7 +215,7 @@ internal sealed class CatalogApiProductReader
             }
         }
 
-        var prices = (item.As<ProductPricePart>()?.Prices ?? [])
+        var prices = ((item.TryGet<ProductPricePart>(out var pricePart) ? pricePart.Prices : null) ?? [])
             .Where(price => price.IsAvailable(now))
             .Select(price => new ApiProductPrice(
                 price.PriceId,

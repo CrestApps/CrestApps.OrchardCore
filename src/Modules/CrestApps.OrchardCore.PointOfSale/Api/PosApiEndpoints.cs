@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Api;
+using CrestApps.OrchardCore.Orders;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
@@ -9,11 +11,13 @@ using CrestApps.OrchardCore.PointOfSale.Models;
 using CrestApps.OrchardCore.PointOfSale.Services;
 using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Email;
 using OrchardCore.Entities;
 
@@ -201,7 +205,13 @@ internal static class PosApiEndpoints
             return ApiProblems.Conflict(PosCodes.ShiftClosed, "Open a shift at the register first.");
         }
 
-        var buyer = await FindBuyerAsync(request, httpContext);
+        var (buyer, customerFound) = await FindBuyerAsync(request, httpContext);
+
+        if (!customerFound)
+        {
+            return ApiProblems.Validation("customerId", "There's no customer with that id.");
+        }
+
         var result = await sales.StartAsync(register, shift, request.Lines, buyer, httpContext.User, httpContext.RequestAborted);
 
         if (!result.Succeeded)
@@ -220,6 +230,9 @@ internal static class PosApiEndpoints
         HttpContext httpContext,
         ICheckoutSessionStore sessionStore,
         IOrderStore orders,
+        IRegisterStore registers,
+        IRegisterShiftStore shiftStore,
+        PosShiftService shifts,
         PosSaleService sales)
     {
         if (request?.Cash is < 0m)
@@ -227,12 +240,21 @@ internal static class PosApiEndpoints
             return ApiProblems.Validation("cash", "Give the cash handed over.");
         }
 
-        if (await CheckoutApi.FindOpenAsync(sessionStore, checkoutId, httpContext.RequestAborted) is not { } session || !session.TryGet<Checkout.Models.CheckoutCounterSale>(out _))
+        if (await CheckoutApi.FindOpenAsync(sessionStore, checkoutId, httpContext.RequestAborted) is not { } session ||
+            !session.TryGet<Checkout.Models.CheckoutCounterSale>(out var counterSale) ||
+            await registers.FindByIdAsync(counterSale.RegisterId, httpContext.RequestAborted) is not { } register ||
+            !await shifts.MaySellAtAsync(httpContext.User, register))
         {
             return ApiProblems.NotFound();
         }
 
-        var result = await sales.PayAsync(session, request.Cash, request.Card is not null, request.Card?.ApprovalCode, request.Reader?.ReaderId, httpContext.RequestAborted);
+        // The money goes into the shift's drawer, so a sale whose shift has closed is rung up again on the open one.
+        if (await shiftStore.FindByIdAsync(counterSale.ShiftId, httpContext.RequestAborted) is not { Status: RegisterShiftStatus.Open })
+        {
+            return ApiProblems.Conflict(PosCodes.ShiftClosed, "The sale's shift is closed; ring it up again on the open shift.");
+        }
+
+        var result = await sales.PayAsync(session, request?.Cash, request?.Card is not null, request?.Card?.ApprovalCode, request?.Reader?.ReaderId, httpContext.RequestAborted);
         var currency = session.TryGet<CheckoutInvoice>(out var invoice) ? invoice.Currency : session.Currency;
 
         if (result.Status == PosPaymentStatus.Failed)
@@ -280,7 +302,8 @@ internal static class PosApiEndpoints
         HttpContext httpContext,
         IOrderStore orders,
         IRegisterStore registers,
-        PosShiftService shifts)
+        PosShiftService shifts,
+        IStringLocalizerFactory localizerFactory)
     {
         var email = request?.Email?.Trim();
 
@@ -302,7 +325,7 @@ internal static class PosApiEndpoints
         var sent = await emailService.SendAsync(new MailMessage
         {
             To = email,
-            Subject = $"Receipt for order {order.OrderNumber}",
+            Subject = localizerFactory.Create(typeof(PosApiEndpoints))["Receipt for order {0}", order.OrderNumber],
             HtmlBody = html,
         }, cancellationToken: httpContext.RequestAborted);
 
@@ -318,7 +341,9 @@ internal static class PosApiEndpoints
         IRegisterStore registers,
         IRegisterShiftStore shiftStore,
         PosShiftService shifts,
-        OrderOperationsService operations)
+        OrderOperationsService operations,
+        IAuthorizationService authorizationService,
+        ICheckoutTenderLedger ledger)
     {
         if (request?.Amount is <= 0m)
         {
@@ -330,13 +355,20 @@ internal static class PosApiEndpoints
             return ApiProblems.NotFound("There's no register with that id you may sell at.");
         }
 
-        if (await orders.FindByIdAsync(request.OrderId, httpContext.RequestAborted) is not { Status: OrderStatus.Paid } order)
+        // A till returns the store's register sales; an online order is returned there only by staff who manage orders.
+        if (await orders.FindByIdAsync(request.OrderId, httpContext.RequestAborted) is not { Status: OrderStatus.Paid } order ||
+            (!OrderChannels.IsCounterSale(order) && !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ManageOrders)))
         {
-            return ApiProblems.NotFound("There's no paid order with that id.");
+            return ApiProblems.NotFound("There's no paid order with that id you may return.");
         }
 
-        var cashPaid = (order.Tenders ?? []).Where(tender => tender.ProviderKey == PosConstants.CashTenderKey).Sum(tender => tender.Amount);
-        var refundedBefore = order.RefundedAmount;
+        // Cash given back comes out of this register's drawer, so the drawer must be open to count it.
+        if (await shiftStore.FindOpenAsync(register.ItemId, httpContext.RequestAborted) is not { } shift)
+        {
+            return ApiProblems.Conflict(PosCodes.ShiftClosed, "Open a shift at the register first.");
+        }
+
+        var cashBefore = await GetCashHeldAsync(ledger, order, httpContext.RequestAborted);
         var result = await operations.RefundAsync(order, request.Amount, request.Reason ?? "Returned at the till", request.Restock != false, PosShiftService.GetName(httpContext.User), asStoreCredit: false, httpContext.RequestAborted);
 
         if (!result.Succeeded)
@@ -344,16 +376,25 @@ internal static class PosApiEndpoints
             return ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, string.Join(" ", result.Errors));
         }
 
-        // What was paid in cash goes back in cash, out of this register's drawer.
-        var cashBack = Math.Min(result.Refunded, Math.Max(0m, cashPaid - refundedBefore));
+        // What the refund put back on the sale's cash goes back in cash, out of this register's drawer. The card is
+        // refunded first, so this is only what the card didn't cover.
+        var cashBack = Math.Max(0m, cashBefore - await GetCashHeldAsync(ledger, order, httpContext.RequestAborted));
 
-        if (cashBack > 0m && await shiftStore.FindOpenAsync(register.ItemId, httpContext.RequestAborted) is { } shift)
+        if (cashBack > 0m)
         {
             await shifts.MoveCashAsync(shift, -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, httpContext.RequestAborted);
         }
 
         return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), result.Messages));
     }
+
+    // The cash a sale was paid with that hasn't been given back yet.
+    private static async Task<decimal> GetCashHeldAsync(ICheckoutTenderLedger ledger, Order order, CancellationToken cancellationToken)
+        => string.IsNullOrEmpty(order.CheckoutSessionId)
+            ? 0m
+            : (await ledger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken))
+                .Where(hold => hold.ProviderKey == PosConstants.CashTenderKey)
+                .Sum(hold => hold.Amount - hold.ReturnedAmount);
 
     // A shift opens for whoever may sell at its register.
     private static async Task<(RegisterShift Shift, Register Register)?> FindShiftAsync(string shiftId, HttpContext httpContext, IRegisterShiftStore shiftStore, IRegisterStore registers, PosShiftService shifts)
@@ -372,25 +413,31 @@ internal static class PosApiEndpoints
                 ? order
                 : null;
 
-    private static async Task<PosBuyer> FindBuyerAsync(ApiPosSaleRequest request, HttpContext httpContext)
+    // The buyer the sale is for: a customer by id, someone by email, or nobody. A customer id that isn't found is the
+    // till's mistake, so it isn't quietly sold to nobody.
+    private static async Task<(PosBuyer Buyer, bool CustomerFound)> FindBuyerAsync(ApiPosSaleRequest request, HttpContext httpContext)
     {
-        if (!string.IsNullOrEmpty(request.CustomerId) &&
-            httpContext.RequestServices.GetService<Customers.Core.Services.ICustomerStore>() is { } customers &&
-            await customers.FindByIdAsync(request.CustomerId, httpContext.RequestAborted) is { } customer)
+        if (!string.IsNullOrEmpty(request.CustomerId))
         {
-            return new PosBuyer
+            if (httpContext.RequestServices.GetService<Customers.Core.Services.ICustomerStore>() is not { } customers ||
+                await customers.FindByIdAsync(request.CustomerId, httpContext.RequestAborted) is not { } customer)
+            {
+                return (null, false);
+            }
+
+            return (new PosBuyer
             {
                 CustomerId = customer.ItemId,
                 UserId = customer.UserId,
                 Name = customer.GetName(),
                 Email = customer.Email,
                 Phone = customer.Phone,
-            };
+            }, true);
         }
 
-        return string.IsNullOrWhiteSpace(request.CustomerEmail)
+        return (string.IsNullOrWhiteSpace(request.CustomerEmail)
             ? null
-            : new PosBuyer { Email = request.CustomerEmail.Trim(), Name = request.CustomerName?.Trim() };
+            : new PosBuyer { Email = request.CustomerEmail.Trim(), Name = request.CustomerName?.Trim() }, true);
     }
 
     private static async Task<ApiShift> ToApiAsync(RegisterShift shift, PosShiftService shifts, HttpContext httpContext)
