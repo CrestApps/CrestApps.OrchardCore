@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
@@ -50,6 +51,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IOrderStore, OrderStore>();
         services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IStoreSetupStep, TestOrderSetupStep>();
 
         // Unpaid orders whose checkout ended without them hearing of it are canceled.
         services.AddScoped<AbandonedOrderSweeper>();

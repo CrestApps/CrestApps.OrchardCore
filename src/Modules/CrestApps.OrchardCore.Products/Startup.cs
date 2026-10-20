@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Products.ContentTransfer;
 using Microsoft.AspNetCore.Routing;
@@ -81,6 +82,7 @@ public sealed class Startup : StartupBase
         services.AddSingleton<ProductContentTypes>();
         services.AddSingleton<IContentDefinitionEventHandler>(serviceProvider => serviceProvider.GetRequiredService<ProductContentTypes>());
         services.AddNavigationProvider<ProductsAdminMenu>();
+        services.AddScoped<IStoreSetupStep, ProductsSetupStep>();
 
         services.AddScoped<IProductSnapshotResolver, DefaultProductSnapshotResolver>();
         services.AddScoped<IPriceResolver, DefaultPriceResolver>();

@@ -153,6 +153,7 @@ const sidebars = {
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
             items: [
+                'user-manual/commerce/set-up-your-store',
                 'user-manual/commerce/payment-providers',
                 'user-manual/commerce/products-and-currencies',
                 'user-manual/commerce/product-listings',
@@ -391,6 +392,8 @@ const sidebars = {
                 'modules/downloads',
                 'modules/reviews',
                 'modules/checkout',
+                'modules/store-setup',
+                'modules/commerce-extensions',
                 'modules/commerce-api',
                 'modules/commerce-webhooks',
                 'modules/point-of-sale',

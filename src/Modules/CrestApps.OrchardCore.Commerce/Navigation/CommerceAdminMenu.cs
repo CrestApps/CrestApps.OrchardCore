@@ -27,6 +27,12 @@ public sealed class CommerceAdminMenu : AdminNavigationProvider
             .Add(S["Commerce"], "15", commerce => commerce
                 .AddClass("commerce")
                 .Id("commerce")
+                .Add(S["Set up your store"], S["Set up your store"].PrefixPosition("0"), setup => setup
+                    .AddClass("commerce-setup")
+                    .Id("commerceSetup")
+                    .Action("Index", "StoreSetup", new { area = CommerceConstants.Features.Area })
+                    .Permission(CommercePermissions.SetUpStore)
+                    .LocalNav())
             );
 
         return ValueTask.CompletedTask;

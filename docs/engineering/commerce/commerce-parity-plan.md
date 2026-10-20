@@ -565,6 +565,53 @@ Not built yet, and why:
 - **Recurring gifts and Gift Aid.** Monthly giving needs a campaign sold as a subscription with a chosen amount; Gift Aid needs the donor's declaration and the claim file HMRC takes.
 - **Fundraising pages per supporter.** Peer-to-peer pages that raise toward a campaign's goal.
 
+## Phase 13 as built
+
+One branch, a commit per slice:
+
+- **PN1a the setup guide.** Commerce › Set up your store, from the `IStoreSetupStep` seam in Abstractions: each module adds the steps of what it does. The steps, with what's done and a quick action for the simple ones:
+  - the store's details (Receipts);
+  - the currency (Checkout);
+  - card payments (Stripe, read from its options, so keys from configuration count);
+  - bank transfers (PayLater, optional);
+  - one flat rate everywhere (Shipping);
+  - tax rules (Taxation);
+  - a first product, adding a Product type when there's none (Products);
+  - a paid test order (Orders).
+
+  Progress and skipped steps are kept in site settings.
+- **PN1c staff presets.** Store manager, Warehouse, Customer support and Marketing, created from the guide with their permissions as role claims (`StaffRolePresets`).
+- **PN1b the Storefront theme and the Online store setup recipe.**
+  - The theme is built on TheTheme. Its Layout has a sticky store header with search, the Navbar's cart, market and account, the main menu, the Title zone for breadcrumbs, and a footer with the store's contact details from the receipt settings.
+  - The setup recipe enables the commerce features and the theme, defines a Product type, and makes an empty catalog the home page.
+- **PN2 the extension guide.** Extending commerce, in the Technical Manual: which seam fits which job, a worked example (a cart line handler and an order handler), and the traps (order handler DI cycles, commits during a request, invariant amounts, detail keys, discounts, admin lists).
+
+Found and fixed on fresh sites:
+
+- The guide called Stripe unconfigured on a site whose keys come from configuration. It reads the resolved Stripe options now.
+- The recipe's Product type tracked stock, so a new owner's first product was out of stock and couldn't be bought. The recipe leaves stock out; owners add it when they keep stock.
+- Pay later was on by default and offered to every shopper of a new store. It's off by default now, everywhere: a store turns it on under Settings › Commerce › Offline payments, and the guide's offline payments step shows when it's on.
+- TheTheme pins a 60px footer and pads the page for a fixed navbar. The theme undoes both for its taller footer and sticky header.
+
+The exit gate holds:
+
+- A blank site was set up from the Online store recipe.
+- The owner followed the guide:
+  - saved the store's details and USD;
+  - card payments showed done from Stripe's test keys;
+  - added $5 shipping everywhere;
+  - skipped tax;
+  - added a $24 product from the guide's link.
+- Two of the product were bought on the storefront with Stripe's test card, $53 with shipping. The guide showed the order paid and 7 of 7 steps done.
+- The staff roles were added with their permissions.
+- This was done without opening the docs.
+
+Not built yet, and why:
+
+- **Importing products.** A CSV import of a first catalog in the guide; ContentTransfer imports content in general today.
+- **Picking a theme's colors and logo in the admin.** The theme reads the receipt settings' name and logo; colors change through a child theme's CSS variables.
+- **A guided Stripe connection.** Entering keys is the one step that leaves the guide; Stripe's OAuth onboarding would replace it.
+
 ## Headless API and point of sale (phase 6, planned)
 
 A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.

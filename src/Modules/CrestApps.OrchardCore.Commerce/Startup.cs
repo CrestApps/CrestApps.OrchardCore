@@ -10,6 +10,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Commerce;
@@ -34,5 +35,18 @@ public sealed class Startup : StartupBase
         // Exports and anonymizes a person's commerce data. Each enabled commerce feature adds its own records through
         // an ICommercePersonalDataContributor, so the service sees only what is enabled.
         services.AddScoped<ICommercePersonalDataService, DefaultCommercePersonalDataService>();
+
+        // The store's setup guide, whose steps come from the modules they're about.
+        services.AddPermissionProvider<CommercePermissionProvider>();
     }
+}
+
+/// <summary>
+/// Adds roles for a store's staff from the setup guide.
+/// </summary>
+[RequireFeatures("OrchardCore.Roles")]
+public sealed class StaffRolesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IStoreSetupStep, StaffRolesSetupStep>();
 }

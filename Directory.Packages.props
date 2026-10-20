@@ -75,6 +75,7 @@
     <PackageVersion Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Theme.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Azure" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Mvc.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />

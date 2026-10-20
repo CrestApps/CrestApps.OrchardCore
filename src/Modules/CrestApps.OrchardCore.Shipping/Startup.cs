@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
@@ -40,6 +41,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddShippingCore();
+        services.AddScoped<IStoreSetupStep, ShippingSetupStep>();
 
         // Shipments and their index live in their own YesSql collection, which has to be declared for them to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ShippingConstants.CollectionName));

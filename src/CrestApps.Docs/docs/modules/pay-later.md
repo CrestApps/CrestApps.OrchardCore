@@ -58,7 +58,7 @@ Each cycle is created exactly once. The sweep takes a lock on the one commitment
 
 ### Configuring the payment term
 
-Under **Settings → Commerce → Offline payments** you can set the **net term (days)** — how many days after checkout a recorded Pay Later balance is due. The due date drives the reminder cadence configured in the [Transactions](transactions) settings. A value of `0` records the balance with no due date. `PayLaterSettings.Enabled` (on by default) turns the option off without disabling the feature.
+Under **Settings → Commerce → Offline payments** you can set the **net term (days)** — how many days after checkout a recorded Pay Later balance is due. The due date drives the reminder cadence configured in the [Transactions](transactions) settings. A value of `0` records the balance with no due date. `PayLaterSettings.Enabled` (off by default) offers the option at checkout; until it's on, enabling the feature adds nothing to checkout.
 
 ## Bank transfer and cash on delivery
 
