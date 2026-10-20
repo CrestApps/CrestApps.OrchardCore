@@ -131,7 +131,12 @@ public sealed class DraftOrderService
 
         if (order is null)
         {
-            var created = await _orderService.CreateFromCartAsync(pricing, draft => draft.Channel = OrderChannels.Draft, cancellationToken);
+            // Made by staff, so the order doesn't take their language.
+            var created = await _orderService.CreateFromCartAsync(pricing, draft =>
+            {
+                draft.Channel = OrderChannels.Draft;
+                draft.Culture = null;
+            }, cancellationToken);
 
             if (!created.Succeeded)
             {

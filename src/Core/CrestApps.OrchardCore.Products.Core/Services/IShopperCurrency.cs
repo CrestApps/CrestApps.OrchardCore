@@ -12,6 +12,12 @@ public interface IShopperCurrency
     ValueTask<string> GetCurrencyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the store's own currency, which amounts without one are in, or <see langword="null"/> when there's no
+    /// single one.
+    /// </summary>
+    ValueTask<string> GetStoreCurrencyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns <paramref name="amount"/>, in <paramref name="fromCurrency"/> (or the store's own currency when it's
     /// <see langword="null"/>), as the shopper pays it in <paramref name="toCurrency"/>. A price is rounded by the store's price rounding rule, such as ending in .99;
     /// another amount, such as what an add-on adds, only to the currency's smallest unit. Returns
@@ -26,6 +32,9 @@ public interface IShopperCurrency
 public sealed class ProductOwnShopperCurrency : IShopperCurrency
 {
     public ValueTask<string> GetCurrencyAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<string>(null);
+
+    public ValueTask<string> GetStoreCurrencyAsync(CancellationToken cancellationToken = default)
         => ValueTask.FromResult<string>(null);
 
     public ValueTask<decimal?> ConvertAsync(decimal amount, string fromCurrency, string toCurrency, bool isPrice = true, CancellationToken cancellationToken = default)

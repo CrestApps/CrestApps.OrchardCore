@@ -718,7 +718,7 @@ public sealed class ProductListingService
 
         var attributes = await _attributeCatalog.GetAttributesAsync([contentItem.ContentType]);
 
-        model.Price = await BuildPriceShapeAsync(document, contentItem.ContentType);
+        model.Price = await BuildPriceShapeAsync(document, contentItem.ContentType, contentItem);
         model.IsPurchasable = document.IsPurchasable;
         model.Sku = document.Sku;
         model.Highlights = BuildSpecifications(document, attributes, attribute => attribute.ShowOnCard).Select(row => row.Value).ToList();
@@ -990,14 +990,43 @@ public sealed class ProductListingService
     /// <summary>
     /// Builds the price shape of a product.
     /// </summary>
-    public async Task<IShape> BuildPriceShapeAsync(ProductSearchDocument document, string contentType)
+    public Task<IShape> BuildPriceShapeAsync(ProductSearchDocument document, string contentType)
+        => BuildPriceShapeAsync(document, contentType, contentItem: null);
+
+    /// <summary>
+    /// Builds the price shape of a product, in the shopper's currency: the product's own price in it when it lists one,
+    /// else its price converted. A subscription is shown in its own currency, since it isn't converted.
+    /// </summary>
+    public async Task<IShape> BuildPriceShapeAsync(ProductSearchDocument document, string contentType, ContentItem contentItem)
     {
         var settings = ProductAttributeCatalog.GetProductSettings(await _contentDefinitionManager.GetTypeDefinitionAsync(contentType));
 
         // Shown in the shopper's currency. Sorting and the price filter stay in the product's own.
         var shopperCurrency = _httpContextAccessor.HttpContext?.RequestServices.GetService<IShopperCurrency>();
-        var (price, currency) = document.Price is { } listed ? await shopperCurrency.ToShopperAsync(listed, document.Currency) : (0m, document.Currency);
-        var (compareAtPrice, _) = document.CompareAtPrice is { } compareAt ? await shopperCurrency.ToShopperAsync(compareAt, document.Currency) : (0m, null);
+        var target = shopperCurrency is null ? null : await shopperCurrency.GetCurrencyAsync();
+        var price = document.Price ?? 0m;
+        var currency = document.Currency;
+        var compareAtPrice = document.CompareAtPrice ?? 0m;
+        var showCompareAt = true;
+
+        if (!string.IsNullOrEmpty(target) && !string.Equals(target, document.Currency, StringComparison.OrdinalIgnoreCase) && document.Price.HasValue)
+        {
+            var now = DateTime.UtcNow;
+            var listed = contentItem is not null && contentItem.TryGet<ProductPricePart>(out var pricing) && pricing.GetDefault(now) is { } offered
+                ? pricing.Prices.FirstOrDefault(candidate => string.Equals(candidate.Currency, target, StringComparison.OrdinalIgnoreCase) &&
+                    candidate.Kind == offered.Kind && candidate.Interval == offered.Interval && candidate.IsAvailable(now))
+                : null;
+
+            if (listed is not null)
+            {
+                (price, currency, showCompareAt) = (listed.Amount, listed.Currency, false);
+            }
+            else if (document.BillingInterval is null)
+            {
+                (price, currency) = await shopperCurrency.ToShopperAsync(price, document.Currency);
+                compareAtPrice = (await shopperCurrency.ToShopperAsync(compareAtPrice, document.Currency)).Amount;
+            }
+        }
 
         return await _shapeFactory.CreateAsync<ProductPriceDisplayViewModel>("ProductPrice", model =>
         {
@@ -1015,7 +1044,7 @@ public sealed class ProductListingService
             // Variants priced differently start at the lowest.
             model.IsFrom = document.MaxPrice > document.Price;
 
-            if (document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
+            if (showCompareAt && document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
             {
                 model.CompareAtPrice = ProductPriceFormatter.Format(compareAtPrice, currency);
                 model.DiscountPercent = (int)Math.Round((1 - (document.Price.Value / document.CompareAtPrice.Value)) * 100, MidpointRounding.AwayFromZero);
@@ -1101,7 +1130,7 @@ public sealed class ProductListingService
                 ? null
                 : _linkGenerator.GetPathByRouteValues(_httpContextAccessor.HttpContext, routeName: null, metadata.DisplayRouteValues);
 
-            var price = await BuildPriceShapeAsync(document, contentItem.ContentType);
+            var price = await BuildPriceShapeAsync(document, contentItem.ContentType, contentItem);
             var actions = await BuildProductActionsAsync(contentItem);
             var shape = await _shapeFactory.CreateAsync<ProductCardViewModel>("ProductCard", card =>
             {

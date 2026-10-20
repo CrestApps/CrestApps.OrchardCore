@@ -107,9 +107,20 @@ public sealed class TaxService : ITaxService
 
         foreach (var provider in _determinationProviders)
         {
-            if (provider.CanHandle(context))
+            if (!provider.CanHandle(context))
+            {
+                continue;
+            }
+
+            // A service that can't answer, such as a tax connector that's down, leaves the order to the store's own
+            // rules rather than stopping the sale.
+            try
             {
                 return await provider.DetermineAsync(context, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "The tax provider '{Provider}' couldn't work out the tax; the store's own rules did instead.", provider.GetType().Name);
             }
         }
 

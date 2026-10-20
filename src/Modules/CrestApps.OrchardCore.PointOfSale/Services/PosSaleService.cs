@@ -104,6 +104,7 @@ public sealed class PosSaleService
         var created = await _orderService.CreateFromCartAsync(pricing, order =>
         {
             order.Channel = OrderChannels.PointOfSale;
+            order.Culture = null;
             order.LocationId = register.LocationId;
             order.RegisterId = register.ItemId;
             order.RegisterName = register.Name;

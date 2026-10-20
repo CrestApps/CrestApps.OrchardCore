@@ -82,7 +82,7 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
-            // Tax is never guessed: an order isn't taken when what it owes can't be worked out.
+            // The tax service then works the tax out by the store's own rules.
             _logger.LogWarning(exception, "TaxJar couldn't be reached.");
 
             throw new InvalidOperationException("TaxJar couldn't be reached to work out the tax.", exception);

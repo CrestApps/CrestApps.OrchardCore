@@ -54,10 +54,11 @@ public sealed class DefaultShippingRateService : IShippingRateService
 
         var methods = zone.Methods.Where(method => method.Enabled).OrderBy(method => method.Position).ThenBy(method => method.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
-        // A shopper buying in a market's currency pays the zone's rates in that currency when it has some; otherwise its
-        // rates in the store's currency (a method with no currency is in the store's) are converted.
-        var shopperCurrency = _shopperCurrency is null ? null : await _shopperCurrency.GetCurrencyAsync(cancellationToken);
-        var inMarket = !string.IsNullOrEmpty(shopperCurrency) && string.Equals(shopperCurrency, request.Currency, StringComparison.OrdinalIgnoreCase);
+        // An order in another currency than the store's, such as a market's, pays the zone's rates in its currency when it
+        // has some; otherwise its rates in the store's currency (a method with no currency is in the store's) are
+        // converted.
+        var storeCurrency = _shopperCurrency is null ? null : await _shopperCurrency.GetStoreCurrencyAsync(cancellationToken);
+        var inMarket = !string.IsNullOrEmpty(storeCurrency) && !string.Equals(storeCurrency, request.Currency, StringComparison.OrdinalIgnoreCase);
         var rates = new List<ShippingRate>();
 
         foreach (var method in methods)

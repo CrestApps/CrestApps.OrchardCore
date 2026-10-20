@@ -182,7 +182,7 @@ internal sealed class CatalogApiProductReader
             item.ContentType,
             document.Title ?? item.DisplayText,
             document.Sku,
-            price ?? await ShowAsync(document.Price, document.Currency, httpContext.RequestAborted),
+            price ?? await ShowAsync(document.Price, document.Currency, httpContext.RequestAborted, isPrice: true, convert: document.BillingInterval is null),
             await ShowAsync(document.CompareAtPrice, document.Currency, httpContext.RequestAborted),
             document.IsPurchasable && await _restrictions.GetRestrictionAsync(item, httpContext.RequestAborted) is null,
             _listingService.GetImageUrl(document.ImagePath),
@@ -281,7 +281,7 @@ internal sealed class CatalogApiProductReader
             item.ContentType,
             document.Title ?? item.DisplayText,
             document.Sku,
-            await ResolveAsync(item, variantId: null, priceId: null, cancellationToken) ?? await ShowAsync(document.Price, currency, cancellationToken),
+            await ResolveAsync(item, variantId: null, priceId: null, cancellationToken) ?? await ShowAsync(document.Price, currency, cancellationToken, isPrice: true, convert: document.BillingInterval is null),
             await ShowAsync(document.CompareAtPrice, currency, cancellationToken),
             document.IsPurchasable && await _restrictions.GetRestrictionAsync(item, cancellationToken) is null,
             await GetUrlAsync(item, httpContext),
@@ -311,11 +311,17 @@ internal sealed class CatalogApiProductReader
     }
 
     // An amount in the caller's market's currency, when it names one.
-    private async Task<ApiMoney> ShowAsync(decimal? amount, string currency, CancellationToken cancellationToken, bool isPrice = true)
+    private async Task<ApiMoney> ShowAsync(decimal? amount, string currency, CancellationToken cancellationToken, bool isPrice = true, bool convert = true)
     {
         if (amount is not { } value)
         {
             return null;
+        }
+
+        // A subscription is sold in its own currency only.
+        if (!convert)
+        {
+            return ApiMoney.From(value, currency);
         }
 
         var (shown, shownCurrency) = await _shopperCurrency.ToShopperAsync(value, currency, isPrice, cancellationToken);

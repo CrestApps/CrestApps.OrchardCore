@@ -124,6 +124,13 @@ public sealed class ShopperMarketService : IShopperCurrency
     public async ValueTask<string> GetCurrencyAsync(CancellationToken cancellationToken = default)
         => (await GetCurrentAsync(cancellationToken))?.Currency;
 
+    public async ValueTask<string> GetStoreCurrencyAsync(CancellationToken cancellationToken = default)
+    {
+        _storeCurrency ??= (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency ?? string.Empty;
+
+        return _storeCurrency.Length == 0 ? null : _storeCurrency;
+    }
+
     public async ValueTask<decimal?> ConvertAsync(decimal amount, string fromCurrency, string toCurrency, bool isPrice = true, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(toCurrency))

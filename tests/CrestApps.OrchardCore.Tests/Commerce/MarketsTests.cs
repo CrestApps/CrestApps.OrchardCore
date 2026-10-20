@@ -220,6 +220,9 @@ public sealed class MarketsTests
         public ValueTask<string> GetCurrencyAsync(CancellationToken cancellationToken = default)
             => ValueTask.FromResult("EUR");
 
+        public ValueTask<string> GetStoreCurrencyAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult("USD");
+
         public ValueTask<decimal?> ConvertAsync(decimal amount, string fromCurrency, string toCurrency, bool isPrice = true, CancellationToken cancellationToken = default)
         {
             if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase))

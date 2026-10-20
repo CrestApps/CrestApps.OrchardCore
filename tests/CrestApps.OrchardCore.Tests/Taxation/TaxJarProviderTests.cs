@@ -4,7 +4,10 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.TaxJar;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -67,7 +70,7 @@ public sealed class TaxJarProviderTests
     }
 
     [Fact]
-    public async Task WhenTaxJarRefuses_TheOrderIsntTaxedByAGuess()
+    public async Task WhenTaxJarRefuses_ItSaysWhy()
     {
         var provider = CreateProvider(new RecordingHandler(HttpStatusCode.BadRequest, """{"error":"Bad Request","detail":"to_zip is required"}"""));
 
@@ -87,6 +90,38 @@ public sealed class TaxJarProviderTests
 
         Assert.Equal(handles, CreateProvider(new RecordingHandler(HttpStatusCode.OK, Answer)).CanHandle(context));
         Assert.False(CreateProvider(new RecordingHandler(HttpStatusCode.OK, Answer), apiKey: null).CanHandle(Context("US")));
+    }
+
+    [Fact]
+    public async Task WhenATaxServiceCantAnswer_TheStoresOwnRulesWorkTheTaxOut()
+    {
+        var harness = new TaxTestHarness(new TestClock(TaxTestData.TransactionDate), services => services.AddScoped<ITaxDeterminationProvider, FailingProvider>());
+        var jurisdictionId = await TaxTestData.AddJurisdictionAsync(harness, "California", "US", "CA");
+
+        await TaxTestData.AddRuleAsync(harness, new TaxRule
+        {
+            Name = "CA Sales Tax",
+            TaxType = TaxTypeNames.SalesTax,
+            JurisdictionId = jurisdictionId,
+            Source = TaxCalculationMethodNames.Percentage,
+            Rate = 0.075m,
+        });
+
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(200m), TestContext.Current.CancellationToken);
+
+        Assert.Equal(15m, result.TaxAmount);
+    }
+
+    private sealed class FailingProvider : ITaxDeterminationProvider
+    {
+        public int Order
+            => 0;
+
+        public bool CanHandle(TaxCalculationContext context)
+            => true;
+
+        public Task<TaxCalculationResult> DetermineAsync(TaxCalculationContext context, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("The tax service is down.");
     }
 
     private static TaxJarTaxDeterminationProvider CreateProvider(RecordingHandler handler, string apiKey = "test-token")
