@@ -220,6 +220,13 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             };
         }
 
+        // Paying a quote is accepting it.
+        if (order.Quote is { Status: OrderQuoteStatus.Sent } quote)
+        {
+            quote.Status = OrderQuoteStatus.Accepted;
+            quote.RespondedUtc = _clock.UtcNow;
+        }
+
         await _orderStore.UpdateAsync(order);
 
         // In the same unit of work: a handler that can't record the sale, such as one that can't sell the stock just
@@ -349,6 +356,9 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             Description = OrderLineText.Describe(line),
             Amount = line.UnitPrice,
             Quantity = line.Quantity,
+
+            // A price staff agreed, such as on a quote, is the price: promotions don't come off it too.
+            ExcludeFromDiscounts = line.QuotedUnitPrice is not null,
             PriceId = line.PriceId,
             Sku = line.Sku,
             TaxCategoryCode = line.TaxCategoryCode,

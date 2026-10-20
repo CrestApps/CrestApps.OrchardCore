@@ -77,9 +77,11 @@ public sealed class OrderViewController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
-            ? Url.RouteUrl("GuestOrderPay", new { token })
-            : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = !QuoteService.CanPay(order, DateTime.UtcNow)
+            ? null
+            : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
+                ? Url.RouteUrl("GuestOrderPay", new { token })
+                : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
         var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
             ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
             : null;

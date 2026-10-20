@@ -1,0 +1,34 @@
+@model CrestApps.OrchardCore.Companies.Drivers.CompanyCheckoutStepViewModel
+
+<p class="mb-3">@T["You're ordering for {0}.", Model.CompanyName]</p>
+
+@if (!string.IsNullOrEmpty(Model.ApprovalReason))
+{
+    <div class="alert @(Model.Approval?.Status == CrestApps.OrchardCore.Orders.Core.Models.OrderApprovalStatus.Pending ? "alert-info" : "alert-warning")" role="status">
+        @if (Model.Approval?.Status == CrestApps.OrchardCore.Orders.Core.Models.OrderApprovalStatus.Pending)
+        {
+            @T["This order is waiting for a company admin's approval: {0}. We'll email you when it's decided.", Model.ApprovalReason]
+        }
+        else
+        {
+            <p class="mb-2">@T["A company admin has to approve this order first: {0}.", Model.ApprovalReason]</p>
+            <div class="form-check mb-0">
+                <input asp-for="RequestApproval" type="checkbox" class="form-check-input" />
+                <label asp-for="RequestApproval" class="form-check-label">@T["Ask for approval"]</label>
+                <span class="hint dashed">@T["Your company's admins are emailed. Once one approves, pay the order from your orders."]</span>
+            </div>
+        }
+        <span asp-validation-for="RequestApproval" class="text-danger d-block"></span>
+    </div>
+}
+
+<div class="mb-3" asp-validation-class-for="PurchaseOrderNumber">
+    <label asp-for="PurchaseOrderNumber" class="form-label">@T["Purchase order number"]</label>
+    @if (Model.IsRequired)
+    {
+        <span class="text-danger" aria-hidden="true">*</span>
+    }
+    <input asp-for="PurchaseOrderNumber" class="form-control" maxlength="64" autocomplete="off" aria-required="@(Model.IsRequired ? "true" : "false")" />
+    <span asp-validation-for="PurchaseOrderNumber" class="text-danger"></span>
+    <span class="hint">@(Model.IsRequired ? T["Your company's reference for this order. It's printed on the invoice."] : T["Optional. Your company's reference for this order, printed on the invoice."])</span>
+</div>

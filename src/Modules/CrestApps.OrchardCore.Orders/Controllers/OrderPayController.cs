@@ -62,7 +62,8 @@ public sealed class OrderPayController : Controller
     private async Task<IActionResult> PayAsync(Order order, string orderUrl)
     {
         // Paid already, canceled, or not an order to pay this way: the order's page says where it stands.
-        if (order.Invoice is null || order.Status is not (OrderStatus.Draft or OrderStatus.AwaitingPayment))
+        if (order.Invoice is null || order.Status is not (OrderStatus.Draft or OrderStatus.AwaitingPayment) ||
+            !Services.QuoteService.CanPay(order, DateTime.UtcNow))
         {
             return Redirect(orderUrl);
         }

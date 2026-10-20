@@ -17,6 +17,11 @@ public static class CheckoutDiscountBase
     {
         ArgumentNullException.ThrowIfNull(line);
 
+        if (line.ExcludeFromDiscounts)
+        {
+            return false;
+        }
+
         return target switch
         {
             DiscountTarget.FirstCycle => line.Plan is not null && CheckoutObligations.GetDeferralDays([line]) == 0,

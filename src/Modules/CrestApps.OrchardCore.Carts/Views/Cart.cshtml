@@ -149,6 +149,15 @@
                             <button type="submit" class="btn btn-primary w-100">@T["Checkout"]</button>
                         </form>
                     }
+
+                    @foreach (var action in Model.Actions)
+                    {
+                        <a href="@action.Url" class="btn btn-outline-secondary w-100 mt-2">@action.Label</a>
+                        @if (!string.IsNullOrEmpty(action.Description))
+                        {
+                            <p class="small text-muted mt-1 mb-0">@action.Description</p>
+                        }
+                    }
                 </div>
             </div>
             <a href="@Url.Content("~/")" class="d-inline-block mt-3 small">@T["Continue shopping"]</a>

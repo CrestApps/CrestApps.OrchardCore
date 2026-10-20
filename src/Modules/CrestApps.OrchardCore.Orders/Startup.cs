@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -59,6 +60,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddScoped<OrderLinksEmailBuilder>();
         services.AddScoped<DraftOrderService>();
+        services.AddScoped<QuoteService>();
+        services.AddScoped<ICartActionProvider, QuoteCartActionProvider>();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 

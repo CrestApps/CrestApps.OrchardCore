@@ -24,6 +24,7 @@ public sealed class DefaultPriceResolver : IPriceResolver
     private readonly ILogger _logger;
     private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
     private readonly IShopperCurrency _shopperCurrency;
+    private readonly IEnumerable<IBuyerPriceProvider> _buyerPrices = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultPriceResolver"/> class.
@@ -68,6 +69,22 @@ public sealed class DefaultPriceResolver : IPriceResolver
         : this(snapshotResolver, clock, logger, httpContextAccessor)
     {
         _shopperCurrency = shopperCurrency;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultPriceResolver"/> class that also gives buyers their own
+    /// prices, such as a company's price list.
+    /// </summary>
+    public DefaultPriceResolver(
+        IProductSnapshotResolver snapshotResolver,
+        IClock clock,
+        ILogger<DefaultPriceResolver> logger,
+        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
+        IShopperCurrency shopperCurrency,
+        IEnumerable<IBuyerPriceProvider> buyerPrices)
+        : this(snapshotResolver, clock, logger, httpContextAccessor, shopperCurrency)
+    {
+        _buyerPrices = buyerPrices ?? [];
     }
 
     /// <inheritdoc/>
@@ -117,6 +134,12 @@ public sealed class DefaultPriceResolver : IPriceResolver
             currency = context.Currency.ToUpperInvariant();
         }
 
+        // A buyer's own price, such as their company's, is their price.
+        if (await GetBuyerPriceAsync(context, product, unitPrice, currency, cancellationToken) is { } buyerPrice)
+        {
+            return new PriceResult(buyerPrice, currency, context.Quantity);
+        }
+
         // Volume and role discounts come off the price the product sells at.
 
         if (context.ContentItem is not null && context.ContentItem.TryGet<ProductPart>(out var productPart))
@@ -125,6 +148,23 @@ public sealed class DefaultPriceResolver : IPriceResolver
         }
 
         return new PriceResult(unitPrice, currency, context.Quantity);
+    }
+
+    // The lowest price a buyer price provider gives, when one gives a lower price than the product's.
+    private async ValueTask<decimal?> GetBuyerPriceAsync(ProductSnapshotContext context, ISellableProduct product, decimal unitPrice, string currency, CancellationToken cancellationToken)
+    {
+        decimal? lowest = null;
+        var buyerContext = new BuyerPriceContext(context.ContentItem, product.VariantId, product.Sku, unitPrice, currency, Math.Max(1, context.Quantity));
+
+        foreach (var provider in _buyerPrices)
+        {
+            if (await provider.GetUnitPriceAsync(buyerContext, cancellationToken) is { } price && price >= 0m && price < (lowest ?? unitPrice))
+            {
+                lowest = price;
+            }
+        }
+
+        return lowest;
     }
 
     private async ValueTask<decimal?> ConvertAsync(decimal amount, string fromCurrency, string toCurrency, CancellationToken cancellationToken)
@@ -227,6 +267,13 @@ public sealed class DefaultPriceResolver : IPriceResolver
             _logger.LogWarning("Refusing to price product '{ContentItemId}' at price '{PriceId}': the quantity asked for is more than the price allows.", product.ContentItemId, price.PriceId);
 
             return null;
+        }
+
+        // A buyer's own price replaces a one-time price they didn't name themselves; a subscription keeps its price.
+        if (price.Kind == PriceKind.OneTime && !price.AllowCustomAmount &&
+            await GetBuyerPriceAsync(context, product, amount.Value, currency, cancellationToken) is { } buyerPrice)
+        {
+            amount = buyerPrice;
         }
 
         return new PriceResult(amount.Value, currency, quantity.Value, price);

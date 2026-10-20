@@ -1,0 +1,3 @@
+@model ShapeViewModel<Company>
+
+<div class="admin-list-secondary">@T.Plural(Model.Value.Buyers.Count, "1 buyer", "{0} buyers")@(string.IsNullOrEmpty(Model.Value.TaxId) ? null : " · " + Model.Value.TaxId)</div>

@@ -214,6 +214,8 @@ public class OrderSettingsViewModel
 
     public string OrderBumpHeadline { get; set; }
 
+    public bool AllowQuoteRequests { get; set; }
+
     [BindNever]
     public string ProductSearchEndpoint { get; set; }
 
@@ -252,11 +254,21 @@ public class OrderViewViewModel
     /// Gets or sets whether the order is shown in the signed-in customer's account, beside its menu.
     /// </summary>
     public bool InAccount { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the buyer turns the order's quote down, or <see langword="null"/>.
+    /// </summary>
+    public string DeclineQuoteUrl { get; set; }
 }
 
 public class AccountOrdersViewModel
 {
     public IReadOnlyList<Order> Orders { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the quotes the customer asked for, and the orders the store sent them, not paid or turned down.
+    /// </summary>
+    public IReadOnlyList<Order> Open { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the orders still owed, such as ones paid by bank transfer before the money arrives.
@@ -374,6 +386,16 @@ public class OrderDocumentPageViewModel
     public string PrintLabel { get; set; }
 }
 
+public class QuoteRequestViewModel
+{
+    public string Message { get; set; }
+
+    public string PurchaseOrderNumber { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<string> Problems { get; set; } = [];
+}
+
 public class DraftOrderEditViewModel
 {
     public string CustomerEmail { get; set; }
@@ -410,6 +432,12 @@ public class DraftOrderEditViewModel
 
     [BindNever]
     public bool CanEmail { get; set; }
+
+    /// <summary>
+    /// Gets the draft's quote, when a buyer asked for it.
+    /// </summary>
+    public OrderQuote Quote
+        => Order?.Quote;
 }
 
 public class DraftOrderLineViewModel
@@ -422,10 +450,19 @@ public class DraftOrderLineViewModel
 
     public int Quantity { get; set; }
 
+    /// <summary>
+    /// Gets or sets the price for each unit staff set, such as on a quote, or none for the catalog's. Text, as the
+    /// number field sends it, so a page in a language with a decimal comma doesn't read "24.5" as 245.
+    /// </summary>
+    public string UnitPrice { get; set; }
+
     public bool Remove { get; set; }
 
     [BindNever]
     public string Title { get; set; }
+
+    [BindNever]
+    public decimal? CatalogUnitPrice { get; set; }
 
     [BindNever]
     public IReadOnlyList<SelectListItem> Variants { get; set; } = [];

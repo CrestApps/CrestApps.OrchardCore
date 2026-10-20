@@ -35,6 +35,8 @@ public sealed record ApiOrderSummary(
 /// <param name="LocationId">The inventory location it's sold from.</param>
 /// <param name="Register">The register a point-of-sale order was rung up on.</param>
 /// <param name="Culture">The culture the buyer shopped in, such as de-DE; the order's emails are written in it.</param>
+/// <param name="CompanyId">The company the order was placed for, when its buyer buys for one.</param>
+/// <param name="PurchaseOrderNumber">The buyer's purchase order number.</param>
 public sealed record ApiOrder(
     string Id,
     string Number,
@@ -47,6 +49,10 @@ public sealed record ApiOrder(
     string Register,
     string Currency,
     string Culture,
+    string CompanyId,
+    string PurchaseOrderNumber,
+    ApiOrderQuote Quote,
+    ApiOrderApproval Approval,
     string CustomerId,
     string CustomerName,
     string CustomerEmail,
@@ -64,6 +70,28 @@ public sealed record ApiOrder(
     DateTime CreatedUtc,
     DateTime? PaidUtc,
     DateTime? CanceledUtc);
+
+/// <summary>
+/// The quote a buyer asked for, on the order it became: requested, sent (offered until it expires), accepted by paying,
+/// or declined.
+/// </summary>
+public sealed record ApiOrderQuote(
+    string Status,
+    string Message,
+    DateTime RequestedUtc,
+    DateTime? SentUtc,
+    DateTime? ExpiresUtc,
+    DateTime? RespondedUtc);
+
+/// <summary>
+/// The approval an order needs before it's paid, such as a company admin's: pending, approved or rejected.
+/// </summary>
+public sealed record ApiOrderApproval(string Status, string Reason, ApiMoney Amount, string RequestedBy, DateTime RequestedUtc, string DecidedBy, DateTime? DecidedUtc, string Note);
+
+/// <summary>
+/// A signed-in buyer's quote request: what they ask, and their purchase order number.
+/// </summary>
+public sealed record ApiQuoteRequest(string Message, string PurchaseOrderNumber);
 
 /// <summary>
 /// A line of an order.
@@ -222,6 +250,14 @@ internal static class OrderApiMapper
             order.RegisterName,
             currency,
             order.Culture,
+            order.CompanyId,
+            order.PurchaseOrderNumber,
+            order.Quote is { } quote
+                ? new ApiOrderQuote(ToCamel(quote.Status.ToString()), quote.Message, quote.RequestedUtc, quote.SentUtc, quote.ExpiresUtc, quote.RespondedUtc)
+                : null,
+            order.Approval is { } approval
+                ? new ApiOrderApproval(ToCamel(approval.Status.ToString()), approval.Reason, ApiMoney.From(approval.Amount, approval.Currency ?? currency), approval.RequestedBy, approval.RequestedUtc, approval.DecidedBy, approval.DecidedUtc, approval.Note)
+                : null,
             order.CustomerId,
             order.CustomerName,
             order.CustomerEmail,

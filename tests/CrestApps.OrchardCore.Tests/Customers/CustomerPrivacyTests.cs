@@ -396,6 +396,7 @@ public sealed class CustomerPrivacyTests
                 var migrations = new OrderMigrations { SchemaBuilder = new SchemaBuilder(yesSql.Configuration, transaction) };
                 await migrations.CreateAsync();
                 await migrations.UpdateFrom4Async();
+                await migrations.UpdateFrom5Async();
                 await transaction.CommitAsync(TestContext.Current.CancellationToken);
             }
 

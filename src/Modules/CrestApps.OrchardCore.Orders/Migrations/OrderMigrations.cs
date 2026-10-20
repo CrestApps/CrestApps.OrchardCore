@@ -113,4 +113,27 @@ public sealed class OrderMigrations : DataMigration
 
         return 5;
     }
+
+    /// <summary>
+    /// Records the company an order was placed for and the buyer's purchase order number, so a company's orders can be
+    /// listed and an order found by its PO number.
+    /// </summary>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
+            .AddColumn<string>("CompanyId", column => column.Nullable().WithLength(26)),
+            collection: OrderConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
+            .AddColumn<string>("PurchaseOrderNumber", column => column.Nullable().WithLength(64)),
+            collection: OrderConstants.CollectionName
+        );
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<OrderIndex>(SchemaBuilder, "IDX_OrderIndex_CompanyId", OrderConstants.CollectionName, "CompanyId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<OrderIndex>(SchemaBuilder, "IDX_OrderIndex_PurchaseOrder", OrderConstants.CollectionName, "PurchaseOrderNumber");
+
+        return 6;
+    }
 }

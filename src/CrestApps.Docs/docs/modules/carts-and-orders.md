@@ -128,6 +128,19 @@ Drafts aren't printed; canceled orders print for the store only. The page around
 - **Invoice email.** `SendInvoiceAsync` emails *Your order … is ready to pay* with the lines, subtotal, note, due date and a **Review and pay** link to `orders/view/{token}/pay`, sets `SentUtc` and adds a note. It needs an `IEmailService` and the order's signed link.
 - **Paying.** `OrderPayController` serves `orders/view/{token}/pay` (`GuestOrderPay`) and `account/orders/{orderId}/pay` (`AccountOrderPay`): it opens the order's pending checkout, or starts one (`CheckoutReferenceTypes.Order`). `OrderCheckoutHandler` fills in the checkout's `CheckoutContactInfo` from the order, and puts an invoiced order whose checkout failed, was canceled or expired back to `Draft`, so its link pays it again. `AbandonedOrderSweeper` leaves invoiced orders alone. The guest and account order pages show a sent draft with its note, due date and **Pay now**.
 
+### Quotes
+
+A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuoteRequests` is on (**Settings > Commerce > Orders**, **Take quote requests**).
+
+- **The cart.** Carts.Core's `ICartActionProvider` (`GetActionsAsync(pricing)` returns `CartAction(Label, Url, Description)`) adds buttons under **Checkout**; `QuoteCartActionProvider` adds **Request a quote**, linking to `cart/quote` (`QuoteRequest`).
+- **The request.** `QuoteService.RequestAsync(user, message, purchaseOrderNumber)` creates a `Draft` order from the priced cart (with no `CartId`, so a later checkout of the cart doesn't replace it), an `OrderInvoice` created by the buyer, the purchase order number, the buyer's customer, and `Order.Quote` (`OrderQuote`: `RequestedUtc`, `Message` up to 2,000 characters, `Status`, `SentUtc`, `ExpiresUtc`, `RespondedUtc`), then deletes the cart. The page is the `QuoteRequest` shape.
+- **Pricing it.** The draft editor's **Price each** sets `OrderLine.QuotedUnitPrice`, which replaces the line's unit price and total (`DraftOrderService.ApplyPrices`). The field is read as invariant text, so a decimal-comma admin language doesn't misread it. A saved draft is re-priced in its own currency. `OrderCheckoutHandler` marks a quoted line `BillingItem.ExcludeFromDiscounts`, which `CheckoutDiscountBase.IsDiscountable` honors, so promotions don't come off an agreed price.
+- **Sending.** `SendInvoiceAsync` on a quote emails *Your quote … is ready* with **Review and accept**, sets `Quote.Status` to `Sent`, `SentUtc`, and `ExpiresUtc` to the invoice's `DueUtc`.
+- **Accepting.** `QuoteService.CanPay(order, now)` is true for an order without a quote, or one sent and not expired (`OrderQuote.CanAccept`), and false while an `Order.Approval` is pending or rejected. `OrderPayController`, the pay links on the order pages and the API follow it. Paying a sent quote sets it `Accepted`.
+- **Declining.** `QuoteService.DeclineAsync` (`account/orders/{orderId}/decline-quote`, `AccountQuoteDecline`) cancels a requested or sent quote not being paid, with `OrderCancelReason.Declined`.
+- **The account.** The account's orders list shows quotes and orders sent to pay, not paid or turned down, above the placed orders, and the order page titles a quote *Quote*.
+- **API.** `POST me/quotes` (`{ message, purchaseOrderNumber }`, 201 with the order, 400 for an empty cart) and `POST me/orders/{orderId}/decline-quote` (409 when it can't be). `ApiOrder.Quote` is an `ApiOrderQuote`.
+
 ### Sales channels
 
 Every order records where it was made, in `Order.Channel` (`OrderChannels`):

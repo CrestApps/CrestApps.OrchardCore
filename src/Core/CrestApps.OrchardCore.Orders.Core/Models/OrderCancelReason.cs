@@ -39,4 +39,14 @@ public enum OrderCancelReason
     /// The store canceled it from the order's page.
     /// </summary>
     CanceledByStore = 7,
+
+    /// <summary>
+    /// The buyer turned down the quote it was.
+    /// </summary>
+    Declined = 8,
+
+    /// <summary>
+    /// The person who had to approve it, such as a company admin, rejected it.
+    /// </summary>
+    Rejected = 9,
 }

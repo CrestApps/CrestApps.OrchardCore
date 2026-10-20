@@ -85,6 +85,11 @@ public sealed class OrderQuery
     public string Search { get; set; }
 
     /// <summary>
+    /// Gets or sets the company whose orders to match, or none for every order.
+    /// </summary>
+    public string CompanyId { get; set; }
+
+    /// <summary>
     /// Gets or sets the channel to match, such as <see cref="OrderChannels.PointOfSale"/>, or none for every channel.
     /// </summary>
     public string Channel { get; set; }
@@ -213,11 +218,18 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
             orders = orders.Where(index => index.Status.IsIn(statuses));
         }
 
+        if (!string.IsNullOrEmpty(query.CompanyId))
+        {
+            var companyId = query.CompanyId;
+
+            orders = orders.Where(index => index.CompanyId == companyId);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search = query.Search.Trim().ToUpperInvariant();
 
-            orders = orders.Where(index => index.OrderNumber.StartsWith(search) || index.CustomerEmail == search);
+            orders = orders.Where(index => index.OrderNumber.StartsWith(search) || index.CustomerEmail == search || index.PurchaseOrderNumber == search);
         }
 
         var count = await orders.CountAsync(cancellationToken);

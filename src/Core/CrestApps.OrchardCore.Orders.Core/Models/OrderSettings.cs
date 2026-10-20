@@ -12,6 +12,11 @@ public sealed class OrderSettings
     public bool SendConfirmations { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether signed-in buyers may ask for a quote from their cart instead of checking out.
+    /// </summary>
+    public bool AllowQuoteRequests { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a buyer who leaves a checkout without paying is emailed once, with what they chose and a
     /// link back to it. It is sent only when the site has an email service.
     /// </summary>

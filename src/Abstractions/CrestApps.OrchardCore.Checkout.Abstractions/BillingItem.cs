@@ -51,6 +51,11 @@ public sealed class BillingItem
     public bool ExcludeFromTax { get; set; }
 
     /// <summary>
+    /// Gets or sets whether no discount takes anything off the item, such as one at a price staff agreed on a quote.
+    /// </summary>
+    public bool ExcludeFromDiscounts { get; set; }
+
+    /// <summary>
     /// Gets or sets the stock keeping unit of the product the item is for, when it is for one.
     /// </summary>
     public string Sku { get; set; }

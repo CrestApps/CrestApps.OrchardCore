@@ -1,0 +1,43 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CrestApps.OrchardCore.Companies.Drivers.CompanyTermsCheckoutViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="form-label">@T["Pay on account"]</div>
+
+        @if (Model.IsApplied)
+        {
+            <div class="d-flex align-items-start gap-2">
+                <span class="flex-grow-1 small">
+                    <span class="text-success">@T["{0} on {1}'s account", ProductPriceFormatter.Format(Model.OnAccount, Model.Currency), Model.CompanyName]</span>
+                    <span class="text-body-secondary d-block">@T["Invoiced, due in {0} days.", Model.NetDays]</span>
+                </span>
+                @* Taking it off is its own submit, so the step is shown again with what's left to pay. *@
+                <button type="submit"
+                        class="btn btn-link btn-sm p-0"
+                        name="@CheckoutConstants.FormActions.FieldName"
+                        value="@(CheckoutConstants.FormActions.RemoveTenderPrefix + CompaniesConstants.TermsTenderKey + ":" + Model.Reference)"
+                        formnovalidate>@T["Remove"]</button>
+            </div>
+        }
+        else
+        {
+            <p class="small mb-2">
+                @if (Model.DepositPercent > 0m)
+                {
+                    @T["Pay a {0}% deposit now, and {1} on {2}'s account, due in {3} days.", Model.DepositPercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture), ProductPriceFormatter.Format(Model.OnAccount, Model.Currency), Model.CompanyName, Model.NetDays]
+                }
+                else
+                {
+                    @T["Put {0} on {1}'s account, due in {2} days.", ProductPriceFormatter.Format(Model.OnAccount, Model.Currency), Model.CompanyName, Model.NetDays]
+                }
+            </p>
+            <button type="submit"
+                    class="btn btn-outline-secondary btn-sm"
+                    name="@CheckoutConstants.FormActions.FieldName"
+                    value="@(CheckoutConstants.FormActions.ApplyTender + ":" + CompaniesConstants.TermsTenderKey)"
+                    formnovalidate>@T["Pay on account"]</button>
+        }
+    </div>
+</div>

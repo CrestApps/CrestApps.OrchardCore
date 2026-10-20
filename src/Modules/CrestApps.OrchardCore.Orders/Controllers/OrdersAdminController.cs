@@ -263,8 +263,10 @@ public sealed class OrdersAdminController : Controller
                 !string.IsNullOrWhiteSpace(order.CustomerEmail) &&
                 HttpContext.RequestServices.GetRequiredService<OrderConfirmationSender>().CanSend;
 
-            // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand.
+            // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand; a
+            // quote, once it's sent.
             if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment &&
+                QuoteService.CanPay(order, DateTime.UtcNow) &&
                 await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreateUrlAsync(order) is { } viewUrl)
             {
                 model.PayUrl = viewUrl + "/pay";
