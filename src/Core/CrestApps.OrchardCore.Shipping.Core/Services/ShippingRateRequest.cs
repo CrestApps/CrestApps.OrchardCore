@@ -83,6 +83,12 @@ public sealed class ShippingRate
     public string TaxCategoryCode { get; init; }
 
     public ShippingRate WithAmount(decimal amount)
+        => WithAmount(amount, Currency);
+
+    /// <summary>
+    /// Returns the rate at another amount, in another currency, such as converted into a market's.
+    /// </summary>
+    public ShippingRate WithAmount(decimal amount, string currency)
         => new()
         {
             RateId = RateId,
@@ -92,7 +98,7 @@ public sealed class ShippingRate
             Name = Name,
             Description = Description,
             Amount = amount,
-            Currency = Currency,
+            Currency = currency,
             TaxCategoryCode = TaxCategoryCode,
         };
 }

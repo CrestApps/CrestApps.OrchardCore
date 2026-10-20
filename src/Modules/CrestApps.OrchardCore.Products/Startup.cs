@@ -27,6 +27,7 @@ using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Services;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using CrestApps.OrchardCore.Products.Api;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -83,6 +84,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IProductSnapshotResolver, DefaultProductSnapshotResolver>();
         services.AddScoped<IPriceResolver, DefaultPriceResolver>();
+        services.TryAddScoped<IShopperCurrency, ProductOwnShopperCurrency>();
 
         services.AddDataMigration<ProductPartMigrations>();
 

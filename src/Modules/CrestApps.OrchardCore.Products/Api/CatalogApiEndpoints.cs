@@ -141,6 +141,7 @@ internal sealed class CatalogApiProductReader
     private readonly IContentManager _contentManager;
     private readonly LinkGenerator _linkGenerator;
     private readonly IClock _clock;
+    private readonly IShopperCurrency _shopperCurrency;
 
     public CatalogApiProductReader(
         ProductSearchDocumentBuilder documentBuilder,
@@ -150,7 +151,8 @@ internal sealed class CatalogApiProductReader
         IEnumerable<IProductAvailabilityProvider> availabilityProviders,
         IContentManager contentManager,
         LinkGenerator linkGenerator,
-        IClock clock)
+        IClock clock,
+        IShopperCurrency shopperCurrency)
     {
         _documentBuilder = documentBuilder;
         _listingService = listingService;
@@ -160,6 +162,7 @@ internal sealed class CatalogApiProductReader
         _contentManager = contentManager;
         _linkGenerator = linkGenerator;
         _clock = clock;
+        _shopperCurrency = shopperCurrency;
     }
 
     public async Task<ApiProductSummary> ReadSummaryAsync(ContentItem item, HttpContext httpContext)
@@ -176,8 +179,8 @@ internal sealed class CatalogApiProductReader
             item.ContentType,
             document.Title ?? item.DisplayText,
             document.Sku,
-            price ?? ApiMoney.From(document.Price, document.Currency),
-            ApiMoney.From(document.CompareAtPrice, document.Currency),
+            price ?? await ShowAsync(document.Price, document.Currency, httpContext.RequestAborted),
+            await ShowAsync(document.CompareAtPrice, document.Currency, httpContext.RequestAborted),
             document.IsPurchasable,
             _listingService.GetImageUrl(document.ImagePath),
             await GetUrlAsync(item, httpContext));
@@ -242,8 +245,8 @@ internal sealed class CatalogApiProductReader
                 variant.GetTitle(optionNames),
                 variant.Options,
                 variant.Sku ?? part?.Sku,
-                await ResolveAsync(item, variant.VariantId, priceId: null, cancellationToken) ?? ApiMoney.From(ProductSale.GetPrice(part, variant, now), currency),
-                ApiMoney.From(ProductSale.GetCompareAtPrice(part, variant, now), currency),
+                await ResolveAsync(item, variant.VariantId, priceId: null, cancellationToken) ?? await ShowAsync(ProductSale.GetPrice(part, variant, now), currency, cancellationToken),
+                await ShowAsync(ProductSale.GetCompareAtPrice(part, variant, now), currency, cancellationToken),
                 _listingService.GetImageUrl(variant.ImagePath),
                 ToAvailability(stock.GetValueOrDefault(new ProductStockKey(item.ContentItemId, variant.VariantId)))));
         }
@@ -257,28 +260,33 @@ internal sealed class CatalogApiProductReader
             ? ToAvailability(ProductAvailabilityProviderExtensions.Combine(stock.Values))
             : ToAvailability(stock.GetValueOrDefault(stockKeys[0]));
 
+        var apiAddOns = new List<ApiProductAddOn>();
+
+        foreach (var addOn in part?.AddOns ?? [])
+        {
+            apiAddOns.Add(new ApiProductAddOn(
+                addOn.AddOnId,
+                addOn.Label,
+                addOn.Kind == ProductAddOnKind.Checkbox ? "checkbox" : "text",
+                await ShowAsync(addOn.Price, currency, cancellationToken, isPrice: false),
+                addOn.Required,
+                addOn.Kind == ProductAddOnKind.Text ? ProductAddOn.MaxTextLength : null));
+        }
+
         return new ApiProduct(
             item.ContentItemId,
             item.ContentType,
             document.Title ?? item.DisplayText,
             document.Sku,
-            await ResolveAsync(item, variantId: null, priceId: null, cancellationToken) ?? ApiMoney.From(document.Price, currency),
-            ApiMoney.From(document.CompareAtPrice, currency),
+            await ResolveAsync(item, variantId: null, priceId: null, cancellationToken) ?? await ShowAsync(document.Price, currency, cancellationToken),
+            await ShowAsync(document.CompareAtPrice, currency, cancellationToken),
             document.IsPurchasable,
             await GetUrlAsync(item, httpContext),
             images,
             prices,
             variantsPart?.Options?.Select(option => new ApiProductOption(option.Name, option.Values?.ToArray() ?? [])).ToList() ?? [],
             apiVariants,
-            (part?.AddOns ?? [])
-                .Select(addOn => new ApiProductAddOn(
-                    addOn.AddOnId,
-                    addOn.Label,
-                    addOn.Kind == ProductAddOnKind.Checkbox ? "checkbox" : "text",
-                    ApiMoney.From(addOn.Price, currency),
-                    addOn.Required,
-                    addOn.Kind == ProductAddOnKind.Text ? ProductAddOn.MaxTextLength : null))
-                .ToList(),
+            apiAddOns,
             specifications,
             new ApiQuantityRules(Math.Max(1, part?.MinQuantity ?? 1), part?.MaxQuantity, Math.Max(1, part?.QuantityStep ?? 1)),
             availability);
@@ -293,9 +301,23 @@ internal sealed class CatalogApiProductReader
             VariantId = variantId,
             PriceId = priceId,
             Quantity = 1,
+            Currency = await _shopperCurrency.GetCurrencyAsync(cancellationToken),
         }, cancellationToken);
 
         return price is null ? null : ApiMoney.From(price.UnitPrice, price.Currency);
+    }
+
+    // An amount in the caller's market's currency, when it names one.
+    private async Task<ApiMoney> ShowAsync(decimal? amount, string currency, CancellationToken cancellationToken, bool isPrice = true)
+    {
+        if (amount is not { } value)
+        {
+            return null;
+        }
+
+        var (shown, shownCurrency) = await _shopperCurrency.ToShopperAsync(value, currency, isPrice, cancellationToken);
+
+        return ApiMoney.From(shown, shownCurrency);
     }
 
     private async Task<string> GetUrlAsync(ContentItem item, HttpContext httpContext)

@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -993,6 +994,11 @@ public sealed class ProductListingService
     {
         var settings = ProductAttributeCatalog.GetProductSettings(await _contentDefinitionManager.GetTypeDefinitionAsync(contentType));
 
+        // Shown in the shopper's currency. Sorting and the price filter stay in the product's own.
+        var shopperCurrency = _httpContextAccessor.HttpContext?.RequestServices.GetService<IShopperCurrency>();
+        var (price, currency) = document.Price is { } listed ? await shopperCurrency.ToShopperAsync(listed, document.Currency) : (0m, document.Currency);
+        var (compareAtPrice, _) = document.CompareAtPrice is { } compareAt ? await shopperCurrency.ToShopperAsync(compareAt, document.Currency) : (0m, null);
+
         return await _shapeFactory.CreateAsync<ProductPriceDisplayViewModel>("ProductPrice", model =>
         {
             model.Display = document.PriceDisplay;
@@ -1003,7 +1009,7 @@ public sealed class ProductListingService
                 return;
             }
 
-            model.Price = ProductPriceFormatter.Format(document.Price.Value, document.Currency);
+            model.Price = ProductPriceFormatter.Format(price, currency);
             model.Period = FormatPeriod(document.BillingInterval, document.BillingDuration);
 
             // Variants priced differently start at the lowest.
@@ -1011,7 +1017,7 @@ public sealed class ProductListingService
 
             if (document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
             {
-                model.CompareAtPrice = ProductPriceFormatter.Format(document.CompareAtPrice.Value, document.Currency);
+                model.CompareAtPrice = ProductPriceFormatter.Format(compareAtPrice, currency);
                 model.DiscountPercent = (int)Math.Round((1 - (document.Price.Value / document.CompareAtPrice.Value)) * 100, MidpointRounding.AwayFromZero);
             }
         });
