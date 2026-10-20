@@ -6,6 +6,7 @@ description: Attach product pricing and type metadata to any Orchard Core conten
 user_manual:
   - user-manual/commerce/products-and-currencies
   - user-manual/commerce/product-listings
+  - user-manual/commerce/headless-api
 ---
 
 | | |
@@ -470,6 +471,12 @@ Three recipes show the feature end to end. They need a front-end theme on Bootst
 - **Product listing: online store sample** creates a *Store Product* type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a **Shop** listing page at `/shop`. It enables [Carts](carts-and-orders), so every product has *Add to cart*, plus Orders and [Customers](customers), and adds two sample customers: a person with a home and a work address, and a business in Canada with a tax id. It also enables [Inventory](inventory) and [Shipping](shipping): every product is counted (25 of most, a few at 2 to 4 so they show *Only N left*, and the *Adventure Works Everyday Backpack* sold out) and has a shipping weight, with boots in a *Bulky* class; the `Stock`, `ShippingZones` and `Settings` steps add the counts, zones for the United States (standard, express by weight, free from $100), Canada and the rest of the world, and three carriers with tracking links. The category filter offers the top level of the category tree, and a *Type* filter offers the level below once a category is picked.
 - **Product listing: real estate sample** creates a *Property* type that is listed but never sold online, with a city and neighborhood taxonomy, type, bedrooms, bathrooms, living area, year built, features and status, 20 properties (some with the price on request and an inquiry button that schedules a viewing), and a **Homes for sale** listing page at `/homes`.
 - **Product listing: vehicle dealership sample** creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
+
+## API
+
+The **Catalog API** feature (`CrestApps.OrchardCore.Products.Api`, it needs Product Listing) maps `GET products` and `GET products/{id}` into the commerce JSON API at `api/commerce/v1`. Both allow guests. The list is searched through `IProductSearchService` over the product types the caller may view (`ViewContent`), with the listing pages' sort keys (`newest`, `price-asc`, `price-desc`, `name`, `featured`, or the recommended order). Each product is priced for the caller through `IPriceResolver`, as the product page prices it, and its availability comes from the `IProductAvailabilityProvider`s. With the **Inventory API** on, `GET products/{id}/availability` gives the stock at each location.
+
+See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
 
 ## Recipes and schema
 

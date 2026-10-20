@@ -5,11 +5,12 @@ description: A customer record for everyone who buys from the store, linked to t
 user_manual:
   - user-manual/commerce/customers
   - user-manual/commerce/store-credit-and-rewards
+  - user-manual/commerce/headless-api
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Customers`, `CrestApps.OrchardCore.Customers.CheckoutDetails` (Checkout details), `CrestApps.OrchardCore.Customers.StoreCredit` (Store Credit), `CrestApps.OrchardCore.Customers.Loyalty` (Loyalty Points), `CrestApps.OrchardCore.Customers.Referrals` (Referrals) |
+| **Features** | `CrestApps.OrchardCore.Customers`, `CrestApps.OrchardCore.Customers.CheckoutDetails` (Checkout details), `CrestApps.OrchardCore.Customers.StoreCredit` (Store Credit), `CrestApps.OrchardCore.Customers.Loyalty` (Loyalty Points), `CrestApps.OrchardCore.Customers.Referrals` (Referrals), `CrestApps.OrchardCore.Customers.Api` (Customers API) |
 | **Core** | `CrestApps.OrchardCore.Customers.Core` |
 | **Category** | Commerce |
 | **Depends on** | Commerce, `OrchardCore.Users` |
@@ -180,6 +181,17 @@ The `Customers` recipe step adds or updates guest and business customers, for sa
 ```
 
 A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. Customers are personal data, so there is no deployment step that exports them. The **Product listing: online store sample** recipe uses this step for its two sample customers.
+
+## API
+
+The **Customers API** feature (`CrestApps.OrchardCore.Customers.Api`) maps into the commerce JSON API at `api/commerce/v1`:
+
+- `me` and `me/addresses`, the signed-in buyer's account and address book, through `CustomerAccountPages` and `CustomerAddressBook` with **Manage own customer profile and addresses**, held to the same rules as **My Account**.
+- `customers` and `customers/{customerId}`, read-only, with **View customers**.
+- With Orders and the Checkout API on, `PUT checkout/{id}/contact`, the Contact step, through `CustomerContactStepService`.
+- With Store Credit or Loyalty Points and the Checkout API on, `checkout/{id}/store-credit` and `checkout/{id}/points`, for signed-in buyers.
+
+See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
 
 ## Admin
 

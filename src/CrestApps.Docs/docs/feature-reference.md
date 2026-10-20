@@ -191,6 +191,14 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Customers` | Customers | [Customers](./modules/customers) |
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
+| `CrestApps.OrchardCore.Products.Api` | Catalog API | [Products](./modules/products#api) |
+| `CrestApps.OrchardCore.Carts.Api` | Cart API | [Carts and Orders](./modules/carts-and-orders#api) |
+| `CrestApps.OrchardCore.Checkout.Api` | Checkout API | [Checkout](./modules/checkout#the-commerce-api) |
+| `CrestApps.OrchardCore.Orders.Api` | Orders API | [Carts and Orders](./modules/carts-and-orders#api) |
+| `CrestApps.OrchardCore.Customers.Api` | Customers API | [Customers](./modules/customers#api) |
+| `CrestApps.OrchardCore.Shipping.Api` | Shipping API | [Shipping](./modules/shipping#api) |
+| `CrestApps.OrchardCore.Inventory.Api` | Inventory API | [Inventory](./modules/inventory#api) |
+| `CrestApps.OrchardCore.Commerce.Webhooks` | Commerce Webhooks | [Commerce Webhooks](./modules/commerce-webhooks) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |

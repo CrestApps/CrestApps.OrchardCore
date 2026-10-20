@@ -5,11 +5,12 @@ description: Shopping carts for products sold online, thin orders that check a c
 user_manual:
   - user-manual/commerce/carts-and-orders
   - user-manual/commerce/gift-cards
+  - user-manual/commerce/headless-api
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns), `CrestApps.OrchardCore.Orders.GiftCards` (Gift Cards) |
+| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns), `CrestApps.OrchardCore.Orders.GiftCards` (Gift Cards), `CrestApps.OrchardCore.Carts.Api` (Cart API), `CrestApps.OrchardCore.Orders.Api` (Orders API) |
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
@@ -254,6 +255,15 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 | **Create order**, an order's **Invoice**, **Packing slip** and **Add items** | `ManageOrders` | Administrator |
 | **Commerce > Returns** and **Settings > Commerce > Returns** (Returns feature) | `ManageOrders` | Administrator |
 | **Commerce > Gift cards** (Gift Cards feature) | `ManageGiftCards` | Administrator |
+
+## API
+
+Two features put carts and orders on the commerce JSON API at `api/commerce/v1`:
+
+- **Cart API** (`CrestApps.OrchardCore.Carts.Api`, it needs Carts) maps `cart` and `cart/lines` for guests and signed-in buyers through `ICartService`, and `cart/merge` for a buyer who signed in after shopping as a guest. A guest's cart travels in the `X-Cart-Token` header, issued by the answer that creates the cart.
+- **Orders API** (`CrestApps.OrchardCore.Orders.Api`, it needs Orders, the Cart API and the Checkout API) maps `POST checkout`, which checks the caller's cart out through `CartCheckoutService` (placing the order and holding its stock) and returns the guest's `X-Checkout-Token`; the buyer's `me/orders`; and the staff `orders` endpoints, which list, get, refund and cancel through `OrderOperationsService` with `ManageOrders`. With **Returns** on it adds the buyer's returns under `me/orders/{orderId}/returns`, and with **Gift Cards** on, `checkout/{id}/gift-cards`.
+
+See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
 
 ## Stock
 

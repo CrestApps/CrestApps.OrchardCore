@@ -2,12 +2,15 @@
 sidebar_label: Checkout
 sidebar_position: 12
 title: Checkout
+user_manual:
+  - user-manual/commerce/checkout
+  - user-manual/commerce/headless-api
 description: A provider-agnostic checkout and payment framework for Orchard Core, reusable by subscriptions and one-time goods purchases, with a durable payment ledger that prevents orphaned records across distributed nodes.
 ---
 
 | | |
 | --- | --- |
-| **Feature** | `CrestApps.OrchardCore.Checkout` |
+| **Feature** | `CrestApps.OrchardCore.Checkout`, `CrestApps.OrchardCore.Checkout.Api` (Checkout API) |
 | **Abstractions** | `CrestApps.OrchardCore.Checkout.Abstractions` |
 | **Core** | `CrestApps.OrchardCore.Checkout.Core` |
 | **Category** | Commerce |
@@ -586,6 +589,16 @@ The last two digits of what an obligation charges, tax included, in the currency
 | `05` (for example `10.05`) | The payment stays **pending** for two minutes (`TestCheckoutPaymentProvider.PendingSettlementDelay`) after the attempt was created. The status endpoint reports `Pending` and the browser stops waiting; the reconciliation sweep picks the attempt up once it is that old and completes the checkout. |
 | Anything else | The payment succeeds. |
 
+## The commerce API
+
+The **Checkout API** feature (`CrestApps.OrchardCore.Checkout.Api`) maps a checkout's endpoints into the commerce JSON API at `api/commerce/v1`: reading it (`checkout/{id}`), its discount codes, its payment methods, beginning the payment, completing it, and canceling it, all through `ICheckoutEngine`. The modules that add steps map their own endpoints beside these: the Contact step (Customers API), the Shipping step (Shipping API), gift cards (Orders API), and store credit and points (Customers API). It also maps the staff `coupons` endpoints, held to `CouponEditor`'s rules, with `ManageCoupons`.
+
+`CrestApps.OrchardCore.Commerce.Api.Core` holds what every commerce endpoint shares: `MapCommerceApi` (the route group, the `Api` authentication scheme, and the guest token headers), `AllowGuests`, `ApiMoney`, `ApiPage<T>`, `ApiProblems` with its conflict `code` values, `ApiAddress`, and `WithIdempotency` (the `Idempotency-Key` filter). `CheckoutApi`, in `CrestApps.OrchardCore.Checkout.Core.Api`, finds the caller's checkout and reads it into `ApiCheckout`, for any module that maps a checkout endpoint.
+
+A client collects a gateway's payment itself, with the provider's SDK. `GET checkout/{id}/payment-methods` lists each method with a `client` dictionary from the provider's **`ICheckoutPaymentClientConfigurationProvider`**, matched by `ProviderKey`; Stripe's gives `publishableKey`, `mode`, and the amount due in minor units with its `currency`. Only values safe to hand any buyer belong there, never a secret. A provider without one lists `client` as `null`.
+
+See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+
 ## Extending checkout
 
 To use the framework in your own module:
@@ -598,6 +611,7 @@ To use the framework in your own module:
 6. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
 7. To let a gateway bill on a cycle, also implement **`ICheckoutRecurringPaymentProvider`** under the same provider key. Implementations must be idempotent on the attempt's idempotency key, so a retried begin resumes the same agreement instead of creating a second one and billing the customer twice.
 8. To let buyers pay with a balance they hold, such as a voucher or a wallet, implement **`ICheckoutTenderProvider`**; see [Adding a kind of balance](#adding-a-kind-of-balance).
+9. To let apps collect a gateway's payment over the commerce API, implement **`ICheckoutPaymentClientConfigurationProvider`** for it; see [The commerce API](#the-commerce-api).
 
 ## Related
 
