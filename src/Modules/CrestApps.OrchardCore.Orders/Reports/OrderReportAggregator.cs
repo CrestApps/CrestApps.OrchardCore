@@ -200,7 +200,7 @@ public static class OrderReportAggregator
         return funnel;
     }
 
-    private static string BuyerKey(Order order)
+    internal static string BuyerKey(Order order)
     {
         if (!string.IsNullOrEmpty(order.CustomerId))
         {

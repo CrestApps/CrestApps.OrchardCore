@@ -20,6 +20,7 @@ public sealed class ReviewsController : Controller
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly ReviewPhotoStore _photos;
 
     internal readonly IHtmlLocalizer H;
 
@@ -28,16 +29,19 @@ public sealed class ReviewsController : Controller
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        ReviewPhotoStore photos,
         IHtmlLocalizer<ReviewsController> htmlLocalizer)
     {
         _reviews = reviews;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _photos = photos;
         H = htmlLocalizer;
     }
 
     [HttpPost("reviews/{productId}")]
+    [RequestSizeLimit(ReviewPhotoStore.MaxPhotos * ReviewPhotoStore.MaxBytes + 1024 * 1024)]
     public async Task<IActionResult> Submit(string productId, ReviewInputModel model)
     {
         var returnUrl = Url.IsLocalUrl(model?.ReturnUrl) ? model.ReturnUrl : "~/";
@@ -67,6 +71,31 @@ public sealed class ReviewsController : Controller
             return LocalRedirect(returnUrl);
         }
 
+        // New photos replace the review's; none sent keeps them.
+        var eligibility = await _reviews.GetEligibilityAsync(productId, userId, HttpContext.RequestAborted);
+        IReadOnlyList<string> photos = null;
+
+        if (eligibility.CanReview && model.Photos?.Any(photo => photo is { Length: > 0 }) == true)
+        {
+            var (saved, problem) = await _photos.SaveAsync(productId, eligibility.Existing?.ItemId ?? userId, model.Photos, HttpContext.RequestAborted);
+
+            if (problem is not null)
+            {
+                await _notifier.ErrorAsync(problem switch
+                {
+                    "too-many" => H["Add at most {0} photos.", ReviewPhotoStore.MaxPhotos],
+                    "too-big" => H["Each photo can be at most 5 MB."],
+                    "not-an-image" => H["Photos have to be JPEG, PNG or WebP images."],
+                    _ => H["Photos can't be added here."],
+                });
+
+                return LocalRedirect(returnUrl);
+            }
+
+            photos = saved;
+        }
+
+        var previousPhotos = eligibility.Existing?.Photos.ToList() ?? [];
         var review = await _reviews.SubmitAsync(new ReviewSubmission
         {
             ProductId = productId,
@@ -76,7 +105,17 @@ public sealed class ReviewsController : Controller
             Rating = model.Rating,
             Title = model.Title,
             Body = model.Body,
+            Photos = photos,
         }, HttpContext.RequestAborted);
+
+        if (review is null)
+        {
+            await _photos.DeleteAsync(photos);
+        }
+        else if (photos is not null)
+        {
+            await _photos.DeleteAsync(previousPhotos.Except(photos));
+        }
 
         if (review is null)
         {

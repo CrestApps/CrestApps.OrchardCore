@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -14,7 +16,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 /// the bot handled to completion versus escalated to a human, plus the average time to escalate. It measures the
 /// terminal reason recorded on the automated activity, so it captures SMS handoffs and after-hours callbacks.
 /// </summary>
-public sealed class HandoffContainmentReportProvider : OmnichannelReportBase
+public sealed class HandoffContainmentReportProvider : OmnichannelReportBase, IReport
 {
     private readonly ISession _session;
 
@@ -32,13 +34,19 @@ public sealed class HandoffContainmentReportProvider : OmnichannelReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-ai-handoff-containment";
+    public static string Name => "omnichannel-ai-handoff-containment";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["AI handoff & containment"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<HandoffContainmentReportProvider>("AI handoff & containment");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Of the automated conversations concluded in the period, how many the AI contained versus escalated to a live agent."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<HandoffContainmentReportProvider>("Of the automated conversations concluded in the period, how many the AI contained versus escalated to a live agent.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

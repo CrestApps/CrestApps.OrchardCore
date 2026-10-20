@@ -1,0 +1,71 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model EmailReportTaskViewModel
+
+<partial name="_ReportWorkflowTaskFields" model="Model" />
+
+<div class="ocat-wrapper" asp-validation-class-for="To">
+    <label class="ocat-label" asp-for="To">@T["To"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="To" />
+        <span asp-validation-for="To"></span>
+        <span class="hint">@T["The recipients, separated by commas, with Liquid."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Cc">
+    <label class="ocat-label" asp-for="Cc">@T["Cc"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Cc" />
+        <span asp-validation-for="Cc"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Bcc">
+    <label class="ocat-label" asp-for="Bcc">@T["Bcc"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Bcc" />
+        <span asp-validation-for="Bcc"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Subject">
+    <label class="ocat-label" asp-for="Subject">@T["Subject"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Subject" />
+        <span asp-validation-for="Subject"></span>
+        <span class="hint">@T["With Liquid. The report title when empty."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Body">
+    <label class="ocat-label" asp-for="Body">@T["Message"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Body" rows="5"></textarea>
+        <span asp-validation-for="Body"></span>
+        <span class="hint">@T["HTML with Liquid, shown before the report."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AttachmentFormat">
+    <label class="ocat-label" asp-for="AttachmentFormat">@T["Attachment"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="AttachmentFormat" asp-items="Model.Formats">
+            <option value="">@T["No attachment"]</option>
+        </select>
+        <span asp-validation-for="AttachmentFormat"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IncludeReport">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IncludeReport" />
+            <label class="form-check-label" asp-for="IncludeReport">@T["Show the report in the message"]</label>
+            <span class="hint dashed">@T["Adds the report's headline numbers and tables after the message. Charts are left out."]</span>
+        </div>
+        <span asp-validation-for="IncludeReport"></span>
+    </div>
+</div>
+
+<p class="text-muted small">@T["The report runs with its owner's access, so the recipients see what its owner can see. Needs the Email feature with a configured provider."]</p>

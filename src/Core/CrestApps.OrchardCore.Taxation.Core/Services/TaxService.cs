@@ -107,9 +107,20 @@ public sealed class TaxService : ITaxService
 
         foreach (var provider in _determinationProviders)
         {
-            if (provider.CanHandle(context))
+            if (!provider.CanHandle(context))
+            {
+                continue;
+            }
+
+            // A service that can't answer, such as a tax connector that's down, leaves the order to the store's own
+            // rules rather than stopping the sale.
+            try
             {
                 return await provider.DetermineAsync(context, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "The tax provider '{Provider}' couldn't work out the tax; the store's own rules did instead.", provider.GetType().Name);
             }
         }
 
@@ -123,9 +134,14 @@ public sealed class TaxService : ITaxService
         decimal sumNominal = 0m;
         decimal sumNet = 0m;
 
+        // What the order's items come to, for rules whose thresholds are the order's.
+        var orderAmount = context.Items
+            .Where(item => item.Kind != TaxableItemKind.Shipping)
+            .Sum(item => _taxableBaseCalculator.GetTaxableBase(item, context));
+
         foreach (var item in context.Items)
         {
-            var itemState = await CalculateItemAsync(context, item, result, cancellationToken);
+            var itemState = await CalculateItemAsync(context, item, orderAmount, result, cancellationToken);
 
             sumNominal += itemState.NominalBase;
             sumNet += itemState.NetBase;
@@ -144,6 +160,7 @@ public sealed class TaxService : ITaxService
     private async ValueTask<ItemTaxState> CalculateItemAsync(
         TaxCalculationContext context,
         ITaxableItem item,
+        decimal orderAmount,
         TaxCalculationResult result,
         CancellationToken cancellationToken)
     {
@@ -162,6 +179,7 @@ public sealed class TaxService : ITaxService
             TransactionDateUtc = context.TransactionDateUtc,
             IsShipping = item.Kind == TaxableItemKind.Shipping,
             TaxableAmount = nominalBase,
+            OrderAmount = orderAmount,
         };
 
         var candidateRules = await _ruleProvider.GetApplicableRulesAsync(query, cancellationToken);

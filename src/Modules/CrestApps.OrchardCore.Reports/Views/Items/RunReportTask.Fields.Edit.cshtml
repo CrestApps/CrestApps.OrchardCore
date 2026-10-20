@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model RunReportTaskViewModel
+
+<partial name="_ReportWorkflowTaskFields" model="Model" />
+
+<p class="text-muted small">@T["The report runs with its owner's access. The output holds ReportId, Title, RowCount, Columns, Rows (each row by column label, at most 1000) and Errors. The task ends with No rows when the report returns nothing."]</p>

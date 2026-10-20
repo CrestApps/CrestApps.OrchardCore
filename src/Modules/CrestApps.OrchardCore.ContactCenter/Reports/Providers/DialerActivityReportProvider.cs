@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
+using OrchardCore.Localization;
 using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -11,6 +13,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 using YesSql;
 using YesSql.Services;
 
@@ -27,7 +30,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// one whose cycles find no agent shows them completing with "No agents", and one with nothing due shows them
 /// completing with "Nothing due".
 /// </remarks>
-public sealed class DialerActivityReportProvider : ContactCenterReportBase
+public sealed class DialerActivityReportProvider : ContactCenterReportBase, IReport
 {
     private static readonly string[] _callEventTypes =
     [
@@ -101,13 +104,19 @@ public sealed class DialerActivityReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-dialer-activity";
+    public static string Name => "contact-center-dialer-activity";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Dialer activity and health"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<DialerActivityReportProvider>("Dialer activity and health");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Whether the dialer is dialing, idle, holding back, has nothing to call or has stalled; its last pacing cycle and call per campaign and dialer profile; calls and routing decisions per hour; and suppressed attempts by reason."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<DialerActivityReportProvider>("Whether the dialer is dialing, idle, holding back, has nothing to call or has stalled; its last pacing cycle and call per campaign and dialer profile; calls and routing decisions per hour; and suppressed attempts by reason.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Operations;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } = [];

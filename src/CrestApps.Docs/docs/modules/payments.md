@@ -298,6 +298,10 @@ alone.
 Taking a card that is tapped against the administrator's own phone (Stripe's *Tap to Pay*) needs Stripe Terminal
 inside a native iOS or Android app, and cannot be done from a web page.
 
+### Stripe Terminal readers
+
+With the [Point of Sale](point-of-sale) feature on, the Stripe module adds `StripeTerminalPaymentProvider` (key `stripe-terminal`, *Card on a Stripe reader*), which takes a register's card on a Stripe Terminal reader through Stripe's server-driven integration, and the `pos/terminal/readers` endpoints a till app lists and pairs readers with. A simulated reader (registration code `simulated-wpe`) and a test card presented on it work in test mode. See [Point of Sale](point-of-sale#stripe-terminal).
+
 ### Refunds
 
 <YouTube video="commerce" title="Narrated video of the Payments list, a partial refund, and the Refunds list" start={500} end={534} />

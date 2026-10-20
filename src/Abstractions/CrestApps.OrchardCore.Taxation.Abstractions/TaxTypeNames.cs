@@ -75,6 +75,11 @@ public static class TaxTypeNames
     public const string DigitalServicesTax = "DigitalServicesTax";
 
     /// <summary>
+    /// A duty on goods brought into a country, charged at checkout so the buyer pays nothing on delivery.
+    /// </summary>
+    public const string ImportDuty = "ImportDuty";
+
+    /// <summary>
     /// Any other tax type not covered by the well-known values.
     /// </summary>
     public const string Other = "Other";
@@ -99,6 +104,7 @@ public static class TaxTypeNames
         LodgingTax,
         EnvironmentalTax,
         DigitalServicesTax,
+        ImportDuty,
         Other,
     ];
 }

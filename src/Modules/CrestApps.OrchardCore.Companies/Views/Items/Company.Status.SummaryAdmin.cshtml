@@ -1,0 +1,24 @@
+@model ShapeViewModel<Company>
+
+@if (!Model.Value.IsEnabled)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]
+    </span>
+}
+@if (Model.Value.Terms?.OffersTerms == true)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Payment terms"]">
+        <i class="fa-solid fa-file-invoice-dollar text-secondary me-1" aria-hidden="true"></i>@(Model.Value.Terms.DepositPercent > 0m ? T["Net {0}, {1}% deposit", Model.Value.Terms.NetDays, Model.Value.Terms.DepositPercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)] : T["Net {0}", Model.Value.Terms.NetDays])
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Payment terms"]">
+        <i class="fa-solid fa-credit-card text-secondary me-1" aria-hidden="true"></i>@T["Pays at checkout"]
+    </span>
+}
+@if (Model.Value.Terms?.RequirePurchaseOrder == true)
+{
+    <span class="badge ta-badge fw-normal">@T["PO required"]</span>
+}

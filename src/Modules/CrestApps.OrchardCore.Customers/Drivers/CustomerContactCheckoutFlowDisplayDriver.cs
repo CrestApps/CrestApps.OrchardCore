@@ -32,33 +32,24 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
 {
     private const string BillingAddressPrefix = nameof(CustomerContactStepViewModel.BillingAddress);
 
-    private static readonly EmailAddressAttribute _emailAddress = new();
-
-    private readonly ICustomerService _customerService;
+    private readonly CustomerContactStepService _contactStep;
     private readonly CustomerAddressBook _addressBook;
     private readonly IAddressEditorService _addressEditor;
     private readonly IShapeFactory _shapeFactory;
-    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
-    internal readonly IStringLocalizer S;
-
     public CustomerContactCheckoutFlowDisplayDriver(
-        ICustomerService customerService,
+        CustomerContactStepService contactStep,
         CustomerAddressBook addressBook,
         IAddressEditorService addressEditor,
         IShapeFactory shapeFactory,
-        CheckoutInvoiceBuilder invoiceBuilder,
-        IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
-        IStringLocalizer<CustomerContactCheckoutFlowDisplayDriver> stringLocalizer)
+        IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions)
     {
-        _customerService = customerService;
+        _contactStep = contactStep;
         _addressBook = addressBook;
         _addressEditor = addressEditor;
         _shapeFactory = shapeFactory;
-        _invoiceBuilder = invoiceBuilder;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
-        S = stringLocalizer;
     }
 
     protected override string StepKey
@@ -76,95 +67,17 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var modelState = context.Updater.ModelState;
-        var session = flow.Session;
-        var requirement = CustomerContactCheckoutHandler.GetRequirement(session);
-        var customer = await GetCustomerAsync(session);
-        var name = Clean(model.Name);
-        var email = Clean(model.Email);
-        var phone = Clean(model.Phone);
-
-        if (name is null)
+        var saved = await _contactStep.SaveAsync(flow, new CustomerContactInput
         {
-            modelState.AddModelError(Prefix, nameof(model.Name), S["Enter your name."]);
-        }
+            Name = model.Name,
+            Email = model.Email,
+            Phone = model.Phone,
+            BillingAddressId = model.BillingAddressId,
+            BillingAddress = model.BillingAddress,
+            SaveBillingAddress = model.SaveBillingAddress,
+        }, context.Updater.ModelState, Prefix);
 
-        if (email is null)
-        {
-            modelState.AddModelError(Prefix, nameof(model.Email), S["Enter your email, so we can send you the order's details."]);
-        }
-        else if (!_emailAddress.IsValid(email))
-        {
-            modelState.AddModelError(Prefix, nameof(model.Email), S["Enter a valid email address."]);
-        }
-
-        Address billingAddress = null;
-        string billingAddressId = null;
-
-        if (requirement != BillingAddressRequirement.Off)
-        {
-            var saved = string.IsNullOrEmpty(model.BillingAddressId) ? null : customer?.FindAddress(model.BillingAddressId);
-
-            if (saved is not null)
-            {
-                billingAddress = saved.ToAddress();
-                billingAddressId = saved.AddressId;
-            }
-            else if (requirement == BillingAddressRequirement.Required || model.BillingAddress?.HasAnyValue() == true)
-            {
-                var result = await _addressEditor.ValidateAsync(model.BillingAddress ?? new AddressEditorViewModel(), modelState, Prefix + "." + BillingAddressPrefix, EditorOptions(customer));
-
-                if (result.IsValid)
-                {
-                    // The billing address is addressed to the buyer, and reaches them by their phone.
-                    billingAddress = new Address
-                    {
-                        Name = name,
-                        Company = result.Address.Company,
-                        AddressLine1 = result.Address.AddressLine1,
-                        AddressLine2 = result.Address.AddressLine2,
-                        DependentLocality = result.Address.DependentLocality,
-                        City = result.Address.City,
-                        Region = result.Address.Region,
-                        PostalCode = result.Address.PostalCode,
-                        SortingCode = result.Address.SortingCode,
-                        Country = result.Address.Country,
-                        Phone = phone,
-                    };
-                }
-            }
-        }
-
-        if (!modelState.IsValid)
-        {
-            return BuildEditor(flow, model);
-        }
-
-        var step = new CustomerContactStep
-        {
-            Name = name,
-            Email = email,
-            Phone = phone,
-            BillingAddressId = billingAddressId,
-            BillingAddress = billingAddress,
-            SaveBillingAddress = billingAddressId is null && billingAddress is not null && customer is not null && model.SaveBillingAddress,
-        };
-
-        session.SavedSteps[CustomersConstants.ContactStepKey] = JObject.FromObject(step);
-
-        // Who to reach about the order: the order, its receipts and a Pay Later reminder all read it from here.
-        global::OrchardCore.Entities.EntityExtensions.Put(session, new CheckoutContactInfo
-        {
-            DisplayName = name,
-            Email = email,
-            Phone = phone,
-            BillingAddress = billingAddress,
-        });
-
-        // An order that doesn't ship is taxed where it is billed, so the invoice is priced again for this address.
-        await _invoiceBuilder.BuildAsync(flow);
-
-        return BuildEditor(flow, posted: null);
+        return BuildEditor(flow, saved ? null : model);
     }
 
     private ShapeResult BuildEditor(CheckoutFlow flow, CustomerContactStepViewModel posted)
@@ -225,22 +138,14 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
 
     // The billing form asks for the address only: its recipient is the buyer named above, and its phone theirs.
     private static AddressEditorOptions EditorOptions(Customer customer)
-        => new()
-        {
-            ShowName = false,
-            ShowCompany = true,
-            ShowPhone = false,
-            DefaultCountry = CustomerAddressBook.EditorOptionsFor(customer).DefaultCountry,
-        };
+        => CustomerContactStepService.BillingEditorOptions(customer);
 
-    private async Task<Customer> GetCustomerAsync(ICheckoutFlowSession session)
-        => string.IsNullOrEmpty(session.OwnerId) ? null : await _customerService.GetOrCreateForUserAsync(session.OwnerId);
+    private Task<Customer> GetCustomerAsync(ICheckoutFlowSession session)
+        => _contactStep.GetCustomerAsync(session);
 
     private CustomerContactStep GetStep(ICheckoutFlowSession session)
         => session.SavedSteps.TryGetPropertyValue(CustomersConstants.ContactStepKey, out var node) && node is not null
             ? node.Deserialize<CustomerContactStep>(_documentJsonSerializerOptions.SerializerOptions)
             : null;
 
-    private static string Clean(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

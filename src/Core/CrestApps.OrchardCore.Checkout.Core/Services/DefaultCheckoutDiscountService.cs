@@ -20,6 +20,9 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// total still matches to the cent what the gateway settles.</description></item>
 /// <item><description>Discounts land before tax, so the customer is not taxed on money they did not
 /// pay.</description></item>
+/// <item><description>Discounts that can't be used together, by what each says it combines with, aren't: the
+/// combination that takes off the most is kept, and the others are recorded as given way, for the
+/// customer to see.</description></item>
 /// </list>
 /// </remarks>
 public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
@@ -47,6 +50,8 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
 
         invoice.Discounts ??= [];
         invoice.Discounts.Clear();
+        invoice.SkippedDiscounts ??= [];
+        invoice.SkippedDiscounts.Clear();
 
         // A checkout that pays off an existing balance (an outstanding transaction) has no price of its own to
         // reduce. Unless the module that settles the balance takes what the discounts take off off that balance
@@ -94,7 +99,89 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
             return;
         }
 
+        var (kept, skipped) = Choose(invoice.Discounts);
+
+        invoice.Discounts.Clear();
+
+        foreach (var discount in kept)
+        {
+            invoice.Discounts.Add(discount);
+        }
+
+        foreach (var discount in skipped)
+        {
+            invoice.SkippedDiscounts.Add(discount);
+        }
+
         Apply(invoice);
+    }
+
+    // The most a small set is searched for its best combination exactly; past it, the largest discounts are taken
+    // first.
+    private const int MaxExactSearch = 12;
+
+    /// <summary>
+    /// Keeps the discounts that can all be used together and take off the most, in the order they came; the others
+    /// are returned as skipped, each with the kept discount it gave way to.
+    /// </summary>
+    public static (List<DiscountLine> Kept, List<DiscountLine> Skipped) Choose(IList<DiscountLine> candidates)
+    {
+        var all = candidates.ToList();
+
+        if (all.All(first => all.All(second => ReferenceEquals(first, second) || first.CanCombineWith(second))))
+        {
+            return (all, []);
+        }
+
+        List<DiscountLine> kept;
+
+        if (all.Count <= MaxExactSearch)
+        {
+            kept = [];
+            var best = -1m;
+
+            for (var mask = 1; mask < 1 << all.Count; mask++)
+            {
+                var subset = all.Where((_, index) => (mask & (1 << index)) != 0).ToList();
+
+                if (!subset.All(first => subset.All(second => ReferenceEquals(first, second) || first.CanCombineWith(second))))
+                {
+                    continue;
+                }
+
+                var total = subset.Sum(discount => discount.Amount);
+
+                // Ties keep the earlier set, the one with the discounts entered first.
+                if (total > best)
+                {
+                    best = total;
+                    kept = subset;
+                }
+            }
+        }
+        else
+        {
+            kept = [];
+
+            foreach (var discount in all.OrderByDescending(discount => discount.Amount))
+            {
+                if (kept.All(other => discount.CanCombineWith(other)))
+                {
+                    kept.Add(discount);
+                }
+            }
+
+            kept = [.. all.Where(kept.Contains)];
+        }
+
+        var skipped = all.Where(discount => !kept.Contains(discount)).ToList();
+
+        foreach (var discount in skipped)
+        {
+            discount.GaveWayTo = kept.FirstOrDefault(other => !discount.CanCombineWith(other))?.Description;
+        }
+
+        return (kept, skipped);
     }
 
     private static void Apply(CheckoutInvoice invoice)
@@ -163,10 +250,16 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
             return;
         }
 
+        // A discount that says how much it takes off each line, such as a free item, is spread by that instead.
+        decimal Weight(CheckoutLineItem line)
+            => discount.LineShares is { Count: > 0 } shares
+                ? (shares.TryGetValue(line.ItemId ?? string.Empty, out var share) ? share : 0m)
+                : line.GetLineTotal(currency);
+
         var eligible = lines
-            .Where(line => CheckoutDiscountBase.IsDiscountable(line, discount.Target) && discount.IsLimitedTo(line) && line.GetLineTotal(currency) > 0m)
+            .Where(line => CheckoutDiscountBase.IsDiscountable(line, discount.Target) && discount.IsLimitedTo(line) && line.GetLineTotal(currency) > 0m && Weight(line) > 0m)
             .ToArray();
-        var total = eligible.Sum(line => line.GetLineTotal(currency));
+        var total = eligible.Sum(Weight);
 
         if (total <= 0m)
         {
@@ -177,10 +270,9 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
 
         for (var i = 0; i < eligible.Length; i++)
         {
-            var lineTotal = eligible[i].GetLineTotal(currency);
             var share = i == eligible.Length - 1
                 ? remaining
-                : Money.Round(discount.Amount * (lineTotal / total), currency);
+                : Money.Round(discount.Amount * (Weight(eligible[i]) / total), currency);
 
             share = Math.Max(0m, Math.Min(Math.Min(share, remaining), Room(eligible[i], currency)));
 

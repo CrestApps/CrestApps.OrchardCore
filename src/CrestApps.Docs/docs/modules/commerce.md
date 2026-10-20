@@ -30,7 +30,10 @@ This video walks through the commerce modules, their screens, configuration and 
 | Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
 | Receipts | Receipts | The reusable printable receipt and its branding settings. | [Receipts](receipts) |
 | Subscriptions | Subscriptions, Subscriptions - Sites, Subscriptions - Installment Plans | Recurring plans and their agreements, selling sites, and administrator-made payment plans. | [Subscriptions](subscriptions), [Installment Plans](installment-plans) |
-| Taxation | Taxation | Tax categories, jurisdictions, rules and calculation. | [Taxation](taxation) |
+| Taxation | Taxation, TaxJar | Tax categories, jurisdictions, rules and calculation, and TaxJar for sales tax. | [Taxation](taxation) |
+| Marketing | Marketing | Customers' purchases, segments by them, and email campaigns to the customers who accept marketing, with an unsubscribe link. | [Marketing](marketing) |
+| Companies | Companies | Business customers with buyers, locations, payment terms on account, purchase order numbers, price lists, approvals and budgets, and OCI punchout. | [Companies](companies) |
+| Markets | Markets | Groups of countries with their own currency, exchange rate, rounding, language and tax treatment, a storefront market picker, and products not sold in a market. | [Markets](markets) |
 
 ## How a purchase flows
 

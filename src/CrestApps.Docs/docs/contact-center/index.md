@@ -268,7 +268,7 @@ The Contact Center soft-phone projection and the CRM-integrated Agent Workspace 
 When a normalized inbound call arrives, the feature:
 
 1. Resolves the dialed number to an Omnichannel **channel endpoint**, then resolves the configured **subject flow** for that endpoint to obtain the subject content type and campaign.
-2. Looks up the **contact** by the caller's phone number (matched against the contact's normalized primary cell and home numbers).
+2. Looks up the **contact** by the caller's phone number, matched in E.164 form against every phone number on the contact, whatever type each is saved as (see [Matching a number to a contact](../omnichannel/management.md#matching-a-number-to-a-contact)).
 3. Creates an `OmnichannelActivity` (`Kind = Call`, `Source = Inbound`) with its **Subject** content item, and an `Interaction` (`Voice`, `Inbound`) linked to that activity.
 4. Enqueues the activity into the inbound **queue** and reserves the available agent, signed in to that queue, whom the queue's routing strategy picks (longest idle by default).
 5. Offers the ringing call to that agent through `IIncomingCallDispatcher`, which raises the soft-phone modal.

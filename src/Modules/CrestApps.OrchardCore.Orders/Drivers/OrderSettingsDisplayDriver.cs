@@ -56,6 +56,7 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
             model.SendRecoveryEmails = settings.SendRecoveryEmails;
             model.RecoveryDelayHours = settings.RecoveryDelayHours;
             model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
+            model.AllowQuoteRequests = settings.AllowQuoteRequests;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
         .OnGroup(SettingsGroupId);
@@ -74,6 +75,7 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
         settings.SendConfirmations = model.SendConfirmations;
         settings.SendRecoveryEmails = model.SendRecoveryEmails;
         settings.RecoveryDelayHours = Math.Clamp(model.RecoveryDelayHours, 1, 72);
+        settings.AllowQuoteRequests = model.AllowQuoteRequests;
 
         if (model.OrderBumpPercentOff is < 0 or >= 100)
         {

@@ -81,5 +81,5 @@ public sealed class RecipesStartup : StartupBase
 public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IReport, DownloadsReport>();
+        => services.AddReport<DownloadsReport>();
 }

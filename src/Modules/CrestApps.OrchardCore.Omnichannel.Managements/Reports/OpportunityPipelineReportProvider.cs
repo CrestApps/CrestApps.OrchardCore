@@ -1,10 +1,13 @@
 using System.Globalization;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -14,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 /// The opportunity pipeline: the open deals by stage with their amount and their amount weighted by the chance of
 /// winning, and the deals closed in the period with the share that was won.
 /// </summary>
-public sealed class OpportunityPipelineReportProvider : OmnichannelReportBase, IReportFilterMetadata
+public sealed class OpportunityPipelineReportProvider : OmnichannelReportBase, IReportFilterMetadata, IReport
 {
     private readonly ISession _session;
     private readonly INamedCatalog<OpportunityStage> _stages;
@@ -40,13 +43,19 @@ public sealed class OpportunityPipelineReportProvider : OmnichannelReportBase, I
     public IReadOnlyCollection<string> FilterNames => [];
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-opportunity-pipeline";
+    public static string Name => "omnichannel-opportunity-pipeline";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Opportunity pipeline"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OpportunityPipelineReportProvider>("Opportunity pipeline");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Open opportunities by stage with their amount and weighted amount, and the win rate of the opportunities closed in the period."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OpportunityPipelineReportProvider>("Open opportunities by stage with their amount and weighted amount, and the win rate of the opportunities closed in the period.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

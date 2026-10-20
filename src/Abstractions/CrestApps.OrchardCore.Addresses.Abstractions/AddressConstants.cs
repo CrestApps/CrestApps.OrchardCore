@@ -22,6 +22,11 @@ public static class AddressConstants
         /// content items that administrators can rename, add or remove.
         /// </summary>
         public const string Countries = "CrestApps.OrchardCore.Addresses.Countries";
+
+        /// <summary>
+        /// Suggests addresses from Google Places as a street is typed.
+        /// </summary>
+        public const string GooglePlaces = "CrestApps.OrchardCore.Addresses.GooglePlaces";
     }
 
     /// <summary>

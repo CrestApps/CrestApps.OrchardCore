@@ -65,6 +65,47 @@ internal static class OmnichannelContactPhonePredicates
     }
 
     /// <summary>
+    /// Builds the predicate the search box of a contact list uses: contacts whose primary cell or home number starts
+    /// with the digits typed, in whichever shape the number is stored.
+    /// </summary>
+    /// <remarks>
+    /// The search box compares the start of the number, not any part of it, because a prefix comparison seeks the
+    /// phone number indexes of the contact index while a "contains" comparison reads every contact on every search.
+    /// A national entry is compared with the national columns and, when it begins with the
+    /// <see cref="PhoneNumberSearchTerm.DefaultCountryCallingCode"/> country code, also with the E.164 columns, so
+    /// <c>1702555</c> finds <c>+17025550104</c>. The <c>phone:</c> term still matches any part of the number.
+    /// </remarks>
+    /// <param name="searchTerm">The parsed search term.</param>
+    /// <returns>The predicate over the contact index.</returns>
+    public static Expression<Func<OmnichannelContactIndex, bool>> SearchBoxMatch(PhoneNumberSearchTerm searchTerm)
+    {
+        var value = searchTerm.Value;
+
+        if (searchTerm.IsE164)
+        {
+            return index =>
+                index.NormalizedPrimaryCellPhoneNumber.StartsWith(value) ||
+                index.NormalizedPrimaryHomePhoneNumber.StartsWith(value);
+        }
+
+        Expression<Func<OmnichannelContactIndex, bool>> predicate = index =>
+            index.PrimaryCellPhoneNumber.StartsWith(value) ||
+            index.PrimaryHomePhoneNumber.StartsWith(value);
+
+        if (value.Length > PhoneNumberSearchTerm.DefaultCountryCallingCode.Length &&
+            value.StartsWith(PhoneNumberSearchTerm.DefaultCountryCallingCode, StringComparison.Ordinal))
+        {
+            var e164 = $"+{value}";
+
+            predicate = OrElse(predicate, index =>
+                index.NormalizedPrimaryCellPhoneNumber.StartsWith(e164) ||
+                index.NormalizedPrimaryHomePhoneNumber.StartsWith(e164));
+        }
+
+        return predicate;
+    }
+
+    /// <summary>
     /// Builds the predicate that matches contacts whose primary cell and home numbers both do not contain the
     /// search term, the negation of a <see cref="PhoneNumberMatchType.Contains"/> match.
     /// </summary>

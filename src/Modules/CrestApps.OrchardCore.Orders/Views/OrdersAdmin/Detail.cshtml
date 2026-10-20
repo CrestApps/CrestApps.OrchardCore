@@ -38,6 +38,26 @@
             {
                 @T["The buyer has opened the checkout to pay this order."]
             }
+            else if (order.Quote is { Status: OrderQuoteStatus.Requested } requested)
+            {
+                @T["{0} asked for a quote {1:g}. Price it, then send it.", order.CustomerName ?? order.CustomerEmail, await LocalAsync(requested.RequestedUtc)]
+                @if (!string.IsNullOrWhiteSpace(requested.Message))
+                {
+                    <span class="d-block small mt-1" style="white-space: pre-line">@requested.Message</span>
+                }
+            }
+            else if (order.Quote is { Status: OrderQuoteStatus.Sent, ExpiresUtc: { } expires } && expires <= DateTime.UtcNow)
+            {
+                @T["The quote expired {0:g}. Change the date to pay by and send it again to offer it again.", await LocalAsync(expires)]
+            }
+            else if (order.Quote is { Status: OrderQuoteStatus.Sent, SentUtc: { } quoted })
+            {
+                @T["Quote emailed to {0} {1:g}. Waiting for the buyer to accept it by paying.", order.CustomerEmail, await LocalAsync(quoted)]
+                @if (order.Quote.ExpiresUtc is { } offeredUntil)
+                {
+                    <span class="d-block small">@T["Offered until {0:D}.", offeredUntil]</span>
+                }
+            }
             else if (order.Invoice.SentUtc is { } sent)
             {
                 @T["Invoice emailed to {0} {1:g}. Waiting for payment.", order.CustomerEmail, await LocalAsync(sent)]
@@ -67,7 +87,7 @@
                     <a class="btn btn-sm btn-secondary" asp-controller="DraftOrdersAdmin" asp-action="Edit" asp-route-orderId="@order.ItemId">@T["Edit"]</a>
                 }
                 <form asp-controller="DraftOrdersAdmin" asp-action="SendInvoice" asp-route-orderId="@order.ItemId" method="post" class="no-multisubmit">
-                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? T["Send invoice"] : T["Send again"])</button>
+                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? (order.Quote is null ? T["Send invoice"] : T["Send quote"]) : T["Send again"])</button>
                 </form>
             </span>
         }
@@ -135,6 +155,16 @@
                             @if (!string.IsNullOrEmpty(order.CancelNote))
                             {
                                 <span>@order.CancelNote</span>
+                            }
+                            break;
+                        case OrderCancelReason.Declined:
+                            @T["Canceled {0:g}: the buyer turned the quote down.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
+                            break;
+                        case OrderCancelReason.Rejected:
+                            @T["Canceled {0:g}: {1} rejected it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc), order.Approval?.DecidedBy ?? T["the approver"].Value]
+                            @if (!string.IsNullOrEmpty(order.Approval?.Note))
+                            {
+                                <span>@order.Approval.Note</span>
                             }
                             break;
                         default:
@@ -216,6 +246,13 @@
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
+                @foreach (var tender in order.Tenders ?? [])
+                {
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>@T["Paid with {0}", tender.Description]</span>
+                        <span>@Format(tender.Amount)</span>
+                    </div>
+                }
                 @foreach (var refund in order.Refunds ?? [])
                 {
                     <div class="d-flex justify-content-between text-info">
@@ -255,6 +292,11 @@
                 <dl class="mb-0">
                     <dt>@T["Order number"]</dt>
                     <dd>@order.OrderNumber</dd>
+                    @if (!string.IsNullOrWhiteSpace(order.PurchaseOrderNumber))
+                    {
+                        <dt>@T["Purchase order"]</dt>
+                        <dd>@order.PurchaseOrderNumber</dd>
+                    }
                     <dt>@T["Placed"]</dt>
                     <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
                     @if (order.PaidUtc.HasValue && !owed)

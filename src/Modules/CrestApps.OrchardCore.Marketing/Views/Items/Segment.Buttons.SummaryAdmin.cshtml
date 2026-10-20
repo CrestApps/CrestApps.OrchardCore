@@ -1,0 +1,4 @@
+@model ShapeViewModel<Segment>
+
+<a asp-action="Edit" asp-controller="SegmentsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-action="Delete" asp-controller="SegmentsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

@@ -19,6 +19,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -215,6 +216,7 @@ public sealed class CustomersAdminController : Controller
         Apply(model, customer, now);
 
         await _store.CreateAsync(customer, HttpContext.RequestAborted);
+        await WebhookCustomerService.PublishCreatedAsync(HttpContext.RequestServices, customer, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The customer {0} was added.", customer.GetName()]);
 
         return RedirectToAction(nameof(Edit), new { customerId = customer.ItemId });
@@ -238,6 +240,8 @@ public sealed class CustomersAdminController : Controller
         var model = ToViewModel(customer);
         model.CanManage = await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers);
         model.Addresses = await _addressBook.SummarizeAsync(customer);
+        model.Sections = await HttpContext.RequestServices.GetRequiredService<IDisplayManager<Customer>>()
+            .BuildDisplayAsync(customer, HttpContext.RequestServices.GetRequiredService<IUpdateModelAccessor>().ModelUpdater, "DetailAdmin");
 
         await AddHistoryAsync(model, customer);
 

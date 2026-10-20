@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -15,10 +16,14 @@ using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
+using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Orders.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -55,6 +60,13 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddScoped<OrderLinksEmailBuilder>();
         services.AddScoped<DraftOrderService>();
+
+        // The Sales Summary dashboard widget.
+        services.AddDataMigration<Dashboard.SalesSummaryWidgetMigrations>()
+            .AddContentPart<Dashboard.SalesSummaryPart>()
+            .UseDisplayDriver<Dashboard.SalesSummaryPartDisplayDriver>();
+        services.AddScoped<QuoteService>();
+        services.AddScoped<ICartActionProvider, QuoteCartActionProvider>();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
@@ -68,6 +80,9 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Order, OrderDisplayDriver>();
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(OrderEmailTemplateSettingsDisplayDriver.GroupId, OrderPermissions.ManageOrders);
+        services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
 
         // The order bump on the payment step: one tick adds the product the store offers before paying.
         services.AddScoped<IDisplayDriver<CheckoutFlow>, OrderBumpCheckoutFlowDisplayDriver>();
@@ -78,10 +93,18 @@ public sealed class Startup : StartupBase
         // A canceled order gives back its coupon uses, and coupons can be limited to some products and categories.
         services.AddScoped<IOrderEventHandler, OrderCouponEventHandler>();
 
+        // Webhooks hear about orders when the Commerce Webhooks feature is on.
+        services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
+
         // What the store does to an order from its page, and the refunds it records wherever they were started.
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+        services.AddScoped<CartCheckoutService>();
 
         // The order's invoice and packing slip, to print.
         services.AddScoped<OrderDocumentBuilder>();
@@ -120,17 +143,19 @@ public sealed class ReportsStartup : StartupBase
         services.AddScoped<OrderReportReader>();
         services.AddScoped<ProductCategoryNames>();
         services
-            .AddScoped<IReport, OrderSalesReport>()
-            .AddScoped<IReport, OrderCategorySalesReport>()
-            .AddScoped<IReport, OrderCustomersReport>()
-            .AddScoped<IReport, CheckoutConversionReport>()
-            .AddScoped<IReport, OrderProductSalesReport>()
-            .AddScoped<IReport, OrderCountrySalesReport>()
-            .AddScoped<IReport, OrderTaxReport>()
-            .AddScoped<IReport, OrderDiscountsReport>()
-            .AddScoped<IReport, OrderRefundsReport>()
-            .AddScoped<IReport, OrderDisputesReport>()
-            .AddScoped<IReport, UnfulfilledOrdersReport>();
+            .AddReport<OrderSalesReport>()
+            .AddReport<OrderCategorySalesReport>()
+            .AddReport<OrderCustomersReport>()
+            .AddReport<OrderCohortsReport>()
+            .AddReport<CheckoutConversionReport>()
+            .AddReport<OrderProductSalesReport>()
+            .AddReport<OrderCountrySalesReport>()
+            .AddReport<OrderTaxReport>()
+            .AddReport<OrderVatOssReport>()
+            .AddReport<OrderDiscountsReport>()
+            .AddReport<OrderRefundsReport>()
+            .AddReport<OrderDisputesReport>()
+            .AddReport<UnfulfilledOrdersReport>();
     }
 }
 
@@ -170,4 +195,57 @@ public sealed class ReturnsStartup : StartupBase
         services.AddSiteSettingsPermission(OrderConstants.ReturnsSettingsGroupId, OrderPermissions.ManageOrders);
         services.AddNavigationProvider<ReturnsAdminMenu>();
     }
+}
+
+/// <summary>
+/// Gift cards: sold as products, issued by hand, and paying toward checkouts after tax.
+/// </summary>
+[Feature(OrderConstants.Features.GiftCards)]
+public sealed class GiftCardsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<GiftCardMigrations>()
+            .AddIndexProvider<GiftCardIndexProvider>();
+        services.AddScoped<IGiftCardStore, GiftCardStore>();
+        services.AddScoped<GiftCardService>();
+        services.AddScoped<GiftCardEmailSender>();
+        services.AddScoped<GiftCardTenderProvider>();
+        services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<GiftCardTenderProvider>());
+        services.AddScoped<IOrderEventHandler, GiftCardOrderEventHandler>();
+        services.AddContentPart<GiftCardPart>()
+            .UseDisplayDriver<GiftCardPartDisplayDriver>();
+        services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
+        services.AddScoped<GiftCardCheckoutService>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, GiftCardCheckoutFlowDisplayDriver>();
+        services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
+        services.AddNavigationProvider<GiftCardsAdminMenu>();
+    }
+}
+
+[Feature(OrderConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapOrderCheckoutApi();
+        routes.MapOrderAccountApi();
+        routes.MapOrderAdminApi();
+    }
+}
+
+[Feature(OrderConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.Returns)]
+public sealed class ReturnsApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapOrderReturnsAccountApi();
+}
+
+[Feature(OrderConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.GiftCards)]
+public sealed class GiftCardsApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapGiftCardCheckoutApi();
 }

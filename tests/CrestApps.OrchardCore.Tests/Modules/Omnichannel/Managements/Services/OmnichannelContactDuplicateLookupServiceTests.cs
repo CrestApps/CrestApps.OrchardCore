@@ -1,7 +1,10 @@
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Moq;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -11,48 +14,34 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 public sealed class OmnichannelContactDuplicateLookupServiceTests
 {
     [Fact]
-    public async Task GetExistingNormalizedPhoneNumbersAsync_WhenQueryingIndexes_RequiresPublishedVersions()
+    public async Task GetExistingNormalizedPhoneNumbersAsync_ReadsThePublishedNumbersOfEveryRecordThroughThePhoneLookup()
     {
         // Arrange
         var predicates = new List<Expression<Func<OmnichannelContactIndex, bool>>>();
-        var indexQuery = new Mock<IQueryIndex<OmnichannelContactIndex>>();
-        indexQuery
-            .Setup(query => query.Where(It.IsAny<Expression<Func<OmnichannelContactIndex, bool>>>()))
-            .Callback<Expression<Func<OmnichannelContactIndex, bool>>>(predicate => predicates.Add(predicate))
-            .Returns(indexQuery.Object);
-        indexQuery
-            .Setup(query => query.ListAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        var rootQuery = new Mock<IQuery>();
-        rootQuery
-            .Setup(query => query.ForIndex<OmnichannelContactIndex>())
-            .Returns(indexQuery.Object);
-
-        var session = new Mock<ISession>();
-        session
-            .Setup(currentSession => currentSession.Query(null))
-            .Returns(rootQuery.Object);
+        var phoneLookup = new Mock<IOmnichannelContactPhoneLookup>();
+        phoneLookup
+            .Setup(lookup => lookup.FindByNumbersAsync(
+                It.IsAny<IReadOnlyCollection<string>>(),
+                OmnichannelContactVersion.Published,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OmnichannelContactPhoneNumberIndex { ContentItemId = "contact", NormalizedPhoneNumber = "+17024993350" }]);
 
         var service = new OmnichannelContactDuplicateLookupService(
-            session.Object,
-            new DefaultPhoneNumberService());
+            CreateRecordingSession(predicates),
+            new DefaultPhoneNumberService(),
+            phoneLookup.Object);
 
         // Act
-        await service.GetExistingNormalizedPhoneNumbersAsync(
+        var existing = await service.GetExistingNormalizedPhoneNumbersAsync(
             ["+17024993350"],
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, predicates.Count);
-        Assert.All(predicates, predicate =>
-        {
-            var conjunction = Assert.IsAssignableFrom<BinaryExpression>(predicate.Body);
-            Assert.Equal(ExpressionType.AndAlso, conjunction.NodeType);
+        Assert.Equal(["+17024993350"], existing);
 
-            var publishedMember = Assert.IsAssignableFrom<MemberExpression>(conjunction.Left);
-            Assert.Equal(nameof(OmnichannelContactIndex.Published), publishedMember.Member.Name);
-        });
+        // A number found by the phone lookup is not looked for again among the national digits.
+        Assert.Empty(predicates);
     }
 
     [Theory]
@@ -60,12 +49,74 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
     [InlineData(OmnichannelContactDuplicateLookupService.LookupBatchSize, 1)]
     [InlineData(OmnichannelContactDuplicateLookupService.LookupBatchSize + 1, 2)]
     [InlineData(5_000, 100)]
-    public async Task GetPhoneNumberOwnersAsync_LooksUpEachColumnSeparatelyInFixedSizeBatches(int keyCount, int expectedBatches)
+    public async Task GetPhoneNumberOwnersAsync_LooksUpNationalDigitsOneColumnPerQueryInFixedSizeBatches(int keyCount, int expectedBatches)
     {
         // Arrange
         // An OR across the number columns made SQL Server scan the whole contact index for every import batch. Each
         // column is compared in a query of its own, so it seeks that column's index.
         var predicates = new List<Expression<Func<OmnichannelContactIndex, bool>>>();
+        var service = new OmnichannelContactDuplicateLookupService(
+            CreateRecordingSession(predicates),
+            new DefaultPhoneNumberService(),
+            ContactPhoneTestStore.CreateEmptyLookup());
+        var keys = Enumerable.Range(0, keyCount).Select(i => $"702{i:D7}").ToArray();
+
+        // Act
+        await service.GetPhoneNumberOwnersAsync(keys, include: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expectedBatches * 2, predicates.Count);
+        Assert.All(predicates, predicate =>
+        {
+            Assert.DoesNotContain("OrElse", predicate.Body.ToString(), StringComparison.Ordinal);
+
+            var conjunction = Assert.IsAssignableFrom<BinaryExpression>(predicate.Body);
+            var publishedMember = Assert.IsAssignableFrom<MemberExpression>(conjunction.Left);
+            Assert.Equal(nameof(OmnichannelContactIndex.Published), publishedMember.Member.Name);
+        });
+    }
+
+    [Fact]
+    public async Task GetPhoneNumberOwnersAsync_FindsTheOwnersOfANumberWhateverTypeTheySavedItAs()
+    {
+        var (connectionString, path) = ContactPhoneTestStore.CreateDatabase("duplicate-owners");
+        var store = await ContactPhoneTestStore.CreateAsync(connectionString);
+
+        try
+        {
+            // Arrange
+            // An imported row whose number a contact holds as its work number is a duplicate of that contact.
+            var contact = ContactPhoneTestStore.CreateRecord(ContactPhoneTestStore.ContactContentType, ("Work", "+17025550104"));
+            var lead = ContactPhoneTestStore.CreateRecord(ContactPhoneTestStore.LeadContentType, ("Other", "+17025550104"));
+            await ContactPhoneTestStore.SaveAsync(store, contact, lead);
+
+            await using var session = store.CreateSession();
+            var service = new OmnichannelContactDuplicateLookupService(
+                session,
+                new DefaultPhoneNumberService(),
+                ContactPhoneTestStore.CreateLookup(session));
+
+            // Act
+            var all = await service.GetPhoneNumberOwnersAsync(["+17025550104"], include: null, TestContext.Current.CancellationToken);
+            var contactsOnly = await service.GetPhoneNumberOwnersAsync(
+                ["+17025550104"],
+                match => match.ContentType == ContactPhoneTestStore.ContactContentType,
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(
+                new[] { contact.ContentItemId, lead.ContentItemId }.Order(StringComparer.Ordinal),
+                all["+17025550104"].Order(StringComparer.Ordinal));
+            Assert.Equal([contact.ContentItemId], contactsOnly["+17025550104"]);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, path);
+        }
+    }
+
+    private static ISession CreateRecordingSession(List<Expression<Func<OmnichannelContactIndex, bool>>> predicates)
+    {
         var indexQuery = new Mock<IQueryIndex<OmnichannelContactIndex>>();
         indexQuery
             .Setup(query => query.Where(It.IsAny<Expression<Func<OmnichannelContactIndex, bool>>>()))
@@ -85,15 +136,7 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
             .Setup(currentSession => currentSession.Query(null))
             .Returns(rootQuery.Object);
 
-        var service = new OmnichannelContactDuplicateLookupService(session.Object, new DefaultPhoneNumberService());
-        var keys = Enumerable.Range(0, keyCount).Select(i => $"+1702{i:D7}").ToArray();
-
-        // Act
-        await service.GetPhoneNumberOwnersAsync(keys, include: null, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(expectedBatches * 4, predicates.Count);
-        Assert.All(predicates, predicate => Assert.DoesNotContain("OrElse", predicate.Body.ToString(), StringComparison.Ordinal));
+        return session.Object;
     }
 
     [Fact]
@@ -154,7 +197,7 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
         // Arrange
         var phoneNumberService = new DefaultPhoneNumberService();
         var session = Mock.Of<ISession>();
-        var service = new OmnichannelContactDuplicateLookupService(session, phoneNumberService);
+        var service = new OmnichannelContactDuplicateLookupService(session, phoneNumberService, Mock.Of<IOmnichannelContactPhoneLookup>());
 
         // Act & Assert
         Assert.Equal("+17024993350", service.NormalizePhoneNumber("+17024993350"));
@@ -171,7 +214,7 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
         // Arrange
         var phoneNumberService = new DefaultPhoneNumberService();
         var session = Mock.Of<ISession>();
-        var service = new OmnichannelContactDuplicateLookupService(session, phoneNumberService);
+        var service = new OmnichannelContactDuplicateLookupService(session, phoneNumberService, Mock.Of<IOmnichannelContactPhoneLookup>());
 
         // Act & Assert
         Assert.Equal(string.Empty, service.NormalizePhoneNumber(""));

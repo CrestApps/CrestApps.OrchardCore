@@ -1,0 +1,4 @@
+@model ShapeViewModel<WebhookDelivery>
+
+@* The list sits in the filter form, so the button posts that form, with its antiforgery token, to Resend. *@
+<button type="submit" formaction="@Url.Action("Resend", "WebhooksAdmin", new { itemId = Model.Value.SubscriptionId, deliveryId = Model.Value.ItemId })" class="btn btn-secondary btn-sm">@T["Send again"]</button>

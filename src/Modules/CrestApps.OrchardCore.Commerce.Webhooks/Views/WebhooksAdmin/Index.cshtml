@@ -1,0 +1,31 @@
+@model WebhooksIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CommerceWebhooks" title="@T["Webhooks"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-body-secondary">@T["Each webhook is a URL the store posts events to, such as an order being paid, signed with the webhook's secret."]</p>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Add webhook"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* The webhooks, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+<admin-list name="CommerceWebhooks" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No webhooks yet. Add one to tell another system when orders are placed, paid or shipped."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Webhook"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column name="Events" position="40" title="@T["Events"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

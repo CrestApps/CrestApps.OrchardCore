@@ -8,9 +8,9 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
-using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -18,7 +18,11 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
-internal sealed class EnterpriseActivityReportProvider : IReport
+/// <summary>
+/// Runs the enterprise activity reports of Omnichannel, one per <see cref="EnterpriseActivityReportKind"/>. The
+/// reports startup describes each.
+/// </summary>
+internal sealed class EnterpriseActivityReportProvider : IReportRunner
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
@@ -26,7 +30,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly IOmnichannelChannelEndpointStore _addressStore;
-    private readonly EnterpriseActivityReportDefinition _definition;
+    private readonly EnterpriseActivityReportKind _kind;
     private readonly IStringLocalizer _stringLocalizer;
 
     public EnterpriseActivityReportProvider(
@@ -34,30 +38,20 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
-        ActivitySourceOptions activitySourceOptions,
+        IOptions<ActivitySourceOptions> activitySourceOptions,
         IOmnichannelChannelEndpointStore addressStore,
-        EnterpriseActivityReportDefinition definition,
-        IStringLocalizer stringLocalizer)
+        EnterpriseActivityReportKind kind,
+        IStringLocalizer<EnterpriseActivityReportProvider> stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
-        _activitySourceOptions = activitySourceOptions;
+        _activitySourceOptions = activitySourceOptions.Value;
         _campaignGroupManager = campaignGroupManager;
         _dispositionManager = dispositionManager;
         _addressStore = addressStore;
-        _definition = definition;
+        _kind = kind;
         _stringLocalizer = stringLocalizer;
     }
-
-    public string Name => _definition.Name;
-
-    public LocalizedString DisplayName => _definition.DisplayName();
-
-    public LocalizedString Description => _definition.Description();
-
-    public string Category => _definition.Category;
-
-    public Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -68,7 +62,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         // so it must be floored to the lowest value every provider can store.
         var toUtc = OmnichannelReportQuery.ClampToQueryableRange(range.ToUtc.GetValueOrDefault());
         var fromUtc = OmnichannelReportQuery.ClampToQueryableRange(
-            _definition.Kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
+            _kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
                 ? OmnichannelReportQuery.MinQueryableUtc
                 : range.FromUtc.GetValueOrDefault());
 
@@ -93,7 +87,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             ? (await _campaignGroupManager.GetAllAsync(cancellationToken))
                 .ToDictionary(group => group.ItemId, group => group.DisplayText, StringComparer.Ordinal)
             : null;
-        var dispositionNames = _definition.Kind == EnterpriseActivityReportKind.CampaignDispositionMix
+        var dispositionNames = _kind == EnterpriseActivityReportKind.CampaignDispositionMix
             ? CatalogReportDisplayNames.ForDispositions(await _dispositionManager.GetAllAsync(cancellationToken))
             : null;
         var userNames = IsUserReport()
@@ -101,7 +95,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             : null;
         // Activities name the address they used, by the id it had then. A number once listed per channel is now one
         // address, so the ids merged into it are counted as that address, under its name rather than a raw id.
-        var addressesById = _definition.Kind == EnterpriseActivityReportKind.ChannelEndpointUsage
+        var addressesById = _kind == EnterpriseActivityReportKind.ChannelEndpointUsage
             ? await ResolveAddressesAsync(cancellationToken)
             : null;
 
@@ -109,7 +103,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             ? await ResolveContactNamesAsync(filteredActivities, cancellationToken)
             : null;
 
-        return _definition.Kind switch
+        return _kind switch
         {
             EnterpriseActivityReportKind.Backlog => BuildBacklog(filteredActivities, toUtc),
             EnterpriseActivityReportKind.Aging => BuildAging(filteredActivities, toUtc),
@@ -730,12 +724,12 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
     private bool IsContactReport()
     {
-        return _definition.Kind is EnterpriseActivityReportKind.CustomerWorkload;
+        return _kind is EnterpriseActivityReportKind.CustomerWorkload;
     }
 
     private bool IsUserReport()
     {
-        return _definition.Kind is
+        return _kind is
             EnterpriseActivityReportKind.AssignedUserPerformance or
             EnterpriseActivityReportKind.CreatedByPerformance or
             EnterpriseActivityReportKind.UserCompletionTime or
@@ -797,7 +791,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
     private bool IsCampaignReport()
     {
-        return _definition.Kind is
+        return _kind is
             EnterpriseActivityReportKind.CampaignSourceMix or
             EnterpriseActivityReportKind.CampaignChannelMix or
             EnterpriseActivityReportKind.CampaignDispositionMix or
@@ -847,13 +841,6 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         public double CompletionRate => Total > 0 ? (double)Completed / Total : 0d;
     }
 }
-
-internal sealed record EnterpriseActivityReportDefinition(
-    string Name,
-    Func<LocalizedString> DisplayName,
-    Func<LocalizedString> Description,
-    EnterpriseActivityReportKind Kind,
-    string Category);
 
 internal enum EnterpriseActivityReportKind
 {

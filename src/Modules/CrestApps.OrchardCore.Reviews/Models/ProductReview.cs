@@ -38,6 +38,11 @@ public sealed class ProductReview
 
     public string OrderId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the media paths of the photos the buyer added, at most three.
+    /// </summary>
+    public List<string> Photos { get; set; } = [];
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime ModifiedUtc { get; set; }

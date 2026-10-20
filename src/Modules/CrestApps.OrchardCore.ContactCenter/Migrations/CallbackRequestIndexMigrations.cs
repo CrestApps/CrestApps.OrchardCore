@@ -79,7 +79,9 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
                 "DocumentId"),
             collection: ContactCenterStorage.CollectionName);
 
-        return 4;
+        await CreateReportIndexAsync();
+
+        return 5;
     }
 
     /// <summary>
@@ -140,5 +142,26 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             "ItemId", "DocumentId");
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>ScheduledUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 5;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<CallbackRequestIndex>(
+            SchemaBuilder,
+            "IDX_CallbackRequestIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "ScheduledUtc", "Id");
     }
 }

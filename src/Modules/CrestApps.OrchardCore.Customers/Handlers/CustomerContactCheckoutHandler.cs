@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -54,6 +55,12 @@ public sealed class CustomerContactCheckoutHandler : CheckoutHandlerBase
         var session = context.Session;
 
         if (!IsOrder(session))
+        {
+            return;
+        }
+
+        // Staff at a register attach the buyer, when they're known, to the order itself.
+        if (session is CheckoutSession { ReferenceId.Length: > 0 } checkout && OrderChannels.IsCounterSale(await _orderStore.FindByIdAsync(checkout.ReferenceId)))
         {
             return;
         }

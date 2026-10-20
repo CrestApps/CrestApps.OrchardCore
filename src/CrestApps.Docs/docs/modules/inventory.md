@@ -2,12 +2,14 @@
 sidebar_label: Inventory
 title: Inventory
 description: Stock items per product, variant and location, an append-only ledger of stock movements, and the service that changes stock under a per-item lock.
-user_manual: user-manual/commerce/inventory
+user_manual:
+  - user-manual/commerce/inventory
+  - user-manual/commerce/headless-api
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Inventory`, `CrestApps.OrchardCore.Inventory.StockAlerts` (Back-in-Stock Alerts), `CrestApps.OrchardCore.Inventory.PurchaseOrders` (Purchase Orders) |
+| **Features** | `CrestApps.OrchardCore.Inventory`, `CrestApps.OrchardCore.Inventory.StockAlerts` (Back-in-Stock Alerts), `CrestApps.OrchardCore.Inventory.PurchaseOrders` (Purchase Orders), `CrestApps.OrchardCore.Inventory.Api` (Inventory API) |
 | **Core** | `CrestApps.OrchardCore.Inventory.Core` |
 | **Category** | Commerce |
 | **Depends on** | Commerce, Products, `OrchardCore.Contents` |
@@ -114,6 +116,15 @@ With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Com
 `InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items, every location together: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant, and `ReleaseDateUtc` while the item's release date is to come, which makes a backorder `ProductAvailabilityStatus.Preorder`. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
 
 With **Product Bundles** on, `BundleAvailabilityProvider` answers for bundles before the stock items: the most bundles the counted parts can make, from `ProductBundleIndex`, taking backorders when every counted part does. `InventoryOrderEventHandler` holds, sells and restocks a bundle line's parts (`OrderLine.BundleItems`) rather than the bundle, and `BundleSearchIndexHandler` refreshes the search records of the bundles a product is in when it sells out or comes back.
+
+## API
+
+The **Inventory API** feature (`CrestApps.OrchardCore.Inventory.Api`) maps into the commerce JSON API at `api/commerce/v1`:
+
+- `GET products/{id}/availability`, for guests: the product's or a variant's stock status at each location, with the count only when it's low.
+- `inventory` and `inventory/{stockItemId}` with **View inventory**, and `receive`, `adjust`, `count` and `transfer` under it with **Manage inventory**, through `IInventoryService`. Each change is committed in the request; a collision with a checkout changing the same stock answers `409` with the code `concurrency`.
+
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Admin
 

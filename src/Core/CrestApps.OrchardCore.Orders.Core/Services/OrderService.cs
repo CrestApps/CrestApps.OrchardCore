@@ -24,6 +24,12 @@ public interface IOrderService
     Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Creates an order from a priced cart, letting the caller set it up (its channel and location, say) before its
+    /// handlers hear of it, so stock is held where it's sold.
+    /// </summary>
+    Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, Action<Order> configure, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Cancels an order that was not paid, records why, and tells every <see cref="IOrderEventHandler"/>. A paid or
     /// already canceled order is left as it is.
     /// </summary>
@@ -73,7 +79,10 @@ public sealed class OrderService : IOrderService
         _logger = logger;
     }
 
-    public async Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default)
+    public Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default)
+        => CreateFromCartAsync(pricing, configure: null, cancellationToken);
+
+    public async Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, Action<Order> configure, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pricing);
 
@@ -96,6 +105,7 @@ public sealed class OrderService : IOrderService
             UserId = pricing.Cart.UserId,
             CartId = pricing.Cart.ItemId,
             Currency = pricing.Currency,
+            Culture = OrderCulture.Current(),
             Status = OrderStatus.Draft,
             CreatedUtc = now,
             ModifiedUtc = now,
@@ -103,6 +113,9 @@ public sealed class OrderService : IOrderService
         };
 
         order.Subtotal = order.Lines.Sum(line => line.LineTotal);
+        order.Channel = OrderChannels.Online;
+
+        configure?.Invoke(order);
 
         await _store.CreateAsync(order, cancellationToken);
 

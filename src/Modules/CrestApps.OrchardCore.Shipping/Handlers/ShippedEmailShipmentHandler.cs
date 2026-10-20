@@ -49,9 +49,19 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
             return;
         }
 
+        // Written in the language the buyer shopped in.
+        using var language = OrderCulture.Use(order.Culture);
+
         // A guest follows the order by its link; a signed-in buyer finds it under My Orders.
         var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
-        var email = _emailBuilder.Build(order, shipment, orderUrl);
+        var built = _emailBuilder.Build(order, shipment, orderUrl);
+        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Shipped, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        {
+            ["TrackingUrl"] = shipment.TrackingUrl,
+            ["Carrier"] = shipment.Carrier,
+            ["ShipmentNumber"] = shipment.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["OrderUrl"] = orderUrl,
+        });
 
         try
         {

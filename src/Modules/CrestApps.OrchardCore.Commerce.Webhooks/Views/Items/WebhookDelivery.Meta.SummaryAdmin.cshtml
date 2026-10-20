@@ -1,0 +1,14 @@
+@model ShapeViewModel<WebhookDelivery>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Raised"]">
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: Model.Value.CreatedUtc, Format: "g"))
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Attempts"]">
+    <i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Value.Attempts, "1 attempt", "{0} attempts")
+</span>
+@if (Model.Value.Status == WebhookDeliveryStatus.Pending && Model.Value.NextAttemptUtc is { } next)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Tried next"]">
+        <i class="fa-solid fa-forward text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: next, Format: "g"))
+    </span>
+}

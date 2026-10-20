@@ -121,7 +121,15 @@
     }
 }
 
-<div class="address-editor" data-address-editor data-formats-url="@Url.Content("~/addresses/formats/")">
+@inject IEnumerable<CrestApps.OrchardCore.Addresses.Core.Autocomplete.IAddressAutocompleteProvider> AutocompleteProviders
+@{
+    // Suggestions are offered only when a provider is set up.
+    var suggests = await CrestApps.OrchardCore.Addresses.Core.Autocomplete.AddressAutocompleteProviderExtensions.GetAvailableAsync(AutocompleteProviders) is not null;
+}
+
+<div class="address-editor" data-address-editor data-formats-url="@Url.Content("~/addresses/formats/")"
+     data-suggest-url="@(suggests ? Url.Content("~/addresses/suggest") : null)" data-resolve-url="@(suggests ? Url.Content("~/addresses/resolve") : null)"
+     data-suggest-label="@T["Suggested addresses"]">
     <div class="row g-3 mb-3">
         <div class="col-md-6">
             <label class="form-label" for="@countryId">@EditorLayout.LabelOf("Country")</label>

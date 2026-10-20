@@ -27,6 +27,11 @@ public static class ShippingConstants
         public const string EasyPost = "CrestApps.OrchardCore.Shipping.EasyPost";
 
         public const string Shipping = "CrestApps.OrchardCore.Shipping";
+
+        /// <summary>
+        /// The shipping API under <c>api/commerce/v1</c>: the checkout's Shipping step and the store's shipments.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Shipping.Api";
     }
 
     public static class Parts

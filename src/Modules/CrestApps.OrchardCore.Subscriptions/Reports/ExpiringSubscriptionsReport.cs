@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -15,7 +17,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Reports;
 /// The expiring subscriptions report: a detail table of subscriptions due to expire within the
 /// look-ahead horizon, ordered by expiration date.
 /// </summary>
-public sealed class ExpiringSubscriptionsReport : SubscriptionReportBase
+public sealed class ExpiringSubscriptionsReport : SubscriptionReportBase, IReport
 {
     private const int HorizonDays = 30;
 
@@ -41,13 +43,19 @@ public sealed class ExpiringSubscriptionsReport : SubscriptionReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "expiring-subscriptions";
+    public static string Name => "expiring-subscriptions";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Expiring subscriptions"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ExpiringSubscriptionsReport>("Expiring subscriptions");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Subscriptions due to expire within the next {0} days, ordered by expiration date.", HorizonDays];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ExpiringSubscriptionsReport>("Subscriptions due to expire within the next 30 days, ordered by expiration date.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

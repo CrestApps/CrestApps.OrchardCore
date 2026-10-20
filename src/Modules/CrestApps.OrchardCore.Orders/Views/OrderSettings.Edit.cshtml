@@ -13,6 +13,16 @@
 <div class="ocat-wrapper">
     <div class="ocat-end">
         <div class="form-check">
+            <input asp-for="AllowQuoteRequests" type="checkbox" class="form-check-input" />
+            <label asp-for="AllowQuoteRequests" class="form-check-label">@T["Take quote requests"]</label>
+            <span class="hint dashed">@T["Signed-in buyers can send their cart as a quote request. It becomes a draft order: set its prices, then send it, and the buyer accepts it by paying."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
             <input asp-for="SendRecoveryEmails" type="checkbox" class="form-check-input" data-recovery-toggle />
             <label asp-for="SendRecoveryEmails" class="form-check-label">@T["Email buyers who leave a checkout"]</label>
             <span class="hint dashed">@T["A buyer who gave their email and left without paying gets one email with what they chose and a link back to it, unless they paid since. Needs the site's email and its base URL."]</span>

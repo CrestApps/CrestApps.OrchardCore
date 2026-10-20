@@ -1,0 +1,64 @@
+@model AccountReferralsViewModel
+
+@* The signed-in customer's referral link, what it gives, and the friends they were rewarded for. *@
+
+<div class="card mb-3">
+    <div class="card-body">
+        @if (Model.FriendGets is not null && Model.YouGet is not null)
+        {
+            <p>@T["Share your link. A friend who opens it gets: {0}. You get {1} when they place their first order.", Model.FriendGets, Model.YouGet]</p>
+        }
+        else if (Model.FriendGets is not null)
+        {
+            <p>@T["Share your link. A friend who opens it gets: {0}.", Model.FriendGets]</p>
+        }
+        else if (Model.YouGet is not null)
+        {
+            <p>@T["Share your link. You get {0} when a friend places their first order.", Model.YouGet]</p>
+        }
+        else
+        {
+            <p>@T["Share your link with friends."]</p>
+        }
+
+        <label class="form-label" for="referral-link">@T["Your link"]</label>
+        <div class="input-group">
+            <input id="referral-link" class="form-control" value="@Model.Link" readonly onclick="this.select()" />
+            <button type="button" class="btn btn-outline-secondary" data-copy-referral-link>@T["Copy"]</button>
+        </div>
+    </div>
+</div>
+
+@if (Model.Referrals.Count > 0)
+{
+    <h2 class="h5">@T.Plural(Model.Referrals.Count, "1 friend bought through your link", "{0} friends bought through your link")</h2>
+    <ul class="list-group mb-3">
+        @foreach (var referral in Model.Referrals)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <span>@referral.FriendName</span>
+                @if (!string.IsNullOrEmpty(referral.Reward))
+                {
+                    <span class="badge text-bg-success">@referral.Reward</span>
+                }
+            </li>
+        }
+    </ul>
+}
+
+<script at="Foot">
+    (function () {
+        var button = document.querySelector('[data-copy-referral-link]');
+        var input = document.getElementById('referral-link');
+
+        if (!button || !input || !navigator.clipboard) {
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            navigator.clipboard.writeText(input.value).then(function () {
+                button.textContent = '@T["Copied"]';
+            });
+        });
+    })();
+</script>

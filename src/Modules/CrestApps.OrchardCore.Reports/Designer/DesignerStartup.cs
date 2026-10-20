@@ -1,0 +1,122 @@
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Reports.Designer.BackgroundTasks;
+using CrestApps.OrchardCore.Reports.Designer.Deployments;
+using CrestApps.OrchardCore.Reports.Designer.Drivers;
+using CrestApps.OrchardCore.Reports.Designer.Handlers;
+using CrestApps.OrchardCore.Reports.Designer.Indexes;
+using CrestApps.OrchardCore.Reports.Designer.Migrations;
+using CrestApps.OrchardCore.Reports.Designer.Recipes;
+using CrestApps.OrchardCore.Reports.Designer.Services;
+using CrestApps.OrchardCore.Reports.Designer.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.DataPipelines.SharedLinks;
+using OrchardCore.Deployment;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
+
+namespace CrestApps.OrchardCore.Reports.Designer;
+
+/// <summary>
+/// Registers the report builder: the query engine over the data sources of Orchard Core, the stores of designed reports,
+/// views, and share links, the views data source and the scheduled refresh of views, the sharing-aware authorization handler, and the
+/// admin menu.
+/// </summary>
+[Feature(ReportsConstants.BuilderFeature)]
+public sealed class DesignerStartup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DesignerStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant configuration, which can override the designer size limits.</param>
+    public DesignerStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCatalogs();
+
+        services.Configure<ReportQueryLimits>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Limits"));
+        services.Configure<ReportDesignVersionOptions>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Versions"));
+
+        services
+            .AddScoped<ReportQueryPlanner>()
+            .AddScoped<ReportQueryEngine>()
+            .AddSingleton<ReportQueryGate>()
+            .AddScoped<ReportValueFormatter>()
+            .AddScoped<ReportDesignDocumentBuilder>()
+            .AddScoped(sp => new Lazy<ReportQueryPlanner>(sp.GetRequiredService<ReportQueryPlanner>))
+            .AddScoped(sp => new Lazy<ReportQueryEngine>(sp.GetRequiredService<ReportQueryEngine>))
+            .AddScoped<ReportExecutionContextFactory>()
+            .AddScoped<ReportOwnerPrincipalResolver>()
+            .AddScoped<ReportDesignService>()
+            .AddScoped<ReportDesignHistoryStore>()
+            .AddScoped<ReportDesignHistoryService>()
+            .AddScoped<ReportDesignRunner>()
+            .AddScoped<DesignedReportPresenter>()
+            .AddScoped<ReportViewRunner>()
+            .AddScoped<ReportViewSnapshotStore>()
+            .AddScoped<ReportViewSnapshotRefresher>();
+
+        services.AddDataSource<ReportViewsDataSource>();
+        services.AddSharedLinkHandler<ReportSharedLinkHandler>();
+
+        services.TryAddScoped<IReportDesignNotifier, NullReportDesignNotifier>();
+        services.AddIndexProvider<ReportDesignDraftIndexProvider>();
+        services.AddIndexProvider<ReportDesignVersionIndexProvider>();
+        services.AddDataMigration<ReportDesignHistoryMigrations>();
+        services.AddIndexProvider<ReportViewSnapshotIndexProvider>();
+        services.AddDataMigration<ReportViewSnapshotMigrations>();
+        services.AddSingleton<IBackgroundTask, ReportViewSnapshotBackgroundTask>();
+
+        services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
+        services.AddScoped<IAuthorizationHandler, ReportDesignAuthorizationHandler>();
+        services.AddPermissionProvider<ReportDesignerPermissionProvider>();
+        services.AddNavigationProvider<ReportDesignerAdminMenu>();
+
+        services
+            .AddDisplayDriver<ReportDesignListEntry, ReportDesignListEntryDisplayDriver>()
+            .AddDisplayDriver<ReportViewListEntry, ReportViewListEntryDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe step that imports designed reports and views.
+/// </summary>
+[Feature(ReportsConstants.BuilderFeature)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DesignerRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<ReportDesignsRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step that exports designed reports and views.
+/// </summary>
+[Feature(ReportsConstants.BuilderFeature)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DesignerDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<ReportDesignsDeploymentSource, ReportDesignsDeploymentStep, ReportDesignsDeploymentStepDisplayDriver>();
+    }
+}

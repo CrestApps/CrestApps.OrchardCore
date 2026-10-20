@@ -1,0 +1,34 @@
+@model SegmentsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="Segments" title="@T["Segments"]" />
+</zone>
+
+<form asp-action="Index" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" name="q" value="@Model.Search" class="form-control" placeholder="@T["Search segments"]" type="search" autocomplete="off" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Add segment"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="Segments" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No segments yet. Add one, such as lapsed buyers: customers who bought before, but not in 90 days."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Segment"]" />
+        <admin-list-column name="Rules" position="30" title="@T["Rules"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

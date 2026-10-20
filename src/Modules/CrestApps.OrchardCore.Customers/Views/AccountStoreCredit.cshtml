@@ -1,0 +1,53 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CustomerStoreCreditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@* The signed-in customer's store credit on the storefront account: what they have, and each time it changed. *@
+
+<div class="card mb-3">
+    <div class="card-body">
+        @if (Model.Accounts.All(account => account.Balance <= 0m))
+        {
+            <p class="mb-1">@T["You have no store credit."]</p>
+            <p class="text-muted small mb-0">@T["Credit the store gives you, such as a refund, shows here and pays toward your next order when you're signed in."]</p>
+        }
+        else
+        {
+            @foreach (var account in Model.Accounts.Where(account => account.Balance > 0m))
+            {
+                <div class="fs-3">@ProductPriceFormatter.Format(account.Balance, account.Currency)</div>
+            }
+            <p class="text-muted small mb-0">@T["At checkout, click Use my store credit and it pays toward your order."]</p>
+        }
+    </div>
+</div>
+
+@if (Model.Accounts.Any(account => account.Activity?.Count > 0))
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["When"]</th>
+                    <th scope="col">@T["What"]</th>
+                    <th scope="col" class="text-end">@T["Change"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (activity, currency) in Model.Accounts.SelectMany(account => (account.Activity ?? []).Select(activity => (activity, account.Currency))).OrderByDescending(entry => entry.activity.CreatedUtc).Take(50))
+                {
+                    <tr>
+                        <td class="text-nowrap">@((await LocalAsync(activity.CreatedUtc)).ToString("d"))</td>
+                        <td>@activity.Reason</td>
+                        <td class="text-end text-nowrap @(activity.Amount < 0 ? "text-danger" : "text-success")">@(activity.Amount < 0 ? "−" : "+")@ProductPriceFormatter.Format(Math.Abs(activity.Amount), currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

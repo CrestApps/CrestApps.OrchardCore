@@ -18,6 +18,13 @@ public static class CartConstants
     public static class Features
     {
         public const string Carts = "CrestApps.OrchardCore.Carts";
+
+        /// <summary>
+        /// The cart API under <c>api/commerce/v1</c>.
+        /// </summary>
+        public const string Wishlists = "CrestApps.OrchardCore.Carts.Wishlists";
+
+        public const string Api = "CrestApps.OrchardCore.Carts.Api";
     }
 
     public static class RouteNames

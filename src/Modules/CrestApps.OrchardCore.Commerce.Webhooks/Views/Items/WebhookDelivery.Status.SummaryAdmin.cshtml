@@ -1,0 +1,26 @@
+@model ShapeViewModel<WebhookDelivery>
+
+@switch (Model.Value.Status)
+{
+    case WebhookDeliveryStatus.Delivered:
+        <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["Delivered"]
+        </span>
+        break;
+    case WebhookDeliveryStatus.Failed:
+        <span class="badge ta-badge bg-danger-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-circle-xmark text-secondary me-1" aria-hidden="true"></i>@T["Failed"]
+        </span>
+        break;
+    default:
+        <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@T["Pending"]
+        </span>
+        break;
+}
+@if (Model.Value.LastStatusCode is { } code)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The receiver's last answer"]">
+        <i class="fa-solid fa-reply text-secondary me-1" aria-hidden="true"></i>@code
+    </span>
+}

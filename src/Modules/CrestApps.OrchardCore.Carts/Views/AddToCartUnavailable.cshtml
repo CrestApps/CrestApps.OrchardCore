@@ -1,0 +1,6 @@
+@model CrestApps.OrchardCore.Carts.ViewModels.AddToCartUnavailableViewModel
+
+@* Shown instead of the add to cart form when the shopper can't buy the product, such as outside the markets it's sold in. *@
+<p class="product-unavailable small text-body-secondary mb-2">
+    <span class="fa-solid fa-circle-info me-1" aria-hidden="true"></span>@Model.Reason
+</p>

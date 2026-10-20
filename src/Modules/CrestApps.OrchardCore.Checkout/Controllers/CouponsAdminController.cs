@@ -41,6 +41,7 @@ public sealed class CouponsAdminController : Controller
     private const int RecentUses = 25;
 
     private readonly ICouponStore _couponStore;
+    private readonly CouponEditor _editor;
     private readonly ICouponRedemptionService _redemptions;
     private readonly IDisplayManager<Coupon> _couponDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -60,6 +61,7 @@ public sealed class CouponsAdminController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public CouponsAdminController(
         ICouponStore couponStore,
+        CouponEditor editor,
         ICouponRedemptionService redemptions,
         IDisplayManager<Coupon> couponDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
@@ -69,6 +71,7 @@ public sealed class CouponsAdminController : Controller
         IStringLocalizer<CouponsAdminController> stringLocalizer)
     {
         _couponStore = couponStore;
+        _editor = editor;
         _redemptions = redemptions;
         _couponDisplayManager = couponDisplayManager;
         _updateModelAccessor = updateModelAccessor;
@@ -241,7 +244,7 @@ public sealed class CouponsAdminController : Controller
         // fields of this form are applied after, once everything is valid.
         var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: true);
 
-        await ValidateAsync(model, existingItemId: null);
+        await _editor.ValidateAsync(model, existingItemId: null, ModelState);
 
         if (!ModelState.IsValid)
         {
@@ -252,7 +255,7 @@ public sealed class CouponsAdminController : Controller
             return View(model);
         }
 
-        Apply(model, coupon);
+        CouponEditor.Apply(model, coupon);
 
         await _couponStore.CreateAsync(coupon);
 
@@ -283,6 +286,8 @@ public sealed class CouponsAdminController : Controller
         {
             ItemId = coupon.ItemId,
             Code = coupon.Code,
+            Method = coupon.Method,
+            OnlyGeneratedCodes = coupon.OnlyGeneratedCodes,
             Description = coupon.Description,
             Kind = coupon.Kind,
             Percentage = coupon.Percentage,
@@ -296,6 +301,13 @@ public sealed class CouponsAdminController : Controller
             MinimumAmount = coupon.MinimumAmount,
             MaximumAmount = coupon.MaximumAmount,
             MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
+            MinimumQuantity = coupon.MinimumQuantity,
+            BuyQuantity = coupon.BuyQuantity > 0 ? coupon.BuyQuantity : null,
+            GetQuantity = coupon.GetQuantity > 0 ? coupon.GetQuantity : null,
+            MaxApplicationsPerOrder = coupon.MaxApplicationsPerOrder,
+            CombinesWithProductDiscounts = coupon.CombinesWithProductDiscounts,
+            CombinesWithOrderDiscounts = coupon.CombinesWithOrderDiscounts,
+            CombinesWithShippingDiscounts = coupon.CombinesWithShippingDiscounts,
             RedemptionCount = coupon.RedemptionCount,
             Sources = string.Join(", ", coupon.Sources ?? []),
             ReferenceTypes = string.Join(", ", coupon.ReferenceTypes ?? []),
@@ -334,7 +346,7 @@ public sealed class CouponsAdminController : Controller
 
         var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
 
-        await ValidateAsync(model, coupon.ItemId);
+        await _editor.ValidateAsync(model, coupon.ItemId, ModelState);
 
         if (!ModelState.IsValid)
         {
@@ -349,7 +361,7 @@ public sealed class CouponsAdminController : Controller
             return View(model);
         }
 
-        Apply(model, coupon);
+        CouponEditor.Apply(model, coupon);
 
         await _couponStore.UpdateAsync(coupon);
 
@@ -377,6 +389,7 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
+        await _couponStore.DeleteGeneratedCodesAsync(coupon.ItemId);
         await _couponStore.DeleteAsync(coupon);
 
         await _notifier.SuccessAsync(H["The coupon was deleted."]);
@@ -384,79 +397,97 @@ public sealed class CouponsAdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task ValidateAsync(CouponEditViewModel model, string existingItemId)
+    /// <summary>
+    /// Generates unique codes that share the coupon's discount and rules, each with its own uses.
+    /// </summary>
+    /// <param name="itemId">The coupon identifier.</param>
+    /// <param name="count">How many codes to generate.</param>
+    /// <param name="prefix">What every code starts with.</param>
+    /// <param name="usesPerCode">How many times each code may be used; blank for no limit.</param>
+    [HttpPost]
+    public async Task<IActionResult> GenerateCodes(string itemId, int count, string prefix, int? usesPerCode)
     {
-        var code = model.Code?.Trim();
-
-        if (string.IsNullOrEmpty(code))
+        if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
-            ModelState.AddModelError(nameof(model.Code), S["A code is required."]);
+            return Forbid();
+        }
+
+        var coupon = string.IsNullOrEmpty(itemId) ? null : await _couponStore.FindByIdAsync(itemId);
+
+        if (coupon is null)
+        {
+            return NotFound();
+        }
+
+        prefix = prefix?.Trim().ToUpperInvariant();
+
+        if (coupon.IsAutomatic)
+        {
+            await _notifier.ErrorAsync(H["An automatic discount has no codes to generate."]);
+        }
+        else if (count is < 1 or > CheckoutConstants.MaxGeneratedCodes)
+        {
+            await _notifier.ErrorAsync(H["Generate between 1 and {0} codes at a time.", CheckoutConstants.MaxGeneratedCodes]);
+        }
+        else if (!string.IsNullOrEmpty(prefix) && (prefix.Length > 12 || !prefix.All(character => char.IsAsciiLetterOrDigit(character) || character == '-')))
+        {
+            await _notifier.ErrorAsync(H["A prefix is up to 12 letters, digits or dashes."]);
+        }
+        else if (usesPerCode is <= 0)
+        {
+            await _notifier.ErrorAsync(H["Leave the uses per code blank for no limit, or enter a number greater than zero."]);
         }
         else
         {
-            // Two coupons sharing a code would make which one applies a matter of query order, so the same
-            // customer could get different discounts on different days.
-            var existing = await _couponStore.GetByCodeAsync(code);
+            var codes = await _couponStore.GenerateCodesAsync(coupon, count, prefix, usesPerCode, HttpContext.RequestAborted);
 
-            if (existing is not null && !string.Equals(existing.ItemId, existingItemId, StringComparison.Ordinal))
-            {
-                ModelState.AddModelError(nameof(model.Code), S["That code is already in use."]);
-            }
+            await _notifier.SuccessAsync(H.Plural(codes.Count, "Generated 1 code.", "Generated {0} codes."));
         }
 
-        if (model.Kind == CouponKind.Percentage && model.Percentage is <= 0m or > 100m)
+        return RedirectToAction(nameof(Edit), new { itemId });
+    }
+
+    /// <summary>
+    /// Downloads the coupon's generated codes as a CSV file, with how often each was used.
+    /// </summary>
+    /// <param name="itemId">The coupon identifier.</param>
+    public async Task<IActionResult> ExportCodes(string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
-            ModelState.AddModelError(nameof(model.Percentage), S["Enter a percentage between 1 and 100."]);
+            return Forbid();
         }
 
-        if (model.Kind == CouponKind.FixedAmount)
-        {
-            if (model.Amount <= 0m)
-            {
-                ModelState.AddModelError(nameof(model.Amount), S["Enter an amount greater than zero."]);
-            }
+        var coupon = string.IsNullOrEmpty(itemId) ? null : await _couponStore.FindByIdAsync(itemId);
 
-            if (string.IsNullOrWhiteSpace(model.Currency))
-            {
-                // A fixed amount with no currency would apply its face value to any currency, so ten dollars
-                // off would become ten thousand yen off.
-                ModelState.AddModelError(nameof(model.Currency), S["A fixed amount needs a currency."]);
-            }
+        if (coupon is null)
+        {
+            return NotFound();
         }
 
-        if (model.StartsUtc.HasValue && model.EndsUtc.HasValue && model.EndsUtc.Value <= model.StartsUtc.Value)
+        var csv = new System.Text.StringBuilder("Code,Uses,Limit,Created (UTC)\r\n");
+
+        foreach (var code in await _couponStore.ListGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted))
         {
-            ModelState.AddModelError(nameof(model.EndsUtc), S["The end date must be after the start date."]);
+            csv.Append(code.Code).Append(',')
+                .Append(code.RedemptionCount.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(code.MaxRedemptions?.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(code.CreatedUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture))
+                .Append("\r\n");
         }
 
-        if (!string.IsNullOrWhiteSpace(model.CustomerEmail) && !model.CustomerEmail.Contains('@', StringComparison.Ordinal))
-        {
-            ModelState.AddModelError(nameof(model.CustomerEmail), S["Enter the customer's email address, or leave it blank."]);
-        }
-
-        if (model.MaxRedemptions is <= 0)
-        {
-            ModelState.AddModelError(nameof(model.MaxRedemptions), S["Leave the limit blank for unlimited, or enter a number greater than zero."]);
-        }
-
-        if (model.MaxRedemptionsPerCustomer is <= 0)
-        {
-            ModelState.AddModelError(nameof(model.MaxRedemptionsPerCustomer), S["Leave the limit blank for no limit, or enter a number greater than zero."]);
-        }
-
-        if (model.MaximumAmount is <= 0m)
-        {
-            ModelState.AddModelError(nameof(model.MaximumAmount), S["Leave the maximum blank, or enter an amount greater than zero."]);
-        }
-        else if (model.MaximumAmount.HasValue && model.MinimumAmount.HasValue && model.MaximumAmount.Value < model.MinimumAmount.Value)
-        {
-            ModelState.AddModelError(nameof(model.MaximumAmount), S["The maximum amount can't be less than the minimum amount."]);
-        }
+        return File(System.Text.Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{coupon.Code}-codes.csv");
     }
 
     private async Task PopulateUsesAsync(CouponEditViewModel model, Coupon coupon)
     {
         model.Redemptions = await _redemptions.ListAsync(coupon.Code, RecentUses, HttpContext.RequestAborted);
+        (model.GeneratedCodes, model.UsedGeneratedCodes) = await _couponStore.CountGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted);
+
+        if (coupon.CanBeTyped)
+        {
+            model.DiscountLinkUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/discount/{Uri.EscapeDataString(coupon.Code)}";
+        }
         model.HeldCount = await _redemptions.CountHeldAsync(coupon.Code, HttpContext.RequestAborted);
 
         // What each use paid for, such as an order, reads by its number rather than its id when a module knows it.
@@ -537,41 +568,5 @@ public sealed class CouponsAdminController : Controller
             .Select(source => source.DisplayName is null ? source.Name : $"{source.Name} ({source.DisplayName.Value})")
             .OrderBy(text => text, StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
-
-    private static List<string> SplitList(string value)
-        => string.IsNullOrWhiteSpace(value)
-            ? []
-            : value
-                .Split([',', ';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-    private static string TrimToNull(string value)
-        => string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim();
-
-    private static void Apply(CouponEditViewModel model, Coupon coupon)
-    {
-        coupon.Code = model.Code?.Trim();
-        coupon.Description = model.Description?.Trim();
-        coupon.Kind = model.Kind;
-        coupon.Percentage = model.Kind == CouponKind.Percentage ? model.Percentage : 0m;
-        coupon.Amount = model.Kind == CouponKind.FixedAmount ? model.Amount : 0m;
-        coupon.Currency = model.Kind == CouponKind.FixedAmount ? model.Currency?.Trim().ToUpperInvariant() : null;
-        // Free shipping takes off shipping, whatever it was set to apply to before.
-        coupon.Target = model.Kind == CouponKind.FreeShipping ? DiscountTarget.OneTime : model.Target;
-        coupon.IsEnabled = model.IsEnabled;
-        coupon.StartsUtc = model.StartsUtc;
-        coupon.EndsUtc = model.EndsUtc;
-        coupon.MaxRedemptions = model.MaxRedemptions;
-        coupon.MinimumAmount = model.MinimumAmount;
-        coupon.MaximumAmount = model.MaximumAmount;
-        coupon.MaxRedemptionsPerCustomer = model.MaxRedemptionsPerCustomer;
-        coupon.Sources = SplitList(model.Sources);
-        coupon.ReferenceTypes = SplitList(model.ReferenceTypes);
-        coupon.CustomerId = TrimToNull(model.CustomerId);
-        coupon.CustomerEmail = TrimToNull(model.CustomerEmail);
     }
 }

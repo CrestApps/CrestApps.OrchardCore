@@ -1,0 +1,3 @@
+@model ShapeViewModel<Register>
+
+<div class="admin-list-secondary">@string.Join(", ", new[] { Model.Value.Address?.AddressLine1, Model.Value.Address?.City, Model.Value.Address?.Country }.Where(part => !string.IsNullOrEmpty(part)))</div>

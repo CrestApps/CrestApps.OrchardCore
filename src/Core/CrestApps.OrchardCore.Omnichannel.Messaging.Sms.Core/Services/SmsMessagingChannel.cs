@@ -46,6 +46,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     // eagerly closes a dependency cycle the container cannot report, and the scope deadlocks.
     private readonly Lazy<ISmsDispatcher> _dispatcher;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
+    private readonly IOmnichannelContactPhoneLookup _phoneLookup;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IContactMethodsAccessor _contactMethods;
     private readonly ISession _session;
@@ -60,13 +61,15 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <param name="contactTypeProvider">The provider of the content types that are contacts.</param>
     /// <param name="phoneNumberService">The phone number service a typed number is validated with.</param>
     /// <param name="contactMethods">Reads a contact's phone numbers.</param>
+    /// <param name="phoneLookup">The lookup that finds a sender by any of a contact's numbers.</param>
     public SmsMessagingChannel(
         Lazy<ISmsDispatcher> dispatcher,
         ISession session,
         IStringLocalizer<SmsMessagingChannel> stringLocalizer,
         IOmnichannelContactTypeProvider contactTypeProvider,
         IPhoneNumberService phoneNumberService,
-        IContactMethodsAccessor contactMethods)
+        IContactMethodsAccessor contactMethods,
+        IOmnichannelContactPhoneLookup phoneLookup)
     {
         _dispatcher = dispatcher;
         _session = session;
@@ -74,6 +77,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         _contactTypeProvider = contactTypeProvider;
         _phoneNumberService = phoneNumberService;
         _contactMethods = contactMethods;
+        _phoneLookup = phoneLookup;
     }
 
     /// <inheritdoc/>
@@ -203,10 +207,9 @@ public sealed class SmsMessagingChannel : IMessagingChannel
             return [];
         }
 
-        var matches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.Published &&
-                    (index.NormalizedPrimaryCellPhoneNumber == normalized || index.NormalizedPrimaryHomePhoneNumber == normalized))
-            .ListAsync(cancellationToken);
+        // Every number of every record, whatever type it is saved as: a contact texted at its work number is
+        // matched when it texts back from it.
+        var matches = await _phoneLookup.FindByNumbersAsync([normalized], OmnichannelContactVersion.Published, cancellationToken: cancellationToken);
 
         // Contacts come before leads and converted leads are left out, so a sender who is both a contact and a lead
         // is linked to the contact, and callers that take the first match always take the same one.

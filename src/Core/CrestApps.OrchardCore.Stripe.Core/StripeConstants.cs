@@ -11,6 +11,11 @@ public static class StripeConstants
     public const string ProcessorKey = "Stripe";
 
     /// <summary>
+    /// The payment method for a card presented on a Stripe Terminal reader at a register.
+    /// </summary>
+    public const string TerminalProviderKey = "stripe-terminal";
+
+    /// <summary>
     /// The name of the named <see cref="System.Net.Http.HttpClient"/> used for Stripe API calls.
     /// </summary>
     public const string HttpClientName = "Stripe";

@@ -1,7 +1,7 @@
 ---
 sidebar_label: Taxes
 title: Taxes
-description: Set up the categories, tax types, jurisdictions, tables and rules your site uses to charge tax, then classify your products so checkout adds the right tax.
+description: Set up the categories, tax types, jurisdictions, tables and rules your site uses to charge tax, classify your products so checkout adds the right tax, and use the EU VAT rates, import duty, TaxJar and the VAT one-stop-shop report.
 technical_manual:
   - modules/taxation
 ---
@@ -38,7 +38,7 @@ A **category** groups what you sell for tax purposes, for example *Electronics*,
 
 A **tax type** is a label for the kind of tax a rule produces, such as *SalesTax* or *VAT*. It groups taxes in reports and never changes the amount.
 
-Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *PST*, *QST*, *ExciseTax*, *AlcoholTax*, *TobaccoTax*, *TourismTax*, *LodgingTax*, *EnvironmentalTax*, *DigitalServicesTax* and *Other*. To add one, open **Commerce > Taxation > Types**, click **Add Tax Type**, enter a **Name** and an optional **Description**, and click **Save**. Delete the ones you never use to keep the rule editor short.
+Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *PST*, *QST*, *ExciseTax*, *AlcoholTax*, *TobaccoTax*, *TourismTax*, *LodgingTax*, *EnvironmentalTax*, *DigitalServicesTax*, *ImportDuty* and *Other*. To add one, open **Commerce > Taxation > Types**, click **Add Tax Type**, enter a **Name** and an optional **Description**, and click **Save**. Delete the ones you never use to keep the rule editor short.
 
 ## 3. Create jurisdictions
 
@@ -105,7 +105,8 @@ A **rule** is one tax: what it applies to, and how it is worked out. Several rul
 | **Jurisdiction** | The jurisdiction the rule belongs to, or **Any jurisdiction**. |
 | **Category** | The category the rule applies to, or **Any category** for everything. A rule also applies to items whose **Tax classification** is this category. |
 | **Customer type** | **Any customer**, **Consumer (B2C)** or **Business (B2B)**. |
-| **Minimum amount** / **Maximum amount** | Optional. The rule applies only when the taxable amount is at least the minimum and below the maximum. |
+| **Minimum amount** / **Maximum amount** | Optional. The rule applies only when the amount is at least the minimum and below the maximum. |
+| **Amounts compared with** | What the minimum and maximum are compared with: **Each item** (the default), each item's taxable amount; or **The whole order**, what the order's items come to before tax, shipping left out. The whole order suits an [import duty](#import-duty) charged only on orders above a value. |
 | **Tax is included in the item price** | Tick when your prices already include this tax, so it is worked out of the price instead of added on top. |
 | **Tax is compound (calculated on top of other taxes)** | Tick when this tax is charged on the price plus the taxes worked out before it. |
 | **Reverse charge (the customer accounts for the tax)** | For a business buyer, the tax is not charged; a zero line marked as reverse charge is shown instead. Other buyers are charged as usual. |
@@ -118,7 +119,7 @@ A **rule** is one tax: what it applies to, and how it is worked out. Several rul
 The list shows each rule's tax type, method, rate or amount, and priority.
 
 :::caution[Jurisdictions at checkout]
-A rule tied to a **Jurisdiction** only charges buyers whose address is in that jurisdiction. The checkout doesn't ask buyers for an address yet, so it can't tell where a buyer is: at checkout, only rules set to **Any jurisdiction** apply. To charge a tax on every sale, set its rule to **Any jurisdiction**. Your developer can give the checkout the buyer's address, and then rules for each jurisdiction apply to the buyers in it; see the [Taxation technical page](../../modules/taxation.md#tax-sourcing).
+A rule tied to a **Jurisdiction** only charges buyers whose address is in that jurisdiction. The checkout taxes an order where it ships to, or, when nothing ships, where the buyer is billed. Until the buyer has given an address, only rules set to **Any jurisdiction** apply. See the [Taxation technical page](../../modules/taxation.md#tax-sourcing).
 :::
 
 ## Where you sell from
@@ -179,3 +180,86 @@ A product with no category of its own takes the category of its tagged term. A c
 4. **Products:** classify televisions as *Electronics* and cigarettes as *Tobacco*.
 
 For a buyer in California, a television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary. A buyer outside California pays only the tobacco tax, which has no jurisdiction. The sales tax needs the buyer's address, which the checkout only knows when your developer supplies it.
+
+## Prices that include tax
+
+In many countries the price a shopper sees already includes VAT. To sell that way to some countries, add them to a [market](markets.md) with **Prices include tax** on. At checkout, the tax your rules give is then taken out of the prices instead of added on top, so the shopper pays the price they saw.
+
+## Taxes on the order
+
+The checkout's order summary shows each tax once for each rate, whatever the items it was charged on, such as *VAT 19%* and *VAT 7%*. A tax that was taken out of the prices says so: *VAT 19% (included)*.
+
+An order keeps the taxes it was charged: their names, types, places, rates, what they were charged on and the amounts. Reports, such as the [VAT one-stop shop (OSS)](#vat-one-stop-shop-oss-report) report, add them up, and apps see them through the [headless API](headless-api.md).
+
+## EU VAT standard rates
+
+The **EU VAT standard rates** recipe sets up VAT for the European Union in one step. It adds the 27 EU member states as jurisdictions (level **Country**), and a **Percentage** rule for each, with **Tax type** *VAT*, **Display name** *VAT*, the country's standard rate, and **Applies to shipping charges** ticked.
+
+1. Open **Configuration > Recipes**.
+2. Find **EU VAT standard rates** and click **Run**.
+3. Open **Commerce > Taxation > Rules** to see the rules, named after their countries, such as *Germany VAT*.
+
+:::caution[Check the rates]
+VAT rates change. Check each country's rate before you sell there, and add reduced rates for the products they apply to, such as books or food, as rules for those [categories](#1-create-tax-categories).
+:::
+
+Running the recipe again puts its jurisdictions and rules back as the recipe has them, so a rate you changed is set back.
+
+## Import duty
+
+Some countries charge **import duty** on goods brought in from abroad, often only on orders above a value. Charge it at checkout, so the buyer pays nothing on delivery:
+
+1. Add a jurisdiction for the destination country, such as *Canada* (level **Country**, country *Canada*), if you don't have one.
+2. Add a **Percentage** rule with **Tax type** *ImportDuty*, **Display name** *Import duty*, the country's **Jurisdiction** and its **Rate**.
+3. Set **Minimum amount** to the value duty starts at, such as *150*, and **Amounts compared with** to **The whole order**.
+
+An order to that country whose items come to 150 or more, before tax and without shipping, is charged the duty, on its own line in the order summary. A smaller order isn't. Leave **Applies to shipping charges** clear unless the country charges duty on shipping too.
+
+Sites set up before import duty was added get the *ImportDuty* tax type when they're updated.
+
+## VAT one-stop shop (OSS) report
+
+Sellers in the EU who sell to buyers in other EU countries declare the VAT on those sales in one return, the **one-stop shop** (OSS). The **VAT one-stop shop (OSS)** report gives its figures.
+
+| | |
+| --- | --- |
+| **Menu** | Reports > Commerce > VAT one-stop shop (OSS) |
+| **Permission** | Manage orders |
+| **Feature** | Orders and Reports |
+
+<AskYourAdmin />
+
+1. Set your store's country under **Commerce > Taxation > Origin** (see [Where you sell from](#where-you-sell-from)).
+2. Open the report and choose the quarter's first and last day as the period. Click **Show**.
+
+For the orders paid in the period, the report adds up the VAT charged on orders to EU countries other than your own, by the country they went to (the shipping address, or the billing address when nothing shipped) and the rate. For each currency you sold in it shows the **VAT due**, the number of countries, and a table with each country and rate: the orders, the **Taxable amount** and the **VAT**, with a total. A refund takes its share of the order's VAT off.
+
+Only taxes whose **Tax type** is *VAT* are counted. Orders to your own country, and to countries outside the EU, are left out. *No order paid in the period was charged VAT in another EU country.* means there's nothing to declare.
+
+## TaxJar
+
+For sales tax in the United States, where rates change by state, county and city, **TaxJar** can work out the tax instead of your own rules. You need a TaxJar account.
+
+| | |
+| --- | --- |
+| **Menu** | Commerce > Taxation > TaxJar |
+| **Permission** | Manage taxation |
+| **Feature** | TaxJar |
+
+<AskYourAdmin />
+
+1. In TaxJar, get an API token under **Account > TaxJar API**.
+2. Open **Commerce > Taxation > TaxJar**, fill in the fields (below), and save.
+
+| Field | What it does |
+| --- | --- |
+| **TaxJar API token** | Your TaxJar token. Once saved it's never shown again; leave it blank to keep it, or enter a new one to replace it. Without a token, your own tax rules work out tax. |
+| **Remove the token** | Shown once a token is saved. Stops using TaxJar: your own tax rules work out tax again. |
+| **Countries** | The two-letter codes of the countries TaxJar works tax out for, separated by commas. It starts with *US*. |
+| **Sandbox** | For a sandbox token from TaxJar, while you try it out. |
+
+Saving restarts your site, so the new settings are used at once. This takes a moment.
+
+For an order to one of those countries, with prices that don't include tax, TaxJar works out the tax on each item and on shipping from your store's address (**Commerce > Taxation > Origin**) and the address the order goes to. The order summary shows it as *Sales tax* (*VAT* for a country other than the United States), with the combined rate of the places that tax the address. Your own rules aren't used for that order. Orders to other countries, and orders in a market whose prices include tax, use your own rules.
+
+If TaxJar can't be reached, or can't work out the tax, your own tax rules work it out instead, so the sale goes on, and the problem is written to the site's log. Customers marked **Exempt from tax** are sent to TaxJar as exempt.

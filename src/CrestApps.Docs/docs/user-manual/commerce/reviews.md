@@ -24,6 +24,14 @@ After sending, the customer is told their review will show once you approve it. 
 
 Under the product's price, its stars, average and number of reviews link to the reviews.
 
+## Photos
+
+With the **Media** feature on, buyers can add up to three photos to their review: JPEG, PNG or WebP images of up to 5 MB each. They show with the review, on the product's page and under **Commerce > Reviews**. New photos replace the ones a review had.
+
+## Ask buyers for reviews
+
+Under **Settings > Commerce > Reviews**, tick **Ask buyers for reviews** and choose the **Days after paying**, such as 14. Each order's buyer then gets one email with a link to review each product they bought. Only buyers who said yes to news and offers are asked, and only for orders from the last 60 days. It needs your site's email, its base URL, and Customers.
+
 ## Approve reviews
 
 **Commerce > Reviews** lists the reviews waiting for approval, newest first. Each shows the product, who wrote it, the stars, the title and text, and whether it's a verified purchase.

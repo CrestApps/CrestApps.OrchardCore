@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
@@ -6,13 +7,15 @@ using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using ISession = YesSql.ISession;
 using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
 /// <summary>
 /// The CRM campaign performance report: per-campaign completed-versus-pending activity progress.
 /// </summary>
-public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
+public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase, IReport
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
@@ -42,13 +45,19 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-campaign-performance";
+    public static string Name => "omnichannel-campaign-performance";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Campaign performance"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CampaignPerformanceReportProvider>("Campaign performance");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per-campaign completed-versus-pending progress across the CRM activity inventory."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CampaignPerformanceReportProvider>("Per-campaign completed-versus-pending progress across the CRM activity inventory.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

@@ -12,10 +12,10 @@ public static class OmnichannelContactMatches
     /// <summary>
     /// Orders the matches by tier and removes converted leads and duplicates.
     /// </summary>
-    /// <param name="matches">The contact index rows that matched.</param>
+    /// <param name="matches">The index rows that matched.</param>
     /// <param name="leadContentTypes">The lead content types.</param>
     /// <returns>The matched content item ids, contacts first.</returns>
-    public static IReadOnlyList<string> Order(IEnumerable<OmnichannelContactIndex> matches, IReadOnlyCollection<string> leadContentTypes)
+    public static IReadOnlyList<string> Order(IEnumerable<IOmnichannelContactMatch> matches, IReadOnlyCollection<string> leadContentTypes)
     {
         var (contacts, leads) = Split(matches, leadContentTypes);
 
@@ -27,17 +27,17 @@ public static class OmnichannelContactMatches
     /// matching open lead. A contact and a lead at one number therefore resolve to the contact alone, while two
     /// contacts at one number still come back as two.
     /// </summary>
-    /// <param name="matches">The contact index rows that matched.</param>
+    /// <param name="matches">The index rows that matched.</param>
     /// <param name="leadContentTypes">The lead content types.</param>
     /// <returns>The matched content item ids of the best tier.</returns>
-    public static IReadOnlyList<string> BestTier(IEnumerable<OmnichannelContactIndex> matches, IReadOnlyCollection<string> leadContentTypes)
+    public static IReadOnlyList<string> BestTier(IEnumerable<IOmnichannelContactMatch> matches, IReadOnlyCollection<string> leadContentTypes)
     {
         var (contacts, leads) = Split(matches, leadContentTypes);
 
         return (contacts.Count > 0 ? contacts : leads).Distinct(StringComparer.Ordinal).ToArray();
     }
 
-    private static (List<string> Contacts, List<string> Leads) Split(IEnumerable<OmnichannelContactIndex> matches, IReadOnlyCollection<string> leadContentTypes)
+    private static (List<string> Contacts, List<string> Leads) Split(IEnumerable<IOmnichannelContactMatch> matches, IReadOnlyCollection<string> leadContentTypes)
     {
         var contacts = new List<string>();
         var leads = new List<string>();

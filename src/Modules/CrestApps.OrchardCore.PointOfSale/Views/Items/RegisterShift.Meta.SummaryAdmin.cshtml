@@ -1,0 +1,8 @@
+@model ShapeViewModel<RegisterShift>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Opened"]">
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: Model.Value.OpenedUtc, Format: "g"))
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Opened by"]">
+    <i class="fa-regular fa-user text-secondary me-1" aria-hidden="true"></i>@Model.Value.OpenedByName
+</span>

@@ -1,0 +1,4 @@
+@model ShapeViewModel<WebhookSubscription>
+
+<a asp-action="Deliveries" asp-controller="WebhooksAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Deliveries"]</a>
+<a asp-action="Edit" asp-controller="WebhooksAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>

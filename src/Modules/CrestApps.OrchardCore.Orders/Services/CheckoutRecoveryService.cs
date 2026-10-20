@@ -107,16 +107,23 @@ public sealed class CheckoutRecoveryService
                 return sent;
             }
 
-            var (subject, text, html) = Build(order, name, url, site.SiteName);
+            // Written in the language the buyer shopped in.
+            using var language = OrderCulture.Use(order.Culture);
+
+            var (builtSubject, builtText, builtHtml) = Build(order, name, url, site.SiteName);
+            var message = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Recovery, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
+            {
+                ["RecoveryUrl"] = url,
+            }, cancellationToken);
 
             try
             {
                 await emailService.SendAsync(new MailMessage
                 {
                     To = email,
-                    Subject = subject,
-                    TextBody = text,
-                    HtmlBody = html,
+                    Subject = message.Subject,
+                    TextBody = message.Text,
+                    HtmlBody = message.Html,
                 }, cancellationToken: cancellationToken);
             }
             catch (Exception exception)

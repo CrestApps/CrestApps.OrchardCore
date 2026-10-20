@@ -152,7 +152,7 @@ public sealed class OrderReturnsController : Controller
         return View(viewName, await _shapeFactory.CreateAsync<OrderReturnRequestViewModel>("OrderReturnRequest", model =>
         {
             model.Order = order;
-            model.Reasons = settings.Reasons ?? [];
+            model.Reasons = settings.GetReasons();
             model.AllowExchanges = settings.AllowExchanges;
             model.WindowDays = settings.WindowDays;
             model.Problems = problems;

@@ -67,6 +67,10 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         }
 
         session.Currency = order.Currency;
+
+        // What the buyer knows the order by, for a client that can't read the order itself.
+        global::OrchardCore.Entities.EntityExtensions.Put(session, new Checkout.Models.CheckoutReferenceNumber { Number = order.OrderNumber });
+
         session.Steps.Add(new CheckoutFlowStep
         {
             Key = OrderConstants.CheckoutStepKey,
@@ -165,16 +169,29 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.CheckoutSessionId = session.SessionId;
         order.Total = invoice.GrandTotal;
         order.TaxAmount = invoice.TaxAmount;
+        order.TaxLines = [.. invoice.TaxLines ?? []];
 
         // What the discounts took off, so the order's lines, shipping, discounts and tax add up to what was paid.
         order.Discounts = [.. (invoice.Discounts ?? [])
             .Where(discount => discount.Amount > 0m)
             .Select(discount => new OrderDiscount
             {
-                Code = discount.Code,
+                Code = discount.IsAutomatic ? null : discount.Code,
                 Description = discount.Description,
                 Amount = discount.Amount,
                 ProviderKey = discount.ProviderKey,
+                Target = discount.Target,
+            })];
+
+        // What a gift card or store credit paid toward the total, so the order shows how it was paid.
+        order.Tenders = [.. (invoice.Tenders ?? [])
+            .Where(tender => tender.Amount > 0m)
+            .Select(tender => new OrderTender
+            {
+                ProviderKey = tender.ProviderKey,
+                Reference = tender.Reference,
+                Description = tender.Description,
+                Amount = tender.Amount,
             })];
 
         // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's
@@ -201,6 +218,13 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
                 Amount = shipping.Amount,
                 LocationId = shipping.LocationId,
             };
+        }
+
+        // Paying a quote is accepting it.
+        if (order.Quote is { Status: OrderQuoteStatus.Sent } quote)
+        {
+            quote.Status = OrderQuoteStatus.Accepted;
+            quote.RespondedUtc = _clock.UtcNow;
         }
 
         await _orderStore.UpdateAsync(order);
@@ -332,6 +356,9 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             Description = OrderLineText.Describe(line),
             Amount = line.UnitPrice,
             Quantity = line.Quantity,
+
+            // A price staff agreed, such as on a quote, is the price: promotions don't come off it too.
+            ExcludeFromDiscounts = line.QuotedUnitPrice is not null,
             PriceId = line.PriceId,
             Sku = line.Sku,
             TaxCategoryCode = line.TaxCategoryCode,

@@ -1,0 +1,22 @@
+@model CrestApps.OrchardCore.Orders.Dashboard.SalesSummaryViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
+
+@* The Sales Summary dashboard widget: sales net of refunds in the store's currency, and the orders to ship. *@
+
+<div class="row g-2">
+    @foreach (var (label, figure) in new[] { (T["Today"], Model.Today), (T["Last 7 days"], Model.Last7Days), (T["Last 30 days"], Model.Last30Days) })
+    {
+        <div class="col-4">
+            <div class="border rounded p-2 text-center h-100">
+                <div class="fs-5 fw-bold text-nowrap">@ProductPriceFormatter.Format(figure.Sales, Model.Currency)</div>
+                <div class="text-muted small">@label &middot; @T.Plural(figure.Orders, "1 order", "{0} orders")</div>
+            </div>
+        </div>
+    }
+    <div class="col-12">
+        <a class="border rounded p-2 d-flex justify-content-between align-items-center text-decoration-none" asp-area="CrestApps.OrchardCore.Orders" asp-controller="OrdersAdmin" asp-action="Index">
+            <span class="text-muted small">@T["Orders to ship"]</span>
+            <span class="fs-5 fw-bold @(Model.ToShip > 0 ? "text-warning" : null)">@Model.ToShip</span>
+        </a>
+    </div>
+</div>

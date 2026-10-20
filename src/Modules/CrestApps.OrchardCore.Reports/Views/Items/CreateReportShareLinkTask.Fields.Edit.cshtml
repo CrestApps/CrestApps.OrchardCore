@@ -1,0 +1,61 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model CreateReportShareLinkTaskViewModel
+
+<partial name="_ReportWorkflowTaskFields" model="Model" />
+
+<div class="ocat-wrapper" asp-validation-class-for="Recipients">
+    <label class="ocat-label" asp-for="Recipients">@T["Recipients"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Recipients" />
+        <span asp-validation-for="Recipients"></span>
+        <span class="hint">@T["The user names or emails of the users of the site the link is for, separated by commas, with Liquid. Only they can open it, once signed in."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Note">
+    <label class="ocat-label" asp-for="Note">@T["Note"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Note" />
+        <span asp-validation-for="Note"></span>
+        <span class="hint">@T["Optional. What the link is for, with Liquid, sent with the email and shown on the report's Sharing tab."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ExpiresAfterDays">
+    <label class="ocat-label" asp-for="ExpiresAfterDays">@T["Expires after (days)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="1" class="form-control" asp-for="ExpiresAfterDays" />
+        <span asp-validation-for="ExpiresAfterDays"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxUses">
+    <label class="ocat-label" asp-for="MaxUses">@T["Most uses"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" class="form-control" asp-for="MaxUses" />
+        <span asp-validation-for="MaxUses"></span>
+        <span class="hint">@T["0 for no limit. Opening the report, changing its filters and exporting it are each a use."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowExport" />
+            <label class="form-check-label" asp-for="AllowExport">@T["Allow export"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="NotifyByEmail" />
+            <label class="form-check-label" asp-for="NotifyByEmail">@T["Email the link to the recipients"]</label>
+            <span class="hint dashed">@T["Needs the Email feature. Otherwise, send the link with another task."]</span>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small">@T["The output holds the link's Url, LinkId, ExpiresUtc, Recipients and Notified, such as {0}. The link opens the report with its owner's access, and can be revoked on the report's Sharing tab or under Tools > Shared Links.", "{{ Workflow.Output.ReportShareLink.Url }}"]</p>

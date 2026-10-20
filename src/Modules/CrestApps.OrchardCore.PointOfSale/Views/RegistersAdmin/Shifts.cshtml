@@ -1,0 +1,24 @@
+@model RegisterShiftsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PointOfSaleShifts" title="@T["Shifts"]" />
+</zone>
+
+<form asp-action="Shifts" method="post" id="register-shifts-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <admin-list name="PointOfSaleShifts" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No shifts yet. Staff open one at a register from the till app."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Register" position="20" title="@T["Register"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Opened" position="40" title="@T["Opened"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

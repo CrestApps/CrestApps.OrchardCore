@@ -1,0 +1,4 @@
+@model ShapeViewModel<Register>
+
+<a asp-action="Shifts" asp-controller="RegistersAdmin" asp-route-Options.RegisterId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Shifts"]</a>
+<a asp-action="Edit" asp-controller="RegistersAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>

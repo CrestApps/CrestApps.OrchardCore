@@ -355,6 +355,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
                 session.TryGet(out invoice);
                 expectedObligations = CheckoutObligations.GetExpectedObligationIds(invoice);
+
+                if (expectedObligations.Count == 0)
+                {
+                    await SupersedeUnexpectedAttemptsAsync(session, expectedObligations, cancellationToken);
+                }
             }
 
             var reconciliation = await _reconciliationService.ReconcileAsync(session, expectedObligations, cancellationToken);
@@ -589,6 +594,16 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             string.Equals(candidate.ProviderKey, provider.Key, StringComparison.OrdinalIgnoreCase) &&
             candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded);
 
+        // An attempt begun for a different total, before the buyer applied a gift card or a code, is not resumed: it
+        // would charge what the invoice no longer asks for. It's set aside, and a new one is made for the new total.
+        if (attempt?.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
+            !MatchesInvoice(attempt, invoice) &&
+            await TrySupersedeAsync(session, attempt, cancellationToken))
+        {
+            existingAttempts.Remove(attempt);
+            attempt = null;
+        }
+
         if (attempt?.State == PaymentAttemptState.Succeeded)
         {
             // Already paid. Nothing for the client to do for this obligation.
@@ -763,6 +778,67 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         return null;
     }
 
+    private static bool MatchesInvoice(PaymentAttempt attempt, CheckoutInvoice invoice)
+    {
+        var (amount, taxAmount) = GetObligationAmounts(invoice, attempt.ObligationId);
+
+        return attempt.ExpectedAmount == amount && attempt.ExpectedTaxAmount == taxAmount;
+    }
+
+    // An attempt the provider was already given is only set aside when the provider says nothing was paid, so a
+    // payment the buyer finished in another tab is never dropped.
+    private async Task<bool> TrySupersedeAsync(CheckoutSession session, PaymentAttempt attempt, CancellationToken cancellationToken)
+    {
+        if (attempt.State == PaymentAttemptState.Pending && _providerResolver.GetProvider(attempt.ProviderKey) is { } provider)
+        {
+            try
+            {
+                var verification = await provider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = attempt }, cancellationToken);
+
+                if (verification.Status == PaymentStatus.Succeeded)
+                {
+                    _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid before the total changed, so it stands.", attempt.ItemId, session.SessionId);
+
+                    return false;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Could not check attempt '{AttemptId}' of checkout '{SessionId}' before setting it aside, so it stands.", attempt.ItemId, session.SessionId);
+
+                return false;
+            }
+        }
+
+        await SupersedeAsync(attempt, cancellationToken);
+
+        return true;
+    }
+
+    private async Task SupersedeAsync(PaymentAttempt attempt, CancellationToken cancellationToken)
+    {
+        attempt.State = PaymentAttemptState.Canceled;
+        attempt.IsSuperseded = true;
+        attempt.FailureReason = "The total changed before it was paid.";
+
+        await _attemptStore.UpdateAsync(attempt, cancellationToken);
+    }
+
+    // Attempts begun for obligations the invoice no longer has, such as a card payment begun before a gift card was
+    // applied that now pays everything, are set aside, so they neither keep the checkout waiting nor get charged.
+    private async Task SupersedeUnexpectedAttemptsAsync(CheckoutSession session, IReadOnlyCollection<string> expectedObligations, CancellationToken cancellationToken)
+    {
+        foreach (var attempt in await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken))
+        {
+            if (attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
+                !attempt.IsSuperseded &&
+                !expectedObligations.Contains(attempt.ObligationId))
+            {
+                await TrySupersedeAsync(session, attempt, cancellationToken);
+            }
+        }
+    }
+
     private static PaymentAttempt CreateAttempt(CheckoutSession session, CheckoutInvoice invoice, string providerKey, string obligationId)
     {
         var (amount, taxAmount) = GetObligationAmounts(invoice, obligationId);
@@ -796,7 +872,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         if (string.Equals(obligationId, CheckoutObligations.OneTime, StringComparison.Ordinal))
         {
             var gross = invoice.InitialPaymentAmount ?? 0m;
-            var tax = invoice.TaxAmount;
+
+            // Balances such as gift cards are already off the gross; the payment provider carries the tax first, and
+            // only what they couldn't leave it is theirs.
+            var tax = Math.Min(Math.Max(0m, invoice.TaxAmount - invoice.TenderTaxAmount), gross);
 
             // InitialPaymentAmount already includes the exclusive tax folded in by the tax service, so the
             // taxable base is the remainder. Charging gross + tax again would double-charge the tax.
@@ -933,6 +1012,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         try
         {
+            // The commit before completing detaches the session, so a handler that loads it by id (an order event
+            // reading what the checkout carried) would get a second copy, and saving this one would then fail.
+            // Tracking it again first hands that handler this same instance.
+            await _sessionStore.SaveAsync(session, cancellationToken);
+
             // Completing handlers are invoked directly rather than through the swallow-and-log helper: a
             // handler that cannot fulfill the purchase must stop the checkout from being marked complete.
             foreach (var handler in _handlers)

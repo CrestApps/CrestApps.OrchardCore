@@ -1,0 +1,35 @@
+@model ShapeViewModel<Segment>
+
+@{
+    var rules = Model.Value.Rules ?? new SegmentRules();
+}
+<div class="admin-list-secondary">
+    @if (!string.IsNullOrEmpty(Model.Value.Description))
+    {
+        <span>@Model.Value.Description</span>
+    }
+    @if (rules.LastOrderAtLeastDaysAgo is { } lapsed)
+    {
+        <span class="badge ta-badge fw-normal">@T["No order in {0} days", lapsed]</span>
+    }
+    @if (rules.LastOrderWithinDays is { } recent)
+    {
+        <span class="badge ta-badge fw-normal">@T["Ordered in the last {0} days", recent]</span>
+    }
+    @if (rules.FirstOrderWithinDays is { } newer)
+    {
+        <span class="badge ta-badge fw-normal">@T["First order in the last {0} days", newer]</span>
+    }
+    @if (rules.MinOrders is { } minOrders)
+    {
+        <span class="badge ta-badge fw-normal">@T["{0}+ orders", minOrders]</span>
+    }
+    @if (rules.MinSpent is { } minSpent)
+    {
+        <span class="badge ta-badge fw-normal">@T["Spent {0}+", minSpent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)]</span>
+    }
+    @if (!string.IsNullOrEmpty(rules.Country))
+    {
+        <span class="badge ta-badge fw-normal">@rules.Country</span>
+    }
+</div>

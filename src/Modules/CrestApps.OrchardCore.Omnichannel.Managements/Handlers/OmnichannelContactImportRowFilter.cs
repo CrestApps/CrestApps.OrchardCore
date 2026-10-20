@@ -37,7 +37,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private string[] _selectedRegistryKeys = [];
     private Dictionary<string, SeenPhoneOwnerState> _seenPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string[]> _existingPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
-    private Func<Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>? _duplicateScope;
+    private Func<Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>? _duplicateScope;
     private Dictionary<int, List<PhoneEntry>> _batchPhoneEntries = [];
     private Dictionary<int, string> _batchSkipReasons = [];
 
@@ -313,7 +313,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     /// import compares against contacts and open leads, as its options say. Without the CRM feature there are no
     /// lead types and a contact import compares against every record, as it always did.
     /// </summary>
-    private async Task<Func<Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>?> GetDuplicateScopeAsync(
+    private async Task<Func<Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>?> GetDuplicateScopeAsync(
         string contentType,
         OmnichannelContactImportOptionsPart options)
     {
@@ -321,7 +321,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             ? []
             : (await _contactTypeProvider.GetLeadContentTypesAsync()).ToHashSet(StringComparer.Ordinal);
 
-        bool IsLead(Omnichannel.Core.Indexes.OmnichannelContactIndex index)
+        bool IsLead(Omnichannel.Core.Indexes.IOmnichannelContactMatch index)
             => !string.IsNullOrEmpty(index.ContentType) && leadTypes.Contains(index.ContentType);
 
         if (leadTypes.Contains(contentType))

@@ -37,6 +37,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -92,13 +93,21 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped<CrmCatalogSeeder>();
         services.AddScoped<LeadStatusFlagService>();
         services.AddScoped<LeadRatingProvider>();
-        services.AddScoped<LeadImportProvider>();
+
+        // Without the content import feature no past import waits to be recorded on its leads, and the import history
+        // tables do not exist, so the imports still being indexed are not looked up. CrmContentTransferStartup
+        // registers the provider that looks them up.
+        services.AddScoped(serviceProvider => new LeadImportProvider(
+            serviceProvider.GetRequiredService<ISession>(),
+            serviceProvider.GetRequiredService<ILocalClock>(),
+            serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>()));
         services.AddScoped<CrmAccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 
         services.AddNavigationProvider<CrmAdminMenu>();
         services.AddPermissionProvider<CrmPermissionProvider>();
         services.AddTransient<IContentsAdminListFilterProvider, CrmContentsAdminListFilterProvider>();
+        AddLeadListCount(services);
         services.AddShapeTableProvider<AccountListPartShapeTableProvider>();
 
         services.AddContactMethods();
@@ -107,6 +116,7 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped<IUnattendedLeadConverter, UnattendedLeadConverter>();
         services.AddScoped<ISubjectActionHandler, ConvertLeadSubjectActionHandler>();
         services.AddDisplayDriver<SubjectAction, LeadSubjectActionDisplayDriver>();
+        services.AddDisplayDriver<OmnichannelDisposition, LeadDispositionDisplayDriver>();
         services.AddDisplayDriver<OmnichannelActivityBatch, LeadBatchFilterDisplayDriver>();
         services.AddDisplayDriver<OmnichannelActivityBatch, LeadAIConversionBatchDisplayDriver>();
 
@@ -124,6 +134,25 @@ public sealed class CrmStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddCrmSearchEndpoints();
+    }
+
+    // Wraps the content list query service the Contents feature registered, so a leads list is counted from the
+    // lead index alone. The service is built from its registered type because the Contents module, which defines
+    // it, is not referenced by this one.
+    private static void AddLeadListCount(IServiceCollection services)
+    {
+        var descriptor = services.LastOrDefault(registration => registration.ServiceType == typeof(IContentsAdminListQueryService));
+
+        if (descriptor?.ImplementationType is not { } innerType)
+        {
+            return;
+        }
+
+        services.Remove(descriptor);
+        services.AddScoped<LeadListCountQueryFactory>();
+        services.AddScoped<IContentsAdminListQueryService>(serviceProvider => new LeadContentsAdminListQueryService(
+            (IContentsAdminListQueryService)ActivatorUtilities.CreateInstance(serviceProvider, innerType),
+            serviceProvider.GetRequiredService<LeadListCountQueryFactory>()));
     }
 }
 
@@ -177,6 +206,9 @@ public sealed class CrmContentTransferStartup : StartupBase
 
         // Only a tenant with the import feature has past imports to record on their leads.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LeadImportBackfillBackgroundTask>());
+
+        // Until that backfill finishes, the imports it has not reached yet are listed from the import history.
+        services.Replace(ServiceDescriptor.Scoped<LeadImportProvider, LeadImportProvider>());
     }
 }
 
@@ -191,9 +223,9 @@ public sealed class CrmReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadFunnelReportProvider>()
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadConversionReportProvider>()
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.OpportunityPipelineReportProvider>();
+            .AddReport<Reports.LeadFunnelReportProvider>()
+            .AddReport<Reports.LeadConversionReportProvider>()
+            .AddReport<Reports.OpportunityPipelineReportProvider>();
     }
 }
 

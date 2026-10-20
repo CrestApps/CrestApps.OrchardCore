@@ -1,0 +1,51 @@
+@using CrestApps.OrchardCore.Reports.Designer.ViewModels
+
+@model ReportDesignsDeploymentStepViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Designed Reports and Views"]</div>
+    <div class="ocat-end">
+        <div class="form-check mb-3">
+            <input class="form-check-input" asp-for="IncludeAll" data-bs-toggle="collapse" data-bs-target="#report-designs-list" aria-expanded="@(Model.IncludeAll ? "false" : "true")" aria-controls="report-designs-list" />
+            <label class="form-check-label" asp-for="IncludeAll">@T["Include all reports and views"]</label>
+            <span class="hint dashed">@T["Exports every designed report and reusable view, including the ones created after this plan."]</span>
+        </div>
+
+        <div id="report-designs-list" class="collapse@(Model.IncludeAll ? string.Empty : " show")">
+            <div class="mb-3">
+                <div class="fw-semibold mb-1">@T["Reports"]</div>
+                @if (Model.Reports.Length == 0)
+                {
+                    <p class="text-muted small mb-0">@T["There are no designed reports."]</p>
+                }
+                @for (var i = 0; i < Model.Reports.Length; i++)
+                {
+                    <div class="form-check">
+                        <input type="hidden" asp-for="Reports[i].ItemId" />
+                        <input asp-for="Reports[i].IsSelected" type="checkbox" class="form-check-input" />
+                        <label class="form-check-label" asp-for="Reports[i].IsSelected">@Model.Reports[i].DisplayText</label>
+                    </div>
+                }
+            </div>
+
+            <div class="mb-3">
+                <div class="fw-semibold mb-1">@T["Views"]</div>
+                @if (Model.Views.Length == 0)
+                {
+                    <p class="text-muted small mb-0">@T["There are no views."]</p>
+                }
+                @for (var i = 0; i < Model.Views.Length; i++)
+                {
+                    <div class="form-check">
+                        <input type="hidden" asp-for="Views[i].ItemId" />
+                        <input asp-for="Views[i].IsSelected" type="checkbox" class="form-check-input" />
+                        <label class="form-check-label" asp-for="Views[i].IsSelected">@Model.Views[i].DisplayText</label>
+                    </div>
+                }
+                <span class="hint">@T["The views the picked reports and views read are exported with them, so they run on the other site."]</span>
+            </div>
+        </div>
+
+        <p class="text-muted small mb-0">@T["Each item is exported with its owner's user name. On import, an item is owned by the user with the same user name when one exists. Share links are not exported."]</p>
+    </div>
+</div>

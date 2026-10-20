@@ -37,6 +37,8 @@ An administrator with the **Edit content types** permission usually does this on
 
 The part adds a fixed **Contact methods** list to the contact, where phone numbers and email addresses are stored. Dialers, loads, imports and exports always read numbers from this list, so do not remove or rename it. A phone number is saved in international format together with its country, so the right country flag shows when you edit it again.
 
+Every number in the list counts when someone calls or texts in: a contact who calls from their work number, or from a second cell number, is shown as that contact rather than as an unknown caller. A **Do not call** or **Do not SMS** on one contact also stops any other contact or lead that has the same number, whatever type each saved it as.
+
 The screencast below creates a *Lead* type with the **Omnichannel Contact** and **Title** parts, then adds a lead with a time zone and a cell phone number:
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a contact content type and a contact item" start={612} end={656} />
@@ -50,7 +52,7 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 
 ## Find a contact
 
-On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A plain number finds contacts whose main cell or home number contains those digits. This only happens on the Contacts list; on other content lists the search box matches names only.
+On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts whose main cell or home number **begins with** those digits, for example `702555`. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
 
 You can also use these search terms. The **Filters** menu of the list has a **Phone** card that reminds you of them.
 

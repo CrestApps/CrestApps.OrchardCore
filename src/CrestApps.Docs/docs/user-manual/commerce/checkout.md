@@ -1,7 +1,7 @@
 ---
 sidebar_label: Checkout
 title: Checkout
-description: What a buyer sees when they pay on your site, from the first step to the order confirmation, including promotion codes, card and wallet payments, and buying without an account.
+description: What a buyer sees when they pay on your site, from the first step to the order confirmation, including promotion codes, gift cards, store credit and points, card and wallet payments, and buying without an account.
 technical_manual:
   - modules/checkout
   - modules/payments
@@ -26,7 +26,7 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 The page has three parts:
 
 - **The steps** across the top, numbered in order. A finished step shows a check mark, and the buyer can click it to go back and change it. Steps not reached yet cannot be opened, so nobody reaches payment with an earlier step unfilled. When the checkout has only one step, the row is not shown.
-- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**. While the payment is being taken it shows **Processing…**. When the buyer started the checkout from a page of your site that asks to be returned to, such as a payment page or a list of payments, the **Payment** step (and the first step) also has a link back to that page, for example **Back to the payment page**. It reads **Back**, or **Leave checkout** when there is also a **Back** to the previous step, unless the page named its own wording.
+- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**, or **Place order** when nothing is left to pay, for example when a gift card or a code covers the whole order. While the payment is being taken it shows **Processing…**. When the buyer started the checkout from a page of your site that asks to be returned to, such as a payment page or a list of payments, the **Payment** step (and the first step) also has a link back to that page, for example **Back to the payment page**. It reads **Back**, or **Leave checkout** when there is also a **Back** to the previous step, unless the page named its own wording.
 - **The order summary** on the right, on every step, so the total is never a surprise.
 
 ### Steps a buyer may see
@@ -50,22 +50,24 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 Under **Settings > Commerce > Checkout**, **Checkout layout** is one of:
 
 - **A page per step**, the default: the steps described above, one page each.
-- **One page**: every step is a numbered section of one page, with the order summary beside them (below them on a phone). The buyer fills in their details and presses **Continue**. Once every step is complete, **Payment** appears below them on the same page, with **Pay now**. If the buyer then changes a detail, such as the shipping method, **Pay now** gives way to **Update order** with *You changed your details. Update your order to see the total before you pay.* Updating saves the change and shows the new total, so what they pay is what they see.
+- **One page**: every step is a numbered section of one page, with the order summary beside them (below them on a phone). The buyer fills in their details and presses **Continue**. Once every step is complete, **Payment** appears below them on the same page, with **Pay now** (or **Place order** when nothing is left to pay). If the buyer then changes a detail, such as the shipping method, **Pay now** gives way to **Update order** with *You changed your details. Update your order to see the total before you pay.* Updating saves the change and shows the new total, so what they pay is what they see.
 
 Opening the settings page takes the **Manage checkout settings** permission.
 
 ### The order summary
 
-The **Order summary** card lists each item with its price. A recurring item shows how often it is billed underneath, for example *Every 1 month*. When tax applies, the card shows a **Subtotal** and one line per tax, using the tax's display name (or **Tax**). The last line, **Due now**, is what the buyer pays today.
+The **Order summary** card lists each item with its price. A recurring item shows how often it is billed underneath, for example *Every 1 month*. When tax applies, the card shows a **Subtotal** and one line for each tax at each rate, using the tax's display name (or **Tax**) and its rate, such as *VAT 19%*. A tax taken out of prices that include it says *(included)*; see [Markets](markets.md#prices-that-include-tax). The last line, **Due now**, is what the buyer pays today.
+
+When a gift card, store credit or points pay part of the order, the card shows the **Total** first, then a line for each of them with what it pays, such as *Gift card ending 4F2K −$30*, *Store credit* or your rewards program's name, and then **Due now**: what's left to pay by card or another payment method. See [Gift cards, store credit and points](#gift-cards-store-credit-and-points).
 
 ## Pay
 
 On the **Payment** step, the buyer:
 
-1. Optionally enters a promotion code (see below).
+1. Optionally enters a promotion code, and pays part or all of the order with a gift card, store credit or points (see below).
 2. Picks a **Payment method**. Each method is a large button: **Credit or debit card (Stripe)** (*Pay securely online and confirm immediately.*), **Pay Later** (*Confirm now and pay later.*), **Bank transfer** and **Cash on delivery**, as you turned them on (see [Offline payments](payment-providers.md#offline-payments-pay-later-bank-transfer-and-cash-on-delivery)). Only methods that can pay for this purchase are shown: cash on delivery only for an order that is delivered. On a test or development site there may also be **Test payment**, which confirms the payment without taking any money; see [Try the checkout with test payments](payment-providers.md#try-the-checkout-with-test-payments).
 3. For card: picks one of their [saved cards](payment-providers.md#saved-cards), or enters the **Name on card** and the **Card details**, optionally ticking **Save this card for next time**, or taps an Apple Pay or Google Pay button when the device offers one.
-4. Clicks **Pay now**.
+4. Clicks **Pay now**. When a gift card, store credit or points pay everything, the page says *No payment is required to complete this checkout.* instead of listing payment methods, and the buyer clicks **Place order**.
 
 If the card's bank asks the cardholder to approve the payment, the approval window opens on top of the page. When the payment is confirmed, the buyer lands on the confirmation page.
 
@@ -84,17 +86,51 @@ If the card's bank asks the cardholder to approve the payment, the approval wind
 
 The **Promotion code** box sits under the order summary on the **Payment** step.
 
-1. Type the code in **Enter a code**. Capital letters do not matter.
+1. Type the code in **Enter a code** (or **Add another code** once one is applied). Capital letters do not matter.
 2. Click **Apply**. The page refreshes the order summary; no payment is taken.
-3. When the code takes money off, the box shows the amount, for example *USD 10.00 off applied.*, and the summary shows the new total.
+3. The box lists each code with what it took off, for example *$10 off*, and the summary shows the new total.
 
-The summary lists the discount as *Discount (CODE)*. It comes off the items, never shipping, and tax is worked out on the discounted prices.
+The summary lists a code's discount as *Discount (CODE)*, and an automatic discount by its description, such as *Summer sale*; an automatic discount needs no code. A discount comes off the items, unless it is free shipping, and tax is worked out on the discounted prices.
 
-To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.* A buyer who has used a code as often as it allows one customer sees *You have already used that code as many times as it allows.* Trying many codes in a row shows *Too many codes were tried. Wait a few minutes, then try again.*
+A buyer can apply up to five codes; a sixth shows *A checkout takes up to 5 codes. Remove one to add another.* When codes can't all be used together, the buyer gets the combination that takes off the most, and a code that isn't used shows *Not used: it can't be combined with* and the discount it gave way to. A code accepted that takes nothing off this order shows *Nothing off this order.* A buyer who opened a [discount link](coupons.md#share-a-discount-link) finds its code already in the box.
+
+To remove a code, click **Remove** next to it. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code limited to other payments or another customer shows *That code can't be used for this payment.* A buyer who has used a code as often as it allows one customer sees *You have already used that code as many times as it allows.* Trying many codes in a row shows *Too many codes were tried. Wait a few minutes, then try again.*
 
 If a code runs out or stops working while the buyer is paying, for example someone else took its last use, the payment does not go through. The page shows the order again without the code, with the new total, and says why, for example *The code LAST1 ran out before you paid, so it was taken off. Check your new total, then pay again.*
 
 When the buyer is paying an existing balance (a transaction, from **My Transactions** or a pay link), what the code takes off is taken off the balance: a 100% code pays it without a card, and a smaller code leaves the rest to pay. See [Coupons](coupons.md#coupons-on-a-payment-for-a-transaction).
+
+## Gift cards, store credit and points
+
+With the [Gift Cards](gift-cards.md), [Store Credit](store-credit-and-rewards.md#store-credit) or [Loyalty Points](store-credit-and-rewards.md#loyalty-points) features on, the **Payment** step has a box for each under the promotion code box. They pay like a second way to pay, not like a discount: tax is worked out on the full price, and they then pay toward the total, tax included. Whatever they don't cover is paid by card or another payment method.
+
+| Box | Who sees it | What the buyer does |
+| --- | --- | --- |
+| **Gift card** | Every buyer, while there's something left to pay. | Types the code in **Enter a gift card code** (or **Add another gift card**) and clicks **Apply**. The card is listed by its last four characters, with what it pays (*$30 used*) and what will be left on it (*$20 left after this order*). |
+| **Store credit** | A signed-in buyer with store credit in the order's currency. | Reads *You have $25 of store credit.* and clicks **Use my store credit**. The box then shows *$25 used* and what's left after this order. |
+| Your rewards program's name, such as **Rewards** | A signed-in buyer with points. | Reads *You have 1,250 points, worth $12.50.* and clicks **Use my points**. The box then shows *$12.50 paid with your points*. With too few points it says *You have 40 points. Spend them once you have 100.* |
+
+Each one pays up to what's on it, in the order the buyer applied them, and **Remove** takes it off again. The page refreshes the order summary each time; nothing is charged until the buyer pays. They pay only the one-time part of an order: never a subscription's recurring charges, a payment of an existing balance (a transaction or a pay link), or a payment that saves a card for later charges, such as installments. On those checkouts the boxes aren't shown.
+
+| What the buyer sees | What it means |
+| --- | --- |
+| *That gift card code is not recognized.* | No gift card has that code. |
+| *That gift card can't be used.* | The card is turned off. |
+| *That gift card has expired.* | Its expiry date has passed. |
+| *That gift card has nothing left on it.* | It is used up. |
+| *That gift card is in EUR, and this order is in USD.* | A card pays only toward orders in its own currency. |
+| *That gift card is being used at another checkout right now, or there's nothing left to pay.* | Another checkout holds what's on the card, or the order is already covered. |
+| *Too many codes were tried. Wait a few minutes, then try again.* | Many gift card codes were tried in a row from the same place. |
+
+While the buyer pays the rest, what each balance pays is held for this checkout, so the same money can't be spent twice, and it's taken off when the order is paid. A checkout that is canceled, fails or expires lets it go. If a balance changed in the meantime, for example the card was spent in another tab, the payment doesn't go through, the page shows the order again with what's left to pay, and says why:
+
+- *Gift card ending 4F2K has less on it than when it was applied, so it pays less. Check what's left to pay, then pay again.*
+- *Gift card ending 4F2K can't be used any more, so it was taken off. Check what's left to pay, then pay again.*
+- *We couldn't reserve Gift card ending 4F2K just now. Please try again.*
+
+A buyer who began paying by card and then applied a gift card isn't charged the old total: a card payment they didn't finish is set aside, and the next one is for what's due now. One they did finish, for example in another tab, stands.
+
+The order, its page, its invoice and its confirmation show each one as *Paid with Gift card ending 4F2K* (or *Paid with Store credit*) and the amount. When the order is refunded, the card is refunded first and the balances last; see [Refund an order](carts-and-orders.md#refund-an-order).
 
 ## Who the order is for
 

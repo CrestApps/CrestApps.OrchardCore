@@ -1,0 +1,155 @@
+@model CompanyEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CompanyEdit" title="@(Model.IsNew ? T["Add company"] : T["Edit company"])">
+        <breadcrumb-item id="Companies" action="Index" controller="CompaniesAdmin" area="@CompaniesConstants.Feature" permission="@CompaniesPermissions.ManageCompanies.Name">@T["Companies"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-itemId="@Model.ItemId" method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3" asp-validation-class-for="Name">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name"></span>
+        </div>
+        <div class="col-md-3 mb-3">
+            <label asp-for="TaxId" class="form-label">@T["Tax or VAT number"]</label>
+            <input asp-for="TaxId" class="form-control" />
+            <span class="hint">@T["Printed on its invoices."]</span>
+        </div>
+        <div class="col-md-3 mb-3">
+            <label asp-for="BillingEmail" class="form-label">@T["Billing email"]</label>
+            <input asp-for="BillingEmail" type="email" class="form-control" />
+            <span class="hint">@T["Optional. Gets its invoices too."]</span>
+        </div>
+    </div>
+
+    <fieldset class="mb-3">
+        <legend class="h5">@T["Buyers"]</legend>
+        <span asp-validation-for="Buyers" class="text-danger"></span>
+        <div class="row g-2 small text-body-secondary d-none d-md-flex mb-1">
+            <div class="col-md-6">@T["User name or email"]</div>
+            <div class="col-md-3">@T["Role"]</div>
+            <div class="col-md-3">@T["Order limit ({0})", Model.StoreCurrency]</div>
+        </div>
+        @for (var i = 0; i < Model.Buyers.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-md-6"><input asp-for="Buyers[i].User" class="form-control" placeholder="@T["User name or email"]" aria-label="@T["User name or email"]" /></div>
+                <div class="col-md-3">
+                    <select asp-for="Buyers[i].Role" class="form-select" aria-label="@T["Role"]">
+                        <option value="@CompanyBuyerRole.Buyer">@T["Buyer"]</option>
+                        <option value="@CompanyBuyerRole.Admin">@T["Admin"]</option>
+                    </select>
+                </div>
+                <div class="col-md-3"><input asp-for="Buyers[i].OrderLimit" type="number" step="0.01" min="0" class="form-control" placeholder="@T["No limit"]" aria-label="@T["Order limit"]" /></div>
+            </div>
+        }
+        <span class="hint">@T["The people who buy for the company, by the user name or email they sign in with. An admin sees all of the company's orders and approves orders over a buyer's limit. Save to add more rows; clear a row to remove a buyer."]</span>
+    </fieldset>
+
+    <fieldset class="mb-3">
+        <legend class="h5">@T["Payment terms"]</legend>
+        <div class="row">
+            <div class="col-md-3 mb-3" asp-validation-class-for="NetDays">
+                <label asp-for="NetDays" class="form-label">@T["Net days"]</label>
+                <input asp-for="NetDays" type="number" min="0" max="365" class="form-control" placeholder="@T["No terms"]" />
+                <span asp-validation-for="NetDays"></span>
+                <span class="hint">@T["Such as 30: what's owed is invoiced, due in this many days. Blank pays at checkout."]</span>
+            </div>
+            <div class="col-md-3 mb-3" asp-validation-class-for="DepositPercent">
+                <label asp-for="DepositPercent" class="form-label">@T["Deposit (%)"]</label>
+                <input asp-for="DepositPercent" type="number" step="0.01" min="0" max="100" class="form-control" />
+                <span asp-validation-for="DepositPercent"></span>
+                <span class="hint">@T["Paid by card at checkout; the rest goes on the invoice."]</span>
+            </div>
+            <div class="col-md-3 mb-3" asp-validation-class-for="CreditLimit">
+                <label asp-for="CreditLimit" class="form-label">@T["Credit limit ({0})", Model.StoreCurrency]</label>
+                <input asp-for="CreditLimit" type="number" step="0.01" min="0" class="form-control" placeholder="@T["No limit"]" />
+                <span asp-validation-for="CreditLimit"></span>
+                <span class="hint">@T["The most it may owe at once."]</span>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="MonthlyBudget" class="form-label">@T["Monthly budget ({0})", Model.StoreCurrency]</label>
+                <input asp-for="MonthlyBudget" type="number" step="0.01" min="0" class="form-control" placeholder="@T["No budget"]" />
+                <span class="hint">@T["Orders beyond it in a month need an admin's approval."]</span>
+            </div>
+        </div>
+        <div class="form-check">
+            <input asp-for="RequirePurchaseOrder" type="checkbox" class="form-check-input" />
+            <label asp-for="RequirePurchaseOrder" class="form-check-label">@T["Buyers give a purchase order number"]</label>
+            <span class="hint dashed">@T["They can't place an order without one; it's printed on the invoice."]</span>
+        </div>
+    </fieldset>
+
+    @if (Model.PriceLists.Count > 0)
+    {
+        <div class="mb-3">
+            <label asp-for="PriceListId" class="form-label">@T["Price list"]</label>
+            <select asp-for="PriceListId" asp-items="Model.PriceLists" class="form-select"><option value="">@T["The store's prices"]</option></select>
+            <span class="hint">@T["The prices its buyers pay."]</span>
+        </div>
+    }
+
+    <fieldset class="mb-3">
+        <legend class="h5">@T["Locations"]</legend>
+        <span asp-validation-for="Locations" class="text-danger"></span>
+        @for (var i = 0; i < Model.Locations.Count; i++)
+        {
+            <input type="hidden" asp-for="Locations[i].LocationId" />
+            <div class="row g-2 mb-2">
+                <div class="col-md-2"><input asp-for="Locations[i].Name" class="form-control" placeholder="@T["Name"]" aria-label="@T["Name"]" /></div>
+                <div class="col-md-3"><input asp-for="Locations[i].AddressLine1" class="form-control" placeholder="@T["Street address"]" aria-label="@T["Street address"]" /></div>
+                <div class="col-md-2"><input asp-for="Locations[i].City" class="form-control" placeholder="@T["City"]" aria-label="@T["City"]" /></div>
+                <div class="col-md-2"><input asp-for="Locations[i].Region" class="form-control" placeholder="@T["State or province"]" aria-label="@T["State or province"]" /></div>
+                <div class="col-md-2"><input asp-for="Locations[i].PostalCode" class="form-control" placeholder="@T["Postal code"]" aria-label="@T["Postal code"]" /></div>
+                <div class="col-md-1"><input asp-for="Locations[i].Country" class="form-control" maxlength="2" placeholder="@T["Country"]" aria-label="@T["Country"]" /></div>
+            </div>
+        }
+        <span class="hint">@T["The places the company has orders shipped to; its buyers pick one at checkout. The country is its two-letter code."]</span>
+    </fieldset>
+
+    <fieldset class="mb-3">
+        <legend class="h5">@T["Punchout (OCI)"]</legend>
+        <div class="form-check mb-2">
+            <input asp-for="PunchoutEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="PunchoutEnabled" class="form-check-label">@T["Its procurement system shops here by punchout"]</label>
+            <span class="hint dashed">@T["The system opens the store with the company's key and sends the buyer back with the cart, where the order is approved and placed."]</span>
+        </div>
+        <div class="mb-2">
+            <label asp-for="PunchoutUser" class="form-label">@T["Punchout buyer"]</label>
+            <input asp-for="PunchoutUser" class="form-control" autocomplete="off" placeholder="@T["User name or email"]" />
+            <span asp-validation-for="PunchoutUser" class="text-danger"></span>
+            <span class="hint">@T["One of the buyers above, who only buys: the procurement system shops as them."]</span>
+        </div>
+        @if (Model.PunchoutKeyCreatedUtc is { } created)
+        {
+            <p class="small text-body-secondary mb-2">@T["The key was made {0:d}.", created]</p>
+        }
+        <div class="form-check mb-2">
+            <input asp-for="NewPunchoutKey" type="checkbox" class="form-check-input" />
+            <label asp-for="NewPunchoutKey" class="form-check-label">@T["Make a new key"]</label>
+            <span class="hint dashed">@T["The old key stops working. A key is made the first time punchout is turned on; it's shown once, after saving."]</span>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.PunchoutUrl))
+        {
+            <p class="small mb-0">@T["Punchout address:"] <code>@Model.PunchoutUrl</code></p>
+        }
+    </fieldset>
+
+    <div class="mb-3">
+        <div class="form-check form-switch">
+            <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+            <span class="hint dashed">@T["A company that's off has its buyers buy for themselves, at checkout like anyone else."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

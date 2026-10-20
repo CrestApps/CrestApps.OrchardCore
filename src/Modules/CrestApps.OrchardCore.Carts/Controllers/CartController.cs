@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Carts.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
@@ -43,11 +44,18 @@ public sealed class CartController : Controller
     {
         var cart = await _cartService.GetCurrentAsync(HttpContext.RequestAborted);
         var pricing = await _cartService.PriceAsync(cart, HttpContext.RequestAborted);
+        var actions = new List<CartAction>();
+
+        foreach (var provider in HttpContext.RequestServices.GetServices<ICartActionProvider>())
+        {
+            actions.AddRange(await provider.GetActionsAsync(pricing, HttpContext.RequestAborted));
+        }
 
         var shape = await _shapeFactory.CreateAsync<CartViewModel>("Cart", model =>
         {
             model.Pricing = pricing;
             model.CheckoutUrl = Url.RouteUrl(CartConstants.RouteNames.Checkout);
+            model.Actions = actions;
         });
 
         return View(shape);

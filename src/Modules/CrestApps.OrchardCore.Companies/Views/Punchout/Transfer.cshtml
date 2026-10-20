@@ -1,0 +1,11 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="PunchoutTransfer" title="@T["Transfer to your procurement system"]">
+        <breadcrumb-item id="Cart" title="@T["Cart"]" href="@Url.RouteUrl("Cart")" />
+    </breadcrumb>
+</zone>
+
+<div class="container my-4" style="max-width: 40rem;">
+    @await DisplayAsync(Model)
+</div>

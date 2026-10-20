@@ -15,6 +15,10 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Shipping.Api;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -66,12 +70,16 @@ public sealed class Startup : StartupBase
         // The Shipping step of an order's checkout, after Contact.
         services.AddScoped<ShippingOrderRateService>();
         services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
+        services.AddScoped<ShippingCheckoutStepService>();
         services.AddDisplayDriver<CheckoutFlow, ShippingCheckoutFlowDisplayDriver>();
 
         // Shipments on the order's admin page and on the buyer's order pages, and the email that a shipment left.
         services.AddDisplayDriver<Order, OrderShipmentsDisplayDriver>();
         services.AddScoped<ShipmentEmailBuilder>();
         services.AddScoped<IShipmentEventHandler, ShippedEmailShipmentHandler>();
+        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
@@ -118,7 +126,7 @@ public sealed class DeploymentStartup : StartupBase
 public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IReport, ShippingPerformanceReport>();
+        => services.AddReport<ShippingPerformanceReport>();
 }
 
 /// <summary>
@@ -140,5 +148,15 @@ public sealed class EasyPostStartup : StartupBase
         services.AddScoped<EasyPostTrackingUpdater>();
         services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
+    }
+}
+
+[Feature(ShippingConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapShippingCheckoutApi();
+        routes.MapShipmentApi();
     }
 }

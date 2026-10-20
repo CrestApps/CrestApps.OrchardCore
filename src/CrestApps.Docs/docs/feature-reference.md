@@ -170,6 +170,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
+| `CrestApps.OrchardCore.Addresses.GooglePlaces` | Address Suggestions (Google Places) | [Addresses](./modules/addresses#address-suggestions) |
 | `CrestApps.OrchardCore.Products` | Products | [Products](./modules/products) |
 | `CrestApps.OrchardCore.Products.Elasticsearch` | Product Search (Elasticsearch) | [Products](./modules/products#search-servers) |
 | `CrestApps.OrchardCore.Products.Lucene` | Product Search (Lucene) | [Products](./modules/products#search-servers) |
@@ -182,6 +183,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Reports` | Reports | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.OpenXml` | Reports (OpenXml) | [Reports](./modules/reports) |
+| `CrestApps.OrchardCore.Reports.Builder` | Report Builder | [Report Builder](./modules/report-builder/) |
 
 ## Commerce
 
@@ -190,9 +192,24 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Customers` | Customers | [Customers](./modules/customers) |
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
+| `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
+| `CrestApps.OrchardCore.Companies` | Companies | [Companies](./modules/companies) |
+| `CrestApps.OrchardCore.Marketing` | Marketing | [Marketing](./modules/marketing) |
+| `CrestApps.OrchardCore.Carts.Wishlists` | Wishlists | [Carts and Orders](./modules/carts-and-orders#wishlists) |
+| `CrestApps.OrchardCore.Reports.Subscriptions` | Report Subscriptions | [Reports](./modules/reports#report-subscriptions) |
+| `CrestApps.OrchardCore.Products.Api` | Catalog API | [Products](./modules/products#api) |
+| `CrestApps.OrchardCore.Carts.Api` | Cart API | [Carts and Orders](./modules/carts-and-orders#api) |
+| `CrestApps.OrchardCore.Checkout.Api` | Checkout API | [Checkout](./modules/checkout#the-commerce-api) |
+| `CrestApps.OrchardCore.Orders.Api` | Orders API | [Carts and Orders](./modules/carts-and-orders#api) |
+| `CrestApps.OrchardCore.Customers.Api` | Customers API | [Customers](./modules/customers#api) |
+| `CrestApps.OrchardCore.Shipping.Api` | Shipping API | [Shipping](./modules/shipping#api) |
+| `CrestApps.OrchardCore.Inventory.Api` | Inventory API | [Inventory](./modules/inventory#api) |
+| `CrestApps.OrchardCore.Commerce.Webhooks` | Commerce Webhooks | [Commerce Webhooks](./modules/commerce-webhooks) |
+| `CrestApps.OrchardCore.PointOfSale` | Point of Sale | [Point of Sale](./modules/point-of-sale) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
+| `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
@@ -259,6 +276,8 @@ Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `Setting
 | `receipts` | `ManageReceiptSettings` | Receipts |
 | `inventory` | `ManageInventory` | Inventory |
 | `shipping` | `ManageShipping` | Shipping |
+| `taxjar` | `ManageTaxation` | TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`) |
+| `address-suggestions` | `ManageAddressSuggestions` | Address Suggestions (Google Places) (`CrestApps.OrchardCore.Addresses.GooglePlaces`) |
 | `subscriptions` | `ManageSubscriptionSettings` | Subscriptions, and its roles, Stripe currency and installment plan features |
 | `telephony` | `ManageTelephonySettings` | Telephony, the soft phone widget, Asterisk and Telnyx |
 | `sms` | `ManageSmsSettings` | Telnyx SMS (`CrestApps.OrchardCore.Telnyx.Sms`), whose settings section now also requires this permission, as Orchard Core's own SMS and Twilio sections do |

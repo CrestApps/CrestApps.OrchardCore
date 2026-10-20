@@ -68,4 +68,43 @@ public sealed class CouponMigrations : DataMigration
 
         return 2;
     }
+
+    /// <summary>
+    /// Marks the discounts that apply by themselves, without a code, so every checkout can find them.
+    /// </summary>
+    /// <returns>The schema version this migration upgrades to.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<CouponIndex>(table => table
+            .AddColumn<bool>("IsAutomatic", column => column.WithDefault(false)),
+            collection: CheckoutConstants.CouponCollectionName
+        );
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponIndex>(SchemaBuilder, "IDX_CouponIndex_Automatic", CheckoutConstants.CouponCollectionName, "IsAutomatic", "IsEnabled");
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the unique codes generated for a coupon.
+    /// </summary>
+    /// <returns>The schema version this migration upgrades to.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<CouponCodeIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("CouponId", column => column.WithLength(26))
+            .Column<string>("NormalizedCode", column => column.WithLength(64))
+            .Column<int>("RedemptionCount")
+            .Column<DateTime>("CreatedUtc"),
+            collection: CheckoutConstants.CouponCollectionName
+        );
+
+        // A code the buyer types is looked up here when it isn't a coupon's own; a coupon's page counts its codes.
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponCodeIndex>(SchemaBuilder, "IDX_CouponCodeIndex_Code", CheckoutConstants.CouponCollectionName, "NormalizedCode");
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponCodeIndex>(SchemaBuilder, "IDX_CouponCodeIndex_Coupon", CheckoutConstants.CouponCollectionName, "CouponId", "RedemptionCount");
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponCodeIndex>(SchemaBuilder, "IDX_CouponCodeIndex_ItemId", CheckoutConstants.CouponCollectionName, "ItemId");
+
+        return 4;
+    }
 }

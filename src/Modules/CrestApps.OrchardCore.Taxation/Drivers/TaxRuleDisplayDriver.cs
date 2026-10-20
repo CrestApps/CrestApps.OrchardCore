@@ -79,6 +79,7 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
             model.ReverseCharge = rule.ReverseCharge;
             model.AppliesToShipping = rule.AppliesToShipping;
             model.MinimumAmount = rule.MinimumAmount;
+            model.ThresholdBasis = rule.ThresholdBasis;
             model.MaximumAmount = rule.MaximumAmount;
             model.EffectiveFromUtc = rule.EffectiveFromUtc;
             model.EffectiveToUtc = rule.EffectiveToUtc;
@@ -150,6 +151,7 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
         rule.ReverseCharge = model.ReverseCharge;
         rule.AppliesToShipping = model.AppliesToShipping;
         rule.MinimumAmount = model.MinimumAmount;
+        rule.ThresholdBasis = model.ThresholdBasis;
         rule.MaximumAmount = model.MaximumAmount;
         rule.EffectiveFromUtc = model.EffectiveFromUtc;
         rule.EffectiveToUtc = model.EffectiveToUtc;

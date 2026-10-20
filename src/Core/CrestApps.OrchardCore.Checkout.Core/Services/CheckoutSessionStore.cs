@@ -23,7 +23,8 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     private static readonly GuestSessionTokenScope _guestTokenScope = new(
         CheckoutConstants.GuestTokenCookieName,
         CheckoutConstants.GuestTokenProtectorPurpose,
-        TimeSpan.FromDays(30));
+        TimeSpan.FromDays(30),
+        HeaderName: "X-Checkout-Token");
 
     private readonly IHttpContextAccessor _contextAccessor;
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;

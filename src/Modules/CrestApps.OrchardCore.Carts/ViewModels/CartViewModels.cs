@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Carts.Core.Models;
+using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 
 namespace CrestApps.OrchardCore.Carts.ViewModels;
@@ -168,11 +169,24 @@ public class CartViewModel
     /// (the Orders feature is off).
     /// </summary>
     public string CheckoutUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets what else can be done with the cart, such as asking for a quote.
+    /// </summary>
+    public IReadOnlyList<CartAction> Actions { get; set; } = [];
 }
 
 /// <summary>
 /// The cart link in the site header.
 /// </summary>
+/// <summary>
+/// Shown instead of the add to cart form when the shopper can't buy the product, such as outside its markets.
+/// </summary>
+public class AddToCartUnavailableViewModel
+{
+    public string Reason { get; set; }
+}
+
 public class CartLinkViewModel
 {
     public int ItemCount { get; set; }

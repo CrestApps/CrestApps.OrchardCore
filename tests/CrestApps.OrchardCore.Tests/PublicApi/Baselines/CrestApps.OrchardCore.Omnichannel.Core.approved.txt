@@ -150,6 +150,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string DisplayText { get; set; }
         public bool Enabled { get; set; }
     }
+    public interface IOmnichannelContactMatch
+    {
+        string ContentItemId { get; }
+        string ContentType { get; }
+        bool IsConverted { get; }
+    }
     public sealed class LeadImportIndex : YesSql.Indexes.MapIndex
     {
         public LeadImportIndex() { }
@@ -239,11 +245,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public bool DoNotSms { get; set; }
         public System.DateTime? DoNotSmsUtc { get; set; }
     }
-    public sealed class OmnichannelContactIndex : YesSql.Indexes.MapIndex
+    public sealed class OmnichannelContactIndex : YesSql.Indexes.MapIndex, CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch
     {
         public OmnichannelContactIndex() { }
         public string ContentItemId { get; set; }
         public string ContentType { get; set; }
+        public long DocumentId { get; set; }
         public bool IsConverted { get; set; }
         public bool Latest { get; set; }
         public string NormalizedPrimaryCellPhoneNumber { get; set; }
@@ -253,6 +260,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string PrimaryHomePhoneNumber { get; set; }
         public bool Published { get; set; }
         public string TimeZoneId { get; set; }
+    }
+    public sealed class OmnichannelContactPhoneNumberIndex : YesSql.Indexes.MapIndex, CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch
+    {
+        public OmnichannelContactPhoneNumberIndex() { }
+        public string ContentItemId { get; set; }
+        public string ContentType { get; set; }
+        public long DocumentId { get; set; }
+        public bool IsConverted { get; set; }
+        public bool Latest { get; set; }
+        public string NormalizedPhoneNumber { get; set; }
+        public string PhoneType { get; set; }
+        public bool Published { get; set; }
     }
     public sealed class OmnichannelMessageIndex : YesSql.Indexes.MapIndex
     {
@@ -1171,6 +1190,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool UseDoNotEmail { get; set; }
         public bool UseDoNotSms { get; set; }
     }
+    public enum OmnichannelContactVersion
+    {
+        Any = 0,
+        Published = 1,
+        Latest = 2,
+    }
     public sealed class OmnichannelCrmOptions
     {
         public OmnichannelCrmOptions() { }
@@ -1489,7 +1514,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public sealed class ContactOptOutResolver : CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver
     {
-        public ContactOptOutResolver(YesSql.ISession session) { }
+        public ContactOptOutResolver(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup) { }
         public System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContentDefinitionOmnichannelContactTypeProvider : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider
@@ -1669,6 +1694,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IOmnichannelContactPhoneLookup
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactPhoneNumberIndex>> FindByNumbersAsync(System.Collections.Generic.IReadOnlyCollection<string> normalizedPhoneNumbers, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelContactVersion version, System.Collections.Generic.IReadOnlyCollection<string> contentTypes = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactPhoneNumberIndex>> GetNumbersAsync(System.Collections.Generic.IReadOnlyCollection<string> contentItemIds, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelContactVersion version, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IOmnichannelContactTypeProvider
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -1818,8 +1848,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public static class OmnichannelContactMatches
     {
-        public static System.Collections.Generic.IReadOnlyList<string> BestTier(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex> matches, System.Collections.Generic.IReadOnlyCollection<string> leadContentTypes) { }
-        public static System.Collections.Generic.IReadOnlyList<string> Order(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex> matches, System.Collections.Generic.IReadOnlyCollection<string> leadContentTypes) { }
+        public static System.Collections.Generic.IReadOnlyList<string> BestTier(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch> matches, System.Collections.Generic.IReadOnlyCollection<string> leadContentTypes) { }
+        public static System.Collections.Generic.IReadOnlyList<string> Order(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch> matches, System.Collections.Generic.IReadOnlyCollection<string> leadContentTypes) { }
     }
     public static class OmnichannelContactPreferences
     {

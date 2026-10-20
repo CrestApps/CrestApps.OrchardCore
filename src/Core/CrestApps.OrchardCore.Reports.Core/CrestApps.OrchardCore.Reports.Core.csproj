@@ -13,6 +13,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Core" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="YesSql.Core" />
   </ItemGroup>
 
   <ItemGroup>

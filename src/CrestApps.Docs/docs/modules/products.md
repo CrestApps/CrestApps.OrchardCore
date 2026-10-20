@@ -6,6 +6,7 @@ description: Attach product pricing and type metadata to any Orchard Core conten
 user_manual:
   - user-manual/commerce/products-and-currencies
   - user-manual/commerce/product-listings
+  - user-manual/commerce/headless-api
 ---
 
 | | |
@@ -31,7 +32,7 @@ Because the part is a normal Orchard Core content part, products participate in 
 | Property | Type | Description |
 | --- | --- | --- |
 | `Price` | `decimal?` | The price of the item, expressed in the product's own `Currency`. It is required when the product can be bought or its price is shown, and optional otherwise. |
-| `Currency` | `string` | The ISO-4217 currency code the price is sold in (for example `USD`). When empty, the content type's `ProductPartSettings.DefaultCurrency` applies. A product owns its currency; prices are never converted between currencies. |
+| `Currency` | `string` | The ISO-4217 currency code the price is sold in (for example `USD`). When empty, the content type's `ProductPartSettings.DefaultCurrency` applies. A product owns its currency. Prices are converted only into a shopper's market currency, by [Markets](markets.md). |
 | `Sku` | `string` | An optional stock-keeping unit that uniquely identifies the product for carts, orders, and fulfilment. |
 | `CompareAtPrice` | `decimal?` | An optional "was" or list price. When it is higher than `Price`, it is shown struck through with the saving. |
 | `IsPurchasable` | `bool` | Whether this item can be bought online. Only used when the type's sales mode is *Per item*. |
@@ -165,7 +166,7 @@ Both the editable `ProductPart.Price` and the snapshot's unit price are `decimal
 Reading `ProductPart.Price` directly couples a caller to today's flat, per-item pricing. To keep checkout, payment, and future ordering flows stable while pricing rules evolve, resolve prices through a seam instead:
 
 - **`PriceResult`** is an immutable value that always pairs an amount with the currency it is expressed in — its `UnitPrice`, `Currency`, `Quantity`, and computed `Subtotal`. A price is never passed around without its currency.
-- **`IPriceResolver`** resolves a `PriceResult` from a `ProductSnapshotContext`. The default resolver returns the product's list price tagged with the product-owned currency. It never converts between currencies: when the context requests a currency that differs from the product's currency it returns `null` and logs a warning, so a price is never charged in the wrong currency.
+- **`IPriceResolver`** resolves a `PriceResult` from a `ProductSnapshotContext`. The default resolver returns the product's list price tagged with the product-owned currency. When the context requests another currency, a price the product lists in it wins; otherwise a one-time price is converted through **`IShopperCurrency`**. The default `IShopperCurrency` (`ProductOwnShopperCurrency`) converts nothing, and a recurring price or one the buyer names is never converted, so the resolver returns `null` and logs a warning rather than charge a price in the wrong currency. [Markets](markets.md#the-shoppers-currency-seam) registers an `IShopperCurrency` that converts by the shopper's market.
 
 A future pricing engine (customer-specific pricing, contract rates) can replace `IPriceResolver` to produce the same `PriceResult` without changing any consumer.
 
@@ -470,6 +471,38 @@ Three recipes show the feature end to end. They need a front-end theme on Bootst
 - **Product listing: online store sample** creates a *Store Product* type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a **Shop** listing page at `/shop`. It enables [Carts](carts-and-orders), so every product has *Add to cart*, plus Orders and [Customers](customers), and adds two sample customers: a person with a home and a work address, and a business in Canada with a tax id. It also enables [Inventory](inventory) and [Shipping](shipping): every product is counted (25 of most, a few at 2 to 4 so they show *Only N left*, and the *Adventure Works Everyday Backpack* sold out) and has a shipping weight, with boots in a *Bulky* class; the `Stock`, `ShippingZones` and `Settings` steps add the counts, zones for the United States (standard, express by weight, free from $100), Canada and the rest of the world, and three carriers with tracking links. The category filter offers the top level of the category tree, and a *Type* filter offers the level below once a category is picked.
 - **Product listing: real estate sample** creates a *Property* type that is listed but never sold online, with a city and neighborhood taxonomy, type, bedrooms, bathrooms, living area, year built, features and status, 20 properties (some with the price on request and an inquiry button that schedules a viewing), and a **Homes for sale** listing page at `/homes`.
 - **Product listing: vehicle dealership sample** creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
+
+## Product feeds
+
+The **Product Feeds** feature (`CrestApps.OrchardCore.Products.Feeds`) publishes the products for shopping channels:
+
+- `feeds/products.xml` is Google Merchant Center's RSS 2.0 with the `g:` attributes, which Meta and TikTok catalogs read too.
+- `feeds/products.csv` has the same columns.
+
+Both take `?currency=` (a market's currency, converted with `IShopperCurrency`) and `?key=` when `ProductFeedSettings.Key` is set. `ProductFeedService` caches a feed for 15 minutes per currency.
+
+`ProductFeedBuilder` reads the published items of every product type, 200 at a time. An item is a product that can be bought here with its price shown and isn't recurring, or each enabled variant of one with variants. Its attributes are:
+
+| Attribute | From |
+| --- | --- |
+| `id`, `item_group_id` | The SKU, or the item id; a variant's group is its product. |
+| `title`, `description` | The title (with the variant's options), and `HtmlBodyPart`, `MarkdownBodyPart` or `SeoMetaPart` as plain text. |
+| `link`, `image_link`, `additional_image_link` | The display route on the site's `BaseUrl`, and the first `MediaField`'s photos (a variant's own first). |
+| `availability`, `availability_date` | `IProductAvailabilityProvider`: `in_stock` (or untracked), `out_of_stock`, `backorder`, or `preorder` with its release date. |
+| `price`, `sale_price`, `sale_price_effective_date` | The variant's, the product's or its default one-time price, never a buyer's own (`IBuyerPriceProvider` isn't asked); the sale price while a sale is on or coming, with its dates. |
+| `brand`, `gtin`, `mpn`, `identifier_exists` | `ProductFeedPart`, else a term of a field or taxonomy named for brands, else `DefaultBrand`; `identifier_exists` is `no` without a brand and a GTIN or MPN. |
+| `condition`, `google_product_category`, `product_type` | `ProductFeedPart` or the defaults; the path of the product's first other taxonomy term. |
+| `color`, `size` | A variant's options named Color or Size, or a text field named Color. |
+
+`ProductFeedValidator` checks each item against Merchant Center's rules: the lengths, absolute links, a photo, an availability and condition it knows, a price above zero, a sale price below it, and a GTIN's check digit. An item that fails is left out and listed. **Settings > Commerce > Product feeds** (`ManageProductFeeds`) shows the feed addresses, the items in and why the others aren't, and the defaults.
+
+The attachable **Product Feed** part (`ProductFeedPart`: `Brand`, `Gtin`, `VariantGtins`, `Mpn`, `Condition`, `GoogleProductCategory`, `ExcludeFromFeeds`) goes on the product types that need them.
+
+## API
+
+The **Catalog API** feature (`CrestApps.OrchardCore.Products.Api`, it needs Product Listing) maps `GET products` and `GET products/{id}` into the commerce JSON API at `api/commerce/v1`. Both allow guests. The list is searched through `IProductSearchService` over the product types the caller may view (`ViewContent`), with the listing pages' sort keys (`newest`, `price-asc`, `price-desc`, `name`, `featured`, or the recommended order). Each product is priced for the caller through `IPriceResolver`, as the product page prices it, and its availability comes from the `IProductAvailabilityProvider`s. With the **Inventory API** on, `GET products/{id}/availability` gives the stock at each location.
+
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Recipes and schema
 

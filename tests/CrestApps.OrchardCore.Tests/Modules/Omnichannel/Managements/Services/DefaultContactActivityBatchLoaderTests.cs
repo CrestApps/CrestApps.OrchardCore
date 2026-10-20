@@ -829,7 +829,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             new SqliteDbConnectionAccessor(connectionString),
             [],
             Options.Create(sourceOptions),
-            new ContactOptOutResolver(session),
+            new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session)),
+            ContactPhoneTestStore.CreateLookup(session),
             new NoNotInServiceNumbers(),
             TestContactMethods.Accessor,
             NullLogger<DefaultContactActivityBatchLoader>.Instance,
@@ -1076,6 +1077,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         [
             new ContentItemIndexProvider(),
             CreateContactIndexProvider(),
+            ContactPhoneTestStore.CreatePhoneNumberIndexProvider(),
             new OmnichannelActivityIndexProvider(),
             new LeadIndexProvider(),
             new LeadImportIndexProvider(),
@@ -1150,6 +1152,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
         await CrmMigrations.CreateLeadIndexAsync(schemaBuilder);
         await CrmMigrations.CreateLeadImportIndexAsync(schemaBuilder);
+        await OmnichannelContactsMigrations.CreatePhoneNumberIndexTableAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

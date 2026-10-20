@@ -1,13 +1,16 @@
 ---
 sidebar_label: Customers
 title: Customers
-description: A customer record for everyone who buys from the store, linked to their Orchard Core user when they have an account.
-user_manual: user-manual/commerce/customers
+description: A customer record for everyone who buys from the store, linked to their Orchard Core user when they have an account, with store credit, loyalty points and referrals.
+user_manual:
+  - user-manual/commerce/customers
+  - user-manual/commerce/store-credit-and-rewards
+  - user-manual/commerce/headless-api
 ---
 
 | | |
 | --- | --- |
-| **Feature** | `CrestApps.OrchardCore.Customers` |
+| **Features** | `CrestApps.OrchardCore.Customers`, `CrestApps.OrchardCore.Customers.CheckoutDetails` (Checkout details), `CrestApps.OrchardCore.Customers.StoreCredit` (Store Credit), `CrestApps.OrchardCore.Customers.Loyalty` (Loyalty Points), `CrestApps.OrchardCore.Customers.Referrals` (Referrals), `CrestApps.OrchardCore.Customers.Api` (Customers API) |
 | **Core** | `CrestApps.OrchardCore.Customers.Core` |
 | **Category** | Commerce |
 | **Depends on** | Commerce, `OrchardCore.Users` |
@@ -79,7 +82,46 @@ The **Checkout details** feature (`CrestApps.OrchardCore.Customers.CheckoutDetai
 
 ## Storefront account pages
 
-`account/details` (`AccountDetails`) and `account/addresses` (`AccountAddresses`, with `.../add`, `.../{addressId}` and `.../{addressId}/delete`) edit the signed-in buyer's customer record and address book on the storefront, through `CustomerAccountPages`, the same validation as **My Account**.
+`account/details` (`AccountDetails`) and `account/addresses` (`AccountAddresses`, with `.../add`, `.../{addressId}` and `.../{addressId}/delete`) edit the signed-in buyer's customer record and address book on the storefront, through `CustomerAccountPages`, the same validation as **My Account**. With their features on, `account/store-credit`, `account/rewards` and `account/refer` show the buyer's [store credit](#store-credit), [points](#loyalty-points) and [referral link](#referrals); each is in the account menu with **Manage own customer profile and addresses**.
+
+## Sections on the customer's page
+
+The customer's admin page (`CustomersAdminController.Edit`) builds the customer's `DetailAdmin` display through `IDisplayManager<Customer>` and renders it below the orders, as `CustomerEditViewModel.Sections`. A module adds a section with a `DisplayDriver<Customer>` that answers only `context.DisplayType == "DetailAdmin"` and places its shape in the `Content` zone; the `Customer.DetailAdmin` template renders that zone. Store credit (`Content:5`) and loyalty points (`Content:6`) use it.
+
+## Store credit
+
+The **Store Credit** feature (`CrestApps.OrchardCore.Customers.StoreCredit`, depends on Customers and Orders) keeps money the store owes a customer, given by hand or as a refund, and lets it pay toward the signed-in customer's checkouts as a [tender](checkout#balances-that-pay-after-tax), after tax.
+
+- **The account.** A `StoreCreditAccount` (a `CatalogItem` in the `Customers` collection, `StoreCreditAccountIndex` on customer, currency and balance, `StoreCreditMigrations`) holds one customer's `Balance` in one `Currency`, with `Activity` (`StoreCreditActivity`: `CreatedUtc`, `Amount`, `Balance` after, `Reason`, `SessionId`, `Actor`). `ChangeBalance` never goes below zero and always writes the activity. `IStoreCreditStore` (`StoreCreditStore`, with concurrency checks) adds `FindAsync(customerId, currency)` and `ListByCustomerAsync`.
+- **Changing it.** `StoreCreditService.ChangeAsync(customerId, currency, amount, reason, actor, sessionId)` makes the account on a first credit, and otherwise changes it under `CheckoutTenderLocks.GetKey(StoreCreditService.TenderKey, accountId)`, the lock the checkout's ledger takes. It returns `null` when the lock is busy, or when there's nothing to take credit from.
+- **Paying with it.** `StoreCreditTenderProvider` is the `ICheckoutTenderProvider` with the key `store-credit`. Store credit belongs to an account, so `FindForCheckoutAsync` resolves it only from the session's `OwnerId`, through the user's customer, in the invoice's currency, and its lines pay only from the buyer's own account, whatever the selection names. The line's description is *Store credit*. `StoreCreditCheckoutFlowDisplayDriver` renders `CheckoutStoreCredit` at `Aside:7` for a signed-in buyer with credit, on a checkout that doesn't settle an existing balance or save a payment method. Its button posts `apply-tender:store-credit` (`StoreCreditCheckoutFlowDisplayDriver.ApplyAction`), and **Remove** posts `remove-tender:store-credit:` and the account id.
+- **Refunds as credit.** The provider is also the `IOrderStoreCreditRefunder` for the [Orders](carts-and-orders#managing-an-order) feature: `CanRefundAsync` is true when the order's `UserId` has a customer, and `RefundAsync` adds the amount in the order's currency with the reason *Refund of order …* and the order's checkout session id.
+- **Admin.** `CustomerStoreCreditDisplayDriver` adds the `CustomerStoreCredit_DetailAdmin` section: the balances, the latest 20 changes, and for **Manage customers** a form that posts to `StoreCreditAdminController.Change` (`Admin/customers/{customerId}/store-credit`, with `amount`, `currency` and a required `reason`). A guest customer can't be given credit.
+- **Storefront.** `account/store-credit` (`AccountStoreCredit`, `StoreCreditAccountController`) shows the signed-in customer's credit and the latest 50 changes, and `StoreCreditAccountMenu` adds **Store credit** to the account menu.
+
+## Loyalty points
+
+The **Loyalty Points** feature (`CrestApps.OrchardCore.Customers.Loyalty`, depends on Customers and Orders) gives a signed-in customer points for what they buy, and lets them spend the points toward later checkouts as a tender.
+
+- **The account.** A `LoyaltyAccount` (in the `Customers` collection, `LoyaltyAccountIndex` on the customer, `LoyaltyMigrations`) holds whole `Points` and `Activity` (`LoyaltyActivity`: `Points` changed, `Balance`, `Kind`, `Reason`, `OrderId`, `SessionId`, `Actor`). `LoyaltyActivityKind` is `Earned`, `Reversed`, `Spent`, `Returned` or `Adjusted`. `ChangePoints` never goes below zero and records the change that actually happened. `GetEarnedFor(orderId)` is what an order earned and hasn't had taken back.
+- **Settings.** `LoyaltySettings` (**Settings > Commerce > Rewards**, group `loyalty`, `CustomersConstants.LoyaltySettingsGroupId`, permission **Manage customers**): `ProgramName` (blank shows *Rewards*), `PointsPerUnit` (1, 0 or more), `PointValue` (0.01, more than zero) and `MinimumPointsToRedeem` (100, 1 or more). `LoyaltyService.GetSettingsAsync` fills in the name.
+- **Earning.** `LoyaltyOrderEventHandler.PaidAsync` gives the order's signed-in buyer `LoyaltyService.GetPointsFor(order, settings)`, once per order: the floor of `PointsPerUnit` times the order's `Subtotal`, less its discounts whose `OrderDiscount.Target` isn't `DiscountTarget.Shipping`, less what points paid (`Order.Tenders` with the key `loyalty-points`). Shipping and tax earn nothing. It adds an order note.
+- **Taking back.** `CanceledAsync` takes back everything the order still has earned. `RefundedAsync` takes back the share of the points the order earned that the refund is of the order's total, rounded, never more than it still has earned. Both are `Reversed` changes.
+- **Spending.** `LoyaltyTenderProvider` is the `ICheckoutTenderProvider` with the key `loyalty-points`, for the session owner's customer only, described by the program's name. It offers nothing below `MinimumPointsToRedeem`. A balance is worth `LoyaltyService.GetValue(points, settings, currency)`, the points times `PointValue` to the cent below. `DebitAsync` spends `GetPointsWorth(amount)`, the points that pay the amount rounded up, never more than the customer has; `CreditAsync` gives back the points an amount is worth, as `Returned`. `LoyaltyCheckoutFlowDisplayDriver` renders `CheckoutLoyalty` at `Aside:8`, posting `apply-tender:loyalty-points` and `remove-tender:loyalty-points:` and the account id.
+- **Changing points by hand.** `LoyaltyService.ChangeAsync(customerId, points, kind, reason, actor, orderId)` works like store credit, under `CheckoutTenderLocks.GetKey(LoyaltyService.TenderKey, accountId)`. `CustomerLoyaltyDisplayDriver` adds `CustomerLoyalty_DetailAdmin`, with a form that posts to `LoyaltyAdminController.Change` (`Admin/customers/{customerId}/loyalty`, `points` and a required `reason`, as `Adjusted`).
+- **Storefront.** `account/rewards` (`AccountRewards`, `LoyaltyAccountController`) shows the points, their value, how they're earned and spent, and the latest 50 changes. `LoyaltyAccountMenu` adds **Rewards** to the account menu, and `LoyaltySettingsAdminMenu` the settings page.
+
+## Referrals
+
+The **Referrals** feature (`CrestApps.OrchardCore.Customers.Referrals`, depends on Customers and Orders) gives each signed-in customer a referral link. A friend who opens it can get a single-use discount, and the customer is rewarded with store credit or points for the friend's first order.
+
+- **The profile.** A `ReferralProfile` (in the `Customers` collection, `ReferralProfileIndex` on customer and code, `ReferralMigrations`) holds the customer's `Code` and `Referrals`: one `ReferralRecord` per rewarded friend (`FriendEmail` in lower case, `FriendName`, the friend's first name, `OrderId`, `OrderNumber`, `Reward`, the reward's description or `null`, and `RewardKind`, `RewardAmount`, `RewardCurrency` and `RewardPoints`, what was given, which a canceled order takes back whatever the settings say by then, `CreatedUtc`). `ReferralService.GetOrCreateAsync(customerId)` makes it the first time the customer's account page is opened, with an 8-character code from the alphabet without 0, O, 1 or I.
+- **Settings.** `ReferralSettings` (**Settings > Commerce > Referrals**, group `referrals`, permission **Manage customers**): `FriendCouponId` (a coupon that isn't automatic, or `null`), `RewardKind` (`None`, `StoreCredit` or `Points`), `RewardAmount` (10), `RewardPoints` (500) and `MinimumOrderAmount` (0).
+- **The link.** `GET refer/{code}` (`ReferralController`) stores the code in the `orchard-referral` cookie (`ReferralService.CookieName`; HTTP-only, essential, the tenant's path, 30 days) and redirects to the home page with a message. When the store offers a coupon that is redeemable now, and this browser hasn't opened this link before, it generates one single-use code of it with the prefix `REF-` (`ICouponStore.GenerateCodesAsync(coupon, 1, "REF-", usesPerCode: 1)`) and stores it in the [discount link](checkout#discount-links-and-generated-codes) cookie (`CheckoutConstants.DiscountLinkCookieName`) for 30 days, so it is applied to the friend's checkouts. Generating codes is rate limited per address (`IPaymentAttemptLimiter`, scope `referral-link`). A code that matches no profile says the link isn't valid; a signed-in customer opening their own link is told so, and gets no code.
+- **Remembering it.** `ReferralCheckoutHandler.ActivatingAsync` puts the cookie's code on each new checkout as a `CheckoutReferral`, except one that settles an existing balance.
+- **The reward.** `ReferralOrderEventHandler.PaidAsync` reads the paid order's checkout session. It rewards the profile's customer once, and only when the order has an email; the friend isn't the customer (by email or user); no record of the profile names the friend's email; the friend has no other paid order (by `UserId`, or for a guest by email, through `IOrderStore.PageAsync`); and the order's `Subtotal`, less its discounts that didn't come off shipping, reaches `MinimumOrderAmount`. The reward is `RewardAmount` of store credit in the order's currency through `StoreCreditService`, or `RewardPoints` through `LoyaltyService` (as `Adjusted`), when the referrer has an account and that feature is on; the record is kept either way, and an order note names the referrer and the reward.
+- **Taking it back.** `CanceledAsync` removes the friend's record, so they can be referred again, and takes back `RewardAmount` or `RewardPoints` for the current `RewardKind` when a reward was given. A refund doesn't.
+- **Storefront.** `account/refer` (`AccountReferrals`, `ReferralAccountController`) shows the link (`{scheme}://{host}{pathBase}/refer/{code}`), what a friend gets (the coupon's description), what the customer gets, and the friends rewarded. `ReferralAccountMenu` adds **Refer a friend** to the account menu, and `ReferralSettingsAdminMenu` the settings page.
 
 ## Merging guests into an account
 
@@ -140,6 +182,17 @@ The `Customers` recipe step adds or updates guest and business customers, for sa
 
 A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. Customers are personal data, so there is no deployment step that exports them. The **Product listing: online store sample** recipe uses this step for its two sample customers.
 
+## API
+
+The **Customers API** feature (`CrestApps.OrchardCore.Customers.Api`) maps into the commerce JSON API at `api/commerce/v1`:
+
+- `me` and `me/addresses`, the signed-in buyer's account and address book, through `CustomerAccountPages` and `CustomerAddressBook` with **Manage own customer profile and addresses**, held to the same rules as **My Account**.
+- `customers` and `customers/{customerId}`, read-only, with **View customers**.
+- With Orders and the Checkout API on, `PUT checkout/{id}/contact`, the Contact step, through `CustomerContactStepService`.
+- With Store Credit or Loyalty Points and the Checkout API on, `checkout/{id}/store-credit` and `checkout/{id}/points`, for signed-in buyers.
+
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
+
 ## Admin
 
 **Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active, and their address book (`customers/{customerId}/addresses/...`). An anonymized customer's addresses can't be edited.
@@ -150,7 +203,7 @@ A customer is matched by `ItemId`, then by the email of a guest, so running a re
 
 | Permission | Allows |
 | --- | --- |
-| **Manage customers** | Adding, editing, exporting and erasing customers, and the Customers settings. Implies **View customers**. |
+| **Manage customers** | Adding, editing, exporting and erasing customers, and the Customers settings. Giving and taking store credit and points, and the **Rewards** and **Referrals** settings. Implies **View customers**. |
 | **View customers** | Listing and opening customers, read-only. |
 | **Manage own customer profile and addresses** | Using **My Account**. Granted to the Authenticated role by default. |
 

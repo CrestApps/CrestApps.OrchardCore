@@ -7,6 +7,9 @@
  * Postcode…), which are required, and whether the region is chosen from a list. Fields the country does not use are
  * set aside and disabled, so they post nothing. Without the script the server lays the form out again when it comes
  * back.
+ *
+ * When the site suggests addresses, typing a street lists addresses for it under the field; picking one fills in the
+ * rest of the address, switching the country first when it's in another.
  */
 (function () {
   'use strict';
@@ -62,6 +65,9 @@
   if (typeof document === 'undefined' || !document.querySelectorAll) {
     return;
   }
+
+  // The layout each editor is waiting for, after its country changed.
+  var layouts = new WeakMap();
 
   function fieldsOf(wrapper) {
     return wrapper.querySelectorAll('input, select, textarea');
@@ -208,7 +214,7 @@
         return;
       }
 
-      fetch(url + encodeURIComponent(code), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      layouts.set(editor, fetch(url + encodeURIComponent(code), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
         .then(function (response) {
           return response.ok ? response.json() : null;
         })
@@ -220,8 +226,249 @@
         })
         .catch(function () {
           // The fields stay as they are; the server checks the address against the country anyway.
-        });
+        }));
     });
+
+    var suggestUrl = editor.getAttribute('data-suggest-url');
+    var resolveUrl = editor.getAttribute('data-resolve-url');
+
+    if (suggestUrl && resolveUrl) {
+      suggest(editor, country, suggestUrl, resolveUrl);
+    }
+  }
+
+  // Sets a field's value as if it had been typed, so other scripts on the page see it.
+  function setValue(field, value) {
+    if (!field || field.disabled) {
+      return;
+    }
+
+    field.value = value || '';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function fill(editor, address) {
+    /** @param {string} selector */
+    function field(selector) {
+      return /** @type {HTMLInputElement | null} */ (editor.querySelector(selector));
+    }
+
+    setValue(field('input[autocomplete="address-line1"]'), address.addressLine1);
+    setValue(field('input[autocomplete="address-line2"]'), address.addressLine2);
+    setValue(field('input[autocomplete="address-level3"]'), address.dependentLocality);
+    setValue(field('input[autocomplete="address-level2"]'), address.city);
+    setValue(field('input[autocomplete="postal-code"]'), address.postalCode);
+
+    var list = /** @type {HTMLSelectElement | null} */ (editor.querySelector('[data-address-region-list]'));
+
+    if (list && !list.disabled) {
+      var region = (address.region || '').toUpperCase();
+      var match = Array.prototype.find.call(list.options, function (option) {
+        return option.value.toUpperCase() === region || option.text.toUpperCase() === region;
+      });
+
+      setValue(list, match ? match.value : '');
+    } else {
+      setValue(field('[data-address-region-text]'), address.region);
+    }
+  }
+
+  function newSession() {
+    return globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()) + '-' + String(Math.random()).slice(2);
+  }
+
+  // Addresses suggested for the street as it's typed, in a list under the field.
+  function suggest(editor, country, suggestUrl, resolveUrl) {
+    var street = /** @type {HTMLInputElement | null} */ (editor.querySelector('input[autocomplete="address-line1"]'));
+
+    if (!street || !street.parentElement) {
+      return;
+    }
+
+    var listId = street.id + '-suggestions';
+    var list = document.createElement('div');
+
+    list.id = listId;
+    list.className = 'list-group position-absolute shadow-sm address-suggestions';
+    list.style.zIndex = '1050';
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', editor.getAttribute('data-suggest-label') || '');
+    list.hidden = true;
+
+    street.parentElement.classList.add('position-relative');
+    street.insertAdjacentElement('afterend', list);
+    street.setAttribute('role', 'combobox');
+    street.setAttribute('aria-autocomplete', 'list');
+    street.setAttribute('aria-controls', listId);
+    street.setAttribute('aria-expanded', 'false');
+
+    var session = newSession();
+    var timer = 0;
+    var latest = 0;
+    var active = -1;
+    /** @type {{ id: string, text: string }[]} */
+    var items = [];
+
+    function close() {
+      list.hidden = true;
+      list.replaceChildren();
+      items = [];
+      active = -1;
+      street.setAttribute('aria-expanded', 'false');
+      street.removeAttribute('aria-activedescendant');
+    }
+
+    function highlight(index) {
+      var options = list.querySelectorAll('[role="option"]');
+
+      active = index;
+      options.forEach(function (option, position) {
+        option.classList.toggle('active', position === index);
+        option.setAttribute('aria-selected', position === index ? 'true' : 'false');
+      });
+
+      if (index >= 0 && options[index]) {
+        street.setAttribute('aria-activedescendant', options[index].id);
+      } else {
+        street.removeAttribute('aria-activedescendant');
+      }
+    }
+
+    function pick(index) {
+      var item = items[index];
+
+      close();
+
+      if (!item) {
+        return;
+      }
+
+      var query = '?id=' + encodeURIComponent(item.id) + '&session=' + encodeURIComponent(session);
+
+      // A pick ends the session; the next address typed is another.
+      session = newSession();
+
+      fetch(resolveUrl + query, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (address) {
+          if (!address) {
+            return;
+          }
+
+          var hasCountry = address.country && Array.prototype.some.call(country.options, function (option) {
+            return option.value === address.country;
+          });
+
+          // Another country is laid out first, so its fields are there to fill.
+          if (hasCountry && country.value !== address.country) {
+            country.value = address.country;
+            country.dispatchEvent(new Event('change', { bubbles: true }));
+
+            return Promise.resolve(layouts.get(editor)).then(function () {
+              fill(editor, address);
+            });
+          }
+
+          fill(editor, address);
+        })
+        .catch(function () {
+          // The shopper types the rest themselves.
+        });
+    }
+
+    function show(suggestions) {
+      list.replaceChildren();
+      items = suggestions || [];
+      active = -1;
+
+      items.forEach(function (item, index) {
+        var option = document.createElement('button');
+
+        option.type = 'button';
+        option.id = listId + '-' + index;
+        option.className = 'list-group-item list-group-item-action small';
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', 'false');
+        option.tabIndex = -1;
+        option.textContent = item.text;
+
+        // Picked before the field loses focus and closes the list.
+        option.addEventListener('mousedown', function (event) {
+          event.preventDefault();
+          pick(index);
+        });
+
+        list.appendChild(option);
+      });
+
+      // Right under the street field, as wide as it.
+      list.style.left = street.offsetLeft + 'px';
+      list.style.top = street.offsetTop + street.offsetHeight + 'px';
+      list.style.width = street.offsetWidth + 'px';
+      list.hidden = items.length === 0;
+      street.setAttribute('aria-expanded', items.length > 0 ? 'true' : 'false');
+    }
+
+    street.addEventListener('input', function (event) {
+      // Only what the shopper types is looked up, not the street a pick filled in.
+      if (!event.isTrusted) {
+        return;
+      }
+
+      var text = street.value.trim();
+      var request = ++latest;
+
+      window.clearTimeout(timer);
+
+      if (text.length < 3) {
+        close();
+
+        return;
+      }
+
+      timer = window.setTimeout(function () {
+        var query = '?q=' + encodeURIComponent(text) + '&country=' + encodeURIComponent(country.value || '') + '&session=' + encodeURIComponent(session);
+
+        fetch(suggestUrl + query, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+          .then(function (response) {
+            return response.ok ? response.json() : [];
+          })
+          .then(function (suggestions) {
+            // Only the latest typing is shown, however the answers arrive.
+            if (request === latest && document.activeElement === street) {
+              show(suggestions);
+            }
+          })
+          .catch(function () {
+            close();
+          });
+      }, 250);
+    });
+
+    street.addEventListener('keydown', function (event) {
+      if (list.hidden || items.length === 0) {
+        return;
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        highlight((active + 1) % items.length);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        highlight(active <= 0 ? items.length - 1 : active - 1);
+      } else if (event.key === 'Enter' && active >= 0) {
+        event.preventDefault();
+        pick(active);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
+
+    street.addEventListener('blur', close);
   }
 
   function initializeAll() {

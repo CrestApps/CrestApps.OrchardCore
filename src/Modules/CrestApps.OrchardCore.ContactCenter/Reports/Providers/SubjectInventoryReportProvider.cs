@@ -1,15 +1,18 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 /// <summary>
 /// The Contact Center subject inventory report: per-subject completed-versus-pending activity progress.
 /// </summary>
-public sealed class SubjectInventoryReportProvider : ContactCenterReportBase
+public sealed class SubjectInventoryReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SubjectInventoryReportProvider"/> class.
@@ -26,16 +29,19 @@ public sealed class SubjectInventoryReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-subject-inventory";
+    public static string Name => "contact-center-subject-inventory";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Subject inventory"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<SubjectInventoryReportProvider>("Subject inventory");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per-subject completed-versus-pending progress across the activity inventory."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<SubjectInventoryReportProvider>("Per-subject completed-versus-pending progress across the activity inventory.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.CrmCampaigns;
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

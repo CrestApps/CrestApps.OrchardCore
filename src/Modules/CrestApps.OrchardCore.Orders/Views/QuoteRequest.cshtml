@@ -1,0 +1,37 @@
+@model QuoteRequestViewModel
+
+@* A signed-in buyer's form to send their cart as a quote request. *@
+
+<h1 class="h3 mb-3">@T["Request a quote"]</h1>
+<p class="text-body-secondary">@T["We'll price the items in your cart and email you a quote. Your cart is emptied; the quote shows under your orders, where you pay it or turn it down."]</p>
+
+@if (Model.Problems.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0 ps-3">
+            @foreach (var problem in Model.Problems)
+            {
+                <li>@problem</li>
+            }
+        </ul>
+    </div>
+}
+
+<form method="post" action="@Url.RouteUrl("QuoteRequest")" class="no-multisubmit">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label for="QuoteMessage" class="form-label">@T["Your message"]</label>
+        <textarea id="QuoteMessage" name="Message" class="form-control" rows="5" maxlength="2000">@Model.Message</textarea>
+        <span class="hint">@T["Optional. Such as the quantities you need, or when you need them by."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label for="QuotePurchaseOrderNumber" class="form-label">@T["Purchase order number"]</label>
+        <input id="QuotePurchaseOrderNumber" name="PurchaseOrderNumber" value="@Model.PurchaseOrderNumber" class="form-control" maxlength="64" autocomplete="off" />
+        <span class="hint">@T["Optional. Your reference for the order, printed on the invoice."]</span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">@T["Send the request"]</button>
+    <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the cart"]</a>
+</form>

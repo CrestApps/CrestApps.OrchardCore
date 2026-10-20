@@ -2,12 +2,14 @@
 sidebar_label: Shipping
 title: Shipping
 description: Shipping zones by country and region, the methods each zone offers, the rate providers that price them, store pickup, shipments, carrier rates and labels through ICarrierProvider and EasyPost, and product shipping data.
-user_manual: user-manual/commerce/shipping
+user_manual:
+  - user-manual/commerce/shipping
+  - user-manual/commerce/headless-api
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Shipping`, `CrestApps.OrchardCore.Shipping.EasyPost` (EasyPost) |
+| **Features** | `CrestApps.OrchardCore.Shipping`, `CrestApps.OrchardCore.Shipping.EasyPost` (EasyPost), `CrestApps.OrchardCore.Shipping.Api` (Shipping API) |
 | **Core** | `CrestApps.OrchardCore.Shipping.Core` |
 | **Category** | Commerce |
 | **Depends on** | Commerce, Products, Addresses, `OrchardCore.Contents` |
@@ -28,7 +30,7 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 
 - **`IShippingRateService`**
   - `FindZoneAsync(address)` returns the first zone by `Position` (then name) that covers the address, else the `RestOfWorld` zone, else `null`.
-  - `GetRatesAsync(ShippingRateRequest)` asks the provider of each enabled method of that zone, in order. Methods in another currency, or whose provider is missing (logged), are skipped. Class surcharges are added, and amounts are rounded to the currency and never negative.
+  - `GetRatesAsync(ShippingRateRequest)` asks the provider of each enabled method of that zone, in order. Methods in another currency, or whose provider is missing (logged), are skipped. A shopper in a [market](markets.md#shipping) gets the zone's methods in the market's currency, or else the others converted into it through `IShopperCurrency`. Class surcharges are added, and amounts are rounded to the currency and never negative.
 - **`ShippingRateRequest`**: `Destination` (`Address`), `Currency`, and `Lines` of `ShippingRequestLine` (`ContentItemId`, `VariantId`, `Title`, `Quantity`, `UnitPrice`, `Weight` per unit, `ShippingClass`), with `Subtotal`, `TotalWeight` and `ItemCount`.
 - **`ShippingRate`**: `RateId` (the method id, then `:option` for a provider with several), `ZoneId`, `MethodId`, `ProviderName`, `Name`, `Description`, `Amount`, `Currency` and `TaxCategoryCode`.
 - **`IShippingRateProvider`**: `Name`, `DisplayName`, `Description`, and `GetRatesAsync(ShippingRateContext)` returning none, one or several rates. `ShippingRateContext` has the `Zone`, `Method` and `Request`, and `CreateRate(amount, option, name)`.
@@ -72,6 +74,16 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 - **`CarrierShippingRateProvider`** (`Carrier`) quotes the order's weight plus `PackagingWeight`, in the default box, from `ShipFrom` to the destination; caches a quote for ten minutes per destination and weight; keeps the `CarrierRateSettings.Carriers` and the order's currency; and offers the cheapest `MaxRates` with the markup, named like *USPS Ground Advantage*, with the business days as the description. Without a default carrier provider, a ship-from address or a destination, or when the quote fails (logged), it offers `FallbackAmount` or nothing.
 - **Labels** (`ShipmentLabelsAdminController`, `FulfillOrders`): `shipping/shipments/{shipmentId}/label` for a pending shipment that isn't a pickup, prefilled with the items' weight plus the box; `/label/rates` quotes the parcel; `/label/buy` buys the chosen rate, keeps the label on the shipment and ships it with the label's carrier, tracking number and link, which sends the shipped email. `OrderShipmentsDisplayDriver` shows **Buy label** when there's a default carrier provider.
 - **EasyPost** (feature `CrestApps.OrchardCore.Shipping.EasyPost`): `EasyPostCarrierProvider` calls EasyPost's API through the `EasyPost` named `HttpClient`. `EasyPostSettings` (the **EasyPost** tab of **Settings > Commerce > Shipping**, for `ManageShipping`) keeps `IsEnabled`, and `ApiKey` and `WebhookSecret` protected with data protection (purpose `EasyPostSettings`). Enabling it while no provider is the default makes it the default; disabling the default clears it. Saving it with a public https `BaseUrl` registers the webhook through EasyPost's API (`RegisterWebhookAsync`) with a secret made for it, again when the address or the key changes, and keeps `WebhookId` and `WebhookUrl`; the store never enters a secret. `POST shipping/easypost/webhook` (`EasyPostWebhook`, `EasyPostWebhookController`) accepts only bodies of up to 512 KB signed with the secret (`X-Hmac-Signature`, HMAC-SHA256); `EasyPostTrackingUpdater` applies `tracker.created` and `tracker.updated` events to the shipment with that tracking number, and delivers a shipped shipment when the tracker says `delivered`.
+
+## API
+
+The **Shipping API** feature (`CrestApps.OrchardCore.Shipping.Api`, it needs Shipping and the Checkout API) maps into the commerce JSON API at `api/commerce/v1`:
+
+- The checkout's Shipping step, through `ShippingCheckoutStepService`: `checkout/{id}/pickup-locations`, `checkout/{id}/shipping-rates` (a quote for an address) and `PUT checkout/{id}/shipping` (a pickup location, or an address and its rate).
+- `me/orders/{orderId}/shipments`, the signed-in buyer's tracking, with **View own orders**.
+- The staff fulfillment endpoints, through `IShipmentService` with `FulfillOrders`: `orders/{orderId}/shipments` (what's left to ship, and packing a shipment), and `shipments/{shipmentId}/ship` and `/deliver`.
+
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Admin
 
