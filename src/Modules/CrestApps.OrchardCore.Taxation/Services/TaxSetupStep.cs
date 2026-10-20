@@ -32,7 +32,7 @@ internal sealed class TaxSetupStep : IStoreSetupStep
 
     public async Task<StoreSetupStepDescription> DescribeAsync(CancellationToken cancellationToken = default)
     {
-        var count = (await _rules.GetAllAsync()).Count;
+        var count = (await _rules.GetAllAsync(cancellationToken)).Count;
 
         return new StoreSetupStepDescription
         {

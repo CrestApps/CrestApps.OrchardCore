@@ -49,7 +49,7 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
 
     public async Task<StoreSetupStepDescription> DescribeAsync(CancellationToken cancellationToken = default)
     {
-        var zones = (await _catalog.GetAllAsync()).Where(zone => zone.Methods.Any(method => method.Enabled)).ToList();
+        var zones = (await _catalog.GetAllAsync(cancellationToken)).Where(zone => zone.Methods.Any(method => method.Enabled)).ToList();
 
         return new StoreSetupStepDescription
         {
@@ -78,13 +78,13 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
 
         var name = S["Everywhere"].Value;
 
-        if (await _catalog.FindByNameAsync(name) is not null)
+        if (await _catalog.FindByNameAsync(name, cancellationToken) is not null)
         {
             return StoreSetupActionResult.Failure(S["There's a shipping zone named {0} already. Add a rate to it under Shipping zones.", name]);
         }
 
         var currency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
-        var zone = await _manager.NewAsync();
+        var zone = await _manager.NewAsync(cancellationToken: cancellationToken);
 
         zone.Name = name;
         zone.RestOfWorld = true;
@@ -100,7 +100,7 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
         method.Put(new FlatRateSettings { Amount = Math.Round(amount, 2, MidpointRounding.AwayFromZero) });
         zone.Methods.Add(method);
 
-        await _manager.CreateAsync(zone);
+        await _manager.CreateAsync(zone, cancellationToken);
 
         return StoreSetupActionResult.Success(S["Orders ship anywhere for {0} {1}.", amount.ToString("0.00", CultureInfo.CurrentCulture), currency]);
     }
