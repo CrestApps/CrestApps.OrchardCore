@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 to 6 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built) and [Phase 6 as built](#phase-6-as-built)); phases 7 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 7 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built), [Phase 6 as built](#phase-6-as-built) and [Phase 7 as built](#phase-7-as-built)); phases 8 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -415,6 +415,29 @@ Not built yet, and why:
 - **Store credit and points at a register.** The register's checkout belongs to the staff member; spending a customer's balances there needs the customer's consent at the till.
 - **Offline selling (P-D10).** The API takes orders as they happen; accepting ones made earlier needs stock reconciled when they arrive.
 - **A headless storefront starter.** The API and its OpenAPI document are what a starter builds on; a sample app is its own repository.
+
+## Phase 7 as built
+
+One branch, a commit per slice:
+
+- **PG1a markets and the shopper's currency.** A Markets feature (Commerce › Markets): a market is a set of countries, each in one market only, with a currency, an exchange rate from the store's currency that the store sets (P-D7), a rounding rule that rounds converted prices up (none, whole units, .99, .95), a language, whether its prices include tax, and on or off. The shopper's market is the one they picked in the storefront's picker (a cookie), else the one of their culture's country; an app names it with the `market` query value or the `X-Market` header; the admin never has one. Products.Core has the seam, `IShopperCurrency` (the default sells each product in its own currency): the price resolver uses a product's own price in the market's currency, else converts a one-time price and rounds it; subscriptions and amounts the buyer types are never converted. The cart is priced in the shopper's currency and moves to a new one when they change market, without calling it a price change; product cards, the product page (variants and add-ons), checkout and the catalog API show converted prices; shipping uses a zone's methods in the market's currency or converts the store's. A market whose prices include tax makes the checkout's tax inclusive (`MarketCheckoutTaxProfileHandler`). Sorting and the listing's price filter stay in the store's currency.
+- **PG1b what each market sells.** "Not sold in" on a product's editor; Products.Core's `IProductSaleRestriction` seam makes the add to cart button say so, the cart refuse it and the catalog API mark it not purchasable.
+- **PG1c address suggestions.** Addresses.Core's `IAddressAutocompleteProvider`, endpoints for suggestions and the parts of the one picked (60 requests a minute for each visitor, since each call is billed), the address editor's suggestion list under the street, and an Address Suggestions (Google Places) feature whose key is kept protected on the server.
+- **PG2 languages.** An order keeps the culture its buyer shopped in, and its confirmation, shipped, return, gift card and recovery emails are written in it (`OrderCulture`); a market's language switches the storefront to it.
+- **PG3a VAT on orders.** An order keeps its tax lines, the API order shows its taxes, and the checkout summary shows each tax and rate once.
+- **PG3b the OSS report.** Reports › VAT one-stop shop: VAT on orders to other EU countries by country and rate, refunds taken off in proportion, the store's own country left out; and an EU VAT standard rates recipe for the 27 member states.
+- **PG3c duties.** An import duty tax type, and rule thresholds that can be the whole order's (`TaxRule.ThresholdBasis`), so a duty is charged only above a country's threshold and shown as its own line.
+- **PG3d tax connectors.** A TaxJar feature on `ITaxDeterminationProvider` for the countries it's set up for, with prices that exclude tax; when it can't answer, the order isn't taken rather than taxed by a guess.
+
+The exit gate holds: a shopper picks Germany, sees euros and German on the listing, product page and cart, pays the price shown with 19% VAT taken out of it, and the order shows under Germany at 19% in the OSS report.
+
+Not built yet, and why:
+
+- **Hiding a product from a market's listing.** It shows there as not sold; leaving it out needs the market in the index of every search backend (SQL, Lucene, Elasticsearch, Azure AI Search).
+- **One product across its translations.** Orchard Core's content localization makes each translation its own item, with its own stock and prices; selling them as one needs the cart, stock and prices keyed by the localization set.
+- **Shipping thresholds in a market's currency.** Free-shipping and table thresholds compare the order in its own currency with the method's amounts.
+- **Live exchange rates.** Rates are the store's (P-D7); a provider is a later option.
+- **Avalara.** TaxJar is the first connector; Avalara is another provider on the same seam.
 
 ## Headless API and point of sale (phase 6, planned)
 
