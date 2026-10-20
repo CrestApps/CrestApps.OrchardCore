@@ -4,7 +4,7 @@
 
 <div class="mb-3">
     <label asp-for="ApiKey" class="form-label">@T["TaxJar API token"]</label>
-    <input asp-for="ApiKey" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new token to replace it."] : null)" />
+    <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new token to replace it."] : null)" />
     <span class="hint">@(Model.HasApiKey ? T["A token is saved, and TaxJar works out tax. It's never shown again."] : T["Without a token, your own tax rules work out tax."])</span>
 </div>
 
