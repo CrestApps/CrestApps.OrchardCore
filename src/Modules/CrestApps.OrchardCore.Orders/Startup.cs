@@ -206,7 +206,18 @@ public sealed class GiftCardsStartup : StartupBase
 public sealed class ApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        => routes.MapOrderCheckoutApi();
+    {
+        routes.MapOrderCheckoutApi();
+        routes.MapOrderAccountApi();
+    }
+}
+
+[Feature(OrderConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.Returns)]
+public sealed class ReturnsApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapOrderReturnsAccountApi();
 }
 
 [Feature(OrderConstants.Features.Api)]

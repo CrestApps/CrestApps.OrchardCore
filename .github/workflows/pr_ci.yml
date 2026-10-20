@@ -100,3 +100,9 @@ jobs:
       with:
         name: tenant-hierarchy-coverage
         path: tenant-hierarchy.cobertura.xml
+    # The commerce API suite runs one real tenant set up from the online store sample and drives the commerce JSON API
+    # over HTTP the way a headless storefront or app does: the catalog, guest carts and checkouts kept apart by their
+    # tokens, a checkout paid with the test provider, and the buyer's own endpoints refusing callers without a token.
+    - name: Commerce API integration tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj

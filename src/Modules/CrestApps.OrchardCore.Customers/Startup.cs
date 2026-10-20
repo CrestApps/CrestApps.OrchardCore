@@ -209,3 +209,10 @@ public sealed class LoyaltyApiStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapLoyaltyCheckoutApi();
 }
+
+[Feature(CustomersConstants.Features.Api)]
+public sealed class AccountApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapCustomerAccountApi();
+}

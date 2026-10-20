@@ -75,14 +75,19 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
     internal static string GetCacheKey(HttpContext httpContext, string key)
     {
+        // A guest is known by their cart's token, or their checkout's when they have no cart. Never both: the answer to
+        // starting a checkout hands out the checkout token, so a retry of it carries one the first request didn't.
         var caller = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
             httpContext.User?.FindFirstValue("sub") ??
-            httpContext.Request.Headers[CommerceApi.CartTokenHeader].ToString() + httpContext.Request.Headers[CommerceApi.CheckoutTokenHeader].ToString();
+            FirstNonEmpty(httpContext.Request.Headers[CommerceApi.CartTokenHeader].ToString(), httpContext.Request.Headers[CommerceApi.CheckoutTokenHeader].ToString());
 
         var scope = $"{httpContext.Request.PathBase}|{httpContext.Request.Method}|{httpContext.Request.Path}|{caller}|{key}";
 
         return "commerce-api-idempotency:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(scope)));
     }
+
+    private static string FirstNonEmpty(string first, string second)
+        => string.IsNullOrEmpty(first) ? second : first;
 
     internal static StoredResponse Capture(object result)
     {

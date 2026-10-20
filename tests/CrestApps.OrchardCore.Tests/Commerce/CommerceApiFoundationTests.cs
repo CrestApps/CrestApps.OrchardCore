@@ -105,6 +105,23 @@ public sealed class CommerceApiFoundationTests
         Assert.NotEqual(IdempotencyEndpointFilter.GetCacheKey(first, "same"), IdempotencyEndpointFilter.GetCacheKey(second, "same"));
     }
 
+    [Fact]
+    public void ARetry_CarryingTheCheckoutTokenTheFirstAnswerHandedOut_IsTheSameRequest()
+    {
+        var first = new DefaultHttpContext();
+        first.Request.Method = "POST";
+        first.Request.Path = "/api/commerce/v1/checkout";
+        first.Request.Headers[CommerceApi.CartTokenHeader] = "cart-a";
+
+        var retry = new DefaultHttpContext();
+        retry.Request.Method = "POST";
+        retry.Request.Path = "/api/commerce/v1/checkout";
+        retry.Request.Headers[CommerceApi.CartTokenHeader] = "cart-a";
+        retry.Request.Headers[CommerceApi.CheckoutTokenHeader] = "checkout-handed-out";
+
+        Assert.Equal(IdempotencyEndpointFilter.GetCacheKey(first, "same"), IdempotencyEndpointFilter.GetCacheKey(retry, "same"));
+    }
+
     private static DefaultHttpContext ApiContext()
     {
         var context = new DefaultHttpContext();

@@ -151,5 +151,8 @@ public sealed class EasyPostStartup : StartupBase
 public sealed class ApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        => routes.MapShippingCheckoutApi();
+    {
+        routes.MapShippingCheckoutApi();
+        routes.MapShipmentApi();
+    }
 }
