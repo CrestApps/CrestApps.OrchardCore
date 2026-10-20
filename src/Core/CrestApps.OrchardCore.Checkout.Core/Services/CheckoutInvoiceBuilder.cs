@@ -86,6 +86,7 @@ public sealed class CheckoutInvoiceBuilder
                     Plan = billingItem.Plan,
                     PriceId = billingItem.PriceId,
                     ExcludeFromTax = billingItem.ExcludeFromTax,
+                    ExcludeFromDiscounts = billingItem.ExcludeFromDiscounts,
                     Sku = billingItem.Sku,
                     TaxCategoryCode = billingItem.TaxCategoryCode,
                     TaxClassificationCode = billingItem.TaxClassificationCode,

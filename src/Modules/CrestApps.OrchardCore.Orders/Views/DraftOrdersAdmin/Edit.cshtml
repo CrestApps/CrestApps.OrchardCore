@@ -27,6 +27,18 @@
     </div>
 }
 
+@if (Model.Quote is { } quote)
+{
+    <div class="alert alert-info">
+        <span class="fw-semibold">@T["The buyer asked for this quote."]</span>
+        @if (!string.IsNullOrWhiteSpace(quote.Message))
+        {
+            <span class="d-block mt-1" style="white-space: pre-line">@quote.Message</span>
+        }
+        <span class="d-block small mt-1">@T["Set a price each to change the catalog's, save, then send the quote. The date to pay by is when the quote expires."]</span>
+    </div>
+}
+
 <form method="post" class="no-multisubmit">
     <input type="hidden" asp-for="AddsToOrderId" />
 
@@ -61,6 +73,7 @@
                         <tr>
                             <th scope="col">@T["Product"]</th>
                             <th scope="col" class="text-end">@T["Quantity"]</th>
+                            <th scope="col" class="text-end">@T["Price each"]</th>
                             <th scope="col" class="text-end">@T["Amount"]</th>
                             <th scope="col" class="text-center">@T["Remove"]</th>
                         </tr>
@@ -97,6 +110,9 @@
                                 <td class="text-end">
                                     <input type="number" name="Lines[@i].Quantity" value="@line.Quantity" min="1" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Quantity of {0}", line.Title]" />
                                 </td>
+                                <td class="text-end">
+                                    <input type="number" name="Lines[@i].UnitPrice" value="@line.UnitPrice" min="0" step="0.01" class="form-control form-control-sm d-inline-block text-end" style="width: 8rem;" placeholder="@(line.CatalogUnitPrice?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" aria-label="@T["Price each of {0}", line.Title]" />
+                                </td>
                                 <td class="text-end text-nowrap">@(line.LineTotal is { } total ? ProductPriceFormatter.Format(total, Model.Currency) : "—")</td>
                                 <td class="text-center">
                                     <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Remove {0}", line.Title]" />
@@ -106,7 +122,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <th scope="row" colspan="2" class="text-end">@T["Subtotal"]</th>
+                            <th scope="row" colspan="3" class="text-end">@T["Subtotal"]</th>
                             <th class="text-end text-nowrap">@ProductPriceFormatter.Format(Model.Subtotal, Model.Currency)</th>
                             <td></td>
                         </tr>

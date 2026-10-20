@@ -91,6 +91,12 @@ public sealed class Order : CatalogItem
     public string CompanyId { get; set; }
 
     /// <summary>
+    /// Gets or sets the quote the order started as, when a buyer asked the store for one: what they asked, and whether
+    /// it was sent, accepted or turned down.
+    /// </summary>
+    public OrderQuote Quote { get; set; }
+
+    /// <summary>
     /// Gets or sets the buyer's purchase order number: their own reference for the order, printed on its invoice.
     /// </summary>
     public string PurchaseOrderNumber { get; set; }
@@ -310,6 +316,11 @@ public sealed class OrderLine
     public string PriceName { get; set; }
 
     /// <summary>
+    /// Gets or sets the price staff set on a quote or draft for each unit, in place of the catalog's, or none.
+    /// </summary>
+    public decimal? QuotedUnitPrice { get; set; }
+
+    /// <summary>
     /// Gets or sets the variant bought, for a product sold in variants.
     /// </summary>
     public string VariantId { get; set; }
@@ -398,6 +409,7 @@ public enum OrderNoteKind
 /// </summary>
 public sealed class OrderInvoice
 {
+
     /// <summary>
     /// Gets or sets who in the store made it.
     /// </summary>
@@ -606,4 +618,49 @@ public sealed class OrderLineBundleItem
     public string Title { get; set; }
 
     public int Quantity { get; set; }
+}
+
+/// <summary>
+/// A quote a buyer asked the store for: their message, and where it is. Staff set its prices and send it; the buyer
+/// accepts it by paying, or turns it down.
+/// </summary>
+public sealed class OrderQuote
+{
+    public DateTime RequestedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer asked, such as the quantities they need and when.
+    /// </summary>
+    public string Message { get; set; }
+
+    public OrderQuoteStatus Status { get; set; }
+
+    public DateTime? SentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the quote stops being offered, or none.
+    /// </summary>
+    public DateTime? ExpiresUtc { get; set; }
+
+    public DateTime? RespondedUtc { get; set; }
+
+    /// <summary>
+    /// Returns whether the buyer can accept it now: sent, and not expired.
+    /// </summary>
+    public bool CanAccept(DateTime utcNow)
+        => Status == OrderQuoteStatus.Sent && (ExpiresUtc is null || ExpiresUtc > utcNow);
+}
+
+public enum OrderQuoteStatus
+{
+    /// <summary>
+    /// Asked for; the store hasn't sent it yet.
+    /// </summary>
+    Requested,
+
+    Sent,
+
+    Accepted,
+
+    Declined,
 }

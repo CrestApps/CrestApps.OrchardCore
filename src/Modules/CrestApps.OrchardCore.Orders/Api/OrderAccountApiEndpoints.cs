@@ -34,6 +34,18 @@ internal static class OrderAccountApiEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Gets one of the signed-in buyer's orders.");
 
+        group.MapPost("me/quotes", RequestQuoteAsync)
+            .WithIdempotency()
+            .WithName("RequestQuote")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithSummary("Asks for a quote for the buyer's cart: it becomes a draft order for the store to price and send, and the cart is emptied.");
+
+        group.MapPost("me/orders/{orderId}/decline-quote", DeclineQuoteAsync)
+            .WithName("DeclineMyQuote")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithSummary("Turns down a quote, or withdraws the request: the order is canceled.");
+
         return routes;
     }
 
@@ -110,9 +122,49 @@ internal static class OrderAccountApiEndpoints
             return ApiProblems.NotFound();
         }
 
-        var payUrl = order.Status == OrderStatus.Canceled ? null : await OrderPayLinks.GetPayUrlAsync(httpContext.RequestServices, order);
+        var payUrl = order.Status == OrderStatus.Canceled || !QuoteService.CanPay(order, DateTime.UtcNow) ? null : await OrderPayLinks.GetPayUrlAsync(httpContext.RequestServices, order);
 
         return TypedResults.Ok(OrderApiMapper.ToApi(order, await operations.IsOwedAsync(order, httpContext.RequestAborted), payUrl));
+    }
+
+    private static async Task<Results<Created<ApiOrder>, ValidationProblem, ProblemHttpResult>> RequestQuoteAsync(
+        ApiQuoteRequest request,
+        HttpContext httpContext,
+        QuoteService quotes)
+    {
+        if (!await quotes.CanRequestAsync(httpContext.User))
+        {
+            return ApiProblems.NotFound("The store doesn't take quote requests.");
+        }
+
+        var (quote, problems) = await quotes.RequestAsync(httpContext.User, request?.Message, request?.PurchaseOrderNumber, httpContext.RequestAborted);
+
+        if (quote is null)
+        {
+            return ApiProblems.Validation(new Dictionary<string, string[]> { ["cart"] = [.. problems] });
+        }
+
+        return TypedResults.Created($"{httpContext.Request.PathBase}/{CommerceApi.RoutePrefix}/me/orders/{quote.ItemId}", OrderApiMapper.ToApi(quote, isOwed: false, payUrl: null));
+    }
+
+    private static async Task<Results<Ok<ApiOrder>, ProblemHttpResult>> DeclineQuoteAsync(
+        string orderId,
+        HttpContext httpContext,
+        IAuthorizationService authorizationService,
+        IOrderStore orders,
+        QuoteService quotes)
+    {
+        if (await FindOwnAsync(orderId, httpContext, authorizationService, orders, paidOnly: false) is not { Quote: not null } order)
+        {
+            return ApiProblems.NotFound();
+        }
+
+        if (!await quotes.DeclineAsync(order, httpContext.User.Identity?.Name, httpContext.RequestAborted))
+        {
+            return ApiProblems.Conflict(ApiProblems.Codes.Unsupported, "The quote is paid, being paid, or already turned down.");
+        }
+
+        return TypedResults.Ok(OrderApiMapper.ToApi(order, isOwed: false, payUrl: null));
     }
 
     private static async Task<Results<Ok<IReadOnlyList<ApiOrderReturn>>, ProblemHttpResult>> ListReturnsAsync(
@@ -217,7 +269,7 @@ internal static class OrderAccountApiEndpoints
         var order = string.IsNullOrEmpty(orderId) ? null : await orders.FindByIdAsync(orderId, httpContext.RequestAborted);
 
         return order is null ||
-            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null) ||
+            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null && order.Quote is null) ||
             (paidOnly && order.Status != OrderStatus.Paid) ||
             !string.Equals(order.UserId, httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
             !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ViewOwnOrders)

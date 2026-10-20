@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Companies.Services;
@@ -45,6 +46,15 @@ public sealed class CompanyCheckoutHandler : CheckoutHandlerBase
             Order = StepOrder,
             CollectData = true,
         });
+
+        // An order that already has a purchase order number, such as a quote the buyer asked for with one, doesn't ask
+        // for it again: the step starts done, and the buyer can still change it.
+        if (context.Session is CheckoutSession session && session.SavedSteps[CompanyCheckoutStepService.StepKey] is null &&
+            string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) &&
+            await _orders.FindByIdAsync(session.ReferenceId) is { PurchaseOrderNumber.Length: > 0 } order)
+        {
+            session.SavedSteps[CompanyCheckoutStepService.StepKey] = new JsonObject { ["PurchaseOrderNumber"] = order.PurchaseOrderNumber };
+        }
     }
 
     public override async Task CompletingAsync(CheckoutFlowCompletingContext context)

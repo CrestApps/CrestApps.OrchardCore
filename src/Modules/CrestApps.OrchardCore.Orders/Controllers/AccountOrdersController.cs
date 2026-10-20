@@ -42,11 +42,19 @@ public sealed class AccountOrdersController : Controller
         }
 
         var pager = new Pager(pagerParameters, PageSize);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var (count, orders) = await _orderStore.PageAsync(new OrderQuery
         {
-            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            UserId = userId,
             Statuses = [OrderStatus.AwaitingPayment, OrderStatus.Paid, OrderStatus.Canceled],
         }, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
+
+        // Quotes asked for and orders sent to pay sit apart, above: they aren't orders placed yet.
+        var (_, drafts) = await _orderStore.PageAsync(new OrderQuery
+        {
+            UserId = userId,
+            Statuses = [OrderStatus.Draft],
+        }, 0, 50, HttpContext.RequestAborted);
 
         // An order paid offline reads as owed until the money arrives.
         var owed = new HashSet<string>(StringComparer.Ordinal);
@@ -64,6 +72,7 @@ public sealed class AccountOrdersController : Controller
         return View(await _shapeFactory.CreateAsync<AccountOrdersViewModel>("AccountOrders", model =>
         {
             model.Orders = orders;
+            model.Open = [.. drafts.Where(draft => draft.Quote is not null || draft.Invoice?.SentUtc is not null)];
             model.OwedOrderIds = owed;
             model.Pager = pagerShape;
         }));
@@ -80,7 +89,7 @@ public sealed class AccountOrdersController : Controller
         // Only the customer's own placed orders open here, and orders the store sent them to pay; anything else reads
         // as not found.
         if (order is null ||
-            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null) ||
+            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null && order.Quote is null) ||
             !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
             !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
         {
@@ -88,7 +97,7 @@ public sealed class AccountOrdersController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = order.Status == OrderStatus.Canceled
+        var payUrl = order.Status == OrderStatus.Canceled || !QuoteService.CanPay(order, DateTime.UtcNow)
             ? null
             : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
                 ? Url.RouteUrl("AccountOrderPay", new { orderId = order.ItemId })
@@ -100,6 +109,7 @@ public sealed class AccountOrdersController : Controller
             model.Sections = sections;
             model.PayUrl = payUrl;
             model.InAccount = true;
+            model.DeclineQuoteUrl = QuoteService.CanDecline(order) ? Url.RouteUrl("AccountQuoteDecline", new { orderId = order.ItemId }) : null;
             model.InvoiceUrl = Url.RouteUrl("AccountOrderInvoice", new { orderId = order.ItemId });
         }));
     }

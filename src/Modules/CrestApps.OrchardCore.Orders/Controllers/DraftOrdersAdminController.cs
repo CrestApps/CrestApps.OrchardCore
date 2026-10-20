@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -111,6 +112,8 @@ public sealed class DraftOrdersAdminController : Controller
                 ContentItemId = line.ContentItemId,
                 VariantId = line.VariantId,
                 Quantity = line.Quantity,
+                UnitPrice = line.QuotedUnitPrice?.ToString(CultureInfo.InvariantCulture),
+                CatalogUnitPrice = line.QuotedUnitPrice is null ? line.UnitPrice : null,
                 Title = line.Title,
                 LineTotal = line.LineTotal,
             })],
@@ -149,7 +152,7 @@ public sealed class DraftOrdersAdminController : Controller
 
         if (await _drafts.SendInvoiceAsync(order, User.Identity?.Name, HttpContext.RequestAborted))
         {
-            await _notifier.SuccessAsync(H["Invoice emailed to {0}.", order.CustomerEmail]);
+            await _notifier.SuccessAsync(order.Quote is null ? H["Invoice emailed to {0}.", order.CustomerEmail] : H["Quote emailed to {0}.", order.CustomerEmail]);
         }
         else
         {
@@ -171,9 +174,9 @@ public sealed class DraftOrdersAdminController : Controller
 
         if (submit == "update")
         {
-            var pricing = await _drafts.PriceAsync(input, order?.CartId, HttpContext.RequestAborted);
+            var pricing = await _drafts.PriceAsync(input, order?.CartId, order?.Currency, HttpContext.RequestAborted);
 
-            model.Lines = [.. input.Lines.Select(line => new DraftOrderLineViewModel { LineId = line.LineId, ContentItemId = line.ContentItemId, VariantId = line.VariantId, Quantity = line.Quantity })];
+            model.Lines = ToLines(input);
             await PopulateAsync(model, order, pricing);
 
             return View("Edit", model);
@@ -185,9 +188,9 @@ public sealed class DraftOrdersAdminController : Controller
         {
             await _session.CancelAsync();
 
-            model.Lines = [.. input.Lines.Select(line => new DraftOrderLineViewModel { LineId = line.LineId, ContentItemId = line.ContentItemId, VariantId = line.VariantId, Quantity = line.Quantity })];
+            model.Lines = ToLines(input);
             model.Problems = problems;
-            await PopulateAsync(model, order, await _drafts.PriceAsync(input, order?.CartId, HttpContext.RequestAborted));
+            await PopulateAsync(model, order, await _drafts.PriceAsync(input, order?.CartId, order?.Currency, HttpContext.RequestAborted));
 
             return View("Edit", model);
         }
@@ -214,7 +217,12 @@ public sealed class DraftOrdersAdminController : Controller
     {
         var lines = (model.Lines ?? [])
             .Where(line => line is not null && !line.Remove && !string.IsNullOrEmpty(line.ContentItemId))
-            .Select(line => new DraftOrderLineInput(string.IsNullOrEmpty(line.LineId) ? UniqueId.GenerateId() : line.LineId, line.ContentItemId, line.VariantId, Math.Clamp(line.Quantity, 0, 10_000)))
+            .Select(line => new DraftOrderLineInput(
+                string.IsNullOrEmpty(line.LineId) ? UniqueId.GenerateId() : line.LineId,
+                line.ContentItemId,
+                line.VariantId,
+                Math.Clamp(line.Quantity, 0, 10_000),
+                ParsePrice(line.UnitPrice)))
             .ToList();
 
         foreach (var productId in (model.AddProductIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
@@ -236,6 +244,21 @@ public sealed class DraftOrdersAdminController : Controller
             Lines = lines,
         };
     }
+
+    private static List<DraftOrderLineViewModel> ToLines(DraftOrderInput input)
+        => [.. input.Lines.Select(line => new DraftOrderLineViewModel
+        {
+            LineId = line.LineId,
+            ContentItemId = line.ContentItemId,
+            VariantId = line.VariantId,
+            Quantity = line.Quantity,
+            UnitPrice = line.UnitPrice?.ToString(CultureInfo.InvariantCulture),
+        })];
+
+    private static decimal? ParsePrice(string value)
+        => decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) && price is >= 0 and < 100_000_000
+            ? price
+            : null;
 
     private async Task PopulateAsync(DraftOrderEditViewModel model, Order order, Carts.Core.Models.CartPricing pricing)
     {
@@ -276,14 +299,15 @@ public sealed class DraftOrdersAdminController : Controller
             if (priced is not null)
             {
                 line.Title = priced.Title ?? line.Title;
-                line.LineTotal = priced.LineTotal;
+                line.CatalogUnitPrice = priced.UnitPrice;
+                line.LineTotal = ParsePrice(line.UnitPrice) is { } price ? price * line.Quantity : priced.LineTotal;
                 line.Problem = priced.Problem?.Value;
             }
         }
 
         if (pricing is not null)
         {
-            model.Subtotal = pricing.Lines.Sum(line => line.LineTotal);
+            model.Subtotal = model.Lines.Sum(line => line.LineTotal ?? 0);
             model.Currency = pricing.Currency;
         }
         else if (order is not null)

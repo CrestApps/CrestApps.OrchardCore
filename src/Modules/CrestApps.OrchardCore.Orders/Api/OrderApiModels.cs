@@ -51,6 +51,7 @@ public sealed record ApiOrder(
     string Culture,
     string CompanyId,
     string PurchaseOrderNumber,
+    ApiOrderQuote Quote,
     string CustomerId,
     string CustomerName,
     string CustomerEmail,
@@ -68,6 +69,23 @@ public sealed record ApiOrder(
     DateTime CreatedUtc,
     DateTime? PaidUtc,
     DateTime? CanceledUtc);
+
+/// <summary>
+/// The quote a buyer asked for, on the order it became: requested, sent (offered until it expires), accepted by paying,
+/// or declined.
+/// </summary>
+public sealed record ApiOrderQuote(
+    string Status,
+    string Message,
+    DateTime RequestedUtc,
+    DateTime? SentUtc,
+    DateTime? ExpiresUtc,
+    DateTime? RespondedUtc);
+
+/// <summary>
+/// A signed-in buyer's quote request: what they ask, and their purchase order number.
+/// </summary>
+public sealed record ApiQuoteRequest(string Message, string PurchaseOrderNumber);
 
 /// <summary>
 /// A line of an order.
@@ -228,6 +246,9 @@ internal static class OrderApiMapper
             order.Culture,
             order.CompanyId,
             order.PurchaseOrderNumber,
+            order.Quote is { } quote
+                ? new ApiOrderQuote(ToCamel(quote.Status.ToString()), quote.Message, quote.RequestedUtc, quote.SentUtc, quote.ExpiresUtc, quote.RespondedUtc)
+                : null,
             order.CustomerId,
             order.CustomerName,
             order.CustomerEmail,
