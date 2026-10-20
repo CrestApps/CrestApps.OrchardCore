@@ -22,6 +22,8 @@ public static class CartConstants
         /// <summary>
         /// The cart API under <c>api/commerce/v1</c>.
         /// </summary>
+        public const string Wishlists = "CrestApps.OrchardCore.Carts.Wishlists";
+
         public const string Api = "CrestApps.OrchardCore.Carts.Api";
     }
 

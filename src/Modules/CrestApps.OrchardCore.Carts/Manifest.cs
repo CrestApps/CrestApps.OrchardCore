@@ -25,6 +25,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = CartConstants.Features.Wishlists,
+    Name = "Wishlists",
+    Description = "Lets signed-in shoppers save products for later from the product page, and find them under Wishlist in their account, each with its add to cart.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CartConstants.Features.Carts,
+    ]
+)]
+
+[assembly: Feature(
     Id = CartConstants.Features.Api,
     Name = "Cart API",
     Description = "Lets a headless storefront or app read and change the caller's cart over the commerce JSON API. A guest's cart travels in the X-Cart-Token header. Enable OpenAPI to document it.",
