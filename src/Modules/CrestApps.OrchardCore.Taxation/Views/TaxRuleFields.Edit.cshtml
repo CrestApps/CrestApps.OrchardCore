@@ -105,6 +105,17 @@
 </div>
 
 <div class="ocat-wrapper">
+    <label asp-for="ThresholdBasis" class="ocat-label">@T["Amounts compared with"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <select asp-for="ThresholdBasis" class="form-select ocat-limited">
+            <option value="@CrestApps.OrchardCore.Taxation.Models.TaxThresholdBasis.Item">@T["Each item"]</option>
+            <option value="@CrestApps.OrchardCore.Taxation.Models.TaxThresholdBasis.Order">@T["The whole order"]</option>
+        </select>
+        <span class="hint">@T["The whole order suits an import duty charged only on orders above a value, such as 150."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="IncludedInPrice" class="form-check-input" type="checkbox" />

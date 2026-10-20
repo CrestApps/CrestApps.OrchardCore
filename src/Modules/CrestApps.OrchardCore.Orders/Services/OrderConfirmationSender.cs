@@ -54,6 +54,9 @@ public sealed class OrderConfirmationSender
             return false;
         }
 
+        // Written in the language the buyer shopped in.
+        using var language = OrderCulture.Use(order.Culture);
+
         // A guest opens the order from the email; a signed-in customer finds it under My Orders.
         var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
         var email = await _emailBuilder.BuildAsync(order, orderUrl);

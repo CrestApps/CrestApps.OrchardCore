@@ -56,7 +56,7 @@ Opening the settings page takes the **Manage checkout settings** permission.
 
 ### The order summary
 
-The **Order summary** card lists each item with its price. A recurring item shows how often it is billed underneath, for example *Every 1 month*. When tax applies, the card shows a **Subtotal** and one line per tax, using the tax's display name (or **Tax**). The last line, **Due now**, is what the buyer pays today.
+The **Order summary** card lists each item with its price. A recurring item shows how often it is billed underneath, for example *Every 1 month*. When tax applies, the card shows a **Subtotal** and one line for each tax at each rate, using the tax's display name (or **Tax**) and its rate, such as *VAT 19%*. A tax taken out of prices that include it says *(included)*; see [Markets](markets.md#prices-that-include-tax). The last line, **Due now**, is what the buyer pays today.
 
 When a gift card, store credit or points pay part of the order, the card shows the **Total** first, then a line for each of them with what it pays, such as *Gift card ending 4F2K −$30*, *Store credit* or your rewards program's name, and then **Due now**: what's left to pay by card or another payment method. See [Gift cards, store credit and points](#gift-cards-store-credit-and-points).
 

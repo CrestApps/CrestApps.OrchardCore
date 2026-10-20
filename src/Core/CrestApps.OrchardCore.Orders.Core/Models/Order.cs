@@ -85,6 +85,17 @@ public sealed class Order : CatalogItem
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the taxes the order was charged, each for a jurisdiction, tax and rate, as its checkout worked them
+    /// out: what reports such as the VAT one-stop-shop return add up.
+    /// </summary>
+    public List<CrestApps.OrchardCore.Taxation.Models.TaxLine> TaxLines { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the culture the buyer shopped in, such as de-DE: the order's emails are written in it.
+    /// </summary>
+    public string Culture { get; set; }
+
+    /// <summary>
     /// Gets or sets the inventory location the order is sold from, such as the store whose register rang it up: its
     /// stock is held and sold there.
     /// </summary>

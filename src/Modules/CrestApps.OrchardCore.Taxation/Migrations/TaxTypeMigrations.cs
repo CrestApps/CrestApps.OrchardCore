@@ -47,6 +47,27 @@ public sealed class TaxTypeMigrations : DataMigration
             }
         }
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the import duty type to sites seeded before it was a well-known type.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        var existing = await _manager.GetAllAsync();
+
+        if (existing.Any() && !existing.Any(type => string.Equals(type.Name, TaxTypeNames.ImportDuty, StringComparison.OrdinalIgnoreCase)))
+        {
+            var entry = await _manager.NewAsync();
+            entry.Name = TaxTypeNames.ImportDuty;
+
+            if ((await _manager.ValidateAsync(entry)).Succeeded)
+            {
+                await _manager.CreateAsync(entry);
+            }
+        }
+
+        return 2;
     }
 }

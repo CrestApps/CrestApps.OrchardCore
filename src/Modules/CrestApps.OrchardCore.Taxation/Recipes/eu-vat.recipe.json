@@ -1,0 +1,550 @@
+{
+  "name": "EuVatStandardRates",
+  "displayName": "EU VAT standard rates",
+  "description": "Adds the 27 EU member states as tax jurisdictions, each with a VAT rule at its standard rate, charged on goods and shipping. Rates change: check each country's rate before you sell there, and add reduced rates for the products they apply to.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "tax",
+    "vat",
+    "eu",
+    "oss"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Taxation"
+      ]
+    },
+    {
+      "name": "TaxJurisdiction",
+      "TaxJurisdictions": [
+        {
+          "ItemId": "4evatj00000000000000000001",
+          "Name": "Austria",
+          "Code": "AT",
+          "Level": 0,
+          "Country": "AT"
+        },
+        {
+          "ItemId": "4evatj00000000000000000002",
+          "Name": "Belgium",
+          "Code": "BE",
+          "Level": 0,
+          "Country": "BE"
+        },
+        {
+          "ItemId": "4evatj00000000000000000003",
+          "Name": "Bulgaria",
+          "Code": "BG",
+          "Level": 0,
+          "Country": "BG"
+        },
+        {
+          "ItemId": "4evatj00000000000000000004",
+          "Name": "Croatia",
+          "Code": "HR",
+          "Level": 0,
+          "Country": "HR"
+        },
+        {
+          "ItemId": "4evatj00000000000000000005",
+          "Name": "Cyprus",
+          "Code": "CY",
+          "Level": 0,
+          "Country": "CY"
+        },
+        {
+          "ItemId": "4evatj00000000000000000006",
+          "Name": "Czechia",
+          "Code": "CZ",
+          "Level": 0,
+          "Country": "CZ"
+        },
+        {
+          "ItemId": "4evatj00000000000000000007",
+          "Name": "Denmark",
+          "Code": "DK",
+          "Level": 0,
+          "Country": "DK"
+        },
+        {
+          "ItemId": "4evatj00000000000000000008",
+          "Name": "Estonia",
+          "Code": "EE",
+          "Level": 0,
+          "Country": "EE"
+        },
+        {
+          "ItemId": "4evatj00000000000000000009",
+          "Name": "Finland",
+          "Code": "FI",
+          "Level": 0,
+          "Country": "FI"
+        },
+        {
+          "ItemId": "4evatj00000000000000000010",
+          "Name": "France",
+          "Code": "FR",
+          "Level": 0,
+          "Country": "FR"
+        },
+        {
+          "ItemId": "4evatj00000000000000000011",
+          "Name": "Germany",
+          "Code": "DE",
+          "Level": 0,
+          "Country": "DE"
+        },
+        {
+          "ItemId": "4evatj00000000000000000012",
+          "Name": "Greece",
+          "Code": "GR",
+          "Level": 0,
+          "Country": "GR"
+        },
+        {
+          "ItemId": "4evatj00000000000000000013",
+          "Name": "Hungary",
+          "Code": "HU",
+          "Level": 0,
+          "Country": "HU"
+        },
+        {
+          "ItemId": "4evatj00000000000000000014",
+          "Name": "Ireland",
+          "Code": "IE",
+          "Level": 0,
+          "Country": "IE"
+        },
+        {
+          "ItemId": "4evatj00000000000000000015",
+          "Name": "Italy",
+          "Code": "IT",
+          "Level": 0,
+          "Country": "IT"
+        },
+        {
+          "ItemId": "4evatj00000000000000000016",
+          "Name": "Latvia",
+          "Code": "LV",
+          "Level": 0,
+          "Country": "LV"
+        },
+        {
+          "ItemId": "4evatj00000000000000000017",
+          "Name": "Lithuania",
+          "Code": "LT",
+          "Level": 0,
+          "Country": "LT"
+        },
+        {
+          "ItemId": "4evatj00000000000000000018",
+          "Name": "Luxembourg",
+          "Code": "LU",
+          "Level": 0,
+          "Country": "LU"
+        },
+        {
+          "ItemId": "4evatj00000000000000000019",
+          "Name": "Malta",
+          "Code": "MT",
+          "Level": 0,
+          "Country": "MT"
+        },
+        {
+          "ItemId": "4evatj00000000000000000020",
+          "Name": "Netherlands",
+          "Code": "NL",
+          "Level": 0,
+          "Country": "NL"
+        },
+        {
+          "ItemId": "4evatj00000000000000000021",
+          "Name": "Poland",
+          "Code": "PL",
+          "Level": 0,
+          "Country": "PL"
+        },
+        {
+          "ItemId": "4evatj00000000000000000022",
+          "Name": "Portugal",
+          "Code": "PT",
+          "Level": 0,
+          "Country": "PT"
+        },
+        {
+          "ItemId": "4evatj00000000000000000023",
+          "Name": "Romania",
+          "Code": "RO",
+          "Level": 0,
+          "Country": "RO"
+        },
+        {
+          "ItemId": "4evatj00000000000000000024",
+          "Name": "Slovakia",
+          "Code": "SK",
+          "Level": 0,
+          "Country": "SK"
+        },
+        {
+          "ItemId": "4evatj00000000000000000025",
+          "Name": "Slovenia",
+          "Code": "SI",
+          "Level": 0,
+          "Country": "SI"
+        },
+        {
+          "ItemId": "4evatj00000000000000000026",
+          "Name": "Spain",
+          "Code": "ES",
+          "Level": 0,
+          "Country": "ES"
+        },
+        {
+          "ItemId": "4evatj00000000000000000027",
+          "Name": "Sweden",
+          "Code": "SE",
+          "Level": 0,
+          "Country": "SE"
+        }
+      ]
+    },
+    {
+      "name": "TaxRule",
+      "TaxRules": [
+        {
+          "ItemId": "4evatr00000000000000000001",
+          "Name": "Austria VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000001",
+          "Rate": 0.2,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000002",
+          "Name": "Belgium VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000002",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000003",
+          "Name": "Bulgaria VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000003",
+          "Rate": 0.2,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000004",
+          "Name": "Croatia VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000004",
+          "Rate": 0.25,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000005",
+          "Name": "Cyprus VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000005",
+          "Rate": 0.19,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000006",
+          "Name": "Czechia VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000006",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000007",
+          "Name": "Denmark VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000007",
+          "Rate": 0.25,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000008",
+          "Name": "Estonia VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000008",
+          "Rate": 0.24,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000009",
+          "Name": "Finland VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000009",
+          "Rate": 0.255,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000010",
+          "Name": "France VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000010",
+          "Rate": 0.2,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000011",
+          "Name": "Germany VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000011",
+          "Rate": 0.19,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000012",
+          "Name": "Greece VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000012",
+          "Rate": 0.24,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000013",
+          "Name": "Hungary VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000013",
+          "Rate": 0.27,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000014",
+          "Name": "Ireland VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000014",
+          "Rate": 0.23,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000015",
+          "Name": "Italy VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000015",
+          "Rate": 0.22,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000016",
+          "Name": "Latvia VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000016",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000017",
+          "Name": "Lithuania VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000017",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000018",
+          "Name": "Luxembourg VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000018",
+          "Rate": 0.17,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000019",
+          "Name": "Malta VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000019",
+          "Rate": 0.18,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000020",
+          "Name": "Netherlands VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000020",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000021",
+          "Name": "Poland VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000021",
+          "Rate": 0.23,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000022",
+          "Name": "Portugal VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000022",
+          "Rate": 0.23,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000023",
+          "Name": "Romania VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000023",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000024",
+          "Name": "Slovakia VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000024",
+          "Rate": 0.23,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000025",
+          "Name": "Slovenia VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000025",
+          "Rate": 0.22,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000026",
+          "Name": "Spain VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000026",
+          "Rate": 0.21,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        },
+        {
+          "ItemId": "4evatr00000000000000000027",
+          "Name": "Sweden VAT",
+          "Source": "Percentage",
+          "TaxType": "VAT",
+          "TaxName": "VAT",
+          "JurisdictionId": "4evatj00000000000000000027",
+          "Rate": 0.25,
+          "AppliesToShipping": true,
+          "Enabled": true,
+          "Priority": 0
+        }
+      ]
+    }
+  ]
+}

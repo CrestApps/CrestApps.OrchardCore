@@ -173,6 +173,14 @@ public class CartViewModel
 /// <summary>
 /// The cart link in the site header.
 /// </summary>
+/// <summary>
+/// Shown instead of the add to cart form when the shopper can't buy the product, such as outside its markets.
+/// </summary>
+public class AddToCartUnavailableViewModel
+{
+    public string Reason { get; set; }
+}
+
 public class CartLinkViewModel
 {
     public int ItemCount { get; set; }

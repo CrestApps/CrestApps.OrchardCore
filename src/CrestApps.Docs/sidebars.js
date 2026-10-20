@@ -156,6 +156,7 @@ const sidebars = {
                 'user-manual/commerce/payment-providers',
                 'user-manual/commerce/products-and-currencies',
                 'user-manual/commerce/product-listings',
+                'user-manual/commerce/markets',
                 'user-manual/commerce/taxes',
                 'user-manual/commerce/coupons',
                 'user-manual/commerce/gift-cards',
@@ -368,6 +369,7 @@ const sidebars = {
             link: { type: 'doc', id: 'modules/commerce' },
             items: [
                 'modules/products',
+                'modules/markets',
                 'modules/carts-and-orders',
                 'modules/customers',
                 'modules/inventory',

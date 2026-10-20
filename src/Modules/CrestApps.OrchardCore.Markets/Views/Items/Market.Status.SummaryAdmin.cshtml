@@ -1,0 +1,29 @@
+@model ShapeViewModel<Market>
+
+@if (Model.Value.IsEnabled)
+{
+    <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["On"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]
+    </span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Currency and exchange rate"]">
+    <i class="fa-solid fa-money-bill-wave text-secondary me-1" aria-hidden="true"></i>@Model.Value.Currency × @Model.Value.ExchangeRate.ToString("0.######", System.Globalization.CultureInfo.CurrentCulture)
+</span>
+@if (Model.Value.PricesIncludeTax)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Prices include tax"]">
+        <i class="fa-solid fa-receipt text-secondary me-1" aria-hidden="true"></i>@T["Tax included"]
+    </span>
+}
+@if (!string.IsNullOrEmpty(Model.Value.Culture))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Language"]">
+        <i class="fa-solid fa-language text-secondary me-1" aria-hidden="true"></i>@Model.Value.Culture
+    </span>
+}

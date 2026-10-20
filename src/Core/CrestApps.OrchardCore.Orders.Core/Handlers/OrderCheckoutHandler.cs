@@ -169,6 +169,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.CheckoutSessionId = session.SessionId;
         order.Total = invoice.GrandTotal;
         order.TaxAmount = invoice.TaxAmount;
+        order.TaxLines = [.. invoice.TaxLines ?? []];
 
         // What the discounts took off, so the order's lines, shipping, discounts and tax add up to what was paid.
         order.Discounts = [.. (invoice.Discounts ?? [])

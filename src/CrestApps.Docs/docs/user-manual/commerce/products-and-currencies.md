@@ -11,7 +11,7 @@ Anything you sell on your site is a content item with a price. You set this up i
 
 ## Manage currencies
 
-The currencies you add here are the ones offered in every currency drop-down of the product editors. Add only the currencies you actually sell in.
+The currencies you add here are the ones offered in every currency drop-down of the product editors. Add only the currencies you actually sell in. To sell to other countries in their currency without pricing every product again, use [Markets](markets.md), which convert your prices at an exchange rate.
 
 | | |
 | --- | --- |

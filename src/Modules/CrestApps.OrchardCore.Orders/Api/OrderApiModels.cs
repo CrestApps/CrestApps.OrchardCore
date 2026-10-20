@@ -34,6 +34,7 @@ public sealed record ApiOrderSummary(
 /// <param name="Channel">Where it was made: <c>online</c>, <c>pos</c> (a store's register) or <c>draft</c> (sent by staff).</param>
 /// <param name="LocationId">The inventory location it's sold from.</param>
 /// <param name="Register">The register a point-of-sale order was rung up on.</param>
+/// <param name="Culture">The culture the buyer shopped in, such as de-DE; the order's emails are written in it.</param>
 public sealed record ApiOrder(
     string Id,
     string Number,
@@ -45,6 +46,7 @@ public sealed record ApiOrder(
     string LocationId,
     string Register,
     string Currency,
+    string Culture,
     string CustomerId,
     string CustomerName,
     string CustomerEmail,
@@ -54,6 +56,7 @@ public sealed record ApiOrder(
     ApiOrderShipping Shipping,
     IReadOnlyList<ApiOrderLine> Lines,
     IReadOnlyList<ApiOrderDiscount> Discounts,
+    IReadOnlyList<ApiOrderTax> Taxes,
     IReadOnlyList<ApiOrderTender> Tenders,
     IReadOnlyList<ApiOrderRefund> Refunds,
     ApiOrderTotals Totals,
@@ -92,6 +95,12 @@ public sealed record ApiOrderShipping(string Name, string Description, ApiMoney 
 /// A discount the order got.
 /// </summary>
 public sealed record ApiOrderDiscount(string Code, string Description, ApiMoney Amount, string Target);
+
+/// <summary>
+/// A tax the order was charged: its name, where, the rate, what it was charged on, and whether it was included in the
+/// prices rather than added to them.
+/// </summary>
+public sealed record ApiOrderTax(string Name, string Type, string Jurisdiction, decimal Rate, ApiMoney Taxable, ApiMoney Amount, bool IncludedInPrice);
 
 /// <summary>
 /// A balance that paid toward the order: a gift card, store credit, points.
@@ -212,6 +221,7 @@ internal static class OrderApiMapper
             order.LocationId,
             order.RegisterName,
             currency,
+            order.Culture,
             order.CustomerId,
             order.CustomerName,
             order.CustomerEmail,
@@ -232,6 +242,10 @@ internal static class OrderApiMapper
                 (line.AddOns ?? []).Select(addOn => new ApiOrderLineAddOn(addOn.AddOnId, addOn.Label, addOn.Value, ApiMoney.From(addOn.Price, currency))).ToList(),
                 line.ShipsFromUtc)).ToList(),
             (order.Discounts ?? []).Select(discount => new ApiOrderDiscount(discount.Code, discount.Description, ApiMoney.From(discount.Amount, currency), ToCamel(discount.Target.ToString()))).ToList(),
+            (order.TaxLines ?? [])
+                .GroupBy(line => (Name: line.TaxName ?? line.TaxType, line.TaxType, line.JurisdictionName, line.Rate, line.IncludedInPrice))
+                .Select(group => new ApiOrderTax(group.Key.Name, group.Key.TaxType, group.Key.JurisdictionName, group.Key.Rate, ApiMoney.From(group.Sum(line => line.TaxableAmount), currency), ApiMoney.From(group.Sum(line => line.TaxAmount), currency), group.Key.IncludedInPrice))
+                .ToList(),
             (order.Tenders ?? []).Select(tender => new ApiOrderTender(tender.ProviderKey, tender.Reference, tender.Description, ApiMoney.From(tender.Amount, currency))).ToList(),
             (order.Refunds ?? []).Select(refund => new ApiOrderRefund(refund.RefundId, ApiMoney.From(refund.Amount, refund.Currency ?? currency), refund.Reason, refund.CreatedUtc)).ToList(),
             new ApiOrderTotals(

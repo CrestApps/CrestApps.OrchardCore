@@ -2,7 +2,8 @@
 sidebar_label: Taxation
 sidebar_position: 15
 title: Taxation Framework
-description: A provider-agnostic, extensible taxation framework for Orchard Core that models tax as a determination rather than a stored rate.
+description: A provider-agnostic, extensible taxation framework for Orchard Core that models tax as a determination rather than a stored rate, with order-wide thresholds for import duty, the EU VAT standard rates recipe, the TaxJar connector and the VAT one-stop-shop report.
+user_manual: user-manual/commerce/taxes
 ---
 
 | | |
@@ -10,6 +11,7 @@ description: A provider-agnostic, extensible taxation framework for Orchard Core
 | **Feature Name** | Taxation |
 | **Feature ID** | `CrestApps.OrchardCore.Taxation` |
 | **Category** | Commerce |
+| **Other features** | TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)) |
 
 Provides a provider-agnostic, extensible, international taxation framework that any Orchard Core content type or CrestApps module (Products, Subscriptions, Payments, Commerce, Bookings, Services, and custom content) can plug into.
 
@@ -216,7 +218,44 @@ await ruleStore.CreateAsync(new TaxRule
 });
 ```
 
-The `TaxName` is optional; when it is left empty the tax line falls back to the rule `Name`. Rules carry `Version`, `Priority`, `EffectiveFromUtc`, `EffectiveToUtc`, `MinimumAmount`, `MaximumAmount`, `CustomerType`, `IsCompound`, `IncludedInPrice`, `ReverseCharge`, and `AppliesToShipping`. Historical rules must remain immutable once used by a transaction; publish a new version rather than mutating a rule that has already been applied.
+The `TaxName` is optional; when it is left empty the tax line falls back to the rule `Name`. Rules carry `Version`, `Priority`, `EffectiveFromUtc`, `EffectiveToUtc`, `MinimumAmount`, `MaximumAmount`, `ThresholdBasis`, `CustomerType`, `IsCompound`, `IncludedInPrice`, `ReverseCharge`, and `AppliesToShipping`. Historical rules must remain immutable once used by a transaction; publish a new version rather than mutating a rule that has already been applied.
+
+#### Thresholds: each item or the whole order
+
+`MinimumAmount` and `MaximumAmount` limit a rule to amounts at least the minimum and below the maximum. `TaxRule.ThresholdBasis` (`TaxThresholdBasis`) says which amount:
+
+| `ThresholdBasis` | Compared with |
+| --- | --- |
+| `Item` (the default) | The item's taxable amount (`TaxRuleQuery.TaxableAmount`). |
+| `Order` | What the order's items come to, before tax, shipping left out (`TaxRuleQuery.OrderAmount`: the sum of `ITaxableBaseCalculator.GetTaxableBase` over the context's items that aren't `TaxableItemKind.Shipping`). `TaxService` sets it on every query; a query without it falls back to the item's amount. |
+
+`CatalogTaxRuleProvider` applies it. The admin calls it **Amounts compared with** (**Each item** or **The whole order**); the `TaxRule` recipe step takes `"ThresholdBasis": "Item"` or `"Order"`.
+
+#### Import duty
+
+`TaxTypeNames.ImportDuty` (`ImportDuty`) is a well-known tax type: a duty on goods brought into a country, charged at checkout. New sites are seeded with it, and `TaxTypeMigrations.UpdateFrom1Async` adds it to sites seeded before it, unless they have no tax types at all or already have one by that name. A duty is an ordinary rule:
+
+```json
+{
+  "name": "TaxRule",
+  "TaxRules": [
+    {
+      "ItemId": "ca-import-duty",
+      "Name": "Canada import duty",
+      "Source": "Percentage",
+      "TaxType": "ImportDuty",
+      "TaxName": "Import duty",
+      "JurisdictionId": "ca",
+      "Rate": 0.05,
+      "MinimumAmount": 150,
+      "ThresholdBasis": "Order",
+      "Enabled": true
+    }
+  ]
+}
+```
+
+Every item of an order to the jurisdiction whose items come to 150 or more is charged the duty. The checkout summary groups the invoice's tax lines by display name, rate and `IncludedInPrice` (`CheckoutInvoiceSummary.cshtml`), so the duty shows once, as its own line, such as *Import duty 5%*, and an included tax as *VAT 19% (included)*.
 
 ### Nexus vs. a jurisdiction having a tax
 
@@ -394,7 +433,35 @@ The main extension points are:
 | `ITaxRefundCalculator` | Derives full and proportional refund tax from a snapshot. |
 | `ITaxDeterminationProvider` | Short-circuits the engine with an external determination. |
 
-An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services (for example `CrestApps.OrchardCore.Taxation.Avalara` or `CrestApps.OrchardCore.Taxation.Stripe`) can be layered on top of the same abstractions.
+An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services can be layered on top of the same abstractions; [TaxJar](#taxjar) is one. Providers are asked by their `Order`, lowest first, and the first that can handle the context determines it. The engine checks that every item is in the context's currency before asking any provider.
+
+## TaxJar
+
+The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxation) works out tax with TaxJar for orders to the countries it's set up for, in place of the store's rules. The settings screen is described in the [User Manual](../user-manual/commerce/taxes.md#taxjar).
+
+| | |
+| --- | --- |
+| **Settings** | **Commerce > Taxation > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
+| **Provider** | `TaxJarTaxDeterminationProvider` (`ITaxDeterminationProvider`, `Order` 100), with the named `HttpClient` `TaxJar` (10-second timeout) |
+| **Options** | `TaxJarOptions`: `ApiKey` (unprotected), `UseSandbox`, `Countries`, and `BaseUrl` (`https://api.taxjar.com/v2/`, or `https://api.sandbox.taxjar.com/v2/` with the sandbox) |
+
+`TaxJarSettings.ApiKey` is protected with data protection (purpose `CrestApps.OrchardCore.Taxation.TaxJar.ApiKey`). The settings page never shows it again, keeps it when the field is left blank, and removes it with **Remove the token**. `Countries` defaults to `US`. `TaxJarOptionsConfiguration` reads the settings into `TaxJarOptions` once per tenant, so saving the settings releases the shell (`IShellReleaseManager.RequestRelease`) and the tenant restarts with them.
+
+`CanHandle` is `true` when there's a token, `TaxCalculationContext.DefaultPriceType` is `Exclusive`, and the destination's country is in `Countries`. A context whose prices include tax, such as a checkout in a [market](markets.md#tax) whose prices include tax, stays with the store's rules, because TaxJar adds tax to a price.
+
+`DetermineAsync` posts the order to `taxes` with the token as a bearer token:
+
+| TaxJar field | From |
+| --- | --- |
+| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Commerce > Taxation > Origin**) |
+| `to_country`, `to_zip`, `to_state`, `to_city`, `to_street` | `TaxCalculationContext.Destination` |
+| `amount`, `shipping` | The non-shipping and the shipping items' unit price times quantity, less their discounts |
+| `line_items` | Each non-shipping item: `id`, `quantity`, `unit_price`, `discount`, and `product_tax_code` from `TaxableItem.TaxClassificationCode` |
+| `exemption_type` | `other` for a customer whose `CustomerTaxProfile.IsTaxExempt` is `true` |
+
+The answer becomes one `TaxLine` for each line item, and one for shipping, that owes tax: `Rate` is TaxJar's `combined_tax_rate`, `TaxableAmount` and `TaxAmount` its `taxable_amount` and `tax_collectable`, `JurisdictionName` the jurisdictions joined as *city, county, state, country*, and `CalculationMethod` `TaxJar`. The tax type and name are `SalesTax` and *Sales tax* for the United States, and `VAT` and *VAT* elsewhere.
+
+When TaxJar answers with an error, or doesn't answer, the provider logs it and throws an `InvalidOperationException`. `TaxService` catches a determination provider's failure (anything but cancellation), logs a warning, and works the tax out with the built-in engine, so a connector that's down doesn't stop sales.
 
 ## Per-category taxation with taxonomies
 
@@ -518,7 +585,24 @@ The five catalog entities — **Tax categories**, **Tax types**, **Tax jurisdict
 
 When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for each of these steps (and for the `TaxationPart` and its settings), giving editor validation and IntelliSense while authoring recipes.
 
+### EU VAT standard rates
+
+The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRates`, `Recipes/eu-vat.recipe.json`, not a setup recipe), run from **Configuration > Recipes**. It enables Taxation and adds the 27 EU member states as `TaxJurisdiction`s (level `Country`, with the ISO code as code and country, Greece as `GR`), and a `Percentage` `TaxRule` for each (`TaxType` `VAT`, `TaxName` *VAT*, the country's standard rate, `AppliesToShipping`, priority 0). Its entries have fixed `ItemId`s (`4evatj…` for jurisdictions, `4evatr…` for rules), so running it again updates the same entries. Rates change: check them before relying on the recipe, and add reduced-rate rules by category.
+
 **Deployment steps** with the same five names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
+
+## Taxes on orders and the one-stop shop
+
+When a cart's checkout completes, `OrderCheckoutHandler` copies the invoice's tax lines to `Order.TaxLines` (`List<TaxLine>`), so an order keeps every tax it was charged: its name, type, jurisdiction, rate, taxable amount, amount and whether it was included in the price. The Orders API shows them as the order's `taxes`; see [Carts and Orders](carts-and-orders.md#taxes-and-culture-on-the-order).
+
+The **VAT one-stop shop (OSS)** report (`OrderVatOssReport`, name `order-vat-oss`, registered by the Orders module when Reports is on, permission `ManageOrders`) adds them up for the EU one-stop-shop return. `OrderVatOss.Summarize(orders, originCountry)`:
+
+- reads the orders paid in the period;
+- takes each order's country from its shipping address, else its billing address, and keeps only EU member states (`OrderVatOss.EuCountries`, Greece as `GR`) other than the origin country (`TaxOriginSettings.Origin.Country`);
+- adds up the tax lines whose `TaxType` is `VAT` and whose amount isn't zero, by country, rate and currency;
+- takes refunds off in proportion: each line counts `1 - RefundedAmount / Total` of its taxable amount and tax.
+
+The report shows, per currency, the VAT due and the number of countries, and a table of country, rate, orders, taxable amount and VAT, with a total. Orders paid before `Order.TaxLines` existed have no tax lines, so they aren't counted.
 
 ## Determinism
 

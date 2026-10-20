@@ -417,6 +417,139 @@ public sealed class OrderTaxReport : OrderReportBase, IReport
 }
 
 /// <summary>
+/// The VAT one-stop-shop (OSS) return: the VAT charged on orders paid in the period that went to other EU countries, by
+/// country and rate, with refunds taken off. A quarter's report is the return's figures; orders to the store's own
+/// country (its tax origin) are declared at home and left out.
+/// </summary>
+public sealed class OrderVatOssReport : OrderReportBase, IReport
+{
+    private readonly ISiteService _siteService;
+
+    public OrderVatOssReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderVatOssReport> stringLocalizer)
+        : base(reader, siteService, clock, stringLocalizer)
+    {
+        _siteService = siteService;
+    }
+
+    public static string Name => "order-vat-oss";
+
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderVatOssReport>("VAT one-stop shop (OSS)");
+
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderVatOssReport>("The VAT charged on orders to other EU countries in the period, by country and rate, refunds taken off: the figures of the EU one-stop-shop return. Run it for a quarter.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
+
+    public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    {
+        var (from, to) = GetPeriod(context);
+        var orders = await ReadPaidAsync(from, to, cancellationToken);
+        var origin = (await _siteService.GetSettingsAsync<CrestApps.OrchardCore.Taxation.Models.TaxOriginSettings>()).Origin?.Country;
+        var document = new ReportDocument { Title = DisplayName.Value };
+        var rows = OrderVatOss.Summarize(orders, origin);
+
+        if (rows.Count == 0)
+        {
+            return document.Add(ReportSection.ForMetrics(S["No EU VAT"].Value,
+            [
+                new ReportMetric(S["Orders"].Value, ReportFormat.Number(0), S["No order paid in the period was charged VAT in another EU country."].Value),
+            ]));
+        }
+
+        foreach (var currency in rows.Select(row => row.Currency).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var inCurrency = rows.Where(row => string.Equals(row.Currency, currency, StringComparison.OrdinalIgnoreCase)).ToList();
+            var table = inCurrency.Select(row => new ReportRow(
+            [
+                row.Country,
+                ReportFormat.Percent((double)row.Rate),
+                ReportFormat.Number(row.Orders),
+                Money(row.Taxable, currency),
+                Money(row.Vat, currency),
+            ])).ToList();
+
+            table.Add(new ReportRow([S["Total"].Value, string.Empty, ReportFormat.Number(inCurrency.Sum(row => row.Orders)), Money(inCurrency.Sum(row => row.Taxable), currency), Money(inCurrency.Sum(row => row.Vat), currency)], emphasize: true));
+
+            document.Add(ReportSection.ForMetrics(S["Summary ({0})", currency].Value,
+            [
+                new ReportMetric(S["VAT due"].Value, Money(inCurrency.Sum(row => row.Vat), currency), S["Refunds taken off."].Value),
+                new ReportMetric(S["Countries"].Value, ReportFormat.Number(inCurrency.Select(row => row.Country).Distinct().Count())),
+            ]));
+            document.Add(ReportSection.ForTable(S["VAT by country and rate ({0})", currency].Value,
+            [
+                new ReportColumn(S["Country"].Value),
+                new ReportColumn(S["Rate"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Orders"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Taxable amount"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["VAT"].Value, ReportColumnAlign.End),
+            ], table));
+        }
+
+        return document;
+    }
+}
+
+/// <summary>
+/// Adds up the VAT of orders to other EU countries for the one-stop-shop return.
+/// </summary>
+public static class OrderVatOss
+{
+    /// <summary>
+    /// The EU member states, by their two-letter codes; Greece is GR here, as addresses write it.
+    /// </summary>
+    public static readonly IReadOnlySet<string> EuCountries = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU",
+        "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+    };
+
+    /// <summary>
+    /// Returns the VAT of the orders by the country they went to and the rate, in each currency: orders to EU countries
+    /// other than <paramref name="originCountry"/>, with what was refunded taken off in proportion.
+    /// </summary>
+    public static IReadOnlyList<OrderVatOssRow> Summarize(IEnumerable<Order> orders, string originCountry)
+    {
+        var rows = new Dictionary<(string Country, decimal Rate, string Currency), (HashSet<string> Orders, decimal Taxable, decimal Vat)>();
+
+        foreach (var order in orders ?? [])
+        {
+            var country = (order.ShippingAddress?.Country ?? order.BillingAddress?.Country)?.ToUpperInvariant();
+
+            if (country is null || !EuCountries.Contains(country) || string.Equals(country, originCountry, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var total = order.Total ?? order.Subtotal;
+            var kept = total > 0m ? Math.Clamp(1m - (order.RefundedAmount / total), 0m, 1m) : 1m;
+
+            foreach (var line in (order.TaxLines ?? []).Where(line => string.Equals(line.TaxType, "VAT", StringComparison.OrdinalIgnoreCase) && line.TaxAmount != 0m))
+            {
+                var key = (country, line.Rate, order.Currency ?? string.Empty);
+                var row = rows.TryGetValue(key, out var existing) ? existing : (new HashSet<string>(StringComparer.Ordinal), 0m, 0m);
+
+                row.Item1.Add(order.ItemId);
+                rows[key] = (row.Item1, row.Item2 + (line.TaxableAmount * kept), row.Item3 + (line.TaxAmount * kept));
+            }
+        }
+
+        return [.. rows
+            .Select(entry => new OrderVatOssRow(entry.Key.Country, entry.Key.Rate, entry.Key.Currency, entry.Value.Orders.Count, Payments.Money.Round(entry.Value.Taxable, entry.Key.Currency), Payments.Money.Round(entry.Value.Vat, entry.Key.Currency)))
+            .OrderBy(row => row.Currency, StringComparer.Ordinal)
+            .ThenBy(row => row.Country, StringComparer.Ordinal)
+            .ThenByDescending(row => row.Rate)];
+    }
+}
+
+/// <summary>
+/// The VAT charged at one rate in one country, in one currency.
+/// </summary>
+public sealed record OrderVatOssRow(string Country, decimal Rate, string Currency, int Orders, decimal Taxable, decimal Vat);
+
+/// <summary>
 /// What each promotion code took off the orders paid in the period.
 /// </summary>
 public sealed class OrderDiscountsReport : OrderReportBase, IReport
