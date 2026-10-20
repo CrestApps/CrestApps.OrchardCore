@@ -1,0 +1,20 @@
+@model ShapeViewModel<RegisterShift>
+
+@if (Model.Value.Status == RegisterShiftStatus.Open)
+{
+    <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-cash-register text-secondary me-1" aria-hidden="true"></i>@T["Open"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["Closed"]
+    </span>
+    @if (Model.Value.CountedCash is { } counted && Model.Value.ExpectedCash is { } expected && counted != expected)
+    {
+        <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Counted less expected cash"]">
+            <i class="fa-solid fa-scale-unbalanced text-secondary me-1" aria-hidden="true"></i>@((counted - expected).ToString("+0.00;-0.00"))
+        </span>
+    }
+}

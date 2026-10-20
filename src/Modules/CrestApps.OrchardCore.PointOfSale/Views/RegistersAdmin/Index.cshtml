@@ -1,0 +1,29 @@
+@model RegistersIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PointOfSaleRegisters" title="@T["Registers"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-body-secondary">@T["A register is a till at one of your stores. Staff open a shift at it from the till app and ring up sales there."]</p>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Add register"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="PointOfSaleRegisters" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No registers yet. Add one for each till at your stores."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Register"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
