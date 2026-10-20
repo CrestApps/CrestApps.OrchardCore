@@ -57,11 +57,14 @@
                 <span>@Format(invoice.DueNow)</span>
             </div>
 
-            @foreach (var taxLine in invoice.TaxLines ?? [])
+            @* One row for each tax at each rate, whatever the lines it was charged on; a tax included in the prices says so. *@
+            @foreach (var tax in (invoice.TaxLines ?? []).Where(line => line.TaxAmount != 0m).GroupBy(line => (Name: string.IsNullOrEmpty(line.TaxName) ? T["Tax"].Value : line.TaxName, line.Rate, line.IncludedInPrice)))
             {
+                var rate = tax.Key.Rate > 0m ? " " + (tax.Key.Rate * 100m).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture) + "%" : string.Empty;
+
                 <div class="d-flex justify-content-between text-body-secondary small">
-                    <span>@(string.IsNullOrEmpty(taxLine.TaxName) ? T["Tax"].Value : taxLine.TaxName)</span>
-                    <span>@Format(taxLine.TaxAmount)</span>
+                    <span>@(tax.Key.IncludedInPrice ? T["{0}{1} (included)", tax.Key.Name, rate] : T["{0}{1}", tax.Key.Name, rate])</span>
+                    <span>@Format(tax.Sum(line => line.TaxAmount))</span>
                 </div>
             }
         }

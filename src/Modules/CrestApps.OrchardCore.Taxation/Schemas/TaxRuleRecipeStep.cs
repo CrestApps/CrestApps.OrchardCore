@@ -62,6 +62,7 @@ public sealed class TaxRuleRecipeStep : IRecipeStep
                 ("AppliesToShipping", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the rule applies to shipping charges.")),
                 ("MinimumAmount", number.Description("The inclusive minimum taxable amount the rule applies to.")),
                 ("MaximumAmount", number.Description("The exclusive maximum taxable amount the rule applies to.")),
+                ("ThresholdBasis", new JsonSchemaBuilder().AnyOf(new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Item", "Order"), new JsonSchemaBuilder().Type(SchemaValueType.Integer)).Description("What the minimum and maximum amounts are compared with: each item, or the whole order.")),
                 ("EffectiveFromUtc", dateSchema.Description("The UTC date the rule becomes effective.")),
                 ("EffectiveToUtc", dateSchema.Description("The UTC date the rule stops being effective.")))
             .Required("Name")

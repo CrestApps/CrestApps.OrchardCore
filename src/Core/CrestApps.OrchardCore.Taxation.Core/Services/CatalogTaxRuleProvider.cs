@@ -91,12 +91,15 @@ public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
             return false;
         }
 
-        if (rule.MinimumAmount.HasValue && query.TaxableAmount < rule.MinimumAmount.Value)
+        // An order-wide threshold, such as an import duty's, is compared with what the order's items come to.
+        var amount = rule.ThresholdBasis == TaxThresholdBasis.Order ? query.OrderAmount ?? query.TaxableAmount : query.TaxableAmount;
+
+        if (rule.MinimumAmount.HasValue && amount < rule.MinimumAmount.Value)
         {
             return false;
         }
 
-        if (rule.MaximumAmount.HasValue && query.TaxableAmount >= rule.MaximumAmount.Value)
+        if (rule.MaximumAmount.HasValue && amount >= rule.MaximumAmount.Value)
         {
             return false;
         }

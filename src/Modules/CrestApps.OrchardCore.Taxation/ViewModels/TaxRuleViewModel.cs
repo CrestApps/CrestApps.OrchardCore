@@ -85,6 +85,8 @@ public class TaxRuleViewModel
     /// </summary>
     public decimal? MinimumAmount { get; set; }
 
+    public TaxThresholdBasis ThresholdBasis { get; set; }
+
     /// <summary>
     /// Gets or sets the maximum taxable amount allowed for the tax rule to apply.
     /// </summary>
