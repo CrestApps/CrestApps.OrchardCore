@@ -144,6 +144,19 @@ Sending the invoice needs your site's email to be set up; the draft's editor war
 
 A paid order can't be changed, but on its page **Add items** starts a new order for the same buyer, marked *These items are added to order ...*. Fill it in and send its invoice like any other; its page links back to the paid order. To take items off a paid order, refund them, or let the buyer [return them](returns.md).
 
+## Quotes
+
+Let signed-in buyers ask for a quote instead of checking out, such as for a large or trade order.
+
+1. On **Settings > Commerce > Orders**, tick **Take quote requests** and save.
+2. A signed-in buyer now sees **Request a quote** under **Checkout** on their cart. They can write a message, such as the quantities they need and by when, and give a purchase order number. Their cart is emptied, and the quote shows under their orders as *Asked for*.
+3. The quote is a draft order on **Commerce > Orders**, with the buyer's message. Click **Edit**, and under **Price each** enter the price you'll offer for a line; leave it blank for your usual price. Set **Pay by (optional)**: the quote expires then. Click **Update prices** to see the totals, then **Save draft**.
+4. Click **Send quote**. The buyer is emailed *Your quote ... is ready*, with the prices, until when it's offered, and a **Review and accept** button.
+
+The buyer accepts the quote by paying it, from the email or their orders, before it expires. Prices you set are final: automatic promotions don't come off them. They can also **Turn it down**, or **Withdraw the request** before you've sent it; either cancels it. An expired quote can't be paid: change its date to pay by and send it again to offer it again.
+
+Sending a quote needs your site's email to be set up.
+
 ## Store reports
 
 With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).

@@ -193,6 +193,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
+| `CrestApps.OrchardCore.Companies` | Companies | [Companies](./modules/companies) |
 | `CrestApps.OrchardCore.Products.Api` | Catalog API | [Products](./modules/products#api) |
 | `CrestApps.OrchardCore.Carts.Api` | Cart API | [Carts and Orders](./modules/carts-and-orders#api) |
 | `CrestApps.OrchardCore.Checkout.Api` | Checkout API | [Checkout](./modules/checkout#the-commerce-api) |

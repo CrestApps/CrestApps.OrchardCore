@@ -439,6 +439,31 @@ Not built yet, and why:
 - **Live exchange rates.** Rates are the store's (P-D7); a provider is a later option.
 - **Avalara.** TaxJar is the first connector; Avalara is another provider on the same seam.
 
+## Phase 8 as built
+
+One branch, a commit per slice:
+
+- **Loyalty and referral rewards after the order is saved.** Points and referral rewards are given in a deferred task once the order is paid, so a signed-in buyer's checkout no longer stalls on two writes to the same order.
+- **PH1 companies.** A Companies feature (Commerce › Companies): buyers and admins, each with an order limit, locations offered at checkout, a tax number, and payment terms: net days, a deposit paid at checkout, a credit limit and a required purchase order number. The account's **Company** page shows the company, its terms, what it owes and its orders. A Company step after shipping takes the purchase order number, which goes on the order, its invoice and the API. What the deposit doesn't cover goes on the company's account as a tender (`company-terms`), a transaction due in its net days, up to the credit left, in the store's currency.
+- **PH2b quotes.** A signed-in buyer sends their cart as a quote request (Orders' **Take quote requests** setting, through Carts' new `ICartActionProvider`), with a message and purchase order number; it's a draft order with `Order.Quote`. Staff set a price each (`OrderLine.QuotedUnitPrice`) and send it, offered until the date to pay by; the buyer accepts it by paying, or turns it down. Promotions don't come off an agreed price (`BillingItem.ExcludeFromDiscounts`). The API asks for and declines quotes.
+- **PH2c price lists.** Commerce › Price lists: a percentage off and prices by SKU, pasted as lines, in the store's currency and converted for a market. Products.Core's `IBuyerPriceProvider` seam lets the price resolver charge a buyer's own price when it's lower; the company's list is one provider.
+- **PH3a approvals and budgets.** An order over a buyer's limit, or past the company's monthly budget, waits for a company admin's approval (`Order.Approval`). The Company step asks for it, a payment gate refuses payment without it, admins approve or reject from their account or the API, and both sides are emailed. An approved order is paid from the buyer's orders; one that grows past the approved total needs approval again.
+- **PH3b punchout.** OCI punchout: a company's procurement system opens the store with the company's key (kept as a hash, shown once) and HOOK_URL, signs in as its punchout buyer (never a site administrator), and gets the cart back as OCI fields.
+
+The exit gate holds: a company buyer asks for a quote with a PO number, the store prices and sends it, the buyer accepts it by paying, the company pays a 20% deposit at checkout and the rest goes on its net-30 account, and the PO number is on the order and its invoice.
+
+Found and fixed while testing:
+
+- A number field in an admin page in a decimal-comma language (German) posted "24.5" and bound as 245. The quote price and the price list fields read invariant text; other admin forms with decimal fields have the same issue, left for a central fix.
+- A quote's draft was re-priced in the admin's currency; a saved draft now keeps its own.
+- Automatic promotions came off a quoted price; agreed prices are excluded from discounts.
+
+Not built yet, and why:
+
+- **cXML punchout.** OCI is built; cXML (PunchOutSetupRequest and an order message back) is the other common protocol, on the same company key and session.
+- **Catalogs per company.** A price list prices products; hiding products from a company needs the company in every search backend's index, like a market's.
+- **Quotes without email.** A quote is sent by email; a store without email can't mark one sent yet.
+
 ## Headless API and point of sale (phase 6, planned)
 
 A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.
