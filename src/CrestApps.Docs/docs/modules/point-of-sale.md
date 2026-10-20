@@ -12,7 +12,7 @@ user_manual: user-manual/commerce/point-of-sale
 | **Depends on** | Commerce, Orders, Inventory, Checkout API |
 | **Works with** | Receipts (printed and emailed receipts), Customers (a named buyer), Gift Cards, Stripe (Terminal readers) |
 
-The **Point of Sale** feature sells at a store's counter from a till app over the [commerce API](../user-manual/commerce/headless-api.md). A sale is an order on the ordinary checkout framework, so prices, coupons, gift cards, tax, stock holds, order events and reports work as they do online. The module adds what a counter needs: registers, shifts with their cash, a cash tender, a payment method for the store's own card terminal, receipts, and returns at the till.
+The **Point of Sale** feature sells at a store's counter from a till app over the [commerce API](commerce-api.md). A sale is an order on the ordinary checkout framework, so prices, coupons, gift cards, tax, stock holds, order events and reports work as they do online. The module adds what a counter needs: registers, shifts with their cash, a cash tender, a payment method for the store's own card terminal, receipts, and returns at the till.
 
 ## Model
 
@@ -72,8 +72,8 @@ It commits that, then starts the order's checkout with `ICheckoutEngine.StartAsy
 | `GET` | `pos/shifts/{shiftId}` | The shift (`ApiShift`), with its summary and expected cash. |
 | `POST` | `pos/shifts/{shiftId}/cash` | A cash movement (`amount`, `reason`); `409 shift-closed`. Idempotent. |
 | `POST` | `pos/shifts/{shiftId}/close` | Closes it with `countedCash` and `note`. |
-| `POST` | `pos/sales` | Rings up `lines` (`PosSaleLine`: `productId`, `variantId`, `priceId`, `quantity`, `addOns`) for a `customerId`, or a `customerEmail` and `customerName`; `201` with `orderId`, `orderNumber` and the `checkout` (`ApiCheckout`). Idempotent. |
-| `POST` | `pos/sales/{checkoutId}/pay` | `cash`, then `card` (`approvalCode`) or `reader` (`readerId`); answers `ApiPosPayment` with `status` `completed`, `due` or `pending`, `amountDue`, `change` and, once completed, `receipt`. Idempotent. |
+| `POST` | `pos/sales` | Rings up `lines` (`PosSaleLine`: `productId`, `variantId`, `priceId`, `quantity`, `addOns`) for a `customerId`, or a `customerEmail` and `customerName`; `201` with `orderId`, `orderNumber` and the `checkout` (`ApiCheckout`); `400` on `customerId` when it isn't a customer, `409 shift-closed` without an open shift. Idempotent. |
+| `POST` | `pos/sales/{checkoutId}/pay` | `cash`, then `card` (`approvalCode`) or `reader` (`readerId`); answers `ApiPosPayment` with `status` `completed`, `due` or `pending`, `amountDue`, `change` and, once completed, `receipt`; `{}` asks whether a reader's payment is done. `409 shift-closed` once the sale's shift has closed; `409 not-available` for a declined reader payment. Idempotent. |
 | `GET` | `pos/sales/{orderId}/receipt` | The receipt's HTML; `409 unsupported` without Receipts. |
 | `POST` | `pos/sales/{orderId}/receipt/email` | Emails it to `email`; `204`. |
 | `POST` | `pos/returns` | `orderId`, `registerId`, `amount`, `reason`, `restock`; answers `refunded`, `cashBack` and the refund's `messages`. Idempotent. |
@@ -95,6 +95,220 @@ With the [Stripe](payments) feature and Point of Sale both on, Stripe's `Termina
 | `GET` | `pos/terminal/readers` | Sell at a register | Lists the account's readers (`ApiStripeReader`: `id`, `label`, `deviceType`, `status`, `locationId`, `action`, `actionStatus`). |
 | `POST` | `pos/terminal/readers` | Manage registers and shifts | Pairs a reader by `registrationCode`, with a `label`, at `stripeLocationId` or a Stripe location made from `address`. `simulated-wpe` pairs a simulated reader in test mode. |
 | `POST` | `pos/terminal/readers/{readerId}/test-card` | Sell at a register | In test mode, presents a test card on a simulated reader (`TestHelpers.Terminal.ReaderService.PresentPaymentMethodAsync`); `409 unsupported` on a live account. |
+
+### Pair a reader
+
+A manager pairs a reader once, by the registration code it shows when it's set up:
+
+```http
+POST pos/terminal/readers
+Content-Type: application/json
+
+{
+  "registrationCode": "sunny-river-moon",
+  "label": "Downtown till 1",
+  "address": { "addressLine1": "1 Main Street", "city": "Springfield", "region": "IL", "postalCode": "62701", "country": "US" }
+}
+```
+
+Stripe keeps each reader at a Stripe location: give the store's `address` and one is made for it, or name one made in the Stripe Dashboard with `stripeLocationId`. The answer is the reader:
+
+```json
+{ "id": "tmr_...", "label": "Downtown till 1", "deviceType": "bbpos_wisepos_e", "status": "online", "locationId": "tml_...", "action": null, "actionStatus": null }
+```
+
+`GET pos/terminal/readers` lists the readers, so the till app can let staff pick the one at their register. In test mode, the registration code `simulated-wpe` pairs a simulated reader, and `POST pos/terminal/readers/{readerId}/test-card` presents a test card on it while a sale is waiting.
+
+## A shift, call by call
+
+A shift as a till app makes it. Paths are shown without `https://your-site/api/commerce/v1/`, every call carries the staff member's bearer token, and the answers leave out some fields. Send an `Idempotency-Key` on the calls that take one (see [Idempotency keys](commerce-api.md#idempotency-keys)), so a dropped connection never rings a sale up twice.
+
+### 1. Pick a register and open a shift
+
+```http
+GET pos/registers
+```
+
+```json
+[
+  { "id": "4r9k2x7m1q", "name": "Downtown till 1", "locationId": "downtown", "currency": "USD", "address": { "city": "Springfield", "country": "US" }, "openShiftId": null }
+]
+```
+
+The list has only the registers the staff member may sell at. `openShiftId` names the register's open shift, when it has one: carry on with it. Otherwise open one with the cash put in the drawer, the **float**:
+
+```http
+POST pos/registers/4r9k2x7m1q/shifts
+Content-Type: application/json
+
+{ "openingFloat": 100.00 }
+```
+
+The answer is `201 Created` with the shift. A register has one open shift at a time; opening another answers `409` with the code `shift-open`.
+
+### 2. Ring up a sale
+
+```http
+POST pos/sales
+Content-Type: application/json
+
+{
+  "registerId": "4r9k2x7m1q",
+  "lines": [ { "productId": "4b2kx7m9qz1c", "quantity": 2 } ],
+  "customerEmail": "avery@example.com",
+  "customerName": "Avery Brooks"
+}
+```
+
+Each line is a product, with `variantId`, `priceId` and `addOns` as for adding it to a cart. Name the buyer with `customerId` when staff look them up, so the sale is on their account and earns them points (an id that isn't a customer answers `400`); or give a walk-in buyer's `customerEmail` and `customerName`, for their receipt; or neither.
+
+The answer is `201 Created`:
+
+```json
+{
+  "orderId": "4d1k8s0p2w",
+  "orderNumber": "1043",
+  "checkout": {
+    "id": "7c2m9x1k",
+    "status": "pending",
+    "totals": {
+      "subtotal": { "amount": 24.0, "currency": "USD" },
+      "tax": { "amount": 1.98, "currency": "USD" },
+      "total": { "amount": 25.98, "currency": "USD" },
+      "amountDue": { "amount": 25.98, "currency": "USD" }
+    }
+  }
+}
+```
+
+The sale is an order, with its stock held at the register's store while it's paid. A sale can't be rung up without an open shift (`409`, `shift-closed`), and a product that can't be sold, or has run out, answers `409` with the code `not-available` and what's wrong.
+
+A discount code or a gift card goes on the sale's checkout with the [checkout endpoints](commerce-api.md#checkout): `POST checkout/7c2m9x1k/codes` or `POST checkout/7c2m9x1k/gift-cards`. Store credit and loyalty points aren't spent at a register. To give up on a sale before it's paid, `DELETE checkout/7c2m9x1k` cancels its checkout: the order is canceled and its stock let go.
+
+The sale's checkout belongs to the staff member who rang it up, so the same account pays it.
+
+### 3. Take the payment
+
+Pay with the cash the buyer hands over:
+
+```http
+POST pos/sales/7c2m9x1k/pay
+Content-Type: application/json
+
+{ "cash": 30.00 }
+```
+
+```json
+{
+  "status": "completed",
+  "amountDue": { "amount": 0.0, "currency": "USD" },
+  "change": { "amount": 4.02, "currency": "USD" },
+  "receipt": {
+    "orderNumber": "1043",
+    "staff": "jordan",
+    "lines": [ { "description": "Contoso mug", "quantity": 2, "unitPrice": { "amount": 12.0, "currency": "USD" }, "total": { "amount": 24.0, "currency": "USD" } } ],
+    "total": { "amount": 25.98, "currency": "USD" },
+    "payments": [ { "method": "Cash", "amount": { "amount": 25.98, "currency": "USD" } } ],
+    "change": { "amount": 4.02, "currency": "USD" }
+  }
+}
+```
+
+| `status` | What it means |
+| --- | --- |
+| `completed` | Paid, and the order is placed. Hand back `change`, and print the `receipt`. |
+| `due` | `amountDue` is still to pay: take more cash, or a card. |
+| `pending` | A Stripe reader is waiting for the card. Ask again in a couple of seconds by paying with `{}`. |
+
+A sale is paid in the shift it was rung up in: once that shift has closed, paying answers `409` with the code `shift-closed`, and the sale is rung up again on the open shift.
+
+When more cash is handed over than is due, the rest is the change. Send all the cash the buyer hands over in one `cash`. Some cash and a card for the rest is one call, or two:
+
+```http
+POST pos/sales/7c2m9x1k/pay
+
+{ "cash": 20.00, "card": { "approvalCode": "483920" } }
+```
+
+`card` records a card taken on the counter terminal, for what's left after the cash; take it on the terminal first. `reader` sends what's left to a Stripe reader instead:
+
+```http
+POST pos/sales/7c2m9x1k/pay
+
+{ "reader": { "readerId": "tmr_..." } }
+```
+
+The answer is `pending` until the buyer presents their card; then paying again with `{}` answers `completed`. If the card is declined, paying answers `409` with the code `not-available`: send the payment to the reader again, or take another way to pay.
+
+### 4. The receipt
+
+The answer that completes the sale holds the receipt as data, for a till app that prints in its own layout on a receipt printer. With the **Receipts** feature on:
+
+- `GET pos/sales/4d1k8s0p2w/receipt` gives the receipt as a printable HTML page, branded from the [Receipts](receipts.md) settings;
+- `POST pos/sales/4d1k8s0p2w/receipt/email` with `{ "email": "avery@example.com" }` emails it.
+
+Without Receipts, both answer `409` with the code `unsupported`.
+
+### 5. Cash in and out
+
+Cash put in the drawer or taken out outside a sale, such as more change from the safe or a banking run, is recorded on the shift: a positive amount is put in, a negative one taken out.
+
+```http
+POST pos/shifts/9s4m2k7x/cash
+Content-Type: application/json
+
+{ "amount": -200.00, "reason": "Banked at noon" }
+```
+
+### 6. Returns at the till
+
+```http
+POST pos/returns
+Content-Type: application/json
+
+{ "orderId": "4d1k8s0p2w", "registerId": "4r9k2x7m1q", "reason": "Wrong size", "restock": true }
+```
+
+```json
+{
+  "orderId": "4d1k8s0p2w",
+  "orderNumber": "1043",
+  "refunded": { "amount": 25.98, "currency": "USD" },
+  "cashBack": { "amount": 25.98, "currency": "USD" },
+  "messages": [ "..." ]
+}
+```
+
+Leave out `amount` to refund all of it, or give an `amount` to refund part. The items go back on the shelf at the register's store unless `restock` is `false`. What the sale paid in cash is handed back from the drawer, `cashBack`, and recorded as cash taken out of the register's open shift, so a return needs an open shift (`409`, `shift-closed`). When a sale was paid partly in cash and partly by card, the card is refunded first and only what it doesn't cover comes out of the drawer. A till returns its store's register sales; an online order is returned there only by staff with **Manage orders**. The rest goes back to how it was paid: a Stripe reader's card is refunded through Stripe, and a gift card gets its money back. A card taken on the counter terminal is refunded on that terminal: the site records the refund, and staff make it on the terminal.
+
+### 7. Close the shift
+
+At the end of the shift, count the cash in the drawer, and close it:
+
+```http
+POST pos/shifts/9s4m2k7x/close
+Content-Type: application/json
+
+{ "countedCash": 124.50, "note": "Short 1.48, a coin dropped behind the till" }
+```
+
+```json
+{
+  "id": "9s4m2k7x",
+  "registerName": "Downtown till 1",
+  "status": "closed",
+  "openingFloat": { "amount": 100.0, "currency": "USD" },
+  "sales": 1,
+  "total": { "amount": 25.98, "currency": "USD" },
+  "cash": { "amount": 25.98, "currency": "USD" },
+  "card": { "amount": 0.0, "currency": "USD" },
+  "expectedCash": { "amount": 125.98, "currency": "USD" },
+  "countedCash": { "amount": 124.5, "currency": "USD" },
+  "difference": { "amount": -1.48, "currency": "USD" }
+}
+```
+
+`GET pos/shifts/9s4m2k7x` gives the same at any time while it's open, so the till can show how the day is going.
 
 ## Admin
 

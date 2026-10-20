@@ -476,7 +476,7 @@ Three recipes show the feature end to end. They need a front-end theme on Bootst
 
 The **Catalog API** feature (`CrestApps.OrchardCore.Products.Api`, it needs Product Listing) maps `GET products` and `GET products/{id}` into the commerce JSON API at `api/commerce/v1`. Both allow guests. The list is searched through `IProductSearchService` over the product types the caller may view (`ViewContent`), with the listing pages' sort keys (`newest`, `price-asc`, `price-desc`, `name`, `featured`, or the recommended order). Each product is priced for the caller through `IPriceResolver`, as the product page prices it, and its availability comes from the `IProductAvailabilityProvider`s. With the **Inventory API** on, `GET products/{id}/availability` gives the stock at each location.
 
-See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Recipes and schema
 

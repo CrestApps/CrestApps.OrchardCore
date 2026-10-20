@@ -83,7 +83,7 @@ The **Shipping API** feature (`CrestApps.OrchardCore.Shipping.Api`, it needs Shi
 - `me/orders/{orderId}/shipments`, the signed-in buyer's tracking, with **View own orders**.
 - The staff fulfillment endpoints, through `IShipmentService` with `FulfillOrders`: `orders/{orderId}/shipments` (what's left to ship, and packing a shipment), and `shipments/{shipmentId}/ship` and `/deliver`.
 
-See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Admin
 

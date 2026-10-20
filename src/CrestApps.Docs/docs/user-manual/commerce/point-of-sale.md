@@ -1,7 +1,7 @@
 ---
 sidebar_label: Point of sale
 title: Point of sale
-description: Sell at your stores' counters from a till app: set up registers and Stripe card readers, open and close shifts with their cash, ring up sales paid in cash, by card or a mix, print and email receipts, and take returns at the till.
+description: "Sell at your stores' counters from a till app: set up registers and Stripe card readers, open and close shifts with their cash, ring up sales paid in cash, by card or a mix, print and email receipts, and take returns at the till."
 technical_manual:
   - modules/point-of-sale
   - modules/payments
@@ -53,221 +53,74 @@ A sale can be paid by card in two ways:
 
 ### Pair a Stripe reader
 
-A reader is paired once, by the code it shows when you set it up. A manager (**Manage registers and shifts**) pairs it from the till app:
-
-```http
-POST pos/terminal/readers
-Content-Type: application/json
-
-{
-  "registrationCode": "sunny-river-moon",
-  "label": "Downtown till 1",
-  "address": { "addressLine1": "1 Main Street", "city": "Springfield", "region": "IL", "postalCode": "62701", "country": "US" }
-}
-```
-
-Stripe keeps each reader at a location. Give the store's `address` and a Stripe location is made for it, or name one you made in the Stripe Dashboard with `stripeLocationId`. The answer is the reader:
-
-```json
-{ "id": "tmr_...", "label": "Downtown till 1", "deviceType": "bbpos_wisepos_e", "status": "online", "locationId": "tml_...", "action": null, "actionStatus": null }
-```
-
-`GET pos/terminal/readers` lists your readers, so the till app can let staff pick the one at their register.
+A reader is paired once, by the registration code it shows when you set it up. A manager (**Manage registers and shifts**) pairs it from the till app: they enter the code, a label such as *Downtown till 1*, and the store's address. Stripe keeps each reader at a location: the site makes one for the store's address, or uses a location you made in the Stripe Dashboard. Once paired, the reader appears in the till app's list of readers, so staff can pick the one at their register.
 
 :::tip[Try it without a reader]
-With Stripe in test mode, pair a simulated reader with the registration code `simulated-wpe`. When a sale is waiting on it, `POST pos/terminal/readers/{readerId}/test-card` presents a test card, as if a buyer tapped one.
+With Stripe in test mode, pair a simulated reader with the registration code *simulated-wpe*. When a sale is waiting on it, the till app can present a test card on it, as if a buyer tapped one.
 :::
+
+Your developers find the requests the till app sends in [Point of Sale](../../modules/point-of-sale.md#pair-a-reader), in the Technical Manual.
 
 ## A day at the till
 
-Here is a shift as a till app makes it, call by call. Paths are shown without `https://your-site/api/commerce/v1/`, every call carries the staff member's bearer token, and the answers leave out some fields to stay short. Send an `Idempotency-Key` on the calls that take one (see [Sending a request again safely](headless-api.md#sending-a-request-again-safely)), so a dropped connection never rings a sale up twice.
+Here is a shift as staff work it in the till app. Each step is a call the till app makes to your site; the Technical Manual walks through the same day [call by call](../../modules/point-of-sale.md#a-shift-call-by-call). A till app built as the Technical Manual describes never rings a sale up, or takes a payment, twice, even when its connection drops.
 
 ### 1. Pick a register and open a shift
 
-```http
-GET pos/registers
-```
+The staff member signs in and picks their register. The list shows only the registers they may sell at. If the register already has an open shift, they carry on with it. Otherwise they open one, entering the cash put in the drawer, the **float**.
 
-```json
-[
-  { "id": "4r9k2x7m1q", "name": "Downtown till 1", "locationId": "downtown", "currency": "USD", "address": { "city": "Springfield", "country": "US" }, "openShiftId": null }
-]
-```
-
-The list has only the registers the staff member may sell at. `openShiftId` names the register's open shift, when it has one: carry on with it. Otherwise open one with the cash put in the drawer, the **float**:
-
-```http
-POST pos/registers/4r9k2x7m1q/shifts
-Content-Type: application/json
-
-{ "openingFloat": 100.00 }
-```
-
-The answer is `201 Created` with the shift. A register has one open shift at a time; opening another answers `409` with the code `shift-open`.
+A register has one open shift at a time: opening a second one is refused.
 
 ### 2. Ring up a sale
 
-```http
-POST pos/sales
-Content-Type: application/json
+The staff member adds the products the buyer is taking, with their variant, price and add-ons as on the product page. They can name the buyer:
 
-{
-  "registerId": "4r9k2x7m1q",
-  "lines": [ { "productId": "4b2kx7m9qz1c", "quantity": 2 } ],
-  "customerEmail": "avery@example.com",
-  "customerName": "Avery Brooks"
-}
-```
+- **Look up a customer**, so the sale is on their account and earns them points. A customer who can't be found is refused, so the sale is never put on the wrong account.
+- **Enter a walk-in buyer's name and email**, for their receipt.
+- **Or name nobody.**
 
-Each line is a product, with `variantId`, `priceId` and `addOns` as for adding it to a cart. Name the buyer with `customerId` when staff look them up, so the sale is on their account and earns them points (an id that isn't a customer answers `400`); or give a walk-in buyer's `customerEmail` and `customerName`, for their receipt; or neither.
+The sale is an order, with its stock held at the register's store while it's paid. A sale can't be rung up without an open shift, and a product that can't be sold, or has run out, is refused with what's wrong.
 
-The answer is `201 Created`:
+A discount code or a gift card goes on the sale before it's paid. Store credit and loyalty points aren't spent at a register. To give up on a sale before it's paid, cancel it: the order is canceled and its stock let go.
 
-```json
-{
-  "orderId": "4d1k8s0p2w",
-  "orderNumber": "1043",
-  "checkout": {
-    "id": "7c2m9x1k",
-    "status": "pending",
-    "totals": {
-      "subtotal": { "amount": 24.0, "currency": "USD" },
-      "tax": { "amount": 1.98, "currency": "USD" },
-      "total": { "amount": 25.98, "currency": "USD" },
-      "amountDue": { "amount": 25.98, "currency": "USD" }
-    }
-  }
-}
-```
-
-The sale is an order, with its stock held at the register's store while it's paid. A sale can't be rung up without an open shift (`409`, `shift-closed`), and a product that can't be sold, or has run out, answers `409` with the code `not-available` and what's wrong.
-
-A discount code or a gift card goes on the sale's checkout with the [checkout endpoints](headless-api.md#checkout): `POST checkout/7c2m9x1k/codes` or `POST checkout/7c2m9x1k/gift-cards`. Store credit and loyalty points aren't spent at a register. To give up on a sale before it's paid, cancel its checkout with `DELETE checkout/7c2m9x1k`: the order is canceled and its stock let go.
-
-The sale's checkout belongs to the staff member who rang it up, so the same account pays it.
+The staff member who rang up the sale is the one who takes its payment.
 
 ### 3. Take the payment
 
-Pay with the cash the buyer hands over:
+The buyer can pay:
 
-```http
-POST pos/sales/7c2m9x1k/pay
-Content-Type: application/json
+- **In cash.** Enter all the cash the buyer hands over: when it's more than is due, the site works out the change to hand back.
+- **By card on the counter terminal.** Charge the card on the terminal first, then record it in the till app with the terminal's approval code.
+- **By card on a Stripe reader.** The till app sends what's due to the reader, and waits while the buyer taps, inserts or swipes their card. If the card is declined, the payment is refused: send the payment to the reader again, or take another way to pay.
+- **With a mix**: some cash, and a card for the rest.
 
-{ "cash": 30.00 }
-```
+When nothing is left to pay, the sale is complete and the order is placed. If there's still something to pay, the till app is told what's due, so staff can take more cash or a card.
 
-```json
-{
-  "status": "completed",
-  "amountDue": { "amount": 0.0, "currency": "USD" },
-  "change": { "amount": 4.02, "currency": "USD" },
-  "receipt": {
-    "orderNumber": "1043",
-    "staff": "jordan",
-    "lines": [ { "description": "Contoso mug", "quantity": 2, "unitPrice": { "amount": 12.0, "currency": "USD" }, "total": { "amount": 24.0, "currency": "USD" } } ],
-    "total": { "amount": 25.98, "currency": "USD" },
-    "payments": [ { "method": "Cash", "amount": { "amount": 25.98, "currency": "USD" } } ],
-    "change": { "amount": 4.02, "currency": "USD" }
-  }
-}
-```
-
-| `status` | What it means |
-| --- | --- |
-| `completed` | Paid, and the order is placed. Hand back `change`, and print the `receipt`. |
-| `due` | `amountDue` is still to pay: take more cash, or a card. |
-| `pending` | A Stripe reader is waiting for the card. Ask again in a couple of seconds by paying with `{}`. |
-
-A sale is paid in the shift it was rung up in: once that shift has closed, paying answers `409` with the code `shift-closed`, and the sale is rung up again on the open shift.
-
-When more cash is handed over than is due, the rest is the change. Send all the cash the buyer hands over in one `cash`. Some cash and a card for the rest is one call, or two:
-
-```http
-POST pos/sales/7c2m9x1k/pay
-
-{ "cash": 20.00, "card": { "approvalCode": "483920" } }
-```
-
-`card` records a card taken on the counter terminal, for what's left after the cash; take it on the terminal first. `reader` sends what's left to a Stripe reader instead:
-
-```http
-POST pos/sales/7c2m9x1k/pay
-
-{ "reader": { "readerId": "tmr_..." } }
-```
-
-The answer is `pending` until the buyer presents their card; then paying again with `{}` answers `completed`. If the card is declined, paying answers `409` with the code `not-available`: send the payment to the reader again, or take another way to pay.
+A sale is paid in the shift it was rung up in. Once that shift has closed, the sale can't be paid any more: ring it up again on the open shift.
 
 ### 4. The receipt
 
-The answer that completes the sale holds the receipt as data, for a till app that prints in its own layout on a receipt printer. With the **Receipts** feature on:
-
-- `GET pos/sales/4d1k8s0p2w/receipt` gives the receipt as a printable HTML page, branded from your [Receipts settings](invoices-and-receipts.md);
-- `POST pos/sales/4d1k8s0p2w/receipt/email` with `{ "email": "avery@example.com" }` emails it.
-
-Without Receipts, both answer `409` with the code `unsupported`.
+When the sale is complete, the till app has the receipt, to print in its own layout on a receipt printer. With the **Receipts** feature on, it can also print the receipt as a page branded from your [Receipts settings](invoices-and-receipts.md), or email it to the buyer. Without Receipts, those two aren't available.
 
 ### 5. Cash in and out
 
-Cash put in the drawer or taken out outside a sale, such as more change from the safe or a banking run, is recorded on the shift: a positive amount is put in, a negative one taken out.
-
-```http
-POST pos/shifts/9s4m2k7x/cash
-Content-Type: application/json
-
-{ "amount": -200.00, "reason": "Banked at noon" }
-```
+Cash put in the drawer or taken out outside a sale, such as more change from the safe or a banking run, is recorded on the shift with its amount and a reason, such as *Banked at noon*.
 
 ### 6. Returns at the till
 
-```http
-POST pos/returns
-Content-Type: application/json
+The staff member finds the sale, enters a reason such as *Wrong size*, and refunds all of it or part of it.
 
-{ "orderId": "4d1k8s0p2w", "registerId": "4r9k2x7m1q", "reason": "Wrong size", "restock": true }
-```
-
-```json
-{
-  "orderId": "4d1k8s0p2w",
-  "orderNumber": "1043",
-  "refunded": { "amount": 25.98, "currency": "USD" },
-  "cashBack": { "amount": 25.98, "currency": "USD" },
-  "messages": [ "..." ]
-}
-```
-
-Leave out `amount` to refund all of it, or give an `amount` to refund part. The items go back on the shelf at the register's store unless `restock` is `false`. What the sale paid in cash is handed back from the drawer, `cashBack`, and recorded as cash taken out of the register's open shift, so a return needs an open shift (`409`, `shift-closed`). When a sale was paid partly in cash and partly by card, the card is refunded first and only what it doesn't cover comes out of the drawer. A till returns its store's register sales; an online order is returned there only by staff with **Manage orders**. The rest goes back to how it was paid: a Stripe reader's card is refunded through Stripe, and a gift card gets its money back. A card taken on the counter terminal is refunded on that terminal: the site records the refund, and staff make it on the terminal.
+- The items go back on the shelf at the register's store, unless staff choose not to restock them.
+- **A return needs an open shift**: what the sale paid in cash is handed back from the drawer and recorded as cash taken out of the register's open shift. The site works out how much cash to hand back.
+- **The card is refunded before the cash.** When a sale was paid partly in cash and partly by card, the card is refunded first, and only what it doesn't cover comes out of the drawer.
+- The rest goes back to how it was paid: a Stripe reader's card is refunded through Stripe, and a gift card gets its money back. A card taken on the counter terminal is refunded on that terminal: the site records the refund, and staff make it on the terminal.
+- **A till returns register sales only.** An online order can be returned at a till only by staff with **Manage orders**.
 
 ### 7. Close the shift
 
-At the end of the shift, count the cash in the drawer, and close it:
+At the end of the shift, the staff member counts the cash in the drawer, enters it with a note if it's off, such as *Short 1.48, a coin dropped behind the till*, and closes the shift. Closing it gives the shift's sales, how they were paid, the cash the drawer should hold, the cash counted, and the difference.
 
-```http
-POST pos/shifts/9s4m2k7x/close
-Content-Type: application/json
-
-{ "countedCash": 124.50, "note": "Short 1.48, a coin dropped behind the till" }
-```
-
-```json
-{
-  "id": "9s4m2k7x",
-  "registerName": "Downtown till 1",
-  "status": "closed",
-  "openingFloat": { "amount": 100.0, "currency": "USD" },
-  "sales": 1,
-  "total": { "amount": 25.98, "currency": "USD" },
-  "cash": { "amount": 25.98, "currency": "USD" },
-  "card": { "amount": 0.0, "currency": "USD" },
-  "expectedCash": { "amount": 125.98, "currency": "USD" },
-  "countedCash": { "amount": 124.5, "currency": "USD" },
-  "difference": { "amount": -1.48, "currency": "USD" }
-}
-```
-
-`GET pos/shifts/9s4m2k7x` gives the same, at any time while it's open, so the till can show how the day is going.
+While a shift is open, the till app can show the same at any time, so staff can see how the day is going.
 
 ## The cash drawer
 
@@ -311,27 +164,9 @@ A register sale is an order, like an online one, so it's under **Commerce > Orde
 - It's **taxed** by the register's store address, and billed to it.
 - It's paid in **cash**, by **card on the counter terminal**, by **card on a Stripe reader**, with a **gift card**, or a mix. Store credit and loyalty points aren't taken at a register.
 
-## Endpoint reference
+## For your developers
 
-All paths start with `api/commerce/v1/`, and every call needs a staff member's token.
-
-| Method | Path | Permission | What it does |
-| --- | --- | --- | --- |
-| `GET` | `pos/registers` | **Sell at a register** | Lists the registers the caller may sell at, each with its open shift. |
-| `POST` | `pos/registers/{registerId}/shifts` | **Sell at a register** | Opens a shift with its `openingFloat`. Takes an idempotency key. |
-| `GET` | `pos/shifts/{shiftId}` | **Sell at a register** | Gets a shift: what it's sold, how it was paid, and the cash its drawer should hold. |
-| `POST` | `pos/shifts/{shiftId}/cash` | **Sell at a register** | Records cash put in (`amount` positive) or taken out (negative), with a `reason`. Takes an idempotency key. |
-| `POST` | `pos/shifts/{shiftId}/close` | **Sell at a register** | Closes a shift with the `countedCash` and a `note`. |
-| `POST` | `pos/sales` | **Sell at a register** | Rings up `lines` at a register in its open shift, for a `customerId`, a walk-in `customerEmail` and `customerName`, or nobody. Takes an idempotency key. |
-| `POST` | `pos/sales/{checkoutId}/pay` | **Sell at a register** | Pays a sale with `cash`, then a `card` or a `reader` for what's left; `{}` asks whether a reader's payment is done. Takes an idempotency key. |
-| `GET` | `pos/sales/{orderId}/receipt` | **Sell at a register** | Gets the receipt as a printable HTML page. Needs Receipts. |
-| `POST` | `pos/sales/{orderId}/receipt/email` | **Sell at a register** | Emails the receipt to an `email`. Needs Receipts. |
-| `POST` | `pos/returns` | **Sell at a register** | Refunds a sale at a register, all of it or an `amount`, with a `reason`; `restock` puts the items back. Takes an idempotency key. |
-| `GET` | `pos/terminal/readers` | **Sell at a register** | Lists the Stripe Terminal readers. Needs Stripe. |
-| `POST` | `pos/terminal/readers` | **Manage registers and shifts** | Pairs a reader by its `registrationCode`, with a `label`, at a `stripeLocationId` or a store `address`. Needs Stripe. |
-| `POST` | `pos/terminal/readers/{readerId}/test-card` | **Sell at a register** | In Stripe test mode, presents a test card on a simulated reader. |
-
-The registers and shifts endpoints answer only for registers the caller may sell at; another register answers `404`. The conflict codes they add are `shift-open` (the register already has an open shift) and `shift-closed` (open a shift first, or the shift is closed).
+The till app is built on the [commerce API](headless-api.md). The [Point of Sale](../../modules/point-of-sale.md#api) page in the Technical Manual lists every request the till app sends, with a whole shift [call by call](../../modules/point-of-sale.md#a-shift-call-by-call).
 
 ## Related pages
 

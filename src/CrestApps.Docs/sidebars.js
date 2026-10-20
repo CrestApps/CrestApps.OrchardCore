@@ -375,6 +375,7 @@ const sidebars = {
                 'modules/downloads',
                 'modules/reviews',
                 'modules/checkout',
+                'modules/commerce-api',
                 'modules/commerce-webhooks',
                 'modules/point-of-sale',
                 'modules/payments',

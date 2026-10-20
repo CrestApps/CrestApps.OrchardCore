@@ -191,7 +191,7 @@ The **Customers API** feature (`CrestApps.OrchardCore.Customers.Api`) maps into 
 - With Orders and the Checkout API on, `PUT checkout/{id}/contact`, the Contact step, through `CustomerContactStepService`.
 - With Store Credit or Loyalty Points and the Checkout API on, `checkout/{id}/store-credit` and `checkout/{id}/points`, for signed-in buyers.
 
-See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Admin
 

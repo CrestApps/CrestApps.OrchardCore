@@ -71,26 +71,7 @@ What's in `data`:
 
 ## What the receiver gets
 
-Each event is a `POST` with a JSON body:
-
-```json
-{
-  "id": "evt_4k2x9m7qz1c8",
-  "event": "order.paid",
-  "createdUtc": "2026-10-19T14:03:22.512Z",
-  "data": {
-    "order": {
-      "id": "4d1k8s0p2w",
-      "number": "1042",
-      "status": "paid",
-      "customerEmail": "avery@example.com",
-      "totals": { "total": { "amount": 29.7, "currency": "USD" } }
-    }
-  }
-}
-```
-
-The example leaves out most of the order. Names are `camelCase`, and money is an `amount` with its `currency`, as in the API.
+Each event is a `POST` with a short JSON message. It says which event happened (`event`, such as `order.paid`), gives the event an `id` and the time it happened (`createdUtc`), and puts what the event is about in `data`, such as the whole order. Names and amounts are written the same way as in the [commerce API](headless-api.md), so a developer who knows the API reads them the same way. The Technical Manual shows [a whole message](../../modules/commerce-webhooks.md#the-payload).
 
 Every message has these headers:
 
@@ -112,59 +93,7 @@ Anybody can post to the receiver's address, so the receiver checks each message'
 
 Each try is signed again when it's sent, so a retry has a fresh timestamp.
 
-In C#:
-
-```csharp
-using System.Security.Cryptography;
-using System.Text;
-
-static bool IsFromStore(string secret, string timestamp, string body, string signature)
-{
-    // A message signed more than 5 minutes ago may be replayed.
-    if (!long.TryParse(timestamp, out var seconds) ||
-        Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - seconds) > 300)
-    {
-        return false;
-    }
-
-    var hash = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(timestamp + "." + body));
-    var expected = "v1=" + Convert.ToHexString(hash).ToLowerInvariant();
-
-    return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(signature ?? ""));
-}
-```
-
-In Node.js, with Express:
-
-```js
-const crypto = require('crypto');
-const express = require('express');
-const app = express();
-
-// Read the body as it arrived: the signature is over its exact bytes.
-app.post('/store', express.raw({ type: 'application/json' }), (req, res) => {
-  const timestamp = req.get('X-Webhook-Timestamp') || '';
-  const signature = req.get('X-Webhook-Signature') || '';
-  const body = req.body.toString('utf8');
-
-  const expected = 'v1=' + crypto
-    .createHmac('sha256', process.env.STORE_WEBHOOK_SECRET)
-    .update(timestamp + '.' + body)
-    .digest('hex');
-
-  const fresh = Math.abs(Date.now() / 1000 - Number(timestamp)) <= 300;
-  const valid = expected.length === signature.length &&
-    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-
-  if (!fresh || !valid) {
-    return res.sendStatus(401);
-  }
-
-  const message = JSON.parse(body);
-  // Skip message.id if it was handled before; otherwise queue the work.
-  res.sendStatus(200);
-});
-```
+Your developers find this check written out in C# and Node.js in [Checking the signature](../../modules/commerce-webhooks.md#checking-the-signature), in the Technical Manual.
 
 :::warning[Keep the secret secret]
 Keep the signing secret in the receiver's settings or secret store, never in a web page or an app. If it may have leaked, click **New secret** on the webhook's page (below).
@@ -208,16 +137,7 @@ Delivered and failed messages are kept for 30 days, then deleted.
 
 ## Send a test event
 
-On the deliveries log, click **Send a test event** to check the receiver is set up. It sends a `webhook.ping` event to this webhook only, signed like any other, whatever events the webhook takes:
-
-```json
-{
-  "id": "evt_7q3m1x8k2c9n",
-  "event": "webhook.ping",
-  "createdUtc": "2026-10-19T14:10:05.031Z",
-  "data": { "webhookId": "4p9w2k7x1m3q", "name": "Warehouse" }
-}
-```
+On the deliveries log, click **Send a test event** to check the receiver is set up. It sends a `webhook.ping` event to this webhook only, signed like any other, whatever events the webhook takes. Its `data` holds the webhook's id and its **Name**, such as *Warehouse*.
 
 *The receiver answered 200.* means it was taken. Otherwise the message says why, such as *The receiver didn't take it: 401 Unauthorized*, which usually means the receiver has a different secret. The test is listed in the log like any other message.
 

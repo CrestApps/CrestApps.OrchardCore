@@ -597,7 +597,7 @@ The **Checkout API** feature (`CrestApps.OrchardCore.Checkout.Api`) maps a check
 
 A client collects a gateway's payment itself, with the provider's SDK. `GET checkout/{id}/payment-methods` lists each method with a `client` dictionary from the provider's **`ICheckoutPaymentClientConfigurationProvider`**, matched by `ProviderKey`; Stripe's gives `publishableKey`, `mode`, and the amount due in minor units with its `currency`. Only values safe to hand any buyer belong there, never a secret. A provider without one lists `client` as `null`.
 
-See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Extending checkout
 

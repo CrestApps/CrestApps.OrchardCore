@@ -124,7 +124,7 @@ The **Inventory API** feature (`CrestApps.OrchardCore.Inventory.Api`) maps into 
 - `GET products/{id}/availability`, for guests: the product's or a variant's stock status at each location, with the count only when it's low.
 - `inventory` and `inventory/{stockItemId}` with **View inventory**, and `receive`, `adjust`, `count` and `transfer` under it with **Manage inventory**, through `IInventoryService`. Each change is committed in the request; a collision with a checkout changing the same stock answers `409` with the code `concurrency`.
 
-See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Admin
 

@@ -277,7 +277,7 @@ Two features put carts and orders on the commerce JSON API at `api/commerce/v1`:
 - **Cart API** (`CrestApps.OrchardCore.Carts.Api`, it needs Carts) maps `cart` and `cart/lines` for guests and signed-in buyers through `ICartService`, and `cart/merge` for a buyer who signed in after shopping as a guest. A guest's cart travels in the `X-Cart-Token` header, issued by the answer that creates the cart.
 - **Orders API** (`CrestApps.OrchardCore.Orders.Api`, it needs Orders, the Cart API and the Checkout API) maps `POST checkout`, which checks the caller's cart out through `CartCheckoutService` (placing the order and holding its stock) and returns the guest's `X-Checkout-Token`; the buyer's `me/orders`; and the staff `orders` endpoints, which list, get, refund and cancel through `OrderOperationsService` with `ManageOrders`. With **Returns** on it adds the buyer's returns under `me/orders/{orderId}/returns`, and with **Gift Cards** on, `checkout/{id}/gift-cards`.
 
-See [Headless commerce API](../user-manual/commerce/headless-api.md) for the endpoints, the conventions they share, and how apps sign in.
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Stock
 
