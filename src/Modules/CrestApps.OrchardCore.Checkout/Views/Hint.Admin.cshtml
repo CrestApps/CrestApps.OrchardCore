@@ -1,0 +1,11 @@
+@*
+    A field's hint, as content field editors render it. The admin theme has its own; this one is for editors shown on the
+    storefront, such as the checkout's own fields and each traveler's details, where the site's theme has none.
+*@
+@{
+    var hint = Model.Hint as string;
+}
+@if (!string.IsNullOrWhiteSpace(hint))
+{
+    <span class="hint">@hint</span>
+}

@@ -1,6 +1,7 @@
-﻿using CrestApps.OrchardCore.Roles.Core.Models;
+using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -27,14 +28,11 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
-        if (context.HasSucceeded)
-        {
-            return;
-        }
-
+        // It runs even when the View content permission was already granted, as it is to everyone, anonymous visitors
+        // included: a restricted item is refused to whoever isn't in its roles, whatever else allowed it.
         var user = context?.User;
 
-        if (user == null)
+        if (user == null || user.IsInRole(OrchardCoreConstants.Roles.Administrator))
         {
             return;
         }

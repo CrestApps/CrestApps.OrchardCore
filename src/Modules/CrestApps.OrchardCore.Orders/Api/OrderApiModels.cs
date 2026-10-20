@@ -107,7 +107,13 @@ public sealed record ApiOrderLine(
     ApiMoney UnitPrice,
     ApiMoney Total,
     IReadOnlyList<ApiOrderLineAddOn> AddOns,
-    DateTime? ShipsFromUtc);
+    DateTime? ShipsFromUtc,
+    IReadOnlyList<ApiOrderLineDetail> Details = null);
+
+/// <summary>
+/// One of a line's details, such as a booking's date, as it read when the order was placed.
+/// </summary>
+public sealed record ApiOrderLineDetail(string Key, string Label, string Value);
 
 /// <summary>
 /// An add-on the buyer chose for a line.
@@ -276,7 +282,8 @@ internal static class OrderApiMapper
                 ApiMoney.From(line.UnitPrice, currency),
                 ApiMoney.From(line.LineTotal, currency),
                 (line.AddOns ?? []).Select(addOn => new ApiOrderLineAddOn(addOn.AddOnId, addOn.Label, addOn.Value, ApiMoney.From(addOn.Price, currency))).ToList(),
-                line.ShipsFromUtc)).ToList(),
+                line.ShipsFromUtc,
+                (line.DetailLines ?? []).Select(detail => new ApiOrderLineDetail(detail.Key, detail.Label, detail.Value)).ToList())).ToList(),
             (order.Discounts ?? []).Select(discount => new ApiOrderDiscount(discount.Code, discount.Description, ApiMoney.From(discount.Amount, currency), ToCamel(discount.Target.ToString()))).ToList(),
             (order.TaxLines ?? [])
                 .GroupBy(line => (Name: line.TaxName ?? line.TaxType, line.TaxType, line.JurisdictionName, line.Rate, line.IncludedInPrice))

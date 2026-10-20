@@ -87,6 +87,7 @@ internal static class CartApiEndpoints
             request.VariantId,
             request.Quantity ?? 1,
             request.AddOns ?? new Dictionary<string, string>(),
+            request.Details ?? new Dictionary<string, string>(),
             httpContext.RequestAborted);
 
         return await RespondAsync(result, cartService, httpContext);
@@ -193,7 +194,8 @@ internal static class CartApiEndpoints
                 line.IsAvailable,
                 line.PriceChanged,
                 line.ShipsFromUtc,
-                line.Problem?.Value)).ToList(),
+                line.Problem?.Value,
+                line.Details.Select(detail => new ApiCartLineDetail(detail.Key, detail.Label, detail.Value)).ToList())).ToList(),
             pricing.ItemCount,
             ApiMoney.From(pricing.Subtotal, currency),
             pricing.CanCheckout,
@@ -231,6 +233,11 @@ public sealed class ApiAddCartLineRequest
     /// The add-ons chosen, by add-on id: the text typed, or <c>true</c> for a ticked box.
     /// </summary>
     public Dictionary<string, string> AddOns { get; set; }
+
+    /// <summary>
+    /// The line's details, by key, such as <c>booking.date</c> for a booking's date.
+    /// </summary>
+    public Dictionary<string, string> Details { get; set; }
 }
 
 /// <summary>
@@ -285,7 +292,13 @@ public sealed record ApiCartLine(
     bool IsAvailable,
     bool PriceChanged,
     DateTime? ShipsFromUtc,
-    string Problem);
+    string Problem,
+    IReadOnlyList<ApiCartLineDetail> Details = null);
+
+/// <summary>
+/// One of a line's details, such as a booking's date, as it reads.
+/// </summary>
+public sealed record ApiCartLineDetail(string Key, string Label, string Value);
 
 /// <summary>
 /// An add-on chosen for a line, and what it adds to each unit.

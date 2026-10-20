@@ -1,0 +1,16 @@
+@model ShapeViewModel<Membership>
+
+@{
+    var membership = Model.Value;
+}
+<div class="admin-list-secondary">
+    <span>@(membership.EndsUtc is { } ends ? T["Until {0:d}", ends] : T["No end date"])</span>
+    @foreach (var role in membership.RoleNames)
+    {
+        <span class="badge ta-badge fw-normal">@role</span>
+    }
+    @if (!string.IsNullOrEmpty(membership.EndedReason))
+    {
+        <span>@membership.EndedReason</span>
+    }
+</div>

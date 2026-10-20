@@ -35,7 +35,9 @@ The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthoriza
   `IsContentRestricted` set to `true`.
 - If the user is in any of those roles, the requirement succeeds. If roles were collected and the user is in none
   of them, the handler fails the requirement. If no roles were picked, the item is not restricted.
-- It returns early when another handler has already succeeded the requirement.
+- It runs even when another handler already succeeded the requirement, as the permission handler does for everyone
+  who has **View content**, anonymous visitors included: a restricted item is refused to whoever isn't in its roles.
+  Users in the Administrator role see every item.
 
 You can attach the part and set **Restrict content?** using the content definitions user interface or a migration.
 

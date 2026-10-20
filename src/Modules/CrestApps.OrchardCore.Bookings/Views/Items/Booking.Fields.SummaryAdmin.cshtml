@@ -1,0 +1,4 @@
+@model ShapeViewModel<Booking>
+
+<a asp-action="Detail" asp-controller="BookingsAdmin" asp-route-itemId="@Model.Value.ItemId">@Model.Value.Title</a>
+<span class="text-body-secondary">@(string.IsNullOrEmpty(Model.Value.CustomerName) ? T["Order {0}", Model.Value.OrderNumber] : T["{0}, order {1}", Model.Value.CustomerName, Model.Value.OrderNumber])</span>

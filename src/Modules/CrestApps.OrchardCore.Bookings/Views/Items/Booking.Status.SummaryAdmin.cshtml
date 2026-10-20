@@ -1,0 +1,15 @@
+@model ShapeViewModel<Booking>
+
+@{
+    var (css, label) = Model.Value.Status switch
+    {
+        BookingStatus.Requested => ("text-bg-warning", T["Requested"]),
+        BookingStatus.Confirmed => ("text-bg-success", T["Confirmed"]),
+        BookingStatus.Completed => ("text-bg-secondary", T["Completed"]),
+        BookingStatus.NoShow => ("text-bg-danger", T["No-show"]),
+        BookingStatus.Canceled => ("text-bg-danger", T["Canceled"]),
+        BookingStatus.Expired => ("text-bg-light", T["Expired"]),
+        _ => ("text-bg-light", T["Unpaid"]),
+    };
+}
+<span class="badge @css">@label</span>

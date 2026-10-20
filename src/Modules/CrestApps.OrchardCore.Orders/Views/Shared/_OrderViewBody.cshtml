@@ -150,6 +150,10 @@
                             {
                                 <div class="small text-muted text-break">@T["Includes {0}", contents]</div>
                             }
+                            @foreach (var detail in line.DetailLines ?? [])
+                            {
+                                <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeDetail(detail)</div>
+                            }
                             @foreach (var addOn in line.AddOns ?? [])
                             {
                                 <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)</div>

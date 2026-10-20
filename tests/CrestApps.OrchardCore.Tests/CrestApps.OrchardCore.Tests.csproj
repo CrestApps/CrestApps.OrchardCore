@@ -117,6 +117,8 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Commerce.Webhooks\CrestApps.OrchardCore.Commerce.Webhooks.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Companies\CrestApps.OrchardCore.Companies.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Marketing\CrestApps.OrchardCore.Marketing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Bookings\CrestApps.OrchardCore.Bookings.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Memberships\CrestApps.OrchardCore.Memberships.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Markets\CrestApps.OrchardCore.Markets.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.PointOfSale\CrestApps.OrchardCore.PointOfSale.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Orders\CrestApps.OrchardCore.Orders.csproj" />

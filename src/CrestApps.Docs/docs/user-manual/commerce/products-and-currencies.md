@@ -155,7 +155,7 @@ A buyer gets the best of their role and volume discounts, not both. The cart say
 
 ## Let buyers personalize a product
 
-Under **Personalization**, **Add-ons** lists the personal touches a buyer can add, such as an engraving or gift wrap. For each, enter a **Label**, choose whether the **Buyer** *types a text* or *ticks a box*, an optional **Extra price** added to every unit, and whether it's **Required**. Clear a label to remove an add-on.
+Under **Personalization**, **Add-ons** lists the personal touches a buyer can add, such as an engraving or gift wrap. For each, enter a **Label**, choose whether the **Buyer** *types a text* or *ticks a box*, an optional **Extra price**, what it's **Charged** on (every unit, every person a unit is for such as a room for two, or a percent of the price such as insurance), and whether it's **Required**. Clear a label to remove an add-on.
 
 Buyers choose add-ons on the product's page. A card of a product with a required add-on shows **Choose options**, which opens that page. The same product with other add-ons is another line in the cart, and the add-ons show on the cart, the checkout, the order and its emails, and the packing form.
 

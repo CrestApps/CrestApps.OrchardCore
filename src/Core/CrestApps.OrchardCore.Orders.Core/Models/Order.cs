@@ -366,6 +366,17 @@ public sealed class OrderLine
     public List<OrderLineAddOn> AddOns { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the line's details beside the product, by key, as the cart's line handlers kept them, such as a
+    /// departure date, for the modules that act on them.
+    /// </summary>
+    public Dictionary<string, string> Details { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line's details as they read when the order was placed, such as "Departure: 1 December 2026".
+    /// </summary>
+    public List<OrderLineDetail> DetailLines { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the products a bundle line is made of, per bundle, as the bundle was when the order was placed.
     /// Stock is held and sold from them, not from the bundle.
     /// </summary>
@@ -617,6 +628,27 @@ public sealed class OrderLineAddOn
     /// Gets or sets the extra price per unit it cost.
     /// </summary>
     public decimal Price { get; set; }
+}
+
+/// <summary>
+/// One of an order line's details as it read when the order was placed.
+/// </summary>
+public sealed class OrderLineDetail
+{
+    /// <summary>
+    /// Gets or sets the detail's key, such as <c>booking.date</c>.
+    /// </summary>
+    public string Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the detail is, such as "Departure".
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets what was chosen, as it reads, such as "1 December 2026".
+    /// </summary>
+    public string Value { get; set; }
 }
 
 /// <summary>

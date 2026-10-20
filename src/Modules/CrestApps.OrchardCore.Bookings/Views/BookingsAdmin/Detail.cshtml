@@ -1,0 +1,155 @@
+@using CrestApps.OrchardCore.Bookings.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@model BookingDetailViewModel
+
+@{
+    var booking = Model.Booking;
+    var start = BookingEmailSender.ToLocal(booking.StartsUtc, Model.TimeZone);
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var when = booking.Kind switch
+    {
+        BookingKind.Nightly => T.GetString("{0} – {1}", start.ToString("D", culture), BookingEmailSender.ToLocal(booking.EndsUtc ?? booking.StartsUtc, Model.TimeZone).ToString("D", culture)).Value,
+        BookingKind.TimeSlot => start.ToString("f", culture),
+        _ => start.ToString("D", culture),
+    };
+    var canFinish = booking.Status == BookingStatus.Confirmed;
+    var (statusCss, statusLabel) = booking.Status switch
+    {
+        BookingStatus.Requested => ("text-bg-warning", T["Requested"]),
+        BookingStatus.Confirmed => ("text-bg-success", T["Confirmed"]),
+        BookingStatus.Completed => ("text-bg-secondary", T["Completed"]),
+        BookingStatus.NoShow => ("text-bg-danger", T["No-show"]),
+        BookingStatus.Canceled => ("text-bg-danger", T["Canceled"]),
+        BookingStatus.Expired => ("text-bg-light", T["Expired"]),
+        _ => ("text-bg-light", T["Unpaid"]),
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="BookingsDetail" title="@Html.Raw(Html.Encode(booking.Title))">
+        <breadcrumb-item id="Bookings" action="Index" controller="BookingsAdmin" area="@BookingsConstants.Feature" permission="@BookingsPermissions.ManageBookings.Name">@T["Bookings"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">@when</h5>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">@T["Status"]</dt>
+                    <dd class="col-sm-8"><span class="badge @statusCss">@statusLabel</span></dd>
+                    <dt class="col-sm-4">@T["Buyer"]</dt>
+                    <dd class="col-sm-8">@booking.CustomerName @(string.IsNullOrEmpty(booking.CustomerEmail) ? null : "· " + booking.CustomerEmail)</dd>
+                    <dt class="col-sm-4">@T["Booked"]</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrEmpty(booking.OccupancyLabel) ? T.Plural(booking.People, "1 person", "{0} people") : T["{0} × {1}, {2} people", booking.Units, booking.OccupancyLabel, booking.People])</dd>
+                    <dt class="col-sm-4">@T["Price"]</dt>
+                    <dd class="col-sm-8">@ProductPriceFormatter.Format(booking.Total, booking.Currency)</dd>
+                    <dt class="col-sm-4">@T["Order"]</dt>
+                    <dd class="col-sm-8"><a href="@Model.OrderUrl">@booking.OrderNumber</a></dd>
+                    @if (booking.Status == BookingStatus.Canceled)
+                    {
+                        <dt class="col-sm-4">@T["Canceled"]</dt>
+                        <dd class="col-sm-8">@T["Fee {0}, refunded {1}", ProductPriceFormatter.Format(booking.CancellationFee ?? 0m, booking.Currency), ProductPriceFormatter.Format(booking.Refunded ?? 0m, booking.Currency)] @booking.CancelReason</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        @if (Model.Travelers.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">@T["Travelers"]</h5>
+                    @for (var i = 0; i < Model.Travelers.Count; i++)
+                    {
+                        <div class="border-top pt-2 mt-2">
+                            <div class="small text-body-secondary">@T["Traveler {0}", i + 1]</div>
+                            @await DisplayAsync(Model.Travelers[i])
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (booking.Status == BookingStatus.Requested)
+        {
+            <div class="alert alert-warning">
+                @T["The buyer asked for this booking. Confirm it by sending the quote from its order; they pay from the quote's link."]
+                <a href="@Url.RouteUrl("OrdersEdit", new { orderId = booking.OrderId })" class="alert-link">@T["Open the order"]</a>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-5">
+        @if (Model.Balance is { } balance)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">@T["Balance"]</h5>
+                    <p class="mb-2">
+                        @switch (balance.Status)
+                        {
+                            case BookingBalanceStatus.Scheduled:
+                                @T["{0} is charged to the card on {1}.", ProductPriceFormatter.Format(balance.Amount, balance.Currency), BookingEmailSender.ToLocal(balance.DueUtc, Model.TimeZone).ToString("D", culture)]
+                                break;
+                            case BookingBalanceStatus.Paid:
+                                @T["{0} was paid.", ProductPriceFormatter.Format(balance.Amount, balance.Currency)]
+                                break;
+                            case BookingBalanceStatus.Failed:
+                                @T["{0} couldn't be charged: {1} The buyer pays it from the invoice's pay link.", ProductPriceFormatter.Format(balance.Amount, balance.Currency), balance.LastFailure]
+                                break;
+                            default:
+                                @T["{0} isn't owed any more.", ProductPriceFormatter.Format(balance.Amount, balance.Currency)]
+                                break;
+                        }
+                    </p>
+                    @if (balance.Status is BookingBalanceStatus.Scheduled or BookingBalanceStatus.Failed)
+                    {
+                        <form asp-action="ChargeBalance" asp-route-itemId="@booking.ItemId" method="post">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Charge the card now"]</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (canFinish)
+        {
+            <div class="card mb-4">
+                <div class="card-body d-flex flex-wrap gap-2">
+                    <form asp-action="Complete" asp-route-itemId="@booking.ItemId" method="post">
+                        <button type="submit" class="btn btn-success btn-sm">@T["Complete"]</button>
+                    </form>
+                    <form asp-action="Complete" asp-route-itemId="@booking.ItemId" asp-route-noShow="true" method="post">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["No-show"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (Model.Cancellation is { } cancellation)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">@T["Cancel"]</h5>
+                    <p class="small">
+                        @T["{0} days before the date, the policy keeps {1}%. Of {2} paid toward it, {3} is refunded.", cancellation.DaysBefore, cancellation.FeePercent.ToString("0.##", culture), ProductPriceFormatter.Format(cancellation.Paid, booking.Currency), ProductPriceFormatter.Format(cancellation.Refund, booking.Currency)]
+                    </p>
+                    <form asp-action="Cancel" asp-route-itemId="@booking.ItemId" method="post">
+                        <div class="mb-2">
+                            <label for="refund" class="form-label small">@T["Refund"]</label>
+                            <input id="refund" name="refund" class="form-control form-control-sm" inputmode="decimal" value="@cancellation.Refund.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                            <span class="hint">@T["What the policy gives back. Change it to refund more or less."]</span>
+                        </div>
+                        <div class="mb-2">
+                            <label for="reason" class="form-label small">@T["Reason"]</label>
+                            <input id="reason" name="reason" class="form-control form-control-sm" maxlength="200" />
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-sm">@T["Cancel the booking"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

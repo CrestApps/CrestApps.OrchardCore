@@ -18,6 +18,14 @@ public interface ICheckoutTenderProvider
     string Key { get; }
 
     /// <summary>
+    /// Gets whether the provider's balances can pay toward a checkout that keeps the card to charge later
+    /// (<see cref="CheckoutSession.SavePaymentMethod"/>), such as a balance owed later that the kept card is charged for.
+    /// Other balances can't, since a checkout they paid in full would never see the card.
+    /// </summary>
+    bool PaysWithSavedPaymentMethod
+        => false;
+
+    /// <summary>
     /// Returns a line for each of the provider's balances the buyer chose for the checkout, with
     /// <see cref="TenderLine.Amount"/> set to everything on it. A balance in another currency, or one that can't pay
     /// this checkout, is left out.

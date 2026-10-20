@@ -1,0 +1,120 @@
+@using CrestApps.OrchardCore.Bookings
+@using CrestApps.OrchardCore.Bookings.Models
+@model CrestApps.OrchardCore.Bookings.ViewModels.BookingPickerViewModel
+
+@*
+    The date (or dates) and option of a booking, on its product's page. Its fields belong to the Add to cart form below
+    it, so they post with it.
+*@
+
+@{
+    var dateName = "details[" + BookingsConstants.Details.Date + "]";
+    var endName = "details[" + BookingsConstants.Details.End + "]";
+    var occupancyName = "details[" + BookingsConstants.Details.Occupancy + "]";
+    var id = Model.FormId + "-booking";
+}
+
+<div class="product-booking mb-3 w-100" id="@id">
+    @switch (Model.Kind)
+    {
+        case BookingKind.Departure:
+            <label class="form-label small" for="@(id)-date">@T["Date"]</label>
+            @if (Model.Departures.Count == 0)
+            {
+                <p class="small text-body-secondary mb-0">@T["No dates are open for booking right now."]</p>
+            }
+            else
+            {
+                <select class="form-select form-select-sm" id="@(id)-date" name="@dateName" form="@Model.FormId" required>
+                    @foreach (var departure in Model.Departures)
+                    {
+                        var label = departure.Remaining <= 0
+                            ? T.GetString("{0} (fully booked)", departure.Label).Value
+                            : departure.Price is null
+                                ? T.GetString("{0} ({1} left)", departure.Label, departure.Remaining).Value
+                                : T.GetString("{0} ({1} left, {2})", departure.Label, departure.Remaining, departure.Price).Value;
+
+                        <option value="@departure.Key" selected="@(departure.Key == Model.SelectedDate)" disabled="@(departure.Remaining <= 0)">@label</option>
+                    }
+                </select>
+            }
+            break;
+
+        case BookingKind.Nightly:
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small" for="@(id)-date">@T["Check-in"]</label>
+                    <input type="date" class="form-control form-control-sm" id="@(id)-date" name="@dateName" form="@Model.FormId" min="@Model.MinDate" max="@Model.MaxDate" value="@Model.SelectedDate" required />
+                </div>
+                <div class="col-6">
+                    <label class="form-label small" for="@(id)-end">@T["Check-out"]</label>
+                    <input type="date" class="form-control form-control-sm" id="@(id)-end" name="@endName" form="@Model.FormId" min="@Model.MinDate" value="@Model.SelectedEnd" required />
+                </div>
+            </div>
+            <span class="hint">@T["Stays of {0} to {1} nights.", Model.MinNights, Model.MaxNights]</span>
+            break;
+
+        case BookingKind.TimeSlot:
+            <label class="form-label small" for="@(id)-date">@T["Time"]</label>
+            @if (Model.Days.Count == 0)
+            {
+                <p class="small text-body-secondary mb-0">@T["No times are free in the next two weeks."]</p>
+            }
+            else
+            {
+                <select class="form-select form-select-sm" id="@(id)-date" name="@dateName" form="@Model.FormId" required>
+                    @foreach (var (day, times) in Model.Days)
+                    {
+                        <optgroup label="@day">
+                            @foreach (var time in times)
+                            {
+                                <option value="@time.Key" selected="@(time.Key == Model.SelectedDate)">@time.Label</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            }
+            break;
+    }
+
+    @if (Model.Occupancies.Count == 1)
+    {
+        <input type="hidden" name="@occupancyName" value="@Model.Occupancies[0].Id" form="@Model.FormId" />
+    }
+    else if (Model.Occupancies.Count > 1)
+    {
+        <label class="form-label small mt-2" for="@(id)-occupancy">@T["Option"]</label>
+        <select class="form-select form-select-sm" id="@(id)-occupancy" name="@occupancyName" form="@Model.FormId" required>
+            @foreach (var occupancy in Model.Occupancies)
+            {
+                <option value="@occupancy.Id">@(occupancy.People > 1 ? T.GetString("{0} ({1} people)", occupancy.Label, occupancy.People).Value : occupancy.Label)</option>
+            }
+        </select>
+    }
+
+    <ul class="list-unstyled small text-body-secondary mt-2 mb-0">
+        @if (Model.PricePerPerson)
+        {
+            <li>@T["The price is per person."]</li>
+        }
+        @if (Model.DepositPercent > 0m)
+        {
+            <li>@T["Pay a {0}% deposit now, and the rest {1} days before.", Model.DepositPercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture), Model.BalanceDueDaysBefore]</li>
+        }
+        @if (Model.CancellationTiers.Count == 0)
+        {
+            <li>@T["Free cancellation."]</li>
+        }
+        else
+        {
+            @foreach (var tier in Model.CancellationTiers.OrderByDescending(tier => tier.DaysBefore))
+            {
+                <li>@T["Canceled {0} or more days before: {1}% fee.", tier.DaysBefore, tier.FeePercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)]</li>
+            }
+        }
+        @if (Model.RequestToBook)
+        {
+            <li>@T["The store confirms each booking before you pay."]</li>
+        }
+    </ul>
+</div>

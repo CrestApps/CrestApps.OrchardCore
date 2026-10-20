@@ -1,0 +1,9 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="BookingSearch" title="@T["Find a date"]" />
+</zone>
+
+<div class="container my-4">
+    @await DisplayAsync(Model)
+</div>

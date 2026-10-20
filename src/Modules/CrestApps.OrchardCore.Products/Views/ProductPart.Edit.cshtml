@@ -162,23 +162,31 @@
     <span class="ocat-label">@T["Add-ons"]</span>
     <div class="ocat-end">
         <div class="row g-2 mb-1 small text-body-secondary d-none d-md-flex">
-            <div class="col-md-5">@T["Label"]</div>
-            <div class="col-md-3">@T["Buyer"]</div>
+            <div class="col-md-4">@T["Label"]</div>
+            <div class="col-md-2">@T["Buyer"]</div>
             <div class="col-md-2">@T["Extra price"]</div>
+            <div class="col-md-2">@T["Charged"]</div>
         </div>
         @for (var i = 0; i < Model.AddOns.Count; i++)
         {
             <div class="row g-2 mb-2 align-items-center">
                 <input type="hidden" asp-for="AddOns[i].AddOnId" />
-                <div class="col-12 col-md-5"><input asp-for="AddOns[i].Label" class="form-control" maxlength="80" placeholder="@T["Such as Engraving or Gift wrap"]" aria-label="@T["Label, row {0}", i + 1]" /></div>
-                <div class="col-6 col-md-3">
+                <div class="col-12 col-md-4"><input asp-for="AddOns[i].Label" class="form-control" maxlength="80" placeholder="@T["Such as Engraving or Gift wrap"]" aria-label="@T["Label, row {0}", i + 1]" /></div>
+                <div class="col-6 col-md-2">
                     <select asp-for="AddOns[i].Kind" class="form-select" aria-label="@T["What the buyer does, row {0}", i + 1]">
                         <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Text">@T["Types a text"]</option>
                         <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Checkbox">@T["Ticks a box"]</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-2"><input type="number" min="0" step="0.01" asp-for="AddOns[i].Price" class="form-control" placeholder="0.00" aria-label="@T["Extra price, row {0}", i + 1]" /></div>
-                <div class="col-12 col-md-2">
+                <div class="col-6 col-md-2">
+                    <select asp-for="AddOns[i].PriceBasis" class="form-select" aria-label="@T["What the price is charged on, row {0}", i + 1]">
+                        <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnPriceBasis.PerUnit">@T["Per unit"]</option>
+                        <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnPriceBasis.PerPerson">@T["Per person"]</option>
+                        <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnPriceBasis.PercentOfPrice">@T["Percent of price"]</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
                     <div class="form-check">
                         <input type="checkbox" asp-for="AddOns[i].Required" class="form-check-input" />
                         <label asp-for="AddOns[i].Required" class="form-check-label">@T["Required"]</label>
@@ -186,7 +194,7 @@
                 </div>
             </div>
         }
-        <span class="hint">@T["Optional. Personal touches a buyer chooses on the product's page, such as a name to engrave or gift wrap, each adding its price to every unit. Clear a label to remove one."]</span>
+        <span class="hint">@T["Optional. Personal touches a buyer chooses on the product's page, such as a name to engrave or gift wrap, each adding its price to every unit, to every person a unit is for (such as a room for two), or a percent of the price (such as insurance). Clear a label to remove one."]</span>
         <span asp-validation-for="AddOns"></span>
     </div>
 </div>

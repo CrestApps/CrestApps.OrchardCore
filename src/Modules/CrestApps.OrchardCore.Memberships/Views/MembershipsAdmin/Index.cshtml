@@ -1,0 +1,35 @@
+@model MembershipsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="Memberships" title="@T["Memberships"]" />
+</zone>
+
+<form asp-action="Index" method="get" id="memberships-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" name="q" value="@Model.Search" class="form-control" placeholder="@T["Search by member"]" type="search" autocomplete="off" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="Memberships" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No memberships yet. Give a product the Membership part to sell one."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Member"]" />
+        <admin-list-column name="Ends" position="30" title="@T["Ends"]" width="auto" />
+        <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

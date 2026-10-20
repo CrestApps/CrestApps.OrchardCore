@@ -104,6 +104,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+        services.AddScoped<IOrderRefunder, OrderRefunder>();
+        services.AddScoped<IOrderRequestService, OrderRequestService>();
         services.AddScoped<CartCheckoutService>();
 
         // The order's invoice and packing slip, to print.

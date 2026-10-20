@@ -44,10 +44,10 @@ public sealed class DefaultCheckoutTenderService : ICheckoutTenderService
         invoice.Tenders ??= [];
         invoice.Tenders.Clear();
 
-        // A checkout that settles an existing balance, or saves a card to charge later, pays with the card alone.
+        // A checkout that settles an existing balance pays with the card alone, and one that saves a card to charge later
+        // takes only the balances that card is charged for later.
         if (flow?.Session is not CheckoutSession session ||
             session.SettlesExistingBalance ||
-            session.SavePaymentMethod ||
             !session.TryGet<CheckoutTenderSelection>(out var selection) ||
             selection.Choices is not { Count: > 0 })
         {
@@ -67,7 +67,7 @@ public sealed class DefaultCheckoutTenderService : ICheckoutTenderService
         {
             var references = selection.For(provider.Key);
 
-            if (references.Count == 0)
+            if (references.Count == 0 || (session.SavePaymentMethod && !provider.PaysWithSavedPaymentMethod))
             {
                 continue;
             }
