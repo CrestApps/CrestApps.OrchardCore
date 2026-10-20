@@ -139,6 +139,7 @@ public sealed class ReportsStartup : StartupBase
             .AddReport<OrderProductSalesReport>()
             .AddReport<OrderCountrySalesReport>()
             .AddReport<OrderTaxReport>()
+            .AddReport<OrderVatOssReport>()
             .AddReport<OrderDiscountsReport>()
             .AddReport<OrderRefundsReport>()
             .AddReport<OrderDisputesReport>()
