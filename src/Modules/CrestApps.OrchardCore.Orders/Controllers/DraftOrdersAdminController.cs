@@ -174,7 +174,7 @@ public sealed class DraftOrdersAdminController : Controller
 
         if (submit == "update")
         {
-            var pricing = await _drafts.PriceAsync(input, order?.CartId, order?.Currency, HttpContext.RequestAborted);
+            var pricing = await _drafts.PriceAsync(input, order?.CartId, order?.Currency, order, HttpContext.RequestAborted);
 
             model.Lines = ToLines(input);
             await PopulateAsync(model, order, pricing);
@@ -190,7 +190,7 @@ public sealed class DraftOrdersAdminController : Controller
 
             model.Lines = ToLines(input);
             model.Problems = problems;
-            await PopulateAsync(model, order, await _drafts.PriceAsync(input, order?.CartId, order?.Currency, HttpContext.RequestAborted));
+            await PopulateAsync(model, order, await _drafts.PriceAsync(input, order?.CartId, order?.Currency, order, HttpContext.RequestAborted));
 
             return View("Edit", model);
         }

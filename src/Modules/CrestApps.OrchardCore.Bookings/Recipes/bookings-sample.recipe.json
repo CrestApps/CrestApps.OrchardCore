@@ -1,0 +1,243 @@
+{
+  "name": "BookingsSample",
+  "displayName": "Bookings sample",
+  "description": "Creates three booking product types with one product each: an Alpine Lakes Tour with four departures, priced per person as a double or a single room, paid by a 15% deposit with the rest due 45 days before and a cancellation policy; a 60-minute massage booked by the hour on weekdays; and a lakeside room booked by the night, with a weekend price. Each is in US dollars, and a Traveler name is asked for at checkout.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "products",
+    "bookings",
+    "travel",
+    "appointments",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Contents",
+        "OrchardCore.Title",
+        "OrchardCore.Autoroute",
+        "OrchardCore.Html",
+        "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Carts",
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Customers",
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Bookings"
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "Tour",
+          "DisplayName": "Tour",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "tours/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "2" }, "ProductPartSettings": { "Type": "Service", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Show" }, "ProductPageSettings": { "ShowDetails": true } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "3", "DisplayName": "Description" } } },
+            { "PartName": "BookingPart", "Name": "BookingPart", "Settings": { "ContentTypePartSettings": { "Position": "4" } } }
+          ]
+        },
+        {
+          "Name": "Appointment",
+          "DisplayName": "Appointment",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "appointments/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "2" }, "ProductPartSettings": { "Type": "Service", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Show" }, "ProductPageSettings": { "ShowDetails": true } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "3", "DisplayName": "Description" } } },
+            { "PartName": "BookingPart", "Name": "BookingPart", "Settings": { "ContentTypePartSettings": { "Position": "4" } } }
+          ]
+        },
+        {
+          "Name": "Room",
+          "DisplayName": "Room",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "rooms/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "2" }, "ProductPartSettings": { "Type": "Service", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Show" }, "ProductPageSettings": { "ShowDetails": true } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "3", "DisplayName": "Description" } } },
+            { "PartName": "BookingPart", "Name": "BookingPart", "Settings": { "ContentTypePartSettings": { "Position": "4" } } }
+          ]
+        },
+        {
+          "Name": "Traveler",
+          "DisplayName": "Traveler",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": false,
+              "Listable": false,
+              "Draftable": false,
+              "Versionable": false,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "Traveler", "Name": "Traveler", "Settings": { "ContentTypePartSettings": { "Position": "0" } } }
+          ]
+        }
+      ],
+      "ContentParts": [
+        {
+          "Name": "Traveler",
+          "Settings": {},
+          "ContentPartFieldDefinitionRecords": [
+            {
+              "FieldName": "TextField",
+              "Name": "FullName",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Full name", "Position": "0" },
+                "TextFieldSettings": { "Required": true, "Hint": "As it is on their passport." }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "4bkngtour0alpinelakes0000a",
+          "ContentItemVersionId": "4bkngtour0alpinelakes0000b",
+          "ContentType": "Tour",
+          "DisplayText": "Alpine Lakes Tour",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Alpine Lakes Tour" },
+          "AutoroutePart": { "Path": "tours/alpine-lakes-tour", "SetHomepage": false, "Disabled": false, "RouteContainedItems": false, "Absolute": false },
+          "ProductPart": { "Price": 1000, "Currency": "USD", "Sku": "TOUR-ALPINE", "IsPurchasable": true },
+          "HtmlBodyPart": { "Html": "<p>Seven days walking between alpine lakes, with a guide, six nights in mountain inns and breakfast and dinner each day. Priced per person, sharing a double room, or with a single room.</p>" },
+          "BookingPart": {
+            "Kind": 0,
+            "Capacity": 12,
+            "PricePerPerson": true,
+            "Occupancies": [
+              { "Id": "4bkngocc0double000000000000", "Label": "Double room", "People": 2, "PriceAdjustment": 0 },
+              { "Id": "4bkngocc0single000000000000", "Label": "Single room", "People": 1, "PriceAdjustment": 300 }
+            ],
+            "DepositPercent": 15,
+            "BalanceDueDaysBefore": 45,
+            "CancellationTiers": [
+              { "DaysBefore": 60, "FeePercent": 10 },
+              { "DaysBefore": 30, "FeePercent": 50 }
+            ],
+            "RequestToBook": false,
+            "AskForTravelers": true
+          }
+        },
+        {
+          "ContentItemId": "4bkngappt0massage00000000a",
+          "ContentItemVersionId": "4bkngappt0massage00000000b",
+          "ContentType": "Appointment",
+          "DisplayText": "Sports Massage, 60 minutes",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Sports Massage, 60 minutes" },
+          "AutoroutePart": { "Path": "appointments/sports-massage-60-minutes", "SetHomepage": false, "Disabled": false, "RouteContainedItems": false, "Absolute": false },
+          "ProductPart": { "Price": 80, "Currency": "USD", "Sku": "APPT-MASSAGE60", "IsPurchasable": true },
+          "HtmlBodyPart": { "Html": "<p>A 60-minute sports massage with one of our therapists, on weekdays from 9 to 5.</p>" },
+          "BookingPart": {
+            "Kind": 2,
+            "Capacity": 1,
+            "Hours": [
+              { "Day": 1, "Opens": "09:00", "Closes": "17:00" },
+              { "Day": 2, "Opens": "09:00", "Closes": "17:00" },
+              { "Day": 3, "Opens": "09:00", "Closes": "17:00" },
+              { "Day": 4, "Opens": "09:00", "Closes": "17:00" },
+              { "Day": 5, "Opens": "09:00", "Closes": "17:00" }
+            ],
+            "SlotMinutes": 60,
+            "DaysAhead": 30,
+            "CancellationTiers": [
+              { "DaysBefore": 1, "FeePercent": 0 }
+            ]
+          }
+        },
+        {
+          "ContentItemId": "4bkngroom0lakeview0000000a",
+          "ContentItemVersionId": "4bkngroom0lakeview0000000b",
+          "ContentType": "Room",
+          "DisplayText": "Lakeview Room",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Lakeview Room" },
+          "AutoroutePart": { "Path": "rooms/lakeview-room", "SetHomepage": false, "Disabled": false, "RouteContainedItems": false, "Absolute": false },
+          "ProductPart": { "Price": 120, "Currency": "USD", "Sku": "ROOM-LAKEVIEW", "IsPurchasable": true },
+          "HtmlBodyPart": { "Html": "<p>A room for two with a view of the lake, breakfast included. Two nights at least.</p>" },
+          "BookingPart": {
+            "Kind": 1,
+            "Capacity": 3,
+            "Occupancies": [
+              { "Id": "4bkngocc0roomfortwo0000000", "Label": "Room for two", "People": 2, "PriceAdjustment": 0 }
+            ],
+            "MinNights": 2,
+            "MaxNights": 14,
+            "WeekendPrice": 160,
+            "DaysAhead": 365
+          }
+        }
+      ]
+    },
+    {
+      "name": "BookingDates",
+      "Dates": [
+        { "ContentItemId": "4bkngtour0alpinelakes0000a", "DaysFromToday": 50, "Capacity": 12 },
+        { "ContentItemId": "4bkngtour0alpinelakes0000a", "DaysFromToday": 80, "Capacity": 12 },
+        { "ContentItemId": "4bkngtour0alpinelakes0000a", "DaysFromToday": 110, "Capacity": 12, "Price": 1150 },
+        { "ContentItemId": "4bkngtour0alpinelakes0000a", "DaysFromToday": 20, "Capacity": 12 }
+      ]
+    }
+  ]
+}

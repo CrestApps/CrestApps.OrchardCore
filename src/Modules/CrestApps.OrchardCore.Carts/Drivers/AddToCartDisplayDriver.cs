@@ -178,7 +178,9 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                     AddOnId = addOn.AddOnId,
                     Label = addOn.Label,
                     Kind = addOn.Kind,
-                    Price = (await shopperCurrency.ToShopperAsync(addOn.Price, product.Currency, isPrice: false)).Amount,
+                    // A share of the price is a percent, not money.
+                    Price = addOn.PriceBasis == ProductAddOnPriceBasis.PercentOfPrice ? addOn.Price : (await shopperCurrency.ToShopperAsync(addOn.Price, product.Currency, isPrice: false)).Amount,
+                    PriceBasis = addOn.PriceBasis,
                     Required = addOn.Required,
                 });
             }
@@ -200,8 +202,9 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         }
         var isProductPage = request?.RouteValues["contentItemId"] is string shown && shown == contentItem.ContentItemId;
         string productUrl = null;
+        var chooseOnProductPage = _options.ChooseOnProductPageParts.Any(contentItem.Has);
 
-        if (addOns.Count > 0 && !isProductPage && _httpContextAccessor.HttpContext is { } httpContext)
+        if ((addOns.Count > 0 || chooseOnProductPage) && !isProductPage && _httpContextAccessor.HttpContext is { } httpContext)
         {
             var metadata = await _contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
@@ -253,6 +256,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             model.AddOns = addOns;
             model.Currency = currencyShown;
             model.IsProductPage = isProductPage;
+            model.ChooseOnProductPage = chooseOnProductPage;
             model.ProductUrl = productUrl;
 
             // The product's quantity rules and volume discounts.

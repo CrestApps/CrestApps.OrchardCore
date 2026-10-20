@@ -1,0 +1,100 @@
+@model BookingDatesViewModel
+
+@{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var isTime = Model.Part.Kind == BookingKind.TimeSlot;
+}
+
+<zone Name="Title">
+    <breadcrumb name="BookingsDates" title="@T["Dates of {0}", Model.Title]">
+        <breadcrumb-item id="Bookings" action="Index" controller="BookingsAdmin" area="@BookingsConstants.Feature" permission="@BookingsPermissions.ManageBookings.Name">@T["Bookings"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p class="text-body-secondary">
+    @if (Model.Part.Kind == BookingKind.Departure)
+    {
+        @T["The dates buyers can choose. Each has its own seats, and can have its own price."]
+    }
+    else
+    {
+        @T["Every date the product's rules offer can be booked, with its capacity. Add a date here to give it another capacity or price, or to close it."]
+    }
+</p>
+
+<form asp-action="Dates" asp-route-contentItemId="@Model.ContentItemId" method="post" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-3">
+                <label asp-for="NewDate" class="form-label">@T["Date"]</label>
+                <input asp-for="NewDate" type="date" class="form-control" required />
+                <span asp-validation-for="NewDate" class="text-danger"></span>
+            </div>
+            @if (isTime)
+            {
+                <div class="col-6 col-md-2">
+                    <label asp-for="NewTime" class="form-label">@T["Time"]</label>
+                    <input asp-for="NewTime" type="time" class="form-control" />
+                </div>
+            }
+            <div class="col-6 col-md-2">
+                <label asp-for="NewCapacity" class="form-label">@T["Capacity"]</label>
+                <input asp-for="NewCapacity" type="number" min="0" class="form-control" placeholder="@Model.Part.Capacity" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="NewPrice" class="form-label">@T["Price ({0})", Model.Currency ?? string.Empty]</label>
+                <input asp-for="NewPrice" inputmode="decimal" class="form-control" placeholder="@T["The product's"]" />
+                <span asp-validation-for="NewPrice" class="text-danger"></span>
+            </div>
+            <div class="col-12 col-md-2">
+                <button type="submit" class="btn btn-primary w-100">@T["Add date"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Slots.Count == 0)
+{
+    <p class="text-body-secondary">@T["No dates yet."]</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>@T["Date"]</th>
+                    <th>@T["Booked"]</th>
+                    <th>@T["Capacity"]</th>
+                    <th>@T["Price"]</th>
+                    <th>@T["Closed"]</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var slot in Model.Slots)
+                {
+                    var formId = "date-" + slot.ItemId;
+                    var start = CrestApps.OrchardCore.Bookings.Services.BookingSchedule.GetLocalStart(slot.SlotKey);
+
+                    <tr>
+                        <td>@(start is null ? slot.SlotKey : isTime ? start.Value.ToString("f", culture) : start.Value.ToString("D", culture))</td>
+                        <td>@T["{0} paid, {1} held", slot.Sold, slot.Held]</td>
+                        <td><input form="@formId" name="capacity" type="number" min="@(slot.Held + slot.Sold)" value="@slot.Capacity" class="form-control form-control-sm" style="max-width: 7rem;" aria-label="@T["Capacity"]" /></td>
+                        <td><input form="@formId" name="price" inputmode="decimal" value="@slot.Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" style="max-width: 8rem;" placeholder="@T["The product's"]" aria-label="@T["Price"]" /></td>
+                        <td>
+                            <div class="form-check">
+                                <input form="@formId" name="closed" type="checkbox" value="true" class="form-check-input" checked="@slot.Closed" id="@(formId)-closed" aria-label="@T["Closed"]" />
+                            </div>
+                        </td>
+                        <td>
+                            <form asp-action="UpdateDate" asp-route-itemId="@slot.ItemId" method="post" id="@formId">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Save"]</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

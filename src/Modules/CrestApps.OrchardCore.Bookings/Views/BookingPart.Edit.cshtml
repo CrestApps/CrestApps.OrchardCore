@@ -1,0 +1,184 @@
+@using CrestApps.OrchardCore.Bookings.Models
+@model CrestApps.OrchardCore.Bookings.ViewModels.BookingPartViewModel
+
+@{
+    var prefix = Html.IdFor(model => model.Kind).Replace("_Kind", string.Empty);
+    var currency = string.IsNullOrEmpty(Model.Currency) ? T.GetString("the product's currency").Value : Model.Currency;
+}
+
+<fieldset class="mb-3" id="@(prefix)-booking" data-booking-editor>
+    <legend class="h5">@T["Booking"]</legend>
+
+    <div class="mb-3">
+        <label asp-for="Kind" class="form-label">@T["What's booked"]</label>
+        <select asp-for="Kind" class="form-select" style="max-width: 28rem;" data-booking-kind>
+            <option value="@BookingKind.Departure">@T["A date with seats, such as a tour, an event or a class"]</option>
+            <option value="@BookingKind.Nightly">@T["Nights, such as a room or a rental"]</option>
+            <option value="@BookingKind.TimeSlot">@T["A time, such as an appointment"]</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Capacity" class="form-label">@T["Capacity"]</label>
+        <input asp-for="Capacity" type="number" min="0" class="form-control" style="max-width: 10rem;" />
+        <span class="hint">@T["How many can be booked on each date: seats on a departure, rooms a night, or bookings in a time slot. A departure's own dates can say otherwise."]</span>
+    </div>
+
+    <div class="mb-3" data-booking-for="@BookingKind.Departure">
+        @if (!string.IsNullOrEmpty(Model.ContentItemId))
+        {
+            <a class="btn btn-secondary btn-sm" asp-area="@CrestApps.OrchardCore.Bookings.BookingsConstants.Feature" asp-controller="BookingsAdmin" asp-action="Dates" asp-route-contentItemId="@Model.ContentItemId">@T["Manage dates"]</a>
+            <span class="hint d-block">@T["The departures buyers can choose, each with its seats and, optionally, its own price."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["Publish the product, then add its dates from here."]</span>
+        }
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="PricePerPerson" type="checkbox" class="form-check-input" />
+            <label asp-for="PricePerPerson" class="form-check-label">@T["The price is per person"]</label>
+            <span class="hint dashed">@T["Such as a tour's. Untick it for a price per unit, such as a room's, whoever is in it."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <span class="form-label d-block">@T["Options"]</span>
+        <div class="row g-2 mb-1 small text-body-secondary d-none d-md-flex">
+            <div class="col-md-6">@T["Option"]</div>
+            <div class="col-md-2">@T["People"]</div>
+            <div class="col-md-4">@T["Price change ({0})", currency]</div>
+        </div>
+        @for (var i = 0; i < Model.Occupancies.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <input type="hidden" asp-for="Occupancies[i].Id" />
+                <div class="col-12 col-md-6"><input asp-for="Occupancies[i].Label" class="form-control" maxlength="80" placeholder="@T["Such as Double room or Child"]" aria-label="@T["Option, row {0}", i + 1]" /></div>
+                <div class="col-6 col-md-2"><input asp-for="Occupancies[i].People" type="number" min="1" max="50" class="form-control" placeholder="1" aria-label="@T["People, row {0}", i + 1]" /></div>
+                <div class="col-6 col-md-4"><input asp-for="Occupancies[i].PriceAdjustment" inputmode="decimal" class="form-control" placeholder="0" aria-label="@T["Price change, row {0}", i + 1]" /></div>
+            </div>
+        }
+        <span class="hint">@T["Optional. What a unit can be, such as a single or a double room, with how many people it's for and what it adds to or takes off the price once, such as a single supplement (300) or a child's price (-150). Clear an option's name to remove it."]</span>
+    </div>
+
+    <div data-booking-for="@BookingKind.Nightly">
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <label asp-for="MinNights" class="form-label">@T["Fewest nights"]</label>
+                <input asp-for="MinNights" type="number" min="1" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="MaxNights" class="form-label">@T["Most nights"]</label>
+                <input asp-for="MaxNights" type="number" min="1" class="form-control" />
+            </div>
+            <div class="col-12 col-md-6">
+                <label asp-for="WeekendPrice" class="form-label">@T["Friday and Saturday nights ({0})", currency]</label>
+                <input asp-for="WeekendPrice" inputmode="decimal" class="form-control" />
+                <span class="hint">@T["Optional. The price of a weekend night, in place of the product's."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3" data-booking-for="@BookingKind.TimeSlot">
+        <span class="form-label d-block">@T["Opening hours"]</span>
+        @for (var i = 0; i < Model.Hours.Count; i++)
+        {
+            <div class="row g-2 mb-2 align-items-center">
+                <input type="hidden" asp-for="Hours[i].Day" />
+                <div class="col-12 col-md-3">
+                    <div class="form-check">
+                        <input asp-for="Hours[i].Open" type="checkbox" class="form-check-input" />
+                        <label asp-for="Hours[i].Open" class="form-check-label">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(Model.Hours[i].Day)</label>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2"><input asp-for="Hours[i].Opens" type="time" class="form-control" aria-label="@T["Opens"]" /></div>
+                <div class="col-6 col-md-2"><input asp-for="Hours[i].Closes" type="time" class="form-control" aria-label="@T["Closes"]" /></div>
+            </div>
+        }
+        <div class="row g-3 mt-1">
+            <div class="col-6 col-md-3">
+                <label asp-for="SlotMinutes" class="form-label">@T["Minutes a slot"]</label>
+                <input asp-for="SlotMinutes" type="number" min="5" step="5" class="form-control" />
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3" data-booking-for="@BookingKind.Nightly @BookingKind.TimeSlot">
+        <label asp-for="DaysAhead" class="form-label">@T["Days ahead"]</label>
+        <input asp-for="DaysAhead" type="number" min="1" max="730" class="form-control" style="max-width: 10rem;" />
+        <span class="hint">@T["How far ahead it can be booked."]</span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="DepositPercent" class="form-label">@T["Deposit (%)"]</label>
+            <input asp-for="DepositPercent" inputmode="decimal" class="form-control" placeholder="@T["Paid in full"]" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="BalanceDueDaysBefore" class="form-label">@T["Rest due (days before)"]</label>
+            <input asp-for="BalanceDueDaysBefore" type="number" min="0" class="form-control" />
+        </div>
+        <div class="col-12">
+            <span class="hint">@T["Optional. A buyer can pay this much now; the rest is charged to the same card this many days before the date. A booking closer than that is paid in full."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <span class="form-label d-block">@T["Cancellation policy"]</span>
+        <div class="row g-2 mb-1 small text-body-secondary d-none d-md-flex">
+            <div class="col-md-4">@T["Canceled at least (days before)"]</div>
+            <div class="col-md-4">@T["Fee (%)"]</div>
+        </div>
+        @for (var i = 0; i < Model.CancellationTiers.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-6 col-md-4"><input asp-for="CancellationTiers[i].DaysBefore" type="number" min="0" class="form-control" aria-label="@T["Days before, row {0}", i + 1]" /></div>
+                <div class="col-6 col-md-4"><input asp-for="CancellationTiers[i].FeePercent" inputmode="decimal" class="form-control" aria-label="@T["Fee, row {0}", i + 1]" /></div>
+            </div>
+        }
+        <span class="hint">@T["Optional. What canceling costs, such as 10% at least 60 days before, 50% at least 30 days before, and everything closer than the last rule. With no rules, a booking is canceled for a full refund."]</span>
+        <span asp-validation-for="CancellationTiers" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="RequestToBook" type="checkbox" class="form-check-input" />
+            <label asp-for="RequestToBook" class="form-check-label">@T["Confirm each booking before it's paid"]</label>
+            <span class="hint dashed">@T["Buyers send a request; you confirm it by sending the quote from its order, and they pay from its link."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="AskForTravelers" type="checkbox" class="form-check-input" />
+            <label asp-for="AskForTravelers" class="form-check-label">@T["Ask for each traveler's details at checkout"]</label>
+            <span class="hint dashed">@T["The fields of the Traveler content type, once per person. Add them under Content definition, Content types, Traveler."]</span>
+        </div>
+    </div>
+</fieldset>
+
+<script at="Foot">
+    (() => {
+        const editor = document.getElementById('@(prefix)-booking');
+        const kind = editor?.querySelector('[data-booking-kind]');
+
+        if (!kind) {
+            return;
+        }
+
+        // Only what the kind chosen uses is shown.
+        const names = { '0': 'Departure', '1': 'Nightly', '2': 'TimeSlot', Departure: 'Departure', Nightly: 'Nightly', TimeSlot: 'TimeSlot' };
+        const show = () => {
+            const chosen = names[kind.value] || kind.value;
+
+            editor.querySelectorAll('[data-booking-for]').forEach(section => {
+                section.hidden = !section.dataset.bookingFor.split(' ').includes(chosen);
+            });
+        };
+
+        kind.addEventListener('change', show);
+        show();
+    })();
+</script>

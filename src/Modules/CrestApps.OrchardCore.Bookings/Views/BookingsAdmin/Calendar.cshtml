@@ -1,0 +1,69 @@
+@model BookingCalendarViewModel
+
+@{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var invariant = System.Globalization.CultureInfo.InvariantCulture;
+    var first = Model.Month;
+    var firstDay = (int)culture.DateTimeFormat.FirstDayOfWeek;
+    var offset = ((int)first.DayOfWeek - firstDay + 7) % 7;
+    var days = DateTime.DaysInMonth(first.Year, first.Month);
+    var cells = (int)Math.Ceiling((offset + days) / 7.0) * 7;
+}
+
+<zone Name="Title">
+    <breadcrumb name="BookingsCalendar" title="@Html.Raw(Html.Encode(first.ToDateTime(TimeOnly.MinValue).ToString("Y", culture)))">
+        <breadcrumb-item id="Bookings" action="Index" controller="BookingsAdmin" area="@BookingsConstants.Feature" permission="@BookingsPermissions.ManageBookings.Name">@T["Bookings"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="d-flex gap-2 mb-3">
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar" asp-route-month="@first.AddMonths(-1).ToString("yyyy-MM", invariant)" aria-label="@T["Previous month"]"><span class="fa-solid fa-chevron-left" aria-hidden="true"></span></a>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar">@T["This month"]</a>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar" asp-route-month="@first.AddMonths(1).ToString("yyyy-MM", invariant)" aria-label="@T["Next month"]"><span class="fa-solid fa-chevron-right" aria-hidden="true"></span></a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered small" style="table-layout: fixed; min-width: 42rem;">
+        <thead>
+            <tr>
+                @for (var i = 0; i < 7; i++)
+                {
+                    <th class="text-center">@culture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)((firstDay + i) % 7))</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (var row = 0; row < cells / 7; row++)
+            {
+                <tr>
+                    @for (var column = 0; column < 7; column++)
+                    {
+                        var index = row * 7 + column - offset;
+
+                        if (index < 0 || index >= days)
+                        {
+                            <td class="bg-body-tertiary"></td>
+
+                            continue;
+                        }
+
+                        var day = first.AddDays(index);
+
+                        <td style="height: 6rem; vertical-align: top;">
+                            <div class="fw-semibold">@day.Day</div>
+                            @if (Model.Days.TryGetValue(day, out var entries))
+                            {
+                                foreach (var entry in entries.OrderBy(entry => entry.Time))
+                                {
+                                    var css = entry.Closed ? "text-body-secondary text-decoration-line-through" : entry.Taken >= entry.Capacity ? "text-danger" : null;
+
+                                    <a class="d-block text-truncate @css" asp-action="Dates" asp-route-contentItemId="@entry.ContentItemId" title="@entry.Title">@(entry.Time is null ? null : entry.Time + " ")@entry.Title (@entry.Taken/@entry.Capacity)</a>
+                                }
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

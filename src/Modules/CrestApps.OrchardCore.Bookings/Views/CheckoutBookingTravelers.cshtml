@@ -1,0 +1,32 @@
+@using OrchardCore.DisplayManagement.Zones
+@model BookingTravelersViewModel
+
+@*
+    Each traveler's details, once per person of each booking that asks for them. Only each item's field zones show: its
+    title and Publish actions belong to the admin's content editor.
+*@
+
+<style at="Head">
+    .checkout-travelers .field-wrapper { margin-bottom: 1rem; }
+    .checkout-travelers .field-wrapper > label { display: inline-block; margin-bottom: .5rem; }
+    .checkout-travelers .ocat-label-required::after { content: " *"; }
+</style>
+
+<div class="checkout-travelers mt-4">
+    @foreach (var (title, editors) in Model.Bookings)
+    {
+        <h5>@T["Travelers: {0}", title]</h5>
+        @for (var i = 0; i < editors.Count; i++)
+        {
+            var zones = ((IZoneHolding)editors[i]).Zones;
+
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="small text-body-secondary mb-2">@T["Traveler {0}", i + 1]</div>
+                    @await DisplayAsync(zones["Content"])
+                    @await DisplayAsync(zones["Parts"])
+                </div>
+            </div>
+        }
+    }
+</div>

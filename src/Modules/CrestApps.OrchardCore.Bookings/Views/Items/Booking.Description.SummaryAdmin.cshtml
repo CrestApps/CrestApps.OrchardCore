@@ -1,0 +1,18 @@
+@inject CrestApps.OrchardCore.Bookings.Services.BookingCapacityService Capacity
+@model ShapeViewModel<Booking>
+
+@{
+    var booking = Model.Value;
+    var timeZone = await Capacity.GetTimeZoneAsync();
+    var start = CrestApps.OrchardCore.Bookings.Services.BookingEmailSender.ToLocal(booking.StartsUtc, timeZone);
+    var when = booking.Kind switch
+    {
+        BookingKind.Nightly => T.GetString("{0:d} – {1:d}", start, CrestApps.OrchardCore.Bookings.Services.BookingEmailSender.ToLocal(booking.EndsUtc ?? booking.StartsUtc, timeZone)).Value,
+        BookingKind.TimeSlot => start.ToString("g", System.Globalization.CultureInfo.CurrentCulture),
+        _ => start.ToString("D", System.Globalization.CultureInfo.CurrentCulture),
+    };
+}
+<div class="admin-list-secondary">
+    <span>@when</span>
+    <span>@(string.IsNullOrEmpty(booking.OccupancyLabel) ? T.Plural(booking.People, "1 person", "{0} people") : T["{0} × {1}", booking.Units, booking.OccupancyLabel])</span>
+</div>

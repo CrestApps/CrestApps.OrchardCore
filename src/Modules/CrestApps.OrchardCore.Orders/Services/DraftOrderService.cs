@@ -66,14 +66,23 @@ public sealed class DraftOrderService
     /// Prices the lines for the buyer, without saving anything, such as to show the store what the draft comes to. A
     /// saved draft keeps its currency, such as a quote the buyer asked for in theirs.
     /// </summary>
-    public async Task<CartPricing> PriceAsync(DraftOrderInput input, string cartId, string currency = null, CancellationToken cancellationToken = default)
+    public Task<CartPricing> PriceAsync(DraftOrderInput input, string cartId, string currency = null, CancellationToken cancellationToken = default)
+        => PriceAsync(input, cartId, currency, existing: null, cancellationToken);
+
+    /// <summary>
+    /// Prices the lines for the buyer, keeping what the existing order's lines carry besides the product, such as their
+    /// add-ons and a booking's dates, so a quote the buyer asked for is priced as they chose it.
+    /// </summary>
+    public async Task<CartPricing> PriceAsync(DraftOrderInput input, string cartId, string currency, Order existing, CancellationToken cancellationToken = default)
     {
         var user = await FindUserAsync(input.CustomerEmail);
         var now = _clock.UtcNow;
+        var kept = (existing?.Lines ?? []).Where(line => !string.IsNullOrEmpty(line.LineId)).ToDictionary(line => line.LineId, StringComparer.Ordinal);
 
         var cart = new Cart
         {
-            ItemId = cartId ?? UniqueId.GenerateId(),
+            // An order's own id when it has no cart, such as a quote, so what it holds, such as a booking's dates, counts as its own.
+            ItemId = cartId ?? existing?.ItemId ?? UniqueId.GenerateId(),
             UserId = user is null ? null : await _userManager.GetUserIdAsync(user),
             Lines = input.Lines
                 .Where(line => line.Quantity > 0 && !string.IsNullOrEmpty(line.ContentItemId))
@@ -84,6 +93,12 @@ public sealed class DraftOrderService
                     VariantId = string.IsNullOrEmpty(line.VariantId) ? null : line.VariantId,
                     Quantity = line.Quantity,
                     AddedUtc = now,
+                    AddOns = kept.TryGetValue(line.LineId ?? string.Empty, out var keptLine) && keptLine.ContentItemId == line.ContentItemId && keptLine.AddOns is { Count: > 0 } addOns
+                        ? addOns.Where(addOn => !string.IsNullOrEmpty(addOn.AddOnId)).ToDictionary(addOn => addOn.AddOnId, addOn => addOn.Value ?? "true", StringComparer.Ordinal)
+                        : null,
+                    Details = kept.TryGetValue(line.LineId ?? string.Empty, out var detailed) && detailed.ContentItemId == line.ContentItemId && detailed.Details is { Count: > 0 } details
+                        ? new Dictionary<string, string>(details, StringComparer.Ordinal)
+                        : null,
                 })
                 .ToList(),
             Currency = currency,
@@ -115,7 +130,7 @@ public sealed class DraftOrderService
             problems.Add(S["The buyer has started paying this order, so it can't be changed now."]);
         }
 
-        var pricing = await PriceAsync(input, existing?.CartId, existing?.Currency, cancellationToken);
+        var pricing = await PriceAsync(input, existing?.CartId, existing?.Currency, existing, cancellationToken);
 
         if (pricing.Lines.Count == 0)
         {

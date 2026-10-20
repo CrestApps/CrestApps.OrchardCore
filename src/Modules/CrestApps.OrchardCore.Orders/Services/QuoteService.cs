@@ -79,9 +79,19 @@ public sealed class QuoteService
     /// Turns the signed-in buyer's cart into a quote request: a draft order of its lines with the buyer's message and
     /// purchase order number, for the store to price and send. The cart is emptied.
     /// </summary>
-    public async Task<(Order Order, IReadOnlyList<string> Problems)> RequestAsync(ClaimsPrincipal user, string message, string purchaseOrderNumber, CancellationToken cancellationToken = default)
+    public Task<(Order Order, IReadOnlyList<string> Problems)> RequestAsync(ClaimsPrincipal user, string message, string purchaseOrderNumber, CancellationToken cancellationToken = default)
+        => RequestAsync(user, message, purchaseOrderNumber, requireQuoteRequests: true, cancellationToken);
+
+    /// <summary>
+    /// Turns the signed-in buyer's cart into a quote request. With <paramref name="requireQuoteRequests"/> off, it's
+    /// taken even when the store doesn't take quote requests, for a cart the store has to confirm first, such as a
+    /// booking.
+    /// </summary>
+    public async Task<(Order Order, IReadOnlyList<string> Problems)> RequestAsync(ClaimsPrincipal user, string message, string purchaseOrderNumber, bool requireQuoteRequests, CancellationToken cancellationToken = default)
     {
-        if (!await CanRequestAsync(user) || await _userManager.GetUserAsync(user) is not User account)
+        var allowed = requireQuoteRequests ? await CanRequestAsync(user) : user?.Identity?.IsAuthenticated == true;
+
+        if (!allowed || await _userManager.GetUserAsync(user) is not User account)
         {
             return (null, [S["Sign in to ask for a quote."]]);
         }

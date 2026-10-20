@@ -66,6 +66,11 @@ public class AddToCartViewModel
     public string Currency { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the product needs something chosen on its own page first, such as a booking's date.
+    /// </summary>
+    public bool ChooseOnProductPage { get; set; }
+
+    /// <summary>
     /// Gets or sets whether this is the product's own page, where add-ons are chosen.
     /// </summary>
     public bool IsProductPage { get; set; }
