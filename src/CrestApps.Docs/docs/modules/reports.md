@@ -186,6 +186,14 @@ services.Configure<ReportOptions>(options => options.Add(new ReportDescriptor(
 
 `IReportManager` enforces unique report names across every descriptor. Because a family is described through options, another feature can add or remove reports of the family without editing the module that registers them. The Contact Center module describes its enterprise interaction and agent workforce report catalogs this way, and Omnichannel its enterprise activity reports.
 
+## Report subscriptions
+
+The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptions`, needs Email) emails a registered report on a schedule. `ReportSubscription` (`ReportSubscriptionIndex`) has the report's `ReportName`, a `Frequency` (`Daily`, `Weekly` on `DayOfWeek`, `Monthly` on `DayOfMonth` 1 to 28), the `Hour` in the site's time zone, the `Recipients`, an optional `AttachmentFormat` (an export format such as `csv` or `xlsx`), `IsEnabled`, and `NextRunUtc`, `LastRunUtc` and `LastError`.
+
+- `ReportSubscriptionSchedule.GetNextRunUtc` and `GetPeriod` work in the site's time zone. A run covers the day, the seven days, or the calendar month before it, from midnight to midnight.
+- `ReportSubscriptionsBackgroundTask` (every five minutes) sends the subscriptions that are due. A late run covers the period it was due for. `ReportSubscriptionService.SendAsync` runs the report with that date range, resolves its display values, and emails its metrics and tables (`ReportWorkflowService.ToHtml`), with the export attached when asked. It records `LastError` when the email or the report fails.
+- **Reports > Subscriptions** (`ReportSubscriptionsController`, `Reports/subscriptions`, the `AdminList`) needs **Manage report subscriptions**, and lists only the reports the person can see. **Save and send now** sends one at once without moving its schedule.
+
 ## Enable via recipe
 
 ```json

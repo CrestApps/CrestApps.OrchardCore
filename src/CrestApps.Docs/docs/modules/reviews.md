@@ -16,7 +16,8 @@ The **Product Reviews** feature lets buyers rate and review the products they bo
 ## Model
 
 - **`ProductReview`** (collection `Reviews`, `ProductReviewIndex`): the product, the user and the name shown, `Rating` (1 to 5), `Title`, `Body`, `Status` (`Pending`, `Approved` or `Rejected`), `VerifiedPurchase` and the `OrderId` it was bought on, and who moderated it when.
-- **`ReviewSettings`** (group `reviews`, **Settings > Commerce > Reviews**): `RequireApproval` (on) and `BuyersOnly` (on).
+- **`ReviewSettings`** (group `reviews`, **Settings > Commerce > Reviews**): `RequireApproval` (on), `BuyersOnly` (on), `SendReviewRequests` (off) and `ReviewRequestDelayDays` (14).
+- **`ProductReview.Photos`**: the media paths of up to three photos.
 - **`ProductRating`**: the count and the average (one decimal) of a product's approved reviews, from `ProductRatingReader`.
 
 ## Submitting
@@ -24,6 +25,19 @@ The **Product Reviews** feature lets buyers rate and review the products they bo
 `ProductReviewsDisplayDriver` adds two shapes to a product's `Detail` display: **`ProductRating`** (stars, average and count, at `Content:before:5`) and **`ProductReviews`** (the approved reviews, newest first, and the form, at `Content:60`, after the specifications at `Content:50`). A signed-in user with **Review products bought** (granted to Authenticated) sees the form when `ReviewService.GetEligibilityAsync` allows it: they bought the product on a paid order, or `BuyersOnly` is off. The form posts to `POST /reviews/{productId}`.
 
 A user has one review per product: reviewing again changes it and, with `RequireApproval`, sends it for approval again. A review written by a buyer is a **verified purchase**, recorded with its order.
+
+## Photos
+
+With Orchard Core's Media feature on, the form takes up to three photos (`ReviewPhotoStore`):
+
+- Each is a JPEG, PNG or WebP of at most 5 MB, checked by its first bytes.
+- They're saved under `reviews/{productId}/` in the media store.
+- New photos replace a review's, and the old files are deleted.
+- The product page and the admin list show them through `IMediaFileStore.MapPathToPublicUrl`.
+
+## Review requests
+
+`ReviewRequestBackgroundTask` (hourly) asks buyers to review what they bought, with `SendReviewRequests` on. It needs the site's email, its base URL and Customers. `ReviewRequestService.SendDueAsync` reads paid orders placed in the last 60 days and at least `ReviewRequestDelayDays` ago, without `Order.ReviewRequestSentUtc`, up to 200 a run. It emails each order's buyer once, with a link to each product's reviews, when their customer accepts marketing. It marks every due order, so a buyer who doesn't accept marketing isn't asked later.
 
 ## Moderating
 

@@ -194,6 +194,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
 | `CrestApps.OrchardCore.Companies` | Companies | [Companies](./modules/companies) |
+| `CrestApps.OrchardCore.Marketing` | Marketing | [Marketing](./modules/marketing) |
+| `CrestApps.OrchardCore.Carts.Wishlists` | Wishlists | [Carts and Orders](./modules/carts-and-orders#wishlists) |
+| `CrestApps.OrchardCore.Reports.Subscriptions` | Report Subscriptions | [Reports](./modules/reports#report-subscriptions) |
 | `CrestApps.OrchardCore.Products.Api` | Catalog API | [Products](./modules/products#api) |
 | `CrestApps.OrchardCore.Carts.Api` | Cart API | [Carts and Orders](./modules/carts-and-orders#api) |
 | `CrestApps.OrchardCore.Checkout.Api` | Checkout API | [Checkout](./modules/checkout#the-commerce-api) |

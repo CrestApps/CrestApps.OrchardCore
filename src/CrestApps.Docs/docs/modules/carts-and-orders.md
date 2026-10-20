@@ -141,6 +141,17 @@ A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuot
 - **The account.** The account's orders list shows quotes and orders sent to pay, not paid or turned down, above the placed orders, and the order page titles a quote *Quote*.
 - **API.** `POST me/quotes` (`{ message, purchaseOrderNumber }`, 201 with the order, 400 for an empty cart) and `POST me/orders/{orderId}/decline-quote` (409 when it can't be). `ApiOrder.Quote` is an `ApiOrderQuote`.
 
+### Order email templates
+
+`IOrderEmailTemplates` (Orders.Core) lets the store write its own emails about orders. Each sender calls `IServiceProvider.ApplyOrderEmailTemplateAsync(kind, order, subject, text, html, values)` with its `OrderEmailKinds`, and gets the email back as the store's template has it: `order-confirmation`, `order-invoice`, `order-quote`, `order-shipped`, `order-return`, `gift-card` and `checkout-recovery`. Without an implementation, an email goes as built.
+
+`LiquidOrderEmailTemplates` reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`):
+
+- A `Layout` around every email, with `{{ Content }}`.
+- `Templates` by kind, each with `IsEnabled`, a `Subject` and a `Body` in Liquid.
+
+The Liquid has `Content` (the built HTML, unencoded), `Subject`, `StoreName`, `Order` (the order as plain values, statuses by name) and the email's own values (`OrderUrl`, `PayUrl`, `TrackingUrl`, `Carrier`, `ShipmentNumber`, `ReturnNumber`, `ReturnStatus`, `Code`, `Amount`, `RecipientName`, `Message`, `RecoveryUrl`). A template that's used rewrites the text part from its HTML. Liquid that doesn't parse is refused when saved. A template that throws when rendered sends the built email and logs why.
+
 ### Sales channels
 
 Every order records where it was made, in `Order.Channel` (`OrderChannels`):
@@ -257,6 +268,7 @@ With the [Reports](reports) feature on, the Orders feature adds these reports un
 | Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units, and the same by kind of product (goods, digital, services). |
 | Sales by category | Orders, units and sales per category: the taxonomy terms in `OrderLine.CategoryIds`, named from the site's published taxonomies (`ProductCategoryNames`). A line in two categories counts in both; one in none counts under *No category*. |
 | Customers | Buyers in the period, per currency: first-time (no paid order before the period) and returning, the share who have paid for more than one order, the average lifetime spend (net of refunds, up to the period's end), and the top 25 buyers. A buyer is known by their customer record, else their account, else their email. |
+| Cohorts and retention | Buyers by the month of their first paid order in the period (`OrderCohortsReport.Build`), and for each of the six months after, the share who paid for another order in it; a month that hasn't ended is left blank. |
 | Checkouts | Order checkouts (`CheckoutSessionIndex`, reference type `Order`) started in the period by how they ended: paid, payment failed, left or expired, or still open, with the paid rate, by day or month. |
 | Sales by country | Orders, tax and total per country the orders ship to, or are billed to. |
 | Tax on orders | Tax charged and what it was charged on, by day or month. |
@@ -291,6 +303,21 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 | **Create order**, an order's **Invoice**, **Packing slip** and **Add items** | `ManageOrders` | Administrator |
 | **Commerce > Returns** and **Settings > Commerce > Returns** (Returns feature) | `ManageOrders` | Administrator |
 | **Commerce > Gift cards** (Gift Cards feature) | `ManageGiftCards` | Administrator |
+
+### Sales Summary widget
+
+With Orchard Core's Admin Dashboard on, the **Sales Summary** dashboard widget (`SalesSummaryWidget`, `SalesSummaryPart`) shows the sales net of refunds in the store's currency today, and over the last 7 and 30 days, with the number of orders, and the orders to ship (`OrderReportReader.ReadUnfulfilledAsync`). Orders in other currencies count in the number of orders only.
+
+### Automation recipes
+
+Orders adds the recipes **Automation: thank-you email** (on) and **Automation: canceled order alert** (added off), and Inventory adds **Automation: low stock alert** (added off). Each turns on Workflows and Email and adds a `WorkflowType` with stable ids: `OrderPaidEvent`, `OrderCanceledEvent` or `LowStockEvent` leading to an `EmailTask` in Liquid over `Workflow.Input`.
+
+## Wishlists
+
+The **Wishlists** feature (`CrestApps.OrchardCore.Carts.Wishlists`) keeps a `Wishlist` (`WishlistIndex` by `UserId`, collection `Carts`) of a signed-in user's saved products, newest first, up to 100.
+
+- `WishlistButtonDisplayDriver` adds the `WishlistButton` shape to a product's `Detail` display (`Content:before:6`). It posts to `wishlist/{contentItemId}/add` (`WishlistAdd`) or `.../remove` (`WishlistRemove`), or links to sign in.
+- `account/wishlist` (`AccountWishlist`, the `AccountWishlist` shape) lists the saved products that are still published, each with its `ProductAction` display (its add to cart), and adds **Wishlist** to the account menu.
 
 ## API
 
