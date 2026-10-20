@@ -11,6 +11,7 @@ import {
     normalizePresenceStatus,
     pendingPresenceLabel,
     presenceLabel,
+    showsDialProgress,
 } from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
 
 // Live: a colleague's extension call was answered by itself, silently, ~20 s after this user's phone heard that
@@ -165,6 +166,19 @@ describe('agentStatusLabel', () => {
     it('uses the localized labels', () => {
         expect(agentStatusLabel({ status: 'Busy' }, { phase: 'Screening' }, { dialPhaseScreening: 'Filtrage…' })).toBe('Filtrage…');
     });
+
+    // The agent is held Reserved while the dialer reaches the customer. A profile that does not show its steps to the
+    // agent -- the default, as most contact-center dialers work -- leaves the status reading Reserved until connected.
+    it('reads "Reserved" while the dialer places a call whose steps the profile does not show', () => {
+        expect(agentStatusLabel({ status: 'Reserved' }, { phase: 'Dialing', showsProgress: false })).toBe('Reserved');
+        expect(agentStatusLabel({ status: 'Reserved' }, { phase: 'Connecting', showsProgress: false })).toBe('Reserved');
+        expect(agentStatusLabel({ status: 'Reserved' }, { phase: 'Dialing', showsProgress: true })).toBe('Dialing…');
+    });
+
+    it('reads "On a call" once the agent is connected, whatever the profile shows', () => {
+        expect(agentStatusLabel({ status: 'Busy' }, null)).toBe('On a call');
+        expect(agentStatusLabel({ status: 'Busy' }, { phase: 'None', showsProgress: false })).toBe('On a call');
+    });
 });
 
 describe('dialPhaseLabel and dialPhaseHint', () => {
@@ -183,5 +197,20 @@ describe('dialPhaseLabel and dialPhaseHint', () => {
     it('tells the agent to wait while the answer is screened', () => {
         expect(dialPhaseHint({ phase: 'Screening' })).toMatch(/answering machine/);
         expect(dialPhaseHint({ phase: 'Dialing' }, { dialPhaseDialingHint: 'Appel en cours' })).toBe('Appel en cours');
+    });
+
+    it('only says the agent is waiting for a connected call when the profile does not show the steps', () => {
+        expect(dialPhaseLabel({ phase: 'Screening', showsProgress: false })).toBe('Waiting for a connected call');
+        expect(dialPhaseHint({ phase: 'Screening', showsProgress: false })).toMatch(/when a person answers/);
+        expect(dialPhaseLabel({ phase: 'Dialing', showsProgress: false }, { dialWaiting: 'En attente' })).toBe('En attente');
+        expect(dialPhaseLabel({ phase: 'None', showsProgress: false })).toBe('');
+    });
+});
+
+describe('showsDialProgress', () => {
+    it('shows the steps only when the profile asks for them', () => {
+        expect(showsDialProgress({ phase: 'Dialing', showsProgress: true })).toBe(true);
+        expect(showsDialProgress({ phase: 'Dialing', showsProgress: false })).toBe(false);
+        expect(showsDialProgress(null)).toBe(false);
     });
 });

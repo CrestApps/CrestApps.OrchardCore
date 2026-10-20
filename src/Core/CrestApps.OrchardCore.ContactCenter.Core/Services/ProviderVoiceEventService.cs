@@ -354,6 +354,17 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             await PublishStateEventAsync(eventType, session, interaction, providerEvent, previousState, now, idempotencyKey, cancellationToken);
         }
 
+        // A campaign call the agent was connected to, but whose connect was only learned from its end, still made the
+        // agent's time on it a call: they are put on it as of when they joined, before the end moves them on.
+        if (handledCallEnded)
+        {
+            await _presenceManager.ConnectHeldAgentAsync(
+                session.AgentId,
+                interaction,
+                DialerCallMetadata.GetAgentJoinedUtc(interaction) ?? session.AnsweredUtc ?? interaction.AnsweredUtc ?? now,
+                cancellationToken);
+        }
+
         // After the call's own events, which caused it, and at their instant: a release is never on record before
         // the hangup that made it.
         if (startsWrapUp)

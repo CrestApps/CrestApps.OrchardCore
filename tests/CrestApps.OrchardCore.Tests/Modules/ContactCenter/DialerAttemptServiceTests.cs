@@ -57,7 +57,7 @@ public sealed class DialerAttemptServiceTests
         var activity = CreateActivity();
         var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
         reservationService
-            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ActivityReservation?)null);
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         var voiceCallRouter = new Mock<IVoiceContactCenterCallRouter>(MockBehavior.Strict);
@@ -77,7 +77,7 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal(4, activity.Attempts);
         Assert.Equal(ActivityStatus.Pending, activity.Status);
         reservationService.Verify(
-            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()),
             Times.Once);
         VerifyNoOutboundRouting(voiceCallRouter);
     }
@@ -109,7 +109,7 @@ public sealed class DialerAttemptServiceTests
 
         var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
         reservationService
-            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("accept"))
             .ReturnsAsync(reservation);
         var voiceCallRouter = CreateVoiceCallRouter();
@@ -218,7 +218,7 @@ public sealed class DialerAttemptServiceTests
             value => value.DispatchAsync(interaction.ItemId, CancellationToken.None),
             Times.Once);
         reservationService.Verify(
-            value => value.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            value => value.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()),
             Times.Once);
         voiceCallRouter.Verify(
             router => router.GetOutboundProviderName("test"),
@@ -244,7 +244,7 @@ public sealed class DialerAttemptServiceTests
 
         var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
         reservationService
-            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("accept"))
             .ReturnsAsync(reservation);
 
@@ -420,7 +420,7 @@ public sealed class DialerAttemptServiceTests
         }
 
         reservationService.Verify(
-            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()),
             Times.Never);
         reservationService.Verify(
             service => service.CompensateAsync("r1", removeFromQueue, It.IsAny<CancellationToken>()),
@@ -462,6 +462,33 @@ public sealed class DialerAttemptServiceTests
         // Assert
         request.Metadata.TryGetValue(global::CrestApps.OrchardCore.Telephony.TelephonyConstants.RequestMetadata.AnsweringMachineDetection, out var requested);
         Assert.Equal(expected, requested);
+    }
+
+    // A power dial held the agent Busy -- "On a call" on every screen -- from the moment it was placed, while the customer
+    // only rang. An automated dial now holds the agent Reserved until they are connected; a preview or callback dial is
+    // one the agent started, so they are on it from the start.
+    [Theory]
+    [InlineData(DialerMode.Power, true)]
+    [InlineData(DialerMode.Progressive, true)]
+    [InlineData(DialerMode.Predictive, true)]
+    [InlineData(DialerMode.Preview, false)]
+    public async Task TryDialAsync_HoldsTheAgentReservedOnlyForAnAutomatedDial(DialerMode mode, bool holdsAgent)
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.Mode = mode;
+        var reservationService = new Mock<IActivityReservationService>();
+
+        // Act
+        await DialAndCaptureRequestAsync(profile, new NoOutboundLineResolver(), reservationService: reservationService);
+
+        // Assert
+        reservationService.Verify(
+            service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()),
+            holdsAgent ? Times.Once() : Times.Never());
+        reservationService.Verify(
+            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            holdsAgent ? Times.Never() : Times.Once());
     }
 
     [Fact]
@@ -606,7 +633,11 @@ public sealed class DialerAttemptServiceTests
     }
 
     // Runs one successful attempt and returns the dial request it registered for the provider.
-    private static async Task<ContactCenterDialRequest> DialAndCaptureRequestAsync(DialerProfile profile, IOutboundLineResolver resolver, OmnichannelChannelEndpoint? loadAddress = null)
+    private static async Task<ContactCenterDialRequest> DialAndCaptureRequestAsync(
+        DialerProfile profile,
+        IOutboundLineResolver resolver,
+        OmnichannelChannelEndpoint? loadAddress = null,
+        Mock<IActivityReservationService>? reservationService = null)
     {
         var reservation = Reservation();
         var activity = CreateActivity();
@@ -628,7 +659,10 @@ public sealed class DialerAttemptServiceTests
             .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) => capturedRegistration = registration)
             .ReturnsAsync(new ProviderCommand { CommandId = interaction.ItemId, Status = ProviderCommandStatus.Pending });
 
-        var reservationService = new Mock<IActivityReservationService>();
+        reservationService ??= new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptForDialAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
         reservationService
             .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservation);

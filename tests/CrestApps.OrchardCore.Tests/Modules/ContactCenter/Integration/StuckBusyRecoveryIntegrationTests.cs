@@ -12,10 +12,10 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 
 /// <summary>
 /// Live, an agent was left Busy with nothing on the line once the call they had accepted was over, and a supervisor's
-/// Set Available only queued behind work that would never end. An outbound call nobody answers leaves an agent in exactly
-/// that state, so these drive it through the real pacing, reservation, presence and provider-event pipeline on SQLite,
-/// then run the real recovery over the state history the pipeline recorded: the Busy state change it reads comes from
-/// the accept at dial time, not from the test.
+/// Set Available only queued behind work that would never end. These drive a campaign call through the real pacing,
+/// reservation, presence and provider-event pipeline on SQLite, then run the real recovery over the state history the
+/// pipeline recorded. An automated dial holds its agent Reserved until they are connected, so a call nobody answers
+/// whose release is missed strands the agent Reserved, and one that was answered strands them Busy.
 /// </summary>
 public sealed class StuckBusyRecoveryIntegrationTests
 {
@@ -23,7 +23,7 @@ public sealed class StuckBusyRecoveryIntegrationTests
     private const string ActivityId = "activity-1";
 
     [Fact]
-    public async Task UnansweredCall_LeavesTheAgentBusy_UntilRecoveryReturnsThemAfterTheGracePeriod()
+    public async Task UnansweredCall_LeavesTheAgentReserved_UntilRecoveryReturnsThemAfterTheGracePeriod()
     {
         // Arrange
         await using var harness = await DialerModeIntegrationHarness.CreateAsync(durableEventHistory: true);
@@ -31,22 +31,21 @@ public sealed class StuckBusyRecoveryIntegrationTests
         await harness.SeedQueuedActivityAsync(ActivityId, "+15551230001");
         var recovery = new RecoveryProbe(harness);
 
-        // The reservation is accepted when the dial is placed, so the agent is Busy before the customer answers.
+        // The reservation is accepted when the dial is placed, but the agent is only held for the call: Reserved, never
+        // on a call, while the customer is reached.
         await harness.RunPacingCycleAsync(DialerModeIntegrationHarness.CreateProfile(DialerMode.Power));
-        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentId));
+        var held = await harness.AgentManager.FindByIdAsync(AgentId, TestContext.Current.CancellationToken);
+        Assert.Equal(AgentPresenceStatus.Reserved, held.PresenceStatus);
+        Assert.False(string.IsNullOrEmpty(held.DialHoldReservationId));
+        var holdReservationId = held.DialHoldReservationId;
 
-        var intoBusy = await recovery.LatestStateChangeAsync();
-        Assert.Equal(AgentPresenceStatus.Busy, intoBusy.CurrentState);
-        Assert.Equal(AgentStateChangeSources.Accepted, intoBusy.Source);
-
-        // The customer never picks up. The call is over, but only a handled call's end releases the agent.
+        // The customer never picks up. The call is over, but its release is missed (the harness does not run it).
         harness.Clock.Advance(TimeSpan.FromSeconds(25));
         await harness.RaiseCallStateAsync(ActivityId, VoiceCallState.NoAnswer, "no-answer");
 
         var interaction = await harness.FindInteractionByActivityAsync(ActivityId);
         Assert.True(interaction.IsSettled);
-        Assert.Equal(harness.Clock.UtcNow, interaction.EndedUtc);
-        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentId));
+        Assert.Equal(AgentPresenceStatus.Reserved, await harness.GetPresenceAsync(AgentId));
 
         // Act
         // Within the grace period the call's own release could still arrive, so recovery leaves the agent alone.
@@ -59,19 +58,21 @@ public sealed class StuckBusyRecoveryIntegrationTests
 
         // Assert
         Assert.Equal(0, withinGrace);
-        Assert.Equal(AgentPresenceStatus.Busy, presenceWithinGrace);
+        Assert.Equal(AgentPresenceStatus.Reserved, presenceWithinGrace);
 
         Assert.Equal(1, afterGrace);
-        Assert.Equal(AgentPresenceStatus.Available, await harness.GetPresenceAsync(AgentId));
+        var recovered = await harness.AgentManager.FindByIdAsync(AgentId, TestContext.Current.CancellationToken);
+        Assert.Equal(AgentPresenceStatus.Available, recovered.PresenceStatus);
+        Assert.Null(recovered.DialHoldReservationId);
 
         // The audit tells the platform putting the agent right apart from the agent finishing their work, and names the
-        // call that had made them Busy.
+        // dial that had held them. No call was ever on their record.
         var reconciled = await recovery.LatestStateChangeAsync();
-        Assert.Equal(AgentPresenceStatus.Busy, reconciled.PreviousState);
+        Assert.Equal(AgentPresenceStatus.Reserved, reconciled.PreviousState);
         Assert.Equal(AgentPresenceStatus.Available, reconciled.CurrentState);
         Assert.Equal(AgentStateChangeSources.Reconciled, reconciled.Source);
-        Assert.Equal(interaction.ItemId, reconciled.InteractionId);
-        Assert.Contains(recovery.Logger.At(LogLevel.Information), message => message.StartsWith("Returned Contact Center agent 'agent-1' to work", StringComparison.Ordinal));
+        Assert.Equal(holdReservationId, reconciled.ReservationId);
+        Assert.Contains(recovery.Logger.At(LogLevel.Warning), message => message.StartsWith("Returned Contact Center agent 'agent-1' to", StringComparison.Ordinal));
 
         // Back in a ready state, the agent is not recovered a second time.
         harness.Clock.Advance(TimeSpan.FromMinutes(5));
@@ -99,7 +100,7 @@ public sealed class StuckBusyRecoveryIntegrationTests
         // Assert
         Assert.Equal(0, recovered);
         Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentId));
-        Assert.Equal(AgentStateChangeSources.Accepted, (await recovery.LatestStateChangeAsync()).Source);
+        Assert.Equal(AgentStateChangeSources.Connected, (await recovery.LatestStateChangeAsync()).Source);
     }
 
     // The presence manager will not move an agent who holds a reservation. That used to be counted and logged as a
@@ -113,12 +114,21 @@ public sealed class StuckBusyRecoveryIntegrationTests
         await harness.SeedQueuedActivityAsync(ActivityId, "+15551230001");
         var recovery = new RecoveryProbe(harness);
 
+        // The customer answers and the agent is connected, then the call's end is missed: it is settled with nothing
+        // moving the agent on.
         await harness.RunPacingCycleAsync(DialerModeIntegrationHarness.CreateProfile(DialerMode.Power));
-        harness.Clock.Advance(TimeSpan.FromSeconds(25));
-        await harness.RaiseCallStateAsync(ActivityId, VoiceCallState.NoAnswer, "no-answer");
+        harness.Clock.Advance(TimeSpan.FromSeconds(10));
+        await harness.RaiseCallStateAsync(ActivityId, VoiceCallState.Connected, "connected");
+        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentId));
 
-        // The accept cleared the agent's reservation, and the harness cannot offer a Busy agent more work, so the
-        // reservation a next offer would leave them holding is put on the profile directly.
+        harness.Clock.Advance(TimeSpan.FromSeconds(15));
+        var interaction = await harness.FindInteractionByActivityAsync(ActivityId);
+        interaction.TransitionTo(InteractionStatus.Ended);
+        interaction.EndedUtc = harness.Clock.UtcNow;
+        await harness.InteractionManager.UpdateAsync(interaction, cancellationToken: TestContext.Current.CancellationToken);
+
+        // The harness cannot offer a Busy agent more work, so the reservation a next offer would leave them holding is
+        // put on the profile directly.
         var agent = await harness.AgentManager.FindByIdAsync(AgentId, TestContext.Current.CancellationToken);
         agent.ActiveReservationId = "reservation-next";
         await harness.AgentManager.UpdateAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
@@ -133,7 +143,7 @@ public sealed class StuckBusyRecoveryIntegrationTests
         Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentId));
         Assert.DoesNotContain(recovery.Logger.At(LogLevel.Information), message => message.StartsWith("Returned Contact Center agent", StringComparison.Ordinal));
         Assert.Contains(recovery.Logger.At(LogLevel.Warning), message => message.Contains("Could not return Contact Center agent 'agent-1' to work", StringComparison.Ordinal));
-        Assert.Equal(AgentStateChangeSources.Accepted, (await recovery.LatestStateChangeAsync()).Source);
+        Assert.Equal(AgentStateChangeSources.Connected, (await recovery.LatestStateChangeAsync()).Source);
     }
 
     // The real recovery over the harness's own store, presence manager and recorded state history.

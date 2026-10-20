@@ -119,6 +119,12 @@ public static class AgentStateChangeSources
     /// <summary>The agent accepted work and became busy.</summary>
     public const string Accepted = "Accepted";
 
+    /// <summary>
+    /// A person answered the call a dialer placed for the agent and the agent was connected to it, so the agent went
+    /// from Reserved, held while the customer was reached, to on a call.
+    /// </summary>
+    public const string Connected = "Connected";
+
     /// <summary>A reservation ended without the work being taken: declined, expired, cancelled or compensated.</summary>
     public const string Released = "Released";
 

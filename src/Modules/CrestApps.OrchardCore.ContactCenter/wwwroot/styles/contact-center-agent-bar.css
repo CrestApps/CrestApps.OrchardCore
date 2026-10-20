@@ -250,7 +250,7 @@ body .ta-content {
   flex: 1 1 0;
 }
 
-.cc-bar__pending-dial.is-dialing, .cc-bar__pending-dial.is-connecting {
+.cc-bar__pending-dial.is-waiting, .cc-bar__pending-dial.is-dialing, .cc-bar__pending-dial.is-connecting {
   background: rgba(52, 152, 219, 0.16);
 }
 .cc-bar__pending-dial.is-screening {

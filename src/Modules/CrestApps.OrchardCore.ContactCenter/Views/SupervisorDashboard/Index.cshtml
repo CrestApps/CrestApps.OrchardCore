@@ -13,6 +13,9 @@
         ["dispatchUrl"] = Model.DispatchUrl,
         ["interventionUrls"] = Model.InterventionUrls,
         ["antiForgeryToken"] = antiForgeryToken,
+
+        // Each agent's state reads as it does on the agent's own screens: "On a call", not the stored "Busy".
+        ["presenceLabels"] = AgentPresenceLabels.Create(T),
         ["strings"] = new Dictionary<string, string>
         {
             ["waiting"] = T["Waiting"].Value,

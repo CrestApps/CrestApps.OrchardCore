@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Modules;
 
@@ -646,6 +647,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public Mock<IActivityReservationManager> ReservationManager { get; } = new();
 
+        public Mock<IAgentPresenceManager> PresenceManager { get; } = new();
+
         public AnswerProviderCommandTypeExecutor CreateExecutor()
         {
             var clock = new Mock<IClock>(MockBehavior.Strict);
@@ -662,7 +665,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 PreDialCoordinators,
                 AuditRecorder,
                 ReservationManager.Object,
-                Mock.Of<IDialerAbandonmentTracker>());
+                Mock.Of<IDialerAbandonmentTracker>(),
+                new ServiceCollection().AddSingleton(PresenceManager.Object).BuildServiceProvider());
         }
 
         public void SetupActiveState()

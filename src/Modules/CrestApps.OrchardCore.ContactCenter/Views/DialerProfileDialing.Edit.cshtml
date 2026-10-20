@@ -98,6 +98,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="ShowDialProgressToAgent" data-dialer-modes="Power Progressive Predictive">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="ShowDialProgressToAgent" class="form-check-input" />
+            <label asp-for="ShowDialProgressToAgent" class="form-check-label">@T["Show each dial to the agent"]</label>
+            <span class="hint dashed">@T["The agent is Reserved while the dialer calls for them, and on a call once a person answers and they are connected. When enabled, their screens also show who is being dialed and each step (dialing, screening for a machine, connecting). When disabled, they show only that the agent is waiting for a connected call, as most contact-center dialers do."]</span>
+        </div>
+    </div>
+</div>
+
 <script at="Foot" depends-on="bootstrap-select">
     (function () {
         var select = document.querySelector('[data-dialer-mode-select]');

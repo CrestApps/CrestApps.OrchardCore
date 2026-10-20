@@ -500,6 +500,8 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             Source = context?.Source ?? AgentStateChangeSources.SetState,
             ReasonCodeId = profile.PresenceReasonCodeId,
             ReasonName = profile.PresenceReason,
+            InteractionId = context?.InteractionId,
+            ReservationId = context?.ReservationId,
             AgentSessionId = context?.AgentSessionId ?? await FindAgentSessionIdAsync(userId, cancellationToken),
             RecordWhenUnchanged = !deferred && reasonChanged,
         }, cancellationToken);
@@ -526,11 +528,14 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
     // Reserved says an offer is ringing for the agent, and it is the offer settling that moves them on. An offer
     // settled without releasing them -- cancelled when its caller hung up -- leaves nothing that ever will, and every
     // request they make was deferred behind it for good. With no offer left, the request applies now. Busy and
-    // wrap-up are left alone: a consult or after-call work keeps an agent in them with no offer behind it.
+    // wrap-up are left alone: a consult or after-call work keeps an agent in them with no offer behind it. So is an agent
+    // a dialer holds while it reaches the customer: no offer rings for them, but the call placed for them does, and the
+    // request waits for it like any other on-call work.
     private async Task<bool> IsStrandedInReservedAsync(AgentProfile profile, CancellationToken cancellationToken)
     {
         if (profile.PresenceStatus != AgentPresenceStatus.Reserved ||
             !string.IsNullOrEmpty(profile.ActiveReservationId) ||
+            !string.IsNullOrEmpty(profile.DialHoldReservationId) ||
             string.IsNullOrEmpty(profile.ItemId) ||
             await _agentWorkStateHealingService.HasPendingOfferAsync(profile.ItemId, cancellationToken))
         {

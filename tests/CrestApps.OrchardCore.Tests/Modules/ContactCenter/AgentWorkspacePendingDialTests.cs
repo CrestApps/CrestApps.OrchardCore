@@ -111,8 +111,9 @@ public sealed class AgentWorkspacePendingDialTests
     {
         // Arrange
         var probe = new WorkspaceProbe(
-            AgentPresenceStatus.Busy,
-            active: CampaignDial(status, answered, screened, classification));
+            AgentPresenceStatus.Reserved,
+            active: CampaignDial(status, answered, screened, classification),
+            dialerProfile: new DialerProfile { ItemId = "profile-1", ShowDialProgressToAgent = true });
 
         // Act
         var model = await probe.PollAsync();
@@ -120,9 +121,35 @@ public sealed class AgentWorkspacePendingDialTests
         // Assert
         Assert.Null(model.ActiveInteraction);
         Assert.NotNull(model.PendingDial);
+        Assert.True(model.PendingDial.ShowsProgress);
         Assert.Equal(expected, model.PendingDial.Phase);
         Assert.Equal("interaction-1", model.PendingDial.InteractionId);
         Assert.Equal("+17025550100", model.PendingDial.CustomerAddress);
+    }
+
+    // Most automated dials never reach a person, so by default the agent is not shown each one: only that they are
+    // waiting for a connected call, without the customer, as contact-center dialers show it.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WorkspacePoll_AnAutomaticDialWhoseProfileDoesNotShowEachDial_LeavesTheCustomerOut(bool profileKnown)
+    {
+        // Arrange
+        var probe = new WorkspaceProbe(
+            AgentPresenceStatus.Reserved,
+            active: CampaignDial(InteractionStatus.Ringing),
+            dialerProfile: profileKnown ? new DialerProfile { ItemId = "profile-1" } : null);
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Null(model.ActiveInteraction);
+        Assert.NotNull(model.PendingDial);
+        Assert.False(model.PendingDial.ShowsProgress);
+        Assert.Equal(DialAttemptPhase.Dialing, model.PendingDial.Phase);
+        Assert.Null(model.PendingDial.CustomerAddress);
+        Assert.Null(model.PendingDial.CustomerLabel);
     }
 
     // Once the agent's leg is on the call it is their call: the card, the timer and "On a call".
@@ -285,14 +312,18 @@ public sealed class AgentWorkspacePendingDialTests
         private readonly Mock<IOmnichannelActivityManager> _activityManager = new();
         private readonly Mock<IContentManager> _contentManager = new();
         private readonly Mock<IDisplayNameProvider> _displayNameProvider = new();
+        private readonly DialerProfile _dialerProfile;
 
         public WorkspaceProbe(
             AgentPresenceStatus presence,
             Interaction active,
             Interaction recent = null,
             DateTime? presenceChangedUtc = null,
-            string activitySource = ActivitySources.PowerDial)
+            string activitySource = ActivitySources.PowerDial,
+            DialerProfile dialerProfile = null)
         {
+            _dialerProfile = dialerProfile;
+
             var profile = new AgentProfile
             {
                 ItemId = "agent-1",
@@ -353,7 +384,7 @@ public sealed class AgentWorkspacePendingDialTests
                 new StubClock(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
                 CreateLinkGenerator(),
-                CreateHttpContext());
+                CreateHttpContext(_dialerProfile));
 
             var property = result.GetType().GetProperty("Value");
 
@@ -396,11 +427,24 @@ public sealed class AgentWorkspacePendingDialTests
                 .BuildServiceProvider()
                 .GetRequiredService<LinkGenerator>();
 
-        private static DefaultHttpContext CreateHttpContext()
-            => new()
+        private static DefaultHttpContext CreateHttpContext(DialerProfile dialerProfile)
+        {
+            var services = new ServiceCollection();
+
+            if (dialerProfile is not null)
+            {
+                var reader = new Mock<IDialerProfileReader>();
+                reader
+                    .Setup(r => r.FindByIdAsync(dialerProfile.ItemId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(dialerProfile);
+                services.AddSingleton(reader.Object);
+            }
+
+            return new()
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test")),
-                RequestServices = new ServiceCollection().BuildServiceProvider(),
+                RequestServices = services.BuildServiceProvider(),
             };
+        }
     }
 }

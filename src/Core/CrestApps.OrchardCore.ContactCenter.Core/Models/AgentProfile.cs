@@ -178,6 +178,17 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public string ActiveReservationId { get; set; }
 
     /// <summary>
+    /// Gets or sets the accepted reservation a dialer holds the agent Reserved under while it reaches the customer.
+    /// </summary>
+    /// <remarks>
+    /// A power, progressive or reserved predictive dial takes its agent before the customer's phone rings, but the
+    /// agent is not on a call until a person answers and the agent is connected: until then they are Reserved, and
+    /// this says what holds them, which no ringing offer does. It is cleared when the agent leaves Reserved -- on
+    /// being connected, or on being released when the call ends without them.
+    /// </remarks>
+    public string DialHoldReservationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the agent profile was created.
     /// </summary>
     [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
