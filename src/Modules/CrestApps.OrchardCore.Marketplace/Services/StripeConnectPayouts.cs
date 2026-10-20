@@ -39,20 +39,41 @@ public sealed class StripeConnectVendorService
         if (string.IsNullOrEmpty(vendor.StripeAccountId))
         {
             var settings = await _siteService.GetSettingsAsync<MarketplaceSettings>();
-            var account = await new AccountService(_stripeClient).CreateAsync(new AccountCreateOptions
+
+            if (string.IsNullOrEmpty(vendor.StripeAccountRequestKey))
             {
-                Type = "express",
-                Country = string.IsNullOrEmpty(vendor.Country) ? settings.DefaultCountry : vendor.Country,
-                Email = vendor.Email,
-                Capabilities = new AccountCapabilitiesOptions
+                vendor.StripeAccountRequestKey = "vendor-account-" + vendor.ItemId + "-" + global::OrchardCore.IdGenerator.GenerateId();
+                await _vendors.UpdateAsync(vendor, cancellationToken);
+            }
+
+            Account account;
+
+            try
+            {
+                account = await new AccountService(_stripeClient).CreateAsync(new AccountCreateOptions
                 {
-                    Transfers = new AccountCapabilitiesTransfersOptions { Requested = true },
-                },
-                BusinessProfile = new AccountBusinessProfileOptions { Name = vendor.Name },
-                Metadata = new Dictionary<string, string> { ["vendorId"] = vendor.ItemId },
-            }, new RequestOptions { IdempotencyKey = "vendor-account-" + vendor.ItemId }, cancellationToken);
+                    Type = "express",
+                    Country = string.IsNullOrEmpty(vendor.Country) ? settings.DefaultCountry : vendor.Country,
+                    Email = vendor.Email,
+                    Capabilities = new AccountCapabilitiesOptions
+                    {
+                        Transfers = new AccountCapabilitiesTransfersOptions { Requested = true },
+                    },
+                    BusinessProfile = new AccountBusinessProfileOptions { Name = vendor.Name },
+                    Metadata = new Dictionary<string, string> { ["vendorId"] = vendor.ItemId },
+                }, new RequestOptions { IdempotencyKey = vendor.StripeAccountRequestKey }, cancellationToken);
+            }
+            catch (StripeException)
+            {
+                // Stripe keeps a refused request's answer for its key a day; a new key lets the vendor try again.
+                vendor.StripeAccountRequestKey = null;
+                await _vendors.UpdateAsync(vendor, cancellationToken);
+
+                throw;
+            }
 
             vendor.StripeAccountId = account.Id;
+            vendor.StripeAccountRequestKey = null;
             await _vendors.UpdateAsync(vendor, cancellationToken);
         }
 

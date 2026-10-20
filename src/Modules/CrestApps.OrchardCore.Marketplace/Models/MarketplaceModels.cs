@@ -41,6 +41,13 @@ public sealed class Vendor : CatalogItem
     public string StripeAccountId { get; set; }
 
     /// <summary>
+    /// Gets or sets the idempotency key of the request making its Stripe account, kept until the account is made so a
+    /// second click doesn't make a second account, and cleared when Stripe refuses it so the next try isn't refused
+    /// again from Stripe's record of the first.
+    /// </summary>
+    public string StripeAccountRequestKey { get; set; }
+
+    /// <summary>
     /// Gets or sets whether its Stripe account can take transfers: onboarding done and transfers active.
     /// </summary>
     public bool PayoutsEnabled { get; set; }
