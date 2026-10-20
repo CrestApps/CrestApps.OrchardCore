@@ -99,7 +99,7 @@ public sealed class OrderReturnService
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(reason) || !(settings.Reasons ?? []).Contains(reason, StringComparer.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(reason) || !settings.GetReasons().Contains(reason, StringComparer.OrdinalIgnoreCase))
             {
                 problems.Add(S["Choose why you're returning {0}.", line.Title]);
 

@@ -15,6 +15,8 @@ using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
+using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Orders.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,10 +82,18 @@ public sealed class Startup : StartupBase
         // A canceled order gives back its coupon uses, and coupons can be limited to some products and categories.
         services.AddScoped<IOrderEventHandler, OrderCouponEventHandler>();
 
+        // Webhooks hear about orders when the Commerce Webhooks feature is on.
+        services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
+
         // What the store does to an order from its page, and the refunds it records wherever they were started.
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+        services.AddScoped<CartCheckoutService>();
 
         // The order's invoice and packing slip, to print.
         services.AddScoped<OrderDocumentBuilder>();
@@ -193,8 +203,36 @@ public sealed class GiftCardsStartup : StartupBase
         services.AddContentPart<GiftCardPart>()
             .UseDisplayDriver<GiftCardPartDisplayDriver>();
         services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
+        services.AddScoped<GiftCardCheckoutService>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, GiftCardCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
         services.AddNavigationProvider<GiftCardsAdminMenu>();
     }
+}
+
+[Feature(OrderConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapOrderCheckoutApi();
+        routes.MapOrderAccountApi();
+        routes.MapOrderAdminApi();
+    }
+}
+
+[Feature(OrderConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.Returns)]
+public sealed class ReturnsApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapOrderReturnsAccountApi();
+}
+
+[Feature(OrderConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.GiftCards)]
+public sealed class GiftCardsApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapGiftCardCheckoutApi();
 }

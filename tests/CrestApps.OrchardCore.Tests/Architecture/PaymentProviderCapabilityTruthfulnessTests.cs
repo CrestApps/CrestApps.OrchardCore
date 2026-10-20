@@ -261,6 +261,12 @@ public sealed class PaymentProviderCapabilityTruthfulnessTests
 
     private static object CreateMock(Type type)
     {
+        // Stripe's client has no parameterless constructor to proxy; a client with a dummy key is never called here.
+        if (type == typeof(global::Stripe.StripeClient))
+        {
+            return new global::Stripe.StripeClient("sk_test_capabilities");
+        }
+
         var mockType = typeof(Mock<>).MakeGenericType(type);
         var mock = (Mock)Activator.CreateInstance(mockType);
 

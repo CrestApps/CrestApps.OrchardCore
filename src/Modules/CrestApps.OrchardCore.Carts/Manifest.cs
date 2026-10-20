@@ -23,3 +23,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Contents",
     ]
 )]
+
+[assembly: Feature(
+    Id = CartConstants.Features.Api,
+    Name = "Cart API",
+    Description = "Lets a headless storefront or app read and change the caller's cart over the commerce JSON API. A guest's cart travels in the X-Cart-Token header. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CartConstants.Features.Carts,
+    ]
+)]

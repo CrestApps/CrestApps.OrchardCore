@@ -29,6 +29,11 @@ public static class InventoryConstants
         public const string StockAlerts = "CrestApps.OrchardCore.Inventory.StockAlerts";
 
         public const string PurchaseOrders = "CrestApps.OrchardCore.Inventory.PurchaseOrders";
+
+        /// <summary>
+        /// The inventory API under <c>api/commerce/v1</c>.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Inventory.Api";
     }
 
     public static class Parts

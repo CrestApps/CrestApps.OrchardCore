@@ -1,0 +1,78 @@
+@model WebhookEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CommerceWebhookEdit" title="@(Model.IsNew ? T["Add webhook"] : T["Edit webhook"])">
+        <breadcrumb-item id="CommerceWebhooks" action="Index" controller="WebhooksAdmin" area="CrestApps.OrchardCore.Commerce.Webhooks" permission="@WebhookPermissions.ManageWebhooks.Name">@T["Webhooks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-itemId="@Model.ItemId" method="post" class="no-multisubmit" id="webhook-form">
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="mb-3" asp-validation-class-for="Name">
+        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name"></span>
+        <span class="hint">@T["What you call it, such as the system it feeds."]</span>
+    </div>
+
+    <div class="mb-3" asp-validation-class-for="Url">
+        <label asp-for="Url" class="form-label">@T["URL"]</label>
+        <input asp-for="Url" class="form-control font-monospace" type="url" placeholder="https://" />
+        <span asp-validation-for="Url"></span>
+        <span class="hint">@T["Events are posted here as JSON. It must answer with a 2xx status; anything else is tried again, less and less often, for about two days."]</span>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check form-switch">
+            <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+            <span class="hint dashed">@T["Turn it off to stop sending without losing it; deliveries still waiting are dropped."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3" role="group" aria-labelledby="webhook-events-label" asp-validation-class-for="Events">
+        <div class="form-label" id="webhook-events-label">@T["Events"]</div>
+        <span asp-validation-for="Events"></span>
+        <div class="form-check mb-2">
+            <input asp-for="AllEvents" type="checkbox" class="form-check-input" />
+            <label asp-for="AllEvents" class="form-check-label">@T["Every event, those added later too"]</label>
+        </div>
+        @foreach (var group in Model.AvailableEvents)
+        {
+            <div class="mb-2">
+                <div class="fw-semibold small text-body-secondary mb-1">@group.Key</div>
+                @foreach (var webhookEvent in group)
+                {
+                    var id = "event-" + webhookEvent.Name.Replace('.', '-');
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="Events" value="@webhookEvent.Name" id="@id" checked="@Model.Events.Contains(webhookEvent.Name)" />
+                        <label class="form-check-label" for="@id">@webhookEvent.DisplayName <span class="font-monospace small text-body-secondary">@webhookEvent.Name</span></label>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (!Model.IsNew)
+    {
+        <div class="mb-3">
+            <label for="webhook-secret" class="form-label">@T["Signing secret"]</label>
+            <div class="input-group">
+                <input id="webhook-secret" class="form-control font-monospace" value="@Model.Secret" readonly />
+                <button type="submit" formaction="@Url.Action("RotateSecret", new { itemId = Model.ItemId })" class="btn btn-outline-secondary">@T["New secret"]</button>
+            </div>
+            <span class="hint">@T["Each delivery carries an X-Webhook-Signature header: v1= and the hex HMAC-SHA256, keyed with this secret, of the X-Webhook-Timestamp value, a dot, and the body. Check it before trusting a delivery."]</span>
+        </div>
+    }
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        @if (!Model.IsNew)
+        {
+            <a asp-action="Deliveries" asp-route-itemId="@Model.ItemId" class="btn btn-secondary">@T["Deliveries"]</a>
+            <a asp-action="Delete" asp-route-itemId="@Model.ItemId" class="btn btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+        }
+    </div>
+</form>

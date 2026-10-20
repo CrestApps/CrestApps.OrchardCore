@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Stripe.Api;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Deployments.Drivers;
 using CrestApps.OrchardCore.Stripe.Deployments.Sources;
@@ -189,6 +190,7 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<ICheckoutSavedPaymentMethodProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutRecurringPaymentProvider, StripeRecurringPaymentProvider>();
         services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, StripeCheckoutPaymentMethodDisplayDriver>();
+        services.AddScoped<ICheckoutPaymentClientConfigurationProvider, StripeCheckoutClientConfigurationProvider>();
     }
 }
 
@@ -227,4 +229,22 @@ public sealed class CommerceAccountStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddNavigationProvider<Navigation.StripeAccountMenu>();
+}
+
+/// <summary>
+/// Stripe Terminal readers at the registers of the Point of Sale feature: a card presented on a reader pays a register's
+/// sale, and the till app lists, pairs and, in test mode, tries readers.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.PointOfSale")]
+public sealed class TerminalStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<StripeTerminalPaymentProvider>();
+        services.AddScoped<ICheckoutPaymentProvider>(serviceProvider => serviceProvider.GetRequiredService<StripeTerminalPaymentProvider>());
+        services.AddScoped<ICheckoutPaymentRefundProvider>(serviceProvider => serviceProvider.GetRequiredService<StripeTerminalPaymentProvider>());
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapStripeTerminalApi();
 }

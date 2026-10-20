@@ -36,8 +36,16 @@ public class OrdersIndexOptions
 
     public OrderStatusFilter Status { get; set; }
 
+    /// <summary>
+    /// Gets or sets where the orders were made: <c>online</c>, <c>pos</c> or <c>draft</c>; none for everywhere.
+    /// </summary>
+    public string Channel { get; set; }
+
     [BindNever]
     public List<SelectListItem> Statuses { get; set; } = [];
+
+    [BindNever]
+    public List<SelectListItem> Channels { get; set; } = [];
 }
 
 public enum OrderStatusFilter

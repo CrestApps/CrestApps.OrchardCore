@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 to 4 built, 2026-10-19 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built) and [Phase 5 as built](#phase-5-as-built)); phases 6 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 6 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built) and [Phase 6 as built](#phase-6-as-built)); phases 7 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -392,13 +392,37 @@ Not built yet, and why:
 - **Affiliate commissions.** Referrals reward customers with credit or points; paying affiliates money belongs with the marketplace payouts in phase 12.
 - **Rewards for orders paid later.** Points and referral rewards are given when an order is placed, including one paid by bank transfer, and taken back if it's canceled; waiting for the money needs an event when an offline payment arrives.
 
+## Phase 6 as built
+
+One branch, a commit per slice:
+
+- **PA2 the API's foundation.** The commerce JSON API is minimal API endpoints under `api/commerce/v1`, which Orchard Core's OpenAPI module documents (it reads minimal APIs through `Microsoft.AspNetCore.OpenApi`; MVC controllers aren't needed). `CommerceApi.MapCommerceApi` gives each module's group the `Api` bearer scheme, no antiforgery and a tag; guests reach the endpoints marked `AllowGuests`, their cart and checkout carried in `X-Cart-Token` and `X-Checkout-Token` headers by `GuestSessionTokenManager` instead of cookies. Money, paging and RFC 9457 problems (with a `code` on conflicts and camelCase field keys from model state) are shared, and `IdempotencyEndpointFilter` replays a final answer, its guest-token headers and `Location` included, for 24 hours per caller, route and key.
+- **PA2 the step services.** What each checkout step's driver did is in a service the driver and the API both call: `CartCheckoutService`, `CustomerContactStepService`, `ShippingCheckoutStepService`, `CheckoutCouponService`, `GiftCardCheckoutService`, `CheckoutTenderChoices`.
+- **PA2a storefront API.** One API feature per module: the catalog priced for the caller with variants, add-ons, specifications and stock; per-location availability; the cart; the checkout (start from the cart, contact, pickup locations, shipping rates and the step, codes, gift cards, store credit, points, payment methods with what a client SDK needs through `ICheckoutPaymentClientConfigurationProvider`, payment, completion with the order number); the signed-in buyer's account, addresses, orders, returns and shipments. `CheckoutApi.Read` gives every module one checkout shape.
+- **PA2b admin API.** Orders (list with filters, by number, refund, cancel), fulfillment (what's left to ship, ship, deliver), customers, stock (receive, adjust, count, transfer, unknown locations refused) and coupons (held to the coupon admin's rules through `CouponEditor`).
+- **PA2c outgoing webhooks.** A Commerce Webhooks module: subscriptions to order, shipment, customer and stock events that modules publish through `ICommerceWebhookPublisher`, each payload in the API's shapes, signed with HMAC-SHA256 over the timestamp and body, sent after the request is saved and retried with backoff for about two days, with a deliveries log, a test event and resend. Redirects aren't followed and internal hosts are refused.
+- **PI2a sales channel and location.** Every order has a channel (online, point of sale, draft; orders from before channels count as online), and register sales also the store's location, the register, shift and staff (`Order.Channel`, `LocationId`, `RegisterId`, `ShiftId`, `StaffUserId`, indexed). Stock is held and sold at the order's location. The orders list, its export and the admin API filter by channel; the admin API also by location.
+- **PI2b registers and shifts.** A Point of Sale module: registers at each store with its address and the roles that may sell there, shifts opened with a float, cash put in and taken out, and closed with a count against what the drawer should hold, summed from the shift's orders rather than kept on the shift. Admin lists of registers and shifts.
+- **PI2c tender at the till.** A register sale is an order whose checkout skips contact and shipping and is taxed by the store's address. Cash is a tender whose reference is what was handed over, so the change falls out; the rest is paid on the store's own terminal (recorded) or on a Stripe Terminal reader the server tells to collect (server-driven, tested with a simulated reader); gift cards and codes go on the sale's checkout. The staff member owns the checkout, so their own store credit and points aren't spent on it (`CheckoutCounterSale`).
+- **PI2d receipts and returns.** Receipts as data for the till app, as HTML from the Receipts settings to print, and by email; returns at the till refund through the order's operations, put stock back at the store and take cash refunds out of the drawer.
+- **Tests.** A commerce integration suite starts a real host with the store sample and drives the API over HTTP: catalog, guest carts and checkouts kept apart by their tokens, a checkout paid with the test provider, idempotent retries, a signed webhook delivered to a local listener, and staff endpoints refusing guests. It runs in CI beside the tenant hierarchy suite.
+
+The exit gate holds: a headless client (a script over the API) buys as a guest with Stripe test mode and with bank transfer, a buyer reads their orders with a bearer token, staff manage orders, stock and coupons with a client-credentials token, a webhook receiver verifies every signature, and a till opens a shift, sells for cash with change, by split cash and card and on a simulated Stripe reader, returns a sale with cash back, and closes the shift with its count.
+
+Not built yet, and why:
+
+- **The store's own Checkout details fields over the API.** The Contact step's endpoint takes the contact details only; collecting a store's custom content fields needs the editor pipeline driven from JSON.
+- **Store credit and points at a register.** The register's checkout belongs to the staff member; spending a customer's balances there needs the customer's consent at the till.
+- **Offline selling (P-D10).** The API takes orders as they happen; accepting ones made earlier needs stock reconciled when they arrive.
+- **A headless storefront starter.** The API and its OpenAPI document are what a starter builds on; a sample app is its own repository.
+
 ## Headless API and point of sale (phase 6, planned)
 
 A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.
 
-**The API is built on Orchard Core's OpenAPI module** (`OrchardCore.OpenApi`, in the app targets we use), not beside it. The module documents every `[ApiController]` routed under `api/...` in Swagger, ReDoc and Scalar, and generates TypeScript and C# clients with NSwag. Calls authenticate with the `Api` scheme: bearer tokens from the tenant's OpenID server (authorization code with PKCE for apps and the docs explorers, client credentials for servers). So each commerce module adds controllers following its convention:
+**The API is built on Orchard Core's OpenAPI module** (`OrchardCore.OpenApi`, in the app targets we use), not beside it. The module documents the site's endpoints in Swagger, ReDoc and Scalar from `Microsoft.AspNetCore.OpenApi`, which reads minimal APIs, and clients are generated from its document with NSwag. Calls authenticate with the `Api` scheme: bearer tokens from the tenant's OpenID server (authorization code with PKCE for apps and the docs explorers, client credentials for servers). So each commerce module maps minimal API endpoints:
 
-- `[ApiController]`, `[Route("api/commerce/...")]`, `[Authorize(AuthenticationSchemes = "Api")]`, typed request and response records, `[ProducesResponseType]`, and `ProblemDetails` for errors, so the explorers and the generated clients are complete.
+- A route group under `api/commerce/v1` with the `Api` scheme, typed request and response records, `WithName`, `WithSummary`, `ProducesProblem`, and `ProblemDetails` for errors, so the explorers and the generated clients are complete.
 - Permission checks are the same as the admin and storefront pages (`IAuthorizationService` with the existing permissions), plus new ones only where a till needs them (for example **Sell at a register**).
 - The endpoints call the same services as the pages (`ICartService`, `ICheckoutEngine`, `ICustomerService`, `IOrderStore`, `IInventoryService`), so rules such as stock holds, coupon holds and tax stay in one place.
 

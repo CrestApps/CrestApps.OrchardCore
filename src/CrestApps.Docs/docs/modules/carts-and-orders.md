@@ -5,11 +5,12 @@ description: Shopping carts for products sold online, thin orders that check a c
 user_manual:
   - user-manual/commerce/carts-and-orders
   - user-manual/commerce/gift-cards
+  - user-manual/commerce/headless-api
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns), `CrestApps.OrchardCore.Orders.GiftCards` (Gift Cards) |
+| **Features** | `CrestApps.OrchardCore.Carts`, `CrestApps.OrchardCore.Orders`, `CrestApps.OrchardCore.Orders.Returns` (Returns), `CrestApps.OrchardCore.Orders.GiftCards` (Gift Cards), `CrestApps.OrchardCore.Carts.Api` (Cart API), `CrestApps.OrchardCore.Orders.Api` (Orders API) |
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
@@ -118,6 +119,20 @@ Drafts aren't printed; canceled orders print for the store only. The page around
 - **Editing.** `IOrderService.ReplaceLinesAsync(order, pricing)` replaces a draft's lines with a priced cart's and calls each `IOrderEventHandler.LinesChangedAsync`; a handler that refuses (Inventory, short of stock) leaves the old lines and returns the problems. An order awaiting payment can't be changed.
 - **Invoice email.** `SendInvoiceAsync` emails *Your order … is ready to pay* with the lines, subtotal, note, due date and a **Review and pay** link to `orders/view/{token}/pay`, sets `SentUtc` and adds a note. It needs an `IEmailService` and the order's signed link.
 - **Paying.** `OrderPayController` serves `orders/view/{token}/pay` (`GuestOrderPay`) and `account/orders/{orderId}/pay` (`AccountOrderPay`): it opens the order's pending checkout, or starts one (`CheckoutReferenceTypes.Order`). `OrderCheckoutHandler` fills in the checkout's `CheckoutContactInfo` from the order, and puts an invoiced order whose checkout failed, was canceled or expired back to `Draft`, so its link pays it again. `AbandonedOrderSweeper` leaves invoiced orders alone. The guest and account order pages show a sent draft with its note, due date and **Pay now**.
+
+### Sales channels
+
+Every order records where it was made, in `Order.Channel` (`OrderChannels`):
+
+| Channel | Set by |
+| --- | --- |
+| `online` | A buyer checking out a cart, on the storefront, a headless storefront or an app. Orders made before channels were recorded read as online (`OrderChannels.Of`). |
+| `pos` | A sale rung up at a register by [Point of Sale](point-of-sale). It also has `LocationId` (the register's inventory location), `RegisterId`, `RegisterName`, `ShiftId`, `StaffUserId` and `StaffName`. `OrderChannels.IsCounterSale` is true for it. |
+| `draft` | `DraftOrderService`: an order staff make and send to the buyer to pay. |
+
+`OrderIndex` has `Channel`, `LocationId` and `ShiftId`, and `OrderQuery` filters by each. **Commerce > Orders** has a channel filter (*Every channel*, *Online*, *Point of sale*, *Drafts sent by staff*) in its list toolbar, which the CSV export follows, and a register sale shows its register as a badge. The staff orders API takes `channel` and `locationId`, and `ApiOrder` and `ApiOrderSummary` carry `channel` and `locationId`, with `register` on `ApiOrder`.
+
+`LocationId` is set only for register sales. A pickup order's location is its shipping's (`Order.Shipping.LocationId`).
 
 ### Returns
 
@@ -254,6 +269,15 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 | **Create order**, an order's **Invoice**, **Packing slip** and **Add items** | `ManageOrders` | Administrator |
 | **Commerce > Returns** and **Settings > Commerce > Returns** (Returns feature) | `ManageOrders` | Administrator |
 | **Commerce > Gift cards** (Gift Cards feature) | `ManageGiftCards` | Administrator |
+
+## API
+
+Two features put carts and orders on the commerce JSON API at `api/commerce/v1`:
+
+- **Cart API** (`CrestApps.OrchardCore.Carts.Api`, it needs Carts) maps `cart` and `cart/lines` for guests and signed-in buyers through `ICartService`, and `cart/merge` for a buyer who signed in after shopping as a guest. A guest's cart travels in the `X-Cart-Token` header, issued by the answer that creates the cart.
+- **Orders API** (`CrestApps.OrchardCore.Orders.Api`, it needs Orders, the Cart API and the Checkout API) maps `POST checkout`, which checks the caller's cart out through `CartCheckoutService` (placing the order and holding its stock) and returns the guest's `X-Checkout-Token`; the buyer's `me/orders`; and the staff `orders` endpoints, which list, get, refund and cancel through `OrderOperationsService` with `ManageOrders`. With **Returns** on it adds the buyer's returns under `me/orders/{orderId}/returns`, and with **Gift Cards** on, `checkout/{id}/gift-cards`.
+
+See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
 ## Stock
 

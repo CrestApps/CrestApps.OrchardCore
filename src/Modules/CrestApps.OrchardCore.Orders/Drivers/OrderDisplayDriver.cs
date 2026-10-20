@@ -47,6 +47,10 @@ internal sealed class OrderDisplayDriver : DisplayDriver<Order>
             View("Order_Status_SummaryAdmin", order)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:1"),
+            View("Order_Channel_SummaryAdmin", order)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:5")
+                .RenderWhen(() => Task.FromResult(OrderChannels.IsCounterSale(order))),
             View("Order_DefaultMeta_SummaryAdmin", order)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Placed:1"),

@@ -50,3 +50,16 @@ using OrchardCore.Modules.Manifest;
         OrderConstants.Features.Orders,
     ]
 )]
+
+[assembly: Feature(
+    Name = "Orders API",
+    Id = OrderConstants.Features.Api,
+    Description = "Lets a headless storefront or app check out the cart, and the buyer see their orders and ask for returns, over the commerce JSON API; staff list, refund and cancel orders. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        OrderConstants.Features.Orders,
+        CartConstants.Features.Api,
+        CheckoutConstants.Features.Api,
+    ]
+)]

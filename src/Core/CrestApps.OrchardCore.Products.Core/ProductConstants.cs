@@ -24,5 +24,10 @@ public static class ProductConstants
 
         public const string Bundles = "CrestApps.OrchardCore.Products.Bundles";
 
+        /// <summary>
+        /// The catalog API: products, priced for the caller, with their variants and stock, under <c>api/commerce/v1</c>.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Products.Api";
+
     }
 }

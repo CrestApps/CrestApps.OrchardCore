@@ -26,6 +26,12 @@ public sealed class OrderIndex : CatalogItemIndex
     public DateTime CreatedUtc { get; set; }
 
     public DateTime? AnonymizedUtc { get; set; }
+
+    public string Channel { get; set; }
+
+    public string LocationId { get; set; }
+
+    public string ShiftId { get; set; }
 }
 
 public sealed class OrderIndexProvider : IndexProvider<Order>
@@ -50,6 +56,9 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 CheckoutSessionId = order.CheckoutSessionId,
                 Status = order.Status,
                 CreatedUtc = order.CreatedUtc,
+                Channel = OrderChannels.Of(order),
+                LocationId = order.LocationId,
+                ShiftId = order.ShiftId,
             });
     }
 }

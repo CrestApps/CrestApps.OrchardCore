@@ -14,6 +14,10 @@ using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Customers.Api;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -40,7 +44,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomerIndexProvider>();
 
         services.AddScoped<ICustomerStore, CustomerStore>();
-        services.AddScoped<ICustomerService, DefaultCustomerService>();
+        services.AddScoped<DefaultCustomerService>();
+        services.AddScoped<ICustomerService>(serviceProvider => new WebhookCustomerService(serviceProvider.GetRequiredService<DefaultCustomerService>(), serviceProvider));
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
@@ -94,6 +100,7 @@ public sealed class OrdersStartup : StartupBase
         services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
         services.AddScoped<OrderAnonymizer>();
         services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
+        services.AddScoped<CustomerContactStepService>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
     }
@@ -179,5 +186,39 @@ public sealed class ReferralsStartup : StartupBase
         services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<ReferralAccountMenu>();
         services.AddNavigationProvider<ReferralSettingsAdminMenu>();
+    }
+}
+
+[Feature(CustomersConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.Orders, CheckoutConstants.Features.Api)]
+public sealed class CheckoutApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapCustomerCheckoutApi();
+}
+
+[Feature(CustomersConstants.Features.Api)]
+[RequireFeatures(CustomersConstants.Features.StoreCredit, CheckoutConstants.Features.Api)]
+public sealed class StoreCreditApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapStoreCreditCheckoutApi();
+}
+
+[Feature(CustomersConstants.Features.Api)]
+[RequireFeatures(CustomersConstants.Features.Loyalty, CheckoutConstants.Features.Api)]
+public sealed class LoyaltyApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapLoyaltyCheckoutApi();
+}
+
+[Feature(CustomersConstants.Features.Api)]
+public sealed class AccountApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapCustomerAccountApi();
+        routes.MapCustomerAdminApi();
     }
 }

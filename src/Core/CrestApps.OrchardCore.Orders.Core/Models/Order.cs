@@ -78,6 +78,41 @@ public sealed class Order : CatalogItem
     public string CheckoutSessionId { get; set; }
 
     /// <summary>
+    /// Gets or sets where the order was made: <see cref="OrderChannels.Online"/>, at a store's register
+    /// (<see cref="OrderChannels.PointOfSale"/>), or by staff (<see cref="OrderChannels.Draft"/>). Orders made before
+    /// channels were recorded have none, and count as online.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inventory location the order is sold from, such as the store whose register rang it up: its
+    /// stock is held and sold there.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the register a point-of-sale order was rung up on.
+    /// </summary>
+    public string RegisterId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name the register had when the order was rung up on it.
+    /// </summary>
+    public string RegisterName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the register shift a point-of-sale order was rung up in.
+    /// </summary>
+    public string ShiftId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the staff member who made the order, at a register or as a draft.
+    /// </summary>
+    public string StaffUserId { get; set; }
+
+    public string StaffName { get; set; }
+
+    /// <summary>
     /// Gets or sets the customer who placed the order, when the Customers feature is enabled.
     /// </summary>
     public string CustomerId { get; set; }

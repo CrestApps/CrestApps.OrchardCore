@@ -81,3 +81,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Autoroute",
     ]
 )]
+
+[assembly: Feature(
+    Id = ProductConstants.Feature.Api,
+    Name = "Catalog API",
+    Description = "Lists and gets products over the commerce JSON API, priced for the caller, with their variants, add-ons and stock. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+    ]
+)]

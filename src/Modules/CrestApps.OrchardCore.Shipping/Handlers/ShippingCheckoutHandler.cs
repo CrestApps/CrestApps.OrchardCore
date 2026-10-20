@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -47,8 +48,11 @@ public sealed class ShippingCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
-        // An order of downloads and services has nothing to ship, so its buyer never sees the step.
-        if (!ShippingOrderRateService.Ships(await _orderStore.FindByIdAsync(session.ReferenceId)))
+        var order = await _orderStore.FindByIdAsync(session.ReferenceId);
+
+        // An order of downloads and services has nothing to ship, and one sold over a counter is taken away, so its
+        // buyer never sees the step.
+        if (!ShippingOrderRateService.Ships(order) || OrderChannels.IsCounterSale(order))
         {
             return;
         }

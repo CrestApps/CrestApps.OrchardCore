@@ -29,6 +29,13 @@ public sealed class ProjectReferenceRulesTests
         "CrestApps.OrchardCore.Commerce",
     ];
 
+    // Neutral contracts that share a forbidden prefix: the API's shared shapes (money, paging, problems, idempotency)
+    // depend only on abstractions, so the foundation and reusable modules may map their endpoints with them.
+    private static readonly string[] _neutralReferences =
+    [
+        "CrestApps.OrchardCore.Commerce.Api.Core",
+    ];
+
     // Reusable, purchase-agnostic modules that other commerce modules build on. Like the foundation
     // abstractions, they must never depend on a concrete gateway or a presentation/orchestration module.
     private static readonly string[] _reusableModuleMarkers =
@@ -116,8 +123,10 @@ public sealed class ProjectReferenceRulesTests
 
             foreach (var reference in ReadProjectReferenceNames(project))
             {
-                var offending = _forbiddenFoundationReferences.FirstOrDefault(forbidden =>
-                    reference.StartsWith(forbidden, StringComparison.Ordinal));
+                var offending = _neutralReferences.Contains(reference, StringComparer.Ordinal)
+                    ? null
+                    : _forbiddenFoundationReferences.FirstOrDefault(forbidden =>
+                        reference.StartsWith(forbidden, StringComparison.Ordinal));
 
                 Assert.True(
                     offending is null,
@@ -149,8 +158,10 @@ public sealed class ProjectReferenceRulesTests
 
             foreach (var reference in ReadProjectReferenceNames(project))
             {
-                var offending = _forbiddenFoundationReferences.FirstOrDefault(forbidden =>
-                    reference.StartsWith(forbidden, StringComparison.Ordinal));
+                var offending = _neutralReferences.Contains(reference, StringComparer.Ordinal)
+                    ? null
+                    : _forbiddenFoundationReferences.FirstOrDefault(forbidden =>
+                        reference.StartsWith(forbidden, StringComparison.Ordinal));
 
                 Assert.True(
                     offending is null,

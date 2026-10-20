@@ -46,6 +46,8 @@ With the [Shipping](shipping.md) feature on, an order with goods shows where it 
 
 An order you gave money back for also shows **Partially refunded** or **Refunded** next to its status.
 
+The channel filter shows where orders were made: **Every channel**, **Online** (bought on your site or in an app), **Point of sale** (rung up at one of your stores' registers, which shows as a badge with the register) or **Drafts sent by staff**. See [Point of sale](point-of-sale.md).
+
 Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
 
 Open an order to see what was bought, the quantities and prices, any discount such as a promotion code, the tax and the total paid, each refund and what's left, when it was placed and paid, who placed it, and the address it was billed to.
@@ -58,7 +60,7 @@ An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **
 
 ### Export orders
 
-**Export CSV** in the list's search bar downloads the orders the list shows, with its search and status: a row per line, with its add-ons, and the order's subtotal, discounts, shipping, tax, total and refunds on its first line, so adding up a column counts each order once.
+**Export CSV** in the list's search bar downloads the orders the list shows, with its search, status and channel: a row per line, with its add-ons, and the order's subtotal, discounts, shipping, tax, total and refunds on its first line, so adding up a column counts each order once.
 
 ## Offer one more thing at checkout
 

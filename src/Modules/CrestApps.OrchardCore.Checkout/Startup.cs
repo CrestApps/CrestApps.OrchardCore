@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Checkout.Recipes;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Checkout.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,6 +74,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CouponRedemptionIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
+        services.AddScoped<CouponEditor>();
         services.AddScoped<CouponScopeEvaluator>();
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
@@ -84,11 +86,13 @@ public sealed class Startup : StartupBase
         // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
         // an ICheckoutTenderProvider. Its gate runs after the coupons', so it holds what's left after a code comes off.
         services.AddScoped<ICheckoutTenderService, DefaultCheckoutTenderService>();
+        services.AddScoped<CheckoutTenderChoices>();
         services.AddScoped<ICheckoutTenderLedger, CheckoutTenderLedger>();
         services.AddScoped<ICheckoutPaymentGate, TenderHoldPaymentGate>();
         services.AddScoped<ICheckoutHandler, TenderCheckoutHandler>();
         services.AddDataMigration<CheckoutTenderMigrations>()
             .AddIndexProvider<CheckoutTenderHoldIndexProvider>();
+        services.AddScoped<CheckoutCouponService>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();
@@ -161,4 +165,14 @@ public sealed class CouponDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddDeployment<CouponsDeploymentSource, CouponsDeploymentStep, CouponsDeploymentStepDisplayDriver>();
+}
+
+[Feature(CheckoutConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapCheckoutApi();
+        routes.MapCouponAdminApi();
+    }
 }

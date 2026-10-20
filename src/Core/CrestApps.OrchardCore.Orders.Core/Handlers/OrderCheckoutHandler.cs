@@ -67,6 +67,10 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         }
 
         session.Currency = order.Currency;
+
+        // What the buyer knows the order by, for a client that can't read the order itself.
+        global::OrchardCore.Entities.EntityExtensions.Put(session, new Checkout.Models.CheckoutReferenceNumber { Number = order.OrderNumber });
+
         session.Steps.Add(new CheckoutFlowStep
         {
             Key = OrderConstants.CheckoutStepKey,

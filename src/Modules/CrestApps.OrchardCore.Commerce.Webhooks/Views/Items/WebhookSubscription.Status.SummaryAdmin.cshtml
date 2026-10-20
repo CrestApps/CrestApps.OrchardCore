@@ -1,0 +1,14 @@
+@model ShapeViewModel<WebhookSubscription>
+
+@if (Model.Value.IsEnabled)
+{
+    <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["On"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]
+    </span>
+}

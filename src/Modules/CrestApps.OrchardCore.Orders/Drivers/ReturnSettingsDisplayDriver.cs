@@ -42,7 +42,7 @@ public sealed class ReturnSettingsDisplayDriver : SiteDisplayDriver<ReturnSettin
         => Initialize<ReturnSettingsViewModel>("ReturnSettings_Edit", model =>
         {
             model.WindowDays = settings.WindowDays;
-            model.Reasons = string.Join(Environment.NewLine, settings.Reasons ?? []);
+            model.Reasons = string.Join(Environment.NewLine, settings.GetReasons());
             model.AllowExchanges = settings.AllowExchanges;
             model.Instructions = settings.Instructions;
         }).Location("Content:1")
@@ -77,7 +77,7 @@ public sealed class ReturnSettingsDisplayDriver : SiteDisplayDriver<ReturnSettin
         }
 
         settings.WindowDays = Math.Clamp(model.WindowDays, 1, MaxWindowDays);
-        settings.Reasons = reasons.Count == 0 ? settings.Reasons : reasons;
+        settings.Reasons = reasons.Count == 0 ? settings.Reasons : [.. reasons.Distinct(StringComparer.OrdinalIgnoreCase)];
         settings.AllowExchanges = model.AllowExchanges;
         settings.Instructions = string.IsNullOrWhiteSpace(model.Instructions) ? null : model.Instructions.Trim();
 

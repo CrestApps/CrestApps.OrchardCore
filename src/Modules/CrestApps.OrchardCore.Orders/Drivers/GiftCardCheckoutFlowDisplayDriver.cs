@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
@@ -22,27 +23,17 @@ namespace CrestApps.OrchardCore.Orders.Drivers;
 internal sealed class GiftCardCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 {
     private readonly IGiftCardStore _store;
-    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly GiftCardCheckoutService _giftCards;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
-    private readonly IClock _clock;
-
-    internal readonly IStringLocalizer S;
 
     public GiftCardCheckoutFlowDisplayDriver(
         IGiftCardStore store,
-        IPaymentAttemptLimiter limiter,
-        IHttpContextAccessor httpContextAccessor,
-        CheckoutInvoiceBuilder invoiceBuilder,
-        IClock clock,
-        IStringLocalizer<GiftCardCheckoutFlowDisplayDriver> stringLocalizer)
+        GiftCardCheckoutService giftCards,
+        IHttpContextAccessor httpContextAccessor)
     {
         _store = store;
-        _limiter = limiter;
+        _giftCards = giftCards;
         _httpContextAccessor = httpContextAccessor;
-        _invoiceBuilder = invoiceBuilder;
-        _clock = clock;
-        S = stringLocalizer;
     }
 
     protected override string StepKey
@@ -94,7 +85,6 @@ internal sealed class GiftCardCheckoutFlowDisplayDriver : CheckoutFlowDisplayDri
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selection = flow.Session.TryGet<CheckoutTenderSelection>(out var existing) ? existing : new CheckoutTenderSelection();
         var action = _httpContextAccessor.HttpContext?.Request.HasFormContentType == true
             ? _httpContextAccessor.HttpContext.Request.Form[CheckoutConstants.FormActions.FieldName].ToString()
             : null;
@@ -102,11 +92,7 @@ internal sealed class GiftCardCheckoutFlowDisplayDriver : CheckoutFlowDisplayDri
 
         if (action?.StartsWith(removePrefix, StringComparison.Ordinal) == true)
         {
-            if (selection.Remove(OrderConstants.GiftCardTenderKey, action[removePrefix.Length..]))
-            {
-                flow.Session.Put(selection);
-                await _invoiceBuilder.BuildAsync(flow);
-            }
+            await _giftCards.RemoveAsync(flow, action[removePrefix.Length..]);
 
             return await EditStepAsync(flow, context);
         }
@@ -116,53 +102,11 @@ internal sealed class GiftCardCheckoutFlowDisplayDriver : CheckoutFlowDisplayDri
             return await EditStepAsync(flow, context);
         }
 
-        // A gift card code is money, so how fast codes can be tried from one address is limited.
         var address = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
 
-        if (!await _limiter.AcquireAsync("gift-card-code", address))
+        if (await _giftCards.ApplyAsync(flow, model.GiftCardCode, address) is { } error)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["Too many codes were tried. Wait a few minutes, then try again."]);
-
-            return await EditStepAsync(flow, context);
-        }
-
-        var card = await _store.GetByCodeAsync(model.GiftCardCode);
-        var invoice = flow.Session.TryGet<CheckoutInvoice>(out var built) ? built : null;
-        var currency = invoice?.Currency ?? (flow.Session as CheckoutSession)?.Currency;
-
-        if (card is null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["That gift card code is not recognized."]);
-        }
-        else if (!card.IsEnabled)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["That gift card can't be used."]);
-        }
-        else if (card.ExpiresUtc.HasValue && card.ExpiresUtc.Value <= _clock.UtcNow)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["That gift card has expired."]);
-        }
-        else if (card.Balance <= 0m)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["That gift card has nothing left on it."]);
-        }
-        else if (!string.IsNullOrEmpty(currency) && !string.Equals(card.Currency, currency, StringComparison.OrdinalIgnoreCase))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["That gift card is in {0}, and this order is in {1}.", card.Currency, currency]);
-        }
-        else
-        {
-            selection.Add(OrderConstants.GiftCardTenderKey, card.ItemId);
-            flow.Session.Put(selection);
-
-            // Rebuilt now, so the buyer sees what the card pays and what's left before they pay.
-            await _invoiceBuilder.BuildAsync(flow);
-
-            if (flow.Session.TryGet<CheckoutInvoice>(out var rebuilt) &&
-                !(rebuilt.Tenders ?? []).Any(tender => tender.ProviderKey == OrderConstants.GiftCardTenderKey && tender.Reference == card.ItemId))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), S["That gift card is being used at another checkout right now, or there's nothing left to pay."]);
-            }
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.GiftCardCode), error);
         }
 
         return await EditStepAsync(flow, context);
@@ -170,5 +114,5 @@ internal sealed class GiftCardCheckoutFlowDisplayDriver : CheckoutFlowDisplayDri
 
     // A checkout that settles an existing balance, or saves a card to charge later, is paid by card alone.
     private static bool AcceptsGiftCards(CheckoutFlow flow)
-        => flow.Session is CheckoutSession { SettlesExistingBalance: false, SavePaymentMethod: false };
+        => GiftCardCheckoutService.AcceptsGiftCards(flow);
 }

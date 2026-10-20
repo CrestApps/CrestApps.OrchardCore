@@ -44,6 +44,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Addresses.Core/CrestApps.OrchardCore.Addresses.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Carts.Core/CrestApps.OrchardCore.Carts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Commerce.Api.Core/CrestApps.OrchardCore.Commerce.Api.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
@@ -137,6 +138,8 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Carts/CrestApps.OrchardCore.Carts.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Checkout/CrestApps.OrchardCore.Checkout.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Commerce.Webhooks/CrestApps.OrchardCore.Commerce.Webhooks.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.PointOfSale/CrestApps.OrchardCore.PointOfSale.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Orders/CrestApps.OrchardCore.Orders.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" />
@@ -180,6 +183,7 @@
     <Project Path="tests/CrestApps.OrchardCore.Benchmarks/CrestApps.OrchardCore.Benchmarks.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj" />
+    <Project Path="tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />

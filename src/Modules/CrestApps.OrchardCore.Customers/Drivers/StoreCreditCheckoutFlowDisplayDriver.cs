@@ -23,16 +23,16 @@ internal sealed class StoreCreditCheckoutFlowDisplayDriver : CheckoutFlowDisplay
 
     private readonly StoreCreditTenderProvider _provider;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
+    private readonly CheckoutTenderChoices _choices;
 
     public StoreCreditCheckoutFlowDisplayDriver(
         StoreCreditTenderProvider provider,
         IHttpContextAccessor httpContextAccessor,
-        CheckoutInvoiceBuilder invoiceBuilder)
+        CheckoutTenderChoices choices)
     {
         _provider = provider;
         _httpContextAccessor = httpContextAccessor;
-        _invoiceBuilder = invoiceBuilder;
+        _choices = choices;
     }
 
     protected override string StepKey
@@ -75,27 +75,17 @@ internal sealed class StoreCreditCheckoutFlowDisplayDriver : CheckoutFlowDisplay
             ? _httpContextAccessor.HttpContext.Request.Form[CheckoutConstants.FormActions.FieldName].ToString()
             : null;
         var removePrefix = CheckoutConstants.FormActions.RemoveTenderPrefix + StoreCreditService.TenderKey + ":";
-        var selection = flow.Session.TryGet<CheckoutTenderSelection>(out var existing) ? existing : new CheckoutTenderSelection();
-        var changed = false;
 
+        // Added or taken off, the invoice is rebuilt, so the buyer sees what the credit pays and what's left.
         if (string.Equals(action, ApplyAction, StringComparison.Ordinal) &&
             flow.Session.TryGet<CheckoutInvoice>(out var invoice) &&
             await _provider.FindForCheckoutAsync(flow, invoice.Currency) is { Balance: > 0m } account)
         {
-            selection.Add(StoreCreditService.TenderKey, account.ItemId);
-            changed = true;
+            await _choices.AddAsync(flow, StoreCreditService.TenderKey, account.ItemId);
         }
         else if (action?.StartsWith(removePrefix, StringComparison.Ordinal) == true)
         {
-            changed = selection.Remove(StoreCreditService.TenderKey, action[removePrefix.Length..]);
-        }
-
-        if (changed)
-        {
-            flow.Session.Put(selection);
-
-            // Rebuilt now, so the buyer sees what the credit pays and what's left before they pay.
-            await _invoiceBuilder.BuildAsync(flow);
+            await _choices.RemoveAsync(flow, StoreCreditService.TenderKey, action[removePrefix.Length..]);
         }
 
         return await EditStepAsync(flow, context);

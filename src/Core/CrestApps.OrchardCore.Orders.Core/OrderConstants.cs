@@ -60,6 +60,12 @@ public static class OrderConstants
         public const string Returns = "CrestApps.OrchardCore.Orders.Returns";
 
         public const string GiftCards = "CrestApps.OrchardCore.Orders.GiftCards";
+
+        /// <summary>
+        /// The orders API under <c>api/commerce/v1</c>: checking out the cart, the buyer's orders and returns, and the
+        /// store's order operations.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Orders.Api";
     }
 
     public static class RouteNames

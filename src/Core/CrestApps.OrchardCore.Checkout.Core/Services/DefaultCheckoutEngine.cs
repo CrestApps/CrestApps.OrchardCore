@@ -1012,6 +1012,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         try
         {
+            // The commit before completing detaches the session, so a handler that loads it by id (an order event
+            // reading what the checkout carried) would get a second copy, and saving this one would then fail.
+            // Tracking it again first hands that handler this same instance.
+            await _sessionStore.SaveAsync(session, cancellationToken);
+
             // Completing handlers are invoked directly rather than through the swallow-and-log helper: a
             // handler that cannot fulfill the purchase must stop the checkout from being marked complete.
             foreach (var handler in _handlers)

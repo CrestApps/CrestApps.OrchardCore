@@ -74,3 +74,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
     ]
 )]
+
+[assembly: Feature(
+    Id = CustomersConstants.Features.Api,
+    Name = "Customers API",
+    Description = "Lets a signed-in buyer read and change their account and addresses, and a checkout take their contact details, store credit and points, over the commerce JSON API; staff list and look up customers. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CustomersConstants.Features.Customers,
+    ]
+)]
