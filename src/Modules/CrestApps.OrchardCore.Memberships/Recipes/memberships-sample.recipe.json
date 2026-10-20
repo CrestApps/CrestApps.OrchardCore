@@ -1,0 +1,131 @@
+{
+  "name": "MembershipsSample",
+  "displayName": "Memberships sample",
+  "description": "Creates a Member role, a Members' Article type whose items only members can see, one such article, and an Annual Membership product at $49 that puts its buyer in the Member role for a year.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "products",
+    "memberships",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Contents",
+        "OrchardCore.Title",
+        "OrchardCore.Autoroute",
+        "OrchardCore.Html",
+        "OrchardCore.Roles",
+        "CrestApps.OrchardCore.Roles",
+        "CrestApps.OrchardCore.ContentAccessControl",
+        "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Carts",
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Memberships"
+      ]
+    },
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Member",
+          "Description": "Paid members, who see members' content.",
+          "Permissions": []
+        }
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "MembersArticle",
+          "DisplayName": "Members' Article",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "members/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "2" } } },
+            { "PartName": "RolePickerPart", "Name": "RolePickerPart", "Settings": { "ContentTypePartSettings": { "Position": "3", "DisplayName": "Who can see it" }, "RolePickerPartSettings": { "AllowSelectMultiple": true }, "RolePickerPartContentAccessControlSettings": { "IsContentRestricted": true } } }
+          ]
+        },
+        {
+          "Name": "MembershipPlan",
+          "DisplayName": "Membership Plan",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "membership/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "2" }, "ProductPartSettings": { "Type": "Service", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Show" }, "ProductPageSettings": { "ShowDetails": true } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "3", "DisplayName": "Description" } } },
+            { "PartName": "MembershipPart", "Name": "MembershipPart", "Settings": { "ContentTypePartSettings": { "Position": "4" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "4mmbrartcl0trailguides000a",
+          "ContentItemVersionId": "4mmbrartcl0trailguides000b",
+          "ContentType": "MembersArticle",
+          "DisplayText": "Members' Trail Guide: Five Quiet Routes",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Members' Trail Guide: Five Quiet Routes" },
+          "AutoroutePart": { "Path": "members/trail-guide", "SetHomepage": false, "Disabled": false, "RouteContainedItems": false, "Absolute": false },
+          "HtmlBodyPart": { "Html": "<p>Five routes our guides walk on their days off, with where to park and when to go. For members only.</p>" },
+          "RolePickerPart": { "RoleNames": [ "Member" ] }
+        },
+        {
+          "ContentItemId": "4mmbrplan0annual000000000a",
+          "ContentItemVersionId": "4mmbrplan0annual000000000b",
+          "ContentType": "MembershipPlan",
+          "DisplayText": "Annual Membership",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Annual Membership" },
+          "AutoroutePart": { "Path": "membership/annual-membership", "SetHomepage": false, "Disabled": false, "RouteContainedItems": false, "Absolute": false },
+          "ProductPart": { "Price": 49, "Currency": "USD", "Sku": "MEMBER-ANNUAL", "IsPurchasable": true },
+          "HtmlBodyPart": { "Html": "<p>A year of members' guides and routes.</p>" },
+          "MembershipPart": { "RoleNames": [ "Member" ], "DurationDays": 365 }
+        }
+      ]
+    }
+  ]
+}
