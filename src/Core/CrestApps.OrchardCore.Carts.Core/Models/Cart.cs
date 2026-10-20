@@ -66,6 +66,12 @@ public sealed class CartLine
     public Dictionary<string, string> AddOns { get; set; }
 
     /// <summary>
+    /// Gets or sets the line's details beside the product, by key, as the line handlers keep them, such as a departure
+    /// date. The same product with other details is another line.
+    /// </summary>
+    public Dictionary<string, string> Details { get; set; }
+
+    /// <summary>
     /// Gets or sets the line's identifier, used to change or remove it.
     /// </summary>
     public string LineId { get; set; }

@@ -34,6 +34,10 @@
                     {
                         <div class="small text-info-emphasis">@T["Pre-order: ships {0:D}", shipsFrom]</div>
                     }
+                    @foreach (var detail in line.Details)
+                    {
+                        <div class="small text-break">@(string.IsNullOrEmpty(detail.Label) ? detail.Value : detail.Label + ": " + detail.Value)</div>
+                    }
                     @foreach (var addOn in line.AddOns)
                     {
                         <div class="small text-break">@(string.IsNullOrEmpty(addOn.Value) ? addOn.Label : addOn.Label + ": " + addOn.Value)</div>

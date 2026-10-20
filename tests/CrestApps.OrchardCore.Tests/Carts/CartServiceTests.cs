@@ -160,6 +160,79 @@ public sealed class CartServiceTests
         Assert.Equal(3, result.Cart.Lines.Single(line => line.AddOns["name"] == "Sam").Quantity);
     }
 
+    [Fact]
+    public async Task ALineHandler_KeepsItsDetails_PricesThem_AndAddOnsArePricedPerPersonOrAsAShare()
+    {
+        _harness.AddProduct("tour", unitPrice: 20m).Alter<ProductPart>(part => part.AddOns =
+        [
+            new ProductAddOn { AddOnId = "meal", Label = "Meals", Kind = ProductAddOnKind.Checkbox, Price = 3m, PriceBasis = ProductAddOnPriceBasis.PerPerson },
+            new ProductAddOn { AddOnId = "cover", Label = "Insurance", Kind = ProductAddOnKind.Checkbox, Price = 10m, PriceBasis = ProductAddOnPriceBasis.PercentOfPrice },
+        ]);
+        _harness.LineHandlers.Add(new DateLineHandler());
+
+        var addOns = new Dictionary<string, string> { ["meal"] = "true", ["cover"] = "true" };
+        var refused = await _harness.NewRequest().AddAsync("tour", null, null, 1, addOns, new Dictionary<string, string>(), TestContext.Current.CancellationToken);
+
+        Assert.False(refused.Succeeded);
+        Assert.Equal("Choose a date.", refused.Message.Value);
+
+        var result = await _harness.NextRequest().AddAsync("tour", null, null, 1, addOns, new Dictionary<string, string> { ["test.date"] = "2026-12-01", ["unknown"] = "x" }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        var line = Assert.Single(result.Cart.Lines);
+        Assert.Equal(new Dictionary<string, string> { ["test.date"] = "2026-12-01" }, line.Details);
+
+        // 20, then 5 for the date, then meals for both people (2 x 3) and a tenth of 25.
+        Assert.Equal(33.5m, line.AddedUnitPrice);
+
+        await _harness.NextRequest().AddAsync("tour", null, null, 1, addOns, new Dictionary<string, string> { ["test.date"] = "2026-12-08" }, TestContext.Current.CancellationToken);
+        var next = _harness.NextRequest();
+        var pricing = await next.PriceAsync(await next.GetCurrentAsync(TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, pricing.Lines.Count);
+        Assert.Equal(("Date", "2026-12-01"), (pricing.Lines[0].Details[0].Label, pricing.Lines[0].Details[0].Value));
+        Assert.Equal([6m, 2.5m], pricing.Lines[0].AddOns.Select(addOn => addOn.Price));
+    }
+
+    [Fact]
+    public async Task ALineHandler_ThatLimitsTheQuantity_RefusesMore()
+    {
+        _harness.AddProduct("tour", unitPrice: 20m);
+        _harness.LineHandlers.Add(new DateLineHandler());
+
+        var result = await _harness.NewRequest().AddAsync("tour", null, null, 3, null, new Dictionary<string, string> { ["test.date"] = "2026-12-01" }, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Only 2 of tour left.", result.Message.Value);
+    }
+
+    private sealed class DateLineHandler : ICartLineHandler
+    {
+        public Task PrepareAsync(CartLinePrepareContext context, CancellationToken cancellationToken = default)
+        {
+            if (context.PostedDetails.TryGetValue("test.date", out var date))
+            {
+                context.Details["test.date"] = date;
+            }
+            else
+            {
+                context.Refuse(new Microsoft.Extensions.Localization.LocalizedString("date", "Choose a date."));
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task EvaluateAsync(CartLineEvaluateContext context, CancellationToken cancellationToken = default)
+        {
+            context.UnitPrice += 5m;
+            context.PeoplePerUnit = 2;
+            context.MaxQuantity = Math.Min(context.MaxQuantity, 2);
+            context.Details.Add(new CartLineDetail("test.date", "Date", context.GetDetail("test.date")));
+
+            return Task.CompletedTask;
+        }
+    }
+
     private static void WithAddOns(ContentItem item)
         => item.Alter<ProductPart>(part => part.AddOns =
         [
@@ -328,6 +401,8 @@ public sealed class CartServiceTests
 
         public DateTime Now { get; set; } = new(2026, 10, 13, 12, 0, 0, DateTimeKind.Utc);
 
+        public List<ICartLineHandler> LineHandlers { get; } = [];
+
         public ContentItem AddProduct(string id, decimal unitPrice, string currency = "USD", bool sellable = true, ProductPrice price = null)
         {
             var item = new ContentItem { ContentItemId = id, ContentItemVersionId = id + "-v1", ContentType = "Product", DisplayText = id };
@@ -408,6 +483,26 @@ public sealed class CartServiceTests
 
             var clock = new Mock<IClock>();
             clock.Setup(c => c.UtcNow).Returns(() => Now);
+
+            if (LineHandlers.Count > 0)
+            {
+                return new CartService(
+                    Store,
+                    Mock.Of<ISession>(),
+                    new GuestSessionTokenManager(_accessor, _protection),
+                    _accessor,
+                    contentManager.Object,
+                    snapshots.Object,
+                    prices.Object,
+                    Availability,
+                    clock.Object,
+                    Options.Create(new CartOptions()),
+                    NullLogger<CartService>.Instance,
+                    new PassThroughStringLocalizer<CartService>(),
+                    shopperCurrency: null,
+                    restrictions: [],
+                    LineHandlers);
+            }
 
             return new CartService(
                 Store,

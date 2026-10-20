@@ -73,6 +73,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
                 Label = addOn.Label,
                 Kind = addOn.Kind,
                 Price = addOn.Price == 0 ? null : addOn.Price,
+                PriceBasis = addOn.PriceBasis,
                 Required = addOn.Required,
             })];
 
@@ -238,7 +239,8 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             AddOnId = string.IsNullOrEmpty(addOn.AddOnId) ? IdGenerator.GenerateId() : addOn.AddOnId,
             Label = addOn.Label.Trim(),
             Kind = Enum.IsDefined(addOn.Kind) ? addOn.Kind : ProductAddOnKind.Text,
-            Price = Math.Max(0m, addOn.Price ?? 0m),
+            Price = Math.Max(0m, addOn.PriceBasis == ProductAddOnPriceBasis.PercentOfPrice ? Math.Min(100m, addOn.Price ?? 0m) : addOn.Price ?? 0m),
+            PriceBasis = Enum.IsDefined(addOn.PriceBasis) ? addOn.PriceBasis : ProductAddOnPriceBasis.PerUnit,
             Required = addOn.Required,
         })];
 

@@ -27,9 +27,16 @@ public sealed class ProductAddOn
     public ProductAddOnKind Kind { get; set; }
 
     /// <summary>
-    /// Gets or sets the extra price per unit when the buyer chooses it, or zero.
+    /// Gets or sets the extra price per unit when the buyer chooses it, or zero. With
+    /// <see cref="ProductAddOnPriceBasis.PerPerson"/> it is per person a unit is for, and with
+    /// <see cref="ProductAddOnPriceBasis.PercentOfPrice"/> it is a percent of the unit's price.
     /// </summary>
     public decimal Price { get; set; }
+
+    /// <summary>
+    /// Gets or sets what <see cref="Price"/> is charged on.
+    /// </summary>
+    public ProductAddOnPriceBasis PriceBasis { get; set; }
 
     /// <summary>
     /// Gets or sets whether the buyer has to fill it in, such as the name to print on a mug.
@@ -44,6 +51,27 @@ public enum ProductAddOnKind
 {
     Text,
     Checkbox,
+}
+
+/// <summary>
+/// What an add-on's price is charged on.
+/// </summary>
+public enum ProductAddOnPriceBasis
+{
+    /// <summary>
+    /// Its price on every unit.
+    /// </summary>
+    PerUnit,
+
+    /// <summary>
+    /// Its price for every person a unit is for, such as travel insurance on a double room.
+    /// </summary>
+    PerPerson,
+
+    /// <summary>
+    /// A percent of the unit's price.
+    /// </summary>
+    PercentOfPrice,
 }
 
 /// <summary>

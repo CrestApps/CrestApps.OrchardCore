@@ -198,6 +198,10 @@
                             {
                                 <div class="small text-break"><span class="fa-solid fa-box-open text-body-secondary me-1" aria-hidden="true"></span>@T["Includes {0}", contents]</div>
                             }
+                            @foreach (var detail in line.DetailLines ?? [])
+                            {
+                                <div class="small text-break"><span class="fa-solid fa-circle-info text-body-secondary me-1" aria-hidden="true"></span>@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeDetail(detail)</div>
+                            }
                             @foreach (var addOn in line.AddOns ?? [])
                             {
                                 <div class="small text-break">

@@ -60,6 +60,10 @@
                                 {
                                     <div class="small text-info-emphasis"><span class="fa-solid fa-calendar-day me-1" aria-hidden="true"></span>@T["Pre-order: ships {0:D}", shipsFrom]</div>
                                 }
+                                @foreach (var detail in line.Details)
+                                {
+                                    <div class="small text-break"><span class="fa-solid fa-circle-info text-body-secondary me-1" aria-hidden="true"></span>@(string.IsNullOrEmpty(detail.Label) ? detail.Value : detail.Label + ": " + detail.Value)</div>
+                                }
                                 @foreach (var addOn in line.AddOns)
                                 {
                                     <div class="small">

@@ -48,6 +48,20 @@ public interface ICartService
         => AddAsync(contentItemId, priceId, variantId, quantity, cancellationToken);
 
     /// <summary>
+    /// Adds a product, one of its variants, with add-ons and details, such as a departure date, which the line
+    /// handlers check and keep.
+    /// </summary>
+    /// <param name="contentItemId">The product.</param>
+    /// <param name="priceId">The product's price, or <see langword="null"/> for its default price.</param>
+    /// <param name="variantId">The variant, or <see langword="null"/> for a product without variants.</param>
+    /// <param name="quantity">How many to add.</param>
+    /// <param name="addOns">The add-ons chosen, by add-on id.</param>
+    /// <param name="details">The details the buyer gave, by key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, IReadOnlyDictionary<string, string> addOns, IReadOnlyDictionary<string, string> details, CancellationToken cancellationToken = default)
+        => AddAsync(contentItemId, priceId, variantId, quantity, addOns, cancellationToken);
+
+    /// <summary>
     /// Changes how many units a line has. A quantity below one removes the line.
     /// </summary>
     Task<CartResult> UpdateQuantityAsync(string lineId, int quantity, CancellationToken cancellationToken = default);
