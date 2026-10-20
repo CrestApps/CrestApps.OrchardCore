@@ -1,0 +1,72 @@
+@model ClassifiedPartViewModel
+
+@{
+    var id = Html.IdFor(model => model.Place).Replace("_Place", string.Empty);
+}
+
+<fieldset class="mb-3" id="@(id)-classified">
+    <legend class="h6">@T["Where"]</legend>
+    <div class="mb-2">
+        <label asp-for="Place" class="form-label">@T["Place"]</label>
+        <input asp-for="Place" class="form-control" maxlength="200" placeholder="@T["Such as Seattle, WA"]" />
+    </div>
+    <div class="row g-2 align-items-end">
+        <div class="col-6 col-md-4">
+            <label asp-for="Latitude" class="form-label">@T["Latitude"]</label>
+            <input asp-for="Latitude" inputmode="decimal" class="form-control" data-classified-latitude />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="Longitude" class="form-label">@T["Longitude"]</label>
+            <input asp-for="Longitude" inputmode="decimal" class="form-control" data-classified-longitude />
+        </div>
+        <div class="col-12 col-md-4">
+            <button type="button" class="btn btn-outline-secondary w-100" data-classified-locate>@T["Use where I am"]</button>
+        </div>
+    </div>
+    <span class="hint">@T["Optional. Where it is, so people searching nearby find it."]</span>
+    <span asp-validation-for="Latitude" class="text-danger"></span>
+
+    @if (Model.IsAdmin)
+    {
+        <div class="row g-2 mt-3">
+            <div class="col-12 col-md-4">
+                <label asp-for="Status" class="form-label">@T["Status"]</label>
+                <select asp-for="Status" class="form-select">
+                    <option value="@ClassifiedStatus.Pending">@T["Waiting for approval"]</option>
+                    <option value="@ClassifiedStatus.Approved">@T["Up"]</option>
+                    <option value="@ClassifiedStatus.Rejected">@T["Rejected"]</option>
+                    <option value="@ClassifiedStatus.Expired">@T["Expired"]</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="ExpiresUtc" class="form-label">@T["Ends (UTC)"]</label>
+                <input asp-for="ExpiresUtc" type="datetime-local" step="1" class="form-control" />
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="FeaturedUntilUtc" class="form-label">@T["Featured until (UTC)"]</label>
+                <input asp-for="FeaturedUntilUtc" type="datetime-local" step="1" class="form-control" />
+            </div>
+        </div>
+        <span class="hint">@T["A listing that's up is taken down when it ends. Approve or reject what's waiting from Content, Posted listings."]</span>
+    }
+</fieldset>
+
+<script at="Foot">
+    (() => {
+        const editor = document.getElementById('@(id)-classified');
+        const button = editor?.querySelector('[data-classified-locate]');
+
+        if (!button || !navigator.geolocation) {
+            button?.remove();
+
+            return;
+        }
+
+        button.addEventListener('click', () => {
+            navigator.geolocation.getCurrentPosition(position => {
+                editor.querySelector('[data-classified-latitude]').value = position.coords.latitude.toFixed(6);
+                editor.querySelector('[data-classified-longitude]').value = position.coords.longitude.toFixed(6);
+            });
+        });
+    })();
+</script>

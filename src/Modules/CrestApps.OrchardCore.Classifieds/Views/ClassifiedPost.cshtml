@@ -1,0 +1,37 @@
+@using OrchardCore.DisplayManagement.Zones
+@model ClassifiedPostViewModel
+
+@* The form a visitor posts or edits a listing with: the content type's own fields and parts, without its admin title
+   and Publish actions. *@
+
+@{
+    var zones = ((IZoneHolding)Model.Editor).Zones;
+    var action = Model.ContentItemId is null
+        ? Url.RouteUrl("ClassifiedPost", new { contentType = Model.ContentType })
+        : Url.RouteUrl("ClassifiedEdit", new { contentItemId = Model.ContentItemId });
+}
+
+<style at="Head">
+    .classified-post .field-wrapper { margin-bottom: 1rem; }
+    .classified-post .field-wrapper > label { display: inline-block; margin-bottom: .5rem; }
+    .classified-post .ocat-label-required::after { content: " *"; }
+</style>
+
+<h1 class="h3 mb-3">@(Model.ContentItemId is null ? T["Post a listing"] : T["Edit your listing"])</h1>
+
+@if (Model.RequireApproval)
+{
+    <p class="text-body-secondary">@T["A moderator checks each listing before it's shown. You'll find it under My listings."]</p>
+}
+
+<form method="post" action="@action" class="classified-post no-multisubmit" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    @await DisplayAsync(zones["Header"])
+    @await DisplayAsync(zones["Content"])
+    @await DisplayAsync(zones["Parts"])
+
+    <button type="submit" class="btn btn-primary">@(Model.ContentItemId is null ? T["Post it"] : T["Save"])</button>
+    <a href="@Url.RouteUrl("ClassifiedsOwn")" class="btn btn-link">@T["My listings"]</a>
+</form>

@@ -1,0 +1,15 @@
+@model ShapeViewModel<ClassifiedEntry>
+
+@if (Model.Value.Part.Status is ClassifiedStatus.Pending or ClassifiedStatus.Rejected)
+{
+    <form asp-action="Approve" asp-controller="ClassifiedsAdmin" asp-route-contentItemId="@Model.Value.ContentItemId" method="post" class="d-inline">
+        <button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button>
+    </form>
+}
+@if (Model.Value.Part.Status == ClassifiedStatus.Pending)
+{
+    <form asp-action="Reject" asp-controller="ClassifiedsAdmin" asp-route-contentItemId="@Model.Value.ContentItemId" method="post" class="d-inline-flex gap-1">
+        <input name="reason" class="form-control form-control-sm" placeholder="@T["Why (optional)"]" maxlength="200" aria-label="@T["Why it's rejected"]" />
+        <button type="submit" class="btn btn-danger btn-sm">@T["Reject"]</button>
+    </form>
+}
