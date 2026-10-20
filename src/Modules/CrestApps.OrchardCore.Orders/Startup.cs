@@ -81,6 +81,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
         services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(OrderEmailTemplateSettingsDisplayDriver.GroupId, OrderPermissions.ManageOrders);
         services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
 
         // The order bump on the payment step: one tick adds the product the store offers before paying.
