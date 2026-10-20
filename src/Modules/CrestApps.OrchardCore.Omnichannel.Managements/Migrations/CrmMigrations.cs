@@ -161,7 +161,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -241,6 +241,24 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         }
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the index the leads list counts its leads from, so the count reads only the leads it counts.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        if (await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            await IndexTableIndexCreation.CreateIfMissingAsync<LeadIndex>(
+                SchemaBuilder,
+                LeadCountIndexName,
+                collection: null,
+                _leadCountIndexColumns);
+        }
+
+        return 6;
     }
 
     // The imports already made are recorded on their leads by LeadImportBackfillBackgroundTask, after activation:
@@ -576,11 +594,20 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
         await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
             .CreateIndex(LeadConvertedIndexName, "DocumentId", "IsConverted", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
+            .CreateIndex(LeadCountIndexName, _leadCountIndexColumns));
     }
 
     // Covers the join from the content list to the lead index together with the converted filter, so counting a
     // large lead list reads this index alone instead of looking up every lead row to test IsConverted.
     private const string LeadConvertedIndexName = "IDX_LeadIndex_DocumentId_Converted";
+
+    // Covers the count of the leads list (LeadListCountQueryFactory): the lead types, whether the lead was converted
+    // and the version, so the count seeks to the leads it counts and reads nothing else.
+    private const string LeadCountIndexName = "IDX_LeadIndex_ContentType_Converted";
+
+    private static readonly string[] _leadCountIndexColumns = ["ContentType", "IsConverted", "Latest", "Published"];
 
     internal static async Task CreateLeadImportIndexAsync(ISchemaBuilder schemaBuilder)
     {

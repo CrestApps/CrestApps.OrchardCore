@@ -8,6 +8,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 public sealed class OmnichannelContactIndex : MapIndex, IOmnichannelContactMatch
 {
     /// <summary>
+    /// Gets or sets the id of the content item version the row was written for.
+    /// </summary>
+    /// <remarks>
+    /// The data layer fills it when the row is read and never writes it, so a query can page the contacts by
+    /// document id from this index alone.
+    /// </remarks>
+    public long DocumentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the content item id.
     /// </summary>
     public string ContentItemId { get; set; }

@@ -1,14 +1,10 @@
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents.Services;
-using OrchardCore.Users;
-using OrchardCore.Users.Models;
-using YesSql;
+using YesSql.Filters.Builders;
 using YesSql.Filters.Query;
+using YesSql.Filters.Query.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
@@ -26,67 +22,37 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </remarks>
 internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFilterProvider
 {
-    public const string LeadStatusTermName = "lead-status";
+    public const string LeadStatusTermName = LeadListTermPredicates.LeadStatusTermName;
 
     public void Build(QueryEngineBuilder<ContentItem> builder)
     {
         builder
-            .WithNamedTerm(LeadStatusTermName, term => term
-                .OneCondition(async (value, query, context) =>
-                {
-                    var statusId = await ResolveCatalogIdAsync<LeadStatus>(value, context);
-
-                    return query.With<LeadIndex>(index => index.StatusId == statusId);
-                }))
-            .WithNamedTerm("converted", term => term
-                .OneCondition((value, query) =>
-                {
-                    var converted = ParseBoolean(value);
-
-                    return query.With<LeadIndex>(index => index.IsConverted == converted);
-                }))
-            .WithNamedTerm("source", term => term
-                .OneCondition(async (value, query, context) =>
-                {
-                    var sourceId = await ResolveLeadSourceIdAsync(value, context);
-
-                    return query.With<LeadIndex>(index => index.SourceId == sourceId);
-                }))
-            .WithNamedTerm("list", term => term
-                .OneCondition((value, query) => query.With<LeadIndex>(index => index.ListName == value)))
-            .WithNamedTerm("owner", term => term
-                .OneCondition(async (value, query, context) =>
-                {
-                    var ownerId = await ResolveUserIdAsync(value, context);
-
-                    return query.With<LeadIndex>(index => index.OwnerId == ownerId);
-                }))
-            .WithNamedTerm("rating", term => term
-                .OneCondition(async (value, query, context) =>
-                {
-                    var ratings = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<LeadRatingProvider>();
-                    var rating = await ratings.NormalizeAsync(value) ?? value;
-
-                    return query.With<LeadIndex>(index => index.Rating == rating);
-                }))
+            .WithNamedTerm(LeadStatusTermName, LeadTerm(LeadStatusTermName))
+            .WithNamedTerm(LeadListTermPredicates.ConvertedTermName, LeadTerm(LeadListTermPredicates.ConvertedTermName))
+            .WithNamedTerm(LeadListTermPredicates.SourceTermName, LeadTerm(LeadListTermPredicates.SourceTermName))
+            .WithNamedTerm(LeadListTermPredicates.ListTermName, LeadTerm(LeadListTermPredicates.ListTermName))
+            .WithNamedTerm(LeadListTermPredicates.OwnerTermName, LeadTerm(LeadListTermPredicates.OwnerTermName))
+            .WithNamedTerm(LeadListTermPredicates.RatingTermName, LeadTerm(LeadListTermPredicates.RatingTermName))
             .WithNamedTerm("stage", term => term
                 .OneCondition(async (value, query, context) =>
                 {
-                    var stageId = await ResolveCatalogIdAsync<OpportunityStage>(value, context);
+                    var stageId = await LeadListTermPredicates.ResolveCatalogIdAsync<OpportunityStage>(
+                        value,
+                        ((ContentQueryContext)context).ServiceProvider);
 
                     return query.With<OpportunityIndex>(index => index.StageId == stageId);
                 }))
             .WithNamedTerm("closed", term => term
                 .OneCondition((value, query) =>
                 {
-                    var closed = ParseBoolean(value);
+                    var closed = LeadListTermPredicates.ParseBoolean(value);
 
                     return query.With<OpportunityIndex>(index => index.IsClosed == closed);
                 }))
             .WithNamedTerm("won", term => term
                 .OneCondition((value, query) =>
                 {
-                    var won = ParseBoolean(value);
+                    var won = LeadListTermPredicates.ParseBoolean(value);
 
                     return query.With<OpportunityIndex>(index => index.IsWon == won);
                 }))
@@ -94,33 +60,10 @@ internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFil
                 .OneCondition((value, query) => query.With<OpportunityIndex>(index => index.AccountContentItemId == value)));
     }
 
-    // A term names a status or stage the way people read it; an identifier works too, for links built by code.
-    private static async ValueTask<string> ResolveCatalogIdAsync<T>(string value, object context)
-        where T : CrestApps.Core.Models.CatalogItem, CrestApps.Core.INameAwareModel
-    {
-        var catalog = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<INamedCatalog<T>>();
-
-        var entry = await catalog.FindByNameAsync(value);
-
-        return entry?.ItemId ?? value;
-    }
-
-    // People type the name of a lead source; the index stores the id of its content item. An id works too.
-    private static async ValueTask<string> ResolveLeadSourceIdAsync(string value, object context)
-    {
-        var sources = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<LeadSourceProvider>();
-
-        return await sources.FindIdAsync(value) ?? value;
-    }
-
-    // People type a user name; the index stores the user id. An id works too, for links built by code.
-    private static async ValueTask<string> ResolveUserIdAsync(string value, object context)
-    {
-        var userManager = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<UserManager<IUser>>();
-
-        return await userManager.FindByNameAsync(value) is User user ? user.UserId : value;
-    }
-
-    private static bool ParseBoolean(string value)
-        => value?.Trim().ToLowerInvariant() is "true" or "yes" or "1" or "y";
+    private static Action<NamedTermEngineBuilder<ContentItem, QueryTermOption<ContentItem>>> LeadTerm(string termName)
+        => term => term
+            .OneCondition(async (value, query, context) => query.With(await LeadListTermPredicates.BuildAsync(
+                termName,
+                value,
+                ((ContentQueryContext)context).ServiceProvider)));
 }

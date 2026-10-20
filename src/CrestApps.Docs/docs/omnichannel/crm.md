@@ -43,7 +43,7 @@ The feature's migration runs once per tenant and never changes a type that alrea
   - Its list contains every account-child type.
   - A contact or opportunity type added later joins the list automatically.
   - An administrator can remove a type from the list, and it is not added back.
-- The `LeadIndex` and `OpportunityIndex` tables.
+- The `LeadIndex` and `OpportunityIndex` tables. `LeadIndex` carries an index on `ContentType`, `IsConverted`, `Latest` and `Published` (`IDX_LeadIndex_ContentType_Converted`), which the count of the Leads list reads.
 - `ContentType` and `IsConverted` columns on `OmnichannelContactIndex`, backfilled from existing rows.
 - A seeded **Lead Status** catalog and **Opportunity Stage** catalog.
 
@@ -74,6 +74,19 @@ Holds stage, open/closed/won flags, probability, amount, close date, owner, sour
 ### `AccountPart`
 
 A marker. Its setting records which types the feature added to the account's list, so a type an administrator removed is not added again.
+
+## Leads list count
+
+**Interaction Center > Leads** is the Content Admin list of the lead types with `converted:false`. Content Admin counts its items with the query that lists them, which joins the document table, `ContentItemIndex` and `LeadIndex` and counts the distinct documents. On a large tenant that count outlived the command timeout.
+
+The CRM feature wraps the registered `IContentsAdminListQueryService` with `LeadContentsAdminListQueryService`. When `LeadListCountQueryFactory` can count the same leads from `LeadIndex` alone, the list query is returned as a `LeadListQuery`: the list rows come from the Content Admin query, and the count from a `count(*)` on `LeadIndex` that seeks `IDX_LeadIndex_ContentType_Converted`. The lead index count is used only when all of these are true; otherwise the list keeps its own count:
+
+- The `contentTypeId` route value names only lead types, and the user has **View all content** (`ViewContent`) on each of them.
+- At least one lead term is used (`lead-status:`, `converted:`, `source:`, `list:`, `owner:` or `rating:`), each with a plain value (no `NOT`, `OR` or `AND`).
+- The `status:` term, when used, is **Latest**, **Published**, **Unpublished** or **All versions**.
+- There is no free-text search, no other term, and the request carries no query string value other than `q`, `page` and `pagesize`.
+
+The list terms and the count use the same predicates (`LeadListTermPredicates`), so the count agrees with the rows.
 
 ## Caller matching
 

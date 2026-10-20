@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 
 /// <summary>
 /// Writes the phone number index rows of the contacts and leads saved before that index existed, so they can be found
-/// by any of their numbers, a few thousand records a minute until every one has been read.
+/// by any of their numbers, up to 2,000 records a minute until every one has been read.
 /// </summary>
 /// <remarks>
 /// A record is indexed again whenever it is saved, so only the records nothing has touched since need this. It runs
@@ -34,7 +34,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
 
     internal const int PageSize = 200;
 
-    private const int PagesPerRun = 25;
+    private const int PagesPerRun = 10;
 
     private bool _completed;
 
@@ -132,23 +132,28 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
         await using (var session = store.CreateSession())
         {
             // The contact index has one row for each published or latest version of a contact or lead, which are
-            // exactly the versions the phone number index holds.
-            var items = (await session
-                .Query<ContentItem, ContentItemIndex>(index => index.DocumentId > cursor)
+            // exactly the versions the phone number index holds. The page is read from that index alone, so the
+            // database seeks to the cursor and stops after one page. Joining the content item index as well made
+            // SQL Server group and sort every row after the cursor to find the next page, so each page read almost
+            // the whole table and the backfill kept the database at full load for as long as it ran.
+            var ids = (await session
+                .QueryIndex<OmnichannelContactIndex>(index => index.DocumentId > cursor)
                 .OrderBy(index => index.DocumentId)
-                .With<OmnichannelContactIndex>()
                 .Take(PageSize)
                 .ListAsync(cancellationToken))
-                .ToList();
+                .Select(index => index.DocumentId)
+                .Distinct()
+                .ToArray();
 
-            if (items.Count == 0)
+            if (ids.Length == 0)
             {
                 return (cursor, 0, false);
             }
 
-            pageCursor = items.Max(item => item.Id);
+            // The cursor moves past every id of the page, also past a record deleted since its index row was read.
+            pageCursor = ids.Max();
 
-            var ids = items.Select(item => item.Id).ToArray();
+            var items = (await session.GetAsync<ContentItem>(ids, cancellationToken: cancellationToken)).ToList();
 
             // A record saved since the index was added already has its rows.
             var indexed = (await session

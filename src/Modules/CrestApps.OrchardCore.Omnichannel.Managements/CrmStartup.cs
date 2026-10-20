@@ -107,6 +107,7 @@ public sealed class CrmStartup : StartupBase
         services.AddNavigationProvider<CrmAdminMenu>();
         services.AddPermissionProvider<CrmPermissionProvider>();
         services.AddTransient<IContentsAdminListFilterProvider, CrmContentsAdminListFilterProvider>();
+        AddLeadListCount(services);
         services.AddShapeTableProvider<AccountListPartShapeTableProvider>();
 
         services.AddContactMethods();
@@ -133,6 +134,25 @@ public sealed class CrmStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddCrmSearchEndpoints();
+    }
+
+    // Wraps the content list query service the Contents feature registered, so a leads list is counted from the
+    // lead index alone. The service is built from its registered type because the Contents module, which defines
+    // it, is not referenced by this one.
+    private static void AddLeadListCount(IServiceCollection services)
+    {
+        var descriptor = services.LastOrDefault(registration => registration.ServiceType == typeof(IContentsAdminListQueryService));
+
+        if (descriptor?.ImplementationType is not { } innerType)
+        {
+            return;
+        }
+
+        services.Remove(descriptor);
+        services.AddScoped<LeadListCountQueryFactory>();
+        services.AddScoped<IContentsAdminListQueryService>(serviceProvider => new LeadContentsAdminListQueryService(
+            (IContentsAdminListQueryService)ActivatorUtilities.CreateInstance(serviceProvider, innerType),
+            serviceProvider.GetRequiredService<LeadListCountQueryFactory>()));
     }
 }
 
