@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +53,10 @@ public sealed class GiftCardEmailSender
         {
             return false;
         }
+
+        // Written in the language the card was bought in.
+        var order = !string.IsNullOrEmpty(card.OrderId) && _serviceProvider.GetService<IOrderStore>() is { } orders ? await orders.FindByIdAsync(card.OrderId, cancellationToken) : null;
+        using var language = OrderCulture.Use(order?.Culture);
 
         var site = await _siteService.GetSiteSettingsAsync();
         var request = _httpContextAccessor.HttpContext?.Request;

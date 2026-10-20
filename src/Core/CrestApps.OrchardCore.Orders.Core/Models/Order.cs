@@ -85,6 +85,11 @@ public sealed class Order : CatalogItem
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the culture the buyer shopped in, such as de-DE: the order's emails are written in it.
+    /// </summary>
+    public string Culture { get; set; }
+
+    /// <summary>
     /// Gets or sets the inventory location the order is sold from, such as the store whose register rang it up: its
     /// stock is held and sold there.
     /// </summary>

@@ -105,6 +105,7 @@ public sealed class OrderService : IOrderService
             UserId = pricing.Cart.UserId,
             CartId = pricing.Cart.ItemId,
             Currency = pricing.Currency,
+            Culture = OrderCulture.Current(),
             Status = OrderStatus.Draft,
             CreatedUtc = now,
             ModifiedUtc = now,

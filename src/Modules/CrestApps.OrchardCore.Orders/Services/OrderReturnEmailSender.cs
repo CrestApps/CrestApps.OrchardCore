@@ -61,6 +61,10 @@ public sealed class OrderReturnEmailSender
         }
 
         var order = await _orders.FindByIdAsync(orderReturn.OrderId, cancellationToken);
+
+        // Written in the language the buyer shopped in.
+        using var language = OrderCulture.Use(order?.Culture);
+
         var orderUrl = order is null ? null : await _links.CreateUrlAsync(order);
         var email = Build(orderReturn, kind, (await _siteService.GetSettingsAsync<ReturnSettings>()).Instructions, orderUrl);
 

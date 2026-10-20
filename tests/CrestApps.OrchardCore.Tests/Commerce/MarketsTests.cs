@@ -195,6 +195,22 @@ public sealed class MarketsTests
             .GetRestrictionAsync(new ContentItem { ContentType = "Product" }, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public void AnOrdersEmails_AreWrittenInTheCultureTheBuyerShoppedIn()
+    {
+        var before = CultureInfo.CurrentUICulture.Name;
+
+        using (CrestApps.OrchardCore.Orders.Core.Services.OrderCulture.Use("de-DE"))
+        {
+            Assert.Equal("de-DE", CultureInfo.CurrentUICulture.Name);
+            Assert.Equal("de-DE", CultureInfo.CurrentCulture.Name);
+        }
+
+        Assert.Equal(before, CultureInfo.CurrentUICulture.Name);
+        Assert.Null(CrestApps.OrchardCore.Orders.Core.Services.OrderCulture.Use(null));
+        Assert.Null(CrestApps.OrchardCore.Orders.Core.Services.OrderCulture.Use(" "));
+    }
+
     private static Market Germany()
         => new() { ItemId = "de", Name = "Germany", Countries = ["DE", "AT"], Currency = "EUR", ExchangeRate = 0.92m, Rounding = MarketPriceRounding.EndIn99, PricesIncludeTax = true };
 

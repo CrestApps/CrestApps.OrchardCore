@@ -107,6 +107,9 @@ public sealed class CheckoutRecoveryService
                 return sent;
             }
 
+            // Written in the language the buyer shopped in.
+            using var language = OrderCulture.Use(order.Culture);
+
             var (subject, text, html) = Build(order, name, url, site.SiteName);
 
             try
