@@ -24,6 +24,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ReportsConstants.SubscriptionsFeature,
+    Name = "Report Subscriptions",
+    Description = "Emails reports on a schedule: a report every day, week or month for the period before, such as the sales report every Monday, with its numbers and tables and the report as a file.",
+    Category = "Reporting",
+    Dependencies =
+    [
+        ReportsConstants.Feature,
+        "OrchardCore.Email",
+    ]
+)]
+
+[assembly: Feature(
     Id = ReportsConstants.BuilderFeature,
     Name = "Report Builder",
     Description = "Lets people build their own reports with drag and drop: pick data sets from any data source, join them, add calculated fields, filters, charts, and pivot tables, save reusable views, pin reports to the admin menu, and share reports with people, roles, or links.",

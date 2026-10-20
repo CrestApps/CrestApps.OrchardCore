@@ -22,6 +22,11 @@ public static class ReportsConstants
     public const string BuilderFeature = "CrestApps.OrchardCore.Reports.Builder";
 
     /// <summary>
+    /// The feature that emails reports on a schedule.
+    /// </summary>
+    public const string SubscriptionsFeature = "CrestApps.OrchardCore.Reports.Subscriptions";
+
+    /// <summary>
     /// The technical name of the data source that exposes saved report views as data sets.
     /// </summary>
     public const string ViewsDataSource = "ReportViews";
