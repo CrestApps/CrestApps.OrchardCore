@@ -377,6 +377,11 @@ public sealed class OrderLine
     public List<OrderLineDetail> DetailLines { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether no discount takes anything off the line, such as a donation.
+    /// </summary>
+    public bool ExcludeFromDiscounts { get; set; }
+
+    /// <summary>
     /// Gets or sets the products a bundle line is made of, per bundle, as the bundle was when the order was placed.
     /// Stock is held and sold from them, not from the bundle.
     /// </summary>

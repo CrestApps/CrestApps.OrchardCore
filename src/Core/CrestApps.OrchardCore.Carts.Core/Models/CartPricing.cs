@@ -53,6 +53,11 @@ public sealed class CartLinePricing
     public CartLine Line { get; init; }
 
     /// <summary>
+    /// Gets or sets whether no discount takes anything off the line, as a line handler said, such as for a donation.
+    /// </summary>
+    public bool ExcludeFromDiscounts { get; set; }
+
+    /// <summary>
     /// Gets the published product, or <see langword="null"/> when it is gone.
     /// </summary>
     public ContentItem ContentItem { get; init; }

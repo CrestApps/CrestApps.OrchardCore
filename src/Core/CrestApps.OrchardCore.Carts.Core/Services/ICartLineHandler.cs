@@ -153,6 +153,11 @@ public sealed class CartLineEvaluateContext
     public LocalizedString Problem { get; set; }
 
     /// <summary>
+    /// Gets or sets whether no discount takes anything off the line, such as a donation.
+    /// </summary>
+    public bool ExcludeFromDiscounts { get; set; }
+
+    /// <summary>
     /// Converts an amount in the product's own currency into the line's, as a price.
     /// </summary>
     public Task<decimal> ConvertAsync(decimal amount, CancellationToken cancellationToken = default)
