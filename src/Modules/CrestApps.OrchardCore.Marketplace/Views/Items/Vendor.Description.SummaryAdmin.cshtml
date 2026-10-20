@@ -1,0 +1,16 @@
+@model ShapeViewModel<Vendor>
+
+@{
+    var vendor = Model.Value;
+}
+<div class="admin-list-secondary">
+    @if (vendor.CommissionPercent is { } commission)
+    {
+        <span>@T["{0}% commission", commission.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)]</span>
+    }
+    <span>@(vendor.PayoutsEnabled ? T["Paid out to Stripe"] : string.IsNullOrEmpty(vendor.StripeAccountId) ? T["No payout account yet"] : T["Stripe setup not finished"])</span>
+    @if (vendor.UserNames.Count > 0)
+    {
+        <span>@string.Join(", ", vendor.UserNames)</span>
+    }
+</div>
