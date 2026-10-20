@@ -40,7 +40,7 @@ public interface ICommerceWebhookPublisher
 { "id": "evt_...", "event": "order.paid", "createdUtc": "2026-10-19T14:03:22.512Z", "data": { } }
 ```
 
-`data` is serialized with `JsonSerializerOptions.Web` (camelCase). It then adds a `ShellScope` deferred task that, after the request's work is committed, sends those deliveries in a scope of its own, so a slow receiver never holds up the request. An error while queuing is logged and swallowed: a webhook must never fail the order that raised it.
+`data` is serialized with `JsonSerializerOptions.Web` (camelCase). The event id is `evt_` and a new id, unless the caller passes one to `PublishAsync(eventName, data, eventId)`: an event that may be raised twice for the same thing passes a stable id, so receivers drop the repeat. A new delivery's `NextAttemptUtc` is a minute away (`Backoff[0]`), so the background task leaves it to the first send. It then adds a `ShellScope` deferred task that, after the request's work is committed, sends those deliveries in a scope of its own, so a slow receiver never holds up the request. An error while queuing is logged and swallowed: a webhook must never fail the order that raised it.
 
 A module offers an event to the admin's event picker with `AddCommerceWebhookEvent(name, displayName, group)`, and publishes it with the publisher, resolved with `GetService` so it runs without the feature:
 
@@ -61,11 +61,11 @@ Send the commerce API's shapes in `data` where there is one, so a receiver reads
 
 | Event | Published by | `data` |
 | --- | --- | --- |
-| `order.created` | Orders, `OrderWebhookEventHandler.CreatedAsync` (an order made from a cart) | `order` (`ApiOrder`) |
+| `order.created` | Orders, `OrderWebhookEventHandler.CreatedAsync`: in a deferred task, once the order is saved and isn't canceled (another handler, such as the stock hold, can still refuse it), with the id `evt_order-created_` and the order's id | `order` (`ApiOrder`) |
 | `order.paid` | Orders, `OrderWebhookEventHandler.PaidAsync` | `order` |
-| `order.canceled` | Orders, `OrderWebhookEventHandler.CanceledAsync`, for every `OrderCancelReason`, `Replaced` included | `order`, `reason` (camelCase `OrderCancelReason`) |
+| `order.canceled` | Orders, `OrderWebhookEventHandler.CanceledAsync`, for every `OrderCancelReason` but `Replaced` | `order`, `reason` (camelCase `OrderCancelReason`) |
 | `order.refunded` | Orders, `OrderWebhookEventHandler.RefundedAsync`, once per refund | `order`, `refund` (`ApiOrderRefund`) |
-| `customer.created` | Customers, `WebhookCustomerService` (decorating `ICustomerService`: `CreateGuestAsync` and a new `GetOrCreateForUserAsync`) and **Add customer** in the admin | `customer` (`ApiCustomer`) |
+| `customer.created` | Customers, `WebhookCustomerService` (decorating `ICustomerService`: `CreateGuestAsync` and a new `GetOrCreateForUserAsync`) and **Add customer** in the admin, with the id `evt_customer-created_` and the customer's id | `customer` (`ApiCustomer`) |
 | `shipment.shipped` | Shipping, `ShipmentWebhookHandler.ShippedAsync` | `shipment` (`ApiShipment`), `orderNumber`, `customerEmail` |
 | `shipment.delivered` | Shipping, `ShipmentWebhookHandler.DeliveredAsync` | the same |
 | `stock.changed` | Inventory, `StockWebhookObserver` (an `IStockLevelObserver`): after the unit of work commits, one event per stock item whose total `Available` differs from before its first change | `stock` (`ApiStockItem`), `previousAvailable` |
@@ -81,11 +81,11 @@ Customers made by the `Customers` recipe step aren't published.
 
 - It posts `Payload` with `Content-Type: application/json`, a `CrestApps-Commerce-Webhooks/1.0` user agent, and the headers in `WebhookConstants.Headers`: `X-Webhook-Id` (the event id), `X-Webhook-Event`, `X-Webhook-Timestamp` (Unix seconds, at this attempt) and `X-Webhook-Signature`.
 - The signature is `WebhookDispatcher.Sign(secret, timestamp, body)`: `v1=` and the lowercase hex HMAC-SHA256 of `{timestamp}.{body}`, keyed with the UTF-8 bytes of the whole secret.
-- It uses the named `HttpClient` `CommerceWebhooks`, with a 15-second timeout.
+- It uses the named `HttpClient` `CommerceWebhooks`, with a 15-second timeout, and doesn't follow redirects: a `3xx` is an answer that isn't `2xx`. Its handler (`WebhookNetwork`) also refuses to connect when the host resolves only to loopback, private or link-local addresses, so a hostname can't reach the site's own network either; loopback is allowed while the host environment is Development. Of a refusal, only the first 500 characters are read, for at most 5 seconds.
 - A `2xx` answer marks it `Delivered`. Any other answer, a timeout or a connection error schedules the next attempt from `WebhookDispatcher.Backoff`: 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours and 24 hours after the attempts so far. After the eighth attempt fails it's `Failed`.
-- A delivery whose subscription was deleted fails with *The webhook was deleted.*
+- A delivery fails at once, without being sent, when its subscription was deleted (*The webhook was deleted.*), is turned off (*The webhook was turned off.*), or has a secret Data Protection can't unprotect (*The webhook's signing secret can't be read. Give it a new secret, then send it again.*).
 
-`WebhookDeliveriesBackgroundTask` runs every minute. It sends up to 50 pending deliveries whose `NextAttemptUtc` has come (`IWebhookDeliveryStore.ListDueAsync`, oldest first), and deletes up to 50 delivered or failed deliveries created more than 30 days ago.
+`WebhookDeliveriesBackgroundTask` runs every minute, under a 10-minute lock. It sends up to 20 pending deliveries whose `NextAttemptUtc` has come (`IWebhookDeliveryStore.ListDueAsync`, oldest first), loading each afresh and saving it as soon as it's sent, so a run that stops half way, or the next run, never sends it again. It then deletes up to 20 delivered or failed deliveries created more than 30 days ago.
 
 **Send again** in the admin (`WebhookDispatcher.ResendAsync`) resets a delivery to pending with no attempts and sends it at once.
 
@@ -96,7 +96,7 @@ A receiver should check the signature against the raw body, refuse an old timest
 ## Admin
 
 - **Commerce > Webhooks** (`commerce/webhooks`, `WebhooksAdminController`) lists the subscriptions through the `AdminList` shape, with **Add webhook**.
-- A subscription's editor sets its name, URL, whether it's on, and its events, grouped by each event's group. `IsAllowedUrl` takes an absolute `https` URL without user info; plain `http` only to a loopback host when the host environment is Development. Saved, it shows the **Signing secret**, with **New secret** (`RotateSecret`).
+- A subscription's editor sets its name, URL, whether it's on, and its events, grouped by each event's group. `IsAllowedUrl` takes an absolute `https` URL without user info, and refuses a loopback, private or link-local IP address; plain `http` only to a loopback host when the host environment is Development. Deleting a subscription deletes its deliveries. Saved, it shows the **Signing secret**, with **New secret** (`RotateSecret`).
 - **Deliveries** (`commerce/webhooks/Deliveries/{itemId}`) lists a subscription's deliveries, newest first, with a status filter, **Send again** per delivery, and **Send a test event** (`Ping`), which sends `webhook.ping` to that subscription in the request.
 
 ## Permissions

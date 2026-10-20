@@ -35,6 +35,7 @@ This video walks through the commerce features, from connecting Stripe to refund
 | **Checkout** | The pages a buyer goes through to pay, with or without an account. | [Checkout](checkout.md) |
 | **Headless API** | Sell from your own storefront, a phone app or a point of sale, and connect back-office systems, over a JSON API. | [Headless commerce API](headless-api.md) |
 | **Webhooks** | Tell your other systems, such as a warehouse or accounting, the moment an order is paid or shipped, a customer is created, or stock runs low. | [Webhooks](webhooks.md) |
+| **Point of sale** | Sell at your stores' counters from a till app: registers, shifts and their cash drawer, cash and card payments, Stripe card readers, receipts and returns at the till. | [Point of sale](point-of-sale.md) |
 | **Subscriptions** | Sell plans that renew every month or year, with free trials, and let subscribers manage their own plans. | [Subscriptions](subscriptions.md) |
 | **Selling sites** | Sell a ready-made website: the customer pays and their site is created for them. | [Selling sites](sites.md) |
 | **Installment plans** | Sell something on a payment plan: take a down payment by card today, then collect the rest in scheduled payments. | [Installment plans](installment-plans.md) |
@@ -46,7 +47,7 @@ This video walks through the commerce features, from connecting Stripe to refund
 
 | Menu | What is there |
 | --- | --- |
-| **Commerce** | **Orders**, **My Orders**, **Returns**, **Customers**, **Inventory**, **Purchase orders**, **Shipping**, **Reviews**, **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Gift cards**, **Webhooks**, **Currencies** and **Taxation**. |
+| **Commerce** | **Orders**, **My Orders**, **Returns**, **Customers**, **Inventory**, **Purchase orders**, **Shipping**, **Reviews**, **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Gift cards**, **Webhooks**, **Point of sale**, **Currencies** and **Taxation**. |
 | **Subscriptions** | **Agreements**, **My Plans**, **Installment Plans**, **Site provisioning** and **My Sites**. |
 | **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Orders**, **Returns**, **Inventory**, **Shipping**, **Downloads**, **Reviews**, **Customers**, **Rewards**, **Referrals**, **Transactions** (reminders), **Receipts** and **Pay Later**. |
 

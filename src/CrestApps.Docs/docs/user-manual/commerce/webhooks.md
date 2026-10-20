@@ -37,11 +37,11 @@ The system that receives the messages is called the **receiver**. Whoever builds
 | Field | What it does |
 | --- | --- |
 | **Name** | What you call it, such as the system it feeds: *Warehouse* or *Accounting*. Required. |
-| **URL** | The receiver's full address, starting with `https://`, such as `https://hooks.contoso.com/store`. A plain `http://` address works only for a receiver on the same machine while the site runs in development. |
-| **On** | Turn it off to stop sending new events without losing the webhook. Messages already waiting to be sent are still tried. |
+| **URL** | The receiver's full address, starting with `https://`, such as `https://hooks.contoso.com/store`. An address on your own network, such as `https://10.0.0.5/` or `https://192.168.1.20/`, isn't accepted. A plain `http://` address works only for a receiver on the same machine while the site runs in development. |
+| **On** | Turn it off to stop sending without losing the webhook. Messages waiting to be tried again aren't sent either: they're marked **Failed**, with *The webhook was turned off.* |
 | **Events** | The events to send (below). Tick **Every event, those added later too** to send them all, including events added to the store later. Choose at least one. |
 
-**Commerce > Webhooks** lists your webhooks, each with whether it's **On** or **Off** and how many events it sends. Click a webhook's name, or **Edit**, to change it. **Delete**, on its page, removes it: nothing more is sent to it.
+**Commerce > Webhooks** lists your webhooks, each with whether it's **On** or **Off** and how many events it sends. Click a webhook's name, or **Edit**, to change it. **Delete**, on its page, removes it and its deliveries log: nothing more is sent to it.
 
 ## The events
 
@@ -49,7 +49,7 @@ Each event has a name, which the receiver reads, and a label you see when choosi
 
 | Event | Label | Sent when | `data` holds |
 | --- | --- | --- | --- |
-| `order.created` | Order placed | An order is made, such as when a buyer checks out their cart, before it's paid. Checking out the same cart again makes a new order, and cancels the earlier one with the reason `replaced`. | `order` |
+| `order.created` | Order placed | An order is made, such as when a buyer checks out their cart, before it's paid. It's sent once the order is saved and its stock is held: an order refused because something ran out sends nothing. Checking out the same cart again makes a new order and quietly cancels the earlier one, which sends no event. | `order` |
 | `order.paid` | Order paid | The order's checkout is completed. An order placed to pay offline, such as by bank transfer, is sent when it's placed, before the money arrives. | `order` |
 | `order.canceled` | Order canceled | The order is canceled, by your store or because its checkout didn't finish. | `order`, and `reason` |
 | `order.refunded` | Order refunded | Money is given back on the order, once for each refund, in full or in part. | `order`, and `refund` |
@@ -63,7 +63,7 @@ Each event has a name, which the receiver reads, and a label you see when choosi
 What's in `data`:
 
 - **`order`** is the order as the [commerce API](headless-api.md) gives it: its `id`, `number`, `status`, the customer's name, email, phone and addresses, its lines, discounts, shipping, what paid toward it, its refunds and totals.
-- **`reason`** says why an order was canceled: `canceledByStore`, `checkoutCanceled`, `checkoutExpired`, `paymentFailed`, `abandoned`, `unavailable` (something it needed couldn't be held), or `replaced` (the buyer checked out the same cart again).
+- **`reason`** says why an order was canceled: `canceledByStore`, `checkoutCanceled`, `checkoutExpired`, `paymentFailed`, `abandoned`, or `unavailable` (something it needed couldn't be held).
 - **`refund`** is the refund just made: its `id`, `amount`, `reason` and `createdUtc`.
 - **`customer`** is the customer as the API gives them: their `id`, `kind`, name, email, phone and addresses.
 - **`shipment`** is the shipment as the API gives it: its number, `status`, carrier, tracking number and link, its lines and tracking events. `orderNumber` and `customerEmail` say whose it is.
@@ -96,7 +96,7 @@ Every message has these headers:
 
 | Header | What it holds |
 | --- | --- |
-| `X-Webhook-Id` | The event's id, the same as `id` in the body. It's the same on every try, so the receiver can drop a message it has already handled. |
+| `X-Webhook-Id` | The event's id, the same as `id` in the body. It's the same on every try, so the receiver can drop a message it has already handled. `order.created` and `customer.created` always have the same id for the same order or customer, such as `evt_order-created_4d1k8s0p2w`, so even if one is raised twice, the receiver can drop the repeat. |
 | `X-Webhook-Event` | The event's name, such as `order.paid`. |
 | `X-Webhook-Timestamp` | When this try was signed, in seconds since 1 January 1970 (UTC). |
 | `X-Webhook-Signature` | `v1=` and the signature (below). |
@@ -174,7 +174,7 @@ Keep the signing secret in the receiver's settings or secret store, never in a w
 
 A message is sent right after the change that raised it is saved, so a slow or broken receiver never slows down your buyers.
 
-- The receiver has 15 seconds to answer. A `2xx` status, such as `200`, means it took the message: it's **Delivered**.
+- The receiver has 15 seconds to answer. A `2xx` status, such as `200`, means it took the message: it's **Delivered**. A redirect isn't followed: it counts as not taken.
 - Any other answer, no answer in time, or no connection, and the message is tried again: after 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours and 24 hours. That's 8 tries over nearly two days. If the last one fails too, the message is **Failed**, and isn't tried again unless you send it again yourself.
 - Every try sends the same body, with the same `id`.
 
@@ -191,7 +191,7 @@ Click **Deliveries**, on the list or on a webhook's page, to see every message s
 | Shown | What it means |
 | --- | --- |
 | Event | The event's name, such as `order.paid`. Point at it to see the event's id. |
-| **Pending**, **Delivered** or **Failed** | Waiting to be sent or sent again, taken by the receiver, or given up on after the last try. |
+| **Pending**, **Delivered** or **Failed** | Waiting to be sent or sent again, taken by the receiver, or given up on: after the last try, or because the webhook was turned off or its secret can't be read. |
 | The answer | The status code of the receiver's last answer, such as `200` or `500`. |
 | Raised | When the event happened. |
 | Attempts | How many times it has been tried. |
@@ -201,6 +201,8 @@ Click **Deliveries**, on the list or on a webhook's page, to see every message s
 The status filter in the list header (**Filter by status**) shows **Any status**, **Pending**, **Delivered** or **Failed** messages.
 
 Click **Send again** to send a message now, for example once you've fixed the receiver. It starts over: if it fails, it's tried again on the same schedule. *Sent again; the receiver answered 200.* confirms it was taken.
+
+If a message failed with *The webhook's signing secret can't be read. Give it a new secret, then send it again.*, the site can no longer read the secret it stored, for example after its encryption keys were lost. Click **New secret**, put it in the receiver, and send the failed messages again.
 
 Delivered and failed messages are kept for 30 days, then deleted.
 

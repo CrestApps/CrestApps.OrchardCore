@@ -120,6 +120,20 @@ Drafts aren't printed; canceled orders print for the store only. The page around
 - **Invoice email.** `SendInvoiceAsync` emails *Your order … is ready to pay* with the lines, subtotal, note, due date and a **Review and pay** link to `orders/view/{token}/pay`, sets `SentUtc` and adds a note. It needs an `IEmailService` and the order's signed link.
 - **Paying.** `OrderPayController` serves `orders/view/{token}/pay` (`GuestOrderPay`) and `account/orders/{orderId}/pay` (`AccountOrderPay`): it opens the order's pending checkout, or starts one (`CheckoutReferenceTypes.Order`). `OrderCheckoutHandler` fills in the checkout's `CheckoutContactInfo` from the order, and puts an invoiced order whose checkout failed, was canceled or expired back to `Draft`, so its link pays it again. `AbandonedOrderSweeper` leaves invoiced orders alone. The guest and account order pages show a sent draft with its note, due date and **Pay now**.
 
+### Sales channels
+
+Every order records where it was made, in `Order.Channel` (`OrderChannels`):
+
+| Channel | Set by |
+| --- | --- |
+| `online` | A buyer checking out a cart, on the storefront, a headless storefront or an app. Orders made before channels were recorded read as online (`OrderChannels.Of`). |
+| `pos` | A sale rung up at a register by [Point of Sale](point-of-sale). It also has `LocationId` (the register's inventory location), `RegisterId`, `RegisterName`, `ShiftId`, `StaffUserId` and `StaffName`. `OrderChannels.IsCounterSale` is true for it. |
+| `draft` | `DraftOrderService`: an order staff make and send to the buyer to pay. |
+
+`OrderIndex` has `Channel`, `LocationId` and `ShiftId`, and `OrderQuery` filters by each. **Commerce > Orders** has a channel filter (*Every channel*, *Online*, *Point of sale*, *Drafts sent by staff*) in its list toolbar, which the CSV export follows, and a register sale shows its register as a badge. The staff orders API takes `channel` and `locationId`, and `ApiOrder` and `ApiOrderSummary` carry `channel` and `locationId`, with `register` on `ApiOrder`.
+
+`LocationId` is set only for register sales. A pickup order's location is its shipping's (`Order.Shipping.LocationId`).
+
 ### Returns
 
 The **Returns** feature (`CrestApps.OrchardCore.Orders.Returns`) adds buyer-requested returns. An `OrderReturn` (in the `Orders` collection, `OrderReturnIndex` on number, order, user, status and date) has a `Number` (such as `R-261019-K3QZ`), the order, the buyer, `Lines` (`OrderReturnLine`: order `LineId`, title, SKU, quantity, the unit price paid, `Reason`, `Restocked`), a `Resolution` (`Refund` or `Exchange`, with `ExchangeFor`), the buyer's `Comment`, the store's `StoreMessage`, `RefundedAmount`, `RestockLocationId`, and a `Status`: `Requested`, `Approved`, `Received`, `Completed`, `Rejected` or `Canceled` (withdrawn by the buyer).

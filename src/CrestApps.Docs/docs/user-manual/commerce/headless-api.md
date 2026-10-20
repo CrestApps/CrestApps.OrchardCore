@@ -17,7 +17,7 @@ Use it to build:
 
 - **A headless storefront**: your own website, in any framework, that shows your products and checks buyers out.
 - **A phone app** your buyers sign in to, to shop, pay and follow their orders.
-- **A point of sale** at your shop's counter.
+- **A point of sale** at your shop's counter. See [Point of sale](point-of-sale.md).
 - **A back-office integration**, such as a warehouse system that ships orders and receives stock, or an accounting system that reads orders and refunds.
 
 To have your store tell another system when something happens, such as an order being paid, instead of that system asking, use [webhooks](webhooks.md).
@@ -43,6 +43,7 @@ Each commerce module has its own **API** feature, under **Configuration > Featur
 | **Customers API** | Saves the checkout's Contact step, and puts store credit and points toward a checkout. Buyers manage their account and addresses. Staff list and look up customers. | Customers |
 | **Shipping API** | Lists pickup locations and shipping rates, and saves the checkout's Shipping step. Buyers follow their shipments. Staff ship orders. | Shipping, Checkout API |
 | **Inventory API** | Says what's in stock at each of your locations. Staff list, receive, adjust, count and move stock. | Inventory |
+| **Point of Sale** | Registers, shifts and their cash, sales rung up and paid at the counter, receipts and returns at the till. See [Point of sale](point-of-sale.md). | Orders, Inventory, Checkout API |
 
 Some endpoints appear only when another feature is on too:
 
@@ -62,7 +63,7 @@ Orchard Core's **OpenAPI** feature describes every endpoint, with its parameters
 
 By default, only a signed-in user with the **View OpenAPI Content** permission can read the description. The OpenAPI settings page has **Allow anonymous access to the API schema**, which opens it to everyone. Leave it off on a live store unless you want your API to be public knowledge.
 
-The commerce endpoints are grouped in the explorers by tag: **Catalog**, **Cart**, **Checkout**, **Inventory**, **Account**, and for staff **Orders**, **Customers**, **Coupons**, **Stock** and **Fulfillment**.
+The commerce endpoints are grouped in the explorers by tag: **Catalog**, **Cart**, **Checkout**, **Inventory**, **Account**, and for staff **Orders**, **Customers**, **Coupons**, **Stock**, **Fulfillment** and **Point of Sale**.
 
 :::tip[Try calls from Swagger or Scalar]
 The **OpenAPI Documentation — Bearer/PKCE** recipe, under **Configuration > Recipes**, sets up sign-in for the Swagger and Scalar pages, so an admin can try the staff endpoints from the browser. After running it, open the **openapi** application it creates (see below) and change `https://localhost:5001` in its redirect addresses to your site's address. The recipe points token validation at the *Default* tenant; on another tenant, change it to that tenant's name.
@@ -605,11 +606,13 @@ Another buyer's order answers `404`. See [Returns and exchanges](returns.md).
 
 | Method | Path | Permission | What it does |
 | --- | --- | --- | --- |
-| `GET` | `orders` | **Manage orders** | Lists orders, newest first. Takes `status` (one or more of `draft`, `awaitingPayment`, `paid`, `canceled`, separated by commas), `q` (order number, name or email), `customerId`, `from`, `to`, `skip` and `take`. |
+| `GET` | `orders` | **Manage orders** | Lists orders, newest first. Takes `status` (one or more of `draft`, `awaitingPayment`, `paid`, `canceled`, separated by commas), `channel` (`online`, `pos` or `draft`), `locationId` (the store a register sale was made at), `q` (order number, name or email), `customerId`, `from`, `to`, `skip` and `take`. |
 | `GET` | `orders/{orderId}` | **Manage orders** | Gets an order, with what can still be refunded, what's still owed, whether it can be refunded as store credit, and its notes. |
 | `GET` | `orders/by-number/{number}` | **Manage orders** | Gets an order by the number the buyer was given. |
 | `POST` | `orders/{orderId}/refunds` | **Manage orders** | Refunds an order: everything refundable, or an `amount`, with a `reason`; `restock` puts its stock back; `asStoreCredit` gives it as store credit. Takes an idempotency key. |
 | `POST` | `orders/{orderId}/cancel` | **Manage orders** | Cancels an order, with a `note`; `refund` gives back what was paid; `restock` puts its stock back. Takes an idempotency key. |
+
+Every order, here and under `me/orders`, says where it was made in `channel`: `online` (the storefront, a headless storefront or an app), `pos` (a store's register) or `draft` (made by staff and sent to the buyer to pay). A register sale also has its store's `locationId`, and the order has the `register` it was rung up on.
 
 A refund or a cancel answers with the amount given back, what happened (`messages`), and the order as it now is. See [Carts and orders](carts-and-orders.md).
 
@@ -656,6 +659,27 @@ A change that leaves out `locationId` applies to your default location; an id th
 
 A coupon's `kind` is `percentage`, `fixedAmount`, `freeShipping` or `buyXGetY`, and its `method` is `code` or `automatic`; anything else is a `400`. A coupon comes back with every field it takes, `sources` and `referenceTypes` included, so you can read one, change a field, and send it all back. See [Coupons](coupons.md).
 
+### Point of sale
+
+With the **Point of Sale** feature on, a till app rings up sales at your stores' registers. Every call needs a staff member's token with **Sell at a register**.
+
+| Method | Path | Permission | What it does |
+| --- | --- | --- | --- |
+| `GET` | `pos/registers` | **Sell at a register** | Lists the registers the caller may sell at, each with its open shift. |
+| `POST` | `pos/registers/{registerId}/shifts` | **Sell at a register** | Opens a shift with its `openingFloat`. |
+| `GET` | `pos/shifts/{shiftId}` | **Sell at a register** | Gets a shift, with its sales and the cash its drawer should hold. |
+| `POST` | `pos/shifts/{shiftId}/cash` | **Sell at a register** | Records cash put in or taken out. |
+| `POST` | `pos/shifts/{shiftId}/close` | **Sell at a register** | Closes a shift with the `countedCash`. |
+| `POST` | `pos/sales` | **Sell at a register** | Rings up products at a register. |
+| `POST` | `pos/sales/{checkoutId}/pay` | **Sell at a register** | Pays a sale in cash, by card or on a Stripe reader. |
+| `GET` | `pos/sales/{orderId}/receipt` | **Sell at a register** | Gets the receipt as HTML. |
+| `POST` | `pos/sales/{orderId}/receipt/email` | **Sell at a register** | Emails the receipt. |
+| `POST` | `pos/returns` | **Sell at a register** | Refunds a sale at the till. |
+| `GET` | `pos/terminal/readers` | **Sell at a register** | Lists the Stripe Terminal readers. |
+| `POST` | `pos/terminal/readers` | **Manage registers and shifts** | Pairs a Stripe Terminal reader. |
+
+See [Point of sale](point-of-sale.md) for a shift call by call, and every field.
+
 ## Generate a typed client
 
 The OpenAPI description at `/openapi/v1.json` lists every endpoint with its fields, so you can generate a client for your app instead of writing the calls by hand. Each endpoint has a stable operation name, such as `StartCheckout`, `BeginCheckoutPayment` or `CompleteCheckout`, which becomes the method's name.
@@ -678,6 +702,7 @@ The generated client sends what you give it, so add the headers your app keeps: 
 ## Related pages
 
 - [Webhooks](webhooks.md)
+- [Point of sale](point-of-sale.md)
 - [Checkout](checkout.md)
 - [Carts and orders](carts-and-orders.md)
 - [Payment providers](payment-providers.md)
