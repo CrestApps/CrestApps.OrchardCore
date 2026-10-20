@@ -17,6 +17,7 @@ using OrchardCore.Contents.ViewModels;
 using YesSql;
 using YesSql.Filters.Query;
 using YesSql.Services;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 

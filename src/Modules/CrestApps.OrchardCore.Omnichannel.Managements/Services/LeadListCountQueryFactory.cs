@@ -6,6 +6,7 @@ using OrchardCore.Contents.ViewModels;
 using YesSql;
 using YesSql.Filters.Nodes;
 using YesSql.Services;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
