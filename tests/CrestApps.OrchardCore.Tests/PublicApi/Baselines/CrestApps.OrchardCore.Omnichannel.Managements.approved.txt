@@ -1496,6 +1496,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Statuses { get; set; }
     }
+    public class LeadDispositionViewModel
+    {
+        public LeadDispositionViewModel() { }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> LeadStatuses { get; set; }
+        public string SetLeadStatusId { get; set; }
+    }
     public class LeadExportOptionsViewModel
     {
         public LeadExportOptionsViewModel() { }

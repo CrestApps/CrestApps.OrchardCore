@@ -1,9 +1,10 @@
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
-/// The lead status a subject action moves a lead to when the activity it runs for belongs to a lead. It is stored
-/// on the action, so any action type can advance a lead, for example a no-answer retry that marks the lead as
-/// contacted.
+/// The lead status a subject action or a disposition moves a lead to when the activity belongs to a lead. Stored on an
+/// action, it lets any action type advance a lead, for example a no-answer retry that marks the lead as contacted.
+/// Stored on a disposition, it applies in every subject, unless a subject action for that disposition names a status
+/// of its own.
 /// </summary>
 public sealed class SetLeadStatusActionMetadata
 {

@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadDispositionViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="SetLeadStatusId" class="ocat-label">@T["Set lead status"]</label>
+    <div class="ocat-end">
+        <select asp-for="SetLeadStatusId" asp-items="Model.LeadStatuses" class="form-select">
+            <option value="">@T["Leave the status as it is"]</option>
+        </select>
+        <span class="hint">@T["When an activity that belongs to a lead is completed with this disposition, in any subject, the lead moves to this status. A subject action for this disposition that sets its own lead status takes precedence. It has no effect on contacts."]</span>
+    </div>
+</div>
