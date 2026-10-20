@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Customers.Services;
@@ -43,7 +44,9 @@ public sealed class LoyaltyTenderProvider : ICheckoutTenderProvider
     /// </summary>
     public async Task<LoyaltyAccount> FindForCheckoutAsync(CheckoutFlow flow, CancellationToken cancellationToken = default)
     {
-        if (flow?.Session is not CheckoutSession { OwnerId: { Length: > 0 } ownerId } ||
+        // A register's checkout is the staff member's, not the buyer's.
+        if (flow?.Session is not CheckoutSession { OwnerId: { Length: > 0 } ownerId } session ||
+            session.TryGet<CheckoutCounterSale>(out _) ||
             await _customerStore.FindByUserIdAsync(ownerId, cancellationToken) is not { } customer)
         {
             return null;

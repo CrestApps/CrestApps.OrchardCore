@@ -33,7 +33,10 @@ public sealed class CommerceWebhookPublisher : ICommerceWebhookPublisher
         _logger = logger;
     }
 
-    public async Task PublishAsync(string eventName, object data, CancellationToken cancellationToken = default)
+    public Task PublishAsync(string eventName, object data, CancellationToken cancellationToken = default)
+        => PublishAsync(eventName, data, eventId: null, cancellationToken);
+
+    public async Task PublishAsync(string eventName, object data, string eventId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(eventName);
 
@@ -50,7 +53,7 @@ public sealed class CommerceWebhookPublisher : ICommerceWebhookPublisher
             }
 
             var now = _clock.UtcNow;
-            var eventId = "evt_" + IdGenerator.GenerateId();
+            eventId = string.IsNullOrEmpty(eventId) ? "evt_" + IdGenerator.GenerateId() : eventId;
             var payload = JsonSerializer.Serialize(new { id = eventId, @event = eventName, createdUtc = now, data }, JsonSerializerOptions.Web);
             var ids = new List<string>();
 
@@ -64,7 +67,9 @@ public sealed class CommerceWebhookPublisher : ICommerceWebhookPublisher
                     EventName = eventName,
                     Payload = payload,
                     Status = WebhookDeliveryStatus.Pending,
-                    NextAttemptUtc = now,
+
+                    // Sent right after the request; the retry task only picks it up if that send didn't finish.
+                    NextAttemptUtc = now + WebhookDispatcher.Backoff[0],
                     CreatedUtc = now,
                 };
 

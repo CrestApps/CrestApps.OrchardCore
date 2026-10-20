@@ -32,7 +32,9 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, WebhookDeliveriesBackgroundTask>();
 
         // A receiver that doesn't answer in time is tried again later rather than holding a worker.
-        services.AddHttpClient(WebhookConstants.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+        // Redirects aren't followed: an https address the merchant approved mustn't send events somewhere else.
+        services.AddHttpClient(WebhookConstants.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 
         services.AddPermissionProvider<WebhookPermissionProvider>();
         services.AddNavigationProvider<WebhooksAdminMenu>();

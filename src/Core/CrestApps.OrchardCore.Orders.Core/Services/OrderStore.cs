@@ -83,6 +83,21 @@ public sealed class OrderQuery
     /// Gets or sets an order number, or the start of one, or a customer's email address.
     /// </summary>
     public string Search { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel to match, such as <see cref="OrderChannels.PointOfSale"/>, or none for every channel.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inventory location to match, or none for every location.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the register shift to match, or none.
+    /// </summary>
+    public string ShiftId { get; set; }
 }
 
 public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
@@ -165,6 +180,27 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
         if (query.NotAnonymized)
         {
             orders = orders.Where(index => index.AnonymizedUtc == null);
+        }
+
+        if (!string.IsNullOrEmpty(query.Channel))
+        {
+            var channel = query.Channel;
+
+            orders = orders.Where(index => index.Channel == channel);
+        }
+
+        if (!string.IsNullOrEmpty(query.LocationId))
+        {
+            var locationId = query.LocationId;
+
+            orders = orders.Where(index => index.LocationId == locationId);
+        }
+
+        if (!string.IsNullOrEmpty(query.ShiftId))
+        {
+            var shiftId = query.ShiftId;
+
+            orders = orders.Where(index => index.ShiftId == shiftId);
         }
 
         if (query.Statuses is { Count: > 0 })

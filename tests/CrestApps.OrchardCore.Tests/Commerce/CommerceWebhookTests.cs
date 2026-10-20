@@ -62,6 +62,10 @@ public sealed class CommerceWebhookTests
     [InlineData("https://user:password@hooks.example.com/", false, false)]
     [InlineData("ftp://hooks.example.com/", false, false)]
     [InlineData("/relative", false, false)]
+    [InlineData("https://10.0.0.5/hook", false, false)]
+    [InlineData("https://169.254.169.254/latest", false, false)]
+    [InlineData("https://192.168.1.20/hook", true, false)]
+    [InlineData("https://localhost/hook", false, false)]
     public void Events_ArePostedOnlyOverHttps_OrToThisMachineWhileDeveloping(string url, bool isDevelopment, bool allowed)
         => Assert.Equal(allowed, WebhooksAdminController.IsAllowedUrl(url, isDevelopment));
 

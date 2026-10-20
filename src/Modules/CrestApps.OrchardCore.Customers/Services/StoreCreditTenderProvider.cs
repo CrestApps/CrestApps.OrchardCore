@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Customers.Services;
@@ -46,8 +47,10 @@ public sealed class StoreCreditTenderProvider : ICheckoutTenderProvider, IOrderS
     /// </summary>
     public async Task<StoreCreditAccount> FindForCheckoutAsync(CheckoutFlow flow, string currency, CancellationToken cancellationToken = default)
     {
-        // Store credit belongs to an account, so only a signed-in buyer spends it.
-        if (flow?.Session is not CheckoutSession { OwnerId: { Length: > 0 } ownerId } ||
+        // Store credit belongs to an account, so only a signed-in buyer spends it; a register's checkout is the staff
+        // member's, not the buyer's.
+        if (flow?.Session is not CheckoutSession { OwnerId: { Length: > 0 } ownerId } session ||
+            session.TryGet<CheckoutCounterSale>(out _) ||
             await _customerStore.FindByUserIdAsync(ownerId, cancellationToken) is not { } customer)
         {
             return null;

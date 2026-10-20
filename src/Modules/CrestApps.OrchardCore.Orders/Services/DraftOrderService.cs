@@ -131,7 +131,7 @@ public sealed class DraftOrderService
 
         if (order is null)
         {
-            var created = await _orderService.CreateFromCartAsync(pricing, cancellationToken);
+            var created = await _orderService.CreateFromCartAsync(pricing, draft => draft.Channel = OrderChannels.Draft, cancellationToken);
 
             if (!created.Succeeded)
             {

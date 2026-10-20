@@ -20,14 +20,14 @@
         <label asp-for="Url" class="form-label">@T["URL"]</label>
         <input asp-for="Url" class="form-control font-monospace" type="url" placeholder="https://" />
         <span asp-validation-for="Url"></span>
-        <span class="hint">@T["Events are posted here as JSON. It must answer with a 2xx status; anything else is tried again, less and less often, for a day."]</span>
+        <span class="hint">@T["Events are posted here as JSON. It must answer with a 2xx status; anything else is tried again, less and less often, for about two days."]</span>
     </div>
 
     <div class="mb-3">
         <div class="form-check form-switch">
             <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
             <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
-            <span class="hint dashed">@T["Turn it off to stop sending without losing it."]</span>
+            <span class="hint dashed">@T["Turn it off to stop sending without losing it; deliveries still waiting are dropped."]</span>
         </div>
     </div>
 

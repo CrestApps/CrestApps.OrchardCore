@@ -54,7 +54,7 @@ internal sealed class WebhookCustomerService : ICustomerService
 
     internal static Task PublishCreatedAsync(IServiceProvider serviceProvider, Customer customer, CancellationToken cancellationToken)
         => customer is not null && serviceProvider.GetService<ICommerceWebhookPublisher>() is { } publisher
-            ? publisher.PublishAsync(CommerceWebhookEvents.CustomerCreated, new { customer = CustomerAccountApiEndpoints.ToApi(customer) }, cancellationToken)
+            ? publisher.PublishAsync(CommerceWebhookEvents.CustomerCreated, new { customer = CustomerAccountApiEndpoints.ToApi(customer) }, $"evt_customer-created_{customer.ItemId}", cancellationToken)
             : Task.CompletedTask;
 
     private Task PublishCreatedAsync(Customer customer, CancellationToken cancellationToken)

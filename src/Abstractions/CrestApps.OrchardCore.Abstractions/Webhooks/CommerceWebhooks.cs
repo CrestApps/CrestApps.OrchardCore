@@ -15,7 +15,14 @@ public interface ICommerceWebhookPublisher
     /// <param name="eventName">The event's name, such as <c>order.paid</c>.</param>
     /// <param name="data">What the event is about, serialized as JSON in the payload's <c>data</c>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task PublishAsync(string eventName, object data, CancellationToken cancellationToken = default);
+    Task PublishAsync(string eventName, object data, CancellationToken cancellationToken = default)
+        => PublishAsync(eventName, data, eventId: null, cancellationToken);
+
+    /// <summary>
+    /// Queues the event under an id of the publisher's: an event that can be raised twice for one thing (a customer
+    /// made by two requests at once) keeps one id, so a receiver drops the repeat.
+    /// </summary>
+    Task PublishAsync(string eventName, object data, string eventId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

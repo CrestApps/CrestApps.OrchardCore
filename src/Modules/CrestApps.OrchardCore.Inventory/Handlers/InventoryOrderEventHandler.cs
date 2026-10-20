@@ -114,7 +114,7 @@ public sealed class InventoryOrderEventHandler : OrderEventHandlerBase
     // location, such as the shop it's picked up at, would rather its units came from there.
     internal static IEnumerable<StockRequest> ToRequests(Order order)
     {
-        var locationId = order.Shipping?.LocationId;
+        var locationId = order.LocationId ?? order.Shipping?.LocationId;
 
         return order.Lines.SelectMany(line => line.BundleItems is { Count: > 0 } items
             ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * line.Quantity, locationId))

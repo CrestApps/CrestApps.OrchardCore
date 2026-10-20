@@ -255,7 +255,7 @@ internal static class CouponAdminApiEndpoints
             modelState.AddModelError("Kind", "Use percentage, fixedAmount, freeShipping or buyXGetY.");
         }
 
-        if (!string.IsNullOrEmpty(request?.Method) && request.Method is not ("code" or "automatic"))
+        if (!string.IsNullOrEmpty(request?.Method) && request.Method.ToLowerInvariant() is not ("code" or "automatic"))
         {
             modelState.AddModelError("Method", "Use code or automatic.");
         }

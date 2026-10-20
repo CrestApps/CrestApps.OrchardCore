@@ -61,10 +61,27 @@ public sealed class WebhookDispatcher
         => _protector.Protect("whsec_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(24)).TrimEnd('=').Replace('+', '-').Replace('/', '_'));
 
     /// <summary>
-    /// Returns a subscription's secret, to show the merchant and to sign with.
+    /// Returns a subscription's secret, to show the merchant and to sign with; <see langword="null"/> when it can't be
+    /// read, such as after the site's data protection keys were lost.
     /// </summary>
     public string GetSecret(WebhookSubscription subscription)
-        => string.IsNullOrEmpty(subscription?.ProtectedSecret) ? null : _protector.Unprotect(subscription.ProtectedSecret);
+    {
+        if (string.IsNullOrEmpty(subscription?.ProtectedSecret))
+        {
+            return null;
+        }
+
+        try
+        {
+            return _protector.Unprotect(subscription.ProtectedSecret);
+        }
+        catch (CryptographicException exception)
+        {
+            _logger.LogWarning(exception, "The signing secret of webhook '{SubscriptionId}' can't be read; it needs a new one.", subscription.ItemId);
+
+            return null;
+        }
+    }
 
     /// <summary>
     /// Returns the signature of a body at a time: <c>v1=</c> and the lowercase hex HMAC-SHA256 of
@@ -101,10 +118,21 @@ public sealed class WebhookDispatcher
         delivery.Attempts++;
         delivery.LastAttemptUtc = now;
 
+        var secret = subscription is null ? null : GetSecret(subscription);
+
         if (subscription is null)
         {
             // The webhook was deleted; nothing is sent to where it pointed.
             Fail(delivery, statusCode: null, "The webhook was deleted.");
+        }
+        else if (!subscription.IsEnabled)
+        {
+            Fail(delivery, statusCode: null, "The webhook was turned off.");
+        }
+        else if (secret is null)
+        {
+            // Unsigned, a receiver can't trust it; signed with the wrong key, it would refuse it anyway.
+            Fail(delivery, statusCode: null, "The webhook's signing secret can't be read. Give it a new secret, then send it again.");
         }
         else
         {
@@ -119,7 +147,7 @@ public sealed class WebhookDispatcher
                 request.Headers.Add(WebhookConstants.Headers.Id, delivery.EventId);
                 request.Headers.Add(WebhookConstants.Headers.Event, delivery.EventName);
                 request.Headers.Add(WebhookConstants.Headers.Timestamp, timestamp.ToString(CultureInfo.InvariantCulture));
-                request.Headers.Add(WebhookConstants.Headers.Signature, Sign(GetSecret(subscription) ?? string.Empty, timestamp, delivery.Payload ?? "{}"));
+                request.Headers.Add(WebhookConstants.Headers.Signature, Sign(secret, timestamp, delivery.Payload ?? "{}"));
                 request.Headers.UserAgent.Add(new ProductInfoHeaderValue("CrestApps-Commerce-Webhooks", "1.0"));
 
                 using var response = await _httpClientFactory.CreateClient(WebhookConstants.HttpClientName).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -135,7 +163,7 @@ public sealed class WebhookDispatcher
                 }
                 else
                 {
-                    var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var body = await ReadStartAsync(response, cancellationToken);
 
                     Retry(delivery, (int)response.StatusCode, $"{(int)response.StatusCode} {response.ReasonPhrase}: {body}", now);
                 }
@@ -161,6 +189,27 @@ public sealed class WebhookDispatcher
         delivery.NextAttemptUtc = _clock.UtcNow;
 
         await SendAsync(delivery, cancellationToken);
+    }
+
+    // Only the start of a refusal is kept, and a receiver slow to send it isn't waited on.
+    private static async Task<string> ReadStartAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+
+            await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+            var buffer = new char[MaxErrorLength];
+            using var reader = new StreamReader(stream);
+            var read = await reader.ReadBlockAsync(buffer.AsMemory(), timeout.Token);
+
+            return new string(buffer, 0, read);
+        }
+        catch (Exception exception) when (exception is OperationCanceledException or IOException or HttpRequestException)
+        {
+            return string.Empty;
+        }
     }
 
     private static void Retry(WebhookDelivery delivery, int? statusCode, string error, DateTime now)

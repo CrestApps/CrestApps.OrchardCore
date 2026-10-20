@@ -254,6 +254,9 @@ public sealed class WebhooksAdminController : Controller
         if (await _subscriptions.FindByIdAsync(itemId) is { } subscription)
         {
             await _subscriptions.DeleteAsync(subscription);
+
+            // Its log goes with it; what's left over is cleared with the log's old entries.
+            await _deliveries.DeleteBySubscriptionAsync(subscription.ItemId, take: 1000, HttpContext.RequestAborted);
             await _notifier.SuccessAsync(H["The webhook was deleted. Nothing more is sent to it."]);
         }
 
@@ -387,14 +390,42 @@ public sealed class WebhooksAdminController : Controller
             return false;
         }
 
+        // An address of the site's own network (a private, link-local or loopback IP) isn't another system's.
+        if (IPAddress.TryParse(uri.Host.Trim('[', ']'), out var literal) && IsInternal(literal))
+        {
+            return isDevelopment && uri.Scheme == Uri.UriSchemeHttp && IPAddress.IsLoopback(literal);
+        }
+
         if (uri.Scheme == Uri.UriSchemeHttps)
         {
-            return true;
+            return !uri.IsLoopback;
         }
 
         return isDevelopment &&
             uri.Scheme == Uri.UriSchemeHttp &&
             (uri.IsLoopback || (IPAddress.TryParse(uri.Host, out var address) && IPAddress.IsLoopback(address)));
+    }
+
+    private static bool IsInternal(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address) || address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6UniqueLocal)
+        {
+            return true;
+        }
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        var bytes = address.GetAddressBytes();
+
+        return bytes.Length == 4 &&
+            (bytes[0] == 10 ||
+             (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+             (bytes[0] == 192 && bytes[1] == 168) ||
+             (bytes[0] == 169 && bytes[1] == 254) ||
+             bytes[0] == 0);
     }
 
     private void Apply(WebhookEditViewModel model, WebhookSubscription subscription)

@@ -51,6 +51,11 @@ public interface IWebhookDeliveryStore : ICatalog<WebhookDelivery>
     /// Deletes delivered and failed deliveries made before a date, up to a number at a time. Returns how many.
     /// </summary>
     Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a webhook's deliveries, up to a number at a time. Returns how many.
+    /// </summary>
+    Task<int> DeleteBySubscriptionAsync(string subscriptionId, int take, CancellationToken cancellationToken = default);
 }
 
 public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, WebhookDeliveryIndex>, IWebhookDeliveryStore
@@ -85,6 +90,22 @@ public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, Webh
         var page = await query.OrderByDescending(index => index.CreatedUtc).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, [.. page]);
+    }
+
+    public async Task<int> DeleteBySubscriptionAsync(string subscriptionId, int take, CancellationToken cancellationToken = default)
+    {
+        var deliveries = await Session.Query<WebhookDelivery, WebhookDeliveryIndex>(index => index.SubscriptionId == subscriptionId, collection: CollectionName)
+            .Take(take)
+            .ListAsync(cancellationToken);
+        var count = 0;
+
+        foreach (var delivery in deliveries)
+        {
+            Session.Delete(delivery, CollectionName);
+            count++;
+        }
+
+        return count;
     }
 
     public async Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default)
