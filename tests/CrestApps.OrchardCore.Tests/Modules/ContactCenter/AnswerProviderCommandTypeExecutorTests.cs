@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
-using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Modules;
 
@@ -666,7 +665,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 AuditRecorder,
                 ReservationManager.Object,
                 Mock.Of<IDialerAbandonmentTracker>(),
-                new ServiceCollection().AddSingleton(PresenceManager.Object).BuildServiceProvider());
+                PresenceManager.Object);
         }
 
         public void SetupActiveState()

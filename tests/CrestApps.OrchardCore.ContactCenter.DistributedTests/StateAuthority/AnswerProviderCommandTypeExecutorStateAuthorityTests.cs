@@ -57,7 +57,7 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
             Mock.Of<IContactCenterAuditRecorder>(),
             Mock.Of<IActivityReservationManager>(),
             Mock.Of<IDialerAbandonmentTracker>(),
-            Mock.Of<IServiceProvider>());
+            Mock.Of<IAgentPresenceManager>());
         var command = CreateCommand();
         var result = new ContactCenterVoiceProviderResult
         {

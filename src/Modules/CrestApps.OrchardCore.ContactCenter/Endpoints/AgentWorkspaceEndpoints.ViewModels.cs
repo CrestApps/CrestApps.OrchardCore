@@ -93,6 +93,7 @@ internal static partial class AgentWorkspaceEndpoints
         IActivityQueueManager queueManager,
         IContentManager contentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        IDialerProfileReader dialerProfileReader,
         LinkGenerator linkGenerator,
         HttpContext httpContext,
         CancellationToken cancellationToken)
@@ -139,9 +140,8 @@ internal static partial class AgentWorkspaceEndpoints
 
             // Most of these dials never reach a person, so unless the profile asks for it the agent is not shown each
             // one -- who is being dialed, and every step -- only that they are waiting for a connected call.
-            var dialerProfileReader = httpContext.RequestServices.GetService<IDialerProfileReader>();
             var dialerProfileId = DialerCallMetadata.GetDialerProfileId(interaction);
-            var dialerProfile = dialerProfileReader is null || string.IsNullOrEmpty(dialerProfileId)
+            var dialerProfile = string.IsNullOrEmpty(dialerProfileId)
                 ? null
                 : await dialerProfileReader.FindByIdAsync(dialerProfileId, cancellationToken);
             var showsProgress = dialerProfile?.ShowDialProgressToAgent == true;

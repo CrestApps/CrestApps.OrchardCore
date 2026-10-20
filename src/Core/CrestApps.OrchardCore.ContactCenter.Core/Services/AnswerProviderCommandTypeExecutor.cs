@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -35,7 +34,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     private readonly IActivityReservationManager _reservationManager;
     private readonly IClock _clock;
     private readonly IDialerAbandonmentTracker _abandonmentTracker;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IAgentPresenceManager _presenceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AnswerProviderCommandTypeExecutor"/> class.
@@ -51,7 +50,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     /// <param name="auditRecorder">The recorder that writes the agent leg's outcome and a missed offer to the audit log.</param>
     /// <param name="reservationManager">The reservation manager used to date a missed offer from when it started ringing.</param>
     /// <param name="abandonmentTracker">The tracker that plays an automated dialer call's abandoned-call message when its agent cannot be connected, and records an agent connected too late.</param>
-    /// <param name="serviceProvider">The service provider the presence manager is resolved from when a dialer's held agent is connected.</param>
+    /// <param name="presenceManager">The presence manager that puts an agent a dialer held Reserved on the call once they are connected.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyService telephonyService,
@@ -64,10 +63,10 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
         IContactCenterAuditRecorder auditRecorder,
         IActivityReservationManager reservationManager,
         IDialerAbandonmentTracker abandonmentTracker,
-        IServiceProvider serviceProvider)
+        IAgentPresenceManager presenceManager)
     {
         _abandonmentTracker = abandonmentTracker;
-        _serviceProvider = serviceProvider;
+        _presenceManager = presenceManager;
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
         _interactionManager = interactionManager;
@@ -334,13 +333,8 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
                         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
                     }
 
-                    // Held Reserved while the dialer reached the customer, the agent is on the call from now. Resolved
-                    // when needed rather than injected, so building the executor does not build the presence manager.
-                    if (DialerCallMetadata.IsCampaignDial(interaction))
-                    {
-                        await _serviceProvider.GetRequiredService<IAgentPresenceManager>()
-                            .ConnectHeldAgentAsync(request.AgentId, interaction, now, cancellationToken);
-                    }
+                    // Held Reserved while the dialer reached the customer, the agent is on the call from now.
+                    await _presenceManager.ConnectHeldAgentAsync(request.AgentId, interaction, now, cancellationToken);
 
                     await RecordAgentLegAnsweredAsync(session, interaction, result.ProviderLegId, request.AgentId, now, cancellationToken);
                 }

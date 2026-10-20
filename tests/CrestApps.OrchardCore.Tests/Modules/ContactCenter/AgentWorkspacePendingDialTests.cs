@@ -381,10 +381,11 @@ public sealed class AgentWorkspacePendingDialTests
                 MockUserManager(),
                 _displayNameProvider.Object,
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
+                CreateDialerProfileReader(_dialerProfile),
                 new StubClock(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
                 CreateLinkGenerator(),
-                CreateHttpContext(_dialerProfile));
+                CreateHttpContext());
 
             var property = result.GetType().GetProperty("Value");
 
@@ -427,24 +428,27 @@ public sealed class AgentWorkspacePendingDialTests
                 .BuildServiceProvider()
                 .GetRequiredService<LinkGenerator>();
 
-        private static DefaultHttpContext CreateHttpContext(DialerProfile dialerProfile)
+        // A dialer feature that is off reads no profile, like the platform's null-object default.
+        private static IDialerProfileReader CreateDialerProfileReader(DialerProfile dialerProfile)
         {
-            var services = new ServiceCollection();
-
-            if (dialerProfile is not null)
+            if (dialerProfile is null)
             {
-                var reader = new Mock<IDialerProfileReader>();
-                reader
-                    .Setup(r => r.FindByIdAsync(dialerProfile.ItemId, It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(dialerProfile);
-                services.AddSingleton(reader.Object);
+                return new NullDialerProfileReader();
             }
 
-            return new()
+            var reader = new Mock<IDialerProfileReader>();
+            reader
+                .Setup(r => r.FindByIdAsync(dialerProfile.ItemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(dialerProfile);
+
+            return reader.Object;
+        }
+
+        private static DefaultHttpContext CreateHttpContext()
+            => new()
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test")),
-                RequestServices = services.BuildServiceProvider(),
+                RequestServices = new ServiceCollection().BuildServiceProvider(),
             };
-        }
     }
 }
