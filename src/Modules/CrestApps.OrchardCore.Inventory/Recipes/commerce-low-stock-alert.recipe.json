@@ -1,0 +1,87 @@
+{
+  "name": "CommerceLowStockAlert",
+  "displayName": "Automation: low stock alert",
+  "description": "Adds a workflow that emails the store when a product runs low or sells out. It's added turned off: open Workflows > Email the store when stock runs low, set the address it goes to, and turn it on.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "automation",
+    "workflow",
+    "inventory",
+    "alert"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "OrchardCore.Workflows",
+        "OrchardCore.Email"
+      ]
+    },
+    {
+      "name": "WorkflowType",
+      "data": [
+        {
+          "WorkflowTypeId": "4cmlowstockalertworkflow01",
+          "Name": "Email the store when stock runs low",
+          "IsEnabled": false,
+          "IsSingleton": false,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4cmlowstockevent0000000001",
+              "Name": "LowStockEvent",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Stock ran low"
+                }
+              }
+            },
+            {
+              "ActivityId": "4cmlowstockemail0000000001",
+              "Name": "EmailTask",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Tell the store"
+                },
+                "Recipients": {
+                  "Expression": "stock@example.com"
+                },
+                "Subject": {
+                  "Expression": "{% if Workflow.Input.SoldOut %}Sold out{% else %}Running low{% endif %}: {{ Workflow.Input.Title }}"
+                },
+                "BodyFormat": "Html",
+                "HtmlBody": {
+                  "Expression": "<p>{{ Workflow.Input.Title }} (SKU {{ Workflow.Input.Sku }}) has {{ Workflow.Input.Available }} left; it's set to warn at {{ Workflow.Input.LowStockThreshold }}.</p>"
+                }
+              }
+            }
+          ],
+          "Transitions": [
+            {
+              "Id": 0,
+              "SourceActivityId": "4cmlowstockevent0000000001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4cmlowstockemail0000000001"
+            }
+          ],
+          "Properties": {}
+        }
+      ]
+    }
+  ]
+}
