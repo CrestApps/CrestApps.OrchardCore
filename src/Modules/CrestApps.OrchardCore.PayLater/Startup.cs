@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -45,6 +46,7 @@ public sealed class Startup : StartupBase
 
         // Bank transfer and Cash on delivery are offline methods too, each off until the store turns it on.
         services.AddScoped<BankTransferCheckoutPaymentProvider>();
+        services.AddScoped<IStoreSetupStep, OfflinePaymentsSetupStep>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<BankTransferCheckoutPaymentProvider>());
         services.AddScoped<OfflineCheckoutPaymentProvider>(sp => sp.GetRequiredService<BankTransferCheckoutPaymentProvider>());
         services.AddScoped<CashOnDeliveryCheckoutPaymentProvider>();

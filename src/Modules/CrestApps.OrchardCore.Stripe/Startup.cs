@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.PersonalData;
@@ -65,6 +66,7 @@ public class Startup : StartupBase
         services.Configure<StripeConfigurationOptions>(_shellConfiguration.GetSection(StripeConfigurationOptions.SectionName));
 
         services.AddScoped<IDisplayDriver<ISite>, StripeSettingsDisplayDriver>();
+        services.AddScoped<IStoreSetupStep, StripeSetupStep>();
         services.AddTransient<IConfigureOptions<StripeOptions>, StripeOptionsConfiguration>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
         services.AddNavigationProvider<AdminMenu>();
