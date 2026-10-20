@@ -25,7 +25,7 @@ internal static class OrderAdminApiEndpoints
         group.MapGet("orders", ListAsync)
             .WithName("ListOrders")
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .WithSummary("Lists the store's orders, newest first: by status, customer, date, or a search of number, name and email.");
+            .WithSummary("Lists the store's orders, newest first: by status, customer, channel (online, pos, draft), the location they're sold from, date, or a search of number, name and email.");
 
         group.MapGet("orders/{orderId}", GetAsync)
             .WithName("GetOrder")
@@ -62,6 +62,8 @@ internal static class OrderAdminApiEndpoints
         string status,
         string q,
         string customerId,
+        string channel,
+        string locationId,
         DateTime? from,
         DateTime? to,
         int? skip,
@@ -88,6 +90,8 @@ internal static class OrderAdminApiEndpoints
         {
             Statuses = statuses,
             CustomerId = string.IsNullOrWhiteSpace(customerId) ? null : customerId,
+            Channel = string.IsNullOrWhiteSpace(channel) ? null : channel.Trim().ToLowerInvariant(),
+            LocationId = string.IsNullOrWhiteSpace(locationId) ? null : locationId.Trim(),
             Search = string.IsNullOrWhiteSpace(q) ? null : q.Trim(),
             CreatedOnOrAfter = from?.ToUniversalTime(),
             CreatedBefore = to?.ToUniversalTime(),

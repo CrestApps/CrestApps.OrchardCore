@@ -1,0 +1,5 @@
+@model ShapeViewModel<Order>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sold at a register by {0}", Model.Value.StaffName ?? string.Empty]">
+    <i class="fa-solid fa-cash-register text-secondary me-1" aria-hidden="true"></i>@(Model.Value.RegisterName ?? T["Point of sale"].Value)
+</span>

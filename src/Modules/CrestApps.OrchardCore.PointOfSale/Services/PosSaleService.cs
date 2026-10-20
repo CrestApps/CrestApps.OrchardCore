@@ -106,6 +106,7 @@ public sealed class PosSaleService
             order.Channel = OrderChannels.PointOfSale;
             order.LocationId = register.LocationId;
             order.RegisterId = register.ItemId;
+            order.RegisterName = register.Name;
             order.ShiftId = shift.ItemId;
             order.StaffUserId = staff.FindFirstValue(ClaimTypes.NameIdentifier);
             order.StaffName = PosShiftService.GetName(staff);

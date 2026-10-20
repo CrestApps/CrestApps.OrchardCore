@@ -29,6 +29,7 @@ public sealed class OrdersAdminController : Controller
 {
     private const string OptionsSearch = "Options.Search";
     private const string OptionsStatus = "Options.Status";
+    private const string OptionsChannel = "Options.Channel";
 
     private readonly IOrderStore _orderStore;
     private readonly IAuthorizationService _authorizationService;
@@ -396,6 +397,14 @@ public sealed class OrdersAdminController : Controller
             new SelectListItem(S["Any status"], nameof(OrderStatusFilter.All), options.Status == OrderStatusFilter.All),
         ];
 
+        options.Channels =
+        [
+            new SelectListItem(S["Every channel"], string.Empty, string.IsNullOrEmpty(options.Channel)),
+            new SelectListItem(S["Online"], OrderChannels.Online, options.Channel == OrderChannels.Online),
+            new SelectListItem(S["Point of sale"], OrderChannels.PointOfSale, options.Channel == OrderChannels.PointOfSale),
+            new SelectListItem(S["Drafts sent by staff"], OrderChannels.Draft, options.Channel == OrderChannels.Draft),
+        ];
+
         var routeData = new RouteData();
 
         if (!string.IsNullOrEmpty(options.Search))
@@ -406,6 +415,11 @@ public sealed class OrdersAdminController : Controller
         if (options.Status != OrderStatusFilter.Placed)
         {
             routeData.Values.TryAdd(OptionsStatus, options.Status);
+        }
+
+        if (!string.IsNullOrEmpty(options.Channel))
+        {
+            routeData.Values.TryAdd(OptionsChannel, options.Channel);
         }
 
         var viewModel = new OrdersIndexViewModel
@@ -438,6 +452,7 @@ public sealed class OrdersAdminController : Controller
         {
             UserId = userId,
             Search = userId is null ? options.Search : null,
+            Channel = userId is null && options.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft ? options.Channel : null,
             Statuses = userId is not null
                 ? [OrderStatus.Paid, OrderStatus.AwaitingPayment]
                 : options.Status switch
@@ -463,6 +478,11 @@ public sealed class OrdersAdminController : Controller
         if (options is not null && options.Status != OrderStatusFilter.Placed)
         {
             values.Add(OptionsStatus, options.Status);
+        }
+
+        if (!string.IsNullOrEmpty(options?.Channel))
+        {
+            values.Add(OptionsChannel, options.Channel);
         }
 
         if (pagerParameters?.PageSize is int pageSize)

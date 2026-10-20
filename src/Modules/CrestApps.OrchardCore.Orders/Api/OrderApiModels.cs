@@ -9,12 +9,16 @@ namespace CrestApps.OrchardCore.Orders.Api;
 /// <param name="Status"><c>draft</c>, <c>awaitingPayment</c>, <c>paid</c> or <c>canceled</c>.</param>
 /// <param name="Fulfillment"><c>unfulfilled</c>, <c>partiallyFulfilled</c> or <c>fulfilled</c>, once it's paid.</param>
 /// <param name="IsOwed">Whether it's waiting for money: placed to be paid offline, or sent to be paid.</param>
+/// <param name="Channel">Where it was made: <c>online</c>, <c>pos</c> (a store's register) or <c>draft</c> (sent by staff).</param>
+/// <param name="LocationId">The inventory location it's sold from, such as the store whose register rang it up.</param>
 public sealed record ApiOrderSummary(
     string Id,
     string Number,
     string Status,
     string Fulfillment,
     bool IsOwed,
+    string Channel,
+    string LocationId,
     int ItemCount,
     ApiMoney Total,
     string CustomerName,
@@ -27,6 +31,9 @@ public sealed record ApiOrderSummary(
 /// </summary>
 /// <param name="Refund"><c>none</c>, <c>partiallyRefunded</c> or <c>refunded</c>.</param>
 /// <param name="PayUrl">A page the buyer pays an order that's still owed on.</param>
+/// <param name="Channel">Where it was made: <c>online</c>, <c>pos</c> (a store's register) or <c>draft</c> (sent by staff).</param>
+/// <param name="LocationId">The inventory location it's sold from.</param>
+/// <param name="Register">The register a point-of-sale order was rung up on.</param>
 public sealed record ApiOrder(
     string Id,
     string Number,
@@ -34,6 +41,9 @@ public sealed record ApiOrder(
     string Fulfillment,
     string Refund,
     bool IsOwed,
+    string Channel,
+    string LocationId,
+    string Register,
     string Currency,
     string CustomerId,
     string CustomerName,
@@ -178,6 +188,8 @@ internal static class OrderApiMapper
             ToCamel(order.Status.ToString()),
             order.FulfillmentStatus is { } fulfillment ? ToCamel(fulfillment.ToString()) : null,
             isOwed,
+            OrderChannels.Of(order),
+            order.LocationId,
             order.ItemCount,
             ApiMoney.From(order.Total ?? order.Subtotal, order.Currency),
             order.CustomerName,
@@ -196,6 +208,9 @@ internal static class OrderApiMapper
             order.FulfillmentStatus is { } fulfillment ? ToCamel(fulfillment.ToString()) : null,
             ToCamel(order.RefundStatus.ToString()),
             isOwed,
+            OrderChannels.Of(order),
+            order.LocationId,
+            order.RegisterName,
             currency,
             order.CustomerId,
             order.CustomerName,

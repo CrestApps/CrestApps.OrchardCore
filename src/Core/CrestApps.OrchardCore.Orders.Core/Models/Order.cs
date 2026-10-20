@@ -96,6 +96,11 @@ public sealed class Order : CatalogItem
     public string RegisterId { get; set; }
 
     /// <summary>
+    /// Gets or sets the name the register had when the order was rung up on it.
+    /// </summary>
+    public string RegisterName { get; set; }
+
+    /// <summary>
     /// Gets or sets the register shift a point-of-sale order was rung up in.
     /// </summary>
     public string ShiftId { get; set; }
