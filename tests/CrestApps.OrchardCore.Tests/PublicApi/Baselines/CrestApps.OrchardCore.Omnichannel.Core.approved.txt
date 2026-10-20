@@ -250,6 +250,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public OmnichannelContactIndex() { }
         public string ContentItemId { get; set; }
         public string ContentType { get; set; }
+        public long DocumentId { get; set; }
         public bool IsConverted { get; set; }
         public bool Latest { get; set; }
         public string NormalizedPrimaryCellPhoneNumber { get; set; }

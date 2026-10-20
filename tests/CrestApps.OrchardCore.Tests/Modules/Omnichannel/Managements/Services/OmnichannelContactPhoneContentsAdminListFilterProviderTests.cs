@@ -2,8 +2,10 @@ using System.Linq.Expressions;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using YesSql;
 using YesSql.Filters.Query;
 
@@ -98,6 +100,96 @@ public sealed class OmnichannelContactPhoneContentsAdminListFilterProviderTests
 
         // Assert
         Assert.True(matches);
+    }
+
+    [Theory]
+    [InlineData("702", true)]
+    [InlineData("702 555", true)]
+    [InlineData("(702) 555-0104", true)]
+    [InlineData("702.555.0104", true)]
+    [InlineData("+1 702", true)]
+    [InlineData("70", false)]
+    [InlineData("John 2", false)]
+    [InlineData("Unit 702", false)]
+    [InlineData("702+1", false)]
+    [InlineData("", false)]
+    public void TryParsePhoneLikeTerm_ReadsOnlyASearchWrittenLikeAPhoneNumber(string value, bool expected)
+    {
+        // Act
+        var result = OmnichannelContactPhoneContentsAdminListFilterProvider.TryParsePhoneLikeTerm(value, out _);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("702555", true)]
+    [InlineData("7025550104", true)]
+    [InlineData("1702555", true)]
+    [InlineData("+1702555", true)]
+    [InlineData("5550104", false)]
+    [InlineData("+1555", false)]
+    public void SearchBoxMatch_MatchesTheNumbersThatStartWithTheSearch(string search, bool expected)
+    {
+        // Arrange
+        Assert.True(PhoneNumberSearchTerm.TryParse(search, out var searchTerm));
+
+        var predicate = OmnichannelContactPhonePredicates.SearchBoxMatch(searchTerm).Compile();
+        var row = CreateIndex("7025550104", "+17025550104");
+
+        // Act
+        var matches = EvaluateLikeSql(predicate, row);
+
+        // Assert
+        Assert.Equal(expected, matches);
+    }
+
+    [Fact]
+    public async Task DisplayTextOrPhoneMatch_FindsTheRecordsByNameOrByTheStartOfTheirNumber()
+    {
+        var (connectionString, path) = ContactPhoneTestStore.CreateDatabase("phone-search-box");
+        var store = await ContactPhoneTestStore.CreateAsync(connectionString);
+
+        try
+        {
+            // Arrange
+            var vegas = ContactPhoneTestStore.CreateRecord(ContactPhoneTestStore.ContactContentType, ("Cell", "+17025550104"));
+            var losAngeles = ContactPhoneTestStore.CreateRecord(ContactPhoneTestStore.ContactContentType, ("Home", "+13105557020"));
+            var named = ContactPhoneTestStore.CreateRecord(ContactPhoneTestStore.ContactContentType);
+            named.DisplayText = "Unit 702";
+
+            await ContactPhoneTestStore.SaveAsync(store, vegas, losAngeles, named);
+
+            // Act
+            var nationalMatches = await SearchAsync(store, "702");
+            var e164Matches = await SearchAsync(store, "+1310");
+
+            // Assert
+            // "702" is the start of one number and part of a name; the number that only holds it further in is left out.
+            Assert.Equal(
+                new[] { vegas.ContentItemId, named.ContentItemId }.Order(),
+                nationalMatches.Order());
+            Assert.Equal([losAngeles.ContentItemId], e164Matches);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, path);
+        }
+    }
+
+    private static async Task<string[]> SearchAsync(IStore store, string search)
+    {
+        Assert.True(OmnichannelContactPhoneContentsAdminListFilterProvider.TryParsePhoneLikeTerm(search, out var searchTerm));
+
+        await using var session = store.CreateSession();
+
+        var items = await session
+            .Query<ContentItem>()
+            .With<ContentItemIndex>(index => index.Latest)
+            .With(OmnichannelContactPhoneContentsAdminListFilterProvider.DisplayTextOrPhoneMatch(search, useExactMatch: false, searchTerm))
+            .ListAsync(TestContext.Current.CancellationToken);
+
+        return items.Select(item => item.ContentItemId).ToArray();
     }
 
     /// <summary>

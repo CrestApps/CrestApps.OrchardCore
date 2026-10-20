@@ -52,7 +52,7 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 
 ## Find a contact
 
-On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A plain number finds contacts whose main cell or home number contains those digits. This only happens on the Contacts list; on other content lists the search box matches names only.
+On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts whose main cell or home number **begins with** those digits, for example `702555`. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
 
 You can also use these search terms. The **Filters** menu of the list has a **Phone** card that reminds you of them.
 

@@ -730,6 +730,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom4Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom5Async() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
