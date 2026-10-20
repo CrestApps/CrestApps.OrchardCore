@@ -46,5 +46,11 @@ public static class CustomersConstants
         public const string Loyalty = "CrestApps.OrchardCore.Customers.Loyalty";
 
         public const string Referrals = "CrestApps.OrchardCore.Customers.Referrals";
+
+        /// <summary>
+        /// The customers API under <c>api/commerce/v1</c>: the signed-in buyer's own account, the checkout's Contact step,
+        /// and the store's customer records.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Customers.Api";
     }
 }

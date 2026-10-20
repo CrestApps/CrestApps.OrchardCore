@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
+using CrestApps.OrchardCore.Orders.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -199,4 +200,19 @@ public sealed class GiftCardsStartup : StartupBase
         services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
         services.AddNavigationProvider<GiftCardsAdminMenu>();
     }
+}
+
+[Feature(OrderConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapOrderCheckoutApi();
+}
+
+[Feature(OrderConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.GiftCards)]
+public sealed class GiftCardsApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapGiftCardCheckoutApi();
 }

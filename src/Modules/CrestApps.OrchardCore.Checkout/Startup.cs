@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Checkout.Recipes;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Checkout.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -163,4 +164,11 @@ public sealed class CouponDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddDeployment<CouponsDeploymentSource, CouponsDeploymentStep, CouponsDeploymentStepDisplayDriver>();
+}
+
+[Feature(CheckoutConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapCheckoutApi();
 }

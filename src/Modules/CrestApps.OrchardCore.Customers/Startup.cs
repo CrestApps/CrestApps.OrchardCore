@@ -14,6 +14,9 @@ using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Customers.Api;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -181,4 +184,28 @@ public sealed class ReferralsStartup : StartupBase
         services.AddNavigationProvider<ReferralAccountMenu>();
         services.AddNavigationProvider<ReferralSettingsAdminMenu>();
     }
+}
+
+[Feature(CustomersConstants.Features.Api)]
+[RequireFeatures(OrderConstants.Features.Orders, CheckoutConstants.Features.Api)]
+public sealed class CheckoutApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapCustomerCheckoutApi();
+}
+
+[Feature(CustomersConstants.Features.Api)]
+[RequireFeatures(CustomersConstants.Features.StoreCredit, CheckoutConstants.Features.Api)]
+public sealed class StoreCreditApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapStoreCreditCheckoutApi();
+}
+
+[Feature(CustomersConstants.Features.Api)]
+[RequireFeatures(CustomersConstants.Features.Loyalty, CheckoutConstants.Features.Api)]
+public sealed class LoyaltyApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapLoyaltyCheckoutApi();
 }

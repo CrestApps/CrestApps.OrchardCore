@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Commerce.Api;
 
@@ -13,6 +14,8 @@ public static class ApiProblems
     /// </summary>
     public static class Codes
     {
+        public const string EmptyCart = "empty-cart";
+
         public const string OutOfStock = "out-of-stock";
 
         public const string InvoiceChanged = "invoice-changed";
@@ -47,4 +50,36 @@ public static class ApiProblems
 
     public static ValidationProblem Validation(string field, string error)
         => Validation(new Dictionary<string, string[]> { [field] = [error] });
+
+    /// <summary>
+    /// The problems a form-shaped service recorded, keyed by the JSON names of the request's fields: <c>Email</c>
+    /// becomes <c>email</c>, and <c>BillingAddress.City</c> becomes <c>billingAddress.city</c>.
+    /// </summary>
+    public static ValidationProblem Validation(ModelStateDictionary modelState, string detail = null)
+    {
+        ArgumentNullException.ThrowIfNull(modelState);
+
+        var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
+
+        foreach (var (key, entry) in modelState)
+        {
+            if (entry.Errors.Count == 0)
+            {
+                continue;
+            }
+
+            var name = string.Join('.', key.Split('.').Select(part => part.Length == 0 ? part : char.ToLowerInvariant(part[0]) + part[1..]));
+            var messages = entry.Errors.Select(error => error.ErrorMessage).Where(message => !string.IsNullOrEmpty(message)).ToArray();
+
+            // An error without a message only kept a page on its step; there's nothing in it for a client.
+            if (messages.Length == 0)
+            {
+                continue;
+            }
+
+            errors[name] = errors.TryGetValue(name, out var existing) ? [.. existing, .. messages] : [.. messages];
+        }
+
+        return Validation(errors, detail);
+    }
 }

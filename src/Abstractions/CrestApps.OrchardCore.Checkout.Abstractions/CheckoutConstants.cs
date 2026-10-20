@@ -61,6 +61,11 @@ public static class CheckoutConstants
         /// active in the Development environment unless configuration explicitly allows it elsewhere.
         /// </summary>
         public const string TestProvider = "CrestApps.OrchardCore.Checkout.TestProvider";
+
+        /// <summary>
+        /// The checkout API under <c>api/commerce/v1</c>: reading a checkout, its codes, paying it and completing it.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Checkout.Api";
     }
 
     /// <summary>

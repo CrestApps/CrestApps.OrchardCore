@@ -86,6 +86,12 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
     internal static StoredResponse Capture(object result)
     {
+        // A typed union, such as Results<Ok<T>, ProblemHttpResult>, wraps the result it returned.
+        while (result is INestedHttpResult nested)
+        {
+            result = nested.Result;
+        }
+
         var statusCode = result is IStatusCodeHttpResult { StatusCode: { } code } ? code : StatusCodes.Status200OK;
         var value = result is IValueHttpResult valueResult ? valueResult.Value : result is IResult ? null : result;
 
