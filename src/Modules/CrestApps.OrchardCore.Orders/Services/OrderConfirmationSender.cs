@@ -59,7 +59,11 @@ public sealed class OrderConfirmationSender
 
         // A guest opens the order from the email; a signed-in customer finds it under My Orders.
         var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
-        var email = await _emailBuilder.BuildAsync(order, orderUrl);
+        var built = await _emailBuilder.BuildAsync(order, orderUrl);
+        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Confirmation, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        {
+            ["OrderUrl"] = orderUrl,
+        }, cancellationToken);
 
         var result = await emailService.SendAsync(new MailMessage
         {

@@ -122,12 +122,20 @@ public sealed class GiftCardEmailSender
             html.Append("<p><a href=\"").Append(_encoder.Encode(storeUrl)).Append("\">").Append(_encoder.Encode(S["Shop at {0}", site.SiteName].Value)).Append("</a></p>");
         }
 
+        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.GiftCard, order, subject, text.ToString(), html.ToString(), new Dictionary<string, string>
+        {
+            ["Code"] = card.Code,
+            ["Amount"] = value,
+            ["RecipientName"] = card.RecipientName,
+            ["Message"] = message,
+        }, cancellationToken);
+
         var result = await emailService.SendAsync(new MailMessage
         {
             To = card.RecipientEmail,
-            Subject = subject,
-            TextBody = text.ToString(),
-            HtmlBody = html.ToString(),
+            Subject = email.Subject,
+            TextBody = email.Text,
+            HtmlBody = email.Html,
         }, cancellationToken: cancellationToken);
 
         if (!result.Succeeded)
