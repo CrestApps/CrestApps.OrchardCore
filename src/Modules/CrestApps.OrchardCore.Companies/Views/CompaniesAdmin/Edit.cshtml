@@ -112,6 +112,34 @@
         <span class="hint">@T["The places the company has orders shipped to; its buyers pick one at checkout. The country is its two-letter code."]</span>
     </fieldset>
 
+    <fieldset class="mb-3">
+        <legend class="h5">@T["Punchout (OCI)"]</legend>
+        <div class="form-check mb-2">
+            <input asp-for="PunchoutEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="PunchoutEnabled" class="form-check-label">@T["Its procurement system shops here by punchout"]</label>
+            <span class="hint dashed">@T["The system opens the store with the company's key and sends the buyer back with the cart, where the order is approved and placed."]</span>
+        </div>
+        <div class="mb-2">
+            <label asp-for="PunchoutUser" class="form-label">@T["Punchout buyer"]</label>
+            <input asp-for="PunchoutUser" class="form-control" autocomplete="off" placeholder="@T["User name or email"]" />
+            <span asp-validation-for="PunchoutUser" class="text-danger"></span>
+            <span class="hint">@T["One of the buyers above, who only buys: the procurement system shops as them."]</span>
+        </div>
+        @if (Model.PunchoutKeyCreatedUtc is { } created)
+        {
+            <p class="small text-body-secondary mb-2">@T["The key was made {0:d}.", created]</p>
+        }
+        <div class="form-check mb-2">
+            <input asp-for="NewPunchoutKey" type="checkbox" class="form-check-input" />
+            <label asp-for="NewPunchoutKey" class="form-check-label">@T["Make a new key"]</label>
+            <span class="hint dashed">@T["The old key stops working. A key is made the first time punchout is turned on; it's shown once, after saving."]</span>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.PunchoutUrl))
+        {
+            <p class="small mb-0">@T["Punchout address:"] <code>@Model.PunchoutUrl</code></p>
+        }
+    </fieldset>
+
     <div class="mb-3">
         <div class="form-check form-switch">
             <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />

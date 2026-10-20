@@ -39,6 +39,11 @@ public sealed class Company : CatalogItem
 
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets how the company's procurement system shops the store by OCI punchout, or none.
+    /// </summary>
+    public CompanyPunchout Punchout { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime? ModifiedUtc { get; set; }
@@ -67,6 +72,26 @@ public sealed class CompanyBuyer
     /// Gets or sets the most an order the buyer places may come to before a company admin has to approve it, or none.
     /// </summary>
     public decimal? OrderLimit { get; set; }
+}
+
+/// <summary>
+/// A company's OCI punchout: its procurement system opens the store with the key, as the punchout buyer.
+/// </summary>
+public sealed class CompanyPunchout
+{
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user the procurement system shops as: one of the company's buyers.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SHA-256 hash of the key, as hex. The key itself is shown once, when it's made.
+    /// </summary>
+    public string KeyHash { get; set; }
+
+    public DateTime? KeyCreatedUtc { get; set; }
 }
 
 public enum CompanyBuyerRole

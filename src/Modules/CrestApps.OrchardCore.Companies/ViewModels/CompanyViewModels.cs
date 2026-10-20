@@ -50,6 +50,35 @@ public class CompanyEditViewModel
 
     [BindNever]
     public IList<SelectListItem> PriceLists { get; set; } = [];
+
+    public bool PunchoutEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user name or email of the buyer the procurement system shops as.
+    /// </summary>
+    public string PunchoutUser { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to make a new punchout key, which replaces the old one.
+    /// </summary>
+    public bool NewPunchoutKey { get; set; }
+
+    [BindNever]
+    public DateTime? PunchoutKeyCreatedUtc { get; set; }
+
+    [BindNever]
+    public string PunchoutUrl { get; set; }
+}
+
+public class PunchoutTransferViewModel
+{
+    public string HookUrl { get; set; }
+
+    public string Target { get; set; }
+
+    public IReadOnlyList<KeyValuePair<string, string>> Fields { get; set; } = [];
+
+    public int ItemCount { get; set; }
 }
 
 public class CompanyBuyerRowViewModel

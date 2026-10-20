@@ -122,6 +122,7 @@ public sealed class CompaniesAdminController : Controller
 
         await _companies.CreateAsync(company);
         await _notifier.SuccessAsync(H["The company was added. Its buyers buy for it once they sign in."]);
+        await NotifyNewKeyAsync(company);
 
         return RedirectToAction(nameof(Index));
     }
@@ -150,6 +151,9 @@ public sealed class CompaniesAdminController : Controller
             RequirePurchaseOrder = company.Terms?.RequirePurchaseOrder == true,
             MonthlyBudget = company.MonthlyBudget,
             PriceListId = company.PriceListId,
+            PunchoutEnabled = company.Punchout?.Enabled == true,
+            PunchoutUser = company.FindBuyer(company.Punchout?.UserId) is { } punchoutBuyer ? punchoutBuyer.Email ?? punchoutBuyer.UserName : null,
+            PunchoutKeyCreatedUtc = company.Punchout?.KeyCreatedUtc,
             Buyers = [.. company.Buyers.Select(buyer => new CompanyBuyerRowViewModel { User = buyer.Email ?? buyer.UserName, Role = buyer.Role, OrderLimit = buyer.OrderLimit })],
             Locations = [.. company.Locations.Select(location => new CompanyLocationRowViewModel
             {
@@ -180,12 +184,15 @@ public sealed class CompaniesAdminController : Controller
 
         if (!await ApplyAsync(model, company))
         {
+            model.PunchoutKeyCreatedUtc = company.Punchout?.KeyCreatedUtc;
+
             return View(await PopulateAsync(model, company.ItemId));
         }
 
         company.ModifiedUtc = _clock.UtcNow;
         await _companies.UpdateAsync(company);
         await _notifier.SuccessAsync(H["The company was saved."]);
+        await NotifyNewKeyAsync(company);
 
         return RedirectToAction(nameof(Index));
     }
@@ -299,6 +306,27 @@ public sealed class CompaniesAdminController : Controller
             });
         }
 
+        // The procurement system shops as one of the company's buyers, and never as a site administrator.
+        string punchoutUserId = null;
+
+        if (model.PunchoutEnabled)
+        {
+            var punchoutUser = string.IsNullOrWhiteSpace(model.PunchoutUser)
+                ? null
+                : await _userManager.FindByEmailAsync(model.PunchoutUser.Trim()) ?? await _userManager.FindByNameAsync(model.PunchoutUser.Trim());
+
+            punchoutUserId = punchoutUser is null ? null : await _userManager.GetUserIdAsync(punchoutUser);
+
+            if (punchoutUserId is null || !buyers.Any(buyer => buyer.UserId == punchoutUserId))
+            {
+                ModelState.AddModelError(nameof(model.PunchoutUser), S["Choose one of the company's buyers for punchout, by user name or email."]);
+            }
+            else if (await _userManager.IsInRoleAsync(punchoutUser, "Administrator"))
+            {
+                ModelState.AddModelError(nameof(model.PunchoutUser), S["A site administrator can't be the punchout buyer. Use a user who only buys."]);
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             return false;
@@ -319,13 +347,44 @@ public sealed class CompaniesAdminController : Controller
         company.PriceListId = string.IsNullOrWhiteSpace(model.PriceListId) ? null : model.PriceListId;
         company.Buyers = buyers;
         company.Locations = locations;
+        company.Punchout ??= new CompanyPunchout();
+        company.Punchout.Enabled = model.PunchoutEnabled;
+        company.Punchout.UserId = punchoutUserId;
+
+        // A new key, asked for or the first; it's shown once.
+        _newPunchoutKey = null;
+
+        if (model.PunchoutEnabled && (model.NewPunchoutKey || string.IsNullOrEmpty(company.Punchout.KeyHash)))
+        {
+            var (key, hash) = PunchoutService.NewKey();
+
+            _newPunchoutKey = key;
+            company.Punchout.KeyHash = hash;
+            company.Punchout.KeyCreatedUtc = _clock.UtcNow;
+        }
 
         return true;
     }
 
+    private string _newPunchoutKey;
+
+    private async Task NotifyNewKeyAsync(Company company)
+    {
+        if (_newPunchoutKey is null)
+        {
+            return;
+        }
+
+        await _notifier.WarningAsync(H["The new punchout key is <code>{0}</code>. Copy it into the procurement system now: it isn't shown again. Its punchout address is <code>{1}</code>.", _newPunchoutKey, PunchoutUrl(company.ItemId)]);
+    }
+
+    private string PunchoutUrl(string companyId)
+        => $"{Request.Scheme}://{Request.Host}{Request.PathBase}/punchout/oci/{companyId}";
+
     private async Task<CompanyEditViewModel> PopulateAsync(CompanyEditViewModel model, string itemId = null)
     {
         model.ItemId = itemId;
+        model.PunchoutUrl = itemId is null ? null : PunchoutUrl(itemId);
         model.StoreCurrency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
         model.PriceLists = [.. (await _priceLists.ListAllAsync(HttpContext.RequestAborted)).Select(list => new SelectListItem(list.Name, list.ItemId, list.ItemId == model.PriceListId))];
 

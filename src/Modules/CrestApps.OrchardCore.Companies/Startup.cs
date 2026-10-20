@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -46,6 +47,8 @@ public sealed class Startup : StartupBase
         // The Company step: the purchase order number, before payment.
         services.AddScoped<CompanyCheckoutStepService>();
         services.AddScoped<CompanyApprovalService>();
+        services.AddScoped<PunchoutService>();
+        services.AddScoped<ICartActionProvider, PunchoutCartActionProvider>();
         services.AddScoped<ICheckoutPaymentGate, CompanyApprovalPaymentGate>();
         services.AddScoped<ICheckoutHandler, CompanyCheckoutHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CompanyCheckoutStepDisplayDriver>();
