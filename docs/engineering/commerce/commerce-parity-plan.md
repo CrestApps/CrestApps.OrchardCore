@@ -464,6 +464,26 @@ Not built yet, and why:
 - **Catalogs per company.** A price list prices products; hiding products from a company needs the company in every search backend's index, like a market's.
 - **Quotes without email.** A quote is sent by email; a store without email can't mark one sent yet.
 
+## Phase 9 as built
+
+One branch, a commit per slice:
+
+- **PJ2 segments and campaigns.** A Marketing feature keeps each customer's purchases (orders, spend less refunds in the store's currency, first and last order, country), counted once per order and refund as they're paid, and built from earlier orders in the background. Commerce › Segments groups customers by them, such as lapsed buyers. Commerce › Campaigns emails a segment's customers who accept marketing: Liquid with the customer's name and purchases, a test send, now or at a time, in batches that pick up where they stopped. Each email has a protected one-click unsubscribe link.
+- **PK1a scheduled reports.** A Report Subscriptions feature emails any registered report daily, weekly or monthly for the period before, in the site's time zone, with its numbers and tables and the report as a CSV or Excel file.
+- **PJ1a editable emails.** Orders.Core's `IOrderEmailTemplates`: the order confirmation, order to pay, quote, shipped, return, gift card and left-checkout emails pass through the store's Liquid template of each (Settings › Commerce › Emails), with the built email as `{{ Content }}`, the order, and a layout around them all. A template that fails sends the built email.
+- **PJ1b reviews with photos, review requests.** Up to three photos on a review, stored in Media and checked by their bytes. A review request goes once per paid order, some days after paying, to buyers who accept marketing.
+- **PJ3a wishlists.** Save to wishlist on the product page, and Account › Wishlist with each product's add to cart.
+- **PJ3b automation templates.** Recipes adding workflows: a thank-you email when an order is paid, and alerts to the store when an order is canceled or stock runs low.
+- **PK1b cohorts and the dashboard.** A Cohorts and retention report (buyers by first-order month, and the share back in each of the six months after), and a Sales Summary admin dashboard widget.
+
+The exit gate holds: a lapsed-buyers segment (its days since the last order set to 0 on the test store, whose orders are all from today, so the 90-day rule wasn't tried on older orders) sent its one customer who accepts marketing the win-back campaign with their name in it, skipped the 19 who don't, and the customer unsubscribed from its link. The owner got the weekly sales report by email, with the CSV attached.
+
+Not built yet, and why:
+
+- **Campaign analytics.** Opens and clicks need tracking pixels and redirected links; a campaign shows sent, skipped and failed.
+- **Segments by product or category.** Purchases keep totals and dates, not what was bought.
+- **Dashboard charts.** The widget shows figures; charts stay in the reports.
+
 ## Headless API and point of sale (phase 6, planned)
 
 A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.

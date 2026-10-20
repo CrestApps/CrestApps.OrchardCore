@@ -1,0 +1,28 @@
+@using OrchardCore.DisplayManagement.Views
+@using CrestApps.OrchardCore.Reports.Subscriptions.Models
+@model ShapeViewModel<ReportSubscription>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+<div class="admin-list-secondary">
+    @switch (Model.Value.Frequency)
+    {
+        case ReportSubscriptionFrequency.Daily:
+            @T["Daily at {0}:00", Model.Value.Hour]
+            break;
+        case ReportSubscriptionFrequency.Weekly:
+            @T["Every {0} at {1}:00", System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(Model.Value.DayOfWeek), Model.Value.Hour]
+            break;
+        default:
+            @T["Monthly on day {0} at {1}:00", Model.Value.DayOfMonth, Model.Value.Hour]
+            break;
+    }
+    &middot; @Model.Value.Recipients
+    @if (Model.Value.NextRunUtc is { } next && Model.Value.IsEnabled)
+    {
+        <text>&middot; @T["next {0:g}", (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(next, DateTimeKind.Utc))).DateTime]</text>
+    }
+    @if (!string.IsNullOrEmpty(Model.Value.LastError))
+    {
+        <span class="text-danger d-block">@T["Last run didn't go out: {0}", Model.Value.LastError]</span>
+    }
+</div>

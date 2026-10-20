@@ -157,6 +157,15 @@ The buyer accepts the quote by paying it, from the email or their orders, before
 
 Sending a quote needs your site's email to be set up.
 
+## Write your own emails
+
+On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.
+
+- **Layout** goes around every one of them, such as your logo at the top and your address at the bottom. Put `{{ Content }}` where the email goes.
+- Each email has its own **Subject** and **Body**: the order confirmation, the order to pay you send a buyer, the quote, the shipped email, the return emails, the gift card, and the email to a buyer who left their checkout. Tick **Use my template** to use yours.
+
+In a template, `{{ Content }}` is the email as the store would send it, so a body of *Thanks so much!* followed by `{{ Content }}` adds a line above it. `{{ Order.OrderNumber }}` and `{{ Order.CustomerName }}` put in the order's details, and each email lists its own links, such as `{{ PayUrl }}`. A template that has a mistake can't be saved, and one that can't be filled in sends the store's own email instead.
+
 ## Store reports
 
 With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
@@ -167,6 +176,7 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Sales by product** | How many of each product and variant sold, and for how much before discounts, and the same for goods, digital products and services. |
 | **Sales by category** | What each category sold. A product in two categories counts in both. |
 | **Customers** | Who bought: first-time and returning buyers, how many have bought more than once, what buyers have spent in all on average, and your top buyers. |
+| **Cohorts and retention** | Buyers grouped by the month of their first order, and how many of each month's buyers came back in each of the six months after. |
 | **Checkouts** | The checkouts buyers started and how they ended: paid, payment failed, left or expired, or still open, with the share that were paid. |
 | **Sales by country** | Orders and totals for each country they ship to. |
 | **Tax on orders** | The tax orders charged, day by day. |
@@ -182,6 +192,14 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Product reviews** | With Product Reviews on: the reviews written, how many wait for approval, the stars given, and each product's rating. |
 
 Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
+
+### On the dashboard
+
+With the **Admin Dashboard** feature on, add the **Sales Summary** widget under **Manage Dashboard**. It shows your sales today, over the last 7 and 30 days, and the orders to ship.
+
+## Wishlists
+
+With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a product's page, and find what they saved under **Wishlist** in their account, each with its **Add to cart**. A product you stop selling drops off their wishlist.
 
 ## The buyer's account
 

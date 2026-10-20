@@ -45,6 +45,18 @@ How the filters work:
 
 Reports cannot be scheduled or emailed yet; run and export them when you need them.
 
+## Email a report on a schedule
+
+With **Report Subscriptions** on, any report can be emailed every day, week or month, such as your sales every Monday morning.
+
+1. On **Reports > Subscriptions**, click **Add subscription**.
+2. Choose the **Report**, and when to **Send** it: every day for the day before, every week for the 7 days before, or every month for the month before.
+3. Choose the **Day of the week** or **Day of the month**, and the **Hour**, in your site's time zone.
+4. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** to get the report as a file too.
+5. Click **Save**, or **Save and send now** to get one straight away.
+
+The email shows the report's numbers and tables. If one doesn't go out, such as when your site's email isn't set up, the list shows why. Untick **On** to pause a subscription.
+
 ## Agent time over long periods
 
 The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:

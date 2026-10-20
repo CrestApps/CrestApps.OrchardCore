@@ -1,0 +1,108 @@
+@using CrestApps.OrchardCore.Reports.Subscriptions
+@using CrestApps.OrchardCore.Reports.Subscriptions.Models
+@model ReportSubscriptionEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+<zone Name="Title">
+    <breadcrumb name="ReportSubscriptionEdit" title="@(Model.IsNew ? T["Add subscription"] : T["Edit subscription"])">
+        <breadcrumb-item id="ReportSubscriptions" action="Index" controller="ReportSubscriptions" area="@ReportsConstants.Feature" permission="@ReportSubscriptionPermissions.ManageReportSubscriptions.Name">@T["Report subscriptions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (!Model.CanEmail)
+{
+    <div class="alert alert-warning">@T["Reports are emailed once the site's email is set up."]</div>
+}
+
+@if (Model.Subscription is { } subscription)
+{
+    <div class="alert @(string.IsNullOrEmpty(subscription.LastError) ? "alert-info" : "alert-warning")">
+        @if (subscription.IsEnabled && subscription.NextRunUtc is { } next)
+        {
+            <span class="d-block">@T["Next goes out {0:g}.", await LocalAsync(next)]</span>
+        }
+        @if (subscription.LastRunUtc is { } last)
+        {
+            <span class="d-block">@(string.IsNullOrEmpty(subscription.LastError) ? T["Last went out {0:g}.", await LocalAsync(last)] : T["The run of {0:g} didn't go out: {1}", await LocalAsync(last), subscription.LastError])</span>
+        }
+    </div>
+}
+
+<form method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label asp-for="ReportName" class="form-label">@T["Report"]</label>
+            <select asp-for="ReportName" asp-items="Model.Reports" class="form-select"><option value="">@T["Choose a report"]</option></select>
+            <span asp-validation-for="ReportName" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" maxlength="255" />
+            <span class="hint">@T["Optional; the report's name when blank."]</span>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <label asp-for="Frequency" class="form-label">@T["Send"]</label>
+            <select asp-for="Frequency" class="form-select">
+                <option value="@ReportSubscriptionFrequency.Daily">@T["Every day, for the day before"]</option>
+                <option value="@ReportSubscriptionFrequency.Weekly">@T["Every week, for the 7 days before"]</option>
+                <option value="@ReportSubscriptionFrequency.Monthly">@T["Every month, for the month before"]</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="DayOfWeek" class="form-label">@T["Day of the week"]</label>
+            <select asp-for="DayOfWeek" class="form-select">
+                @foreach (var day in Enum.GetValues<DayOfWeek>())
+                {
+                    <option value="@day" selected="@(day == Model.DayOfWeek)">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(day)</option>
+                }
+            </select>
+            <span class="hint">@T["For a weekly report."]</span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="DayOfMonth" class="form-label">@T["Day of the month"]</label>
+            <input asp-for="DayOfMonth" type="number" min="1" max="28" class="form-control" />
+            <span class="hint">@T["For a monthly report, from 1 to 28."]</span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Hour" class="form-label">@T["Hour"]</label>
+            <input asp-for="Hour" type="number" min="0" max="23" class="form-control" />
+            <span class="hint">@T["From 0 to 23, in the site's time zone."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Recipients" class="form-label">@T["Email to"]</label>
+        <input asp-for="Recipients" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Recipients" class="text-danger"></span>
+        <span class="hint">@T["Email addresses, separated by commas."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="AttachmentFormat" class="form-label">@T["Attach the report as"]</label>
+        <select asp-for="AttachmentFormat" asp-items="Model.Formats" class="form-select" style="max-width: 16rem;"><option value="">@T["No file"]</option></select>
+        <span class="hint">@T["The email shows the report's numbers and tables either way."]</span>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+            <span class="hint dashed">@T["A subscription that's off isn't sent."]</span>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="submit" name="submit" value="save" class="btn btn-primary save">@T["Save"]</button>
+        <button type="submit" name="submit" value="send" class="btn btn-secondary">@T["Save and send now"]</button>
+        <a asp-action="Index" class="btn btn-link">@T["Cancel"]</a>
+    </div>
+</form>

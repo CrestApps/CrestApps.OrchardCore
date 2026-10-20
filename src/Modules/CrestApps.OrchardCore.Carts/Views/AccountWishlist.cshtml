@@ -1,0 +1,34 @@
+@model CrestApps.OrchardCore.Carts.Wishlists.WishlistViewModel
+
+@* The products the signed-in shopper saved, newest first, each with its add to cart. *@
+
+@if (Model.Entries.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <p class="mb-1">@T["Your wishlist is empty."]</p>
+            <p class="text-muted small mb-0">@T["Save products from their pages to find them here later."]</p>
+        </div>
+    </div>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var entry in Model.Entries)
+        {
+            <li class="list-group-item py-3">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div class="flex-grow-1">
+                        <a class="fw-semibold" href="@Url.Action("Display", "Item", new { area = "OrchardCore.Contents", contentItemId = entry.Product.ContentItemId })">@entry.Product.DisplayText</a>
+                        <div class="mt-2" style="max-width: 24rem;">
+                            @await DisplayAsync(entry.Actions)
+                        </div>
+                    </div>
+                    <form method="post" action="@Url.RouteUrl("WishlistRemove", new { contentItemId = entry.Product.ContentItemId })" class="no-multisubmit" asp-antiforgery="true">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Remove"]</button>
+                    </form>
+                </div>
+            </li>
+        }
+    </ul>
+}

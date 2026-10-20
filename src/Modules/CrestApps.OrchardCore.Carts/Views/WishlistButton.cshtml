@@ -1,0 +1,26 @@
+@model CrestApps.OrchardCore.Carts.Wishlists.WishlistButtonViewModel
+
+@* Save to wishlist on a product's page: a heart that saves it, or takes it off when it's saved. *@
+
+<div class="product-wishlist my-2">
+    @if (!Model.IsSignedIn)
+    {
+        <a class="btn btn-link btn-sm px-0" href="@Url.Action("Login", "Account", new { area = "OrchardCore.Users", returnUrl = Model.ReturnUrl })">
+            <i class="fa-regular fa-heart me-1" aria-hidden="true"></i>@T["Sign in to save it to your wishlist"]
+        </a>
+    }
+    else if (Model.IsSaved)
+    {
+        <form method="post" action="@Url.RouteUrl("WishlistRemove", new { contentItemId = Model.ContentItemId })" class="d-inline no-multisubmit" asp-antiforgery="true">
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" class="btn btn-link btn-sm px-0" aria-pressed="true"><i class="fa-solid fa-heart text-danger me-1" aria-hidden="true"></i>@T["Saved to your wishlist"]</button>
+        </form>
+    }
+    else
+    {
+        <form method="post" action="@Url.RouteUrl("WishlistAdd", new { contentItemId = Model.ContentItemId })" class="d-inline no-multisubmit" asp-antiforgery="true">
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" class="btn btn-link btn-sm px-0" aria-pressed="false"><i class="fa-regular fa-heart me-1" aria-hidden="true"></i>@T["Save to wishlist"]</button>
+        </form>
+    }
+</div>

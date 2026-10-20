@@ -1,0 +1,86 @@
+{
+  "name": "CommerceCanceledOrderAlert",
+  "displayName": "Automation: canceled order alert",
+  "description": "Adds a workflow that emails the store when an order is canceled, with why. It's added turned off: open Workflows > Email the store when an order is canceled, set the address it goes to, and turn it on.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "automation",
+    "workflow",
+    "alert"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "OrchardCore.Workflows",
+        "OrchardCore.Email"
+      ]
+    },
+    {
+      "name": "WorkflowType",
+      "data": [
+        {
+          "WorkflowTypeId": "4cmcanceledorderalertflow1",
+          "Name": "Email the store when an order is canceled",
+          "IsEnabled": false,
+          "IsSingleton": false,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4cmcanceledorderevent00001",
+              "Name": "OrderCanceledEvent",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Order canceled"
+                }
+              }
+            },
+            {
+              "ActivityId": "4cmcanceledorderemail00001",
+              "Name": "EmailTask",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Tell the store"
+                },
+                "Recipients": {
+                  "Expression": "orders@example.com"
+                },
+                "Subject": {
+                  "Expression": "Order {{ Workflow.Input.OrderNumber }} was canceled"
+                },
+                "BodyFormat": "Html",
+                "HtmlBody": {
+                  "Expression": "<p>Order {{ Workflow.Input.OrderNumber }} for {{ Workflow.Input.CustomerEmail }} was canceled: {{ Workflow.Input.Reason }}.</p><p>{{ Workflow.Input.Note }}</p>"
+                }
+              }
+            }
+          ],
+          "Transitions": [
+            {
+              "Id": 0,
+              "SourceActivityId": "4cmcanceledorderevent00001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4cmcanceledorderemail00001"
+            }
+          ],
+          "Properties": {}
+        }
+      ]
+    }
+  ]
+}

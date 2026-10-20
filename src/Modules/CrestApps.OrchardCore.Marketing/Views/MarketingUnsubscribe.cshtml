@@ -1,0 +1,22 @@
+@model UnsubscribeViewModel
+
+@* A campaign email's unsubscribe page: one click stops the store's news and offers; order emails still come. *@
+
+@if (!Model.IsValid)
+{
+    <h1 class="h4">@T["This link doesn't work any more"]</h1>
+    <p>@T["Unsubscribe from the link in a newer email, or change your preferences in your account."]</p>
+}
+else if (Model.IsUnsubscribed)
+{
+    <h1 class="h4">@T["You're unsubscribed"]</h1>
+    <p>@T["{0} won't get our news and offers any more. Emails about your orders still come.", Model.Email]</p>
+}
+else
+{
+    <h1 class="h4">@T["Unsubscribe from our news and offers?"]</h1>
+    <p>@T["{0} will stop getting them. Emails about your orders still come.", Model.Email]</p>
+    <form method="post" action="@Url.RouteUrl("MarketingUnsubscribe", new { token = Model.Token })" class="no-multisubmit">
+        <button type="submit" class="btn btn-primary">@T["Unsubscribe"]</button>
+    </form>
+}

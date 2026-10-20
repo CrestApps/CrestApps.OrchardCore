@@ -1,0 +1,8 @@
+@using OrchardCore.DisplayManagement.Views
+@model ShapeViewModel<CrestApps.OrchardCore.Reports.Subscriptions.Models.ReportSubscription>
+
+<a asp-action="Edit" asp-controller="ReportSubscriptions" asp-route-itemId="@Model.Value.ItemId">@Model.Value.Name</a>
+@if (!Model.Value.IsEnabled)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal ms-1">@T["Off"]</span>
+}

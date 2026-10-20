@@ -89,6 +89,11 @@ public sealed class ReviewService
         review.Rating = Math.Clamp(submission.Rating, 1, ReviewsConstants.MaxRating);
         review.Title = Clip(submission.Title, ReviewsConstants.MaxTitleLength);
         review.Body = Clip(submission.Body, ReviewsConstants.MaxBodyLength);
+
+        if (submission.Photos is not null)
+        {
+            review.Photos = [.. submission.Photos.Take(ReviewPhotoStore.MaxPhotos)];
+        }
         review.VerifiedPurchase = eligibility.Order is not null;
         review.OrderId = eligibility.Order?.ItemId;
         review.Status = settings.RequireApproval ? ReviewStatus.Pending : ReviewStatus.Approved;
@@ -249,4 +254,9 @@ public sealed class ReviewSubmission
     public string Title { get; set; }
 
     public string Body { get; set; }
+
+    /// <summary>
+    /// Gets or sets the review's photos, as media paths, or <see langword="null"/> to keep the ones it has.
+    /// </summary>
+    public IReadOnlyList<string> Photos { get; set; }
 }

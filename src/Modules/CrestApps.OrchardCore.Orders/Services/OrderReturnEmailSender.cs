@@ -66,7 +66,13 @@ public sealed class OrderReturnEmailSender
         using var language = OrderCulture.Use(order?.Culture);
 
         var orderUrl = order is null ? null : await _links.CreateUrlAsync(order);
-        var email = Build(orderReturn, kind, (await _siteService.GetSettingsAsync<ReturnSettings>()).Instructions, orderUrl);
+        var built = Build(orderReturn, kind, (await _siteService.GetSettingsAsync<ReturnSettings>()).Instructions, orderUrl);
+        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Return, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        {
+            ["ReturnNumber"] = orderReturn.Number,
+            ["ReturnStatus"] = kind.ToString(),
+            ["OrderUrl"] = orderUrl,
+        }, cancellationToken);
 
         var result = await emailService.SendAsync(new MailMessage
         {

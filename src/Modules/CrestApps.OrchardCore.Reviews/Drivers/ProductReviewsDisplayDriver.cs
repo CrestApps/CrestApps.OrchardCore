@@ -20,12 +20,14 @@ internal sealed class ProductReviewsDisplayDriver : ContentPartDisplayDriver<Pro
     private readonly ReviewService _reviews;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly ReviewPhotoStore _photos;
 
-    public ProductReviewsDisplayDriver(ReviewService reviews, IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    public ProductReviewsDisplayDriver(ReviewService reviews, IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, ReviewPhotoStore photos)
     {
         _reviews = reviews;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _photos = photos;
     }
 
     public override IDisplayResult Display(ProductPart part, BuildPartDisplayContext context)
@@ -53,6 +55,7 @@ internal sealed class ProductReviewsDisplayDriver : ContentPartDisplayDriver<Pro
                 model.IsSignedIn = !string.IsNullOrEmpty(userId);
                 model.DefaultAuthorName = user?.Identity?.Name;
                 model.ReturnUrl = httpContext is null ? null : httpContext.Request.PathBase + httpContext.Request.Path;
+                model.CanAddPhotos = _photos.IsAvailable;
 
                 if (model.IsSignedIn && await _authorizationService.AuthorizeAsync(user, ReviewsPermissions.SubmitReviews))
                 {

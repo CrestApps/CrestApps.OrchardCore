@@ -1,0 +1,54 @@
+@model CrestApps.OrchardCore.Orders.Drivers.OrderEmailTemplateSettingsViewModel
+@using CrestApps.OrchardCore.Orders.Core.Services
+
+@{
+    var names = new Dictionary<string, (LocalizedHtmlString Name, LocalizedHtmlString Values)>
+    {
+        [OrderEmailKinds.Confirmation] = (T["Order confirmation"], T["{{{{ OrderUrl }}}}: the order's page, for a guest."]),
+        [OrderEmailKinds.Invoice] = (T["Order to pay (sent by staff)"], T["{{{{ PayUrl }}}}: where the buyer pays."]),
+        [OrderEmailKinds.Quote] = (T["Quote"], T["{{{{ PayUrl }}}}: where the buyer accepts it by paying."]),
+        [OrderEmailKinds.Shipped] = (T["Shipment on its way"], T["{{{{ TrackingUrl }}}}, {{{{ Carrier }}}}, {{{{ ShipmentNumber }}}} and {{{{ OrderUrl }}}}."]),
+        [OrderEmailKinds.Return] = (T["Return"], T["{{{{ ReturnNumber }}}}, {{{{ ReturnStatus }}}} and {{{{ OrderUrl }}}}."]),
+        [OrderEmailKinds.GiftCard] = (T["Gift card"], T["{{{{ Code }}}}, {{{{ Amount }}}}, {{{{ RecipientName }}}} and {{{{ Message }}}}."]),
+        [OrderEmailKinds.Recovery] = (T["Left checkout"], T["{{{{ RecoveryUrl }}}}: back to the checkout."]),
+    };
+}
+
+<p class="text-body-secondary">@T["Write the store's own emails about orders. In each, {{{{ Content }}}} is the email as the store would send it, {{{{ Order }}}} the order (such as {{{{ Order.OrderNumber }}}} and {{{{ Order.CustomerName }}}}), {{{{ Subject }}}} its subject and {{{{ StoreName }}}} the store's name. An email whose template can't render is sent as built."]</p>
+
+<div class="mb-4">
+    <label asp-for="Layout" class="form-label">@T["Layout"]</label>
+    <textarea asp-for="Layout" class="form-control font-monospace" rows="6" placeholder="@T["<img src=&quot;...&quot; alt=&quot;Logo&quot;> {{{{ Content }}}} <p>Our address</p>"]"></textarea>
+    <span asp-validation-for="Layout" class="text-danger"></span>
+    <span class="hint">@T["Optional. HTML around every email about an order, such as your logo and address, with {{{{ Content }}}} where the email goes."]</span>
+</div>
+
+@for (var i = 0; i < Model.Templates.Count; i++)
+{
+    var template = Model.Templates[i];
+    var (name, values) = names.TryGetValue(template.Kind, out var found) ? found : (new LocalizedHtmlString(template.Kind, template.Kind), null);
+
+    <fieldset class="mb-4 border-top pt-3">
+        <legend class="h6">@name</legend>
+        <input type="hidden" name="@Html.NameFor(m => m.Templates[i].Kind)" value="@template.Kind" />
+        <div class="form-check mb-2">
+            <input asp-for="Templates[i].IsEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Templates[i].IsEnabled" class="form-check-label">@T["Use my template"]</label>
+            <span class="hint dashed">@T["Off sends the email as built, with the layout around it."]</span>
+        </div>
+        <div class="mb-2">
+            <label asp-for="Templates[i].Subject" class="form-label">@T["Subject"]</label>
+            <input asp-for="Templates[i].Subject" class="form-control" placeholder="@T["The email's own subject"]" />
+            <span asp-validation-for="Templates[i].Subject" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Templates[i].Body" class="form-label">@T["Body"]</label>
+            <textarea asp-for="Templates[i].Body" class="form-control font-monospace" rows="5"></textarea>
+            <span asp-validation-for="Templates[i].Body" class="text-danger"></span>
+            @if (values is not null)
+            {
+                <span class="hint">@T["Also:"] @values</span>
+            }
+        </div>
+    </fieldset>
+}

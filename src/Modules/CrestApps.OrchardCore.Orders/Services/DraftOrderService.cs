@@ -205,13 +205,17 @@ public sealed class DraftOrderService
             return false;
         }
 
-        var (subject, text, html) = BuildInvoiceEmail(order, viewUrl + "/pay");
+        var (builtSubject, builtText, builtHtml) = BuildInvoiceEmail(order, viewUrl + "/pay");
+        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
+        {
+            ["PayUrl"] = viewUrl + "/pay",
+        }, cancellationToken);
         var result = await emailService.SendAsync(new MailMessage
         {
             To = order.CustomerEmail,
-            Subject = subject,
-            TextBody = text,
-            HtmlBody = html,
+            Subject = email.Subject,
+            TextBody = email.Text,
+            HtmlBody = email.Html,
         }, cancellationToken: cancellationToken);
 
         if (!result.Succeeded)
