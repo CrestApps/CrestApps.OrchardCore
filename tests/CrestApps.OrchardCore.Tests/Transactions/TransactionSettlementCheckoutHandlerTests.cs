@@ -706,6 +706,6 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         var hostEnvironment = new Mock<IHostEnvironment>();
         hostEnvironment.SetupGet(environment => environment.EnvironmentName).Returns("Development");
 
-        return new PayLaterCheckoutPaymentProvider(SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings()), hostEnvironment.Object, Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
+        return new PayLaterCheckoutPaymentProvider(SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings { Enabled = true }), hostEnvironment.Object, Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
     }
 }

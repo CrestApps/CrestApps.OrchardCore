@@ -93,7 +93,7 @@ The **Pay Later** feature adds three ways to buy now and pay afterwards. None of
 
 | Method | Offered | What the buyer is told |
 | --- | --- | --- |
-| **Pay Later** | On by default. On every checkout that buys something new, subscriptions included. | *Confirm now and pay later.* |
+| **Pay Later** | When you turn it on. On every checkout that buys something new, subscriptions included. | *Confirm now and pay later.* |
 | **Bank transfer** | Off until you turn it on and add your bank details. One-time purchases only. | *Place the order now and transfer the money from your bank.* Your bank details, at checkout, on the confirmation and on the order's page, with the order number as the reference to quote. |
 | **Cash on delivery** | Off until you turn it on. Only for orders that are delivered: an order of downloads or services doesn't offer it. | *Pay when your order is delivered.* and your note, such as *Our courier takes cash and cards.* |
 
@@ -116,7 +116,7 @@ Open **Settings > Commerce > Offline payments**, change what you need, and click
 
 | Field | What it does |
 | --- | --- |
-| **Offer Pay Later at checkout** | Whether Pay Later is offered. On by default. |
+| **Offer Pay Later at checkout** | Whether Pay Later is offered. Off until you tick it. |
 | **Net term (days)** | How many days after the purchase a Pay Later balance falls due. The due date drives the reminders. Enter 0 to record the balance without a due date. The default is 30. |
 | **Offer Bank transfer at checkout** | Whether Bank transfer is offered. It can't be turned on without bank details. |
 | **Bank details** | The account name, bank, account number or IBAN, and anything else buyers need to transfer the money. Shown exactly as you type it, line by line. |

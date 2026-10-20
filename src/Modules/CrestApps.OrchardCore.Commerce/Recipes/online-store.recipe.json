@@ -68,13 +68,6 @@
       ]
     },
     {
-      "name": "settings",
-      "PayLaterSettings": {
-        "Enabled": false,
-        "NetTermDays": 30
-      }
-    },
-    {
       "name": "themes",
       "admin": "TheAdmin",
       "site": "CrestApps.OrchardCore.StorefrontTheme"

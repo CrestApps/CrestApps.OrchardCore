@@ -590,7 +590,7 @@ Found and fixed on fresh sites:
 
 - The guide called Stripe unconfigured on a site whose keys come from configuration. It reads the resolved Stripe options now.
 - The recipe's Product type tracked stock, so a new owner's first product was out of stock and couldn't be bought. The recipe leaves stock out; owners add it when they keep stock.
-- Pay later is on by default and was offered to every shopper of a new store. The setup recipe turns it off, and the guide's offline payments step shows when it's on. The default stays as it was for existing sites.
+- Pay later was on by default and offered to every shopper of a new store. It's off by default now, everywhere: a store turns it on under Settings › Commerce › Offline payments, and the guide's offline payments step shows when it's on.
 - TheTheme pins a 60px footer and pads the page for a fixed navbar. The theme undoes both for its taller footer and sticky header.
 
 The exit gate holds:

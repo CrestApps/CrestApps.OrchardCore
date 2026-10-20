@@ -52,7 +52,7 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
 
         var done = offered.Count > 0;
 
-        // Pay later is on unless turned off, so the owner sees that anyone can order on an invoice.
+        // When pay later is on, the owner sees that anyone can order on an invoice.
         if (payLater.Enabled)
         {
             offered.Add(S["pay later, on an invoice due in {0} days", payLater.NetTermDays]);

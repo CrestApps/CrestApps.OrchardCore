@@ -31,7 +31,7 @@ public sealed class OfflinePaymentMethodsTests
 
     private BankTransferSettings _bankTransfer = new();
     private CashOnDeliverySettings _cashOnDelivery = new();
-    private PayLaterSettings _payLater = new();
+    private PayLaterSettings _payLater = new() { Enabled = true };
 
     [Fact]
     public async Task BankTransferNeedsToBeOnAndToHaveBankDetails()
@@ -65,15 +65,16 @@ public sealed class OfflinePaymentMethodsTests
     }
 
     [Fact]
-    public async Task PayLaterCanBeTurnedOff_AndIsOnByDefault()
+    public async Task PayLaterIsOffByDefault_AndCanBeTurnedOn()
     {
         var provider = PayLater();
         var session = new CheckoutSession { SessionId = "session-1" };
 
-        Assert.True(await provider.IsAvailableAsync(session, TestContext.Current.CancellationToken));
-
-        _payLater = new PayLaterSettings { Enabled = false };
+        _payLater = new PayLaterSettings();
         Assert.False(await provider.IsAvailableAsync(session, TestContext.Current.CancellationToken));
+
+        _payLater = new PayLaterSettings { Enabled = true };
+        Assert.True(await provider.IsAvailableAsync(session, TestContext.Current.CancellationToken));
     }
 
     [Fact]
