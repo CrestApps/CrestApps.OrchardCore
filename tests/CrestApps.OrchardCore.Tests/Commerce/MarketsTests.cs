@@ -174,6 +174,27 @@ public sealed class MarketsTests
         Assert.Equal(inclusive ? TaxPriceType.Inclusive : TaxPriceType.Exclusive, profile.PriceType);
     }
 
+    [Fact]
+    public async Task AProductLeftOutOfTheShoppersMarket_IsntSoldThere()
+    {
+        var store = new Mock<IMarketStore>();
+        store.Setup(value => value.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Germany()]);
+        var german = new DefaultHttpContext();
+        german.Request.Headers[CrestApps.OrchardCore.Markets.MarketsConstants.HeaderName] = "DE";
+        var american = new DefaultHttpContext();
+        var product = new ContentItem { ContentType = "Product", ContentItemId = "product-1" };
+        product.Apply(nameof(ProductMarketsPart), new ProductMarketsPart { NotSoldIn = ["de"] });
+
+        string RestrictionIn(HttpContext httpContext)
+            => new MarketSaleRestriction(new ShopperMarketService(store.Object, new HttpContextAccessor { HttpContext = httpContext }, Mock.Of<ISiteService>()), new PassThroughStringLocalizer<MarketSaleRestriction>())
+                .GetRestrictionAsync(product, TestContext.Current.CancellationToken).AsTask().GetAwaiter().GetResult();
+
+        Assert.Equal("Not sold in Germany.", RestrictionIn(german));
+        Assert.Null(RestrictionIn(american));
+        Assert.Null(await new MarketSaleRestriction(new ShopperMarketService(store.Object, new HttpContextAccessor { HttpContext = german }, Mock.Of<ISiteService>()), new PassThroughStringLocalizer<MarketSaleRestriction>())
+            .GetRestrictionAsync(new ContentItem { ContentType = "Product" }, TestContext.Current.CancellationToken));
+    }
+
     private static Market Germany()
         => new() { ItemId = "de", Name = "Germany", Countries = ["DE", "AT"], Currency = "EUR", ExchangeRate = 0.92m, Rounding = MarketPriceRounding.EndIn99, PricesIncludeTax = true };
 

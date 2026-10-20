@@ -79,6 +79,14 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             return null;
         }
 
+        // One the shopper can't buy here says why instead.
+        if (_httpContextAccessor.HttpContext is { } requestContext &&
+            await requestContext.RequestServices.GetServices<IProductSaleRestriction>().GetRestrictionAsync(contentItem) is { } restriction)
+        {
+            return Initialize<AddToCartUnavailableViewModel>("AddToCartUnavailable", model => model.Reason = restriction)
+                .Location(ProductActionDisplayType, "Actions:5");
+        }
+
         // Only what can be bought online: the resolver refuses a listed-only product and one with no price.
         var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { VariantId = variants.FirstOrDefault()?.VariantId });
 

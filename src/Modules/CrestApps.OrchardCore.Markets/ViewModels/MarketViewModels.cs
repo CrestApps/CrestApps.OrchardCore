@@ -50,6 +50,17 @@ public class MarketEditViewModel
 }
 
 /// <summary>
+/// "Not sold in" on a product's editor.
+/// </summary>
+public class ProductMarketsEditViewModel
+{
+    public List<string> NotSoldIn { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<Market> Markets { get; set; } = [];
+}
+
+/// <summary>
 /// The market picker on the storefront's navigation bar.
 /// </summary>
 public class MarketPickerViewModel

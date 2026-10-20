@@ -47,6 +47,7 @@ public sealed class CartService : ICartService
     private readonly CartOptions _options;
     private readonly ILogger _logger;
     private readonly IShopperCurrency _shopperCurrency;
+    private readonly IEnumerable<IProductSaleRestriction> _restrictions = [];
 
     internal readonly IStringLocalizer S;
 
@@ -91,10 +92,12 @@ public sealed class CartService : ICartService
         IOptions<CartOptions> options,
         ILogger<CartService> logger,
         IStringLocalizer<CartService> stringLocalizer,
-        IShopperCurrency shopperCurrency)
+        IShopperCurrency shopperCurrency,
+        IEnumerable<IProductSaleRestriction> restrictions)
         : this(store, session, tokens, httpContextAccessor, contentManager, snapshotResolver, priceResolver, availability, clock, options, logger, stringLocalizer)
     {
         _shopperCurrency = shopperCurrency;
+        _restrictions = restrictions ?? [];
     }
 
     public async Task<Cart> GetCurrentAsync(CancellationToken cancellationToken = default)
@@ -458,6 +461,12 @@ public sealed class CartService : ICartService
         if (_options.ExcludedParts.Any(contentItem.Has))
         {
             return new ResolvedLine(S["{0} is bought on its own, not through the cart.", title]) { ContentItem = contentItem, Title = title };
+        }
+
+        // One the shopper can't buy, such as outside the markets it's sold in.
+        if (await _restrictions.GetRestrictionAsync(contentItem, cancellationToken) is { } restriction)
+        {
+            return new ResolvedLine(new LocalizedString(restriction, $"{title}: {restriction}")) { ContentItem = contentItem, Title = title };
         }
 
         var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity }, cancellationToken);

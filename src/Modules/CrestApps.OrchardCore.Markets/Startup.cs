@@ -5,9 +5,12 @@ using CrestApps.OrchardCore.Markets.Migrations;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Markets.Navigation;
 using CrestApps.OrchardCore.Markets.Services;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin.Models;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -31,6 +34,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ShopperMarketService>();
         services.AddScoped<IShopperCurrency>(serviceProvider => serviceProvider.GetRequiredService<ShopperMarketService>());
         services.AddScoped<ICheckoutTaxProfileHandler, MarketCheckoutTaxProfileHandler>();
+
+        // A product can be left out of markets: not sold to their shoppers.
+        services.AddScoped<IProductSaleRestriction, MarketSaleRestriction>();
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductMarketsDisplayDriver>();
 
         services.AddPermissionProvider<MarketsPermissionProvider>();
         services.AddNavigationProvider<MarketsAdminMenu>();

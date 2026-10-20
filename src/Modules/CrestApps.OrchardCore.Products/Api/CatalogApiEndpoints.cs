@@ -142,6 +142,7 @@ internal sealed class CatalogApiProductReader
     private readonly LinkGenerator _linkGenerator;
     private readonly IClock _clock;
     private readonly IShopperCurrency _shopperCurrency;
+    private readonly IEnumerable<IProductSaleRestriction> _restrictions;
 
     public CatalogApiProductReader(
         ProductSearchDocumentBuilder documentBuilder,
@@ -152,7 +153,8 @@ internal sealed class CatalogApiProductReader
         IContentManager contentManager,
         LinkGenerator linkGenerator,
         IClock clock,
-        IShopperCurrency shopperCurrency)
+        IShopperCurrency shopperCurrency,
+        IEnumerable<IProductSaleRestriction> restrictions)
     {
         _documentBuilder = documentBuilder;
         _listingService = listingService;
@@ -163,6 +165,7 @@ internal sealed class CatalogApiProductReader
         _linkGenerator = linkGenerator;
         _clock = clock;
         _shopperCurrency = shopperCurrency;
+        _restrictions = restrictions;
     }
 
     public async Task<ApiProductSummary> ReadSummaryAsync(ContentItem item, HttpContext httpContext)
@@ -181,7 +184,7 @@ internal sealed class CatalogApiProductReader
             document.Sku,
             price ?? await ShowAsync(document.Price, document.Currency, httpContext.RequestAborted),
             await ShowAsync(document.CompareAtPrice, document.Currency, httpContext.RequestAborted),
-            document.IsPurchasable,
+            document.IsPurchasable && await _restrictions.GetRestrictionAsync(item, httpContext.RequestAborted) is null,
             _listingService.GetImageUrl(document.ImagePath),
             await GetUrlAsync(item, httpContext));
     }
@@ -280,7 +283,7 @@ internal sealed class CatalogApiProductReader
             document.Sku,
             await ResolveAsync(item, variantId: null, priceId: null, cancellationToken) ?? await ShowAsync(document.Price, currency, cancellationToken),
             await ShowAsync(document.CompareAtPrice, currency, cancellationToken),
-            document.IsPurchasable,
+            document.IsPurchasable && await _restrictions.GetRestrictionAsync(item, cancellationToken) is null,
             await GetUrlAsync(item, httpContext),
             images,
             prices,
