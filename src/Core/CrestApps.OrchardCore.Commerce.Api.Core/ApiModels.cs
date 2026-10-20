@@ -7,8 +7,12 @@ namespace CrestApps.OrchardCore.Commerce.Api;
 /// </summary>
 public sealed record ApiMoney(decimal Amount, string Currency)
 {
+    /// <summary>
+    /// Returns the amount in the currency, or <see langword="null"/> without a currency: an amount nobody can say the
+    /// currency of isn't money a client can show.
+    /// </summary>
     public static ApiMoney From(decimal amount, string currency)
-        => new(Money.Round(amount, currency), currency);
+        => string.IsNullOrEmpty(currency) ? null : new(Money.Round(amount, currency), currency);
 
     public static ApiMoney From(decimal? amount, string currency)
         => amount is null ? null : From(amount.Value, currency);

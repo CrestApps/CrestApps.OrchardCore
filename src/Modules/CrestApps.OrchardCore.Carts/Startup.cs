@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Carts.Api;
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Carts.Core.Indexes;
 using CrestApps.OrchardCore.Carts.Core.Models;
@@ -11,6 +12,8 @@ using CrestApps.OrchardCore.Carts.ViewModels;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using Fluid;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -63,4 +66,11 @@ public sealed class Startup : StartupBase
             options.MemberAccessStrategy.Register<CartLine>();
         });
     }
+}
+
+[Feature(CartConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapCartApi();
 }
