@@ -1,0 +1,82 @@
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Settings;
+
+namespace CrestApps.OrchardCore.Taxation.TaxJar;
+
+/// <summary>
+/// The TaxJar account sales tax is worked out with, under Commerce › Taxation › TaxJar.
+/// </summary>
+public sealed class TaxJarSettings
+{
+    public const string ProtectionPurpose = "CrestApps.OrchardCore.Taxation.TaxJar.ApiKey";
+
+    /// <summary>
+    /// Gets or sets the protected API token.
+    /// </summary>
+    public string ApiKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether TaxJar's sandbox answers, for a sandbox token.
+    /// </summary>
+    public bool UseSandbox { get; set; }
+
+    /// <summary>
+    /// Gets or sets the two-letter codes of the countries TaxJar works tax out for; orders to the others are taxed by
+    /// the store's own rules.
+    /// </summary>
+    public List<string> Countries { get; set; } = ["US"];
+}
+
+/// <summary>
+/// The TaxJar settings as the provider reads them: the token unprotected. Saving the settings restarts the tenant, so
+/// the provider sees them at once.
+/// </summary>
+public sealed class TaxJarOptions
+{
+    public string ApiKey { get; set; }
+
+    public bool UseSandbox { get; set; }
+
+    public IReadOnlyList<string> Countries { get; set; } = [];
+
+    public string BaseUrl
+        => UseSandbox ? "https://api.sandbox.taxjar.com/v2/" : "https://api.taxjar.com/v2/";
+}
+
+internal sealed class TaxJarOptionsConfiguration : IConfigureOptions<TaxJarOptions>
+{
+    private readonly ISiteService _siteService;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ILogger _logger;
+
+    public TaxJarOptionsConfiguration(ISiteService siteService, IDataProtectionProvider dataProtectionProvider, ILogger<TaxJarOptionsConfiguration> logger)
+    {
+        _siteService = siteService;
+        _dataProtectionProvider = dataProtectionProvider;
+        _logger = logger;
+    }
+
+    public void Configure(TaxJarOptions options)
+    {
+        var settings = _siteService.GetSettingsAsync<TaxJarSettings>().GetAwaiter().GetResult();
+
+        options.UseSandbox = settings.UseSandbox;
+        options.Countries = [.. (settings.Countries ?? []).Where(code => code?.Length == 2).Select(code => code.ToUpperInvariant())];
+
+        if (string.IsNullOrEmpty(settings.ApiKey))
+        {
+            return;
+        }
+
+        try
+        {
+            options.ApiKey = _dataProtectionProvider.CreateProtector(TaxJarSettings.ProtectionPurpose).Unprotect(settings.ApiKey);
+        }
+        catch (System.Security.Cryptography.CryptographicException exception)
+        {
+            _logger.LogWarning(exception, "The TaxJar token couldn't be read; enter it again in the settings.");
+        }
+    }
+}
