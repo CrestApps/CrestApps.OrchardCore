@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Linq.Expressions;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -32,9 +33,9 @@ internal static class LeadListTermPredicates
     public const string RatingTermName = "rating";
 
     /// <summary>
-    /// Gets the names of the lead terms.
+    /// The names of the lead terms.
     /// </summary>
-    public static IReadOnlySet<string> TermNames { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    public static readonly FrozenSet<string> TermNames = new[]
     {
         LeadStatusTermName,
         ConvertedTermName,
@@ -42,7 +43,7 @@ internal static class LeadListTermPredicates
         ListTermName,
         OwnerTermName,
         RatingTermName,
-    };
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Builds the lead index predicate of a lead term.

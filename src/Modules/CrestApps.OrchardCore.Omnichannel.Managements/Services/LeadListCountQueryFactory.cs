@@ -46,7 +46,6 @@ internal sealed class LeadListCountQueryFactory
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
-    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadListCountQueryFactory"/> class.
@@ -55,19 +54,16 @@ internal sealed class LeadListCountQueryFactory
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="contentTypeProvider">The omnichannel content type provider.</param>
-    /// <param name="serviceProvider">The services of the request, which resolve the term values.</param>
     public LeadListCountQueryFactory(
         ISession session,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        OmnichannelContentTypeProvider contentTypeProvider,
-        IServiceProvider serviceProvider)
+        OmnichannelContentTypeProvider contentTypeProvider)
     {
         _session = session;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _contentTypeProvider = contentTypeProvider;
-        _serviceProvider = serviceProvider;
     }
 
     /// <summary>
@@ -152,7 +148,8 @@ internal sealed class LeadListCountQueryFactory
 
         foreach (var (name, value) in leadTerms)
         {
-            query = query.Where(await LeadListTermPredicates.BuildAsync(name, value, _serviceProvider));
+            // The terms resolve their values with the services of the request, as the content list's own terms do.
+            query = query.Where(await LeadListTermPredicates.BuildAsync(name, value, httpContext.RequestServices));
         }
 
         return query;

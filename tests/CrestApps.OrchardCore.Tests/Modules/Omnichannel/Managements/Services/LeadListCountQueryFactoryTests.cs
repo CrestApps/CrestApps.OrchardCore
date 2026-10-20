@@ -144,6 +144,7 @@ public sealed class LeadListCountQueryFactoryTests
 
         httpContext.Request.Method = HttpMethods.Get;
         httpContext.Request.RouteValues["contentTypeId"] = contentTypeId;
+        httpContext.RequestServices = Mock.Of<IServiceProvider>();
 
         return httpContext;
     }
@@ -174,11 +175,17 @@ public sealed class LeadListCountQueryFactoryTests
             Options.Create(new OmnichannelCrmOptions { Enabled = true }));
         await contentTypeProvider.EnsureInitializedAsync(contentDefinitionManager.Object);
 
+        // HttpContextAccessor keeps the context in an AsyncLocal, which this async method would not hand back to the
+        // test, so the accessor is mocked.
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor
+            .Setup(accessor => accessor.HttpContext)
+            .Returns(httpContext);
+
         return new LeadListCountQueryFactory(
             session,
-            new HttpContextAccessor { HttpContext = httpContext },
+            httpContextAccessor.Object,
             authorizationService.Object,
-            contentTypeProvider,
-            Mock.Of<IServiceProvider>());
+            contentTypeProvider);
     }
 }
