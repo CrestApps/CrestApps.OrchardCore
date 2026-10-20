@@ -180,6 +180,18 @@ public sealed class GuestCheckoutApiTests
         Assert.Equal(401, (await guest.GetAsync("me")).Status);
     }
 
+    [Theory]
+    [InlineData("orders")]
+    [InlineData("customers")]
+    [InlineData("inventory")]
+    [InlineData("coupons")]
+    public async Task TheStoresOwnEndpoints_RefuseAGuest(string path)
+    {
+        using var guest = _fixture.CreateClient();
+
+        Assert.Equal(401, (await guest.GetAsync(path)).Status);
+    }
+
     private static async Task<string> FindPurchasableAsync(ApiClient client)
     {
         var list = await client.GetAsync("products?take=30");

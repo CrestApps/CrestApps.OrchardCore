@@ -214,5 +214,8 @@ public sealed class LoyaltyApiStartup : StartupBase
 public sealed class AccountApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        => routes.MapCustomerAccountApi();
+    {
+        routes.MapCustomerAccountApi();
+        routes.MapCustomerAdminApi();
+    }
 }

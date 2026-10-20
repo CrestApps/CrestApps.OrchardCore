@@ -74,6 +74,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CouponRedemptionIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
+        services.AddScoped<CouponEditor>();
         services.AddScoped<CouponScopeEvaluator>();
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
@@ -170,5 +171,8 @@ public sealed class CouponDeploymentStartup : StartupBase
 public sealed class ApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        => routes.MapCheckoutApi();
+    {
+        routes.MapCheckoutApi();
+        routes.MapCouponAdminApi();
+    }
 }

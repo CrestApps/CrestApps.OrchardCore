@@ -209,6 +209,7 @@ public sealed class ApiStartup : StartupBase
     {
         routes.MapOrderCheckoutApi();
         routes.MapOrderAccountApi();
+        routes.MapOrderAdminApi();
     }
 }
 
