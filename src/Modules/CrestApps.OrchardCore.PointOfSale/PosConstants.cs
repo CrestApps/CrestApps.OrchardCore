@@ -20,6 +20,11 @@ public static class PosConstants
     public const string CounterCardProviderKey = "pos-card";
 
     /// <summary>
+    /// The payment method for a card presented on a Stripe Terminal reader, when the Stripe module is on.
+    /// </summary>
+    public const string TerminalProviderKey = "stripe-terminal";
+
+    /// <summary>
     /// The tag the point-of-sale endpoints are documented under.
     /// </summary>
     public const string ApiTag = "Point of Sale";

@@ -70,7 +70,7 @@ internal static class PosApiEndpoints
             .WithName("PayPosSale")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Pays a sale: the cash handed over, then a card on the counter terminal for what's left; it completes once nothing is left to pay, and says the change.");
+            .WithSummary("Pays a sale: the cash handed over, then a card on the counter terminal or a Stripe reader for what's left; it completes once nothing is left to pay, and says the change. A reader's payment answers pending until the card is presented: pay again with nothing to ask.");
 
         group.MapGet("pos/sales/{orderId}/receipt", GetReceiptAsync)
             .WithName("GetPosReceipt")
@@ -232,7 +232,7 @@ internal static class PosApiEndpoints
             return ApiProblems.NotFound();
         }
 
-        var result = await sales.PayAsync(session, request.Cash, request.Card is not null, request.Card?.ApprovalCode, httpContext.RequestAborted);
+        var result = await sales.PayAsync(session, request.Cash, request.Card is not null, request.Card?.ApprovalCode, request.Reader?.ReaderId, httpContext.RequestAborted);
         var currency = session.TryGet<CheckoutInvoice>(out var invoice) ? invoice.Currency : session.Currency;
 
         if (result.Status == PosPaymentStatus.Failed)
@@ -243,7 +243,12 @@ internal static class PosApiEndpoints
         var order = result.Status == PosPaymentStatus.Completed ? await orders.FindByIdAsync(session.ReferenceId, httpContext.RequestAborted) : null;
 
         return TypedResults.Ok(new ApiPosPayment(
-            result.Status == PosPaymentStatus.Completed ? "completed" : "due",
+            result.Status switch
+            {
+                PosPaymentStatus.Completed => "completed",
+                PosPaymentStatus.Pending => "pending",
+                _ => "due",
+            },
             ApiMoney.From(result.AmountDue, currency),
             ApiMoney.From(result.Change, currency),
             order is null ? null : PosReceipts.ToApi(order, result.Change)));

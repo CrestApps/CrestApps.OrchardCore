@@ -55,7 +55,7 @@ public sealed record ApiPosSale(string OrderId, string OrderNumber, ApiCheckout 
 /// <summary>
 /// What paying a sale came to.
 /// </summary>
-/// <param name="Status"><c>completed</c>: paid and placed; or <c>due</c>: <c>amountDue</c> is still to pay.</param>
+/// <param name="Status"><c>completed</c>: paid and placed; <c>due</c>: <c>amountDue</c> is still to pay; or <c>pending</c>: a card reader is taking it.</param>
 /// <param name="Change">The change to hand back.</param>
 /// <param name="Receipt">The sale's receipt, once it's completed.</param>
 public sealed record ApiPosPayment(string Status, ApiMoney AmountDue, ApiMoney Change, ApiPosReceipt Receipt);
@@ -144,6 +144,19 @@ public sealed class ApiPosPayRequest
     /// A card taken on the counter terminal for what's left after the cash.
     /// </summary>
     public ApiPosCard Card { get; set; }
+
+    /// <summary>
+    /// A card presented on a Stripe Terminal reader for what's left after the cash.
+    /// </summary>
+    public ApiPosReader Reader { get; set; }
+}
+
+public sealed class ApiPosReader
+{
+    /// <summary>
+    /// The reader's id, from the readers list.
+    /// </summary>
+    public string ReaderId { get; set; }
 }
 
 public sealed class ApiPosCard

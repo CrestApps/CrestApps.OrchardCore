@@ -179,10 +179,11 @@ public sealed class PosSaleService
     }
 
     /// <summary>
-    /// Pays a sale: cash handed over, then, for what's left, a card on the counter terminal; and completes it once
-    /// nothing is left to pay.
+    /// Pays a sale: cash handed over, then, for what's left, a card on the counter terminal or on a Stripe reader; and
+    /// completes it once nothing is left to pay. A reader's payment completes once the buyer presents their card, so
+    /// paying again with nothing asks whether it has.
     /// </summary>
-    public async Task<PosPaymentResult> PayAsync(CheckoutSession session, decimal? cash, bool card, string approvalCode, CancellationToken cancellationToken = default)
+    public async Task<PosPaymentResult> PayAsync(CheckoutSession session, decimal? cash, bool card, string approvalCode, string readerId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);
 
@@ -199,29 +200,42 @@ public sealed class PosSaleService
             return PosPaymentResult.Fail(S["The sale has no invoice; ring it up again."]);
         }
 
-        if (invoice.AmountDue > 0m)
-        {
-            if (!card)
-            {
-                return new PosPaymentResult { Status = PosPaymentStatus.Due, AmountDue = invoice.AmountDue, Change = GetChange(session, invoice) };
-            }
+        var paymentBegun = session.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending;
 
-            var outcome = await _engine.BeginPaymentAsync(session.SessionId, new BeginPaymentOptions
-            {
-                ProviderKey = PosConstants.CounterCardProviderKey,
-                ProviderData = string.IsNullOrWhiteSpace(approvalCode) ? null : new Dictionary<string, string> { ["approvalCode"] = approvalCode.Trim() },
-            }, cancellationToken);
+        if (invoice.AmountDue > 0m && (card || !string.IsNullOrWhiteSpace(readerId)))
+        {
+            var outcome = await _engine.BeginPaymentAsync(session.SessionId, string.IsNullOrWhiteSpace(readerId)
+                ? new BeginPaymentOptions
+                {
+                    ProviderKey = PosConstants.CounterCardProviderKey,
+                    ProviderData = string.IsNullOrWhiteSpace(approvalCode) ? null : new Dictionary<string, string> { ["approvalCode"] = approvalCode.Trim() },
+                }
+                : new BeginPaymentOptions
+                {
+                    ProviderKey = PosConstants.TerminalProviderKey,
+                    ProviderData = new Dictionary<string, string> { ["readerId"] = readerId.Trim() },
+                }, cancellationToken);
 
             if (!outcome.Succeeded)
             {
                 return PosPaymentResult.Fail(outcome.ErrorMessage);
             }
         }
+        else if (invoice.AmountDue > 0m && !paymentBegun)
+        {
+            return new PosPaymentResult { Status = PosPaymentStatus.Due, AmountDue = invoice.AmountDue, Change = GetChange(session, invoice) };
+        }
 
         var result = await _engine.TryCompleteAsync(session.SessionId, cancellationToken);
 
-        return result.IsCompleted
-            ? new PosPaymentResult { Status = PosPaymentStatus.Completed, Change = GetChange(session, invoice), CardAmount = card ? invoice.AmountDue : 0m }
+        if (result.IsCompleted)
+        {
+            return new PosPaymentResult { Status = PosPaymentStatus.Completed, Change = GetChange(session, invoice), CardAmount = invoice.AmountDue };
+        }
+
+        // The reader is waiting for the card, or the bank for the reader.
+        return result.Status == CheckoutCompletionStatus.Pending
+            ? new PosPaymentResult { Status = PosPaymentStatus.Pending, AmountDue = invoice.AmountDue, Change = GetChange(session, invoice) }
             : PosPaymentResult.Fail(result.ErrorMessage ?? S["The sale couldn't be completed: {0}.", result.Status]);
     }
 
@@ -297,6 +311,11 @@ public enum PosPaymentStatus
     /// Some is still to pay, by card or more cash.
     /// </summary>
     Due,
+
+    /// <summary>
+    /// A card reader is taking the payment: pay again with nothing to ask whether it's done.
+    /// </summary>
+    Pending,
 
     Failed,
 }
