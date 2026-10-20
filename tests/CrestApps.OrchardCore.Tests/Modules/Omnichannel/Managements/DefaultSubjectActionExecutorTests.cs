@@ -513,7 +513,7 @@ public sealed class DefaultSubjectActionExecutorTests
         await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("closed", contact.As<LeadPart>().StatusId);
+        Assert.Equal("closed", GetLeadStatusId(contact));
         contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
     }
 
@@ -537,9 +537,12 @@ public sealed class DefaultSubjectActionExecutorTests
         await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("nurturing", contact.As<LeadPart>().StatusId);
+        Assert.Equal("nurturing", GetLeadStatusId(contact));
         contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
     }
+
+    private static string GetLeadStatusId(ContentItem contact)
+        => contact.TryGet<LeadPart>(out var part) ? part.StatusId : null;
 
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
