@@ -339,6 +339,17 @@ Products' `IProductAvailabilityProvider` says what can be bought; Inventory prov
 - **Pre-order dates.** `CartService` copies a pre-order's `ReleaseDateUtc` onto the priced line (`CartPricing` line `ShipsFromUtc`), which the cart, the mini cart and the order show.
 - **Variant picker.** The `product-variant-picker` script reads each variant's `data-availability`, `data-availability-tone` and `data-buyable`, and updates the line and the button as options change.
 
+## Line details and line handlers
+
+A cart line carries details beside its product, such as a booking's date: `CartLine.Details`, by key, which a module names after itself (`booking.date`). Modules register an `ICartLineHandler`:
+
+- `PrepareAsync` keeps the details it deals with from what the buyer sent (`PostedDetails`), checked, or refuses the line. What no handler keeps is dropped.
+- `EvaluateAsync` prices the line as it stands. It can change `UnitPrice`, lower `MaxQuantity`, set `PeoplePerUnit` for add-ons priced per person, describe the details (`CartLineDetail`) or set a `Problem`. `ConvertAsync` converts an amount from the product's currency.
+
+Handlers run by `Order`, lowest first. Product add-ons are the first handler (order 100) and always run. Two lines of a product with other details stay apart. `ICartService.AddAsync` takes the details as a default interface overload; the *Add to cart* form posts them as `details[{key}]`, and the cart API as `details`.
+
+`OrderLines.FromPricing` copies the details onto `OrderLine.Details` and their descriptions onto `OrderLine.DetailLines`, which the order pages, emails, invoices and `OrderLineText.Describe` show. Reordering, and re-pricing a draft or a quote from its order, keep them. `CartOptions.ChooseOnProductPageParts` names the parts whose products need something chosen on their page first: a card links there instead of adding them.
+
 ## Checkout line details
 
 Carts are the first checkout source with several products, so a `BillingItem` can carry a `Quantity` (its `Amount` is then the unit amount), a `Sku`, a `TaxCategoryCode`, a `TaxClassificationCode` and a `TaxableKind`. The invoice bills every unit, and the tax calculation uses a line's own codes and kind when it has them and the checkout's defaults otherwise. Handlers that set none of these bill and tax exactly as before.

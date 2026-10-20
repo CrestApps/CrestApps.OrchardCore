@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 to 10 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built), [Phase 6 as built](#phase-6-as-built), [Phase 7 as built](#phase-7-as-built), [Phase 8 as built](#phase-8-as-built), [Phase 9 as built](#phase-9-as-built) and [Phase 10 as built](#phase-10-as-built)); phases 11 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 11 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built), [Phase 6 as built](#phase-6-as-built), [Phase 7 as built](#phase-7-as-built), [Phase 8 as built](#phase-8-as-built), [Phase 9 as built](#phase-9-as-built), [Phase 10 as built](#phase-10-as-built) and [Phase 11 as built](#phase-11-as-built)); phases 12 and 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -498,6 +498,39 @@ Not built yet, and why:
 - **Marketplace channels.** Importing orders from Amazon, eBay or TikTok Shop needs each one's seller API and account; the feed lists products there but orders don't come back.
 - **Markets in the feed.** A product a market doesn't sell is still in that market's currency feed; a feed is per currency, not per market.
 - **Live stock in the feed.** A feed is cached for 15 minutes, so a sale shows in it up to 15 minutes later.
+
+## Phase 11 as built
+
+One branch, a commit per slice:
+
+- **PL0a F1 line details and line handlers.** Cart lines carry details beside the product that `ICartLineHandler`s check, price and describe; they're copied onto the order line (raw and as they read) and shown on the cart, order, invoice and emails. Add-ons moved onto it as the first handler, and can now be priced per person or as a percent of the price.
+- **PL0b F2 dated capacity.** `BookingSlot` per product and date (a departure, a night, a time slot) with capacity, held while an order is unpaid, taken when it's paid and given back when it's canceled or expires, under a lock per product. Built inside the Bookings module, which other verticals depend on for it.
+- **PL1 bookings.** The Booking part (departures, nightly stays, time slots), occupancy pricing (per person or per unit, options with supplements), per-date and weekend prices, a date picker on the product page, deposits with the rest owed on the ledger and charged to the kept card on its date (F3 for orders: a tender that keeps the card), cancellation policies that suggest the refund, requests to book through quotes, traveler forms from a Traveler content type, booking emails, Commerce › Bookings with a calendar and each product's dates, and a date search.
+- **PL2 memberships.** The Membership part puts a buyer in roles for its length, extended by buying again and ended by a full refund, a cancellation, its end date or staff. Content Access Control now refuses restricted content even when View content is granted to everyone, which it didn't before.
+
+Found and fixed on the test site:
+
+- Bookings' order handler built `BookingService`, which needs `IOrderService`, which is built with the handlers: a circular dependency. The handler now resolves the service when an order changes, and the balance tender resolves the checkout session store the same way.
+- The balance charge read its record before the checkout committed and then saved it as a second document. It reads it again after the charge, and a cancellation reads its booking again after the refund.
+- Field editors on the storefront (checkout fields, travelers) failed on a hint: the shape `Hint_Admin` exists only in the admin theme. The Checkout module now has one for the storefront.
+- Draft orders rebuilt their cart without the lines' add-ons and details, so a quote for a booking couldn't be saved ("Choose a date"). They keep them now.
+- A percent add-on showed as money on the product page; a time slot read "Wed 21 Oct 2026, A" (the `t` of a custom format is the AM/PM letter); the search offered times beyond how far ahead they book; a cancellation counted the unpaid balance as paid.
+
+The exit gate holds:
+
+- The last two seats of a tour departure sold as a double room with travel insurance on a 15% deposit. The kept card was charged the balance, through the charger the background task runs on the due date (45 days before departure), triggered with **Charge the card now** rather than by waiting. Canceling 50 days before refunded by the policy: 50% kept, 846.16 back, split between the deposit and the balance charge, and the seats came back.
+- A booked massage was paid, confirmed by its email, and completed, and its time left the picker.
+- An Annual Membership bought by a buyer outside the Member role opened the members' article at once. A full refund closed it again.
+
+Not built yet, and why:
+
+- **PL3 supplier inventory.** Flights and supplier hotel rooms need a supplier's API and account (P-D8 isn't decided).
+- **Payment-method fees.** The invoice is built before the payment method is chosen. A fee for a method needs the Payment step to rebuild the invoice when the method changes.
+- **Add-ons per booking.** Add-ons are per unit, per person or a share of the price; one charged once per booking whatever its quantity needs a line amount besides the unit price.
+- **Buyer prices on dates.** A date's own price, the weekend price and an option's adjustment aren't lowered by company price lists or role discounts, which apply to the product's price.
+- **Rentals out and returned.** Nightly bookings cover rentals; deposits held and returned and damage charges (F7) aren't built.
+- **Tickets.** One ticket per attendee with a QR code and check-in (F6).
+- **Memberships that renew by themselves.** A membership is bought again to extend it; subscriptions already renew and grant roles.
 
 ## Headless API and point of sale (phase 6, planned)
 
