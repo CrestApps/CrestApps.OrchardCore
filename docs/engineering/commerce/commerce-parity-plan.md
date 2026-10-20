@@ -532,6 +532,39 @@ Not built yet, and why:
 - **Tickets.** One ticket per attendee with a QR code and check-in (F6).
 - **Memberships that renew by themselves.** A membership is bought again to extend it; subscriptions already renew and grant roles.
 
+## Phase 12 as built
+
+One branch, a commit per slice:
+
+- **PM1 F4 marketplace.** Vendors with the people who run them and their own commission, the Vendor part on products, a ledger entry per vendor line of a paid order (gross after discounts, commission, net), held until the hold ends and goods are fulfilled, released early by staff for a delivered service or a milestone, refunds taken back as negative entries, and payouts per order through `IVendorPayoutProvider`. The Stripe Connect feature onboards vendors to Express accounts and transfers from each order's charge. Commerce › Vendors, Settings › Commerce › Marketplace, and the vendor's own page in the storefront account.
+- **PO1 F5 classifieds.** The Classified part makes a type visitors post from the site, moderated when its type says so, running for a term, expired and unpublished by a background task with an email, and renewed by its owner. The Classified upgrade part makes a product that features or bumps a listing, bought through the cart with the listing as a line detail. A search by words and distance with a Leaflet map, featured first. Content › Posted listings for moderators.
+- **PO2 fundraising.** The Fundraising campaign part: a goal, an end, suggested amounts and a least amount; a donate form on the campaign's page whose amount becomes the line's price, with a tribute; progress toward the goal; a donation per campaign line recorded when paid, with a receipt emailed and kept under Donations in the account. Cart line handlers can now keep a line out of every discount, which a gift needs.
+
+Found and fixed on the test site:
+
+- The marketplace's order handler built `MarketplaceService`, which needs the order store the handlers are built with: the same circular dependency as phase 11. It resolves the service when an order changes.
+- The classifieds admin editor couldn't be saved: its end-date fields carry seconds, which a `datetime-local` input refuses without `step="1"`.
+- The fundraising settings page answered 404: its editor shape was built from the sealed settings class, which renders empty. It has its own view model.
+- The fundraising sample's campaign page had no donate form: its type lacked the product page setting that shows a product's details and actions.
+- Receipt numbers repeated the year the order number already starts with.
+
+The exit gate holds, but for the payout itself:
+
+- The Handmade Ceramic Mug sold for its vendor: 24.49 gross after the order's discount, 2.45 commission, 22.04 net, held seven days. A 10.00 refund took back 9.00 of it. Releasing the order made 13.04 ready to pay out.
+- Paying it out through Stripe Connect couldn't be run: the test Stripe account doesn't have Connect turned on, and setting up a vendor's payouts says so. The payout path is covered by unit tests with a fake provider. It will run live once Connect is enabled in the Stripe dashboard.
+- A visitor posted a classified ad, a moderator approved it, and the visitor bought the 5.00 feature upgrade through the cart: it was featured for seven days, first in a search 9.8 km away with its badge on the map. Its end date set in the past, the background task unpublished it and emailed its owner, and **Renew** brought it back.
+- A 46 € donation in honor of the librarian, through Stripe, counted as $50 toward the $10,000 goal. The receipt was emailed and opened from Donations, a 20 € refund brought the progress to $28.26 and showed on the receipt, and neither the company price nor the promotion code took anything off it.
+
+Not built yet, and why:
+
+- **Disputes between parties.** A buyer's dispute against a vendor, with the vendor's side and the store deciding, needs messaging between them; staff handle it through refunds today.
+- **Vendors managing their products.** Vendors see sales and payouts; staff add and edit their products. A vendor-side product editor needs per-vendor content permissions.
+- **Payouts besides Stripe Connect.** PayPal payouts or bank files would be other `IVendorPayoutProvider`s.
+- **Geocoding.** A listing's place is text and its coordinates come from the browser or are typed; turning an address into coordinates needs a geocoding service and its key.
+- **Paid posting.** Listings are free to post and upgrades are paid; charging to post needs the post to wait for its order.
+- **Recurring gifts and Gift Aid.** Monthly giving needs a campaign sold as a subscription with a chosen amount; Gift Aid needs the donor's declaration and the claim file HMRC takes.
+- **Fundraising pages per supporter.** Peer-to-peer pages that raise toward a campaign's goal.
+
 ## Headless API and point of sale (phase 6, planned)
 
 A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.
