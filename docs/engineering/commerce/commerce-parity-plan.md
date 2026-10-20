@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 to 7 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built), [Phase 6 as built](#phase-6-as-built) and [Phase 7 as built](#phase-7-as-built)); phases 8 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 10 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built), [Phase 6 as built](#phase-6-as-built), [Phase 7 as built](#phase-7-as-built), [Phase 8 as built](#phase-8-as-built), [Phase 9 as built](#phase-9-as-built) and [Phase 10 as built](#phase-10-as-built)); phases 11 to 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -483,6 +483,21 @@ Not built yet, and why:
 - **Campaign analytics.** Opens and clicks need tracking pixels and redirected links; a campaign shows sent, skipped and failed.
 - **Segments by product or category.** Purchases keep totals and dates, not what was bought.
 - **Dashboard charts.** The widget shows figures; charts stay in the reports.
+
+## Phase 10 as built
+
+Point of sale (PI2) was built in phase 6, so this phase is the feeds, and a fix the exit gate found at the till:
+
+- **PI1a product feeds.** A Product Feeds feature publishes the products at `feeds/products.xml` (Google Merchant Center's RSS with its `g:` attributes, which Meta and TikTok catalogs read too) and `feeds/products.csv`, in any market's currency, behind an optional key. Each product sold online is an item, or each variant of one, with its price, sale price and dates, photos, availability (with pre-order dates), brand, GTIN, MPN, condition, category, color and size. A Product Feed part holds the identifiers; a brand also comes from a taxonomy named for brands. Each item is checked against Merchant Center's rules (lengths, links, a photo, a price, a sale price below it, a GTIN's check digit), and Settings › Commerce › Product feeds shows what's left out and why before Merchant Center refuses it.
+- **A company cashier at the till.** A cashier who is a company's buyer got the company checkout step on a register sale, which blocked it. The step is now kept off sales at a register.
+
+The exit gate holds: the last Contoso Baseball Cap was sold at a register for cash, with change, and the feed then listed it out of stock. The feed's 29 items pass the built-in validation, which follows Merchant Center's product data specification; the ones left out have no photo or price. Merchant Center itself wasn't asked, since that needs a merchant account. A feed in euros converts its prices.
+
+Not built yet, and why:
+
+- **Marketplace channels.** Importing orders from Amazon, eBay or TikTok Shop needs each one's seller API and account; the feed lists products there but orders don't come back.
+- **Markets in the feed.** A product a market doesn't sell is still in that market's currency feed; a feed is per currency, not per market.
+- **Live stock in the feed.** A feed is cached for 15 minutes, so a sale shows in it up to 15 minutes later.
 
 ## Headless API and point of sale (phase 6, planned)
 

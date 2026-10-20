@@ -32,8 +32,18 @@ public sealed class CompanyCheckoutHandler : CheckoutHandlerBase
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (await _step.GetCompanyAsync(context.Session) is not { } company ||
-            context.Session.Steps.Any(step => step.Key == CompanyCheckoutStepService.StepKey))
+        if (await _step.GetCompanyAsync(context.Session) is not { } company)
+        {
+            // A step added before the checkout was known not to be a company's, such as a sale at a register, goes.
+            foreach (var stale in context.Session.Steps.Where(step => step.Key == CompanyCheckoutStepService.StepKey).ToList())
+            {
+                context.Session.Steps.Remove(stale);
+            }
+
+            return;
+        }
+
+        if (context.Session.Steps.Any(step => step.Key == CompanyCheckoutStepService.StepKey))
         {
             return;
         }

@@ -142,6 +142,17 @@ public sealed class CompaniesTests
         Assert.Contains("approval", (await step.SaveAsync(session, "PO-1", requestApproval: false, TestContext.Current.CancellationToken)).Keys);
     }
 
+    [Fact]
+    public async Task ASaleAtARegister_IsntACompanys_EvenWhenTheCashierBuysForOne()
+    {
+        var orders = new Mock<IOrderStore>();
+        orders.Setup(store => store.FindByIdAsync("order-1", It.IsAny<CancellationToken>())).ReturnsAsync(new Order { ItemId = "order-1", Channel = OrderChannels.PointOfSale });
+
+        var step = new CompanyCheckoutStepService(Companies(Company(new CompanyTerms())), orders.Object, Approvals(orders.Object), new PassThroughStringLocalizer<CompanyCheckoutStepService>());
+
+        Assert.Null(await step.GetCompanyAsync(Flow().Session, TestContext.Current.CancellationToken));
+    }
+
     private static Mock<IOrderStore> PaidThisMonth(decimal total)
     {
         var orders = new Mock<IOrderStore>();

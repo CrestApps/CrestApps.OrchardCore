@@ -68,11 +68,18 @@ public sealed class CompanyCheckoutStepService
     /// <see langword="null"/>.
     /// </summary>
     public async Task<Company> GetCompanyAsync(ICheckoutFlowSession flowSession, CancellationToken cancellationToken = default)
-        => flowSession is CheckoutSession { OwnerId.Length: > 0 } session &&
-            string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) &&
-            !session.TryGet<CheckoutCounterSale>(out _)
-                ? await _companies.GetForUserAsync(session.OwnerId, cancellationToken)
-                : null;
+    {
+        // A sale at a register is the store's, even when the cashier buys for a company.
+        if (flowSession is not CheckoutSession { OwnerId.Length: > 0 } session ||
+            !string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ||
+            session.TryGet<CheckoutCounterSale>(out _) ||
+            await _orders.FindByIdAsync(session.ReferenceId, cancellationToken) is { Channel: OrderChannels.PointOfSale })
+        {
+            return null;
+        }
+
+        return await _companies.GetForUserAsync(session.OwnerId, cancellationToken);
+    }
 
     /// <summary>
     /// Returns the purchase order number the step was saved with, or <see langword="null"/>.
