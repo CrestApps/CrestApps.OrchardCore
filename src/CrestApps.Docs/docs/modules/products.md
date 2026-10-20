@@ -32,7 +32,7 @@ Because the part is a normal Orchard Core content part, products participate in 
 | Property | Type | Description |
 | --- | --- | --- |
 | `Price` | `decimal?` | The price of the item, expressed in the product's own `Currency`. It is required when the product can be bought or its price is shown, and optional otherwise. |
-| `Currency` | `string` | The ISO-4217 currency code the price is sold in (for example `USD`). When empty, the content type's `ProductPartSettings.DefaultCurrency` applies. A product owns its currency; prices are never converted between currencies. |
+| `Currency` | `string` | The ISO-4217 currency code the price is sold in (for example `USD`). When empty, the content type's `ProductPartSettings.DefaultCurrency` applies. A product owns its currency. Prices are converted only into a shopper's market currency, by [Markets](markets.md). |
 | `Sku` | `string` | An optional stock-keeping unit that uniquely identifies the product for carts, orders, and fulfilment. |
 | `CompareAtPrice` | `decimal?` | An optional "was" or list price. When it is higher than `Price`, it is shown struck through with the saving. |
 | `IsPurchasable` | `bool` | Whether this item can be bought online. Only used when the type's sales mode is *Per item*. |
@@ -166,7 +166,7 @@ Both the editable `ProductPart.Price` and the snapshot's unit price are `decimal
 Reading `ProductPart.Price` directly couples a caller to today's flat, per-item pricing. To keep checkout, payment, and future ordering flows stable while pricing rules evolve, resolve prices through a seam instead:
 
 - **`PriceResult`** is an immutable value that always pairs an amount with the currency it is expressed in — its `UnitPrice`, `Currency`, `Quantity`, and computed `Subtotal`. A price is never passed around without its currency.
-- **`IPriceResolver`** resolves a `PriceResult` from a `ProductSnapshotContext`. The default resolver returns the product's list price tagged with the product-owned currency. It never converts between currencies: when the context requests a currency that differs from the product's currency it returns `null` and logs a warning, so a price is never charged in the wrong currency.
+- **`IPriceResolver`** resolves a `PriceResult` from a `ProductSnapshotContext`. The default resolver returns the product's list price tagged with the product-owned currency. When the context requests another currency, a price the product lists in it wins; otherwise a one-time price is converted through **`IShopperCurrency`**. The default `IShopperCurrency` (`ProductOwnShopperCurrency`) converts nothing, and a recurring price or one the buyer names is never converted, so the resolver returns `null` and logs a warning rather than charge a price in the wrong currency. [Markets](markets.md#the-shoppers-currency-seam) registers an `IShopperCurrency` that converts by the shopper's market.
 
 A future pricing engine (customer-specific pricing, contract rates) can replace `IPriceResolver` to produce the same `PriceResult` without changing any consumer.
 

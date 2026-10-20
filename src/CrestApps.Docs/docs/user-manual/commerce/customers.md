@@ -4,6 +4,7 @@ title: Customers
 description: Find and manage the people and businesses who buy from your store, whether they have an account or bought as a guest.
 technical_manual:
   - modules/customers
+  - modules/addresses
 ---
 
 Everyone who buys from your store is a **customer**: a person or a business, with an account on your site or as a guest. Use this page to find a customer, see how they're addressed, and keep their details up to date.
@@ -103,6 +104,35 @@ A customer keeps an address book of up to 20 addresses, such as a home and an of
 The address is checked against its country: a postal code has to look like that country's, and belong to the state or province chosen. A new address starts with the customer's name, company and phone, in the country of their other addresses, and a customer's first address becomes both defaults.
 
 To remove an address, click **Delete** and confirm. Orders keep their own copy of the addresses they used, so changing or deleting an address never changes a past order.
+
+### Address suggestions
+
+Typing an address is slow, and typos send parcels astray. With address suggestions on, every address form, at checkout, in **My Account** and in the admin, suggests addresses as the street is typed, from Google Places. Picking one fills in the rest of the address.
+
+| | |
+| --- | --- |
+| **Menu** | Settings > Address suggestions |
+| **Permission** | Manage address suggestions |
+| **Feature** | Address Suggestions (Google Places) |
+
+<AskYourAdmin />
+
+To set it up:
+
+1. In the Google Cloud console, create an API key for the **Places API (New)**, restricted to that API.
+2. Open **Settings > Address suggestions**, paste it into **Google Places API key**, and save.
+
+The key is kept on your server and never sent to shoppers' browsers. Once saved it's never shown again: leave the field blank to keep it, or enter a new key to replace it. To stop suggesting addresses, tick **Remove the key** and save. Without a key, shoppers type their address themselves.
+
+How shoppers use it:
+
+- After three characters in the street field, a list of **Suggested addresses** opens under it, in the country chosen in the form, or anywhere when none is chosen.
+- The arrow keys move through the list, **Enter** picks the highlighted address and **Escape** closes the list. A click or a tap picks one too.
+- Picking an address fills in the street, the second line, the city, the state or province, and the postal code, and switches the country when the address is in another one. The shopper checks it and adds what's missing, such as an apartment number.
+
+:::note[Google bills each search]
+Google charges your account for the searches. To keep a visitor from running up the bill, each one can ask for suggestions at most 60 times a minute; typing an address takes about a dozen.
+:::
 
 ## Privacy requests
 

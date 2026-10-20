@@ -157,6 +157,7 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Checkouts** | The checkouts buyers started and how they ended: paid, payment failed, left or expired, or still open, with the share that were paid. |
 | **Sales by country** | Orders and totals for each country they ship to. |
 | **Tax on orders** | The tax orders charged, day by day. |
+| **VAT one-stop shop (OSS)** | The VAT charged on orders to other EU countries, by country and rate, refunds taken off: the figures of the EU one-stop-shop return. See [Taxes](taxes.md#vat-one-stop-shop-oss-report). |
 | **Discounts on orders** | How many orders used each promotion code, and what it took off. |
 | **Refunds** | Each refund given in the period, with its order and reason. |
 | **Disputes** | The payments buyers disputed with their bank in the period, open ones first: why, their status, and how many were won and lost. |
@@ -212,5 +213,7 @@ Link to **Track your order** and **Find my order** from your site's footer or he
 ## Order confirmations
 
 When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total, what a gift card, store credit or points paid toward it, and the billing address. It goes to the email given at checkout, once per order.
+
+The confirmation, and the other emails about the order (shipped, returns, gift cards and the reminder of a checkout left unpaid), are written in the language the buyer shopped in. See [Markets](markets.md#languages).
 
 Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.

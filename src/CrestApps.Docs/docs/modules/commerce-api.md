@@ -126,6 +126,30 @@ Every amount is an `ApiMoney`: the amount in major units (dollars, not cents), r
 { "amount": 49.99, "currency": "USD" }
 ```
 
+### Markets
+
+With the [Markets](markets.md) feature on, a store sells to groups of countries in their own currencies. An app says which market the buyer is in on **every** call, the catalog, the cart and the checkout alike, with either:
+
+- the `market` query value: `GET products?market=DE`, or
+- the `X-Market` header: `X-Market: DE`.
+
+The value is a market's id or a two-letter country code that a market covers. Prices, compare-at prices, variant and add-on prices, the cart, shipping rates and the checkout are then in the market's currency, converted at its rate and rounded by its rule unless the product lists its own price in that currency. A product left out of the market has `isPurchasable: false`, and adding it to the cart answers `409` with the code `not-available`.
+
+API calls are never placed in a market by a browser cookie or language: without `market` or `X-Market`, prices are in the products' own currencies. A cart that moves to another market's currency is priced again in it.
+
+```http
+GET products/4b2kx7m9qz1c
+X-Market: DE
+```
+
+```json
+{
+  "id": "4b2kx7m9qz1c",
+  "price": { "amount": 11.99, "currency": "EUR" },
+  "isPurchasable": true
+}
+```
+
 ### Pages of results
 
 A list that can be long is an `ApiPage<T>`. Ask for a page with `skip` (how many to pass over, from 0) and `take` (how many to return, 20 when not given, at most 100). The answer says how many match in all:
@@ -512,7 +536,7 @@ All paths start with `api/commerce/v1/`. **Guest** means anybody can call it, wi
 | `GET` | `products/{id}` | Guest | Gets a product, priced for the caller, with its images, prices, options, variants, add-ons, specifications, quantity rules and availability. |
 | `GET` | `products/{id}/availability` | Guest | Whether the product, or the variant given in `variantId`, is in stock at each location. For a product sold in variants and no `variantId`, each location answers for all its variants together. Needs the **Inventory API**. |
 
-Prices are what the caller pays, with sales and their role's discount included. Availability gives a count only when few are left, the way the product page says *Only 3 left*.
+Prices are what the caller pays, with sales and their role's discount included, in the caller's [market](#markets) when it names one. `prices` lists each of the product's prices as the product lists it, in its own currency; `price` is the one the caller pays. Availability gives a count only when few are left, the way the product page says *Only 3 left*.
 
 ### Cart
 
@@ -580,6 +604,23 @@ Another buyer's order answers `404`.
 | `POST` | `orders/{orderId}/cancel` | **Manage orders** | Cancels an order, with a `note`; `refund` gives back what was paid; `restock` puts its stock back. Takes an idempotency key. |
 
 Every order, here and under `me/orders`, says where it was made in `channel`: `online` (the storefront, a headless storefront or an app), `pos` (a store's register) or `draft` (made by staff and sent to the buyer to pay). A register sale also has its store's `locationId`, and the order has the `register` it was rung up on.
+
+An order also has the `culture` the buyer shopped in, such as `de-DE`, which its emails are written in, and its `taxes`: each tax it was charged, once per `name`, `type`, `jurisdiction`, `rate` and `includedInPrice`, with what it was charged on (`taxable`) and the `amount`.
+
+```json
+"culture": "de-DE",
+"taxes": [
+  {
+    "name": "VAT",
+    "type": "VAT",
+    "jurisdiction": "Germany",
+    "rate": 0.19,
+    "taxable": { "amount": 20.16, "currency": "EUR" },
+    "amount": { "amount": 3.83, "currency": "EUR" },
+    "includedInPrice": true
+  }
+]
+```
 
 A refund or a cancel answers with the amount given back, what happened (`messages`), and the order as it now is.
 

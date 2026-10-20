@@ -427,7 +427,7 @@ One branch, a commit per slice:
 - **PG3a VAT on orders.** An order keeps its tax lines, the API order shows its taxes, and the checkout summary shows each tax and rate once.
 - **PG3b the OSS report.** Reports › VAT one-stop shop: VAT on orders to other EU countries by country and rate, refunds taken off in proportion, the store's own country left out; and an EU VAT standard rates recipe for the 27 member states.
 - **PG3c duties.** An import duty tax type, and rule thresholds that can be the whole order's (`TaxRule.ThresholdBasis`), so a duty is charged only above a country's threshold and shown as its own line.
-- **PG3d tax connectors.** A TaxJar feature on `ITaxDeterminationProvider` for the countries it's set up for, with prices that exclude tax; when it can't answer, the order isn't taken rather than taxed by a guess.
+- **PG3d tax connectors.** A TaxJar feature on `ITaxDeterminationProvider` for the countries it's set up for, with prices that exclude tax; when a provider can't answer, the tax service falls back to the store's own rules and logs it, so a connector that's down doesn't stop sales.
 
 The exit gate holds: a shopper picks Germany, sees euros and German on the listing, product page and cart, pays the price shown with 19% VAT taken out of it, and the order shows under Germany at 19% in the OSS report.
 

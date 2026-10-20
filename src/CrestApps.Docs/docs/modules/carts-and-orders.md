@@ -25,7 +25,8 @@ A product can be added when it can be bought online (see [sales mode](products#p
 - a product that is only listed, or has no price;
 - a subscription plan, which is signed up for on its own, and any recurring price;
 - a price that asks the buyer for an amount;
-- a product priced in another currency than the cart's, because prices are not converted;
+- a product priced in another currency than the cart's that can't be converted into it (with [Markets](markets.md#carts) on, a shopper's cart is in their market's currency, and prices are converted into it);
+- a product not sold to the shopper, such as one left out of their market (`IProductSaleRestriction`, see [Markets](markets.md#not-sold-in-a-market));
 - a quantity the price does not allow, such as a second unit of a price bought only once.
 
 A cart never holds a price the browser sent. It stores what was chosen (the product, its price and the quantity) and prices every line again through `IProductSnapshotResolver` and `IPriceResolver` whenever it is shown. A line whose product was unpublished, taken off sale or repriced is pointed out, and the cart cannot be checked out until it is changed or removed.
@@ -87,6 +88,13 @@ The checkout's confirmation page shows the order number.
 **Order confirmations.** Other modules add sections to the confirmation email through `IOrderEmailSectionProvider`, such as the download links of [Digital Downloads](downloads). Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, discounts, shipping, tax, total, addresses; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings > Commerce > Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
 
 Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
+
+### Taxes and culture on the order
+
+- **`Order.TaxLines`.** When the checkout completes, `OrderCheckoutHandler` copies the invoice's `TaxLine`s onto the order, one per item, tax and rate, with the jurisdiction, rate, taxable amount, amount and `IncludedInPrice`. Reports such as the [VAT one-stop shop](taxation.md#taxes-on-orders-and-the-one-stop-shop) add them up. Orders paid before this have none.
+- **`Order.Culture`.** `IOrderService.CreateFromCartAsync` keeps the request's UI culture (`OrderCulture.Current()`, such as `de-DE`) when the cart becomes an order, which for a cart is when the buyer starts checking out. The order confirmation (`OrderConfirmationSender`), the shipped email (`ShippedEmailShipmentHandler`), the return emails (`OrderReturnEmailSender`), the gift card email (`GiftCardEmailSender`, from the card's order) and the checkout recovery email (`CheckoutRecoveryService`) are built inside `OrderCulture.Use(order.Culture)`, a `CultureScope` that sets the culture and UI culture, so their localized strings, dates and amounts are in it. An order without a culture, or with one the runtime doesn't know, is written in the current culture. Every order is made there, so an order staff create, or a register sale, keeps the culture of the staff member's request.
+
+With [Markets](markets.md), picking a market with a language switches the storefront's culture, so the order is in the market's language.
 
 ### Accounts, recovery and the storefront account
 
@@ -239,6 +247,7 @@ With the [Reports](reports) feature on, the Orders feature adds these reports un
 | Checkouts | Order checkouts (`CheckoutSessionIndex`, reference type `Order`) started in the period by how they ended: paid, payment failed, left or expired, or still open, with the paid rate, by day or month. |
 | Sales by country | Orders, tax and total per country the orders ship to, or are billed to. |
 | Tax on orders | Tax charged and what it was charged on, by day or month. |
+| VAT one-stop shop (OSS) | VAT on orders to other EU countries by destination country and rate, per currency, refunds taken off in proportion (`OrderVatOssReport`; see [Taxation](taxation.md#taxes-on-orders-and-the-one-stop-shop)). |
 | Discounts on orders | Orders that used each promotion code and what it took off. |
 | Refunds | Each refund given in the period, for orders paid up to 180 days before it. |
 | Disputes | The disputes opened in the period, open ones first, with why, their status and the amount, for orders paid up to 180 days before it (`OrderDisputesReport`). |
@@ -276,6 +285,8 @@ Two features put carts and orders on the commerce JSON API at `api/commerce/v1`:
 
 - **Cart API** (`CrestApps.OrchardCore.Carts.Api`, it needs Carts) maps `cart` and `cart/lines` for guests and signed-in buyers through `ICartService`, and `cart/merge` for a buyer who signed in after shopping as a guest. A guest's cart travels in the `X-Cart-Token` header, issued by the answer that creates the cart.
 - **Orders API** (`CrestApps.OrchardCore.Orders.Api`, it needs Orders, the Cart API and the Checkout API) maps `POST checkout`, which checks the caller's cart out through `CartCheckoutService` (placing the order and holding its stock) and returns the guest's `X-Checkout-Token`; the buyer's `me/orders`; and the staff `orders` endpoints, which list, get, refund and cancel through `OrderOperationsService` with `ManageOrders`. With **Returns** on it adds the buyer's returns under `me/orders/{orderId}/returns`, and with **Gift Cards** on, `checkout/{id}/gift-cards`.
+
+An order (`ApiOrder`, under `me/orders/{orderId}` and `orders/{orderId}`) has its `culture` (`Order.Culture`) and its `taxes`: `Order.TaxLines` grouped by name (the tax name, else the type), type, jurisdiction, rate and whether it was included in the price, each an `ApiOrderTax` with `name`, `type`, `jurisdiction`, `rate` (a fraction, such as `0.19`), `taxable` and `amount` (`ApiMoney`, summed) and `includedInPrice`.
 
 See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
