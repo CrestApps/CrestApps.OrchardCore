@@ -36,6 +36,10 @@ public sealed class Startup : StartupBase
         // The address editor asks for a country's layout when the country changes. A layout is public: it is the same
         // for everyone, in the visitor's language.
         routes.MapGet("/addresses/formats/{countryCode}", AddressFormatsEndpoint.HandleAsync);
+
+        // Address suggestions, when a provider is set up; none answers 404 and the editor offers none.
+        routes.MapGet("/" + AddressAutocompleteEndpoints.SuggestPath, AddressAutocompleteEndpoints.SuggestAsync);
+        routes.MapGet("/" + AddressAutocompleteEndpoints.ResolvePath, AddressAutocompleteEndpoints.ResolveAsync);
     }
 }
 
