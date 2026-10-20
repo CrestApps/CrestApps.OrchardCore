@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Companies;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Transactions;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -20,5 +21,8 @@ using OrchardCore.Modules.Manifest;
     [
         CommerceConstants.Features.Area,
         OrderConstants.Features.Orders,
+
+        // A company's terms are owed as transactions: what its deposit doesn't cover goes on its account in the ledger.
+        TransactionsConstants.Features.Area,
     ]
 )]
