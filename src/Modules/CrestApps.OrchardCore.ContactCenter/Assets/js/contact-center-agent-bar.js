@@ -11,7 +11,7 @@
  * the "contact-center-realtime" helper (which itself pulls in "telephony-client" for escapeHtml/formatDuration).
  */
 import { coalesceRefresh } from './shared/coalesced-refresh.js';
-import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase } from './shared/agent-presence.js';
+import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase, showsDialProgress } from './shared/agent-presence.js';
 import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 
 (function (window, document) {
@@ -393,7 +393,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
 
         // Read the same way on every agent screen (see shared/agent-presence.js): a state's own name, a break by its
         // reason, never a reason kept for a break that has not started yet, and -- while the dialer is placing a call for
-        // the agent -- what it is doing ("Dialing…", "Screening…") rather than "On a call".
+        // the agent -- Reserved, or what it is doing ("Dialing…", "Screening…") when its profile shows that.
         function presenceText() {
             var current = (state && state.presence) || {};
 
@@ -454,7 +454,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 reason || '',
                 offer ? offer.reservationId : '',
                 active ? active.interactionId + ':' + active.status : '',
-                pendingDial ? pendingDial.interactionId + ':' + normalizeDialPhase(pendingDial) : ''
+                pendingDial ? pendingDial.interactionId + ':' + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : 'Waiting') : ''
             ].join('|');
 
             if (signature === activeSignature) {
@@ -607,10 +607,23 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             '</div>';
         }
 
-        // A call the dialer is placing for the agent, before they are on it: who is being called, what the dialer is
-        // doing, and how long it has been at it. There is nothing to act on yet -- the record opens, and the card
-        // becomes the call, once the agent is connected -- so it has no buttons.
+        // A call the dialer is placing for the agent, before they are on it: that they are waiting for a connected call
+        // and for how long -- and, when the dialer profile shows its steps to the agent, who is being called and what
+        // the dialer is doing. There is nothing to act on yet -- the record opens, and the card becomes the call, once
+        // the agent is connected -- so it has no buttons.
         function renderPendingDial(pendingDial) {
+            if (!showsDialProgress(pendingDial)) {
+                var waitingHint = dialPhaseHint(pendingDial, config.presenceLabels);
+
+                return '<div class="cc-bar__offer cc-bar__pending-dial is-expanded is-waiting" data-cc-pending-dial="Waiting">' +
+                    '<div class="cc-bar__offer-head">' + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) +
+                        '<span class="cc-bar__countdown" data-cc-dial-time></span>' +
+                    '</div>' +
+                    (waitingHint ? '<div class="cc-bar__pending-hint">' + escapeHtml(waitingHint) + '</div>' : '') +
+                    (pendingDial.queueName ? '<div class="cc-bar__offer-details">' + detailRow(label('campaign', 'Campaign'), pendingDial.queueName) + '</div>' : '') +
+                '</div>';
+            }
+
             var contactRaw = pendingDial.customerLabel || pendingDial.customerAddress || '';
             var contact = contactRaw
                 ? (/[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw))
@@ -893,7 +906,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         // the bar clears itself shortly after the activity is completed or the call ends, and a call whose push was
         // missed still appears, with no polling cost the rest of the time.
         window.setInterval(function () {
-            if (state && (state.activeInteraction || presenceStatus() === 'Busy')) {
+            if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === 'Busy' || presenceStatus() === 'Reserved')) {
                 refresh();
             }
         }, 12000);

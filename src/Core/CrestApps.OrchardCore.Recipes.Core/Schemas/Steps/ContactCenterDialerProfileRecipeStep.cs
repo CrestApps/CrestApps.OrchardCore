@@ -57,6 +57,7 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("FreeUpCreditPercent", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Percentage, from 0 to 100, of the agents expected to free up that Predictive over-dialing counts when CreditAgentsFreeingUp is true.")),
                             ("ConnectWaitMilliseconds", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Milliseconds, from 0 to 1500, a person who answered an over-dialed call may wait for an agent to free up before the abandoned-call message plays.")),
                             ("AbandonedRetryRequiresAgent", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a Predictive call that was abandoned is retried only with an agent reserved for it.")),
+                            ("ShowDialProgressToAgent", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the agent's screens show who is being dialed and each step of an automated dial placed for them, rather than only that they are waiting for a connected call.")),
                             ("CallingCalendarId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Default business-hours calendar used to evaluate outbound calls.")),
                             ("RegionalCallingCalendarIds", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Object)

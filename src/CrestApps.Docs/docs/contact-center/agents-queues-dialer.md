@@ -164,6 +164,21 @@ Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsuppor
 | `Progressive` | Places one call per available agent as agents become available, bounded at 100 calls per pacing cycle. Requires the **Contact Center Paced Dialing** feature. |
 | `Predictive` | Requires the **Contact Center Paced Dialing** feature. Runs the Power loop (one reserved agent per call, up to **Calls per agent** per cycle), with the over-dial ratio throttled by the measured abandonment rate; with `PredictivePacingModel.OverDial`, places calls without a reserved agent and claims an agent when a person answers. See [Predictive dialing](#predictive-dialing). |
 
+### Agent state during an automated dial
+
+A Power, Progressive or reserved Predictive dial takes its agent before the customer's phone rings, but the agent is not on a call until a person answers and the agent is connected, which is how contact-center dialers report it:
+
+| Moment | Agent state | Recorded by |
+| --- | --- | --- |
+| Routing reserves the agent | `Reserved` | `ActivityReservationService.ReserveAsync` |
+| The dial is placed | `Reserved`, held for the call | `IActivityReservationService.AcceptForDialAsync` accepts the reservation and stores it on `AgentProfile.DialHoldReservationId` |
+| A person answers and the agent is connected | `Busy` (*On a call*), source `Connected` | `IAgentPresenceManager.ConnectHeldAgentAsync`, wherever the agent is marked joined (`dialer_agent_joined_utc`) |
+| The call ends | `WrapUp`, or ready again when no agent joined | the call's end, as for any call |
+
+`DialerAttemptService.TryDialAsync` uses `AcceptForDialAsync` only for automated modes (`DialerMode.IsAutomated()`); a preview or callback dial is one the agent started, so `AcceptAsync` puts them on it at once. An attempt that ends without the agent (no answer, busy, a machine, the customer hung up first) releases them from `Reserved` keeping their place in line, so `Busy` time, *Calls today* and occupancy count only conversations. The hold is cleared whenever the agent leaves `Reserved`. While it is on file, a state the agent asks for waits for the call like any on-call request, and the stranded-Reserved recovery (`AgentAvailabilityRecoveryService`) leaves the agent alone while their call is live. A supervisor's **Free agent** clears it with the rest of the stale work. An over-dialed Predictive call holds nobody: its agent is claimed when a person answers and goes straight to `Busy`.
+
+`DialerProfile.ShowDialProgressToAgent` (default `false`, **Show each dial to the agent** on the **Dialing** tab) decides what the agent's screens show while they are held. Off, they read *Reserved* and *Waiting for a connected call*, without the customer. On, they show who is being dialed and *Dialing…*, *Screening…* or *Connecting…*.
+
 Manual is not a dialer-profile mode: agents dial freely from the soft phone under the separate manual-dialing screening described below. A profile saved as Manual by an earlier version opens and re-saves as Preview.
 
 The Power, Progressive and Predictive automated pacing modes, their strategies, scheduled pacing task, and automated batch source live in the **Contact Center Paced Dialing** feature, which depends on the base **Contact Center Outbound Dialer**. The base Dialer owns the dialer-profile editor and mandatory compliance services together with its runtime services, so enabling Paced Dialing exposes a complete configuration and execution surface while Orchard resolves the rest of the dependency graph. When that feature is disabled, the dialer-profile editor only offers Preview, and saving a Power, Progressive or Predictive profile is rejected so a profile can never silently fail to pace; a stored one resolves to no strategy and the pacing cycle skips it with a warning. Preview remains on the base **Contact Center Outbound Dialer** feature.

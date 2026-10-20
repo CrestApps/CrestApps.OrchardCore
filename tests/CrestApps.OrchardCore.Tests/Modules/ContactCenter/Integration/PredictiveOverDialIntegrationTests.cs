@@ -174,7 +174,7 @@ public sealed class PredictiveOverDialIntegrationTests
         var retry = harness.Router.PlacedCalls[^1];
         Assert.Equal("activity-1", retry.ActivityId);
         Assert.Equal(AgentOne, retry.AgentId);
-        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentOne));
+        Assert.Equal(AgentPresenceStatus.Reserved, await harness.GetPresenceAsync(AgentOne));
         Assert.Equal(0, await harness.CountInFlightAsync());
     }
 

@@ -36,7 +36,9 @@ The page updates as events happen and refreshes every 10 seconds. The status at 
 | **Queue tiles** | For each queue: waiting, signed-in agents, available, busy and not-ready agents, the longest wait, and SLA breaches. A tile turns **amber** when the longest wait passes half the SLA threshold and **red** when there is a breach. |
 | **Agent board** | One card per agent with presence, a status badge, active interactions and action buttons. |
 
-Filter the agent board by **Agent** name, **Signed-in queue**, **Signed-in campaign** and **Status** (Available, Busy, On a call, Not ready, Offline). **Clear** resets the filters; the browser remembers them for next time. The board header shows how many agents match, for example *4 of 12 agents*.
+Each agent's badge shows their state as their own screens do: *Available*, *Reserved*, *On a call*, *Wrap-up*, or the reason for a not-ready state. An agent the dialer is calling for is *Reserved* until a person answers and they are connected.
+
+Filter the agent board by **Agent** name, **Signed-in queue**, **Signed-in campaign** and **Status** (Available, Busy, On a call, Not ready, Offline). **Busy** groups everyone at work: *Reserved*, *On a call* and *Wrap-up*, as the queue tiles count them. **On a call** keeps only agents who are connected to a call; a *Reserved* agent whose call is still ringing is left out. **Clear** resets the filters; the browser remembers them for next time. The board header shows how many agents match, for example *4 of 12 agents*.
 
 Use the dashboard to spot a queue that is backing up, an SLA breach or too few available agents, then move people between queues or ask agents to come back from a break.
 

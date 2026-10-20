@@ -24,7 +24,7 @@ public sealed class PowerDialerIdlePlaceIntegrationTests
         await harness.SeedQueuedActivityAsync(ActivityId, "+15551230001");
 
         await harness.RunPacingCycleAsync(DialerModeIntegrationHarness.CreateProfile(DialerMode.Power));
-        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentId));
+        Assert.Equal(AgentPresenceStatus.Reserved, await harness.GetPresenceAsync(AgentId));
 
         // Act - nobody answers, and the ended call's routing is released as the host's handler does.
         harness.Clock.Advance(TimeSpan.FromSeconds(25));

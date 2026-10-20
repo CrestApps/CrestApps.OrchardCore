@@ -88,7 +88,7 @@ public sealed class AgentPresenceLabelsTests
             {
                 "afterHoursUnavailable", "available", "away", "break", "breakPending", "breakPendingWithReason", "busy",
                 "dialPhaseConnecting", "dialPhaseConnectingHint", "dialPhaseDialing", "dialPhaseDialingHint",
-                "dialPhaseScreening", "dialPhaseScreeningHint", "doNotDisturb", "meeting", "offline", "requestBreak",
+                "dialPhaseScreening", "dialPhaseScreeningHint", "dialWaiting", "dialWaitingHint", "doNotDisturb", "meeting", "offline", "requestBreak",
                 "reserved", "training", "wrapUp",
             },
             _labels.Keys.Order(StringComparer.Ordinal));

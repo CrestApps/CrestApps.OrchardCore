@@ -258,6 +258,14 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
 
         try
         {
+            // The call a dialer held the agent for is among the work just released, so its hold goes with it; left on
+            // file, it would defer the return to ready behind a call that is over.
+            if (!string.IsNullOrEmpty(agent.DialHoldReservationId))
+            {
+                agent.DialHoldReservationId = null;
+                await _agentManager.UpdateAsync(agent, cancellationToken: CancellationToken.None);
+            }
+
             // A Busy or wrapping-up agent is moved on the way their own work ending would move them: setting a state on
             // an agent the platform believes is working is deferred until that work ends, which here it never would.
             var updated = agent.PresenceStatus == AgentPresenceStatus.Reserved

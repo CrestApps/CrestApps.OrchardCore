@@ -222,7 +222,12 @@ public sealed class DialerAttemptService : IDialerAttemptService
             return false;
         }
 
-        var acceptedReservation = await _reservationService.AcceptAsync(reservation.ItemId, cancellationToken);
+        // An automated dial is the dialer's until a person answers and the agent is connected, so it only holds the
+        // agent: they are Reserved while the customer is reached and on a call from the moment they are connected. A
+        // preview or callback dial is one the agent started themself, so they are on it from the start.
+        var acceptedReservation = profile.Mode.IsAutomated()
+            ? await _reservationService.AcceptForDialAsync(reservation.ItemId, cancellationToken)
+            : await _reservationService.AcceptAsync(reservation.ItemId, cancellationToken);
 
         if (acceptedReservation is null)
         {

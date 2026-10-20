@@ -103,12 +103,12 @@ public sealed class DialerVolumeWorkflowTests
             Assert.Equal(started, roundCalls.Count);
             Assert.True(roundCalls.Count <= agentCount, "A cycle placed more calls than there are agents.");
 
-            // No agent is assigned two simultaneous live calls, and each dialing agent is Busy.
+            // No agent is assigned two simultaneous live calls, and each dialing agent is held Reserved for theirs.
             Assert.Equal(roundCalls.Count, roundCalls.Select(call => call.AgentId).Distinct().Count());
 
             foreach (var call in roundCalls)
             {
-                Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(call.AgentId));
+                Assert.Equal(AgentPresenceStatus.Reserved, await harness.GetPresenceAsync(call.AgentId));
             }
 
             roundSizes.Add(roundCalls.Count);

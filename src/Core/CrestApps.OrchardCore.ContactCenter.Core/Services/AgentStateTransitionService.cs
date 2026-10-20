@@ -61,6 +61,12 @@ public sealed class AgentStateTransitionService : IAgentStateTransitionService
 
         ClearStaleReasonOnReady(profile, state, context);
 
+        // A dialer's hold lasts only as long as the agent is Reserved for it: connected or released, it is over.
+        if (state != AgentPresenceStatus.Reserved)
+        {
+            profile.DialHoldReservationId = null;
+        }
+
         // Here rather than in each writer, so no path back to Available can leave the agent's place in the
         // longest-idle line as it was before the work it just did.
         AgentPresenceUtilities.ApplyIdleState(profile, previousState, changedUtc, context.KeepsIdlePlace);

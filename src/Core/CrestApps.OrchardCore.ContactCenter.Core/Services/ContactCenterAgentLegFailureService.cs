@@ -259,6 +259,9 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
+        // Held Reserved while the dialer reached the customer, the agent is on the call from now.
+        await _presenceManager.ConnectHeldAgentAsync(session.AgentId, interaction, now, cancellationToken);
+
         var data = ContactCenterCallAudit.ForSession(session, interaction);
         data.ProviderLegId = agentLegProviderCallId;
         data.LegRole = nameof(CallPartyRole.Agent);

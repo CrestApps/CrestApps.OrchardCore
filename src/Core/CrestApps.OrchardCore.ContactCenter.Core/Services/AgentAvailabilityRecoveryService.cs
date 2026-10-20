@@ -63,7 +63,9 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     // without releasing them -- a power-dial attempt suppressed while a leftover accepted reservation was on file did
     // exactly that -- leaves an agent nobody routes to again: routing wants Available, the phone still reads
     // Available, and only the agent changing their own state used to clear it. Once no offer is left ringing for
-    // them, nothing is live, and the grace period has passed, they are returned to the state they were ready in.
+    // them, nothing is live, and the grace period has passed, they are returned to the state they were ready in. An
+    // agent a dialer holds while it reaches the customer is Reserved too, but the call placed for them is live work of
+    // theirs, so they are left alone until it ends.
     private async Task<int> RecoverStrandedReservedAsync(CancellationToken cancellationToken)
     {
         if (_reservationManager is null)
@@ -102,15 +104,18 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
                 continue;
             }
 
-            var settledReservationId = agent.ActiveReservationId;
+            // The offer that settled, or the dial whose call is over: the record names what had held the agent.
+            var settledReservationId = string.IsNullOrEmpty(agent.ActiveReservationId) ? agent.DialHoldReservationId : agent.ActiveReservationId;
             var target = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
 
             try
             {
+                // A dialer's hold ends with the call it placed, and no call of theirs is live any more.
                 if (!string.IsNullOrEmpty(settledReservationId))
                 {
                     // The presence manager applies a state at once only to an agent with no reservation on file.
                     agent.ActiveReservationId = null;
+                    agent.DialHoldReservationId = null;
                     await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
                 }
 

@@ -27,9 +27,14 @@ export function agentStatusGroup(status) {
 }
 
 // An agent is on a call when they handle a Contact Center interaction or a phone call of their own (a number dialed
-// from the keypad, an extension call).
+// from the keypad, an extension call). A Reserved agent's interaction is one still ringing for them -- an offer, or a
+// call the dialer is placing for them -- and they are not on it until they are connected.
 function isOnCall(agent) {
-    return !!(agent.activeInteractionId || agent.phoneCall || agent.activeInteractions > 0);
+    if (agent.phoneCall) {
+        return true;
+    }
+
+    return agent.presenceStatus !== 'Reserved' && !!(agent.activeInteractionId || agent.activeInteractions > 0);
 }
 
 // Lower case, without accents, so "catia" finds "Cátia".

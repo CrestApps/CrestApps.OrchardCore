@@ -87,6 +87,7 @@ internal static partial class AgentWorkspaceEndpoints
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        IDialerProfileReader dialerProfileReader,
         IClock clock,
         IOptions<AgentAvailabilityOptions> availabilityOptions,
         LinkGenerator linkGenerator,
@@ -169,7 +170,7 @@ internal static partial class AgentWorkspaceEndpoints
         var recentInteractions = await interactionManager.GetRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, reservationManager, activityManager, queueManager, contentManager, httpContext.RequestAborted);
-        (model.ActiveInteraction, model.PendingDial) = await BuildActiveInteractionAsync(profile, recentInteractions, now, availabilityOptions.Value.MaximumWrapUpDuration, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
+        (model.ActiveInteraction, model.PendingDial) = await BuildActiveInteractionAsync(profile, recentInteractions, now, availabilityOptions.Value.MaximumWrapUpDuration, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, dialerProfileReader, linkGenerator, httpContext, httpContext.RequestAborted);
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);

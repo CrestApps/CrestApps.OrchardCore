@@ -87,6 +87,12 @@
 			"A person answered. Connecting you now."
 		]
 	};
+	var DIAL_WAITING_LABEL = [
+		"dialWaiting",
+		"Waiting for a connected call",
+		"dialWaitingHint",
+		"The dialer is calling for you. You will be connected when a person answers."
+	];
 	var REASONED_STATES = {
 		Break: true,
 		Away: true,
@@ -123,16 +129,21 @@
 		else if (typeof value === "string" && /^\d+$/.test(value)) value = DIAL_PHASE_NAMES[Number(value)];
 		return typeof value === "string" && DIAL_PHASE_LABELS[value] ? value : "";
 	}
+	function showsDialProgress(pendingDial) {
+		return !!pendingDial && pendingDial.showsProgress !== false;
+	}
 	function dialPhaseLabel(pendingDial, labels) {
 		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
-		return entry ? text$1(labels, entry[0], entry[1]) : "";
+		if (!entry) return "";
+		return showsDialProgress(pendingDial) ? text$1(labels, entry[0], entry[1]) : text$1(labels, DIAL_WAITING_LABEL[0], DIAL_WAITING_LABEL[1]);
 	}
 	function dialPhaseHint(pendingDial, labels) {
 		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
-		return entry ? text$1(labels, entry[2], entry[3]) : "";
+		if (!entry) return "";
+		return showsDialProgress(pendingDial) ? text$1(labels, entry[2], entry[3]) : text$1(labels, DIAL_WAITING_LABEL[2], DIAL_WAITING_LABEL[3]);
 	}
 	function agentStatusLabel(presence, pendingDial, labels) {
-		var phase = dialPhaseLabel(pendingDial, labels);
+		var phase = showsDialProgress(pendingDial) ? dialPhaseLabel(pendingDial, labels) : "";
 		var status = normalizePresenceStatus((presence || {}).status);
 		if (phase && (status === "Reserved" || status === "Busy")) return phase;
 		return presenceLabel(presence, labels);
@@ -452,7 +463,7 @@
 					reason || "",
 					offer ? offer.reservationId : "",
 					active ? active.interactionId + ":" + active.status : "",
-					pendingDial ? pendingDial.interactionId + ":" + normalizeDialPhase(pendingDial) : ""
+					pendingDial ? pendingDial.interactionId + ":" + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : "Waiting") : ""
 				].join("|");
 				if (signature === activeSignature) return;
 				activeSignature = signature;
@@ -506,6 +517,10 @@
 				return "<div class=\"cc-bar__offer cc-bar__active is-expanded" + (ended ? " is-ended" : " is-connected") + "\" data-cc-active><div class=\"cc-bar__offer-head\">" + escapeHtml(heading) + (ended ? "" : "<span class=\"cc-bar__countdown\" data-cc-talk-time>0:00</span>") + "</div><div class=\"cc-bar__offer-details\">" + rows + "</div>" + (actions ? "<div class=\"cc-bar__offer-actions\">" + actions + "</div>" : "") + "</div>";
 			}
 			function renderPendingDial(pendingDial) {
+				if (!showsDialProgress(pendingDial)) {
+					var waitingHint = dialPhaseHint(pendingDial, config.presenceLabels);
+					return "<div class=\"cc-bar__offer cc-bar__pending-dial is-expanded is-waiting\" data-cc-pending-dial=\"Waiting\"><div class=\"cc-bar__offer-head\">" + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + "<span class=\"cc-bar__countdown\" data-cc-dial-time></span></div>" + (waitingHint ? "<div class=\"cc-bar__pending-hint\">" + escapeHtml(waitingHint) + "</div>" : "") + (pendingDial.queueName ? "<div class=\"cc-bar__offer-details\">" + detailRow(label("campaign", "Campaign"), pendingDial.queueName) + "</div>" : "") + "</div>";
+				}
 				var contactRaw = pendingDial.customerLabel || pendingDial.customerAddress || "";
 				var contact = contactRaw ? /[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw) : label("unknownCaller", "Unknown caller");
 				var number = pendingDial.customerAddress ? formatPhone(pendingDial.customerAddress) : "";
@@ -689,7 +704,7 @@
 			refresh();
 			window.setInterval(tick, 1e3);
 			window.setInterval(function() {
-				if (state && (state.activeInteraction || presenceStatus() === "Busy")) refresh();
+				if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === "Busy" || presenceStatus() === "Reserved")) refresh();
 			}, 12e3);
 		}
 		function boot() {

@@ -242,6 +242,7 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                 MockUserManager(),
                 _displayNameProvider.Object,
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
+                new NullDialerProfileReader(),
                 new StubClock(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
                 CreateLinkGenerator(),

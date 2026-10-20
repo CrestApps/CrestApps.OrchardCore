@@ -141,10 +141,14 @@ public sealed partial class ProviderVoiceEventService
         {
             // A provider that does not join the agent through a leg of its own puts the agent on the call as it is
             // answered: the answer is the moment the agent is connected.
-            if (DialerCallMetadata.MarkAgentJoined(interaction, session.AnsweredUtc ?? _clock.UtcNow))
+            var joinedUtc = session.AnsweredUtc ?? _clock.UtcNow;
+
+            if (DialerCallMetadata.MarkAgentJoined(interaction, joinedUtc))
             {
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
+
+            await _presenceManager.ConnectHeldAgentAsync(session.AgentId, interaction, joinedUtc, cancellationToken);
 
             return;
         }

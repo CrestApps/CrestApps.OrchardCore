@@ -646,6 +646,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public Mock<IActivityReservationManager> ReservationManager { get; } = new();
 
+        public Mock<IAgentPresenceManager> PresenceManager { get; } = new();
+
         public AnswerProviderCommandTypeExecutor CreateExecutor()
         {
             var clock = new Mock<IClock>(MockBehavior.Strict);
@@ -662,7 +664,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 PreDialCoordinators,
                 AuditRecorder,
                 ReservationManager.Object,
-                Mock.Of<IDialerAbandonmentTracker>());
+                Mock.Of<IDialerAbandonmentTracker>(),
+                PresenceManager.Object);
         }
 
         public void SetupActiveState()

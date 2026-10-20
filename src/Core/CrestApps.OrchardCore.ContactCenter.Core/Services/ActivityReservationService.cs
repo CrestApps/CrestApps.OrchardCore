@@ -235,7 +235,14 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     }
 
     /// <inheritdoc/>
-    public async Task<ActivityReservation> AcceptAsync(string reservationId, CancellationToken cancellationToken = default)
+    public Task<ActivityReservation> AcceptAsync(string reservationId, CancellationToken cancellationToken = default)
+        => AcceptCoreAsync(reservationId, holdForDial: false, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<ActivityReservation> AcceptForDialAsync(string reservationId, CancellationToken cancellationToken = default)
+        => AcceptCoreAsync(reservationId, holdForDial: true, cancellationToken);
+
+    private async Task<ActivityReservation> AcceptCoreAsync(string reservationId, bool holdForDial, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
@@ -307,7 +314,15 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         {
             agent.ActiveReservationId = null;
 
-            await _stateTransitions.TransitionAsync(agent, AgentPresenceStatus.Busy, new AgentStateChangeContext
+            // A dial accepted for the agent before the customer is called holds them Reserved: they are not on a call
+            // until a person answers and they are connected, which is when the presence manager makes them Busy. Any
+            // other accept is the agent taking the call, which makes them Busy now.
+            if (holdForDial)
+            {
+                agent.DialHoldReservationId = reservation.ItemId;
+            }
+
+            await _stateTransitions.TransitionAsync(agent, holdForDial ? AgentPresenceStatus.Reserved : AgentPresenceStatus.Busy, new AgentStateChangeContext
             {
                 Actor = acceptedBy,
                 Source = AgentStateChangeSources.Accepted,
@@ -495,9 +510,12 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             agent?.PresenceStatus == AgentPresenceStatus.Reserved &&
             string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal);
         var ownsAcceptedReservation = wasAccepted &&
-            agent?.PresenceStatus == AgentPresenceStatus.Busy &&
-            (string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal) ||
-                string.IsNullOrWhiteSpace(agent.ActiveReservationId));
+            ((agent?.PresenceStatus == AgentPresenceStatus.Busy &&
+                (string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal) ||
+                    string.IsNullOrWhiteSpace(agent.ActiveReservationId))) ||
+            // A dial accepted for the agent holds them Reserved until they are connected.
+            (agent?.PresenceStatus == AgentPresenceStatus.Reserved &&
+                string.Equals(agent.DialHoldReservationId, reservation.ItemId, StringComparison.Ordinal)));
 
         // An agent whose own reservation this is cannot hold newer work: a reservation is only made for an agent who
         // has none. Any other active reservation is then a leftover whose call ended without settling it, and letting
