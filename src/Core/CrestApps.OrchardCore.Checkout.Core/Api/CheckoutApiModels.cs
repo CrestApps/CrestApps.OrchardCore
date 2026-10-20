@@ -8,9 +8,10 @@ namespace CrestApps.OrchardCore.Checkout.Core.Api;
 /// <param name="Id">The checkout's id.</param>
 /// <param name="Status"><c>pending</c>, <c>awaitingProvider</c>, <c>paymentPending</c>, <c>completed</c>, <c>failed</c>, <c>canceled</c> or <c>expired</c>.</param>
 /// <param name="OrderId">The order it pays for, when it pays for one.</param>
+/// <param name="OrderNumber">The number the buyer knows the order by.</param>
 /// <param name="Currency">The currency it's charged in.</param>
 /// <param name="Steps">The steps, in order, and whether each is done.</param>
-/// <param name="NextStep">The first step still to do, or <c>payment</c> when only paying is left.</param>
+/// <param name="NextStep">The key of the first step still to do, such as <c>Contact</c> or <c>Shipping</c>; <c>Payment</c> when only paying is left; none once it's finished.</param>
 /// <param name="Contact">Who the buyer is, from the Contact step.</param>
 /// <param name="Shipping">Where and how the order goes, from the Shipping step.</param>
 /// <param name="Lines">What's being paid for.</param>
@@ -23,6 +24,7 @@ public sealed record ApiCheckout(
     string Id,
     string Status,
     string OrderId,
+    string OrderNumber,
     string Currency,
     IReadOnlyList<ApiCheckoutStep> Steps,
     string NextStep,
@@ -36,8 +38,7 @@ public sealed record ApiCheckout(
     DateTime? CompletedUtc);
 
 /// <summary>
-/// A step of the checkout. A step the API has no endpoint for, such as a store's own fields, is done on the checkout
-/// page.
+/// A step of the checkout. The Payment step is done once the checkout is paid and completed.
 /// </summary>
 public sealed record ApiCheckoutStep(string Key, string Title, bool IsDone);
 
@@ -126,4 +127,5 @@ public sealed record ApiPaymentStep(string ObligationId, string AttemptId, strin
 /// <param name="BlockingStep">The step to do first, when it's blocked.</param>
 /// <param name="Error">Why it failed or is blocked.</param>
 /// <param name="OrderId">The order it paid for.</param>
-public sealed record ApiCheckoutCompletion(string Status, bool Completed, string BlockingStep, string Error, string OrderId);
+/// <param name="OrderNumber">The number the buyer knows the order by.</param>
+public sealed record ApiCheckoutCompletion(string Status, bool Completed, string BlockingStep, string Error, string OrderId, string OrderNumber);

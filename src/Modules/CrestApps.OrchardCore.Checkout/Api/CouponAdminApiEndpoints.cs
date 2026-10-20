@@ -120,6 +120,7 @@ internal static class CouponAdminApiEndpoints
         var model = ToModel(request);
         var modelState = new ModelStateDictionary();
 
+        ValidateKind(request, modelState);
         await editor.ValidateAsync(model, existingItemId: null, modelState);
 
         if (!modelState.IsValid)
@@ -160,6 +161,7 @@ internal static class CouponAdminApiEndpoints
         var model = ToModel(request);
         var modelState = new ModelStateDictionary();
 
+        ValidateKind(request, modelState);
         await editor.ValidateAsync(model, coupon.ItemId, modelState);
 
         if (!modelState.IsValid)
@@ -246,6 +248,29 @@ internal static class CouponAdminApiEndpoints
     private static List<string> Clean(IEnumerable<string> ids)
         => ids?.Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id.Trim()).Distinct(StringComparer.Ordinal).ToList() ?? [];
 
+    private static void ValidateKind(ApiCouponRequest request, ModelStateDictionary modelState)
+    {
+        if (!string.IsNullOrEmpty(request?.Kind) && ParseKnownKind(request.Kind) is null)
+        {
+            modelState.AddModelError("Kind", "Use percentage, fixedAmount, freeShipping or buyXGetY.");
+        }
+
+        if (!string.IsNullOrEmpty(request?.Method) && request.Method is not ("code" or "automatic"))
+        {
+            modelState.AddModelError("Method", "Use code or automatic.");
+        }
+    }
+
+    private static CouponKind? ParseKnownKind(string kind)
+        => kind?.ToLowerInvariant() switch
+        {
+            "percentage" => CouponKind.Percentage,
+            "fixedamount" or "fixed-amount" => CouponKind.FixedAmount,
+            "freeshipping" or "free-shipping" => CouponKind.FreeShipping,
+            "buyxgety" or "buy-x-get-y" => CouponKind.BuyXGetY,
+            _ => null,
+        };
+
     private static CouponKind ParseKind(string kind)
         => kind?.ToLowerInvariant() switch
         {
@@ -291,6 +316,8 @@ internal static class CouponAdminApiEndpoints
             [.. coupon.BuyCategoryIds ?? []],
             coupon.CustomerId,
             coupon.CustomerEmail,
+            [.. coupon.Sources ?? []],
+            [.. coupon.ReferenceTypes ?? []],
             coupon.CreatedUtc);
 }
 
@@ -333,6 +360,8 @@ public sealed record ApiCoupon(
     IReadOnlyList<string> BuyCategoryIds,
     string CustomerId,
     string CustomerEmail,
+    IReadOnlyList<string> Sources,
+    IReadOnlyList<string> ReferenceTypes,
     DateTime CreatedUtc);
 
 /// <summary>

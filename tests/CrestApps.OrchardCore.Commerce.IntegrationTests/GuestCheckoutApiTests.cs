@@ -192,6 +192,33 @@ public sealed class GuestCheckoutApiTests
         Assert.Equal(401, (await guest.GetAsync(path)).Status);
     }
 
+    /// <summary>
+    /// Checks a simple product out as a guest, paid with the test provider, and returns the order's id.
+    /// </summary>
+    internal static async Task<string> CheckOutAsync(CommerceApiFixture fixture)
+    {
+        using var guest = fixture.CreateClient();
+        var productId = await FindPurchasableAsync(guest);
+
+        Assert.Equal(200, (await guest.PostAsync("cart/lines", new { productId, quantity = 1 })).Status);
+
+        var started = await guest.PostAsync("checkout");
+        var checkoutId = started.Json["id"].GetValue<string>();
+
+        Assert.Equal(200, (await guest.PutAsync($"checkout/{checkoutId}/contact", new { name = "Api Buyer", email = "webhooks@example.invalid", billingAddress = _address })).Status);
+
+        var rates = await guest.PostAsync($"checkout/{checkoutId}/shipping-rates", new { address = _address });
+
+        Assert.Equal(200, (await guest.PutAsync($"checkout/{checkoutId}/shipping", new { address = _address, rateId = rates.Json[0]["rateId"].GetValue<string>() })).Status);
+        Assert.Equal(200, (await guest.PostAsync($"checkout/{checkoutId}/payment", new { paymentMethod = "test" })).Status);
+
+        var completed = await guest.PostAsync($"checkout/{checkoutId}/complete");
+
+        Assert.True(completed.Json["completed"].GetValue<bool>(), completed.ToString());
+
+        return completed.Json["orderId"].GetValue<string>();
+    }
+
     private static async Task<string> FindPurchasableAsync(ApiClient client)
     {
         var list = await client.GetAsync("products?take=30");

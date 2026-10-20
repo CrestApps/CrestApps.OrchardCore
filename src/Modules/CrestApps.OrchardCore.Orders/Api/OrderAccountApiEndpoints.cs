@@ -13,8 +13,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Orders.Api;
 
 /// <summary>
-/// The signed-in buyer's orders and returns over the API, as the storefront's account pages show them: their own
-/// placed orders, and drafts the store sent them to pay.
+/// The signed-in buyer's orders and returns over the API, as the storefront's account pages show them: the list has
+/// their placed orders; one of them, or a draft the store sent them to pay, opens by its id.
 /// </summary>
 internal static class OrderAccountApiEndpoints
 {

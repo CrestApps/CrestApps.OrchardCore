@@ -1,12 +1,14 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Entities;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -107,6 +109,13 @@ public sealed class CartCheckoutService
             ReferenceType = CheckoutReferenceTypes.Order,
             ReferenceId = order.ItemId,
         }, cancellationToken);
+
+        // What the buyer knows the order by, for a client that can't read the order itself.
+        if (session is not null)
+        {
+            session.Put(new CheckoutReferenceNumber { Number = order.OrderNumber });
+            await _serviceProvider.GetRequiredService<ICheckoutSessionStore>().SaveAsync(session, cancellationToken);
+        }
 
         return new CartCheckoutResult { Session = session, OrderId = order.ItemId };
     }

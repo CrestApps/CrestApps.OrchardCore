@@ -115,18 +115,21 @@ internal static class InventoryAdminApiEndpoints
         => ChangeAsync(
             httpContext,
             request?.Quantity is > 0 ? null : ("quantity", "Receive at least one."),
+            [("locationId", request?.LocationId)],
             (inventory, location, actor) => inventory.AdjustAsync(stockItemId, location(request.LocationId), StockMovementKind.Received, request.Quantity.Value, request.Reason, actor, httpContext.RequestAborted));
 
     private static Task<Results<Ok<ApiStockItem>, ValidationProblem, ProblemHttpResult>> AdjustAsync(string stockItemId, ApiStockChangeRequest request, HttpContext httpContext)
         => ChangeAsync(
             httpContext,
             request?.Quantity is { } quantity && quantity != 0 ? null : ("quantity", "Give the change in units, up or down."),
+            [("locationId", request?.LocationId)],
             (inventory, location, actor) => inventory.AdjustAsync(stockItemId, location(request.LocationId), StockMovementKind.Adjusted, request.Quantity.Value, request.Reason, actor, httpContext.RequestAborted));
 
     private static Task<Results<Ok<ApiStockItem>, ValidationProblem, ProblemHttpResult>> CountAsync(string stockItemId, ApiStockCountRequest request, HttpContext httpContext)
         => ChangeAsync(
             httpContext,
             request?.Count is >= 0 ? null : ("count", "Give what was counted, zero or more."),
+            [("locationId", request?.LocationId)],
             (inventory, location, actor) => inventory.SetCountAsync(stockItemId, location(request.LocationId), request.Count.Value, request.Reason, actor, httpContext.RequestAborted));
 
     private static Task<Results<Ok<ApiStockItem>, ValidationProblem, ProblemHttpResult>> TransferAsync(string stockItemId, ApiStockTransferRequest request, HttpContext httpContext)
@@ -137,6 +140,7 @@ internal static class InventoryAdminApiEndpoints
                 : string.IsNullOrEmpty(request.FromLocationId) || string.IsNullOrEmpty(request.ToLocationId) || request.FromLocationId == request.ToLocationId
                     ? ("toLocationId", "Name two different locations.")
                     : null,
+            [("fromLocationId", request?.FromLocationId), ("toLocationId", request?.ToLocationId)],
             (inventory, location, actor) => inventory.TransferAsync(stockItemId, request.FromLocationId, request.ToLocationId, request.Quantity.Value, request.Reason, actor, httpContext.RequestAborted));
 
     // Every change is committed here, so a checkout that changed the same stock at the same moment can't be overwritten:
@@ -144,6 +148,7 @@ internal static class InventoryAdminApiEndpoints
     private static async Task<Results<Ok<ApiStockItem>, ValidationProblem, ProblemHttpResult>> ChangeAsync(
         HttpContext httpContext,
         (string Field, string Error)? invalid,
+        IReadOnlyList<(string Field, string LocationId)> locations,
         Func<IInventoryService, Func<string, string>, StockActor, Task<StockChangeResult>> change)
     {
         var services = httpContext.RequestServices;
@@ -161,6 +166,14 @@ internal static class InventoryAdminApiEndpoints
         var known = (await services.GetRequiredService<IInventoryLocationService>().GetLocationsAsync())
             .Select(location => location.LocationId)
             .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var (field, locationId) in locations)
+        {
+            if (!string.IsNullOrEmpty(locationId) && !known.Contains(locationId))
+            {
+                return ApiProblems.Validation(field, "There's no location with that id.");
+            }
+        }
         var actor = new StockActor(
             httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier),
             httpContext.User.Identity?.Name ?? httpContext.User.FindFirstValue("client_id") ?? "API");

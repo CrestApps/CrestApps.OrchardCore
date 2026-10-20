@@ -63,7 +63,6 @@ internal static class CheckoutApiEndpoints
 
         group.MapPost("checkout/{id}/complete", CompleteAsync)
             .AllowGuests()
-            .WithIdempotency()
             .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Payment)
             .WithName("CompleteCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -274,7 +273,7 @@ internal static class CheckoutApiEndpoints
 }
 
 /// <summary>
-/// A code to put on the checkout: a discount code, or a gift card's.
+/// A discount code to put on the checkout. Gift cards have their own endpoint.
 /// </summary>
 public sealed class ApiCodeRequest
 {

@@ -28,7 +28,9 @@ public sealed class CommerceCheckoutApiTests
         var checkout = CheckoutApi.Read(session);
 
         Assert.Equal(CheckoutApi.PaymentStep, checkout.NextStep);
-        Assert.All(checkout.Steps, step => Assert.True(step.IsDone));
+
+        // Paying is done only once the checkout is paid and completed.
+        Assert.Equal([true, true, false], checkout.Steps.Select(step => step.IsDone));
     }
 
     [Fact]
@@ -42,6 +44,7 @@ public sealed class CommerceCheckoutApiTests
         var checkout = CheckoutApi.Read(session);
 
         Assert.Null(checkout.NextStep);
+        Assert.All(checkout.Steps, step => Assert.True(step.IsDone));
         Assert.Equal("completed", checkout.Status);
         Assert.Equal("order-1", checkout.OrderId);
     }

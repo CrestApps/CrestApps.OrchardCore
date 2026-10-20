@@ -1,0 +1,47 @@
+using CrestApps.OrchardCore.Commerce.Webhooks.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.Commerce.Webhooks.BackgroundTasks;
+
+/// <summary>
+/// Every minute, sends the webhook deliveries that are due again, and once a day lets go of the log's old entries.
+/// </summary>
+[BackgroundTask(
+    Title = "Webhook deliveries",
+    Schedule = "* * * * *",
+    Description = "Sends webhook deliveries that failed again, with backoff, and deletes delivered and failed ones after 30 days.",
+    LockTimeout = 3_000,
+    LockExpiration = 300_000)]
+public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
+{
+    private const int BatchSize = 50;
+
+    internal static readonly TimeSpan Retention = TimeSpan.FromDays(30);
+
+    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        var logger = serviceProvider.GetRequiredService<ILogger<WebhookDeliveriesBackgroundTask>>();
+
+        try
+        {
+            var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
+            var store = serviceProvider.GetRequiredService<IWebhookDeliveryStore>();
+            var dispatcher = serviceProvider.GetRequiredService<WebhookDispatcher>();
+
+            foreach (var delivery in await store.ListDueAsync(now, BatchSize, cancellationToken))
+            {
+                await dispatcher.SendAsync(delivery, cancellationToken);
+            }
+
+            // The log is kept for a month; one batch a minute keeps up with any store.
+            await store.DeleteOlderThanAsync(now - Retention, BatchSize, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogError(exception, "An error occurred while sending webhook deliveries.");
+        }
+    }
+}

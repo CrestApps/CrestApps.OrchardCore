@@ -47,9 +47,34 @@ internal static class InventoryApiEndpoints
             return ApiProblems.NotFound();
         }
 
-        var item = (await stockItems.ListByProductAsync(id, httpContext.RequestAborted))
-            .FirstOrDefault(stock => !stock.Archived && string.Equals(stock.VariantId ?? string.Empty, variantId ?? string.Empty, StringComparison.Ordinal));
+        var counted = (await stockItems.ListByProductAsync(id, httpContext.RequestAborted)).Where(stock => !stock.Archived).ToArray();
+        var item = Array.Find(counted, stock => string.Equals(stock.VariantId ?? string.Empty, variantId ?? string.Empty, StringComparison.Ordinal));
         var answer = new List<ApiLocationAvailability>();
+
+        // A product sold in variants is counted per variant. Asked for the product, each location answers for all of
+        // its variants together, as the product page does before a variant is picked.
+        if (item is null && string.IsNullOrEmpty(variantId) && counted.Length > 0)
+        {
+            item = new StockItem
+            {
+                LowStockThreshold = counted.Max(stock => stock.LowStockThreshold),
+                AllowBackorder = counted.Any(stock => stock.AllowBackorder),
+                ReleaseDateUtc = counted.Min(stock => stock.ReleaseDateUtc),
+            };
+
+            foreach (var location in await locations.GetLocationsAsync())
+            {
+                var level = new StockLocationLevel
+                {
+                    LocationId = location.LocationId,
+                    OnHand = counted.Sum(stock => Math.Max(0, stock.FindLevel(location.LocationId)?.Available ?? 0)),
+                };
+
+                answer.Add(ToAvailability(location, item, level));
+            }
+
+            return TypedResults.Ok<IReadOnlyList<ApiLocationAvailability>>(answer);
+        }
 
         foreach (var location in await locations.GetLocationsAsync())
         {

@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Shipping.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -76,6 +77,9 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Order, OrderShipmentsDisplayDriver>();
         services.AddScoped<ShipmentEmailBuilder>();
         services.AddScoped<IShipmentEventHandler, ShippedEmailShipmentHandler>();
+        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);

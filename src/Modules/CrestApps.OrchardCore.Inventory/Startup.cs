@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
 using CrestApps.OrchardCore.Inventory.Core;
@@ -58,6 +60,13 @@ public sealed class Startup : StartupBase
         services.AddScoped<IStockItemStore, StockItemStore>();
         services.AddScoped<IStockMovementStore, StockMovementStore>();
         services.AddScoped<IInventoryService, DefaultInventoryService>();
+
+        // Webhooks hear about stock when the Commerce Webhooks feature is on.
+        services.AddScoped<IStockLevelHandler, StockWebhookHandler>();
+        services.AddScoped<IStockLevelObserver, StockWebhookObserver>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");
         services.AddScoped<InventoryLocationService>();
         services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());

@@ -42,7 +42,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
         if (await cache.GetStringAsync(cacheKey, httpContext.RequestAborted) is { } stored)
         {
-            return Replay(stored);
+            return Replay(stored, httpContext);
         }
 
         var (locker, locked) = await httpContext.RequestServices.GetRequiredService<IDistributedLock>()
@@ -58,13 +58,14 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         {
             if (await cache.GetStringAsync(cacheKey, httpContext.RequestAborted) is { } storedMeanwhile)
             {
-                return Replay(storedMeanwhile);
+                return Replay(storedMeanwhile, httpContext);
             }
 
             var result = await next(context);
 
-            // Only an answer is kept: a server error is worth trying again.
-            if (Capture(result) is { } response && response.StatusCode < StatusCodes.Status500InternalServerError)
+            // Only a final answer is kept. A server error, a "too many requests", and a conflict that clears by itself
+            // (someone else changing the same thing) are worth sending again with the same key.
+            if (Capture(result, httpContext.Response.Headers) is { } response && IsFinal(response))
             {
                 await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(response), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = _lifetime }, httpContext.RequestAborted);
             }
@@ -89,7 +90,10 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     private static string FirstNonEmpty(string first, string second)
         => string.IsNullOrEmpty(first) ? second : first;
 
-    internal static StoredResponse Capture(object result)
+    // The headers a client acts on: the guest tokens the first answer handed out, and where a created thing is.
+    private static readonly string[] _replayedHeaders = [CommerceApi.CartTokenHeader, CommerceApi.CheckoutTokenHeader];
+
+    internal static StoredResponse Capture(object result, IHeaderDictionary responseHeaders = null)
     {
         // A typed union, such as Results<Ok<T>, ProblemHttpResult>, wraps the result it returned.
         while (result is INestedHttpResult nested)
@@ -99,20 +103,56 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
         var statusCode = result is IStatusCodeHttpResult { StatusCode: { } code } ? code : StatusCodes.Status200OK;
         var value = result is IValueHttpResult valueResult ? valueResult.Value : result is IResult ? null : result;
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        return new StoredResponse(statusCode, value is null ? null : JsonSerializer.Serialize(value, value.GetType(), JsonSerializerOptions.Web));
+        foreach (var name in _replayedHeaders)
+        {
+            if (responseHeaders is not null && responseHeaders.TryGetValue(name, out var headerValue) && !string.IsNullOrEmpty(headerValue))
+            {
+                headers[name] = headerValue.ToString();
+            }
+        }
+
+        // Created<T> and its kin say where the new thing is; there's no interface for it, so it's read by name.
+        if (statusCode == StatusCodes.Status201Created && result?.GetType().GetProperty("Location")?.GetValue(result) is string { Length: > 0 } location)
+        {
+            headers["Location"] = location;
+        }
+
+        return new StoredResponse(
+            statusCode,
+            value is null ? null : JsonSerializer.Serialize(value, value.GetType(), JsonSerializerOptions.Web),
+            value is Microsoft.AspNetCore.Mvc.ProblemDetails ? "application/problem+json" : "application/json",
+            headers);
     }
 
-    private static IResult Replay(string stored)
+    /// <summary>
+    /// Returns whether an answer is the request's final one, and kept for a retry; otherwise a retry with the same key
+    /// is tried afresh.
+    /// </summary>
+    internal static bool IsFinal(StoredResponse response)
+        => response.StatusCode < StatusCodes.Status500InternalServerError &&
+            response.StatusCode != StatusCodes.Status429TooManyRequests &&
+            !(response.StatusCode == StatusCodes.Status409Conflict &&
+                response.Body is { } body &&
+                (body.Contains($"\"code\":\"{ApiProblems.Codes.Concurrency}\"", StringComparison.Ordinal) ||
+                 body.Contains($"\"code\":\"{ApiProblems.Codes.IdempotencyInProgress}\"", StringComparison.Ordinal)));
+
+    private static IResult Replay(string stored, HttpContext httpContext)
     {
         var response = JsonSerializer.Deserialize<StoredResponse>(stored);
 
+        foreach (var (name, value) in response.Headers ?? new Dictionary<string, string>())
+        {
+            httpContext.Response.Headers[name] = value;
+        }
+
         return response.Body is null
             ? Results.StatusCode(response.StatusCode)
-            : Results.Content(response.Body, "application/json", statusCode: response.StatusCode);
+            : Results.Content(response.Body, response.ContentType ?? "application/json", statusCode: response.StatusCode);
     }
 
-    internal sealed record StoredResponse(int StatusCode, string Body);
+    internal sealed record StoredResponse(int StatusCode, string Body, string ContentType = null, IReadOnlyDictionary<string, string> Headers = null);
 }
 
 public static class IdempotencyEndpointExtensions

@@ -1,0 +1,40 @@
+@model WebhookDeliveriesViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CommerceWebhookDeliveries" title="@T["Deliveries"]">
+        <breadcrumb-item id="CommerceWebhooks" action="Index" controller="WebhooksAdmin" area="CrestApps.OrchardCore.Commerce.Webhooks" permission="@WebhookPermissions.ManageWebhooks.Name">@T["Webhooks"]</breadcrumb-item>
+        <breadcrumb-item id="CommerceWebhook" url="@Url.Action("Edit", new { itemId = Model.Subscription.ItemId })">@Model.Subscription.Name</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Deliveries" asp-route-itemId="@Model.Subscription.ItemId" method="post" id="webhook-deliveries-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                <div class="col">
+                    <span class="text-break font-monospace small">@Model.Subscription.Url</span>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" formaction="@Url.Action("Ping", new { itemId = Model.Subscription.ItemId })" class="btn btn-secondary text-nowrap">@T["Send a test event"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="CommerceWebhookDeliveries" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> Nothing has been sent to this webhook yet, or nothing matches the filter."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Event" position="20" title="@T["Event"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Sent" position="40" title="@T["Raised"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

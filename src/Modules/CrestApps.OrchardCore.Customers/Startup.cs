@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -43,7 +44,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomerIndexProvider>();
 
         services.AddScoped<ICustomerStore, CustomerStore>();
-        services.AddScoped<ICustomerService, DefaultCustomerService>();
+        services.AddScoped<DefaultCustomerService>();
+        services.AddScoped<ICustomerService>(serviceProvider => new WebhookCustomerService(serviceProvider.GetRequiredService<DefaultCustomerService>(), serviceProvider));
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();

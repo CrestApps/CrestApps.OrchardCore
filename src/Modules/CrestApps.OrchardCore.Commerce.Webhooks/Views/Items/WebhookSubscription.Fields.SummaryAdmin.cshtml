@@ -1,0 +1,3 @@
+@model ShapeViewModel<WebhookSubscription>
+
+<a asp-action="Edit" asp-controller="WebhooksAdmin" asp-route-itemId="@Model.Value.ItemId">@Model.Value.Name</a>

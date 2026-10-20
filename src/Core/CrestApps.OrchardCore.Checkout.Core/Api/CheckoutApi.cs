@@ -57,7 +57,9 @@ public static class CheckoutApi
     /// Returns whether a step is done: saved, or one that asks for nothing.
     /// </summary>
     public static bool IsDone(CheckoutSession session, CheckoutFlowStep step)
-        => !step.CollectData || session.SavedSteps.ContainsKey(step.Key);
+        => string.Equals(step.Key, PaymentStep, StringComparison.Ordinal)
+            ? session.Status == CheckoutSessionStatus.Completed
+            : !step.CollectData || session.SavedSteps.ContainsKey(step.Key);
 
     /// <summary>
     /// Reads a checkout as the API returns it.
@@ -108,6 +110,7 @@ public static class CheckoutApi
             session.SessionId,
             ToCamel(session.Status.ToString()),
             string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ? session.ReferenceId : null,
+            GetNumber(session),
             currency,
             apiSteps,
             nextStep,
@@ -146,8 +149,12 @@ public static class CheckoutApi
             result.IsCompleted,
             result.BlockingStepKey,
             result.ErrorMessage,
-            session is not null && string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ? session.ReferenceId : null);
+            session is not null && string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ? session.ReferenceId : null,
+            session is null ? null : GetNumber(session));
     }
+
+    private static string GetNumber(CheckoutSession session)
+        => session.TryGet<CheckoutReferenceNumber>(out var reference) ? reference.Number : null;
 
     internal static string ToInterval(DurationType type)
         => type switch
