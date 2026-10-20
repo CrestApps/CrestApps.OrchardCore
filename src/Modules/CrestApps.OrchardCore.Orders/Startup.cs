@@ -84,6 +84,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+        services.AddScoped<CartCheckoutService>();
 
         // The order's invoice and packing slip, to print.
         services.AddScoped<OrderDocumentBuilder>();
@@ -193,6 +194,7 @@ public sealed class GiftCardsStartup : StartupBase
         services.AddContentPart<GiftCardPart>()
             .UseDisplayDriver<GiftCardPartDisplayDriver>();
         services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
+        services.AddScoped<GiftCardCheckoutService>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, GiftCardCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
         services.AddNavigationProvider<GiftCardsAdminMenu>();

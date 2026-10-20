@@ -84,11 +84,13 @@ public sealed class Startup : StartupBase
         // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
         // an ICheckoutTenderProvider. Its gate runs after the coupons', so it holds what's left after a code comes off.
         services.AddScoped<ICheckoutTenderService, DefaultCheckoutTenderService>();
+        services.AddScoped<CheckoutTenderChoices>();
         services.AddScoped<ICheckoutTenderLedger, CheckoutTenderLedger>();
         services.AddScoped<ICheckoutPaymentGate, TenderHoldPaymentGate>();
         services.AddScoped<ICheckoutHandler, TenderCheckoutHandler>();
         services.AddDataMigration<CheckoutTenderMigrations>()
             .AddIndexProvider<CheckoutTenderHoldIndexProvider>();
+        services.AddScoped<CheckoutCouponService>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();

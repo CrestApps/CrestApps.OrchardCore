@@ -21,18 +21,18 @@ internal sealed class LoyaltyCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriv
     private readonly LoyaltyTenderProvider _provider;
     private readonly LoyaltyService _loyalty;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
+    private readonly CheckoutTenderChoices _choices;
 
     public LoyaltyCheckoutFlowDisplayDriver(
         LoyaltyTenderProvider provider,
         LoyaltyService loyalty,
         IHttpContextAccessor httpContextAccessor,
-        CheckoutInvoiceBuilder invoiceBuilder)
+        CheckoutTenderChoices choices)
     {
         _provider = provider;
         _loyalty = loyalty;
         _httpContextAccessor = httpContextAccessor;
-        _invoiceBuilder = invoiceBuilder;
+        _choices = choices;
     }
 
     protected override string StepKey
@@ -79,23 +79,14 @@ internal sealed class LoyaltyCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriv
             ? _httpContextAccessor.HttpContext.Request.Form[CheckoutConstants.FormActions.FieldName].ToString()
             : null;
         var removePrefix = CheckoutConstants.FormActions.RemoveTenderPrefix + LoyaltyService.TenderKey + ":";
-        var selection = flow.Session.TryGet<CheckoutTenderSelection>(out var existing) ? existing : new CheckoutTenderSelection();
-        var changed = false;
 
         if (string.Equals(action, ApplyAction, StringComparison.Ordinal) && await _provider.FindForCheckoutAsync(flow) is { Points: > 0 } account)
         {
-            selection.Add(LoyaltyService.TenderKey, account.ItemId);
-            changed = true;
+            await _choices.AddAsync(flow, LoyaltyService.TenderKey, account.ItemId);
         }
         else if (action?.StartsWith(removePrefix, StringComparison.Ordinal) == true)
         {
-            changed = selection.Remove(LoyaltyService.TenderKey, action[removePrefix.Length..]);
-        }
-
-        if (changed)
-        {
-            flow.Session.Put(selection);
-            await _invoiceBuilder.BuildAsync(flow);
+            await _choices.RemoveAsync(flow, LoyaltyService.TenderKey, action[removePrefix.Length..]);
         }
 
         return await EditStepAsync(flow, context);

@@ -94,6 +94,7 @@ public sealed class OrdersStartup : StartupBase
         services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
         services.AddScoped<OrderAnonymizer>();
         services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
+        services.AddScoped<CustomerContactStepService>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
     }

@@ -66,6 +66,7 @@ public sealed class Startup : StartupBase
         // The Shipping step of an order's checkout, after Contact.
         services.AddScoped<ShippingOrderRateService>();
         services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
+        services.AddScoped<ShippingCheckoutStepService>();
         services.AddDisplayDriver<CheckoutFlow, ShippingCheckoutFlowDisplayDriver>();
 
         // Shipments on the order's admin page and on the buyer's order pages, and the email that a shipment left.
