@@ -25,6 +25,11 @@ public class ProductReviewsViewModel
     public string DefaultAuthorName { get; set; }
 
     public string ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether buyers can add photos: the Media feature is on.
+    /// </summary>
+    public bool CanAddPhotos { get; set; }
 }
 
 public class ProductRatingViewModel
@@ -43,6 +48,8 @@ public class ReviewInputModel
     public string AuthorName { get; set; }
 
     public string ReturnUrl { get; set; }
+
+    public List<Microsoft.AspNetCore.Http.IFormFile> Photos { get; set; } = [];
 }
 
 public enum ReviewStatusFilter
@@ -79,4 +86,8 @@ public class ReviewSettingsViewModel
     public bool RequireApproval { get; set; }
 
     public bool BuyersOnly { get; set; }
+
+    public bool SendReviewRequests { get; set; }
+
+    public int ReviewRequestDelayDays { get; set; } = 14;
 }

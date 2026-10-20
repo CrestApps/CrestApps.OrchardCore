@@ -1,4 +1,5 @@
 @model ShapeViewModel<ProductReview>
+@inject CrestApps.OrchardCore.Reviews.Services.ReviewPhotoStore Photos
 
 @if (!string.IsNullOrEmpty(Model.Value.Title))
 {
@@ -7,4 +8,13 @@
 @if (!string.IsNullOrEmpty(Model.Value.Body))
 {
     <span class="text-muted">@(Model.Value.Body.Length > 240 ? Model.Value.Body[..240] + "…" : Model.Value.Body)</span>
+}
+@if (Model.Value.Photos.Count > 0)
+{
+    <span class="d-flex flex-wrap gap-1 mt-1">
+        @foreach (var url in Model.Value.Photos.Select(Photos.GetUrl).Where(url => url is not null))
+        {
+            <a href="@url" target="_blank" rel="noopener"><img src="@url" alt="@T["Photo"]" class="rounded border" style="width: 3rem; height: 3rem; object-fit: cover;" loading="lazy" /></a>
+        }
+    </span>
 }

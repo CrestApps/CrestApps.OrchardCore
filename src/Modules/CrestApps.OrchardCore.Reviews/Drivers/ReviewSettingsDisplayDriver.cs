@@ -28,6 +28,8 @@ public sealed class ReviewSettingsDisplayDriver : SiteDisplayDriver<ReviewSettin
         {
             model.RequireApproval = settings.RequireApproval;
             model.BuyersOnly = settings.BuyersOnly;
+            model.SendReviewRequests = settings.SendReviewRequests;
+            model.ReviewRequestDelayDays = settings.ReviewRequestDelayDays;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ReviewsPermissions.ManageReviews))
         .OnGroup(SettingsGroupId);
@@ -45,6 +47,8 @@ public sealed class ReviewSettingsDisplayDriver : SiteDisplayDriver<ReviewSettin
 
         settings.RequireApproval = model.RequireApproval;
         settings.BuyersOnly = model.BuyersOnly;
+        settings.SendReviewRequests = model.SendReviewRequests;
+        settings.ReviewRequestDelayDays = Math.Clamp(model.ReviewRequestDelayDays, 0, 60);
 
         return Edit(site, settings, context);
     }

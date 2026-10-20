@@ -103,6 +103,11 @@ public sealed class Order : CatalogItem
     public OrderApproval Approval { get; set; }
 
     /// <summary>
+    /// Gets or sets when the buyer was asked to review what they bought, or none when they haven't been yet.
+    /// </summary>
+    public DateTime? ReviewRequestSentUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the buyer's purchase order number: their own reference for the order, printed on its invoice.
     /// </summary>
     public string PurchaseOrderNumber { get; set; }

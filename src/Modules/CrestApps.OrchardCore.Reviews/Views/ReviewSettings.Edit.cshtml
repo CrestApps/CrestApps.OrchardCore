@@ -14,3 +14,15 @@
         <span class="hint dashed">@T["Only customers who paid for a product can review it. Untick it to let any signed-in user review; their reviews aren't marked as verified purchases."]</span>
     </div>
 </div>
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="SendReviewRequests" type="checkbox" class="form-check-input" />
+        <label asp-for="SendReviewRequests" class="form-check-label">@T["Ask buyers for reviews"]</label>
+        <span class="hint dashed">@T["Emails buyers who accept marketing, once for each order, with a link to review each product. Needs the site's email, its base URL, and Customers."]</span>
+    </div>
+</div>
+<div class="mb-3" style="max-width: 16rem;">
+    <label asp-for="ReviewRequestDelayDays" class="form-label">@T["Days after paying"]</label>
+    <input asp-for="ReviewRequestDelayDays" type="number" min="0" max="60" class="form-control" />
+    <span class="hint">@T["Such as 14, so what they bought has arrived and been used."]</span>
+</div>

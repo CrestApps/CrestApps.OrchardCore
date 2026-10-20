@@ -32,6 +32,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ProductReviewIndexProvider>();
 
         services.AddScoped<ReviewService>();
+        services.AddScoped<ReviewPhotoStore>();
+        services.AddScoped<ReviewRequestService>();
+        services.AddSingleton<global::OrchardCore.BackgroundTasks.IBackgroundTask, ReviewRequestBackgroundTask>();
         services.AddScoped<ProductRatingReader>();
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<ProductReviewsDisplayDriver>();

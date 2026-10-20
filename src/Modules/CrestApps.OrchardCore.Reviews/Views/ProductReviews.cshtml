@@ -1,5 +1,6 @@
 @model ProductReviewsViewModel
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject CrestApps.OrchardCore.Reviews.Services.ReviewPhotoStore Photos
 @functions {
     // Stored times are UTC; people read them in the site's time zone.
     private async Task<DateTime> LocalAsync(DateTime utc)
@@ -43,6 +44,15 @@
             {
                 <p class="mt-2 mb-0" style="white-space: pre-line">@review.Body</p>
             }
+            @if (review.Photos.Count > 0)
+            {
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    @foreach (var url in review.Photos.Select(Photos.GetUrl).Where(url => url is not null))
+                    {
+                        <a href="@url" target="_blank" rel="noopener"><img src="@url" alt="@T["Photo from {0}", review.AuthorName]" class="rounded border" style="width: 6rem; height: 6rem; object-fit: cover;" loading="lazy" /></a>
+                    }
+                </div>
+            }
         </article>
     }
 
@@ -74,7 +84,7 @@
                     }
                 </p>
             }
-            <form asp-route-area="@ReviewsConstants.Feature" asp-controller="Reviews" asp-action="Submit" asp-route-productId="@Model.ProductId" method="post">
+            <form asp-route-area="@ReviewsConstants.Feature" asp-controller="Reviews" asp-action="Submit" asp-route-productId="@Model.ProductId" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
                 <h3 class="h6">@(Model.Existing is null ? T["Write a review"] : T["Change your review"])</h3>
                 <div class="mb-2">
@@ -99,6 +109,14 @@
                     <label class="form-label" for="review-author">@T["Name shown with your review"]</label>
                     <input id="review-author" name="AuthorName" class="form-control" maxlength="80" value="@(Model.Existing?.AuthorName ?? Model.DefaultAuthorName)" />
                 </div>
+                @if (Model.CanAddPhotos)
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="review-photos">@T["Photos"]</label>
+                        <input id="review-photos" name="Photos" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" multiple />
+                        <span class="form-text">@(Model.Existing?.Photos.Count > 0 ? T["Optional. Up to 3 JPEG, PNG or WebP images of up to 5 MB each; new ones replace the ones you added."] : T["Optional. Up to 3 JPEG, PNG or WebP images of up to 5 MB each."])</span>
+                    </div>
+                }
                 <button type="submit" class="btn btn-primary">@T["Send review"]</button>
             </form>
         }
