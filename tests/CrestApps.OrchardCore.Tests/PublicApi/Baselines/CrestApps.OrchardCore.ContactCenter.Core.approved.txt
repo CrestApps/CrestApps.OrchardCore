@@ -4173,7 +4173,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterDeadlineScheduler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterDeadlineScheduler, System.IDisposable
     {
-        public ContactCenterDeadlineScheduler(OrchardCore.Environment.Shell.IShellHost shellHost, OrchardCore.Environment.Shell.ShellSettings shellSettings, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterDeadlineScheduler> logger) { }
+        public ContactCenterDeadlineScheduler(OrchardCore.Environment.Shell.IShellHost shellHost, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterDeadlineScheduler> logger) { }
         public void Cancel(string key) { }
         public void Dispose() { }
         public void Schedule(string key, System.DateTime dueUtc, System.Func<System.IServiceProvider, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.DateTime?>> work) { }

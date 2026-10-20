@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
@@ -59,14 +61,16 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
     /// </summary>
     /// <param name="shellHost">The shell host, used to open a scope that outlives whatever scheduled the work.</param>
     /// <param name="shellSettings">The tenant the deadlines belong to.</param>
+    /// <param name="httpContextAccessor">The accessor the work's background HTTP context is set on.</param>
     /// <param name="clock">The tenant clock deadlines are measured against.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterDeadlineScheduler(
         IShellHost shellHost,
         ShellSettings shellSettings,
+        IHttpContextAccessor httpContextAccessor,
         IClock clock,
         ILogger<ContactCenterDeadlineScheduler> logger)
-        : this(clock, TimeProvider.System, work => RunInShellScopeAsync(shellHost, shellSettings, work), logger)
+        : this(clock, TimeProvider.System, work => RunInShellScopeAsync(shellHost, shellSettings, httpContextAccessor, work), logger)
     {
     }
 
@@ -215,12 +219,27 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
 
             _entries[key] = entry;
 
-            // Created under the gate so a timer that fires at once still finds its own entry.
-            entry.Timer = _timeProvider.CreateTimer(
-                static state => ((DeadlineState)state).Owner.OnDue((DeadlineState)state),
-                new DeadlineState(this, key, entry),
-                delay,
-                Timeout.InfiniteTimeSpan);
+            // Created under the gate so a timer that fires at once still finds its own entry. Created without the caller's
+            // execution context: the work runs long after the webhook or request that scheduled it was answered, and a
+            // timer that captured it carried that request's HTTP context holder, cleared by then, into the work.
+            var suppressed = ExecutionContext.IsFlowSuppressed();
+            var flowControl = suppressed ? default : ExecutionContext.SuppressFlow();
+
+            try
+            {
+                entry.Timer = _timeProvider.CreateTimer(
+                    static state => ((DeadlineState)state).Owner.OnDue((DeadlineState)state),
+                    new DeadlineState(this, key, entry),
+                    delay,
+                    Timeout.InfiniteTimeSpan);
+            }
+            finally
+            {
+                if (!suppressed)
+                {
+                    flowControl.Undo();
+                }
+            }
         }
 
         replaced?.Timer.Dispose();
@@ -315,11 +334,28 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
         }
     }
 
-    private static async Task RunInShellScopeAsync(IShellHost shellHost, ShellSettings shellSettings, Func<IServiceProvider, Task> work)
+    private static async Task RunInShellScopeAsync(
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        IHttpContextAccessor httpContextAccessor,
+        Func<IServiceProvider, Task> work)
     {
         var scope = await shellHost.GetScopeAsync(shellSettings);
 
-        await scope.UsingAsync(shellScope => work(shellScope.ServiceProvider));
+        // A background HTTP context for the tenant, as Orchard's own background tasks get: services resolved by the
+        // work and its after-commit tasks read it. Without one, triggering a workflow from an event the work published
+        // failed with a NullReferenceException in TemplatesShapeBindingResolver, which reads HttpContext.Items when it
+        // is built. It stays set until the after-commit tasks, which run when the scope is disposed, have finished.
+        httpContextAccessor.HttpContext = scope.ShellContext.CreateHttpContext();
+
+        try
+        {
+            await scope.UsingAsync(shellScope => work(shellScope.ServiceProvider));
+        }
+        finally
+        {
+            httpContextAccessor.HttpContext = null;
+        }
     }
 
     private sealed class Entry
