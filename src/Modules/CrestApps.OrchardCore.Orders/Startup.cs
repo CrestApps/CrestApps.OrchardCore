@@ -60,6 +60,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddScoped<OrderLinksEmailBuilder>();
         services.AddScoped<DraftOrderService>();
+
+        // The Sales Summary dashboard widget.
+        services.AddDataMigration<Dashboard.SalesSummaryWidgetMigrations>()
+            .AddContentPart<Dashboard.SalesSummaryPart>()
+            .UseDisplayDriver<Dashboard.SalesSummaryPartDisplayDriver>();
         services.AddScoped<QuoteService>();
         services.AddScoped<ICartActionProvider, QuoteCartActionProvider>();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
@@ -140,6 +145,7 @@ public sealed class ReportsStartup : StartupBase
             .AddReport<OrderSalesReport>()
             .AddReport<OrderCategorySalesReport>()
             .AddReport<OrderCustomersReport>()
+            .AddReport<OrderCohortsReport>()
             .AddReport<CheckoutConversionReport>()
             .AddReport<OrderProductSalesReport>()
             .AddReport<OrderCountrySalesReport>()
