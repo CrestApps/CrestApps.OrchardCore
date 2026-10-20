@@ -85,6 +85,17 @@ public sealed class Order : CatalogItem
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the company the order was placed for, when its buyer buys for one: the company sees it, and pays
+    /// it on its terms.
+    /// </summary>
+    public string CompanyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the buyer's purchase order number: their own reference for the order, printed on its invoice.
+    /// </summary>
+    public string PurchaseOrderNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the taxes the order was charged, each for a jurisdiction, tax and rate, as its checkout worked them
     /// out: what reports such as the VAT one-stop-shop return add up.
     /// </summary>

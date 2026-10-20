@@ -35,6 +35,8 @@ public sealed record ApiOrderSummary(
 /// <param name="LocationId">The inventory location it's sold from.</param>
 /// <param name="Register">The register a point-of-sale order was rung up on.</param>
 /// <param name="Culture">The culture the buyer shopped in, such as de-DE; the order's emails are written in it.</param>
+/// <param name="CompanyId">The company the order was placed for, when its buyer buys for one.</param>
+/// <param name="PurchaseOrderNumber">The buyer's purchase order number.</param>
 public sealed record ApiOrder(
     string Id,
     string Number,
@@ -47,6 +49,8 @@ public sealed record ApiOrder(
     string Register,
     string Currency,
     string Culture,
+    string CompanyId,
+    string PurchaseOrderNumber,
     string CustomerId,
     string CustomerName,
     string CustomerEmail,
@@ -222,6 +226,8 @@ internal static class OrderApiMapper
             order.RegisterName,
             currency,
             order.Culture,
+            order.CompanyId,
+            order.PurchaseOrderNumber,
             order.CustomerId,
             order.CustomerName,
             order.CustomerEmail,

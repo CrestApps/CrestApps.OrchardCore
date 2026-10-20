@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -72,9 +73,28 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         S = stringLocalizer;
     }
 
-    public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+    public override Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
     {
-        var order = context.Order;
+        var orderId = context.Order.ItemId;
+
+        // The referrer is rewarded once the order is saved, in a scope of their own: a reward changes a balance under
+        // its own lock and commits, which inside a checkout's completion would commit the checkout halfway.
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            .GetServices<IOrderEventHandler>()
+            .OfType<ReferralOrderEventHandler>()
+            .First()
+            .RewardReferrerAsync(orderId));
+
+        return Task.CompletedTask;
+    }
+
+    internal async Task RewardReferrerAsync(string orderId, CancellationToken cancellationToken = default)
+    {
+        if (await _serviceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
+        {
+            return;
+        }
+
         var friendEmail = order.CustomerEmail?.Trim().ToLowerInvariant();
 
         if (string.IsNullOrEmpty(friendEmail) || string.IsNullOrEmpty(order.CheckoutSessionId) ||

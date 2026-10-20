@@ -262,6 +262,11 @@
                 <dl class="mb-0">
                     <dt>@T["Order number"]</dt>
                     <dd>@order.OrderNumber</dd>
+                    @if (!string.IsNullOrWhiteSpace(order.PurchaseOrderNumber))
+                    {
+                        <dt>@T["Purchase order"]</dt>
+                        <dd>@order.PurchaseOrderNumber</dd>
+                    }
                     <dt>@T["Placed"]</dt>
                     <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
                     @if (order.PaidUtc.HasValue && !owed)

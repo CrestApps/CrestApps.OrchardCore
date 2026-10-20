@@ -32,6 +32,10 @@
     <div class="text-sm-end">
         <h1 class="h3 mb-1">@Model.Title</h1>
         <div>@T["Order {0}", order.OrderNumber]</div>
+        @if (!string.IsNullOrWhiteSpace(order.PurchaseOrderNumber))
+        {
+            <div>@T["PO {0}", order.PurchaseOrderNumber]</div>
+        }
         <div class="small text-body-secondary">@T["Placed {0:d}", Model.Placed]</div>
         @if (Model.Paid is { } paid && Model.AmountDue <= 0m)
         {

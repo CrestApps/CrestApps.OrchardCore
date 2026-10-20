@@ -19,7 +19,13 @@
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
     <div>
         <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
-        <p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+        <p class="text-muted">
+            @T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]
+            @if (!string.IsNullOrWhiteSpace(order.PurchaseOrderNumber))
+            {
+                <span class="d-block">@T["Purchase order {0}", order.PurchaseOrderNumber]</span>
+            }
+        </p>
     </div>
     @if (!string.IsNullOrEmpty(Model.InvoiceUrl))
     {

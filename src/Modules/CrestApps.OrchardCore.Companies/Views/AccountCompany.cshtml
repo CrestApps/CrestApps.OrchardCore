@@ -1,0 +1,115 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CompanyAccountViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    private async Task<string> DateAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime.ToShortDateString();
+}
+
+@* The Company page of a buyer's storefront account: the company, its terms and locations, its buyers for an admin, and its orders. *@
+
+<h1 class="h3 mb-3">@Model.Company.Name</h1>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-body-secondary small">@T["You buy as"]</div>
+                <div class="fs-5">@(Model.Buyer.Role == CompanyBuyerRole.Admin ? T["An admin"] : T["A buyer"])</div>
+                @if (Model.Buyer.OrderLimit is { } limit)
+                {
+                    <div class="small text-body-secondary">@T["Orders over {0} need an admin's approval.", ProductPriceFormatter.Format(limit, Model.Currency)]</div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Company.TaxId))
+                {
+                    <div class="small text-body-secondary">@T["Tax number: {0}", Model.Company.TaxId]</div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-body-secondary small">@T["Payment terms"]</div>
+                @if (Model.Company.Terms?.OffersTerms == true)
+                {
+                    <div class="fs-5">@T["Net {0}", Model.Company.Terms.NetDays]</div>
+                    @if (Model.Company.Terms.DepositPercent > 0m)
+                    {
+                        <div class="small">@T["{0}% deposit at checkout", Model.Company.Terms.DepositPercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)]</div>
+                    }
+                    <div class="small">@T["Owed on account: {0}", ProductPriceFormatter.Format(Model.Owed, Model.Currency)]</div>
+                    @if (Model.Company.Terms.CreditLimit is { } credit)
+                    {
+                        <div class="small text-body-secondary">@T["Credit limit: {0}", ProductPriceFormatter.Format(credit, Model.Currency)]</div>
+                    }
+                }
+                else
+                {
+                    <div class="fs-5">@T["Paid at checkout"]</div>
+                }
+                @if (Model.Company.Terms?.RequirePurchaseOrder == true)
+                {
+                    <div class="small text-body-secondary">@T["Give a purchase order number at checkout."]</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Company.Locations.Count > 0)
+{
+    <h2 class="h5">@T["Locations"]</h2>
+    <ul class="list-unstyled mb-3">
+        @foreach (var location in Model.Company.Locations)
+        {
+            <li class="mb-1"><span class="fw-semibold">@location.Name</span> <span class="text-body-secondary">@string.Join(", ", new[] { location.Address?.AddressLine1, location.Address?.City, location.Address?.Region, location.Address?.PostalCode, location.Address?.Country }.Where(part => !string.IsNullOrEmpty(part)))</span></li>
+        }
+    </ul>
+}
+
+@if (Model.Buyer.Role == CompanyBuyerRole.Admin)
+{
+    <h2 class="h5">@T["Buyers"]</h2>
+    <ul class="list-unstyled mb-3">
+        @foreach (var buyer in Model.Company.Buyers)
+        {
+            <li class="mb-1">@(buyer.Email ?? buyer.UserName) <span class="badge bg-secondary-subtle text-body fw-normal">@(buyer.Role == CompanyBuyerRole.Admin ? T["Admin"] : T["Buyer"])</span></li>
+        }
+    </ul>
+}
+
+<h2 class="h5">@(Model.Buyer.Role == CompanyBuyerRole.Admin ? T["The company's orders"] : T["Your orders for the company"])</h2>
+@if (Model.Orders.Count == 0)
+{
+    <p class="text-body-secondary">@T["No orders yet."]</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Order"]</th>
+                    <th scope="col">@T["Placed"]</th>
+                    <th scope="col">@T["Buyer"]</th>
+                    <th scope="col">@T["PO"]</th>
+                    <th scope="col" class="text-end">@T["Total"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model.Orders)
+                {
+                    <tr>
+                        <td>@order.OrderNumber</td>
+                        <td>@await DateAsync(order.CreatedUtc)</td>
+                        <td>@order.CustomerName</td>
+                        <td>@order.PurchaseOrderNumber</td>
+                        <td class="text-end">@ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

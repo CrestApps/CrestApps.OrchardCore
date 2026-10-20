@@ -1,0 +1,14 @@
+@model CrestApps.OrchardCore.Companies.Drivers.CompanyCheckoutStepViewModel
+
+<p class="mb-3">@T["You're ordering for {0}.", Model.CompanyName]</p>
+
+<div class="mb-3" asp-validation-class-for="PurchaseOrderNumber">
+    <label asp-for="PurchaseOrderNumber" class="form-label">@T["Purchase order number"]</label>
+    @if (Model.IsRequired)
+    {
+        <span class="text-danger" aria-hidden="true">*</span>
+    }
+    <input asp-for="PurchaseOrderNumber" class="form-control" maxlength="64" autocomplete="off" aria-required="@(Model.IsRequired ? "true" : "false")" />
+    <span asp-validation-for="PurchaseOrderNumber" class="text-danger"></span>
+    <span class="hint">@(Model.IsRequired ? T["Your company's reference for this order. It's printed on the invoice."] : T["Optional. Your company's reference for this order, printed on the invoice."])</span>
+</div>

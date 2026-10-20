@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Customers.Handlers;
 
@@ -35,9 +36,27 @@ internal sealed class LoyaltyOrderEventHandler : OrderEventHandlerBase
         S = stringLocalizer;
     }
 
-    public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+    public override Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
     {
-        var order = context.Order;
+        var orderId = context.Order.ItemId;
+
+        // Points are given once the order is saved, in a scope of their own: a balance changes under its own lock and
+        // commits, which inside a checkout's completion would commit the checkout halfway.
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            .GetServices<IOrderEventHandler>()
+            .OfType<LoyaltyOrderEventHandler>()
+            .First()
+            .AwardAsync(orderId));
+
+        return Task.CompletedTask;
+    }
+
+    internal async Task AwardAsync(string orderId, CancellationToken cancellationToken = default)
+    {
+        if (await _serviceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
+        {
+            return;
+        }
 
         if (await FindCustomerIdAsync(order, cancellationToken) is not { } customerId)
         {
