@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Companies.Models;
 using CrestApps.OrchardCore.Companies.Navigation;
 using CrestApps.OrchardCore.Companies.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,8 +30,11 @@ public sealed class Startup : StartupBase
         // Companies live in their own YesSql collection, which has to be declared to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CompaniesConstants.CollectionName));
         services.AddDataMigration<CompanyMigrations>()
-            .AddIndexProvider<CompanyIndexProvider>();
+            .AddIndexProvider<CompanyIndexProvider>()
+            .AddIndexProvider<PriceListIndexProvider>();
         services.AddScoped<ICompanyStore, CompanyStore>();
+        services.AddScoped<IPriceListStore, PriceListStore>();
+        services.AddScoped<IBuyerPriceProvider, CompanyPriceProvider>();
         services.AddScoped<CompanyService>();
         services.AddScoped<IOrderEventHandler, CompanyOrderHandler>();
 
@@ -48,6 +52,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<CompaniesAdminMenu>();
         services.AddNavigationProvider<CompanyAccountMenu>();
         services.AddDisplayDriver<Company, CompanyDisplayDriver>();
+        services.AddDisplayDriver<PriceList, PriceListDisplayDriver>();
     }
 }
 

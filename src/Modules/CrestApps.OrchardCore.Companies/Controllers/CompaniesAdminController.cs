@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -31,6 +32,7 @@ public sealed class CompaniesAdminController : Controller
     private const int SpareRows = 2;
 
     private readonly ICompanyStore _companies;
+    private readonly IPriceListStore _priceLists;
     private readonly UserManager<IUser> _userManager;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
@@ -42,6 +44,7 @@ public sealed class CompaniesAdminController : Controller
 
     public CompaniesAdminController(
         ICompanyStore companies,
+        IPriceListStore priceLists,
         UserManager<IUser> userManager,
         ISiteService siteService,
         IAuthorizationService authorizationService,
@@ -51,6 +54,7 @@ public sealed class CompaniesAdminController : Controller
         IStringLocalizer<CompaniesAdminController> stringLocalizer)
     {
         _companies = companies;
+        _priceLists = priceLists;
         _userManager = userManager;
         _siteService = siteService;
         _authorizationService = authorizationService;
@@ -323,6 +327,7 @@ public sealed class CompaniesAdminController : Controller
     {
         model.ItemId = itemId;
         model.StoreCurrency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
+        model.PriceLists = [.. (await _priceLists.ListAllAsync(HttpContext.RequestAborted)).Select(list => new SelectListItem(list.Name, list.ItemId, list.ItemId == model.PriceListId))];
 
         for (var i = 0; i < SpareRows; i++)
         {

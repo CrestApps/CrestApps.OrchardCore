@@ -21,6 +21,27 @@ public sealed class CompanyBuyerIndex : MapIndex
     public string UserId { get; set; }
 }
 
+public sealed class PriceListIndex : CatalogItemIndex
+{
+    public string Name { get; set; }
+}
+
+public sealed class PriceListIndexProvider : IndexProvider<PriceList>
+{
+    public PriceListIndexProvider()
+    {
+        CollectionName = CompaniesConstants.CollectionName;
+    }
+
+    public override void Describe(DescribeContext<PriceList> context)
+        => context.For<PriceListIndex>()
+            .Map(list => new PriceListIndex
+            {
+                ItemId = list.ItemId,
+                Name = list.Name,
+            });
+}
+
 public sealed class CompanyIndexProvider : IndexProvider<Company>
 {
     public CompanyIndexProvider()

@@ -9,7 +9,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Companies.Navigation;
 
 /// <summary>
-/// Commerce › Companies.
+/// Commerce › Companies, and Commerce › Price lists.
 /// </summary>
 public sealed class CompaniesAdminMenu : AdminNavigationProvider
 {
@@ -18,6 +18,13 @@ public sealed class CompaniesAdminMenu : AdminNavigationProvider
         { "area", CompaniesConstants.Feature },
         { "controller", typeof(CompaniesAdminController).ControllerName() },
         { "action", nameof(CompaniesAdminController.Index) },
+    };
+
+    private static readonly RouteValueDictionary _priceLists = new()
+    {
+        { "area", CompaniesConstants.Feature },
+        { "controller", typeof(PriceListsAdminController).ControllerName() },
+        { "action", nameof(PriceListsAdminController.Index) },
     };
 
     internal readonly IStringLocalizer S;
@@ -35,6 +42,12 @@ public sealed class CompaniesAdminMenu : AdminNavigationProvider
                     .AddClass("commerce-companies")
                     .Id("commerceCompanies")
                     .Action(_companies)
+                    .Permission(CompaniesPermissions.ManageCompanies)
+                    .LocalNav())
+                .Add(S["Price lists"], S["Price lists"].PrefixPosition("3.1"), priceLists => priceLists
+                    .AddClass("commerce-price-lists")
+                    .Id("commercePriceLists")
+                    .Action(_priceLists)
                     .Permission(CompaniesPermissions.ManageCompanies)
                     .LocalNav()));
 

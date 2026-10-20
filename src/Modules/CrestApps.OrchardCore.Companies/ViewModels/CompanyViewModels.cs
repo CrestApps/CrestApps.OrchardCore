@@ -96,3 +96,34 @@ public class CompanyAccountViewModel
 
     public string Currency { get; set; }
 }
+
+public class PriceListsIndexViewModel
+{
+    public AdminListContext<PriceList> List { get; set; }
+
+    public string Search { get; set; }
+}
+
+public class PriceListEditViewModel
+{
+    [BindNever]
+    public string ItemId { get; set; }
+
+    public bool IsNew
+        => string.IsNullOrEmpty(ItemId);
+
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the percentage off, as text, so a page in a language with a decimal comma reads "12.5" right.
+    /// </summary>
+    public string PercentOff { get; set; }
+
+    /// <summary>
+    /// Gets or sets the prices by SKU: a SKU and a price on each line.
+    /// </summary>
+    public string Prices { get; set; }
+
+    [BindNever]
+    public string StoreCurrency { get; set; }
+}
