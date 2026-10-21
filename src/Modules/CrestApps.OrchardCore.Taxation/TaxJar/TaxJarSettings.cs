@@ -30,8 +30,8 @@ public sealed class TaxJarSettings
 }
 
 /// <summary>
-/// The TaxJar settings as the provider reads them: the token unprotected. Saving the settings restarts the tenant, so
-/// the provider sees them at once.
+/// The TaxJar settings as the provider reads them: the token unprotected. Read through
+/// <see cref="IOptionsMonitor{TOptions}.CurrentValue"/>; saving the settings refreshes them without restarting the tenant.
 /// </summary>
 public sealed class TaxJarOptions
 {
@@ -60,7 +60,7 @@ internal sealed class TaxJarOptionsConfiguration : IConfigureOptions<TaxJarOptio
 
     public void Configure(TaxJarOptions options)
     {
-        var settings = _siteService.GetSettingsAsync<TaxJarSettings>().GetAwaiter().GetResult();
+        var settings = _siteService.GetSettings<TaxJarSettings>();
 
         options.UseSandbox = settings.UseSandbox;
         options.Countries = [.. (settings.Countries ?? []).Where(code => code?.Length == 2).Select(code => code.ToUpperInvariant())];

@@ -28,16 +28,16 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private readonly TaxJarOptions _options;
+    private readonly IOptionsMonitor<TaxJarOptions> _options;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
 
     public TaxJarTaxDeterminationProvider(
-        IOptions<TaxJarOptions> options,
+        IOptionsMonitor<TaxJarOptions> options,
         IHttpClientFactory httpClientFactory,
         ILogger<TaxJarTaxDeterminationProvider> logger)
     {
-        _options = options.Value;
+        _options = options;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -47,23 +47,28 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         => 100;
 
     public bool CanHandle(TaxCalculationContext context)
-        => context is not null &&
-            !string.IsNullOrEmpty(_options.ApiKey) &&
+    {
+        var options = _options.CurrentValue;
+
+        return context is not null &&
+            !string.IsNullOrEmpty(options.ApiKey) &&
             context.DefaultPriceType == TaxPriceType.Exclusive &&
             context.Destination?.Country is { Length: 2 } country &&
-            _options.Countries.Contains(country, StringComparer.OrdinalIgnoreCase);
+            options.Countries.Contains(country, StringComparer.OrdinalIgnoreCase);
+    }
 
     public async Task<TaxCalculationResult> DetermineAsync(TaxCalculationContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        var options = _options.CurrentValue;
         var request = BuildRequest(context);
 
-        using var message = new HttpRequestMessage(HttpMethod.Post, _options.BaseUrl + "taxes")
+        using var message = new HttpRequestMessage(HttpMethod.Post, options.BaseUrl + "taxes")
         {
             Content = JsonContent.Create(request, options: _json),
         };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         TaxJarResponse answer;
 

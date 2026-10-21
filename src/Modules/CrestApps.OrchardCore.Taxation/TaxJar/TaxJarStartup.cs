@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
@@ -24,6 +24,7 @@ public sealed class TaxJarStartup : StartupBase
     {
         services.AddHttpClient(TaxJarTaxDeterminationProvider.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
         services.AddTransient<IConfigureOptions<TaxJarOptions>, TaxJarOptionsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<TaxJarOptions>();
         services.AddTaxDeterminationProvider<TaxJarTaxDeterminationProvider>();
         services.AddSiteDisplayDriver<TaxJarSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(TaxJarSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);
@@ -33,7 +34,7 @@ public sealed class TaxJarStartup : StartupBase
 
 /// <summary>
 /// Commerce › Taxation › TaxJar: the token, the sandbox switch and the countries TaxJar works tax out for. The token is
-/// never shown again once saved; saving restarts the tenant so the new settings are used at once.
+/// never shown again once saved; saving refreshes the <see cref="TaxJarOptions"/> so the new settings are used at once.
 /// </summary>
 public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettings>
 {
@@ -42,18 +43,18 @@ public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettin
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     public TaxJarSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
-        IShellReleaseManager shellReleaseManager)
+        IOptionsUpdateNotifier optionsUpdateNotifier)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
     }
 
     protected override string SettingsGroupId
@@ -96,8 +97,8 @@ public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettin
             .Select(code => code.ToUpperInvariant())
             .Distinct(StringComparer.Ordinal)];
 
-        // The provider reads the settings once per tenant; a restart has it read the new ones.
-        _shellReleaseManager.RequestRelease();
+        // The provider reads the options when it works tax out; they are rebuilt once the settings are saved.
+        _optionsUpdateNotifier.RequestUpdate<TaxJarOptions>();
 
         return Edit(site, settings, context);
     }
