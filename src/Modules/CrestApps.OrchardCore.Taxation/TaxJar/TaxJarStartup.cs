@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Taxation.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -87,7 +88,7 @@ public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettin
         }
         else if (!string.IsNullOrWhiteSpace(model.ApiKey))
         {
-            settings.ApiKey = _dataProtectionProvider.CreateProtector(TaxJarSettings.ProtectionPurpose).Protect(model.ApiKey.Trim());
+            settings.ApiKey = _dataProtectionProvider.ProtectSetting(TaxJarSettings.ProtectionPurpose, model.ApiKey.Trim());
         }
 
         settings.UseSandbox = model.UseSandbox;

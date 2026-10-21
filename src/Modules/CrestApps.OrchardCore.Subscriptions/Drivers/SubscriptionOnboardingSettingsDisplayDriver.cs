@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -136,9 +137,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
             }
             else if (!string.IsNullOrEmpty(connectionString))
             {
-                settings.ProtectedConnectionString = _dataProtectionProvider
-                    .CreateProtector(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString)
-                    .Protect(connectionString);
+                settings.ProtectedConnectionString = _dataProtectionProvider.ProtectSetting(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString, connectionString);
             }
         }
 

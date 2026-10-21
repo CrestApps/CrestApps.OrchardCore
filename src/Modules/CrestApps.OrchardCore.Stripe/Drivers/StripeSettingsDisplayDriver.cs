@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Stripe.ViewModels;
@@ -134,8 +135,6 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var protector = _dataProtectionProvider.CreateProtector(ProtectionPurpose);
-
         // IsLive is projected into the runtime StripeOptions, so a change to it must refresh them even when no
         // secret value changed. The checkout mode is no longer edited here: the payment step always collects
         // the card on the site, so the stored value is left as it is. A mode set by the application configuration
@@ -148,8 +147,8 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
             settings.IsLive = model.IsLive;
         }
 
-        changed |= UpdateEnvironment(settings, model, context, protector, isLive: true);
-        changed |= UpdateEnvironment(settings, model, context, protector, isLive: false);
+        changed |= UpdateEnvironment(settings, model, context, isLive: true);
+        changed |= UpdateEnvironment(settings, model, context, isLive: false);
 
         if (changed)
         {
@@ -163,7 +162,6 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         StripeSettings settings,
         StripeSettingsViewModel model,
         UpdateEditorContext context,
-        IDataProtector protector,
         bool isLive)
     {
         var publishable = (isLive ? model.LivePublishableKey : model.TestPublishableKey)?.Trim();
@@ -209,7 +207,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
             }
             else
             {
-                var protectedSecret = protector.Protect(secret);
+                var protectedSecret = _dataProtectionProvider.ProtectSetting(ProtectionPurpose, secret);
 
                 if (isLive)
                 {
@@ -232,7 +230,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
             }
             else
             {
-                var protectedWebhook = protector.Protect(webhook);
+                var protectedWebhook = _dataProtectionProvider.ProtectSetting(ProtectionPurpose, webhook);
 
                 if (isLive)
                 {

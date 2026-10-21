@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Shipping.ViewModels;
@@ -76,7 +77,6 @@ public sealed class EasyPostSettingsDisplayDriver : SiteDisplayDriver<EasyPostSe
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var providers = site.GetOrCreate<CarrierProviderSettings>();
-        var protector = _dataProtectionProvider.CreateProtector(EasyPostCarrierProvider.ProtectionPurpose);
 
         if (!model.IsEnabled)
         {
@@ -106,7 +106,7 @@ public sealed class EasyPostSettingsDisplayDriver : SiteDisplayDriver<EasyPostSe
 
         if (newKey is not null)
         {
-            settings.ApiKey = protector.Protect(newKey);
+            settings.ApiKey = _dataProtectionProvider.ProtectSetting(EasyPostCarrierProvider.ProtectionPurpose, newKey);
         }
 
         await RegisterWebhookAsync(site, settings, newKey ?? _provider.Unprotect(settings.ApiKey), keyChanged: newKey is not null);
@@ -149,7 +149,7 @@ public sealed class EasyPostSettingsDisplayDriver : SiteDisplayDriver<EasyPostSe
 
         settings.WebhookId = webhookId;
         settings.WebhookUrl = url;
-        settings.WebhookSecret = _dataProtectionProvider.CreateProtector(EasyPostCarrierProvider.ProtectionPurpose).Protect(secret);
+        settings.WebhookSecret = _dataProtectionProvider.ProtectSetting(EasyPostCarrierProvider.ProtectionPurpose, secret);
     }
 
     // EasyPost can only call a public https address, never the developer's own machine.

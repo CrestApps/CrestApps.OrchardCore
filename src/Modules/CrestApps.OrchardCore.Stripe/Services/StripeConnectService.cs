@@ -1,4 +1,5 @@
 using System.Net.Http;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Endpoints;
@@ -73,7 +74,6 @@ public sealed class StripeConnectService : IStripeConnectService
 
         var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<StripeSettings>();
-        var protector = _dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
 
         var secretPrefix = isLive ? "sk_live_" : "sk_test_";
         var publishablePrefix = isLive ? "pk_live_" : "pk_test_";
@@ -95,7 +95,7 @@ public sealed class StripeConnectService : IStripeConnectService
         }
         else
         {
-            effectiveSecret = GetStoredSecret(settings, isLive, protector);
+            effectiveSecret = GetStoredSecret(settings, isLive);
         }
 
         if (string.IsNullOrEmpty(effectiveSecret))
@@ -134,7 +134,7 @@ public sealed class StripeConnectService : IStripeConnectService
         // that comes from the configuration is never copied into the stored settings.
         var storedSecret = configured.HasSecretKey
             ? null
-            : protector.Protect(effectiveSecret);
+            : _dataProtectionProvider.ProtectSetting(StripeSettingsDisplayDriver.ProtectionPurpose, effectiveSecret);
 
         if (isLive)
         {
@@ -166,7 +166,7 @@ public sealed class StripeConnectService : IStripeConnectService
         }
         else
         {
-            webhookWarning = await ProvisionWebhookAsync(settings, isLive, effectiveSecret, webhookUrl, accountId, protector);
+            webhookWarning = await ProvisionWebhookAsync(settings, isLive, effectiveSecret, webhookUrl, accountId);
         }
 
         var walletDomain = await TryRegisterWalletDomainAsync(effectiveSecret, webhookUrl);
@@ -199,8 +199,7 @@ public sealed class StripeConnectService : IStripeConnectService
         bool isLive,
         string secretKey,
         string webhookUrl,
-        string accountId,
-        IDataProtector protector)
+        string accountId)
     {
         // Best-effort removal of a webhook left over from a previous connection, so reconnecting does not
         // leave an orphaned endpoint behind at Stripe.
@@ -222,12 +221,12 @@ public sealed class StripeConnectService : IStripeConnectService
             if (isLive)
             {
                 settings.LiveWebhookId = webhook.Id;
-                settings.LiveWebhookSecret = string.IsNullOrEmpty(webhook.Secret) ? settings.LiveWebhookSecret : protector.Protect(webhook.Secret);
+                settings.LiveWebhookSecret = string.IsNullOrEmpty(webhook.Secret) ? settings.LiveWebhookSecret : _dataProtectionProvider.ProtectSetting(StripeSettingsDisplayDriver.ProtectionPurpose, webhook.Secret);
             }
             else
             {
                 settings.TestWebhookId = webhook.Id;
-                settings.TestWebhookSecret = string.IsNullOrEmpty(webhook.Secret) ? settings.TestWebhookSecret : protector.Protect(webhook.Secret);
+                settings.TestWebhookSecret = string.IsNullOrEmpty(webhook.Secret) ? settings.TestWebhookSecret : _dataProtectionProvider.ProtectSetting(StripeSettingsDisplayDriver.ProtectionPurpose, webhook.Secret);
             }
 
             return null;
@@ -247,12 +246,11 @@ public sealed class StripeConnectService : IStripeConnectService
     {
         var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<StripeSettings>();
-        var protector = _dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
 
         var configured = _configurationOptions.GetKeys(isLive);
 
         var accountId = isLive ? settings.LiveAccountId : settings.TestAccountId;
-        var storedSecret = GetStoredSecret(settings, isLive, protector);
+        var storedSecret = GetStoredSecret(settings, isLive);
         var webhookId = isLive ? settings.LiveWebhookId : settings.TestWebhookId;
 
         if (string.IsNullOrEmpty(accountId) && string.IsNullOrEmpty(storedSecret))
@@ -287,12 +285,8 @@ public sealed class StripeConnectService : IStripeConnectService
         return StripeConnectionResult.Success(message, accountId);
     }
 
-    private static string GetStoredSecret(StripeSettings settings, bool isLive, IDataProtector protector)
-    {
-        var stored = isLive ? settings.LivePrivateSecret : settings.TestPrivateSecret;
-
-        return string.IsNullOrEmpty(stored) ? null : protector.Unprotect(stored);
-    }
+    private string GetStoredSecret(StripeSettings settings, bool isLive)
+        => _dataProtectionProvider.UnprotectSetting(StripeSettingsDisplayDriver.ProtectionPurpose, isLive ? settings.LivePrivateSecret : settings.TestPrivateSecret);
 
     // Wallet buttons (Apple Pay above all) are only offered on a domain registered with the Stripe account, so the
     // site's own domain is registered while connecting. A site that is not publicly reachable cannot be

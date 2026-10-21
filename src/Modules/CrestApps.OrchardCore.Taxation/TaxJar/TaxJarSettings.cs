@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -64,19 +65,6 @@ internal sealed class TaxJarOptionsConfiguration : IConfigureOptions<TaxJarOptio
 
         options.UseSandbox = settings.UseSandbox;
         options.Countries = [.. (settings.Countries ?? []).Where(code => code?.Length == 2).Select(code => code.ToUpperInvariant())];
-
-        if (string.IsNullOrEmpty(settings.ApiKey))
-        {
-            return;
-        }
-
-        try
-        {
-            options.ApiKey = _dataProtectionProvider.CreateProtector(TaxJarSettings.ProtectionPurpose).Unprotect(settings.ApiKey);
-        }
-        catch (System.Security.Cryptography.CryptographicException exception)
-        {
-            _logger.LogWarning(exception, "The TaxJar token couldn't be read; enter it again in the settings.");
-        }
+        options.ApiKey = _dataProtectionProvider.UnprotectSettingOrDefault(TaxJarSettings.ProtectionPurpose, settings.ApiKey, _logger, "TaxJar token");
     }
 }

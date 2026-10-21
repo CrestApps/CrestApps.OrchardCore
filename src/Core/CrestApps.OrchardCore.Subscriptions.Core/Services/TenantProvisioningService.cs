@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -319,11 +320,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             throw new InvalidOperationException("The provisioning job did not capture an administrator password.");
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep);
-
         try
         {
-            return protector.Unprotect(job.ProtectedAdminPassword);
+            return _dataProtectionProvider.UnprotectSetting(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep, job.ProtectedAdminPassword);
         }
         catch (CryptographicException exception)
         {
@@ -333,11 +332,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
     private string UnprotectConnectionString(string protectedConnectionString)
     {
-        var protector = _dataProtectionProvider.CreateProtector(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString);
-
         try
         {
-            return protector.Unprotect(protectedConnectionString);
+            return _dataProtectionProvider.UnprotectSetting(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString, protectedConnectionString);
         }
         catch (CryptographicException exception)
         {

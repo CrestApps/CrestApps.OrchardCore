@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Models;
@@ -42,8 +43,6 @@ internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptio
     {
         var settings = _siteService.GetSettings<StripeSettings>();
 
-        var protector = _dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
-
         var isLive = _configurationOptions.IsLive ?? settings.IsLive;
         var configured = _configurationOptions.GetKeys(isLive);
 
@@ -61,15 +60,10 @@ internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptio
         // live in configuration never depends on the database holding a readable value.
         options.ApiKey = configured.HasSecretKey
             ? configured.SecretKey.Trim()
-            : Unprotect(protector, storedSecretKey);
+            : _dataProtectionProvider.UnprotectSetting(StripeSettingsDisplayDriver.ProtectionPurpose, storedSecretKey);
 
         options.WebhookSecret = configured.HasWebhookSecret
             ? configured.WebhookSecret.Trim()
-            : Unprotect(protector, storedWebhookSecret);
+            : _dataProtectionProvider.UnprotectSetting(StripeSettingsDisplayDriver.ProtectionPurpose, storedWebhookSecret);
     }
-
-    private static string Unprotect(IDataProtector protector, string protectedValue)
-        => string.IsNullOrEmpty(protectedValue)
-            ? null
-            : protector.Unprotect(protectedValue);
 }
