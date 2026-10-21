@@ -78,7 +78,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<DefaultCustomerContactResolver>();
         services.Replace(ServiceDescriptor.Scoped<ICustomerContactResolver, CustomerRecordContactResolver>());
 
-        services.AddScoped<IPermissionProvider, CustomerPermissionsProvider>();
+        services.AddPermissionProvider<CustomerPermissionsProvider>();
         services.AddNavigationProvider<CustomersAdminMenu>();
         services.AddNavigationProvider<CustomersAccountMenu>();
         services.AddDisplayDriver<Customer, CustomerDisplayDriver>();
@@ -101,7 +101,7 @@ public sealed class OrdersStartup : StartupBase
         services.AddScoped<OrderAnonymizer>();
         services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
         services.AddScoped<CustomerContactStepService>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
     }
 }
@@ -118,7 +118,7 @@ public sealed class CheckoutDetailsStartup : StartupBase
         services.AddDataMigration<CheckoutDetailsMigrations>();
         services.AddScoped<CheckoutDetailsForm>();
         services.AddScoped<ICheckoutHandler, CheckoutDetailsCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CheckoutDetailsCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, CheckoutDetailsCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Order, OrderCheckoutDetailsDisplayDriver>();
     }
 }
@@ -138,7 +138,7 @@ public sealed class StoreCreditStartup : StartupBase
         services.AddScoped<StoreCreditTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
         services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, StoreCreditCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, StoreCreditCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerStoreCreditDisplayDriver>();
         services.AddNavigationProvider<StoreCreditAccountMenu>();
     }
@@ -159,7 +159,7 @@ public sealed class LoyaltyStartup : StartupBase
         services.AddScoped<LoyaltyTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyTenderProvider>());
         services.AddScoped<Orders.Core.Services.IOrderEventHandler, LoyaltyOrderEventHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, LoyaltyCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, LoyaltyCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerLoyaltyDisplayDriver>();
         services.AddSiteDisplayDriver<LoyaltySettingsDisplayDriver>();
         services.AddSiteSettingsPermission(CustomersConstants.LoyaltySettingsGroupId, CustomerPermissions.ManageCustomers);

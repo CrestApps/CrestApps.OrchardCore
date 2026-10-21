@@ -185,15 +185,13 @@ public sealed class InstallmentPlanSettingsDisplayDriver : SiteDisplayDriver<Ins
                 source.Name,
                 selected.Contains(source.Name, StringComparer.OrdinalIgnoreCase)))];
 
-    // Whoever manages installment plans manages their settings. The Subscriptions settings permission still grants it,
-    // because these settings used to be part of that page.
+    // Whoever manages installment plans manages their settings.
     private async Task<bool> CanManageAsync()
     {
         var user = _httpContextAccessor.HttpContext?.User;
 
         return user is not null &&
-            (await _authorizationService.AuthorizeAsync(user, SubscriptionPermissions.ManageInstallmentPlans) ||
-                await _authorizationService.AuthorizeAsync(user, SubscriptionPermissions.ManageSubscriptionSettings));
+            await _authorizationService.AuthorizeAsync(user, SubscriptionPermissions.ManageInstallmentPlans);
     }
 
     // The retry delays are a short list of day counts. Anything else is rejected rather than half-applied, because a

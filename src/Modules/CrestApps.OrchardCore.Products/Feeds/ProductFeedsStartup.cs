@@ -19,6 +19,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Navigation;
@@ -46,22 +47,6 @@ public sealed class ProductFeedsStartup : StartupBase
         services.AddPermissionProvider<ProductFeedPermissionProvider>();
         services.AddNavigationProvider<ProductFeedsAdminMenu>();
     }
-}
-
-public static class ProductFeedPermissions
-{
-    public static readonly Permission ManageProductFeeds = new("ManageProductFeeds", "Manage product feeds");
-}
-
-internal sealed class ProductFeedPermissionProvider : IPermissionProvider
-{
-    private readonly IEnumerable<Permission> _all = [ProductFeedPermissions.ManageProductFeeds];
-
-    public Task<IEnumerable<Permission>> GetPermissionsAsync()
-        => Task.FromResult(_all);
-
-    public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
-        => [new PermissionStereotype { Name = OrchardCoreConstants.Roles.Administrator, Permissions = _all }];
 }
 
 /// <summary>

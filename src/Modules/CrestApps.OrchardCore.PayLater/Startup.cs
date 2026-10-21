@@ -53,11 +53,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<CashOnDeliveryCheckoutPaymentProvider>());
         services.AddScoped<OfflineCheckoutPaymentProvider>(sp => sp.GetRequiredService<CashOnDeliveryCheckoutPaymentProvider>());
         services.AddScoped<OfflinePaymentLookup>();
-        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, OfflinePaymentMethodDisplayDriver>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, OfflinePaymentConfirmationDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlowPaymentMethod, OfflinePaymentMethodDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, OfflinePaymentConfirmationDisplayDriver>();
         services.AddSingleton<IBackgroundTask, PayLaterRenewalBackgroundTask>();
         services.AddScoped<ICheckoutHandler, PayLaterTransactionCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, PayLaterCheckoutPaymentMethodDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlowPaymentMethod, PayLaterCheckoutPaymentMethodDisplayDriver>();
 
         services.AddTransactionSource(PayLaterCheckoutPaymentProvider.ProcessorKey, source =>
         {

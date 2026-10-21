@@ -94,7 +94,7 @@ public sealed class Startup : StartupBase
 
         // Lets a role with Manage inventory, but no site-settings permission, open Settings > Commerce > Inventory.
         services.AddSiteSettingsPermission(InventoryConstants.SettingsGroupId, InventoryPermissions.ManageInventory);
-        services.AddScoped<IPermissionProvider, InventoryPermissionsProvider>();
+        services.AddPermissionProvider<InventoryPermissionsProvider>();
         services.AddNavigationProvider<InventoryAdminMenu>();
     }
 }

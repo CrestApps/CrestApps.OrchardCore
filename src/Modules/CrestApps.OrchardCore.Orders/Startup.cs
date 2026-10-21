@@ -72,7 +72,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IOrderLinkService, OrderLinkService>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
-        services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();
+        services.AddPermissionProvider<OrderPermissionsProvider>();
         services.AddNavigationProvider<OrdersAdminMenu>();
         services.AddNavigationProvider<OrdersAccountMenu>();
         services.AddSingleton<OrderAccountClaims>();
@@ -87,7 +87,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
 
         // The order bump on the payment step: one tick adds the product the store offers before paying.
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, OrderBumpCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, OrderBumpCheckoutFlowDisplayDriver>();
 
         // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
         services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
@@ -221,8 +221,8 @@ public sealed class GiftCardsStartup : StartupBase
             .UseDisplayDriver<GiftCardPartDisplayDriver>();
         services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
         services.AddScoped<GiftCardCheckoutService>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, GiftCardCheckoutFlowDisplayDriver>();
-        services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
+        services.AddDisplayDriver<CheckoutFlow, GiftCardCheckoutFlowDisplayDriver>();
+        services.AddPermissionProvider<GiftCardPermissionsProvider>();
         services.AddNavigationProvider<GiftCardsAdminMenu>();
     }
 }

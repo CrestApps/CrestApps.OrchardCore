@@ -81,7 +81,7 @@ public sealed class Startup : StartupBase
 
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
-        services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
+        services.AddPermissionProvider<SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
         services.AddNavigationProvider<SubscriptionsAccountMenu>();
         services.AddScoped<SubscriptionDisplayText>();
@@ -117,7 +117,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
         services.AddScoped<ICommercePersonalDataContributor, SubscriptionPersonalDataContributor>();
 
-        services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
+        services.AddDisplayDriver<SubscriptionRegisterUserForm, SubscriptionRegisterUserFormDisplayDriver>();
     }
 }
 
@@ -131,7 +131,6 @@ public sealed class RolesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
 
         // Roles already gate content, features, and permissions across Orchard Core, so granting one for as
         // long as a subscription is current is what makes member-only access enforceable without any of
@@ -164,8 +163,8 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
 
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, UserRegistrationCheckoutFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, ContentStepCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, UserRegistrationCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, ContentStepCheckoutFlowDisplayDriver>();
     }
 }
 
@@ -239,7 +238,7 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<ICheckoutHandler, TenantProvisioningCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, TenantProvisioningStepDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 
         // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so
         // the site's state follows the subscription's.
@@ -315,10 +314,9 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<InstallmentOptionResolver>();
         services.AddScoped<IInstallmentOptionProvider, SiteSettingsInstallmentOptionProvider>();
         services.AddScoped<ICheckoutHandler, InstallmentOptionsCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, InstallmentOptionsCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, InstallmentOptionsCheckoutFlowDisplayDriver>();
 
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
         services.AddDisplayDriver<InstallmentPlan, InstallmentPlanDisplayDriver>();

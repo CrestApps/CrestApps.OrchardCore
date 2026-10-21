@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Taxation.Core;
@@ -10,5 +11,7 @@ public static class TaxationPermissions
     /// <summary>
     /// Grants access to manage tax categories, jurisdictions, and rules.
     /// </summary>
-    public static readonly Permission ManageTaxation = new("ManageTaxation", "Manage taxation");
+    public static readonly Permission ManageTaxation = new(
+        "ManageTaxation",
+        LocalizationSource.Create("Manage taxation", typeof(TaxationPermissions)));
 }

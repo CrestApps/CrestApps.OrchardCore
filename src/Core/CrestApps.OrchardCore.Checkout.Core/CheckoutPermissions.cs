@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Checkout.Core;
@@ -15,10 +16,15 @@ public static class CheckoutPermissions
     /// who can edit content should not thereby be able to publish a code that discounts every sale on the
     /// site.
     /// </remarks>
-    public static readonly Permission ManageCoupons = new("ManageCoupons", "Manage coupons");
+    public static readonly Permission ManageCoupons = new(
+        "ManageCoupons",
+        LocalizationSource.Create("Manage coupons", typeof(CheckoutPermissions)),
+        isSecurityCritical: true);
 
     /// <summary>
     /// The permission required to change how the checkout works, under Settings › Commerce › Checkout.
     /// </summary>
-    public static readonly Permission ManageCheckoutSettings = new("ManageCheckoutSettings", "Manage checkout settings");
+    public static readonly Permission ManageCheckoutSettings = new(
+        "ManageCheckoutSettings",
+        LocalizationSource.Create("Manage checkout settings", typeof(CheckoutPermissions)));
 }

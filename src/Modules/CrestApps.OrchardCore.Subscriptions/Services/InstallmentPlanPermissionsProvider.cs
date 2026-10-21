@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Services;
 /// <summary>
 /// Declares the installment plans permission.
 /// </summary>
-public sealed class InstallmentPlanPermissionsProvider : IPermissionProvider
+internal sealed class InstallmentPlanPermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
