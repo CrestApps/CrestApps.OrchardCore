@@ -72,6 +72,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICartActionProvider, QuoteCartActionProvider>();
         services.AddSignedLinks();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
+        services.AddScoped<OrderPayLinks>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
         services.AddPermissionProvider<OrderPermissionsProvider>();

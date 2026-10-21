@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
-using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Orders.Api;
@@ -115,7 +114,7 @@ internal static class OrderAccountApiEndpoints
         IAuthorizationService authorizationService,
         IOrderStore orders,
         OrderOperationsService operations,
-        IClock clock)
+        OrderPayLinks payLinks)
     {
         var order = await FindOwnAsync(orderId, httpContext, authorizationService, orders, paidOnly: false);
 
@@ -124,7 +123,7 @@ internal static class OrderAccountApiEndpoints
             return ApiProblems.NotFound();
         }
 
-        var payUrl = order.Status == OrderStatus.Canceled || !QuoteService.CanPay(order, clock.UtcNow) ? null : await OrderPayLinks.GetPayUrlAsync(httpContext.RequestServices, order);
+        var payUrl = await payLinks.GetPayUrlAsync(order);
 
         return TypedResults.Ok(OrderApiMapper.ToApi(order, await operations.IsOwedAsync(order, httpContext.RequestAborted), payUrl));
     }

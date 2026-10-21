@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
-using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -64,7 +63,8 @@ public sealed class OrderViewController : Controller
     public async Task<IActionResult> Index(
         string token,
         [FromServices] IDisplayManager<Order> displayManager,
-        [FromServices] IUpdateModelAccessor updateModelAccessor)
+        [FromServices] IUpdateModelAccessor updateModelAccessor,
+        [FromServices] OrderPayLinks payLinks)
     {
         var orderId = _orderLinks.GetOrderId(token);
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
@@ -77,11 +77,7 @@ public sealed class OrderViewController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = !QuoteService.CanPay(order, _clock.UtcNow)
-            ? null
-            : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
-                ? Url.RouteUrl("GuestOrderPay", new { token })
-                : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = await payLinks.GetPayUrlAsync(order, Url.RouteUrl("GuestOrderPay", new { token }));
         var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
             ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
             : null;

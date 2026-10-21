@@ -226,7 +226,8 @@ public sealed class OrdersAdminController : Controller
     public async Task<IActionResult> Detail(
         string orderId,
         [FromServices] IDisplayManager<Order> displayManager,
-        [FromServices] IUpdateModelAccessor updateModelAccessor)
+        [FromServices] IUpdateModelAccessor updateModelAccessor,
+        [FromServices] OrderPayLinks payLinks)
     {
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
@@ -269,8 +270,7 @@ public sealed class OrdersAdminController : Controller
 
             // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand; a
             // quote, once it's sent.
-            if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment &&
-                QuoteService.CanPay(order, _clock.UtcNow) &&
+            if (payLinks.CanPayByLink(order) &&
                 await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreatePayUrlAsync(order) is { } payUrl)
             {
                 model.PayUrl = payUrl;
