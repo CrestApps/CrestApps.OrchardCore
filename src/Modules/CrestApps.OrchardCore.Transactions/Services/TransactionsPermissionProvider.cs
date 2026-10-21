@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Transactions.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
@@ -40,6 +41,20 @@ internal sealed class TransactionsPermissionProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Authenticated,
                 Permissions = _authenticatedPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions =
+                [
+                    TransactionsPermissions.ManageTransactions,
+                    TransactionsPermissions.ManageRefunds,
+                ],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.CustomerSupport,
+                Permissions = [TransactionsPermissions.ManageRefunds],
             },
         ];
     }

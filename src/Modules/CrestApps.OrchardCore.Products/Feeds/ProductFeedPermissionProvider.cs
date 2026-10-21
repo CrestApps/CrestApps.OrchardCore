@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -11,5 +12,22 @@ internal sealed class ProductFeedPermissionProvider : IPermissionProvider
         => Task.FromResult(_all);
 
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
-        => [new PermissionStereotype { Name = OrchardCoreConstants.Roles.Administrator, Permissions = _all }];
+        =>
+        [
+            new PermissionStereotype
+            {
+                Name = OrchardCoreConstants.Roles.Administrator,
+                Permissions = _all,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions = _all,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.Marketing,
+                Permissions = _all,
+            },
+        ];
 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -28,6 +29,29 @@ internal sealed class CustomerPermissionsProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Authenticated,
                 Permissions = [CustomerPermissions.ManageOwnCustomerProfile],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions =
+                [
+                    CustomerPermissions.ManageCustomers,
+                    CustomerPermissions.ViewCustomers,
+                ],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.CustomerSupport,
+                Permissions =
+                [
+                    CustomerPermissions.ManageCustomers,
+                    CustomerPermissions.ViewCustomers,
+                ],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.Marketing,
+                Permissions = [CustomerPermissions.ViewCustomers],
             },
         ];
     }

@@ -49,12 +49,12 @@ Choose **Skip this step** for a step you don't need, such as shipping when you s
 
 | Role | What it can do |
 | --- | --- |
-| **Store manager** | Products, orders, refunds, stock, shipping, customers, promotions, reviews and reports. |
+| **Store manager** | Products, orders, refunds, stock, shipping, customers, promotions, reviews, the marketplace, the point of sale registers and reports. |
 | **Warehouse** | Pick, pack and ship orders, and receive and count stock. |
 | **Customer support** | Look up, change and refund orders, and manage customers, subscriptions and bookings. |
 | **Marketing** | Promotions, coupons, reviews and product feeds, and edit products and pages. |
 
-Give a staff member a role under **Security > Users**. Change what a role can do under **Security > Roles**. A role that was there already is left as it is.
+Each role gets what the features turned on now allow it. When a commerce feature is turned on later, the staff roles get what that feature allows them too. Give a staff member a role under **Security > Users**. Change what a role can do under **Security > Roles**. A role that was there already is left as it is.
 
 ## The Storefront theme
 

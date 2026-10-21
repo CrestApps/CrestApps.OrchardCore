@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -22,6 +23,29 @@ internal sealed class InventoryPermissionsProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions =
+                [
+                    InventoryPermissions.ManageInventory,
+                    InventoryPermissions.ViewInventory,
+                ],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.Warehouse,
+                Permissions =
+                [
+                    InventoryPermissions.ManageInventory,
+                    InventoryPermissions.ViewInventory,
+                ],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.CustomerSupport,
+                Permissions = [InventoryPermissions.ViewInventory],
             },
         ];
     }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -20,6 +21,16 @@ internal sealed class BookingsPermissionProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions = [BookingsPermissions.ManageBookings],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.CustomerSupport,
+                Permissions = [BookingsPermissions.ManageBookings],
             },
         ];
 }

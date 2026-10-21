@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -20,6 +21,20 @@ internal sealed class ShippingPermissionsProvider : IPermissionProvider
         {
             Name = OrchardCoreConstants.Roles.Administrator,
             Permissions = _allPermissions,
+        },
+        new PermissionStereotype
+        {
+            Name = CommerceConstants.StaffRoles.StoreManager,
+            Permissions =
+            [
+                ShippingPermissions.ManageShipping,
+                ShippingPermissions.FulfillOrders,
+            ],
+        },
+        new PermissionStereotype
+        {
+            Name = CommerceConstants.StaffRoles.Warehouse,
+            Permissions = [ShippingPermissions.FulfillOrders],
         },
     ];
 }

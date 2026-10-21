@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -22,6 +23,16 @@ internal sealed class ReviewsPermissionsProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Authenticated,
                 Permissions = [ReviewsPermissions.SubmitReviews],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions = [ReviewsPermissions.ManageReviews],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.Marketing,
+                Permissions = [ReviewsPermissions.ManageReviews],
             },
         ];
 }

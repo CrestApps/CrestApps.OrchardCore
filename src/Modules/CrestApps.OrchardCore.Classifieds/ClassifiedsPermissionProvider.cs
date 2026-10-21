@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -26,6 +27,11 @@ internal sealed class ClassifiedsPermissionProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Authenticated,
                 Permissions = [ClassifiedsPermissions.PostClassifieds],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions = [ClassifiedsPermissions.ModerateClassifieds],
             },
         ];
 }

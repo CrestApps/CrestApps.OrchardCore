@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -21,6 +22,15 @@ internal sealed class PosPermissionProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions =
+                [
+                    PosPermissions.ManageRegisters,
+                    PosPermissions.SellAtRegister,
+                ],
             },
         ];
 }

@@ -49,7 +49,31 @@ services.AddScoped<IStoreSetupStep, MyIntegrationSetupStep>();
 
 ## Staff role presets
 
-`StaffRolePresets` defines Store manager, Warehouse, Customer support and Marketing, each with the permission names it needs. The staff roles step creates the missing ones with `RoleManager<IRole>`, with the permissions as role claims. A permission of a feature that's off is kept and applies once the feature is on. Existing roles aren't changed.
+The role names are `CommerceConstants.StaffRoles` (in `CrestApps.OrchardCore.Abstractions`): `StoreManager` ("Store manager"), `Warehouse`, `CustomerSupport` ("Customer support") and `Marketing`. `StaffRolePresets` gives each a description. The staff roles step only creates the missing roles, with `RoleManager<IRole>`. Their permissions come from the modules: each commerce module's `IPermissionProvider.GetDefaultStereotypes()` returns a `PermissionStereotype` for each staff role it grants something, and Orchard Core applies the stereotypes of every enabled feature when a role is created, and adds a feature's stereotypes to an existing role of that name when the feature is enabled for the first time. Existing roles aren't otherwise changed.
+
+| Module | Store manager | Warehouse | Customer support | Marketing |
+| --- | --- | --- | --- | --- |
+| Commerce | `AccessAdminPanel`, `ListContent`, `ViewContent`, `EditContent`, `PublishContent`, `DeleteContent`, `ManageMediaContent` | `AccessAdminPanel` | `AccessAdminPanel` | `AccessAdminPanel`, `ListContent`, `ViewContent`, `EditContent`, `PublishContent`, `ManageMediaContent` |
+| Orders | `ManageOrders`, `ManageGiftCards` | | `ManageOrders` | |
+| Transactions | `ManageTransactions`, `ManageRefunds` | | `ManageRefunds` | |
+| Inventory | `ManageInventory`, `ViewInventory` | `ManageInventory`, `ViewInventory` | `ViewInventory` | |
+| Shipping | `ManageShipping`, `FulfillOrders` | `FulfillOrders` | | |
+| Customers | `ManageCustomers`, `ViewCustomers` | | `ManageCustomers`, `ViewCustomers` | `ViewCustomers` |
+| Checkout | `ManageCoupons` | | | `ManageCoupons` |
+| Marketing | `ManageMarketing` | | | `ManageMarketing` |
+| Product Reviews | `ManageProductReviews` | | | `ManageProductReviews` |
+| Product feeds | `ManageProductFeeds` | | | `ManageProductFeeds` |
+| Subscriptions | `ManageSubscriptions` | | `ManageSubscriptions` | |
+| Bookings | `ManageBookings` | | `ManageBookings` | |
+| Memberships | `ManageMemberships` | | `ManageMemberships` | |
+| Digital Downloads | `ManageDigitalDownloads` | | | |
+| Fundraising | `ManageFundraising` | | | |
+| Classifieds | `ModerateClassifieds` | | | |
+| Marketplace | `ManageMarketplace` | | | |
+| Point of Sale | `ManageRegisters`, `SellAtRegister` | | | |
+| Reports | `ViewAllReportDesigns` | | | `ViewAllReportDesigns` |
+
+A module that adds a staff permission declares it in its own permission provider, against the `CommerceConstants.StaffRoles` name.
 
 ## The Online store setup recipe
 

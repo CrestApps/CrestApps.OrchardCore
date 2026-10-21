@@ -45,4 +45,32 @@ public static class CommerceConstants
         /// </summary>
         public const string NavigationShape = "CommerceAccountNavigation";
     }
+
+    /// <summary>
+    /// The names of the roles the store setup guide adds for a store's staff. Each commerce module grants its own
+    /// permissions to these roles through <c>IPermissionProvider.GetDefaultStereotypes()</c>, so a role gets them when
+    /// it is created and when a module that grants it more is enabled later.
+    /// </summary>
+    public static class StaffRoles
+    {
+        /// <summary>
+        /// Runs the store day to day: products, orders, stock, shipping, customers, promotions and reports.
+        /// </summary>
+        public const string StoreManager = "Store manager";
+
+        /// <summary>
+        /// Picks, packs and ships orders, and receives and counts stock.
+        /// </summary>
+        public const string Warehouse = "Warehouse";
+
+        /// <summary>
+        /// Answers customers: looks up their orders, changes and refunds them, and manages subscriptions and bookings.
+        /// </summary>
+        public const string CustomerSupport = "Customer support";
+
+        /// <summary>
+        /// Runs promotions, campaigns, reviews and product feeds, and edits products and pages.
+        /// </summary>
+        public const string Marketing = "Marketing";
+    }
 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
@@ -41,6 +42,16 @@ internal sealed class SubscriptionPermissionsProvider : IPermissionProvider
             [
                 SubscriptionPermissions.ManageOwnSubscriptions,
             ],
+        },
+        new PermissionStereotype
+        {
+            Name = CommerceConstants.StaffRoles.StoreManager,
+            Permissions = [SubscriptionPermissions.ManageSubscriptions],
+        },
+        new PermissionStereotype
+        {
+            Name = CommerceConstants.StaffRoles.CustomerSupport,
+            Permissions = [SubscriptionPermissions.ManageSubscriptions],
         },
     ];
 }

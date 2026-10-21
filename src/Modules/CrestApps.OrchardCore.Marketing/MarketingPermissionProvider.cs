@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -20,6 +21,16 @@ internal sealed class MarketingPermissionProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions = [MarketingPermissions.ManageMarketing],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.Marketing,
+                Permissions = [MarketingPermissions.ManageMarketing],
             },
         ];
 }
