@@ -33,6 +33,7 @@ public sealed class InstallmentPlanSettingsDisplayDriver : SiteDisplayDriver<Ins
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly TransactionSourceOptions _sourceOptions;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
 
@@ -43,15 +44,18 @@ public sealed class InstallmentPlanSettingsDisplayDriver : SiteDisplayDriver<Ins
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="sourceOptions">The registered transaction sources, offered for installments at checkout.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="localizerFactory">The localizer factory that translates the registered transaction sources' names.</param>
     public InstallmentPlanSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IOptions<TransactionSourceOptions> sourceOptions,
-        IStringLocalizer<InstallmentPlanSettingsDisplayDriver> stringLocalizer)
+        IStringLocalizer<InstallmentPlanSettingsDisplayDriver> stringLocalizer,
+        IStringLocalizerFactory localizerFactory)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _sourceOptions = sourceOptions.Value;
+        _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
 
@@ -179,11 +183,11 @@ public sealed class InstallmentPlanSettingsDisplayDriver : SiteDisplayDriver<Ins
     private List<SelectListItem> BuildSourceItems(string[] selected)
         => [.. _sourceOptions.Sources.Values
             .Where(source => !string.Equals(source.Name, SubscriptionConstants.InstallmentPlans.TransactionSource, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(source => source.DisplayName?.Value ?? source.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(source => new SelectListItem(
-                source.DisplayName?.Value ?? source.Name,
+                source.DisplayName is null ? source.Name : _localizerFactory.Localize(source.DisplayName).Value,
                 source.Name,
-                selected.Contains(source.Name, StringComparer.OrdinalIgnoreCase)))];
+                selected.Contains(source.Name, StringComparer.OrdinalIgnoreCase)))
+            .OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase)];
 
     // Whoever manages installment plans manages their settings.
     private async Task<bool> CanManageAsync()

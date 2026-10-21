@@ -21,10 +21,10 @@ using CrestApps.OrchardCore.Subscriptions.Tasks;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Services;
-using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Localization;
 using OrchardCore.Navigation;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -279,24 +279,13 @@ public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
 [Feature(SubscriptionConstants.Features.Installments)]
 public sealed class InstallmentPlansStartup : StartupBase
 {
-    internal readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InstallmentPlansStartup"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public InstallmentPlansStartup(IStringLocalizer<InstallmentPlansStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTransactionSource(SubscriptionConstants.InstallmentPlans.TransactionSource, source =>
         {
-            source.DisplayName = S["Installment plan"];
-            source.Description = S["Down payments and scheduled payments of installment plans."];
+            source.DisplayName = LocalizationSource.Create<InstallmentPlansStartup>("Installment plan");
+            source.Description = LocalizationSource.Create<InstallmentPlansStartup>("Down payments and scheduled payments of installment plans.");
         });
 
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SubscriptionConstants.InstallmentPlanCollectionName));

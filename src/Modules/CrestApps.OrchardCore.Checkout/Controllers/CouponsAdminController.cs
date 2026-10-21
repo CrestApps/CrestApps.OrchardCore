@@ -564,8 +564,10 @@ public sealed class CouponsAdminController : Controller
             return;
         }
 
+        var localizerFactory = HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>();
+
         model.KnownSources = sources.Values
-            .Select(source => source.DisplayName is null ? source.Name : $"{source.Name} ({source.DisplayName.Value})")
+            .Select(source => source.DisplayName is null ? source.Name : $"{source.Name} ({localizerFactory.Localize(source.DisplayName).Value})")
             .OrderBy(text => text, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

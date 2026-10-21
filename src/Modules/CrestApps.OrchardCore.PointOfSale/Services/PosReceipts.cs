@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.PointOfSale.Services;
 
@@ -29,7 +30,7 @@ internal static class PosReceipts
             ApiMoney.From(order.DiscountTotal, currency),
             ApiMoney.From(order.TaxAmount ?? 0m, currency),
             ApiMoney.From(order.Total ?? order.Subtotal, currency),
-            GetPayments(order).Select(payment => new ApiPosReceiptPayment(payment.Method, ApiMoney.From(payment.Amount, currency))).ToList(),
+            GetPayments(order, "Cash", "Card").Select(payment => new ApiPosReceiptPayment(payment.Method, ApiMoney.From(payment.Amount, currency))).ToList(),
             ApiMoney.From(change, currency));
     }
 
@@ -43,12 +44,13 @@ internal static class PosReceipts
             return null;
         }
 
+        var S = services.GetRequiredService<IStringLocalizerFactory>().Create(typeof(PosReceipts));
         var document = await receipts.BuildAsync(new ReceiptRequest
         {
             BilledToName = order.CustomerName,
             BilledToEmail = order.CustomerEmail,
             Reference = order.OrderNumber,
-            SourceLabel = "Point of sale",
+            SourceLabel = S["Point of sale"],
             IssuedAt = order.PaidUtc ?? order.CreatedUtc,
             Currency = order.Currency,
             LineItems = [.. order.Lines.Select(line => new ReceiptLineItem
@@ -61,14 +63,15 @@ internal static class PosReceipts
             TaxAmount = order.TaxAmount ?? 0m,
             Total = order.Total ?? order.Subtotal,
             Status = order.Status == OrderStatus.Paid ? ReceiptStatus.Paid : ReceiptStatus.Due,
-            Notes = string.Join(" · ", GetPayments(order).Select(payment => $"{payment.Method}: {ProductPriceFormatter.Format(payment.Amount, order.Currency)}")),
+            Notes = string.Join(" · ", GetPayments(order, S["Cash"], S["Card"]).Select(payment => $"{payment.Method}: {ProductPriceFormatter.Format(payment.Amount, order.Currency)}")),
         });
 
         return renderer.Render(document);
     }
 
-    // How the order was paid: each balance it was tendered, then the card for the rest.
-    private static IEnumerable<(string Method, decimal Amount)> GetPayments(Order order)
+    // How the order was paid: each balance it was tendered, then the card for the rest. The API names the methods in
+    // English, for the till app to show as it likes; the printed receipt names them in the store's language.
+    private static IEnumerable<(string Method, decimal Amount)> GetPayments(Order order, string cash, string card)
     {
         var total = order.Total ?? order.Subtotal;
         var tendered = 0m;
@@ -77,12 +80,12 @@ internal static class PosReceipts
         {
             tendered += tender.Amount;
 
-            yield return (tender.ProviderKey == PosConstants.CashTenderKey ? "Cash" : tender.Description ?? tender.ProviderKey, tender.Amount);
+            yield return (tender.ProviderKey == PosConstants.CashTenderKey ? cash : tender.Description ?? tender.ProviderKey, tender.Amount);
         }
 
         if (total - tendered > 0m)
         {
-            yield return ("Card", total - tendered);
+            yield return (card, total - tendered);
         }
     }
 }

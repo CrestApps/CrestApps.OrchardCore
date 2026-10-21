@@ -131,11 +131,11 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         // A partial refund leaves the files; a full one takes them back.
         order.Refunds.Add(new OrderRefund { RefundId = "r1", Amount = 5m });
-        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service).RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken); return 0; });
+        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken); return 0; });
         Assert.Null(Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken))).RevokedUtc);
 
         order.Refunds.Add(new OrderRefund { RefundId = "r2", Amount = 15m });
-        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service).RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken); return 0; });
+        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken); return 0; });
 
         var revoked = Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken)));
         Assert.Equal(DownloadProblem.Revoked, DownloadService.GetProblem(revoked, _now));

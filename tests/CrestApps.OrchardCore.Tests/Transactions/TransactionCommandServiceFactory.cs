@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -33,7 +34,7 @@ internal static class TransactionCommandServiceFactory
             new HttpContextAccessor(),
             Mock.Of<IUserService>(),
             Mock.Of<IDisplayNameProvider>(),
-            new TransactionDisplayText([], Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>()),
+            new TransactionDisplayText([], Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>(), new SourceTextLocalizerFactory()),
             services ?? new ServiceCollection().BuildServiceProvider(),
             clock,
             NullLogger<DefaultTransactionCommandService>.Instance,

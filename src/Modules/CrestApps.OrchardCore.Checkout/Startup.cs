@@ -125,13 +125,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();
         services.AddScoped<ICommercePersonalDataContributor, CouponPersonalDataContributor>();
 
-        services.Configure<PaymentSessionCacheOptions>(options =>
-        {
-            options.MaxLiveSession = TimeSpan.FromHours(2);
-        });
-
-        services.Configure<PaymentRateLimitOptions>(_ => { });
-
         // The public checkout experience: the flow chrome, the payment step, and the client resources.
         services.AddDisplayDriver<CheckoutFlow, DefaultCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<CheckoutFlow, PaymentStepCheckoutFlowDisplayDriver>();

@@ -58,8 +58,13 @@ public sealed class DownloadSettingsDisplayDriver : SiteDisplayDriver<DownloadSe
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.LinkLifetimeDays), S["Enter a number of days from 0 to 3650."]);
         }
 
-        settings.DownloadLimit = Math.Clamp(model.DownloadLimit, 0, 10_000);
-        settings.LinkLifetimeDays = Math.Clamp(model.LinkLifetimeDays, 0, 3650);
+        if (!context.Updater.ModelState.IsValid)
+        {
+            return Edit(site, settings, context);
+        }
+
+        settings.DownloadLimit = model.DownloadLimit;
+        settings.LinkLifetimeDays = model.LinkLifetimeDays;
 
         return Edit(site, settings, context);
     }
