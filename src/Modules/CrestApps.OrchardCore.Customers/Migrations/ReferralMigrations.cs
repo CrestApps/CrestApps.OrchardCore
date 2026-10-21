@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -21,8 +20,11 @@ public sealed class ReferralMigrations : DataMigration
         );
 
         // A link is opened by its code; a customer's account finds theirs.
-        await IndexTableIndexCreation.CreateIfMissingAsync<ReferralProfileIndex>(SchemaBuilder, "IDX_ReferralProfileIndex_Code", CustomersConstants.CollectionName, "Code");
-        await IndexTableIndexCreation.CreateIfMissingAsync<ReferralProfileIndex>(SchemaBuilder, "IDX_ReferralProfileIndex_Customer", CustomersConstants.CollectionName, "CustomerId");
+        await SchemaBuilder.AlterIndexTableAsync<ReferralProfileIndex>(table =>
+        {
+            table.CreateIndex("IDX_ReferralProfileIndex_Code", "Code");
+            table.CreateIndex("IDX_ReferralProfileIndex_Customer", "CustomerId");
+        }, collection: CustomersConstants.CollectionName);
 
         return 1;
     }

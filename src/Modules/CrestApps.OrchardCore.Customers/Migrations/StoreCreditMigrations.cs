@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -22,8 +21,11 @@ public sealed class StoreCreditMigrations : DataMigration
         );
 
         // A checkout finds the buyer's credit in its currency; a customer's page lists theirs.
-        await IndexTableIndexCreation.CreateIfMissingAsync<StoreCreditAccountIndex>(SchemaBuilder, "IDX_StoreCreditAccountIndex_Customer", CustomersConstants.CollectionName, "CustomerId", "Currency");
-        await IndexTableIndexCreation.CreateIfMissingAsync<StoreCreditAccountIndex>(SchemaBuilder, "IDX_StoreCreditAccountIndex_ItemId", CustomersConstants.CollectionName, "ItemId");
+        await SchemaBuilder.AlterIndexTableAsync<StoreCreditAccountIndex>(table =>
+        {
+            table.CreateIndex("IDX_StoreCreditAccountIndex_Customer", "CustomerId", "Currency");
+            table.CreateIndex("IDX_StoreCreditAccountIndex_ItemId", "ItemId");
+        }, collection: CustomersConstants.CollectionName);
 
         return 1;
     }

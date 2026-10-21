@@ -37,8 +37,7 @@ public sealed class CountryCodeValidator
             return S["The ISO country code must be two letters, for example US or CA."];
         }
 
-        var duplicate = await _session.QueryIndex<GeographicAreaIndex>(index =>
-                index.ContentType == AddressConstants.Country &&
+        var duplicate = await _session.QueryIndex<CountryIndex>(index =>
                 index.Code == code &&
                 index.ContentItemId != contentItemId &&
                 index.Latest)

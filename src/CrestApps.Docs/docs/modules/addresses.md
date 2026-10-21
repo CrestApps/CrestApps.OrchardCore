@@ -150,18 +150,8 @@ The key is set under **Settings > Address suggestions** (settings group `address
 | --- | --- |
 | **Country** | A country with its ISO 3166-1 alpha-2 code in `CountryPart`'s `Code` field. The ISO list is seeded when the feature is enabled, and no two countries may share a code. |
 
-Countries are indexed by `GeographicAreaIndex` (content item id, content type, code, display text, published and latest flags), so the list never loads whole content items. The address formats always come from the shipped data: managed countries decide which countries are offered and what they are called, not how their addresses are written.
+Countries are indexed by `CountryIndex` (content item id, code, display text, published and latest flags), so the list never loads whole content items. The address formats always come from the shipped data: managed countries decide which countries are offered and what they are called, not how their addresses are written.
 
 ## Money safety
 
 Taxation stores codes, not content item ids: the country's ISO code and the region, county, city and district as text. Addresses entered through the address rules carry region codes, so a tax jurisdiction for `CA` matches an address whose customer chose "California". Enabling or disabling either feature never orphans tax data.
-
-## Upgrading from an earlier 3.0 preview
-
-Earlier 3.0 previews kept the Country content in the Addresses feature and had an `AddressPart` whose country, region, county, city and district were content pickers, with Region, County, City and District content types and `IAddressResolver` to read them. A site upgrading from one of those keeps working:
-
-- **Countries.** A site that ran the earlier Addresses migration gets **Address Countries** turned on by itself the first time it starts, so its country list, with any renamed or removed countries, stays as it was. A new site starts without it.
-- **Content.** Content types that have `AddressPart` keep it, with its picker fields, and the Region, County, City and District items stay. Nothing is deleted. They are still indexed in `GeographicAreaIndex`, with their parents.
-- **Code.** `IAddressResolver`, `DefaultAddressResolver` and the `AddressConstants` names for the removed types and parts (`AddressPart`, `Region`, `RegionPart`, `County`, `CountyPart`, `City`, `CityPart`, `District`, `DistrictPart`) are still there, marked `[Obsolete]`, so code that used them builds with a warning. They will be removed in the next major version.
-
-To move to the new address, add an [Address field](content-fields#addressfield) (the ContentFields module's **Address Field** feature) to the content type, copy each item's address into it, and remove `AddressPart`; code reads the field's `Address` value instead of calling `IAddressResolver`.

@@ -4,33 +4,22 @@ namespace CrestApps.OrchardCore.Addresses.Indexes;
 
 /// <summary>
 /// Indexes Country content items by their ISO code, for the country lists and the check that no two countries share a
-/// code. The table is named for the wider set of places it once held.
+/// code.
 /// </summary>
-public sealed class GeographicAreaIndex : MapIndex
+public sealed class CountryIndex : MapIndex
 {
     /// <summary>
-    /// Gets or sets the stable content item identifier of the indexed geographic area.
+    /// Gets or sets the stable content item identifier of the indexed country.
     /// </summary>
     public string ContentItemId { get; set; }
 
     /// <summary>
-    /// Gets or sets the content type of the indexed geographic area, for example <c>Country</c> or <c>City</c>.
-    /// </summary>
-    public string ContentType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the money-safe code of the indexed geographic area (for example the ISO code of a country).
+    /// Gets or sets the ISO 3166-1 alpha-2 code of the indexed country, in capitals.
     /// </summary>
     public string Code { get; set; }
 
     /// <summary>
-    /// Gets or sets the parent place. Countries have none; the column is kept for the rows of sites that indexed
-    /// regions before.
-    /// </summary>
-    public string ParentContentItemId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the display name of the indexed geographic area.
+    /// Gets or sets the display name of the indexed country.
     /// </summary>
     public string DisplayText { get; set; }
 

@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -20,8 +19,11 @@ public sealed class LoyaltyMigrations : DataMigration
             collection: CustomersConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<LoyaltyAccountIndex>(SchemaBuilder, "IDX_LoyaltyAccountIndex_Customer", CustomersConstants.CollectionName, "CustomerId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<LoyaltyAccountIndex>(SchemaBuilder, "IDX_LoyaltyAccountIndex_ItemId", CustomersConstants.CollectionName, "ItemId");
+        await SchemaBuilder.AlterIndexTableAsync<LoyaltyAccountIndex>(table =>
+        {
+            table.CreateIndex("IDX_LoyaltyAccountIndex_Customer", "CustomerId");
+            table.CreateIndex("IDX_LoyaltyAccountIndex_ItemId", "ItemId");
+        }, collection: CustomersConstants.CollectionName);
 
         return 1;
     }

@@ -23,20 +23,14 @@ public sealed class CustomerMigrations : DataMigration
             collection: CustomersConstants.CollectionName
         );
 
-        foreach (var (name, columns) in new[]
+        await SchemaBuilder.AlterIndexTableAsync<CustomerIndex>(table =>
         {
-            ("IDX_CustomerIndex_ItemId", "ItemId"),
-            ("IDX_CustomerIndex_UserId", "UserId"),
-            ("IDX_CustomerIndex_NormalizedEmail", "NormalizedEmail"),
-            ("IDX_CustomerIndex_NormalizedName", "NormalizedName"),
-            ("IDX_CustomerIndex_Status_LastActivityUtc", "Status,LastActivityUtc"),
-        })
-        {
-            await SchemaBuilder.AlterIndexTableAsync<CustomerIndex>(table => table
-                .CreateIndex(name, columns.Split(',')),
-                collection: CustomersConstants.CollectionName
-            );
-        }
+            table.CreateIndex("IDX_CustomerIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_CustomerIndex_UserId", "UserId");
+            table.CreateIndex("IDX_CustomerIndex_NormalizedEmail", "NormalizedEmail");
+            table.CreateIndex("IDX_CustomerIndex_NormalizedName", "NormalizedName");
+            table.CreateIndex("IDX_CustomerIndex_Status_LastActivityUtc", "Status", "LastActivityUtc");
+        }, collection: CustomersConstants.CollectionName);
 
         return 1;
     }
