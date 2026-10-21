@@ -163,5 +163,10 @@ public static class SubscriptionConstants
         /// The data-protection purpose used for the password captured on the account step.
         /// </summary>
         public const string UserRegistrationStep = "UserRegistrationStep";
+
+        /// <summary>
+        /// The data-protection purpose used for the database connection string sold sites are created with.
+        /// </summary>
+        public const string OnboardingConnectionString = "SubscriptionOnboardingConnectionString";
     }
 }

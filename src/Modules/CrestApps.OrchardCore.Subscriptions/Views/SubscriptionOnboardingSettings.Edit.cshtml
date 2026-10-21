@@ -16,9 +16,9 @@
 <div class="ocat-wrapper" asp-validation-class-for="ConnectionString">
     <label asp-for="ConnectionString" class="ocat-label">@T["Connection string"]</label>
     <div class="ocat-end">
-        <input asp-for="ConnectionString" class="form-control" />
+        <input asp-for="ConnectionString" class="form-control" type="password" autocomplete="new-password" placeholder="@(Model.HasConnectionString ? T["A connection string is stored. Provide a new value to replace it."].Value : string.Empty)" />
         <span asp-validation-for="ConnectionString"></span>
-        <span class="hint">@T["Required for every provider except Sqlite. Each site gets its own table prefix, derived from its name."]</span>
+        <span class="hint">@T["Required for every provider except Sqlite. It is stored encrypted and never shown again; leave it blank to keep the stored one. Each site gets its own table prefix, derived from its name."]</span>
     </div>
 </div>
 

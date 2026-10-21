@@ -61,7 +61,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     /// <param name="shellHost">The shell host.</param>
     /// <param name="shellSettingsManager">The manager used to create tenant shell settings.</param>
     /// <param name="setupService">The setup service that initializes the new tenant.</param>
-    /// <param name="dataProtectionProvider">The provider used to unprotect the administrator password.</param>
+    /// <param name="dataProtectionProvider">The provider used to unprotect the administrator password and the onboarding connection string.</param>
     /// <param name="distributedLock">The lock that keeps two nodes from building the same tenant.</param>
     /// <param name="serviceProvider">The service provider used to resolve the optional workflow manager.</param>
     /// <param name="clock">The clock.</param>
@@ -272,9 +272,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         {
             settings["DatabaseProvider"] = onboarding.GetDatabaseProviderOrDefault();
 
-            if (!string.IsNullOrWhiteSpace(onboarding.ConnectionString))
+            if (!string.IsNullOrEmpty(onboarding.ProtectedConnectionString))
             {
-                settings["ConnectionString"] = onboarding.ConnectionString.Trim();
+                settings["ConnectionString"] = UnprotectConnectionString(onboarding.ProtectedConnectionString);
             }
 
             if (!string.IsNullOrWhiteSpace(onboarding.Schema))
@@ -328,6 +328,20 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         catch (CryptographicException exception)
         {
             throw new InvalidOperationException("The administrator password could not be unprotected. The site was not created.", exception);
+        }
+    }
+
+    private string UnprotectConnectionString(string protectedConnectionString)
+    {
+        var protector = _dataProtectionProvider.CreateProtector(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString);
+
+        try
+        {
+            return protector.Unprotect(protectedConnectionString);
+        }
+        catch (CryptographicException exception)
+        {
+            throw new InvalidOperationException("The connection string for new sites could not be unprotected. Enter it again under the tenant onboarding settings. The site was not created.", exception);
         }
     }
 

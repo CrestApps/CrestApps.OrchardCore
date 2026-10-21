@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -33,6 +34,7 @@ namespace CrestApps.OrchardCore.Tests.Subscriptions;
 public sealed class TenantProvisioningServiceTests
 {
     private static readonly DateTime _now = new(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly IDataProtectionProvider _protection = new EphemeralDataProtectionProvider();
 
     /// <summary>
     /// Setup refuses without a database provider, and nobody is around to choose one for a self-service
@@ -64,7 +66,9 @@ public sealed class TenantProvisioningServiceTests
         var (service, setup, _) = CreateService(new SubscriptionOnboardingSettings
         {
             DatabaseProvider = "Postgres",
-            ConnectionString = "Host=db;Database=saas",
+            ProtectedConnectionString = _protection
+                .CreateProtector(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString)
+                .Protect("Host=db;Database=saas"),
             Schema = "public",
         });
 
@@ -135,12 +139,6 @@ public sealed class TenantProvisioningServiceTests
         SubscriptionOnboardingSettings onboarding,
         ShellSettings existing = null)
     {
-        var protector = new Mock<IDataProtector>();
-        protector.Setup(p => p.Unprotect(It.IsAny<byte[]>())).Returns(System.Text.Encoding.UTF8.GetBytes("Password!1"));
-
-        var protectionProvider = new Mock<IDataProtectionProvider>();
-        protectionProvider.Setup(p => p.CreateProtector(It.IsAny<string>())).Returns(protector.Object);
-
         var store = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
         {
             ItemId = "job-1",
@@ -149,7 +147,9 @@ public sealed class TenantProvisioningServiceTests
             Prefix = "qasite1",
             AdminUsername = "siteadmin",
             AdminEmail = "siteadmin@example.com",
-            ProtectedAdminPassword = "cHJvdGVjdGVk",
+            ProtectedAdminPassword = _protection
+                .CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep)
+                .Protect("Password!1"),
             RecipeName = "Blog",
             Status = TenantProvisioningStatus.Pending,
             CreatedUtc = _now,
@@ -170,7 +170,7 @@ public sealed class TenantProvisioningServiceTests
             shellHost.Object,
             settingsManager.Object,
             setup,
-            protectionProvider.Object,
+            _protection,
             new LocalLock(NullLogger<LocalLock>.Instance),
             new ServiceCollection().BuildServiceProvider(),
             CreateSession(),
