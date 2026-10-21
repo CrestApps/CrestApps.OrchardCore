@@ -141,7 +141,9 @@ public sealed class ProductFeedController : Controller
     }
 
     private static string Currency(string currency)
-        => currency is { Length: 3 } && currency.All(char.IsAsciiLetter) ? currency.ToUpperInvariant() : null;
+        => CurrencyCodeUtility.IsValid(currency)
+            ? CurrencyCodeUtility.Normalize(currency)
+            : null;
 }
 
 /// <summary>

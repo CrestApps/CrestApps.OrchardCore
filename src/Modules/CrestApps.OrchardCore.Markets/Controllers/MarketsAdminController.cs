@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Markets.Services;
 using CrestApps.OrchardCore.Markets.ViewModels;
+using CrestApps.OrchardCore.Products.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -225,7 +226,7 @@ public sealed class MarketsAdminController : Controller
             }
         }
 
-        if (string.IsNullOrWhiteSpace(model.Currency) || model.Currency.Trim().Length != 3 || !model.Currency.Trim().All(char.IsAsciiLetter))
+        if (!CurrencyCodeUtility.IsValid(model.Currency))
         {
             ModelState.AddModelError(nameof(model.Currency), S["Enter the market's three-letter currency code, such as EUR."]);
         }
