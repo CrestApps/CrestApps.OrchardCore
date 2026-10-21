@@ -3,28 +3,32 @@
 <fieldset class="mb-3">
     <legend class="h5">@T["Membership"]</legend>
 
-    <div class="mb-3" asp-validation-class-for="RoleNames">
-        <span class="form-label d-block">@T["Roles members are in"]</span>
-        @if (Model.AvailableRoles.Count == 0)
-        {
-            <span class="hint">@T["Add a role for members under Access Control, Roles first, such as Member."]</span>
-        }
-        @foreach (var role in Model.AvailableRoles)
-        {
-            var id = Html.IdFor(model => model.RoleNames) + "-" + role;
+    <div class="ocat-wrapper" asp-validation-class-for="RoleNames">
+        <span class="ocat-label">@T["Roles members are in"]</span>
+        <div class="ocat-end">
+            @if (Model.AvailableRoles.Count == 0)
+            {
+                <span class="hint">@T["Add a role for members under Access Control, Roles first, such as Member."]</span>
+            }
+            @foreach (var role in Model.AvailableRoles)
+            {
+                var id = Html.IdFor(model => model.RoleNames) + "-" + role;
 
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(model => model.RoleNames)" value="@role" checked="@Model.RoleNames.Contains(role, StringComparer.OrdinalIgnoreCase)" />
-                <label class="form-check-label" for="@id">@role</label>
-            </div>
-        }
-        <span class="hint">@T["Content gated to these roles with Content Access Control opens to members. Anyone in a role already stays in it when a membership ends."]</span>
-        <span asp-validation-for="RoleNames" class="text-danger"></span>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(model => model.RoleNames)" value="@role" checked="@Model.RoleNames.Contains(role, StringComparer.OrdinalIgnoreCase)" />
+                    <label class="form-check-label" for="@id">@role</label>
+                </div>
+            }
+            <span class="hint">@T["Content gated to these roles with Content Access Control opens to members. Anyone in a role already stays in it when a membership ends."]</span>
+            <span asp-validation-for="RoleNames" class="text-danger"></span>
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="DurationDays" class="form-label">@T["Days a membership lasts"]</label>
-        <input asp-for="DurationDays" type="number" min="0" max="3650" class="form-control" style="max-width: 10rem;" />
-        <span class="hint">@T["Such as 30 or 365, for each unit bought; buying again while a member adds them. 0 for a membership that doesn't end."]</span>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="DurationDays" class="ocat-label">@T["Days a membership lasts"]</label>
+        <div class="ocat-limited">
+            <input asp-for="DurationDays" type="number" min="0" max="3650" class="form-control" />
+            <span class="hint">@T["Such as 30 or 365, for each unit bought; buying again while a member adds them. 0 for a membership that doesn't end."]</span>
+        </div>
     </div>
 </fieldset>

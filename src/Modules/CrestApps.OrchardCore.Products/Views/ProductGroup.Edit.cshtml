@@ -1,22 +1,28 @@
 @using CrestApps.OrchardCore.Products.ViewModels
 @model ProductGroupEditViewModel
 
-<h5 class="mt-4">@T["Grouped products"]</h5>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-4">@T["Grouped products"]</h5>
+    </div>
+</div>
 
-<div class="mb-3">
-    <label class="form-label" for="@Html.IdFor(model => model.ProductIds)">@T["Products in this group"]</label>
-    @await Component.InvokeAsync("ItemSelector", new
-    {
-        id = Html.IdFor(model => model.ProductIds),
-        inputName = Html.NameFor(model => model.ProductIds),
-        endpoint = Model.SearchEndpoint,
-        initialItemsJson = Model.InitialProductsJson,
-        multiple = true,
-        enableSearch = true,
-        buttonText = T["Choose products"].Value,
-        searchPlaceholder = T["Search products"].Value,
-        emptyResultsText = T["No products match."].Value,
-        smallButton = false,
-    })
-    <span class="hint">@T["Optional, up to 20. This product's page lists them, each with a quantity, and shoppers add the ones they want to their cart at once, such as the pieces of a set. Leave this product unpriced: the products in it are what's bought."]</span>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.ProductIds)">@T["Products in this group"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.ProductIds),
+            inputName = Html.NameFor(model => model.ProductIds),
+            endpoint = Model.SearchEndpoint,
+            initialItemsJson = Model.InitialProductsJson,
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Choose products"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products match."].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Optional, up to 20. This product's page lists them, each with a quantity, and shoppers add the ones they want to their cart at once, such as the pieces of a set. Leave this product unpriced: the products in it are what's bought."]</span>
+    </div>
 </div>

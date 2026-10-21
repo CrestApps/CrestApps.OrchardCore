@@ -1,8 +1,10 @@
 @model FreeShippingSettingsViewModel
 
-<div class="mb-3" asp-validation-class-for="MinimumSubtotal">
-    <label asp-for="MinimumSubtotal" class="form-label">@T["Free from a subtotal of"]</label>
-    <input asp-for="MinimumSubtotal" type="number" min="0" step="any" class="form-control w-auto" />
-    <span asp-validation-for="MinimumSubtotal"></span>
-    <span class="hint">@T["Orders whose items add up to this or more ship free; smaller orders aren't offered the method. Leave it at 0 for always free."]</span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumSubtotal">
+    <label asp-for="MinimumSubtotal" class="ocat-label">@T["Free from a subtotal of"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumSubtotal" type="number" min="0" step="any" class="form-control" />
+        <span asp-validation-for="MinimumSubtotal"></span>
+        <span class="hint">@T["Orders whose items add up to this or more ship free; smaller orders aren't offered the method. Leave it at 0 for always free."]</span>
+    </div>
 </div>

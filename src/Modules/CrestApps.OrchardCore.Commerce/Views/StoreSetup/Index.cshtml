@@ -73,41 +73,48 @@
 
                     @if (description.ActionText is not null)
                     {
-                        <form method="post" asp-action="Run" asp-route-name="@step.Name" class="mb-3" style="max-width: 36rem;">
+                        <form method="post" asp-action="Run" asp-route-name="@step.Name" class="mb-3">
                             @foreach (var field in description.Fields)
                             {
                                 var fieldId = id + "-" + field.Name;
                                 var fieldName = StoreSetupController.FieldPrefix + field.Name;
+                                var isNumber = field.Type == "number";
 
-                                <div class="mb-3">
-                                    <label class="form-label" for="@fieldId">@field.Label</label>
-                                    @switch (field.Type)
-                                    {
-                                        case "textarea":
-                                            <textarea class="form-control" id="@fieldId" name="@fieldName" rows="3" required="@field.Required">@field.Value</textarea>
-                                            break;
-                                        case "select":
-                                            <select class="form-select" id="@fieldId" name="@fieldName" required="@field.Required">
-                                                @foreach (var option in field.Options)
-                                                {
-                                                    <option value="@option.Key" selected="@(option.Key == field.Value)">@option.Value</option>
-                                                }
-                                            </select>
-                                            break;
-                                        case "number":
-                                            <input type="number" class="form-control" id="@fieldId" name="@fieldName" value="@field.Value" min="0" step="0.01" required="@field.Required" style="max-width: 12rem;" />
-                                            break;
-                                        default:
-                                            <input type="@field.Type" class="form-control" id="@fieldId" name="@fieldName" value="@field.Value" required="@field.Required" />
-                                            break;
-                                    }
-                                    @if (field.Hint is not null)
-                                    {
-                                        <span class="hint">@field.Hint</span>
-                                    }
+                                <div class="@(isNumber ? "ocat-limited-wrapper" : "ocat-wrapper")">
+                                    <label class="ocat-label@(field.Required ? " ocat-label-required" : string.Empty)" for="@fieldId">@field.Label</label>
+                                    <div class="@(isNumber ? "ocat-limited" : "ocat-end")">
+                                        @switch (field.Type)
+                                        {
+                                            case "textarea":
+                                                <textarea class="form-control" id="@fieldId" name="@fieldName" rows="3" required="@field.Required">@field.Value</textarea>
+                                                break;
+                                            case "select":
+                                                <select class="form-select" id="@fieldId" name="@fieldName" required="@field.Required">
+                                                    @foreach (var option in field.Options)
+                                                    {
+                                                        <option value="@option.Key" selected="@(option.Key == field.Value)">@option.Value</option>
+                                                    }
+                                                </select>
+                                                break;
+                                            case "number":
+                                                <input type="number" class="form-control" id="@fieldId" name="@fieldName" value="@field.Value" min="0" step="0.01" required="@field.Required" />
+                                                break;
+                                            default:
+                                                <input type="@field.Type" class="form-control" id="@fieldId" name="@fieldName" value="@field.Value" required="@field.Required" />
+                                                break;
+                                        }
+                                        @if (field.Hint is not null)
+                                        {
+                                            <span class="hint">@field.Hint</span>
+                                        }
+                                    </div>
                                 </div>
                             }
-                            <button type="submit" class="btn btn-primary">@description.ActionText</button>
+                            <div class="ocat-wrapper">
+                                <div class="ocat-end-offset">
+                                    <button type="submit" class="btn btn-primary">@description.ActionText</button>
+                                </div>
+                            </div>
                         </form>
                     }
 

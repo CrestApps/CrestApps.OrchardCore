@@ -1,11 +1,15 @@
 @using CrestApps.OrchardCore.Products.ViewModels
 @model ProductRecommendationsEditViewModel
 
-<h5 class="mt-4">@T["Recommendations"]</h5>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-4">@T["Recommendations"]</h5>
+    </div>
+</div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label class="form-label" for="@Html.IdFor(model => model.UpsellIds)">@T["Upsells"]</label>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.UpsellIds)">@T["Upsells"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = Html.IdFor(model => model.UpsellIds),
@@ -21,8 +25,11 @@
         })
         <span class="hint">@T["Better or bigger choices, shown on this product's page as \"You may also like\"."]</span>
     </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label" for="@Html.IdFor(model => model.CrossSellIds)">@T["Cross-sells"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.CrossSellIds)">@T["Cross-sells"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = Html.IdFor(model => model.CrossSellIds),

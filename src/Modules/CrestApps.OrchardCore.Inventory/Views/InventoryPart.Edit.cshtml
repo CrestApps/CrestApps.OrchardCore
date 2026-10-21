@@ -1,63 +1,73 @@
 @model InventoryPartViewModel
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="TrackInventory" type="checkbox" class="form-check-input" />
-        <label asp-for="TrackInventory" class="form-check-label">@T["Count stock"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="TrackInventory" type="checkbox" class="form-check-input" />
+            <label asp-for="TrackInventory" class="form-check-label">@T["Count stock"]</label>
+        </div>
         <span class="hint dashed">@T["Count how many are on hand. A product whose stock isn't counted can always be bought."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="AllowBackorder" type="checkbox" class="form-check-input" />
-        <label asp-for="AllowBackorder" class="form-check-label">@T["Allow backorders"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AllowBackorder" type="checkbox" class="form-check-input" />
+            <label asp-for="AllowBackorder" class="form-check-label">@T["Allow backorders"]</label>
+        </div>
         <span class="hint dashed">@T["Keep selling when none are left. The buyer is told the item is on backorder."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="ReleaseDate" class="form-label">@T["Ships from"]</label>
-    <input asp-for="ReleaseDate" type="date" class="form-control w-auto" />
-    <span class="hint">@T["Optional, for a product not out yet. With backorders allowed, buyers pre-order it while none are in stock, and are told it ships from this date. After the date, it's sold as a backorder."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="ReleaseDate" class="ocat-label">@T["Ships from"]</label>
+    <div class="ocat-limited">
+        <input asp-for="ReleaseDate" type="date" class="form-control" />
+        <span class="hint">@T["Optional, for a product not out yet. With backorders allowed, buyers pre-order it while none are in stock, and are told it ships from this date. After the date, it's sold as a backorder."]</span>
+    </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="LowStockThreshold">
-    <label asp-for="LowStockThreshold" class="form-label">@T["Low-stock threshold"]</label>
-    <input asp-for="LowStockThreshold" type="number" min="0" class="form-control w-auto" placeholder="@Model.DefaultLowStockThreshold" />
-    <span asp-validation-for="LowStockThreshold"></span>
-    <span class="hint">@T["Stock counts as low at this many or fewer. Leave it empty for the store's default ({0}).", Model.DefaultLowStockThreshold]</span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="LowStockThreshold">
+    <label asp-for="LowStockThreshold" class="ocat-label">@T["Low-stock threshold"]</label>
+    <div class="ocat-limited">
+        <input asp-for="LowStockThreshold" type="number" min="0" class="form-control" placeholder="@Model.DefaultLowStockThreshold" />
+        <span asp-validation-for="LowStockThreshold"></span>
+        <span class="hint">@T["Stock counts as low at this many or fewer. Leave it empty for the store's default ({0}).", Model.DefaultLowStockThreshold]</span>
+    </div>
 </div>
 
 @if (!Model.IsNew)
 {
-    <div class="mb-3">
-        <label class="form-label">@T["On hand"]</label>
-        @if (Model.StockItems.Count == 0)
-        {
-            <p class="text-muted small mb-0">@T["Nothing is counted yet. Save the product to start counting it."]</p>
-        }
-        else
-        {
-            <ul class="list-group">
-                @foreach (var item in Model.StockItems)
-                {
-                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
-                        <span>
-                            @item.Title
-                            @if (!string.IsNullOrEmpty(item.Sku))
-                            {
-                                <span class="text-muted small">@T["SKU {0}", item.Sku]</span>
-                            }
-                        </span>
-                        <span class="text-nowrap">
-                            <span class="badge @(item.Available <= 0 ? "text-bg-danger" : item.IsLow ? "text-bg-warning" : "text-bg-success")">@T["{0} available", item.Available]</span>
-                            <a class="btn btn-sm btn-secondary ms-2" asp-route="InventoryItem" asp-route-stockItemId="@item.ItemId">@T["Change"]</a>
-                        </span>
-                    </li>
-                }
-            </ul>
-            <span class="hint">@T["Receive, adjust or count stock under Commerce > Inventory, where every change is recorded."]</span>
-        }
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["On hand"]</span>
+        <div class="ocat-end">
+            @if (Model.StockItems.Count == 0)
+            {
+                <p class="text-muted small mb-0">@T["Nothing is counted yet. Save the product to start counting it."]</p>
+            }
+            else
+            {
+                <ul class="list-group">
+                    @foreach (var item in Model.StockItems)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                            <span>
+                                @item.Title
+                                @if (!string.IsNullOrEmpty(item.Sku))
+                                {
+                                    <span class="text-muted small">@T["SKU {0}", item.Sku]</span>
+                                }
+                            </span>
+                            <span class="text-nowrap">
+                                <span class="badge @(item.Available <= 0 ? "text-bg-danger" : item.IsLow ? "text-bg-warning" : "text-bg-success")">@T["{0} available", item.Available]</span>
+                                <a class="btn btn-sm btn-secondary ms-2" asp-route="InventoryItem" asp-route-stockItemId="@item.ItemId">@T["Change"]</a>
+                            </span>
+                        </li>
+                    }
+                </ul>
+                <span class="hint">@T["Receive, adjust or count stock under Commerce > Inventory, where every change is recorded."]</span>
+            }
+        </div>
     </div>
 }

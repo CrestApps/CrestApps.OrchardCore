@@ -1,55 +1,57 @@
 @model ShippingZoneMethodsViewModel
 
-<div class="mb-3">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-        <label class="form-label mb-0">@T["Shipping methods"]</label>
-        <div class="dropdown">
-            <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add method"]</button>
-            <div class="dropdown-menu dropdown-menu-end">
-                @foreach (var provider in Model.Providers)
-                {
-                    <a class="dropdown-item" asp-action="CreateMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-providerName="@provider.Name">
-                        <div>@provider.DisplayName</div>
-                        <div class="small text-muted">@provider.Description</div>
-                    </a>
-                }
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Shipping methods"]</span>
+    <div class="ocat-end">
+        <div class="d-flex justify-content-end mb-2">
+            <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add method"]</button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    @foreach (var provider in Model.Providers)
+                    {
+                        <a class="dropdown-item" asp-action="CreateMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-providerName="@provider.Name">
+                            <div>@provider.DisplayName</div>
+                            <div class="small text-muted">@provider.Description</div>
+                        </a>
+                    }
+                </div>
             </div>
         </div>
-    </div>
 
-    @if (Model.Methods.Count == 0)
-    {
-        <p class="text-muted small mb-0">@T["No methods yet. Add one, such as a flat rate, so buyers in this zone can choose how to ship."]</p>
-    }
-    else
-    {
-        <ul class="list-group">
-            @foreach (var row in Model.Methods)
-            {
-                <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
-                    <span>
-                        <a asp-action="EditMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId">@row.Method.Name</a>
-                        <span class="badge ta-badge fw-normal" title="@T["Rate provider"]"><i class="fa-solid fa-calculator text-secondary" aria-hidden="true"></i> @row.ProviderName</span>
-                        @if (!string.IsNullOrEmpty(row.Summary))
-                        {
-                            <span class="text-muted small">@row.Summary</span>
-                        }
-                        @if (!row.Method.Enabled)
-                        {
-                            <span class="badge text-bg-secondary">@T["Off"]</span>
-                        }
-                    </span>
-                    <span class="text-nowrap">
-                        <a class="btn btn-sm btn-primary" asp-action="EditMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId">@T["Edit"]</a>
-                        <a class="btn btn-sm btn-danger"
-                           asp-action="DeleteMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId"
-                           data-title="@T["Delete"]"
-                           data-message="@T["Are you sure you want to delete the shipping method {0}?", row.Method.Name]"
-                           data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
-                    </span>
-                </li>
-            }
-        </ul>
-        <span class="hint">@T["Buyers in this zone see the methods that are on, in this order, with what each charges for their order."]</span>
-    }
+        @if (Model.Methods.Count == 0)
+        {
+            <p class="text-muted small mb-0">@T["No methods yet. Add one, such as a flat rate, so buyers in this zone can choose how to ship."]</p>
+        }
+        else
+        {
+            <ul class="list-group">
+                @foreach (var row in Model.Methods)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                        <span>
+                            <a asp-action="EditMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId">@row.Method.Name</a>
+                            <span class="badge ta-badge fw-normal" title="@T["Rate provider"]"><i class="fa-solid fa-calculator text-secondary" aria-hidden="true"></i> @row.ProviderName</span>
+                            @if (!string.IsNullOrEmpty(row.Summary))
+                            {
+                                <span class="text-muted small">@row.Summary</span>
+                            }
+                            @if (!row.Method.Enabled)
+                            {
+                                <span class="badge text-bg-secondary">@T["Off"]</span>
+                            }
+                        </span>
+                        <span class="text-nowrap">
+                            <a class="btn btn-sm btn-primary" asp-action="EditMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId">@T["Edit"]</a>
+                            <a class="btn btn-sm btn-danger"
+                               asp-action="DeleteMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId"
+                               data-title="@T["Delete"]"
+                               data-message="@T["Are you sure you want to delete the shipping method {0}?", row.Method.Name]"
+                               data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+                        </span>
+                    </li>
+                }
+            </ul>
+            <span class="hint">@T["Buyers in this zone see the methods that are on, in this order, with what each charges for their order."]</span>
+        }
+    </div>
 </div>

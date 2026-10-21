@@ -12,9 +12,11 @@
 <form asp-action="Edit" asp-route-itemId="@Model.ItemId" method="post">
     <partial name="_Editor" model="Model" />
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary">@T["Save"]</button>
-        <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+        </div>
     </div>
 </form>
 
@@ -26,38 +28,54 @@
 
             @if (!string.IsNullOrEmpty(Model.DiscountLinkUrl))
             {
-                <label class="form-label" for="discount-link">@T["Discount link"]</label>
-                <input id="discount-link" class="form-control mb-1" value="@Model.DiscountLinkUrl" readonly onclick="this.select()" />
-                <span class="hint d-block mb-3">@T["Whoever opens it gets the code taken off at checkout, without typing it. Add ?redirect= and a page on this site, such as /products, to land somewhere other than the home page."]</span>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="discount-link">@T["Discount link"]</label>
+                    <div class="ocat-end">
+                        <input id="discount-link" class="form-control" value="@Model.DiscountLinkUrl" readonly onclick="this.select()" />
+                        <span class="hint">@T["Whoever opens it gets the code taken off at checkout, without typing it. Add ?redirect= and a page on this site, such as /products, to land somewhere other than the home page."]</span>
+                    </div>
+                </div>
             }
 
-            <p class="mb-2">
-                @if (Model.GeneratedCodes > 0)
-                {
-                    @T["{0} unique codes generated, {1} used.", Model.GeneratedCodes, Model.UsedGeneratedCodes]
-                    <a asp-action="ExportCodes" asp-route-itemId="@Model.ItemId" class="ms-1">@T["Download them (CSV)"]</a>
-                }
-                else
-                {
-                    @T["Generate unique codes to give one to each customer, such as single-use codes on cards or in emails. Each shares this coupon's discount and rules, and has its own uses."]
-                }
-            </p>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <p class="mb-2">
+                        @if (Model.GeneratedCodes > 0)
+                        {
+                            @T["{0} unique codes generated, {1} used.", Model.GeneratedCodes, Model.UsedGeneratedCodes]
+                            <a asp-action="ExportCodes" asp-route-itemId="@Model.ItemId" class="ms-1">@T["Download them (CSV)"]</a>
+                        }
+                        else
+                        {
+                            @T["Generate unique codes to give one to each customer, such as single-use codes on cards or in emails. Each shares this coupon's discount and rules, and has its own uses."]
+                        }
+                    </p>
+                </div>
+            </div>
 
-            <form asp-action="GenerateCodes" asp-route-itemId="@Model.ItemId" method="post" class="row g-2 align-items-end">
-                <div class="col-sm-4 col-md-2">
-                    <label class="form-label" for="generate-count">@T["How many"]</label>
-                    <input id="generate-count" name="count" type="number" min="1" max="@CheckoutConstants.MaxGeneratedCodes" value="100" class="form-control" required />
+            <form asp-action="GenerateCodes" asp-route-itemId="@Model.ItemId" method="post">
+                <div class="ocat-limited-wrapper">
+                    <label class="ocat-label ocat-label-required" for="generate-count">@T["How many"]</label>
+                    <div class="ocat-limited">
+                        <input id="generate-count" name="count" type="number" min="1" max="@CheckoutConstants.MaxGeneratedCodes" value="100" class="form-control" required />
+                    </div>
                 </div>
-                <div class="col-sm-4 col-md-3">
-                    <label class="form-label" for="generate-prefix">@T["Prefix"]</label>
-                    <input id="generate-prefix" name="prefix" maxlength="12" class="form-control" autocomplete="off" placeholder="@T["Optional"]" />
+                <div class="ocat-limited-wrapper">
+                    <label class="ocat-label" for="generate-prefix">@T["Prefix"]</label>
+                    <div class="ocat-limited">
+                        <input id="generate-prefix" name="prefix" maxlength="12" class="form-control" autocomplete="off" placeholder="@T["Optional"]" />
+                    </div>
                 </div>
-                <div class="col-sm-4 col-md-2">
-                    <label class="form-label" for="generate-uses">@T["Uses per code"]</label>
-                    <input id="generate-uses" name="usesPerCode" type="number" min="1" value="1" class="form-control" />
+                <div class="ocat-limited-wrapper">
+                    <label class="ocat-label" for="generate-uses">@T["Uses per code"]</label>
+                    <div class="ocat-limited">
+                        <input id="generate-uses" name="usesPerCode" type="number" min="1" value="1" class="form-control" />
+                    </div>
                 </div>
-                <div class="col-12 col-md-auto">
-                    <button type="submit" class="btn btn-outline-primary">@T["Generate codes"]</button>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-outline-primary">@T["Generate codes"]</button>
+                    </div>
                 </div>
             </form>
         </div>

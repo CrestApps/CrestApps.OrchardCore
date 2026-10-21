@@ -1,60 +1,74 @@
 @model ShippingMethodViewModel
 
-<div class="mb-3" asp-validation-class-for="Name">
-    <label asp-for="Name" class="form-label">@T["Name"]</label>
-    <input asp-for="Name" class="form-control" autofocus />
-    <span asp-validation-for="Name"></span>
-    <span class="hint">@T["What buyers choose, such as Standard or Express. Rate: {0}.", Model.ProviderDisplayName]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" autofocus />
+        <span asp-validation-for="Name"></span>
+        <span class="hint">@T["What buyers choose, such as Standard or Express. Rate: {0}.", Model.ProviderDisplayName]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="Description" class="form-label">@T["Description"]</label>
-    <input asp-for="Description" class="form-control" />
-    <span class="hint">@T["Shown under the name, such as 3 to 5 business days."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <input asp-for="Description" class="form-control" />
+        <span class="hint">@T["Shown under the name, such as 3 to 5 business days."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="Enabled" type="checkbox" class="form-check-input" />
-        <label asp-for="Enabled" class="form-check-label">@T["On"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["On"]</label>
+        </div>
         <span class="hint dashed">@T["Turn it off to stop offering it without losing its settings."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
-    <select asp-for="Currency" asp-items="Model.Currencies" class="form-select w-auto">
-        <option value="">@T["Any"]</option>
-    </select>
-    <span class="hint">@T["The currency the amounts are in. The method is offered only for orders in it. Leave it on Any when the store sells in one currency."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
+            <option value="">@T["Any"]</option>
+        </select>
+        <span class="hint">@T["The currency the amounts are in. The method is offered only for orders in it. Leave it on Any when the store sells in one currency."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="TaxCategoryCode" class="form-label">@T["Tax category code"]</label>
-    <input asp-for="TaxCategoryCode" class="form-control w-auto" />
-    <span class="hint">@T["How the shipping charge is taxed, by tax category code. Leave it empty for the store's default."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category code"]</label>
+    <div class="ocat-limited">
+        <input asp-for="TaxCategoryCode" class="form-control" />
+        <span class="hint">@T["How the shipping charge is taxed, by tax category code. Leave it empty for the store's default."]</span>
+    </div>
 </div>
 
 @if (Model.Surcharges.Count > 0)
 {
-    <div class="mb-3">
-        <label class="form-label">@T["Surcharge per unit, by shipping class"]</label>
-        <ul class="list-group">
-            @for (var i = 0; i < Model.Surcharges.Count; i++)
-            {
-                <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
-                    <label for="@Html.IdFor(m => m.Surcharges[i].Amount)" class="mb-0">@Model.Surcharges[i].ShippingClass</label>
-                    <input type="hidden" asp-for="Surcharges[i].ShippingClass" />
-                    <input asp-for="Surcharges[i].Amount" type="number" min="0" step="any" class="form-control form-control-sm w-auto" />
-                </li>
-            }
-        </ul>
-        <span class="hint">@T["Added to the rate for each unit of a product in the class, such as 15 for each bulky item."]</span>
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Surcharge per unit, by shipping class"]</span>
+        <div class="ocat-end">
+            <ul class="list-group">
+                @for (var i = 0; i < Model.Surcharges.Count; i++)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                        <label for="@Html.IdFor(m => m.Surcharges[i].Amount)" class="mb-0">@Model.Surcharges[i].ShippingClass</label>
+                        <input type="hidden" asp-for="Surcharges[i].ShippingClass" />
+                        <input asp-for="Surcharges[i].Amount" type="number" min="0" step="any" class="form-control form-control-sm w-auto" />
+                    </li>
+                }
+            </ul>
+            <span class="hint">@T["Added to the rate for each unit of a product in the class, such as 15 for each bulky item."]</span>
+        </div>
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="Position" class="form-label">@T["Position"]</label>
-    <input asp-for="Position" type="number" class="form-control w-auto" />
-    <span class="hint">@T["Methods are listed from the smallest position."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Position" type="number" class="form-control" />
+        <span class="hint">@T["Methods are listed from the smallest position."]</span>
+    </div>
 </div>

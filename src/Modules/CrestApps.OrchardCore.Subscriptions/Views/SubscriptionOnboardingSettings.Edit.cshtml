@@ -2,7 +2,7 @@
 
 @model SubscriptionOnboardingSettingsViewModel
 
-<div class="mb-3" asp-validation-class-for="DatabaseProvider">
+<div class="ocat-wrapper" asp-validation-class-for="DatabaseProvider">
     <label asp-for="DatabaseProvider" class="ocat-label">@T["Database for new sites"]</label>
     <div class="ocat-end">
         <select asp-for="DatabaseProvider" asp-items="Model.DatabaseProviders" class="form-select">
@@ -13,7 +13,7 @@
     </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="ConnectionString">
+<div class="ocat-wrapper" asp-validation-class-for="ConnectionString">
     <label asp-for="ConnectionString" class="ocat-label">@T["Connection string"]</label>
     <div class="ocat-end">
         <input asp-for="ConnectionString" class="form-control" />
@@ -22,7 +22,7 @@
     </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="Schema">
+<div class="ocat-wrapper" asp-validation-class-for="Schema">
     <label asp-for="Schema" class="ocat-label">@T["Schema"]</label>
     <div class="ocat-end">
         <input asp-for="Schema" class="form-control" />
