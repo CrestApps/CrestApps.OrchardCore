@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -69,6 +70,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<Dashboard.SalesSummaryPartDisplayDriver>();
         services.AddScoped<QuoteService>();
         services.AddScoped<ICartActionProvider, QuoteCartActionProvider>();
+        services.AddSignedLinks();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 

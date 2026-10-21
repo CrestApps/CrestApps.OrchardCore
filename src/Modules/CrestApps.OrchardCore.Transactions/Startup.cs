@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
@@ -56,6 +57,7 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<TransactionsAccountMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
 
+        services.AddSignedLinks();
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
         services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();

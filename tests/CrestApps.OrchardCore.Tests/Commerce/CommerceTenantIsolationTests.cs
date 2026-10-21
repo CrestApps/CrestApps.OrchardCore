@@ -8,11 +8,10 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Downloads;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -144,7 +143,7 @@ public sealed class CommerceTenantIsolationTests
         // A link another tenant signed can't be read, so nothing is looked up.
         var session = new Mock<global::YesSql.ISession>();
 
-        return new DownloadService(session.Object, Mock.Of<IContentManager>(), siteService.Object, protection, new HttpContextAccessor(), Mock.Of<LinkGenerator>(), Mock.Of<IDistributedLock>(), clock.Object);
+        return new DownloadService(session.Object, Mock.Of<IContentManager>(), siteService.Object, protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), Mock.Of<IDistributedLock>(), clock.Object);
     }
 
     private static async Task<IStore> CouponStoreAsync(string path)

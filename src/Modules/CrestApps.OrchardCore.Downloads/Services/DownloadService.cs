@@ -1,10 +1,9 @@
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Downloads.Indexes;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
@@ -36,8 +35,7 @@ public sealed class DownloadService
     private readonly IContentManager _contentManager;
     private readonly ISiteService _siteService;
     private readonly IDataProtector _protector;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly SiteUrlGenerator _siteUrlGenerator;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
 
@@ -46,8 +44,7 @@ public sealed class DownloadService
         IContentManager contentManager,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator,
+        SiteUrlGenerator siteUrlGenerator,
         IDistributedLock distributedLock,
         IClock clock)
     {
@@ -55,8 +52,7 @@ public sealed class DownloadService
         _contentManager = contentManager;
         _siteService = siteService;
         _protector = dataProtectionProvider.CreateProtector(ProtectionPurpose);
-        _httpContextAccessor = httpContextAccessor;
-        _linkGenerator = linkGenerator;
+        _siteUrlGenerator = siteUrlGenerator;
         _distributedLock = distributedLock;
         _clock = clock;
     }
@@ -145,24 +141,11 @@ public sealed class DownloadService
     /// <summary>
     /// Returns the link that downloads the entitlement's file.
     /// </summary>
-    public async Task<string> CreateUrlAsync(DownloadEntitlement entitlement)
+    public Task<string> CreateUrlAsync(DownloadEntitlement entitlement)
     {
         ArgumentNullException.ThrowIfNull(entitlement);
 
-        var token = _protector.Protect(entitlement.ItemId);
-        var site = await _siteService.GetSiteSettingsAsync();
-
-        // An email is often sent where there is no request, so the site's own address comes first.
-        if (!string.IsNullOrWhiteSpace(site.BaseUrl))
-        {
-            return $"{site.BaseUrl.TrimEnd('/')}/downloads/{Uri.EscapeDataString(token)}";
-        }
-
-        var httpContext = _httpContextAccessor.HttpContext;
-
-        return httpContext is null
-            ? null
-            : _linkGenerator.GetUriByRouteValues(httpContext, DownloadsConstants.RouteNames.Download, new { token });
+        return _siteUrlGenerator.GetUrlAsync(DownloadsConstants.RouteNames.Download, new { token = _protector.Protect(entitlement.ItemId) });
     }
 
     /// <summary>

@@ -7,11 +7,10 @@ using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -296,7 +295,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var clock = new Mock<IClock>();
         clock.Setup(value => value.UtcNow).Returns(() => _clockNow);
 
-        var service = new DownloadService(session, contentManager.Object, siteService.Object, _protection, new HttpContextAccessor(), Mock.Of<LinkGenerator>(), _lock, clock.Object);
+        var service = new DownloadService(session, contentManager.Object, siteService.Object, _protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), _lock, clock.Object);
         var result = await work(service);
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);

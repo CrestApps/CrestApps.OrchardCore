@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Marketing.BackgroundTasks;
 using CrestApps.OrchardCore.Marketing.Drivers;
 using CrestApps.OrchardCore.Marketing.Handlers;
@@ -33,6 +34,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISegmentStore, SegmentStore>();
         services.AddScoped<ICampaignStore, CampaignStore>();
         services.AddScoped<CustomerPurchasesService>();
+        services.AddSignedLinks();
         services.AddScoped<CampaignService>();
         services.AddScoped<IOrderEventHandler, CustomerPurchasesOrderHandler>();
         services.AddSingleton<IBackgroundTask, MarketingBackgroundTask>();

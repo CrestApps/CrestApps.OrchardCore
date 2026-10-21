@@ -175,7 +175,7 @@ public sealed class CheckoutRecoveryServiceTests
     }
 
     private CheckoutRecoveryLinks CreateLinks()
-        => new(_protection, new ResumeLinkGenerator(), SiteService(true, "https://store.test/").Object, Clock());
+        => new(SignedLinkDoubles.Tokens(_protection), SignedLinkDoubles.Urls(SiteService(true, "https://store.test/").Object, new ResumeLinkGenerator()));
 
     private CheckoutRecoveryService CreateService(bool enabled = true, string baseUrl = "https://store.test/")
     {
@@ -185,7 +185,7 @@ public sealed class CheckoutRecoveryServiceTests
             .ReturnsAsync((string id, CancellationToken _) => _sessions.GetValueOrDefault(id));
 
         var siteService = SiteService(enabled, baseUrl);
-        var links = new CheckoutRecoveryLinks(_protection, new ResumeLinkGenerator(), siteService.Object, Clock());
+        var links = new CheckoutRecoveryLinks(SignedLinkDoubles.Tokens(_protection), SignedLinkDoubles.Urls(siteService.Object, new ResumeLinkGenerator()));
         var services = new ServiceCollection().AddSingleton(_email.Object).BuildServiceProvider();
 
         return new CheckoutRecoveryService(

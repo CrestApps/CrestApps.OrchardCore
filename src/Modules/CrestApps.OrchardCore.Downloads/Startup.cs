@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Downloads.Drivers;
 using CrestApps.OrchardCore.Downloads.Handlers;
 using CrestApps.OrchardCore.Downloads.Indexes;
@@ -54,6 +55,7 @@ public sealed class Startup : StartupBase
                 serviceProvider.GetRequiredService<FileCreationService>());
         });
 
+        services.AddSignedLinks();
         services.AddScoped<DownloadService>();
         services.AddScoped<IOrderEventHandler, DownloadOrderEventHandler>();
         services.AddScoped<IOrderEmailSectionProvider, DownloadEmailSectionProvider>();

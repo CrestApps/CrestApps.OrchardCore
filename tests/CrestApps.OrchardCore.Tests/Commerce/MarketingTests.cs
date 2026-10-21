@@ -7,9 +7,9 @@ using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Fluid.Values;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Email;
@@ -116,7 +116,7 @@ public sealed class MarketingTests
             customers,
             liquid.Object,
             SiteService(),
-            new EphemeralDataProtectionProvider(),
+            SignedLinkDoubles.Tokens(),
             Clock(),
             NullLogger<CampaignService>.Instance,
             new PassThroughStringLocalizer<CampaignService>(),

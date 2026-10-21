@@ -1,9 +1,5 @@
-using System.Security.Cryptography;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
 
@@ -21,69 +17,33 @@ public sealed class TransactionPayLinkService : ITransactionPayLinkService
 
     private const string ProtectionPurpose = "CrestApps.OrchardCore.Transactions.PayLink";
 
-    private readonly ITimeLimitedDataProtector _protector;
-    private readonly ISiteService _siteService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly SignedTokenService _signedTokenService;
+    private readonly SiteUrlGenerator _siteUrlGenerator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionPayLinkService"/> class.
     /// </summary>
-    /// <param name="dataProtectionProvider">The tenant's data protection provider.</param>
-    /// <param name="siteService">The site service, for the site's public base URL.</param>
-    /// <param name="httpContextAccessor">The accessor for the current request, used when no base URL is configured.</param>
-    /// <param name="linkGenerator">The link generator.</param>
+    /// <param name="signedTokenService">The service that signs the token.</param>
+    /// <param name="siteUrlGenerator">The generator of the link's absolute URL.</param>
     public TransactionPayLinkService(
-        IDataProtectionProvider dataProtectionProvider,
-        ISiteService siteService,
-        IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator)
+        SignedTokenService signedTokenService,
+        SiteUrlGenerator siteUrlGenerator)
     {
-        _protector = dataProtectionProvider.CreateProtector(ProtectionPurpose).ToTimeLimitedDataProtector();
-        _siteService = siteService;
-        _httpContextAccessor = httpContextAccessor;
-        _linkGenerator = linkGenerator;
+        _signedTokenService = signedTokenService;
+        _siteUrlGenerator = siteUrlGenerator;
     }
 
     /// <inheritdoc/>
-    public async Task<string> CreatePayUrlAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    public Task<string> CreatePayUrlAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(transaction);
 
-        var token = _protector.Protect(transaction.ItemId, Lifetime);
-
-        // The site's configured address wins: a reminder is often sent by a background task, or from an
-        // administrator's request on an internal address, and the link has to work for the customer.
-        var site = await _siteService.GetSiteSettingsAsync();
-
-        if (!string.IsNullOrWhiteSpace(site.BaseUrl))
-        {
-            return $"{site.BaseUrl.TrimEnd('/')}/transactions/pay/{Uri.EscapeDataString(token)}";
-        }
-
-        var httpContext = _httpContextAccessor.HttpContext;
-
-        return httpContext is null
-            ? null
-            : _linkGenerator.GetUriByRouteValues(httpContext, TransactionsConstants.RouteNames.Pay, new { token });
+        // A reminder is often sent by a background task, or from an administrator's request on an internal address,
+        // and the link has to work for the customer, so the site's configured address wins.
+        return _siteUrlGenerator.GetUrlAsync(TransactionsConstants.RouteNames.Pay, new { token = _signedTokenService.Protect(ProtectionPurpose, transaction.ItemId, Lifetime) });
     }
 
     /// <inheritdoc/>
     public string GetTransactionId(string token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _protector.Unprotect(token, out _);
-        }
-        catch (CryptographicException)
-        {
-            // Altered, expired, or protected by another site's keys.
-            return null;
-        }
-    }
+        => _signedTokenService.Unprotect(ProtectionPurpose, token);
 }
