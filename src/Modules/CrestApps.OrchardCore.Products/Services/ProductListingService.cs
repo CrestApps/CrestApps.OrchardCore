@@ -21,6 +21,7 @@ using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Media;
+using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
 using YesSql.Services;
@@ -54,6 +55,7 @@ public sealed class ProductListingService
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
     private readonly Dictionary<string, ProductListingViewModel> _listings = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProductDetailsViewModel> _products = new(StringComparer.Ordinal);
+    private readonly IClock _clock;
     private IReadOnlyList<ContentItem> _listingItems;
 
     // How many automatic filters start open.
@@ -78,7 +80,8 @@ public sealed class ProductListingService
         IUpdateModelAccessor updateModelAccessor,
         IOptions<ProductFacetStyleOptions> facetStyles,
         IEnumerable<IProductListingEntryProvider> entryProviders,
-        IStringLocalizer<ProductListingService> stringLocalizer)
+        IStringLocalizer<ProductListingService> stringLocalizer,
+        IClock clock)
     {
         _attributeCatalog = attributeCatalog;
         _searchService = searchService;
@@ -96,6 +99,7 @@ public sealed class ProductListingService
         _updateModelAccessor = updateModelAccessor;
         _facetStyles = facetStyles.Value;
         _entryProviders = entryProviders;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -979,7 +983,7 @@ public sealed class ProductListingService
 
         if (!string.IsNullOrEmpty(target) && !string.Equals(target, document.Currency, StringComparison.OrdinalIgnoreCase) && document.Price.HasValue)
         {
-            var now = DateTime.UtcNow;
+            var now = _clock.UtcNow;
             var listed = contentItem is not null && contentItem.TryGet<ProductPricePart>(out var pricing) && pricing.GetDefault(now) is { } offered
                 ? pricing.Prices.FirstOrDefault(candidate => string.Equals(candidate.Currency, target, StringComparison.OrdinalIgnoreCase) &&
                     candidate.Kind == offered.Kind && candidate.Interval == offered.Interval && candidate.IsAvailable(now))

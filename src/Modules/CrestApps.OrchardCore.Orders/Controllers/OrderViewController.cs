@@ -77,7 +77,7 @@ public sealed class OrderViewController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = !QuoteService.CanPay(order, DateTime.UtcNow)
+        var payUrl = !QuoteService.CanPay(order, _clock.UtcNow)
             ? null
             : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
                 ? Url.RouteUrl("GuestOrderPay", new { token })

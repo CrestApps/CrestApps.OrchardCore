@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Services;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -59,7 +60,7 @@ public sealed class ProductPurchasabilityTests
     {
         // Every checkout path resolves its snapshot here, so this is what stops a crafted request from buying
         // something the merchant only lists.
-        var resolver = new DefaultProductSnapshotResolver(CreateDefinitions(new ProductPartSettings { SalesMode = mode, DefaultCurrency = "USD" }));
+        var resolver = new DefaultProductSnapshotResolver(CreateDefinitions(new ProductPartSettings { SalesMode = mode, DefaultCurrency = "USD" }), new TestClock(DateTime.UtcNow));
         var item = CreateProduct(new ProductPart { Price = 15599m, IsPurchasable = itemFlag });
 
         var snapshot = await resolver.ResolveAsync(new ProductSnapshotContext(item), TestContext.Current.CancellationToken);
@@ -70,7 +71,7 @@ public sealed class ProductPurchasabilityTests
     [Fact]
     public async Task Snapshot_ResolvesAPerItemProductThatIsForSale()
     {
-        var resolver = new DefaultProductSnapshotResolver(CreateDefinitions(new ProductPartSettings { SalesMode = ProductSalesMode.PerItem, DefaultCurrency = "USD" }));
+        var resolver = new DefaultProductSnapshotResolver(CreateDefinitions(new ProductPartSettings { SalesMode = ProductSalesMode.PerItem, DefaultCurrency = "USD" }), new TestClock(DateTime.UtcNow));
         var item = CreateProduct(new ProductPart { Price = 10999m, IsPurchasable = true });
 
         var snapshot = await resolver.ResolveAsync(new ProductSnapshotContext(item), TestContext.Current.CancellationToken);
@@ -82,7 +83,7 @@ public sealed class ProductPurchasabilityTests
     [Fact]
     public async Task Snapshot_RefusesAProductWithNoPriceAndNoPriceList()
     {
-        var resolver = new DefaultProductSnapshotResolver(CreateDefinitions(new ProductPartSettings { DefaultCurrency = "USD" }));
+        var resolver = new DefaultProductSnapshotResolver(CreateDefinitions(new ProductPartSettings { DefaultCurrency = "USD" }), new TestClock(DateTime.UtcNow));
         var item = CreateProduct(new ProductPart { Price = null });
 
         var snapshot = await resolver.ResolveAsync(new ProductSnapshotContext(item), TestContext.Current.CancellationToken);

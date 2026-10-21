@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Orders.Controllers;
@@ -25,12 +26,18 @@ public sealed class AccountOrdersController : Controller
     private readonly IOrderStore _orderStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
+    private readonly IClock _clock;
 
-    public AccountOrdersController(IOrderStore orderStore, IAuthorizationService authorizationService, IShapeFactory shapeFactory)
+    public AccountOrdersController(
+        IOrderStore orderStore,
+        IAuthorizationService authorizationService,
+        IShapeFactory shapeFactory,
+        IClock clock)
     {
         _orderStore = orderStore;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
+        _clock = clock;
     }
 
     [HttpGet("account/orders", Name = "AccountOrders")]
@@ -97,7 +104,7 @@ public sealed class AccountOrdersController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = order.Status == OrderStatus.Canceled || !QuoteService.CanPay(order, DateTime.UtcNow)
+        var payUrl = order.Status == OrderStatus.Canceled || !QuoteService.CanPay(order, _clock.UtcNow)
             ? null
             : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
                 ? Url.RouteUrl("AccountOrderPay", new { orderId = order.ItemId })

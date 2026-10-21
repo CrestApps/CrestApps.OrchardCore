@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Downloads.Services;
 
@@ -11,12 +12,17 @@ namespace CrestApps.OrchardCore.Downloads.Services;
 internal sealed class DownloadEmailSectionProvider : IOrderEmailSectionProvider
 {
     private readonly DownloadService _downloads;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
-    public DownloadEmailSectionProvider(DownloadService downloads, IStringLocalizer<DownloadEmailSectionProvider> stringLocalizer)
+    public DownloadEmailSectionProvider(
+        DownloadService downloads,
+        IStringLocalizer<DownloadEmailSectionProvider> stringLocalizer,
+        IClock clock)
     {
         _downloads = downloads;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -30,7 +36,7 @@ internal sealed class DownloadEmailSectionProvider : IOrderEmailSectionProvider
 
         foreach (var entitlement in await _downloads.ListAsync(order.ItemId, cancellationToken))
         {
-            if (DownloadService.GetProblem(entitlement, DateTime.UtcNow) != DownloadProblem.None || await _downloads.CreateUrlAsync(entitlement) is not { } url)
+            if (DownloadService.GetProblem(entitlement, _clock.UtcNow) != DownloadProblem.None || await _downloads.CreateUrlAsync(entitlement) is not { } url)
             {
                 continue;
             }

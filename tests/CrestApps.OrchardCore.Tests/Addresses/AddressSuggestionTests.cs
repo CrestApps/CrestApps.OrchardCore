@@ -73,14 +73,15 @@ public sealed class AddressSuggestionTests
         using var cache = new MemoryCache(new MemoryCacheOptions());
         var visitor = IPAddress.Parse("203.0.113.7");
         var other = IPAddress.Parse("203.0.113.8");
+        var now = new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc);
 
         for (var i = 0; i < AddressAutocompleteEndpoints.RequestsPerMinute; i++)
         {
-            Assert.True(AddressAutocompleteEndpoints.Allow(cache, visitor));
+            Assert.True(AddressAutocompleteEndpoints.Allow(cache, visitor, now));
         }
 
-        Assert.False(AddressAutocompleteEndpoints.Allow(cache, visitor));
-        Assert.True(AddressAutocompleteEndpoints.Allow(cache, other));
+        Assert.False(AddressAutocompleteEndpoints.Allow(cache, visitor, now));
+        Assert.True(AddressAutocompleteEndpoints.Allow(cache, other, now));
     }
 
     private static GooglePlacesAddressAutocompleteProvider.AddressComponent Component(string longText, string shortText, params string[] types)

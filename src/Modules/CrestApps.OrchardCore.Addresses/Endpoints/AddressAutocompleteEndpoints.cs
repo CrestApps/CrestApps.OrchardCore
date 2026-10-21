@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Addresses.Core.Autocomplete;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Addresses.Endpoints;
 
@@ -25,7 +26,7 @@ internal static class AddressAutocompleteEndpoints
 
     private const int MaximumText = 120;
 
-    public static async Task<IResult> SuggestAsync(string q, string country, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers, IMemoryCache cache)
+    public static async Task<IResult> SuggestAsync(string q, string country, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers, IMemoryCache cache, IClock clock)
     {
         var text = q?.Trim();
 
@@ -34,7 +35,7 @@ internal static class AddressAutocompleteEndpoints
             return Results.Json(Array.Empty<AddressSuggestion>());
         }
 
-        if (!Allow(cache, httpContext.Connection.RemoteIpAddress))
+        if (!Allow(cache, httpContext.Connection.RemoteIpAddress, clock.UtcNow))
         {
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
         }
@@ -55,14 +56,14 @@ internal static class AddressAutocompleteEndpoints
         return Results.Json(suggestions.Select(suggestion => new { id = suggestion.Id, text = suggestion.Text }));
     }
 
-    public static async Task<IResult> ResolveAsync(string id, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers, IMemoryCache cache)
+    public static async Task<IResult> ResolveAsync(string id, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers, IMemoryCache cache, IClock clock)
     {
         if (string.IsNullOrWhiteSpace(id) || id.Length > 512)
         {
             return Results.NotFound();
         }
 
-        if (!Allow(cache, httpContext.Connection.RemoteIpAddress))
+        if (!Allow(cache, httpContext.Connection.RemoteIpAddress, clock.UtcNow))
         {
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
         }
@@ -86,9 +87,9 @@ internal static class AddressAutocompleteEndpoints
     }
 
     // A visitor's requests this minute, counted by their address.
-    internal static bool Allow(IMemoryCache cache, IPAddress address)
+    internal static bool Allow(IMemoryCache cache, IPAddress address, DateTime utcNow)
     {
-        var key = $"address-autocomplete:{address?.ToString() ?? "unknown"}:{DateTime.UtcNow:yyyyMMddHHmm}";
+        var key = $"address-autocomplete:{address?.ToString() ?? "unknown"}:{utcNow:yyyyMMddHHmm}";
         var count = cache.GetOrCreate(key, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);

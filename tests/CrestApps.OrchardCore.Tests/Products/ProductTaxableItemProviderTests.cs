@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -133,7 +134,7 @@ public class ProductTaxableItemProviderTests
             .Setup(x => x.GetTypeDefinitionAsync(It.IsAny<string>()))
             .ReturnsAsync(typeDefinition);
 
-        return new ProductTaxableItemProvider(new DefaultProductSnapshotResolver(contentDefinitionManager.Object));
+        return new ProductTaxableItemProvider(new DefaultProductSnapshotResolver(contentDefinitionManager.Object, new TestClock(DateTime.UtcNow)));
     }
 
     private static ContentItem CreateProductContentItem(decimal price, JsonObject taxationPart)

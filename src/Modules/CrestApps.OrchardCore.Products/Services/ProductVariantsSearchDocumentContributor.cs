@@ -21,10 +21,6 @@ public sealed class ProductVariantsSearchDocumentContributor : IProductSearchDoc
 
     private readonly IClock _clock;
 
-    public ProductVariantsSearchDocumentContributor()
-    {
-    }
-
     public ProductVariantsSearchDocumentContributor(IClock clock)
     {
         _clock = clock;
@@ -83,7 +79,7 @@ public sealed class ProductVariantsSearchDocumentContributor : IProductSearchDoc
         }
 
         contentItem.TryGet<ProductPart>(out var product);
-        var now = _clock?.UtcNow ?? DateTime.UtcNow;
+        var now = _clock.UtcNow;
         var prices = available.Select(variant => ProductSale.GetPrice(product, variant, now)).Where(price => price.HasValue).Select(price => price.Value).ToList();
 
         if (prices.Count == 0)

@@ -286,7 +286,7 @@ public sealed class RegistersAdminController : Controller
         }
     }
 
-    private static void Apply(RegisterEditViewModel model, Register register)
+    private void Apply(RegisterEditViewModel model, Register register)
     {
         register.Name = model.Name.Trim();
         register.LocationId = model.LocationId;
@@ -303,7 +303,7 @@ public sealed class RegistersAdminController : Controller
             PostalCode = string.IsNullOrWhiteSpace(model.PostalCode) ? null : model.PostalCode.Trim(),
             Country = model.Country?.Trim().ToUpperInvariant(),
         };
-        register.ModifiedUtc = DateTime.UtcNow;
+        register.ModifiedUtc = _clock.UtcNow;
     }
 
     private async Task<RegisterEditViewModel> PopulateAsync(RegisterEditViewModel model, string itemId = null)

@@ -12,6 +12,7 @@ using OrchardCore.Admin;
 using CrestApps.OrchardCore.Orders.Core;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
 using OrchardCore.Routing;
 using OrchardCore.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
@@ -36,6 +37,7 @@ public sealed class OrdersAdminController : Controller
     private readonly IShapeFactory _shapeFactory;
     private readonly INotifier _notifier;
     private readonly PagerOptions _pagerOptions;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -47,13 +49,15 @@ public sealed class OrdersAdminController : Controller
         INotifier notifier,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<OrdersAdminController> stringLocalizer,
-        IHtmlLocalizer<OrdersAdminController> htmlLocalizer)
+        IHtmlLocalizer<OrdersAdminController> htmlLocalizer,
+        IClock clock)
     {
         _orderStore = orderStore;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
         _pagerOptions = pagerOptions.Value;
+        _clock = clock;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -113,7 +117,7 @@ public sealed class OrdersAdminController : Controller
         // A byte order mark, so a spreadsheet reads the names and currencies as UTF-8.
         var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray();
 
-        return File(bytes, "text/csv", $"orders-{TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone):yyyy-MM-dd}.csv");
+        return File(bytes, "text/csv", $"orders-{TimeZoneInfo.ConvertTimeFromUtc(_clock.UtcNow, zone):yyyy-MM-dd}.csv");
     }
 
     /// <summary>
@@ -266,7 +270,7 @@ public sealed class OrdersAdminController : Controller
             // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand; a
             // quote, once it's sent.
             if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment &&
-                QuoteService.CanPay(order, DateTime.UtcNow) &&
+                QuoteService.CanPay(order, _clock.UtcNow) &&
                 await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreateUrlAsync(order) is { } viewUrl)
             {
                 model.PayUrl = viewUrl + "/pay";

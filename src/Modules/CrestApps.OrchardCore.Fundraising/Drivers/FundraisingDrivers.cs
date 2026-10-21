@@ -14,6 +14,7 @@ using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -29,13 +30,19 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
 
     private readonly DonationService _donations;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
-    public FundraisingCampaignPartDisplayDriver(DonationService donations, IHttpContextAccessor httpContextAccessor, IStringLocalizer<FundraisingCampaignPartDisplayDriver> stringLocalizer)
+    public FundraisingCampaignPartDisplayDriver(
+        DonationService donations,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<FundraisingCampaignPartDisplayDriver> stringLocalizer,
+        IClock clock)
     {
         _donations = donations;
         _httpContextAccessor = httpContextAccessor;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -44,7 +51,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         var progress = Initialize<CampaignProgressViewModel>("CampaignProgress", async model =>
         {
             model.Progress = await _donations.GetProgressAsync(part.ContentItem);
-            model.Ended = part.EndsUtc < DateTime.UtcNow;
+            model.Ended = part.EndsUtc < _clock.UtcNow;
         });
 
         if (context.DisplayType == ProductActionDisplayType)
@@ -136,7 +143,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
             ? part.MinimumAmount
             : Math.Round(await shopperCurrency.ConvertAsync(part.MinimumAmount, currency, shown, isPrice: false) ?? part.MinimumAmount, 2, MidpointRounding.AwayFromZero);
         model.TaxDeductible = part.TaxDeductible;
-        model.Ended = part.EndsUtc < DateTime.UtcNow;
+        model.Ended = part.EndsUtc < _clock.UtcNow;
     }
 
     private static bool TryParse(string value, out decimal amount)

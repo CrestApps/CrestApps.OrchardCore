@@ -163,15 +163,6 @@ public sealed class ReviewRequestService
     LockExpiration = 900_000)]
 public sealed class ReviewRequestBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await serviceProvider.GetRequiredService<ReviewRequestService>().SendDueAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            serviceProvider.GetRequiredService<ILogger<ReviewRequestBackgroundTask>>().LogError(ex, "An error occurred while sending review requests.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ReviewRequestService>().SendDueAsync(cancellationToken);
 }

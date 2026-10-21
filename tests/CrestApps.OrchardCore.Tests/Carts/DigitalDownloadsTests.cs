@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -152,7 +153,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         await InSessionAsync(service => service.GrantAsync(order, TestContext.Current.CancellationToken), Product(file, limit: 3, days: 30));
 
-        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>()).GetSectionAsync(order, TestContext.Current.CancellationToken));
+        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(DateTime.UtcNow)).GetSectionAsync(order, TestContext.Current.CancellationToken));
 
         var link = Assert.Single(section.Links);
         Assert.Equal("guide.pdf", link.Text);

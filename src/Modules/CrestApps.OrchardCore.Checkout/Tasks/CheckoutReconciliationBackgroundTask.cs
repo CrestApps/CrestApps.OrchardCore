@@ -102,7 +102,7 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
     // pending intent, a subscription waiting on confirmation. Releasing those after the configured lifetime
     // is what keeps the provider's side from filling with the site's forgotten checkouts. The engine refuses
     // to expire anything that actually collected money, so this can never close a paid purchase.
-    private static async Task ExpireAbandonedAsync(
+    private async Task ExpireAbandonedAsync(
         ICheckoutSessionStore sessionStore,
         ISiteService siteService,
         ICheckoutEngine engine,
@@ -111,7 +111,7 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
     {
         var settings = await siteService.GetSettingsAsync<CheckoutSettings>();
         var lifetime = TimeSpan.FromHours(Math.Max(1, settings.SessionLifetimeHours));
-        var before = DateTime.UtcNow - lifetime;
+        var before = _clock.UtcNow - lifetime;
 
         foreach (var status in new[] { CheckoutSessionStatus.Pending, CheckoutSessionStatus.AwaitingProvider })
         {

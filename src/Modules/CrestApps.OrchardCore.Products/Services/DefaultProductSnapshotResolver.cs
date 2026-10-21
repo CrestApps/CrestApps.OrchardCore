@@ -29,14 +29,12 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
     /// Initializes a new instance of the <see cref="DefaultProductSnapshotResolver"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager used to read part settings.</param>
-    public DefaultProductSnapshotResolver(IContentDefinitionManager contentDefinitionManager)
+    /// <param name="clock">The clock that decides which sale prices are current.</param>
+    public DefaultProductSnapshotResolver(
+        IContentDefinitionManager contentDefinitionManager,
+        IClock clock)
     {
         _contentDefinitionManager = contentDefinitionManager;
-    }
-
-    public DefaultProductSnapshotResolver(IContentDefinitionManager contentDefinitionManager, IClock clock)
-        : this(contentDefinitionManager)
-    {
         _clock = clock;
     }
 
@@ -86,7 +84,7 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
         }
 
         // During a sale the product sells at its sale price.
-        var unitPrice = ProductSale.GetPrice(productPart, variant, _clock?.UtcNow ?? DateTime.UtcNow);
+        var unitPrice = ProductSale.GetPrice(productPart, variant, _clock.UtcNow);
 
         // A product with no price of its own can still be sold at the prices it lists; with neither, there is
         // nothing to charge.

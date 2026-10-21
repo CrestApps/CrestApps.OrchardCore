@@ -199,7 +199,7 @@ public sealed class ProductPricePartTests
     private static async Task<PriceResult> Resolve(ContentItem product, ProductSnapshotContext context)
     {
         var resolver = new DefaultPriceResolver(
-            new DefaultProductSnapshotResolver(CreateContentDefinitionManager()),
+            new DefaultProductSnapshotResolver(CreateContentDefinitionManager(), new TestClock(DateTime.UtcNow)),
             new TestClock(_now),
             NullLogger<DefaultPriceResolver>.Instance);
 

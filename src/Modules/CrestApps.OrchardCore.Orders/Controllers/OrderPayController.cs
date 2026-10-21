@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Controllers;
 
@@ -20,19 +21,22 @@ public sealed class OrderPayController : Controller
     private readonly ICheckoutEngine _engine;
     private readonly ICheckoutSessionStore _sessions;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IClock _clock;
 
     public OrderPayController(
         IOrderStore orders,
         IOrderLinkService links,
         ICheckoutEngine engine,
         ICheckoutSessionStore sessions,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IClock clock)
     {
         _orders = orders;
         _links = links;
         _engine = engine;
         _sessions = sessions;
         _authorizationService = authorizationService;
+        _clock = clock;
     }
 
     [HttpGet("orders/view/{token}/pay", Name = "GuestOrderPay")]
@@ -63,7 +67,7 @@ public sealed class OrderPayController : Controller
     {
         // Paid already, canceled, or not an order to pay this way: the order's page says where it stands.
         if (order.Invoice is null || order.Status is not (OrderStatus.Draft or OrderStatus.AwaitingPayment) ||
-            !Services.QuoteService.CanPay(order, DateTime.UtcNow))
+            !Services.QuoteService.CanPay(order, _clock.UtcNow))
         {
             return Redirect(orderUrl);
         }
