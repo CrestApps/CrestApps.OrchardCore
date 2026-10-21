@@ -68,6 +68,9 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<StripeSettingsDisplayDriver>();
         services.AddScoped<IStoreSetupStep, StripeSetupStep>();
         services.AddTransient<IConfigureOptions<StripeOptions>, StripeOptionsConfiguration>();
+
+        // The options are rebuilt when the Stripe settings change, so a new key is used without a tenant restart.
+        services.AddSignalOptionsChangeTokenSource<StripeOptions>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
         services.AddNavigationProvider<AdminMenu>();
         services.AddPermissionProvider<StripePermissionsProvider>();
@@ -97,7 +100,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<StripeOptions>>();
+            var options = sp.GetRequiredService<IOptionsMonitor<StripeOptions>>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
             // Route Stripe API calls through a named HttpClient so a delegating handler can observe
@@ -110,7 +113,8 @@ public sealed class Startup : StartupBase
                 httpClientFactory.CreateClient(StripeConstants.HttpClientName),
                 maxNetworkRetries: 3);
 
-            return new StripeClient(options.Value.ApiKey, httpClient: httpClient);
+            // Built per scope from the current options, so a changed key is used from the next request on.
+            return new StripeClient(options.CurrentValue.ApiKey, httpClient: httpClient);
         });
     }
 

@@ -63,7 +63,7 @@ public static class CreateWebhookEndpoint
         IHttpContextAccessor httpContextAccessor,
         ILogger<T> logger,
         IEnumerable<IPaymentEvent> paymentEvents,
-        IOptions<StripeOptions> stripeOptions,
+        IOptionsMonitor<StripeOptions> stripeOptions,
         YesSql.ISession session,
         IDistributedLock distributedLock,
         IClock clock,
@@ -78,7 +78,9 @@ public static class CreateWebhookEndpoint
             return TypedResults.BadRequest();
         }
 
-        if (string.IsNullOrEmpty(stripeOptions.Value.WebhookSecret))
+        var webhookSecret = stripeOptions.CurrentValue.WebhookSecret;
+
+        if (string.IsNullOrEmpty(webhookSecret))
         {
             return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
         }
@@ -90,7 +92,7 @@ public static class CreateWebhookEndpoint
             stripeEvent = EventUtility.ConstructEvent(
                 json: json,
                 stripeSignatureHeader: signature,
-                stripeOptions.Value.WebhookSecret,
+                webhookSecret,
                 throwOnApiVersionMismatch: false);
         }
         catch (Exception ex)

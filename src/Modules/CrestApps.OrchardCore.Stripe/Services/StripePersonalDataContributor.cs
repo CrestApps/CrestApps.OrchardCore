@@ -25,7 +25,7 @@ public sealed class StripePersonalDataContributor : ICommercePersonalDataContrib
     /// </summary>
     public const string CheckoutSessionMetadataKey = "checkout_session_id";
 
-    private readonly IOptions<StripeOptions> _options;
+    private readonly IOptionsMonitor<StripeOptions> _options;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
@@ -36,7 +36,7 @@ public sealed class StripePersonalDataContributor : ICommercePersonalDataContrib
     /// <param name="serviceProvider">The service provider the Stripe customer service is resolved from once Stripe is known to be configured.</param>
     /// <param name="logger">The logger.</param>
     public StripePersonalDataContributor(
-        IOptions<StripeOptions> options,
+        IOptionsMonitor<StripeOptions> options,
         IServiceProvider serviceProvider,
         ILogger<StripePersonalDataContributor> logger)
     {
@@ -106,7 +106,7 @@ public sealed class StripePersonalDataContributor : ICommercePersonalDataContrib
     // Resolved only once Stripe has a secret key: the Stripe client is built from the key when it is resolved, and a
     // store without Stripe configured must still be able to answer a privacy request.
     private IStripeCustomerService GetCustomerService()
-        => _options.Value.IsConfigured
+        => _options.CurrentValue.IsConfigured
             ? _serviceProvider.GetService<IStripeCustomerService>()
             : null;
 

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Endpoints;
 using CrestApps.OrchardCore.Stripe.Models;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Settings;
 using Stripe;
 
@@ -27,7 +28,7 @@ public sealed class StripeConnectService : IStripeConnectService
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly StripeWorkflowNotifier _workflowNotifier;
     private readonly StripeConfigurationOptions _configurationOptions;
     private readonly ILogger<StripeConnectService> _logger;
@@ -37,21 +38,21 @@ public sealed class StripeConnectService : IStripeConnectService
     /// </summary>
     /// <param name="siteService">The site service used to read and persist Stripe settings.</param>
     /// <param name="dataProtectionProvider">The provider used to protect and unprotect Stripe secrets.</param>
-    /// <param name="shellReleaseManager">The manager used to reload the tenant after the connection changes.</param>
+    /// <param name="optionsUpdateNotifier">The notifier that refreshes the runtime Stripe options after the connection changes.</param>
     /// <param name="workflowNotifier">The notifier used to raise Stripe workflow events on failures.</param>
     /// <param name="configurationOptions">The Stripe values supplied by the application configuration.</param>
     /// <param name="logger">The logger used to record connection failures.</param>
     public StripeConnectService(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         StripeWorkflowNotifier workflowNotifier,
         IOptions<StripeConfigurationOptions> configurationOptions,
         ILogger<StripeConnectService> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _workflowNotifier = workflowNotifier;
         _configurationOptions = configurationOptions.Value;
         _logger = logger;
@@ -174,7 +175,7 @@ public sealed class StripeConnectService : IStripeConnectService
 
         await _siteService.UpdateSiteSettingsAsync(site);
 
-        _shellReleaseManager.RequestRelease();
+        _optionsUpdateNotifier.RequestUpdate<StripeOptions>();
 
         var walletNote = walletDomain is null
             ? string.Empty
@@ -272,7 +273,7 @@ public sealed class StripeConnectService : IStripeConnectService
 
         await _siteService.UpdateSiteSettingsAsync(site);
 
-        _shellReleaseManager.RequestRelease();
+        _optionsUpdateNotifier.RequestUpdate<StripeOptions>();
 
         var message = string.IsNullOrEmpty(accountId)
             ? "Disconnected the Stripe account."

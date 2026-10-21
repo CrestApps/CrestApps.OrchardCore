@@ -12,11 +12,11 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 /// </summary>
 internal sealed class StripeCheckoutClientConfigurationProvider : ICheckoutPaymentClientConfigurationProvider
 {
-    private readonly StripeOptions _options;
+    private readonly IOptionsMonitor<StripeOptions> _options;
 
-    public StripeCheckoutClientConfigurationProvider(IOptions<StripeOptions> options)
+    public StripeCheckoutClientConfigurationProvider(IOptionsMonitor<StripeOptions> options)
     {
-        _options = options.Value;
+        _options = options;
     }
 
     public string ProviderKey
@@ -24,10 +24,11 @@ internal sealed class StripeCheckoutClientConfigurationProvider : ICheckoutPayme
 
     public Task<IReadOnlyDictionary<string, string>> GetAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default)
     {
+        var options = _options.CurrentValue;
         var values = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["publishableKey"] = _options.PublishableKey,
-            ["mode"] = _options.IsLive ? "live" : "test",
+            ["publishableKey"] = options.PublishableKey,
+            ["mode"] = options.IsLive ? "live" : "test",
         };
 
         if (session is not null && session.TryGet<CheckoutInvoice>(out var invoice) && invoice.AmountDue > 0m)

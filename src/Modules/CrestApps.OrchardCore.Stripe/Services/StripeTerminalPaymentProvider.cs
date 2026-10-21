@@ -26,7 +26,7 @@ public sealed class StripeTerminalPaymentProvider : ICheckoutPaymentProvider, IC
     public const string ReaderIdDataKey = "readerId";
 
     private readonly StripeClient _stripeClient;
-    private readonly StripeOptions _options;
+    private readonly IOptionsMonitor<StripeOptions> _options;
     private readonly IStripeRefundService _refundService;
     private readonly ILogger _logger;
 
@@ -34,13 +34,13 @@ public sealed class StripeTerminalPaymentProvider : ICheckoutPaymentProvider, IC
 
     public StripeTerminalPaymentProvider(
         StripeClient stripeClient,
-        IOptions<StripeOptions> options,
+        IOptionsMonitor<StripeOptions> options,
         IStripeRefundService refundService,
         ILogger<StripeTerminalPaymentProvider> logger,
         IStringLocalizer<StripeTerminalPaymentProvider> stringLocalizer)
     {
         _stripeClient = stripeClient;
-        _options = options.Value;
+        _options = options;
         _refundService = refundService;
         _logger = logger;
         S = stringLocalizer;
@@ -62,7 +62,7 @@ public sealed class StripeTerminalPaymentProvider : ICheckoutPaymentProvider, IC
     };
 
     public Task<bool> IsAvailableAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default)
-        => Task.FromResult(_options.IsConfigured && session is not null && session.TryGet<CheckoutCounterSale>(out _));
+        => Task.FromResult(_options.CurrentValue.IsConfigured && session is not null && session.TryGet<CheckoutCounterSale>(out _));
 
     public async Task<PaymentBeginResult> BeginAsync(BeginPaymentContext context, CancellationToken cancellationToken = default)
     {

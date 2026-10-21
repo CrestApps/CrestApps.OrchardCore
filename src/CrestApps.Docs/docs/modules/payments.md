@@ -81,7 +81,7 @@ If the site is not publicly reachable (for example on `localhost`), Stripe canno
 | `TestPublishableKey` / `TestPrivateSecret` / `TestWebhookSecret` | Test-mode credentials. |
 | `TestAccountId` / `TestWebhookId` | The resolved test account id and the id of the auto-provisioned test webhook endpoint. |
 
-Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`. Clicking **Connect** verifies the secret key, stores it, records the resolved account id, and (when the site is publicly reachable) provisions the webhook and captures its signing secret. You can also fill the fields in and **Save** to store them without provisioning a webhook.
+Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`. Services read them through `IOptionsMonitor<StripeOptions>.CurrentValue`, and the `StripeClient` is built per request from the current options; saving the settings, connecting, disconnecting or importing them refreshes the options (`IOptionsUpdateNotifier.RequestUpdate<StripeOptions>()`) without restarting the tenant. Clicking **Connect** verifies the secret key, stores it, records the resolved account id, and (when the site is publicly reachable) provisions the webhook and captures its signing secret. You can also fill the fields in and **Save** to store them without provisioning a webhook.
 
 ### Configuration from the application settings
 

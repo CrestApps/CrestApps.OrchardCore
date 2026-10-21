@@ -40,9 +40,7 @@ internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptio
 
     public void Configure(StripeOptions options)
     {
-        var settings = _siteService.GetSettingsAsync<StripeSettings>()
-            .GetAwaiter()
-            .GetResult();
+        var settings = _siteService.GetSettings<StripeSettings>();
 
         var protector = _dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
 

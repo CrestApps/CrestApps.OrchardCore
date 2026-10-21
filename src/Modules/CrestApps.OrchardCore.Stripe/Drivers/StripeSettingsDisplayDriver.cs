@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -38,7 +38,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly StripeConfigurationOptions _configurationOptions;
 
     internal readonly IStringLocalizer S;
@@ -49,21 +49,21 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
     /// <param name="authorizationService">The authorization service used to verify access to Stripe settings.</param>
     /// <param name="httpContextAccessor">The accessor used to read the current HTTP context.</param>
     /// <param name="dataProtectionProvider">The provider used to protect Stripe private keys and webhook secrets.</param>
-    /// <param name="shellReleaseManager">The manager used to request a tenant reload after settings change.</param>
+    /// <param name="optionsUpdateNotifier">The notifier that refreshes the runtime Stripe options after settings change.</param>
     /// <param name="configurationOptions">The Stripe values supplied by the application configuration.</param>
     /// <param name="stringLocalizer">The localizer used to build validation messages.</param>
     public StripeSettingsDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IDataProtectionProvider dataProtectionProvider,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IOptions<StripeConfigurationOptions> configurationOptions,
         IStringLocalizer<StripeSettingsDisplayDriver> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _dataProtectionProvider = dataProtectionProvider;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _configurationOptions = configurationOptions.Value;
         S = stringLocalizer;
     }
@@ -87,8 +87,6 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         {
             return null;
         }
-
-        context.AddTenantReloadWarningWrapper();
 
         var live = _configurationOptions.GetKeys(isLive: true);
         var test = _configurationOptions.GetKeys(isLive: false);
@@ -138,8 +136,8 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectionPurpose);
 
-        // IsLive is projected into the runtime StripeOptions, so a change to it must reload the tenant even when
-        // no secret value changed. The checkout mode is no longer edited here: the payment step always collects
+        // IsLive is projected into the runtime StripeOptions, so a change to it must refresh them even when no
+        // secret value changed. The checkout mode is no longer edited here: the payment step always collects
         // the card on the site, so the stored value is left as it is. A mode set by the application configuration
         // wins, so the posted value is ignored and the stored one is left as it is.
         var changed = false;
@@ -155,7 +153,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         if (changed)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier.RequestUpdate<StripeOptions>();
         }
 
         return await EditAsync(site, settings, context);
