@@ -175,6 +175,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony.Azure/CrestApps.OrchardCore.Telephony.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Azure/CrestApps.OrchardCore.Omnichannel.Messaging.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Voice/CrestApps.OrchardCore.Omnichannel.Voice.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" />
