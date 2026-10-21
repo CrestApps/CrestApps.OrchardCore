@@ -127,7 +127,7 @@ public sealed class DonationService
 
             var campaignCurrency = campaign.TryGet<ProductPart>(out var product) && !string.IsNullOrEmpty(product.Currency) ? product.Currency : order.Currency;
             var amount = line.LineTotal;
-            var campaignAmount = await ConvertAsync(amount, order.Currency, campaignCurrency, cancellationToken);
+            var campaignAmount = await _shopperCurrency.ConvertOrKeepAsync(amount, order.Currency, campaignCurrency, isPrice: false, cancellationToken);
 
             var donation = new Donation
             {
@@ -199,16 +199,6 @@ public sealed class DonationService
         int? daysLeft = part?.EndsUtc is { } ends ? Math.Max(0, (int)Math.Ceiling((ends - _clock.UtcNow).TotalDays)) : null;
 
         return new CampaignProgress(Math.Round(raised, 2, MidpointRounding.AwayFromZero), part?.Goal ?? 0m, donors, currency, daysLeft);
-    }
-
-    private async Task<decimal> ConvertAsync(decimal amount, string from, string to, CancellationToken cancellationToken)
-    {
-        if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
-        {
-            return amount;
-        }
-
-        return await _shopperCurrency.ConvertAsync(amount, from, to, isPrice: false, cancellationToken) ?? amount;
     }
 
     private async Task SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)

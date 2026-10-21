@@ -132,7 +132,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         // The amounts are offered in the shopper's currency, rounded to whole units.
         foreach (var amount in part.SuggestedAmounts ?? [])
         {
-            var converted = string.IsNullOrEmpty(currency) ? amount : await _shopperCurrency.ConvertAsync(amount, currency, shown, isPrice: false) ?? amount;
+            var converted = await _shopperCurrency.ConvertOrKeepAsync(amount, currency, shown, isPrice: false);
             var rounded = Math.Max(1m, Math.Round(converted, 0, MidpointRounding.AwayFromZero));
 
             amounts.Add((rounded, ProductPriceFormatter.Format(rounded, shown)));
@@ -143,7 +143,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         model.Currency = shown;
         model.Minimum = string.IsNullOrEmpty(currency)
             ? part.MinimumAmount
-            : Math.Round(await _shopperCurrency.ConvertAsync(part.MinimumAmount, currency, shown, isPrice: false) ?? part.MinimumAmount, 2, MidpointRounding.AwayFromZero);
+            : Math.Round(await _shopperCurrency.ConvertOrKeepAsync(part.MinimumAmount, currency, shown, isPrice: false), 2, MidpointRounding.AwayFromZero);
         model.TaxDeductible = part.TaxDeductible;
         model.Ended = part.EndsUtc < _clock.UtcNow;
     }

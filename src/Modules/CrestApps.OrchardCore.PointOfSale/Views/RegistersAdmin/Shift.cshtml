@@ -1,7 +1,8 @@
 @model RegisterShiftDetailViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
 @functions {
     private string Money(decimal amount)
-        => amount.ToString("N2") + (string.IsNullOrEmpty(Model.Shift.Currency) ? string.Empty : " " + Model.Shift.Currency);
+        => ProductPriceFormatter.Format(amount, Model.Shift.Currency);
 }
 @{
     var shift = Model.Shift;

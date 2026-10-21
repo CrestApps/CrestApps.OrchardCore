@@ -219,20 +219,14 @@ internal sealed class BookingPartDisplayDriver : ContentPartDisplayDriver<Bookin
         if (part.Kind == BookingKind.Departure)
         {
             var slots = await _slots.ListAsync(item.ContentItemId, _clock.UtcNow, _clock.UtcNow.AddDays(800));
-            var shownCurrency = (await _shopperCurrency.GetCurrencyAsync()) ?? currency;
             var departures = new List<BookingPickerOption>();
 
             foreach (var slot in slots.Where(slot => !slot.Closed && DateOnly.FromDateTime(BookingEmailSender.ToLocal(slot.StartsUtc, timeZone)) >= today))
             {
                 // A date's own price is shown in the shopper's currency, as the product's is.
-                string price = null;
-
-                if (slot.Price is { } own)
-                {
-                    var converted = string.IsNullOrEmpty(currency) ? null : await _shopperCurrency.ConvertAsync(own, currency, shownCurrency);
-
-                    price = converted is { } shown ? ProductPriceFormatter.Format(shown, shownCurrency) : ProductPriceFormatter.Format(own, currency);
-                }
+                var price = slot.Price is { } own
+                    ? await _shopperCurrency.FormatForShopperAsync(own, currency)
+                    : null;
 
                 departures.Add(new BookingPickerOption(slot.SlotKey, BookingSchedule.GetLocalStart(slot.SlotKey)?.ToString("D", culture) ?? slot.SlotKey, slot.Remaining, price));
             }
