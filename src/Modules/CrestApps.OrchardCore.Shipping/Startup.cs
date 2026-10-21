@@ -3,6 +3,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
 using CrestApps.OrchardCore.Shipping.Drivers;
+using CrestApps.OrchardCore.Shipping.Endpoints;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Shipping.Handlers;
 using CrestApps.OrchardCore.Shipping.Indexes;
@@ -147,6 +148,9 @@ public sealed class EasyPostStartup : StartupBase
         services.AddScoped<EasyPostTrackingUpdater>();
         services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddEasyPostWebhookEndpoint();
 }
 
 [Feature(ShippingConstants.Features.Api)]
