@@ -22,5 +22,19 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
         CartConstants.Features.Carts,
         CheckoutConstants.Features.Area,
+
+        // The item selector the coupon editor picks products and categories with.
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
+    Id = OrderConstants.Features.Returns,
+    Name = "Returns",
+    Description = "Lets buyers ask to return items of their orders, for a refund or an exchange, and the store approve, receive, restock and refund them under Commerce > Returns.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        OrderConstants.Features.Orders,
     ]
 )]

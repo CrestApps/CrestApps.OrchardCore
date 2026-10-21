@@ -183,13 +183,39 @@ A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to t
 - the one-time amount and the first recurring cycle are reduced separately, so a setup-fee coupon never eats a monthly charge and "first month half price" never halves every month after;
 - what is recorded on the invoice is what was actually taken off, so a receipt cannot show a discount larger than the price it applied to.
 
-The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage or fixed amount, targeting the one-time amount or the first cycle, with an optional validity window, minimum amount, and usage limit. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
+Within its bucket a discount takes off only what it can discount (`CheckoutDiscountBase`): a one-time discount, the goods bought now but never a shipping line; a first-cycle discount, the recurring charges collected now. What it took off is spread across those lines in proportion to each line's total, into `CheckoutLineItem.DiscountAmount`, and the last line takes what rounding leaves, so the shares add up to the discount exactly. `CheckoutTaxContextFactory` passes each share to tax as `TaxableItem.DiscountAmount`, so a line is taxed on what the buyer pays for it, and shipping, which no coupon touches, is taxed in full. A coupon's percentage and its minimum amount count the same lines: a 10% coupon on a $50 item with $15 shipping takes $5 off, and with a 10% tax charges $4.50 on the item and $1.50 on shipping.
+
+The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage, fixed amount or free shipping, targeting the one-time amount or the first cycle, with an optional validity window, minimum and maximum amount, usage limit and limit per customer. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
+
+A **free-shipping** coupon (`CouponKind.FreeShipping`) contributes a discount aimed at `DiscountTarget.Shipping`: it takes off the shipping lines charged now, and nothing else, while its minimum and maximum count the items. A coupon can be **limited to some products or categories** (`Coupon.ProductIds`, `Coupon.CategoryIds`, taxonomy term ids): only the lines it applies to count toward its amounts, and its `DiscountLine.LineItemIds` keeps the share off the other lines. A line knows its product and categories through `BillingItem.ProductId` and `BillingItem.CategoryIds`; the [Orders](carts-and-orders) feature fills them in and adds the product and category pickers to the coupon editor (through `IDisplayManager<Coupon>`, so other modules can add editors too).
 
 Entering a code and pressing **Apply** saves it and rebuilds the invoice immediately, so the customer sees what the code actually took off *before* they agree to pay. A discount a customer cannot see until after the charge is a discount they cannot check.
 
 A first-cycle coupon reduces only what is due for the first cycle. The recurring price the gateway is told, and the amount later cycles are invoiced for, is always the plan's full cycle amount; at Stripe the reduction is expressed as a single-use coupon on the agreement.
 
-A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything. Redemption takes a lock on the coupon, so two checkouts finishing at the same instant cannot both take the last one.
+A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything.
+
+### Holding a use while the buyer pays
+
+Between applying a code and completing, a use is **held**, like stock. `ICheckoutPaymentGate` implementations run inside the checkout's lock just before a payment begins (or, for a checkout with nothing to pay, before it completes). `CouponHoldPaymentGate` asks `ICouponRedemptionService.HoldAsync` to hold a use of each coupon on the invoice; when one can't be held, it takes the code off, rebuilds the invoice and refuses the payment with `InvoiceChanged`, and the payment script loads the page again with the new total and *The code LAST1 ran out before you paid, so it was taken off.* A buyer is never charged for a use that's gone.
+
+Each use is a `CouponRedemption` in the coupon collection (`CouponRedemptionIndex`): **Held** with an expiry as long as the checkout can live (`CheckoutSettings.SessionLifetimeHours`), **Redeemed** when the checkout completes, **Released** when it is canceled, fails or expires, and **Returned** when its order is canceled (`ReturnAsync`, called by the Orders feature). A coupon has used `RedemptionCount`, plus uses recorded while its lock couldn't be taken, plus the live holds of other checkouts. Every change is made under the coupon's lock and committed before the lock is let go, so the second of two buyers racing for the last use is told it's gone. A limit per customer counts the customer's redeemed and held uses by account or by email, so a buyer who checks out as a guest with the same email is the same customer. The coupon's edit page lists its recent uses and how many are held.
+
+Applying codes is throttled per address (`IPaymentAttemptLimiter`, scope `coupon-code`), since short codes can be guessed.
+
+### Coupons in recipes and deployments
+
+The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`.
+
+```json
+{
+  "name": "Coupons",
+  "Coupons": [
+    { "Code": "SPRING10", "Description": "Spring sale", "Kind": "Percentage", "Percentage": 10, "MaxRedemptions": 500, "MaxRedemptionsPerCustomer": 1, "EndsUtc": "2027-06-01T00:00:00Z", "IsEnabled": true },
+    { "Code": "SHIPFREE", "Kind": "FreeShipping", "MinimumAmount": 75, "IsEnabled": true }
+  ]
+}
+```
 
 ### Coupons on a checkout that settles an existing balance
 
@@ -224,7 +250,12 @@ The framework never calculates tax itself. It consumes the [Taxation](taxation) 
 - When the Taxation feature is **disabled**, a no-op implementation leaves the invoice untaxed and checkout keeps working.
 - When the **Checkout** and **Taxation** features are **both enabled**, a taxation-aware implementation is wired in automatically (via `[RequireFeatures]`, so there is no separate integration feature to switch on). It determines the tax for the amount due now, folds any exclusive tax into the charged amount, and captures an immutable snapshot. Recurring cycles are taxed with the rules effective at billing time, each carrying its own snapshot, so historical tax is never recalculated.
 
-An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes.
+An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes. The default provider's destination is the address the order ships to (`CheckoutShippingInfo`, set by [Shipping](shipping)), else the buyer's billing address (`CheckoutContactInfo`); with neither, only rules without a jurisdiction apply.
+
+The default provider then runs every **`ICheckoutTaxProfileHandler`**, at checkout and when a recurring charge is taxed, so modules add what they know without replacing it:
+
+- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Commerce > Taxation > Origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
+- `CustomerCheckoutTaxProfileHandler` (with [Customers](customers)) sets `CheckoutTaxProfile.Customer` for a signed-in buyer: business (`B2B`) or person, their tax id as the registration and VAT number, `IsTaxExempt`, and the ids of the exemption certificates on file for them. A rule the customer is exempt from charges nothing (`TaxTreatment.Exempt`). A guest is taxed as a person.
 
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
 determination. Settling an outstanding [transaction](transactions) does this: the transaction already carries its
@@ -339,6 +370,20 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 - A session whose `CheckoutSession.SavePaymentMethod` is set (server code sets it, for example when a customer chooses to pay a balance in [installments](installment-plans#installments-at-checkout)) keeps the payment method for later charges without the customer: the payment step offers only providers with `SupportsSavedPaymentMethods`, tells the customer the card is saved, and renders each provider panel with `CheckoutFlowPaymentMethod.SavePaymentMethod`; `ICheckoutEngine.BeginPaymentAsync` refuses any other provider and adds `CheckoutPaymentDataKeys.SavePaymentMethod` to the provider data itself.
 
 A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
+
+### Payment methods a checkout can rule out
+
+A provider that implements **`ICheckoutPaymentProviderAvailability`** decides for each checkout whether it can be chosen, for example one the store turned off, or cash on delivery for an order with nothing to deliver. `CheckoutPaymentMethodSelector.GetAvailableAsync` leaves it out of the payment step, and `ICheckoutEngine.BeginPaymentAsync` refuses it too, since a request can name any provider. **`ICheckoutPaymentProviderDescription`** gives the line under the provider's name. The confirmation says *your order is placed* instead of *your purchase is complete* when the checkout was completed with a provider whose capabilities say `DefersPayment`.
+
+A provider can report a fraud rating with the verification (`PaymentVerificationResult.RiskLevel` — `normal`, `elevated` or `highest` — and `RiskScore`), which the reconciliation keeps on the `PaymentAttempt`.
+
+### One-page layout
+
+`CheckoutSettings.Layout` (**Settings > Commerce > Checkout**, group `checkout`, permission `ManageCheckoutSettings`) is `CheckoutLayout.Steps` (the default) or `CheckoutLayout.OnePage`. On one page, `CheckoutController` builds the editor of every visible step in order, each with the flow's current step set to it, and renders their `Header`, `Content` and `Footer` zones as sections of the `OnePage` view, with the last section's `Aside` zone (the invoice summary and the coupon box). Step drivers need no change.
+
+- A post updates every section it showed, in order, and redirects back (post, redirect, get). The payment section joins the page once every visible step with `CollectData` before it has its key in `SavedSteps`.
+- With payment showing, the payment script takes the submit as on the stepped layout. A post from that page with no `checkout-action` completes the checkout, for a purchase that needs no gateway.
+- A change to a section above payment switches the button to **Update order**, a submit named `checkout-action` with `CheckoutConstants.FormActions.Update`, which saves and shows the new total before anything is charged.
 
 ## Test payments
 

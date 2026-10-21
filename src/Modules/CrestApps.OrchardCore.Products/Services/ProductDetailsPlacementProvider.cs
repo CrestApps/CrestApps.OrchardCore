@@ -70,12 +70,9 @@ public sealed class ProductDetailsPlacementProvider : IShapePlacementProvider
         return hidden.Count == 0 ? null : new Resolver(hidden);
     }
 
-    private static ContentItem GetContentItem(object shape)
-        => shape switch
-        {
-            IShape dynamicShape when dynamicShape.Properties.TryGetValue("ContentItem", out var value) => value as ContentItem,
-            _ => shape?.GetType().GetProperty("ContentItem")?.GetValue(shape) as ContentItem,
-        };
+    // The content display manager puts the item it is displaying on the content shape's properties.
+    private static ContentItem GetContentItem(IShape shape)
+        => shape?.Properties.TryGetValue("ContentItem", out var value) == true ? value as ContentItem : null;
 
     private sealed class Resolver : IPlacementInfoResolver
     {

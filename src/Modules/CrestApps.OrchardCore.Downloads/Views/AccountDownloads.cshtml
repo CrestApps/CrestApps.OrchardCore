@@ -1,0 +1,79 @@
+@model AccountDownloadsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@* Everything the signed-in customer can download from their paid orders, what still works first. *@
+
+@if (Model.Downloads.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <p class="mb-1">@T["You have nothing to download yet."]</p>
+            <p class="text-muted small mb-0">@T["Files from digital products you buy appear here once the order is paid."]</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var download in Model.Downloads)
+        {
+            var entitlement = download.Entitlement;
+
+            <div class="list-group-item py-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="me-2">
+                        <div class="fw-semibold">@entitlement.FileName</div>
+                        <div class="small text-muted">
+                            @entitlement.ProductTitle &middot;
+                            <a href="@Url.RouteUrl("AccountOrder", new { orderId = download.Order.ItemId })">@T["Order {0}", download.Order.OrderNumber]</a>
+                        </div>
+                        @if (download.Problem == DownloadProblem.None)
+                        {
+                            <div class="small text-muted">
+                                @if (entitlement.Remaining.HasValue)
+                                {
+                                    @T.Plural(entitlement.Remaining.Value, "1 download left", "{0} downloads left")
+                                }
+                                @if (entitlement.ExpiresUtc.HasValue)
+                                {
+                                    <span> &middot; @T["until {0:d}", await LocalAsync(entitlement.ExpiresUtc.Value)]</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (download.Problem == DownloadProblem.None)
+                    {
+                        <a class="btn btn-sm btn-primary px-3" href="@download.Url">
+                            <span class="fa-solid fa-download me-1" aria-hidden="true"></span>@T["Download"]
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-secondary">
+                            @switch (download.Problem)
+                            {
+                                case DownloadProblem.Expired:
+                                    @T["Expired"]
+                                    break;
+                                case DownloadProblem.LimitReached:
+                                    @T["All downloads used"]
+                                    break;
+                                case DownloadProblem.Revoked:
+                                    @T["Taken back"]
+                                    break;
+                                default:
+                                    @T["No longer available"]
+                                    break;
+                            }
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

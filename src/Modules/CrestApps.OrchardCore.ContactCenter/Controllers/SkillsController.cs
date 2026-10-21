@@ -71,6 +71,10 @@ public sealed class SkillsController : ContactCenterCatalogController<ContactCen
     protected override LocalizedHtmlString DeletedNotification
         => H["The skill has been deleted successfully."];
 
+    /// <inheritdoc/>
+    protected override void SetName(ContactCenterSkill entry, string name)
+        => entry.Name = name;
+
     /// <summary>
     /// Lists the skills.
     /// </summary>

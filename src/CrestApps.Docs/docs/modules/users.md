@@ -126,3 +126,12 @@ require the `ManageAvatarSettings` permission (*Manage the avatar settings*), gr
 default. The avatar box on the user editor accepts only image extensions allowed by the media options and is shown
 only to users who hold the Orchard Core `ManageMedia` permission. See the
 [User Manual](../user-manual/administration/users.md#avatars) for the administrator steps.
+
+## Sign in with an email code
+
+| | |
+| --- | --- |
+| **Feature Name** | Sign in with an email code |
+| **Feature ID** | `CrestApps.OrchardCore.Users.EmailCodeSignIn` |
+
+Adds **Email me a sign-in code** to the login form (`EmailCodeLoginFormDisplayDriver`) and the pages `sign-in/email` (`EmailSignIn`) and `sign-in/email/code`. `EmailSignInCodes` keeps a SHA-256 hash of each six-digit code in `IDistributedCache`, per tenant, for ten minutes and five tries, and limits sends to three per email and ten per client address every fifteen minutes. The request page answers the same way for any email, and the code page is rendered from the post, so the email is never in a URL. Users who are disabled, locked out or have two-factor authentication on are not signed in by a code. A successful code confirms the user's email. It depends on Orchard Core Users and Email.

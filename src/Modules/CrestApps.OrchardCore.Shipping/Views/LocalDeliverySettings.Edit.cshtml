@@ -1,0 +1,26 @@
+@model LocalDeliverySettingsViewModel
+
+<div class="mb-3" asp-validation-class-for="PostalCodes">
+    <label asp-for="PostalCodes" class="form-label">@T["Postal codes delivered to"]</label>
+    <textarea asp-for="PostalCodes" rows="4" class="form-control font-monospace"></textarea>
+    <span asp-validation-for="PostalCodes"></span>
+    <span class="hint">@T["One per line, or separated by commas. End one with * to cover every code starting with it, such as 981*. Case, spaces and dashes are ignored."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="form-label">@T["Delivery fee"]</label>
+    <input asp-for="Amount" type="number" min="0" step="any" class="form-control w-auto" />
+    <span asp-validation-for="Amount"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="FreeFromSubtotal" class="form-label">@T["Free from an order subtotal of"]</label>
+    <input asp-for="FreeFromSubtotal" type="number" min="0" step="any" class="form-control w-auto" />
+    <span class="hint">@T["Leave it empty to always charge the fee."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MinimumSubtotal" class="form-label">@T["Smallest order delivered"]</label>
+    <input asp-for="MinimumSubtotal" type="number" min="0" step="any" class="form-control w-auto" />
+    <span class="hint">@T["Orders below this subtotal aren't offered local delivery. Leave it at 0 to deliver any order."]</span>
+</div>

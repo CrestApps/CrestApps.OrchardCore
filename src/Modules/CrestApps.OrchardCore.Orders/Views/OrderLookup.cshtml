@@ -1,0 +1,18 @@
+@model FindOrderViewModel
+
+@* Find my order: the email an order was placed with, to send its links to. *@
+
+<p>@T["Enter the email you placed your order with. We'll email you a link to each of your recent orders."]</p>
+
+<form asp-route="@CrestApps.OrchardCore.Orders.Core.OrderConstants.RouteNames.Find" method="post" class="no-multisubmit">
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label">@T["Email"]</label>
+        <input asp-for="Email" type="email" class="form-control" autocomplete="email" required />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">@T["Send me the links"]</button>
+</form>
+
+<p class="small text-muted mt-3">
+    @T["Have your order number?"] <a href="@Url.RouteUrl("OrdersTrack")">@T["Track your order"]</a>
+</p>

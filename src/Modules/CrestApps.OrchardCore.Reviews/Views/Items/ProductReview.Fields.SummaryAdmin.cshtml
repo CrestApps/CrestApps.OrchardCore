@@ -1,0 +1,4 @@
+@model ShapeViewModel<ProductReview>
+
+<a href="@Url.Content("~/Contents/ContentItems/" + Model.Value.ProductId)" target="_blank">@Model.Value.ProductTitle</a>
+<span class="text-muted small ms-1">@T["by {0}", Model.Value.AuthorName]</span>

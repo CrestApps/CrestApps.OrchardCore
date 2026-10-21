@@ -1,0 +1,17 @@
+@model OrderReturnsViewModel
+
+<div class="card mt-4">
+    <div class="card-header">@T["Returns"]</div>
+    <ul class="list-group list-group-flush">
+        @foreach (var orderReturn in Model.Returns)
+        {
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span>
+                    <a asp-controller="ReturnsAdmin" asp-action="Detail" asp-area="CrestApps.OrchardCore.Orders" asp-route-returnId="@orderReturn.ItemId">@orderReturn.Number</a>
+                    <span class="small text-muted">· @string.Join(", ", orderReturn.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</span>
+                </span>
+                @await Html.PartialAsync("_OrderReturnStatus", orderReturn.Status)
+            </li>
+        }
+    </ul>
+</div>

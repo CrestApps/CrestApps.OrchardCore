@@ -36,6 +36,8 @@
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.RateLimits.Core" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

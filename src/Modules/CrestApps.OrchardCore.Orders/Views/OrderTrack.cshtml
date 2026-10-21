@@ -1,0 +1,26 @@
+@model TrackOrderViewModel
+
+@* Track your order: the order's number and the email it was placed with open its page, with where its parcels are. *@
+
+<p>@T["Enter your order number, from your confirmation email, and the email you ordered with."]</p>
+
+@if (Model.NotFound)
+{
+    <div class="alert alert-warning" role="alert">@T["We couldn't find an order with that number and email. Check both, or have us email you your orders."]</div>
+}
+
+<form asp-route="OrdersTrack" method="post" class="no-multisubmit">
+    <div class="mb-3">
+        <label asp-for="OrderNumber" class="form-label">@T["Order number"]</label>
+        <input asp-for="OrderNumber" class="form-control text-uppercase" autocomplete="off" placeholder="261019-ABC123" required />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label">@T["Email"]</label>
+        <input asp-for="Email" type="email" class="form-control" autocomplete="email" required />
+    </div>
+    <button type="submit" class="btn btn-primary">@T["Track"]</button>
+</form>
+
+<p class="small text-muted mt-3">
+    @T["Don't have the number?"] <a href="@Url.RouteUrl(CrestApps.OrchardCore.Orders.Core.OrderConstants.RouteNames.Find)">@T["Have us email you your orders"]</a>
+</p>

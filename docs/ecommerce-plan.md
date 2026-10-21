@@ -5,6 +5,10 @@
 **Planning only.** This document defines the ecommerce architecture and delivery sequence. It does
 not implement runtime behavior.
 
+**Status 2026-10-18:** phases 0 to 12 are built and merged; see the
+[commerce completion plan](./engineering/commerce/commerce-completion-plan.md). What comes next, to match and pass
+WooCommerce and Shopify, is in the [commerce parity plan](./engineering/commerce/commerce-parity-plan.md).
+
 **Revised 2026-10-12, after PR #6 merged.** The inventory rows for Products, Checkout, Subscription Stripe
 flows, Transactions, Customers, Promotions and the storefront now reflect what shipped. The next step is
 front-end product listing, ahead of Phase 1. The plan for it, and a status summary of the whole suite, is in

@@ -18,3 +18,21 @@
         <span class="hint">@T["One per line, such as Bulky or Fragile. A product can be put in a class, and each shipping method can charge extra for each unit in it."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Carriers" class="ocat-label">@T["Tracking links"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Carriers" rows="4" class="form-control font-monospace"></textarea>
+        <span class="hint">@T["One per line: the carrier's name, then | and its tracking link with {0} where the tracking number goes, such as {1}. A shipment sent with the carrier gets its tracking link from here.", "{0}", "UPS | https://www.ups.com/track?tracknum={0}"]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SendShippedEmails" type="checkbox" class="form-check-input" />
+            <label asp-for="SendShippedEmails" class="form-check-label">@T["Email the buyer when a shipment leaves"]</label>
+            <span class="hint dashed">@T["With what's in the shipment, the carrier and the tracking link. Needs an email service set up."]</span>
+        </div>
+    </div>
+</div>

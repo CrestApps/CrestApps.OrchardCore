@@ -1,0 +1,244 @@
+@model PurchaseOrderEditViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+@{
+    var order = Model.Order;
+    var readOnly = !Model.CanManage || order.Status is PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled;
+    var canReceive = Model.CanManage && order.CanReceive;
+    var currency = order.Currency ?? Model.Currency;
+}
+
+<zone Name="Title">
+    <breadcrumb name="PurchaseOrdersEdit" title="@T["Purchase order {0}", order.Number]">
+        <breadcrumb-item id="PurchaseOrdersIndex" action="Index" controller="PurchaseOrdersAdmin" area="CrestApps.OrchardCore.Inventory" permission="@InventoryPermissions.ViewInventory.Name">@T["Purchase orders"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    @await Html.PartialAsync("_PurchaseOrderStatus", order.Status)
+    <span class="text-body-secondary small">
+        @T["Started {0:g} by {1}", await LocalAsync(order.CreatedUtc), order.Author ?? T["the store"].Value]
+        @if (order.OrderedUtc is { } ordered)
+        {
+            <span>· @T["ordered {0:d}", await LocalAsync(ordered)]</span>
+        }
+        @if (order.ReceivedUtc is { } received)
+        {
+            <span>· @T["received {0:d}", await LocalAsync(received)]</span>
+        }
+    </span>
+    @if (Model.CanManage)
+    {
+        <div class="ms-auto d-flex flex-wrap gap-2">
+            @if (order.IsDraft)
+            {
+                <button type="submit" form="purchase-order-ordered" class="btn btn-sm btn-success" disabled="@(order.Lines.Count == 0)">@T["Mark as ordered"]</button>
+                <button type="submit" form="purchase-order-delete" class="btn btn-sm btn-danger" data-title="@T["Delete draft"]" data-message="@T["Delete this draft purchase order?"]">@T["Delete"]</button>
+            }
+            else if (order.Status is not (PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled))
+            {
+                <button type="submit" form="purchase-order-cancel" class="btn btn-sm btn-outline-danger" data-title="@T["Cancel purchase order"]" data-message="@T["Cancel what's still to come? What was received stays in stock."]">@T["Cancel order"]</button>
+            }
+        </div>
+    }
+</div>
+
+<form asp-action="Edit" asp-route-purchaseOrderId="@order.ItemId" method="post" class="no-multisubmit" id="purchase-order-form">
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="card mb-4">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+<div class="row g-3">
+                <div class="col-md-6" asp-validation-class-for="Supplier">
+                    <label asp-for="Supplier" class="form-label">@T["Supplier"]</label>
+                    <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
+                    <datalist id="purchase-order-suppliers">
+                        @foreach (var supplier in Model.Suppliers)
+                        {
+                            <option value="@supplier"></option>
+                        }
+                    </datalist>
+                    <span asp-validation-for="Supplier"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SupplierEmail" class="form-label">@T["Supplier's email"]</label>
+                    <input asp-for="SupplierEmail" type="email" class="form-control" autocomplete="off" disabled="@readOnly" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="LocationId" class="form-label">@T["Receive at"]</label>
+                    <select asp-for="LocationId" asp-items="Model.Locations" class="form-select" disabled="@(readOnly || Model.Order?.Received > 0)"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label">@T["Costs in"]</label>
+                    <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" disabled="@readOnly"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="ExpectedDate" class="form-label">@T["Expected"]</label>
+                    <input asp-for="ExpectedDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" disabled="@readOnly" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Note" class="form-label">@T["Note"]</label>
+                    <textarea asp-for="Note" rows="2" class="form-control" maxlength="2000" disabled="@readOnly"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>@T.Plural(order.Lines.Count, "1 item", "{0} items")</span>
+            @if (canReceive)
+            {
+                <span class="small text-body-secondary">@T["Receiving at {0}", Model.LocationName]</span>
+            }
+        </div>
+        @if (order.Lines.Count == 0)
+        {
+            <div class="card-body text-muted">@T["No items yet. Find them below by SKU or name, then save."]</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Item"]</th>
+                            <th scope="col" class="text-end">@T["Ordered"]</th>
+                            <th scope="col" class="text-end">@T["Received"]</th>
+                            <th scope="col" class="text-end">@T["Unit cost"]</th>
+                            <th scope="col" class="text-end">@T["Total"]</th>
+                            @if (canReceive)
+                            {
+                                <th scope="col" class="text-end">@T["Arrived now"]</th>
+                            }
+                            @if (Model.CanManage && order.IsDraft)
+                            {
+                                <th scope="col" class="text-center">@T["Remove"]</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < order.Lines.Count; i++)
+                        {
+                            var line = order.Lines[i];
+
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="Lines[@i].LineId" value="@line.LineId" />
+                                    <a asp-controller="InventoryAdmin" asp-action="Item" asp-route-stockItemId="@line.StockItemId">@line.Title</a>
+                                    @if (!string.IsNullOrEmpty(line.Sku))
+                                    {
+                                        <div class="small text-muted">@T["SKU {0}", line.Sku]</div>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (Model.CanManage && order.IsDraft)
+                                    {
+                                        <input type="number" name="Lines[@i].Ordered" value="@line.Ordered" min="1" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Ordered of {0}", line.Title]" />
+                                    }
+                                    else
+                                    {
+                                        <input type="hidden" name="Lines[@i].Ordered" value="@line.Ordered" />
+                                        @line.Ordered
+                                    }
+                                </td>
+                                <td class="text-end">@line.Received</td>
+                                <td class="text-end">
+                                    @if (!readOnly)
+                                    {
+                                        <input type="number" name="Lines[@i].UnitCost" value="@line.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" class="form-control form-control-sm d-inline-block text-end" style="width: 7rem;" aria-label="@T["Unit cost of {0}", line.Title]" />
+                                    }
+                                    else
+                                    {
+                                        @ProductPriceFormatter.Format(line.UnitCost, currency)
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">@ProductPriceFormatter.Format(line.UnitCost * line.Ordered, currency)</td>
+                                @if (canReceive)
+                                {
+                                    <td class="text-end">
+                                        @if (line.Outstanding > 0)
+                                        {
+                                            <input type="number" name="Lines[@i].Receive" min="0" max="@line.Outstanding" placeholder="@line.Outstanding" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Arrived of {0}", line.Title]" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i><span class="visually-hidden">@T["All received"]</span></span>
+                                        }
+                                    </td>
+                                }
+                                @if (Model.CanManage && order.IsDraft)
+                                {
+                                    <td class="text-center">
+                                        <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Remove {0}", line.Title]" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row" colspan="4" class="text-end">@T["Total"]</th>
+                            <th class="text-end text-nowrap">@ProductPriceFormatter.Format(order.Total, currency)</th>
+                            @if (canReceive)
+                            {
+                                <td></td>
+                            }
+                            @if (Model.CanManage && order.IsDraft)
+                            {
+                                <td></td>
+                            }
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+
+    @if (Model.CanManage && order.IsDraft)
+    {
+        <div class="mb-3">
+            <label class="form-label" for="purchase-order-add-items">@T["Add items"]</label>
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = "purchase-order-add-items",
+                inputName = "AddStockItemIds",
+                endpoint = Model.SearchEndpoint,
+                initialItemsJson = "[]",
+                multiple = true,
+                enableSearch = true,
+                buttonText = T["Find items to order"].Value,
+                searchPlaceholder = T["Search by SKU or name"].Value,
+                emptyResultsText = T["No stock items found."].Value,
+                noSelectionText = T["None chosen."].Value,
+                selectedItemsLabel = T["To add"].Value,
+            })
+            <span class="hint">@T["They're added with a quantity of 1 when you save."]</span>
+        </div>
+    }
+
+    @if (!readOnly)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            @if (canReceive)
+            {
+                <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
+                <button type="submit" class="btn btn-outline-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
+            }
+        </div>
+    }
+</form>
+
+@if (Model.CanManage)
+{
+    <form asp-action="MarkOrdered" asp-route-purchaseOrderId="@order.ItemId" method="post" id="purchase-order-ordered" class="no-multisubmit"></form>
+    <form asp-action="Cancel" asp-route-purchaseOrderId="@order.ItemId" method="post" id="purchase-order-cancel" class="no-multisubmit"></form>
+    <form asp-action="Delete" asp-route-purchaseOrderId="@order.ItemId" method="post" id="purchase-order-delete" class="no-multisubmit"></form>
+}

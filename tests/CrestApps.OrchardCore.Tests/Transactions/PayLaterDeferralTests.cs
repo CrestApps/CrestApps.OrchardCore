@@ -1,3 +1,4 @@
+using Moq;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -151,10 +152,17 @@ public sealed class PayLaterDeferralTests
         => new(
             new InMemoryPaymentAttemptStore(attempts),
             TransactionManagerFactory.Create(store),
-            SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays }),
+            [PayLaterProvider(netTermDays)],
+            [],
             new TestClock(_now),
             NullLogger<PayLaterTransactionCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<PayLaterTransactionCheckoutHandler>());
+
+    private static PayLaterCheckoutPaymentProvider PayLaterProvider(int netTermDays)
+        => new(
+            SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays }),
+            Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(environment => environment.EnvironmentName == "Development"),
+            new PassThroughStringLocalizer<PayLaterCheckoutPaymentProvider>());
 
     private static (PayLaterRenewalBackgroundTask Task, IServiceProvider Services) CreateRenewalTask(FakeTransactionStore store, DateTime now)
     {

@@ -14,8 +14,8 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// The split between computing a discount and redeeming it is what makes a usage limit mean something. A
 /// customer who applies a single-use code and then abandons the checkout must not burn it, or a leaked code
 /// could be exhausted by people who never bought anything. So the coupon is evaluated freely while the
-/// customer shops, and the counter only moves on a completed purchase, under a lock so two checkouts
-/// finishing at the same moment cannot both take the last redemption.
+/// customer shops, a use is held when payment begins (<see cref="Handlers.CouponHoldPaymentGate"/>), and the
+/// counter only moves on a completed purchase, through <see cref="ICouponRedemptionService"/>.
 /// </remarks>
 public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
 {
@@ -24,35 +24,28 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
     /// </summary>
     public const string ProviderKey = "coupon";
 
-    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(1);
-
     private readonly ICouponStore _couponStore;
     private readonly CouponScopeEvaluator _scopeEvaluator;
-    private readonly IDistributedLock _distributedLock;
+    private readonly ICouponRedemptionService _redemptions;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CouponDiscountProvider"/> class.
     /// </summary>
     /// <param name="couponStore">The coupon catalog.</param>
     /// <param name="scopeEvaluator">The rule that limits a coupon to some sources, reference types or one customer.</param>
-    /// <param name="distributedLock">The lock that serializes redemptions of one coupon.</param>
+    /// <param name="redemptions">The coupon uses.</param>
     /// <param name="clock">The clock used to check the validity window.</param>
-    /// <param name="logger">The logger.</param>
     public CouponDiscountProvider(
         ICouponStore couponStore,
         CouponScopeEvaluator scopeEvaluator,
-        IDistributedLock distributedLock,
-        IClock clock,
-        ILogger<CouponDiscountProvider> logger)
+        ICouponRedemptionService redemptions,
+        IClock clock)
     {
         _couponStore = couponStore;
         _scopeEvaluator = scopeEvaluator;
-        _distributedLock = distributedLock;
+        _redemptions = redemptions;
         _clock = clock;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -71,12 +64,31 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
         var invoice = context.Invoice;
 
         // The coupon reduces whichever part of the invoice it targets, so a first-cycle offer never touches
-        // a setup fee and a one-time coupon never halves a recurring charge.
-        var baseAmount = coupon.Target == DiscountTarget.FirstCycle
-            ? invoice.FirstRecurringPaymentAmount ?? 0m
-            : invoice.InitialPaymentAmount ?? 0m;
+        // a setup fee and a one-time coupon never halves a recurring charge. Shipping is not part of it, so a
+        // percentage is taken off the items and a minimum counts only what is bought: the items the coupon is for,
+        // when it is limited to some products or categories. A free-shipping coupon counts the items the same way,
+        // and takes off the shipping.
+        var countedTarget = coupon.Kind == CouponKind.FreeShipping ? DiscountTarget.OneTime : coupon.Target;
+        var baseAmount = CheckoutDiscountBase.GetAmount(invoice, countedTarget, coupon.AppliesTo);
 
-        var amount = coupon.GetDiscount(baseAmount, invoice.Currency);
+        decimal amount;
+        IList<string> lineItemIds = null;
+
+        if (coupon.Kind == CouponKind.FreeShipping)
+        {
+            amount = coupon.IsWithinSpend(baseAmount) ? CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.Shipping) : 0m;
+        }
+        else
+        {
+            amount = coupon.GetDiscount(baseAmount, invoice.Currency);
+
+            if (coupon.HasItemLimits)
+            {
+                lineItemIds = [.. (invoice.LineItems ?? [])
+                    .Where(line => CheckoutDiscountBase.IsDiscountable(line, coupon.Target) && coupon.AppliesTo(line))
+                    .Select(line => line.ItemId)];
+            }
+        }
 
         if (amount <= 0m)
         {
@@ -91,7 +103,8 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
                 Code = coupon.Code,
                 Description = string.IsNullOrEmpty(coupon.Description) ? coupon.Code : coupon.Description,
                 Amount = amount,
-                Target = coupon.Target,
+                Target = coupon.EffectiveTarget,
+                LineItemIds = lineItemIds,
             },
         ];
     }
@@ -106,37 +119,8 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
                 continue;
             }
 
-            await RedeemOneAsync(discount.Code, cancellationToken);
+            await _redemptions.RedeemAsync(context.Flow, discount, cancellationToken);
         }
-    }
-
-    private async Task RedeemOneAsync(string code, CancellationToken cancellationToken)
-    {
-        // Two checkouts completing at the same instant would otherwise both read the same count and both
-        // write count + 1, so the last redemption of a single-use code could be taken twice.
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync("COUPON_" + code.ToUpperInvariant(), _lockTimeout, _lockExpiration);
-
-        if (!locked)
-        {
-            // Losing a redemption count is bad, but blocking a completed purchase is worse: the customer has
-            // already paid. The miscount is logged so it can be reconciled.
-            _logger.LogWarning("Could not acquire the lock to redeem coupon '{Code}'. Its redemption count may be short by one.", code);
-
-            return;
-        }
-
-        await using var _ = locker;
-
-        var coupon = await _couponStore.GetByCodeAsync(code, cancellationToken);
-
-        if (coupon is null)
-        {
-            return;
-        }
-
-        coupon.RedemptionCount++;
-
-        await _couponStore.UpdateAsync(coupon, cancellationToken);
     }
 
     private async Task<Coupon> ResolveAsync(CheckoutFlow flow, CancellationToken cancellationToken)

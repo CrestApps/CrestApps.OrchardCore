@@ -1,0 +1,5 @@
+@model FindOrderViewModel
+
+@* The same answer whether or not there are orders, so the page never tells who has bought here. *@
+
+<p>@T["If we have orders placed with {0}, we've emailed a link to each of them. It can take a few minutes to arrive.", Model.Email]</p>

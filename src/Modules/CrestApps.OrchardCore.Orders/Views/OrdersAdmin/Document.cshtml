@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Orders
+@model OrderDocumentPageViewModel
+
+@{
+    var title = Model.Document.Metadata.Type == "OrderPackingSlip"
+        ? T["Packing slip for {0}", Model.Order.OrderNumber]
+        : T["Invoice for {0}", Model.Order.OrderNumber];
+}
+
+<zone Name="Title">
+    <breadcrumb name="OrdersDocument" title="@title">
+        <breadcrumb-item id="OrdersIndex" action="Index" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" permission="@OrderPermissions.ManageOrders.Name">@T["Orders"]</breadcrumb-item>
+        <breadcrumb-item id="OrdersDetail" action="Detail" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" route-orderId="@Model.Order.ItemId" permission="@OrderPermissions.ManageOrders.Name">@T["Order {0}", Model.Order.OrderNumber]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_OrderDocumentActions" model="Model" />
+
+<div class="order-document-print-area">
+    @await DisplayAsync(Model.Document)
+</div>

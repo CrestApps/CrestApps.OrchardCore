@@ -105,7 +105,7 @@ public sealed class OmnichannelContactTimeZoneHandlerTests
             .Setup(manager => manager.GetTypeDefinitionAsync("Contact"))
             .ReturnsAsync(typeDefinition);
 
-        return new OmnichannelContactTimeZoneHandler(new DefaultPhoneNumberService(), contentDefinitionManager.Object);
+        return new OmnichannelContactTimeZoneHandler(new DefaultPhoneNumberService(), contentDefinitionManager.Object, TestContactMethods.Accessor);
     }
 
     private static ContentItem CreateContact(string timeZoneId, params ContentItem[] contactMethods)

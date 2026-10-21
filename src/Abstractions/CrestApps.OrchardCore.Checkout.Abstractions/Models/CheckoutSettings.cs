@@ -23,4 +23,9 @@ public sealed class CheckoutSettings
     /// holding for it is released. Defaults to one day.
     /// </summary>
     public int SessionLifetimeHours { get; set; } = 24;
+
+    /// <summary>
+    /// Gets or sets how the checkout's steps are laid out: a page per step, or all on one page.
+    /// </summary>
+    public CheckoutLayout Layout { get; set; }
 }

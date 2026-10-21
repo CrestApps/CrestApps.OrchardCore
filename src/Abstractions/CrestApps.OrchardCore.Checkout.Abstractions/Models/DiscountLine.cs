@@ -36,6 +36,23 @@ public sealed class DiscountLine
     /// Gets or sets what the discount applies to.
     /// </summary>
     public DiscountTarget Target { get; set; }
+
+    /// <summary>
+    /// Gets or sets the invoice lines (<see cref="CheckoutLineItem.ItemId"/>) the discount is limited to, such as the
+    /// products a coupon is for. When it is empty, the discount applies to every line its target can discount.
+    /// </summary>
+    public IList<string> LineItemIds { get; set; }
+
+    /// <summary>
+    /// Returns whether the discount may take something off the line, as far as its own limits go.
+    /// </summary>
+    /// <param name="line">The invoice line.</param>
+    public bool IsLimitedTo(CheckoutLineItem line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+
+        return LineItemIds is not { Count: > 0 } || LineItemIds.Contains(line.ItemId, StringComparer.Ordinal);
+    }
 }
 
 /// <summary>
@@ -53,4 +70,9 @@ public enum DiscountTarget
     /// distinct is what stops "first month half price" from silently halving every month after.
     /// </summary>
     FirstCycle = 1,
+
+    /// <summary>
+    /// The shipping charged now, such as a free-shipping coupon takes off. No other discount touches shipping.
+    /// </summary>
+    Shipping = 2,
 }

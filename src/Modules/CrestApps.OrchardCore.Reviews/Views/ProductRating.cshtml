@@ -1,0 +1,12 @@
+@model ProductRatingViewModel
+
+@if (Model.Rating.Count > 0)
+{
+    <div class="product-rating mb-3">
+        <a href="#reviews" class="text-decoration-none">
+            <partial name="_Stars" model="Model.Rating.Average" />
+            <span class="ms-1">@Model.Rating.Average.ToString("0.0")</span>
+            <span class="text-muted">(@T.Plural(Model.Rating.Count, "1 review", "{0} reviews"))</span>
+        </a>
+    </div>
+}

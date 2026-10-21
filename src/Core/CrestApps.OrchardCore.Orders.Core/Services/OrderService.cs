@@ -2,7 +2,9 @@ using System.Security.Cryptography;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Core.Services;
@@ -27,6 +29,30 @@ public interface IOrderService
     /// </summary>
     /// <returns><see langword="true"/> when the order was canceled now.</returns>
     Task<bool> CancelAsync(Order order, OrderCancelReason reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels the order. Only <see cref="OrderCancelReason.CanceledByStore"/> cancels a paid order; with
+    /// <paramref name="restock"/>, what it sold goes back into stock.
+    /// </summary>
+    Task<bool> CancelAsync(Order order, OrderCancelReason reason, bool restock, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records money given back for the order, once per refund, and tells the order handlers.
+    /// </summary>
+    /// <returns><see langword="false"/> when the refund was recorded already.</returns>
+    Task<bool> RecordRefundAsync(Order order, OrderRefund refund, bool restock, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds a note to the order.
+    /// </summary>
+    Task AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces the lines of an order not paid or checked out yet with the cart's, such as a store's draft being
+    /// changed. The orders' handlers hear of it, and one that can't provide the new lines, such as stock running short,
+    /// refuses them: nothing changes and the problems are returned.
+    /// </summary>
+    Task<IReadOnlyList<string>> ReplaceLinesAsync(Order order, CartPricing pricing, CancellationToken cancellationToken = default);
 }
 
 public sealed class OrderService : IOrderService
@@ -73,25 +99,7 @@ public sealed class OrderService : IOrderService
             Status = OrderStatus.Draft,
             CreatedUtc = now,
             ModifiedUtc = now,
-            Lines = pricing.Lines.Select(line => new OrderLine
-            {
-                LineId = line.Line.LineId,
-                ContentItemId = line.Line.ContentItemId,
-                ContentItemVersionId = line.Product?.ContentItemVersionId ?? line.ContentItem?.ContentItemVersionId,
-                ContentType = line.Product?.ContentType ?? line.ContentItem?.ContentType,
-                Title = line.Title,
-                Sku = line.Product?.Sku,
-                PriceId = line.Price?.PriceId,
-                PriceName = line.Price?.Price?.Name,
-                VariantId = line.Line.VariantId,
-                VariantTitle = line.Product?.VariantTitle,
-                Quantity = line.Line.Quantity,
-                UnitPrice = line.UnitPrice,
-                LineTotal = line.LineTotal,
-                ProductType = line.Product?.ProductType ?? default,
-                TaxCategoryCode = line.Product?.TaxCategoryCode,
-                TaxClassificationCode = line.Product?.TaxClassificationCode,
-            }).ToList(),
+            Lines = OrderLines.FromPricing(pricing),
         };
 
         order.Subtotal = order.Lines.Sum(line => line.LineTotal);
@@ -113,11 +121,58 @@ public sealed class OrderService : IOrderService
         return new OrderCreationResult(order, created.Problems);
     }
 
+    public async Task<IReadOnlyList<string>> ReplaceLinesAsync(Order order, CartPricing pricing, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(pricing);
+
+        if (order.Status != OrderStatus.Draft)
+        {
+            throw new InvalidOperationException("Only an order not checked out yet can have its lines replaced.");
+        }
+
+        if (!pricing.CanCheckout)
+        {
+            throw new InvalidOperationException("Only a cart whose every line can be bought replaces an order's lines.");
+        }
+
+        var previous = order.Lines;
+
+        order.Lines = OrderLines.FromPricing(pricing);
+        order.Currency = pricing.Currency;
+        order.Subtotal = order.Lines.Sum(line => line.LineTotal);
+
+        var changed = new OrderLinesChangedContext(order, previous);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.LinesChangedAsync(changed, cancellationToken);
+        }
+
+        if (changed.Problems.Count > 0)
+        {
+            order.Lines = previous;
+            order.Subtotal = previous.Sum(line => line.LineTotal);
+
+            return changed.Problems;
+        }
+
+        order.ModifiedUtc = _clock.UtcNow;
+        await _store.UpdateAsync(order, cancellationToken);
+
+        return [];
+    }
+
     public async Task<bool> CancelAsync(Order order, OrderCancelReason reason, CancellationToken cancellationToken = default)
+        => await CancelAsync(order, reason, restock: false, cancellationToken);
+
+    public async Task<bool> CancelAsync(Order order, OrderCancelReason reason, bool restock, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(order);
 
-        if (order.Status is not (OrderStatus.Draft or OrderStatus.AwaitingPayment))
+        // Only the store cancels a paid order: a checkout that ends never touches an order it already paid for.
+        if (order.Status == OrderStatus.Canceled ||
+            (order.Status == OrderStatus.Paid && reason != OrderCancelReason.CanceledByStore))
         {
             return false;
         }
@@ -136,7 +191,7 @@ public sealed class OrderService : IOrderService
             _logger.LogInformation("Order '{OrderNumber}' was canceled: {Reason}.", order.OrderNumber, reason);
         }
 
-        var context = new OrderCanceledContext(order, reason);
+        var context = new OrderCanceledContext(order, reason) { Restock = restock };
 
         foreach (var handler in _handlers)
         {
@@ -144,6 +199,63 @@ public sealed class OrderService : IOrderService
         }
 
         return true;
+    }
+
+    public async Task<bool> RecordRefundAsync(Order order, OrderRefund refund, bool restock, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(refund);
+
+        order.Refunds ??= [];
+
+        // A refund is reported again when it is reconciled; it counts once.
+        if (!string.IsNullOrEmpty(refund.RefundId) && order.Refunds.Any(existing => string.Equals(existing.RefundId, refund.RefundId, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        order.Refunds.Add(refund);
+        order.ModifiedUtc = _clock.UtcNow;
+
+        await _store.UpdateAsync(order, cancellationToken);
+
+        var context = new OrderRefundedContext(order, refund)
+        {
+            // Stock goes back only once everything was given back: after a partial refund the customer keeps the goods.
+            Restock = restock && order.RefundStatus == OrderRefundStatus.Refunded,
+        };
+
+        foreach (var handler in _handlers)
+        {
+            await handler.RefundedAsync(context, cancellationToken);
+        }
+
+        return true;
+    }
+
+    public async Task AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        order.Notes ??= [];
+        order.Notes.Add(new OrderNote
+        {
+            Id = UniqueId.GenerateId(),
+            Text = text.Trim(),
+            Kind = kind,
+            AuthorName = string.IsNullOrWhiteSpace(authorName) ? null : authorName.Trim(),
+            CreatedUtc = now,
+        });
+        order.ModifiedUtc = now;
+
+        await _store.UpdateAsync(order, cancellationToken);
     }
 
     /// <summary>

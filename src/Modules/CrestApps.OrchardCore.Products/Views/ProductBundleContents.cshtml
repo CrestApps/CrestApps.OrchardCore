@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductBundleContentsViewModel
+
+<section class="product-bundle-contents mb-4" aria-labelledby="product-bundle-contents-heading">
+    <h2 class="h5" id="product-bundle-contents-heading">@T["In this bundle"]</h2>
+    <ul class="list-group list-group-flush">
+        @foreach (var item in Model.Items)
+        {
+            <li class="list-group-item px-0 d-flex gap-2">
+                <span class="fw-semibold text-nowrap">@T["{0} ×", item.Quantity]</span>
+                @if (item.ContentItem is not null)
+                {
+                    <a display-for="@item.ContentItem" class="text-break">@item.Title</a>
+                }
+                else
+                {
+                    <span class="text-break">@item.Title</span>
+                }
+            </li>
+        }
+    </ul>
+</section>

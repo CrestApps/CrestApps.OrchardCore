@@ -133,6 +133,8 @@ public sealed partial class VoiceAgentConversationLoop
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
         var contextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var contentManager = services.GetRequiredService<IContentManager>();
+        var contactMethods = services.GetRequiredService<IContactMethodsAccessor>();
+        var contactMethodsWriter = services.GetRequiredService<IContactMethodsWriter>();
         var dispositionCatalog = services.GetRequiredService<ICatalog<OmnichannelDisposition>>();
         var actionCatalog = services.GetRequiredService<ISourceCatalog<SubjectAction>>();
         var executor = services.GetRequiredService<ISubjectActionExecutor>();
@@ -260,7 +262,7 @@ public sealed partial class VoiceAgentConversationLoop
 
         if (allowUpdateContact && contact is not null)
         {
-            userPrompt += $"{Environment.NewLine}{Environment.NewLine}Current contact email on file: {OmnichannelSubjectWriter.GetContactEmail(contact) ?? "(none)"}";
+            userPrompt += $"{Environment.NewLine}{Environment.NewLine}Current contact email on file: {contactMethods.Get(contact).GetPrimaryEmailAddress() ?? "(none)"}";
         }
 
         var conclusionContext = await contextBuilder.BuildAsync(profile, context =>
@@ -404,9 +406,10 @@ public sealed partial class VoiceAgentConversationLoop
         // Gated contact write-back: the contact is a separate content item, so it is updated after the conclusion
         // is durably committed above — a failing contact save cannot then roll back the disposition. Rather than
         // deep-merging a model-authored content item (which appends duplicate contact-method items and cannot
-        // build a correctly structured EmailAddress), we upsert only a captured email into the ContactMethods bag.
+        // build a correctly structured EmailAddress), we upsert only a captured email through the contact type's
+        // contact-methods writer.
         if (allowUpdateContact && contact is not null &&
-            await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result?.ContactEmail))
+            await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contactMethodsWriter, contact, result?.ContactEmail))
         {
             await contentManager.UpdateAsync(contact);
 

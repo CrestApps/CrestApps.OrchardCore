@@ -1,0 +1,69 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model OrderReturnsViewModel
+
+<div class="card mt-4 mb-3">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>@T["Returns"]</span>
+        @if (!string.IsNullOrEmpty(Model.RequestUrl))
+        {
+            <a class="btn btn-outline-primary btn-sm" href="@Model.RequestUrl"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @T["Return items"]</a>
+        }
+    </div>
+    @if (Model.Returns.Count == 0)
+    {
+        <div class="card-body small text-muted">@T["Something not right? You can send items back for a refund or an exchange."]</div>
+    }
+    <ul class="list-group list-group-flush">
+        @foreach (var orderReturn in Model.Returns)
+        {
+            <li class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold">@T["Return {0}", orderReturn.Number]</span>
+                    @await Html.PartialAsync("_OrderReturnStatus", orderReturn.Status)
+                </div>
+                <div class="small">@string.Join(", ", orderReturn.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</div>
+                <div class="small text-muted">
+                    @(orderReturn.Resolution == OrderReturnResolution.Exchange ? T["Exchange for: {0}", orderReturn.ExchangeFor] : T["Refund"])
+                </div>
+                @switch (orderReturn.Status)
+                {
+                    case OrderReturnStatus.Requested:
+                        <div class="small mt-1">@T["We'll email you once we've looked at it."]</div>
+                        <form method="post" action="@Model.WithdrawUrlFormat.Replace("__id__", orderReturn.ItemId)" class="mt-1 no-multisubmit">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-link btn-sm p-0">@T["Withdraw this request"]</button>
+                        </form>
+                        break;
+                    case OrderReturnStatus.Approved:
+                        <div class="alert alert-info small mt-2 mb-0" role="status">
+                            <div class="fw-semibold mb-1">@T["How to send it back"]</div>
+                            @if (!string.IsNullOrWhiteSpace(Model.Instructions))
+                            {
+                                <div style="white-space: pre-line">@Model.Instructions</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(orderReturn.StoreMessage))
+                            {
+                                <div class="mt-1" style="white-space: pre-line">@orderReturn.StoreMessage</div>
+                            }
+                            <div class="mt-1">@T["Put the return number {0} in the parcel.", orderReturn.Number]</div>
+                        </div>
+                        break;
+                    case OrderReturnStatus.Received:
+                        <div class="small mt-1">@T["We've got the items back and are finishing your return."]</div>
+                        break;
+                    case OrderReturnStatus.Completed:
+                        <div class="small mt-1">
+                            @(orderReturn.RefundedAmount > 0 ? T["Refunded {0}.", ProductPriceFormatter.Format(orderReturn.RefundedAmount, orderReturn.Currency)] : T["Done."])
+                        </div>
+                        break;
+                    case OrderReturnStatus.Rejected:
+                        @if (!string.IsNullOrWhiteSpace(orderReturn.StoreMessage))
+                        {
+                            <div class="small mt-1" style="white-space: pre-line">@orderReturn.StoreMessage</div>
+                        }
+                        break;
+                }
+            </li>
+        }
+    </ul>
+</div>

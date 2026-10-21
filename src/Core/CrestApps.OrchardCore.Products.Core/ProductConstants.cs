@@ -15,5 +15,14 @@ public static class ProductConstants
         /// The feature that lists products on the front end, with filters, sorting and product pages.
         /// </summary>
         public const string Listing = "CrestApps.OrchardCore.Products.Listing";
+
+        public const string Recommendations = "CrestApps.OrchardCore.Products.Recommendations";
+
+        public const string Comparison = "CrestApps.OrchardCore.Products.Comparison";
+
+        public const string Grouped = "CrestApps.OrchardCore.Products.Grouped";
+
+        public const string Bundles = "CrestApps.OrchardCore.Products.Bundles";
+
     }
 }

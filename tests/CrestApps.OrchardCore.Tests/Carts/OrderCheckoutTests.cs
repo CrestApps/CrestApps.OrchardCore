@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -221,6 +222,56 @@ public sealed class OrderCheckoutTests
         Assert.Equal("555-0100", order.CustomerPhone);
         Assert.Equal("Springfield", order.BillingAddress.City);
         Assert.NotSame(billing, order.BillingAddress);
+    }
+
+    [Fact]
+    public async Task CompletingTheCheckout_KeepsTheDiscounts_SoTheOrderAddsUp()
+    {
+        var cart = CreateCart(("mug", 2, 25m));
+        _carts.Carts.Add(cart);
+
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
+        var session = await StartCheckoutAsync(order);
+
+        session.Put(new CheckoutInvoice
+        {
+            Currency = "USD",
+            GrandTotal = 45m,
+            LineItems = [new CheckoutLineItem { ItemId = "mug", Quantity = 2, UnitPrice = 25m }],
+            Discounts = [new DiscountLine { ProviderKey = "Coupons", Code = "SAVE10", Description = "10% off", Amount = 5m, Target = DiscountTarget.OneTime }],
+        });
+
+        await CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        var discount = Assert.Single(order.Discounts);
+        Assert.Equal(("SAVE10", "10% off", 5m, "Coupons"), (discount.Code, discount.Description, discount.Amount, discount.ProviderKey));
+        Assert.Equal(order.Subtotal - order.DiscountTotal, order.Total);
+    }
+
+    [Fact]
+    public async Task CompletingTheCheckout_KeepsWhereAndHowTheOrderShips()
+    {
+        var cart = CreateCart(("mug", 1, 12m));
+        _carts.Carts.Add(cart);
+
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
+        var session = await StartCheckoutAsync(order);
+        var shipTo = new Address { Name = "Sam Lee", AddressLine1 = "9 Pine Rd", City = "Seattle", Region = "WA", PostalCode = "98101", Country = "US", Phone = "555-0199" };
+
+        session.Put(new CheckoutShippingInfo { Address = shipTo, RateId = "standard", MethodId = "standard", ZoneId = "us", ProviderName = "Flat", Name = "Standard", Amount = 5m });
+        session.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 17m, LineItems = [new CheckoutLineItem { ItemId = "mug", Quantity = 1, UnitPrice = 12m }, new CheckoutLineItem { ItemId = "shipping", Quantity = 1, UnitPrice = 5m }] });
+
+        await CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        Assert.Equal("Seattle", order.ShippingAddress.City);
+        Assert.NotSame(shipTo, order.ShippingAddress);
+        Assert.Equal(("Standard", 5m, "standard"), (order.Shipping.Name, order.Shipping.Amount, order.Shipping.MethodId));
+        Assert.Equal(17m, order.Total);
+
+        // Forgetting the buyer keeps only where, roughly, the order went.
+        order.Anonymize(_now);
+
+        Assert.Equal(("US", "WA", null), (order.ShippingAddress.Country, order.ShippingAddress.Region, order.ShippingAddress.AddressLine1));
     }
 
     [Fact]

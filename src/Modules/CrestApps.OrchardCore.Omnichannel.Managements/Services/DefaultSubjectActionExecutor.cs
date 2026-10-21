@@ -23,6 +23,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
+    private readonly IContactMethodsAccessor _contactMethods;
     private readonly ILogger _logger;
     private readonly IEnumerable<ISubjectActionHandler> _handlers;
     private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
@@ -35,6 +36,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ISession session,
         IClock clock,
         ILocalClock localClock,
+        IContactMethodsAccessor contactMethods,
         ILogger<DefaultSubjectActionExecutor> logger,
         IEnumerable<ISubjectActionHandler> handlers = null,
         IEnumerable<IFollowUpActivityHandler> followUpHandlers = null)
@@ -46,6 +48,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _session = session;
         _clock = clock;
         _localClock = localClock;
+        _contactMethods = contactMethods;
         _logger = logger;
         _handlers = handlers ?? [];
         _followUpHandlers = followUpHandlers ?? [];
@@ -258,7 +261,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         if (context.Contact is not null)
         {
-            newActivity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(context.Contact, newActivity.Channel);
+            newActivity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(context.Contact, _contactMethods.Get(context.Contact), newActivity.Channel);
         }
 
         await _session.SaveAsync(newActivity, collection: OmnichannelConstants.CollectionName);

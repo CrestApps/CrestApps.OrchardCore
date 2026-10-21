@@ -519,6 +519,7 @@ public sealed class DefaultSubjectActionExecutorTests
             session.Object,
             clock.Object,
             localClock ?? Mock.Of<ILocalClock>(),
+            TestContactMethods.Accessor,
             NullLogger<DefaultSubjectActionExecutor>.Instance,
             followUpHandlers: followUpHandlers);
     }

@@ -144,6 +144,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             Options.Create(sourceOptions),
             new ContactOptOutResolver(session),
             new NoNotInServiceNumbers(),
+            TestContactMethods.Accessor,
             NullLogger<DefaultContactActivityBatchLoader>.Instance);
     }
 

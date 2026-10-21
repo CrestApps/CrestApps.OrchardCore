@@ -94,6 +94,10 @@
                 <li>@T["The uploaded file must use one of the enabled formats: {0}.", string.Join(", ", supportedFormats)]</li>
                 <li>@T["The very first row of the uploaded file must be the column names. The column names and their requirements are defined below."]</li>
                 <li>@T["The order of the columns in the file is not important as long as they exist. Any column not defined below will be ignored."]</li>
+                @foreach (var layout in Model.OtherLayouts)
+                {
+                    <li>@layout</li>
+                }
                 <li>
                     @T["Download a template for one of the enabled formats:"]
 

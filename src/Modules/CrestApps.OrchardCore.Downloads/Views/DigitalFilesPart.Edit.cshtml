@@ -1,0 +1,131 @@
+@model DigitalFilesPartViewModel
+
+@{
+    var listId = Html.IdFor(model => model.Files) + "-list";
+    var inputId = Html.IdFor(model => model.Files) + "-upload";
+    var prefix = Html.NameFor(model => model.Files).ToString();
+
+    static string Size(long bytes)
+        => bytes >= 1024 * 1024 ? $"{bytes / 1024d / 1024d:0.#} MB" : $"{Math.Max(1, bytes / 1024d):0} KB";
+}
+
+<div class="mb-3" id="@listId" data-prefix="@prefix" data-upload-url="@Model.UploadUrl" data-file-url="@Model.FileUrlFormat">
+    <label class="form-label">@T["Files"]</label>
+    <ul class="list-group mb-2" data-digital-files>
+        @for (var i = 0; i < Model.Files.Count; i++)
+        {
+            var file = Model.Files[i];
+            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <span>
+                    <i class="fa-regular fa-file me-1" aria-hidden="true"></i>
+                    <a href="@Model.FileUrlFormat?.Replace("__id__", file.FileId)">@file.FileName</a>
+                    <span class="text-muted small">@Size(file.Size)</span>
+                </span>
+                <span class="form-check mb-0">
+                    <input type="hidden" name="@(prefix)[@i].FileId" value="@file.FileId" />
+                    <input type="checkbox" class="form-check-input" id="@(listId)-remove-@i" name="@(prefix)[@i].Remove" value="true" />
+                    <label class="form-check-label" for="@(listId)-remove-@i">@T["Remove"]</label>
+                </span>
+            </li>
+        }
+    </ul>
+    <input type="file" id="@inputId" class="form-control" multiple />
+    <span class="hint">@T["Buyers download these after paying. They are kept privately, never in the media library, and nobody can open them without a buyer's link. Up to 1 GB each. Removing a file here doesn't take it from orders that have it."]</span>
+    <div class="text-danger small mt-1 d-none" data-digital-files-error></div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label asp-for="DownloadLimit" class="form-label">@T["Downloads per buyer"]</label>
+        <input asp-for="DownloadLimit" type="number" min="0" max="10000" class="form-control" placeholder="@Model.Defaults?.DownloadLimit" />
+        <span asp-validation-for="DownloadLimit"></span>
+        <span class="hint">@T["How many times a buyer can download each file. Blank uses the site's setting ({0}); 0 means no limit.", Model.Defaults?.DownloadLimit ?? 0]</span>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label asp-for="LinkLifetimeDays" class="form-label">@T["Days the links work"]</label>
+        <input asp-for="LinkLifetimeDays" type="number" min="0" max="3650" class="form-control" placeholder="@Model.Defaults?.LinkLifetimeDays" />
+        <span asp-validation-for="LinkLifetimeDays"></span>
+        <span class="hint">@T["How long after paying a buyer's links work. Blank uses the site's setting ({0}); 0 means they never expire.", Model.Defaults?.LinkLifetimeDays ?? 0]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var root = document.getElementById('@listId');
+        var input = document.getElementById('@inputId');
+
+        if (!root || !input) {
+            return;
+        }
+
+        var list = root.querySelector('[data-digital-files]');
+        var error = root.querySelector('[data-digital-files-error]');
+        var prefix = root.dataset.prefix;
+
+        function nextIndex() {
+            return list.querySelectorAll('li').length;
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.classList.toggle('d-none', !message);
+        }
+
+        function add(file) {
+            var index = nextIndex();
+            var item = document.createElement('li');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center gap-2';
+
+            var name = document.createElement('span');
+            var link = document.createElement('a');
+            link.textContent = file.fileName;
+            link.href = (root.dataset.fileUrl || '').replace('__id__', file.fileId);
+            name.appendChild(link);
+
+            var size = document.createElement('span');
+            size.className = 'text-muted small ms-1';
+            size.textContent = file.size >= 1048576 ? (file.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(file.size / 1024)) + ' KB';
+            name.appendChild(size);
+
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = prefix + '[' + index + '].FileId';
+            hidden.value = file.fileId;
+
+            item.appendChild(name);
+            item.appendChild(hidden);
+            list.appendChild(item);
+        }
+
+        input.addEventListener('change', async function () {
+            var form = input.closest('form');
+            var token = form ? form.querySelector('input[name="__RequestVerificationToken"]') : null;
+
+            showError('');
+
+            for (var i = 0; i < input.files.length; i++) {
+                var data = new FormData();
+                data.append('file', input.files[i]);
+
+                if (token) {
+                    data.append('__RequestVerificationToken', token.value);
+                }
+
+                try {
+                    var response = await fetch(root.dataset.uploadUrl, { method: 'POST', body: data, credentials: 'same-origin' });
+
+                    if (!response.ok) {
+                        showError('@T["{0} could not be uploaded.", "__name__"]'.replace('__name__', input.files[i].name));
+                        continue;
+                    }
+
+                    add(await response.json());
+                } catch (e) {
+                    showError('@T["{0} could not be uploaded.", "__name__"]'.replace('__name__', input.files[i].name));
+                }
+            }
+
+            input.value = '';
+        });
+    })();
+</script>

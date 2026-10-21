@@ -102,6 +102,30 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 `CommerceConstants.Features.Area` is exposed by `CrestApps.OrchardCore.Abstractions`, which commerce modules already reference.
 
+### Storefront account
+
+The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with an `INavigationProvider` that builds only for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+
+```csharp
+public sealed class MyAccountMenu : INavigationProvider
+{
+    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    {
+        if (name == CommerceConstants.Account.MenuName)
+        {
+            builder.Add(S["Gift cards"], "60", item => item
+                .Id("account-gift-cards")
+                .AddClass("fa-solid fa-gift")
+                .Action("Index", "AccountGiftCards", new { area = "My.Module" }));
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+An account page renders `await DisplayAsync(await New.CommerceAccountNavigation())` in its side column. Orders, Digital Downloads, Subscriptions, Transactions and Customers add **Orders**, **Downloads**, **Subscriptions**, **Balances and invoices**, **Addresses** and **Account details**.
+
 ### The shared admin list UI
 
 The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. A module's list can reuse the Commerce feature's **`commerce-admin-list` script**: a `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
@@ -202,6 +226,21 @@ Commerce is a composition shell, not a domain:
 - It defines no persistence: no YesSql indexes, index providers, data migrations or stores.
 - It owns none of the order, payment, tax, receipt or report data models. Those belong to their domain modules.
 - Reusable domain commands live in their owning module; Commerce only composes them.
+
+## Theming the storefront
+
+Every storefront page renders through a named shape, so a theme changes any of them with a Razor (`.cshtml`) or Liquid (`.liquid`) template of that name in its `Views` folder, or from the admin with Orchard Core's **Templates** feature, without replacing a controller view. The controller views are thin frames: the breadcrumb, the page heading and, on account pages, the account menu, around the page's shape. A test fails the build when a storefront controller renders a page outside a shape.
+
+| Page | Shapes |
+| --- | --- |
+| Listings and product pages | The listing and card shapes in [Products](products#theming); on a product's actions, `AddToCart`, `GroupedProducts`, `ExternalProductAction` and `ProductCompareToggle`; on its page, `ProductBundleContents`, `ProductUpsells`, `ProductRelated` and `ProductRecentlyViewed`; card strips, `ProductCardStrip` |
+| Comparison | `ProductCompare` |
+| Cart | `Cart`, `MiniCart`, `CartRecommendations` |
+| Checkout | `CheckoutFlow` and each step's editor, such as `CheckoutCoupon` and `CheckoutOrderBump`; `CheckoutThankYou` and `OrderConfirmation` on the confirmation, with `OrderConfirmationOffers`; `CheckoutEnded` |
+| Account | `AccountOverview`, `AccountDetails`, `AccountAddresses`, `AccountAddressEdit`, `AccountOrders`, `AccountOrder`, `AccountDownloads`, `AccountPaymentMethods`, `AccountSubscriptions`, `AccountTransactions` |
+| Guests and links | `OrderLookup`, `OrderLookupSent`, `GuestOrder`, `GuestOrderInvalid`, `DownloadPage`, `TransactionPay`, `TransactionPayInvalid`, `SubscriptionUnavailable` |
+
+The emails (order confirmations, abandoned checkout and shipment emails) are written by the modules and aren't templates yet.
 
 ## Related
 

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.DisplayManagement;
 using OrchardCore.RateLimits;
 using YesSql;
 
@@ -26,6 +27,7 @@ public sealed class SubscriptionsController : Controller
     private readonly ISession _session;
     private readonly ICheckoutEngine _engine;
     private readonly IPriceResolver _priceResolver;
+    private readonly IShapeFactory _shapeFactory;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -34,16 +36,19 @@ public sealed class SubscriptionsController : Controller
     /// <param name="session">The YesSql session used to resolve the published plan.</param>
     /// <param name="engine">The checkout engine that owns the purchase.</param>
     /// <param name="priceResolver">The pricing seam that decides whether the plan can be sold.</param>
+    /// <param name="shapeFactory">The shape factory that builds the page shown when the plan can't be bought.</param>
     /// <param name="logger">The logger.</param>
     public SubscriptionsController(
         ISession session,
         ICheckoutEngine engine,
         IPriceResolver priceResolver,
+        IShapeFactory shapeFactory,
         ILogger<SubscriptionsController> logger)
     {
         _session = session;
         _engine = engine;
         _priceResolver = priceResolver;
+        _shapeFactory = shapeFactory;
         _logger = logger;
     }
 
@@ -91,7 +96,7 @@ public sealed class SubscriptionsController : Controller
                 plan.DisplayText,
                 pricing.Problem);
 
-            return View("Unavailable");
+            return View("Unavailable", await _shapeFactory.CreateAsync("SubscriptionUnavailable"));
         }
 
         var session = await _engine.StartAsync(new StartCheckoutRequest

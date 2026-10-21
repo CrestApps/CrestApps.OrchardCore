@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Controllers;
@@ -75,6 +76,7 @@ public sealed class TransactionPayControllerTests
         return new TransactionPayController(
             payLinks.Object,
             TransactionManagerFactory.Create(store),
+            new ModelShapeFactory(),
             new PassThroughStringLocalizer<TransactionPayController>())
         {
             ControllerContext = new ControllerContext

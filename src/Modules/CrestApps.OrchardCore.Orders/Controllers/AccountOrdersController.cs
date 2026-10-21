@@ -1,0 +1,127 @@
+using System.Security.Claims;
+using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Orders.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Navigation;
+
+namespace CrestApps.OrchardCore.Orders.Controllers;
+
+/// <summary>
+/// The signed-in customer's orders on the storefront account: the list, and each order with what other modules add
+/// to it, such as its downloads and shipments. Each page's content is a shape (<c>AccountOrders</c>, <c>AccountOrder</c>)
+/// that a theme can override.
+/// </summary>
+[Authorize]
+public sealed class AccountOrdersController : Controller
+{
+    private const int PageSize = 10;
+
+    private readonly IOrderStore _orderStore;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IShapeFactory _shapeFactory;
+
+    public AccountOrdersController(IOrderStore orderStore, IAuthorizationService authorizationService, IShapeFactory shapeFactory)
+    {
+        _orderStore = orderStore;
+        _authorizationService = authorizationService;
+        _shapeFactory = shapeFactory;
+    }
+
+    [HttpGet("account/orders", Name = "AccountOrders")]
+    public async Task<IActionResult> Index(PagerParameters pagerParameters, [FromServices] OrderOperationsService operations)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
+        {
+            return Forbid();
+        }
+
+        var pager = new Pager(pagerParameters, PageSize);
+        var (count, orders) = await _orderStore.PageAsync(new OrderQuery
+        {
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            Statuses = [OrderStatus.AwaitingPayment, OrderStatus.Paid, OrderStatus.Canceled],
+        }, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
+
+        // An order paid offline reads as owed until the money arrives.
+        var owed = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var order in orders)
+        {
+            if (await operations.IsOwedAsync(order, HttpContext.RequestAborted))
+            {
+                owed.Add(order.ItemId);
+            }
+        }
+
+        var pagerShape = count > PageSize ? await _shapeFactory.PagerAsync(pager, count) : null;
+
+        return View(await _shapeFactory.CreateAsync<AccountOrdersViewModel>("AccountOrders", model =>
+        {
+            model.Orders = orders;
+            model.OwedOrderIds = owed;
+            model.Pager = pagerShape;
+        }));
+    }
+
+    [HttpGet("account/orders/{orderId}", Name = "AccountOrder")]
+    public async Task<IActionResult> Detail(
+        string orderId,
+        [FromServices] IDisplayManager<Order> displayManager,
+        [FromServices] IUpdateModelAccessor updateModelAccessor)
+    {
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
+
+        // Only the customer's own placed orders open here, and orders the store sent them to pay; anything else reads
+        // as not found.
+        if (order is null ||
+            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null) ||
+            !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
+            !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
+        {
+            return NotFound();
+        }
+
+        var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
+        var payUrl = order.Status == OrderStatus.Canceled
+            ? null
+            : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
+                ? Url.RouteUrl("AccountOrderPay", new { orderId = order.ItemId })
+                : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+
+        return View(await _shapeFactory.CreateAsync<OrderViewViewModel>("AccountOrder", model =>
+        {
+            model.Order = order;
+            model.Sections = sections;
+            model.PayUrl = payUrl;
+            model.InAccount = true;
+            model.InvoiceUrl = Url.RouteUrl("AccountOrderInvoice", new { orderId = order.ItemId });
+        }));
+    }
+
+    /// <summary>
+    /// The buyer's invoice for their order, to print or save as a PDF.
+    /// </summary>
+    [HttpGet("account/orders/{orderId}/invoice", Name = "AccountOrderInvoice")]
+    public async Task<IActionResult> Invoice(string orderId, [FromServices] OrderDocumentBuilder documents)
+    {
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
+
+        if (order is null ||
+            order.Status is OrderStatus.Draft or OrderStatus.Canceled ||
+            !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
+            !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
+        {
+            return NotFound();
+        }
+
+        var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
+
+        return View(await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => OrdersAdminController.Copy(document, model)));
+    }
+}

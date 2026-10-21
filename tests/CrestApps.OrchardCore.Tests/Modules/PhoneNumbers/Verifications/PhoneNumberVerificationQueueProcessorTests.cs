@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -6,6 +7,8 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore;
@@ -13,6 +16,8 @@ using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
+
+using CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumbers.Verifications;
 
@@ -153,7 +158,8 @@ public sealed class PhoneNumberVerificationQueueProcessorTests
         // Act
         var prepared = OmnichannelContactPhoneNumberVerificationHandler.PreparePendingVerification(
             contact,
-            new DefaultPhoneNumberService());
+            new DefaultPhoneNumberService(),
+            TestContactMethods.Accessor);
 
         // Assert
         Assert.True(prepared);
@@ -169,6 +175,101 @@ public sealed class PhoneNumberVerificationQueueProcessorTests
         Assert.Null(contactPart.VerificationResultJson);
     }
 
+    [Fact]
+    public void PreparePendingVerification_WhenTheContactAlreadyHoldsTheNumbersVerification_CopiesItToTheBagItemWithoutALookup()
+    {
+        // Arrange
+        // A save that rebuilt the bag item dropped its copy of the verification. The contact still holds it for the
+        // same number, so the item gets it back and no paid lookup is queued.
+        var phoneNumberContentItem = CreatePhoneNumberContentItem("+17024993350", "Cell");
+        var contact = CreateContact(phoneNumberContentItem);
+
+        contact.Apply(new PhoneNumberVerificationPart
+        {
+            PhoneNumber = "+17024993350",
+            NormalizedPhoneNumber = "+17024993350",
+            VerificationStatus = PhoneNumberVerificationStatus.Verified,
+            LastVerifiedUtc = _now.AddDays(-1),
+            VerificationProvider = "Fake",
+        });
+
+        // Act
+        var prepared = OmnichannelContactPhoneNumberVerificationHandler.PreparePendingVerification(
+            contact,
+            new DefaultPhoneNumberService(),
+            TestContactMethods.Accessor);
+
+        // Assert
+        Assert.False(prepared);
+
+        var storedItem = Assert.Single(ReadStoredBag(contact).ContentItems);
+        Assert.True(storedItem.TryGet<PhoneNumberVerificationPart>(out var phonePart));
+        Assert.Equal(PhoneNumberVerificationStatus.Verified, phonePart.VerificationStatus);
+        Assert.Equal("+17024993350", phonePart.NormalizedPhoneNumber);
+        Assert.Equal("Fake", phonePart.VerificationProvider);
+    }
+
+    [Fact]
+    public void PreparePendingVerification_WhenTheTypeHasAContactMethodsProvider_MarksTheContactAndAddsNoBag()
+    {
+        // Arrange
+        var accessor = TestContactMethods
+            .CreateServices(services => services.AddContactMethodsProvider<FieldContactMethodsProvider>("Person"))
+            .GetRequiredService<IContactMethodsAccessor>();
+        var person = new ContentItem
+        {
+            ContentItemId = IdGenerator.GenerateId(),
+            ContentType = "Person",
+        };
+
+        person.Apply(new OmnichannelContactPart());
+        person.Alter<PersonContactPart>(part => part.Mobile = new PhoneField { PhoneNumber = "+17024993350" });
+
+        // Act
+        var prepared = OmnichannelContactPhoneNumberVerificationHandler.PreparePendingVerification(
+            person,
+            new DefaultPhoneNumberService(),
+            accessor);
+
+        // Assert
+        Assert.True(prepared);
+        Assert.True(person.TryGet<PhoneNumberVerificationPart>(out var contactPart));
+        Assert.Equal(PhoneNumberVerificationStatus.Unverified, contactPart.VerificationStatus);
+        Assert.Equal("+17024993350", contactPart.NormalizedPhoneNumber);
+        Assert.False(person.Has(OmnichannelConstants.NamedParts.ContactMethods));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_StoresTheResultOnTheContactAndOnTheBagItemHoldingTheNumber()
+    {
+        // Arrange
+        var manager = new FakePhoneNumberVerificationManager(phoneNumber => CreateResult(phoneNumber, PhoneNumberVerificationStatus.Verified));
+        var processor = CreateProcessor(manager, new FakePhoneNumberVerificationRequestDelayer());
+        var contact = CreateContact(
+            CreatePhoneNumberContentItem("+17024993351", "Home"),
+            CreatePhoneNumberContentItem("+17024993350", "Cell"));
+
+        contact.AlterPhoneNumberVerificationPending("+17024993350", "+17024993350");
+
+        // Act
+        await processor.ProcessAsync([contact], new PhoneNumberVerificationsSettings(), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(contact.TryGet<PhoneNumberVerificationPart>(out var contactPart));
+        Assert.Equal(PhoneNumberVerificationStatus.Verified, contactPart.VerificationStatus);
+
+        var storedItems = ReadStoredBag(contact).ContentItems;
+        Assert.False(storedItems[0].Has(nameof(PhoneNumberVerificationPart)));
+        Assert.True(storedItems[1].TryGet<PhoneNumberVerificationPart>(out var phonePart));
+        Assert.Equal(PhoneNumberVerificationStatus.Verified, phonePart.VerificationStatus);
+    }
+
+    /// <summary>
+    /// Reads the bag from the contact's stored JSON rather than the cached part, so a change is known to be kept.
+    /// </summary>
+    private static BagPart ReadStoredBag(ContentItem contact)
+        => ((JsonObject)contact.Content)[OmnichannelConstants.NamedParts.ContactMethods].ToObject<BagPart>();
+
     private static PhoneNumberVerificationQueueProcessor CreateProcessor(
         IPhoneNumberVerificationManager manager,
         IPhoneNumberVerificationRequestDelayer delayer)
@@ -180,6 +281,7 @@ public sealed class PhoneNumberVerificationQueueProcessorTests
             manager,
             delayer,
             [],
+            TestContactMethods.Accessor,
             clock.Object,
             NullLogger<PhoneNumberVerificationQueueProcessor>.Instance);
     }

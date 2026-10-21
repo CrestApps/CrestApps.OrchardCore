@@ -1,0 +1,114 @@
+@model OrderReturnRequestViewModel
+
+@* The buyer's form to send items of an order back. *@
+
+<h1 class="h3 mb-1">@T["Return items"]</h1>
+<p class="text-muted">@T["Order {0}. Choose what you're sending back and why. Returns are accepted for {1} days after you pay.", Model.Order.OrderNumber, Model.WindowDays]</p>
+
+@if (Model.Problems.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0 ps-3">
+            @foreach (var problem in Model.Problems)
+            {
+                <li>@problem</li>
+            }
+        </ul>
+    </div>
+}
+
+<form method="post" class="no-multisubmit">
+    @Html.AntiForgeryToken()
+
+    <div class="list-group mb-4">
+        @for (var i = 0; i < Model.Lines.Count; i++)
+        {
+            var line = Model.Lines[i];
+
+            <div class="list-group-item">
+                <input type="hidden" name="Lines[@i].LineId" value="@line.LineId" />
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md-5">
+                        <div class="fw-semibold">@line.Title</div>
+                        @if (!string.IsNullOrEmpty(line.Sku))
+                        {
+                            <div class="small text-muted">@T["SKU {0}", line.Sku]</div>
+                        }
+                    </div>
+                    <div class="col-5 col-md-3">
+                        <label class="form-label small mb-0" for="return-quantity-@i">@T["How many"]</label>
+                        <select id="return-quantity-@i" name="Lines[@i].Quantity" class="form-select form-select-sm">
+                            @for (var quantity = 0; quantity <= line.Returnable; quantity++)
+                            {
+                                <option value="@quantity" selected="@(quantity == line.Quantity)">@(quantity == 0 ? T["None"].Value : quantity.ToString())</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-7 col-md-4">
+                        <label class="form-label small mb-0" for="return-reason-@i">@T["Why"]</label>
+                        <select id="return-reason-@i" name="Lines[@i].Reason" class="form-select form-select-sm">
+                            <option value="">@T["Choose a reason"]</option>
+                            @foreach (var reason in Model.Reasons)
+                            {
+                                <option value="@reason" selected="@(string.Equals(reason, line.Reason, StringComparison.OrdinalIgnoreCase))">@reason</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Model.AllowExchanges)
+    {
+        <fieldset class="mb-3">
+            <legend class="h6">@T["What would you like?"]</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="Resolution" id="return-refund" value="@OrderReturnResolution.Refund" checked="@(Model.Resolution == OrderReturnResolution.Refund)" />
+                <label class="form-check-label" for="return-refund">@T["My money back"]</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="Resolution" id="return-exchange" value="@OrderReturnResolution.Exchange" checked="@(Model.Resolution == OrderReturnResolution.Exchange)" />
+                <label class="form-check-label" for="return-exchange">@T["Something else instead, such as another size"]</label>
+            </div>
+            <div class="mt-2" data-exchange-for>
+                <label class="form-label small mb-0" for="return-exchange-for">@T["What would you like instead?"]</label>
+                <input id="return-exchange-for" name="ExchangeFor" value="@Model.ExchangeFor" class="form-control" maxlength="500" />
+            </div>
+        </fieldset>
+    }
+
+    <div class="mb-4">
+        <label class="form-label" for="return-comment">@T["Anything else we should know? (optional)"]</label>
+        <textarea id="return-comment" name="Comment" rows="3" maxlength="2000" class="form-control">@Model.Comment</textarea>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">@T["Ask to return"]</button>
+        <a href="@Model.BackUrl" class="btn btn-outline-secondary">@T["Back to the order"]</a>
+    </div>
+    <p class="small text-muted mt-3">@T["We'll email you once we've looked at your request, with how to send the items back."]</p>
+</form>
+
+@* The "instead" field shows only for an exchange. Without script it stays in view, and is read only for one. *@
+<script at="Foot">
+    (function () {
+        var field = document.querySelector('[data-exchange-for]');
+
+        if (!field) {
+            return;
+        }
+
+        function sync() {
+            var exchange = document.getElementById('return-exchange');
+
+            field.hidden = !(exchange && exchange.checked);
+        }
+
+        document.querySelectorAll('input[name=Resolution]').forEach(function (radio) {
+            radio.addEventListener('change', sync);
+        });
+
+        sync();
+    })();
+</script>

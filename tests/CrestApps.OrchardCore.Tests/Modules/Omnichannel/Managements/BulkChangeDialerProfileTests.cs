@@ -323,6 +323,7 @@ public sealed class BulkChangeDialerProfileTests
                 new UserManager<IUser>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null),
                 new Mock<IDisplayNameProvider>().Object,
                 [Dialer.Object],
+                TestContactMethods.Accessor,
                 stringLocalizer.Object,
                 htmlLocalizer.Object)
             {

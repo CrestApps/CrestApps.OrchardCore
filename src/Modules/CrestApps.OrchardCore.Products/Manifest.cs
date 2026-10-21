@@ -22,6 +22,53 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Comparison,
+    Name = "Product Comparison",
+    Description = "Lets shoppers pick up to four products and compare their prices and specifications side by side.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ProductConstants.Feature.Bundles,
+    Name = "Product Bundles",
+    Description = "Sells bundles and kits made of other products at their own price, with their stock worked out from their parts and taken from each part when sold.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
+    Id = ProductConstants.Feature.Grouped,
+    Name = "Grouped Products",
+    Description = "Shows several products on one page, such as the pieces of a set, for shoppers to buy in the quantities they choose.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
+    Id = ProductConstants.Feature.Recommendations,
+    Name = "Product Recommendations",
+    Description = "Recommends products to shoppers: the upsells and cross-sells you choose for each product, related products from the same categories, and the products a shopper viewed recently.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Listing,
     Name = "Product Listing",
     Description = "Lists products on the front end with filters, sorting, grid and list views, and product pages. Products can be listed without being sold online.",

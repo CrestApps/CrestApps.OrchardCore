@@ -104,6 +104,11 @@ internal sealed class InMemoryPaymentAttemptStore : IPaymentAttemptStore
             matches = matches.Where(a => a.SessionId == query.SessionId);
         }
 
+        if (!string.IsNullOrEmpty(query?.ProviderReference))
+        {
+            matches = matches.Where(a => a.ProviderReference == query.ProviderReference);
+        }
+
         var all = matches.OrderByDescending(a => a.UpdatedUtc).ToArray();
 
         return Task.FromResult(new PageResult<PaymentAttempt>

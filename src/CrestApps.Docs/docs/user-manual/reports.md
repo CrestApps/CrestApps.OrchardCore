@@ -86,6 +86,10 @@ The button always shows the range you picked in words, for example *From Jan 1, 
 | Why was a record not called, or why did an agent not get a call? Has routing stopped looking at a queue? | **Dialer decision log** (see [below](#dialer-decision-log)) |
 | How often did the AI hand a conversation to a person? | **AI handoff & containment** |
 | How many leads converted, from which source and list, and what is in the sales pipeline? | **Lead funnel**, **Lead conversion by source and list**, **Opportunity pipeline** (see [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#reports)) |
+| What did the store sell, and what did it keep after refunds? What is an average order worth? Which products, categories and countries sold most? How much tax did orders charge, and what did promotion codes take off? | **Sales**, **Sales by product**, **Sales by category**, **Sales by country**, **Tax on orders**, **Discounts on orders**, **Refunds** under *Commerce* (see [Carts and orders](commerce/carts-and-orders.md#store-reports)) |
+| Who buys, how many come back, and how many checkouts end in a sale? | **Customers**, **Checkouts** under *Commerce* |
+| Which paid orders still have to ship, how fast does the store ship, and what is running out of stock? | **Orders to ship**, **Shipping times**, **Stock on hand**, **Stock movements** under *Commerce* |
+| Are buyers downloading what they bought, and what do they think of it? | **Downloads**, **Product reviews** under *Commerce* |
 
 ## Agent availability and wait time
 

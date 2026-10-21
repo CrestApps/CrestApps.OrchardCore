@@ -1,4 +1,10 @@
 @model StockItemViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var item = Model.Item;
@@ -34,6 +40,41 @@
                         <dd class="col-6 text-end">@item.Sku</dd>
                     }
                 </dl>
+                @if (Model.HasLocations)
+                {
+                    <table class="table table-sm align-middle mt-3 mb-0">
+                        <caption class="caption-top pt-0">@T["By location"]</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Location"]</th>
+                                <th scope="col" class="text-end">@T["On hand"]</th>
+                                <th scope="col" class="text-end">@T["Available"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var location in Model.Locations)
+                            {
+                                var level = item.FindLevel(location.LocationId);
+
+                                <tr>
+                                    <td>@location.Name</td>
+                                    <td class="text-end">@(level?.OnHand ?? 0)</td>
+                                    <td class="text-end">
+                                        @(level?.Available ?? 0)
+                                        @if (level?.Reserved > 0)
+                                        {
+                                            <div class="small text-muted">@T["{0} held", level.Reserved]</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                @if (Model.WaitingAlerts > 0)
+                {
+                    <p class="small mb-0 mt-2"><span class="fa-solid fa-bell text-body-secondary me-1" aria-hidden="true"></span>@T.Plural(Model.WaitingAlerts.Value, "1 shopper is waiting to hear when it's back.", "{0} shoppers are waiting to hear when it's back.")</p>
+                }
             </div>
             <div class="card-footer">
                 <a class="btn btn-sm btn-secondary" href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = item.ContentItemId })">@T["Open the product"]</a>
@@ -46,6 +87,17 @@
                 <div class="card-header">@T["Receive or adjust"]</div>
                 <div class="card-body">
                     <form asp-action="Adjust" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                        @if (Model.HasLocations)
+                        {
+                            <div class="mb-2">
+                                <select asp-for="Adjust.LocationId" class="form-select" aria-label="@T["Location"]">
+                                    @foreach (var location in Model.ListedLocations)
+                                    {
+                                        <option value="@location.LocationId">@T["At {0}", location.Name]</option>
+                                    }
+                                </select>
+                            </div>
+                        }
                         <div class="mb-2">
                             <select asp-for="Adjust.Kind" class="form-select">
                                 <option value="@StockMovementKind.Received">@T["Received: stock arrived"]</option>
@@ -68,9 +120,20 @@
                 <div class="card-header">@T["Count"]</div>
                 <div class="card-body">
                     <form asp-action="Count" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                        @if (Model.HasLocations)
+                        {
+                            <div class="mb-2">
+                                <select asp-for="Count.LocationId" class="form-select" aria-label="@T["Location"]">
+                                    @foreach (var location in Model.ListedLocations)
+                                    {
+                                        <option value="@location.LocationId">@T["At {0}", location.Name]</option>
+                                    }
+                                </select>
+                            </div>
+                        }
                         <div class="mb-2">
                             <input asp-for="Count.Count" type="number" min="0" class="form-control" aria-label="@T["Counted"]" placeholder="@T["How many did you count?"]" />
-                            <span class="hint">@T["The count replaces what's on hand, and the history records the difference."]</span>
+                            <span class="hint">@(Model.HasLocations ? T["The count replaces what's on hand at the location, and the history records the difference."] : T["The count replaces what's on hand, and the history records the difference."])</span>
                         </div>
                         <div class="mb-2">
                             <input asp-for="Count.Reason" class="form-control" maxlength="200" aria-label="@T["Reason"]" placeholder="@T["Note (optional)"]" />
@@ -79,6 +142,47 @@
                     </form>
                 </div>
             </div>
+
+            @if (Model.HasLocations)
+            {
+                <div class="card mt-4">
+                    <div class="card-header">@T["Move between locations"]</div>
+                    <div class="card-body">
+                        <form asp-action="Transfer" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <label asp-for="Transfer.FromLocationId" class="form-label small mb-0">@T["From"]</label>
+                                    <select asp-for="Transfer.FromLocationId" class="form-select">
+                                        @foreach (var location in Model.Locations)
+                                        {
+                                            <option value="@location.LocationId">@location.Name (@(item.FindLevel(location.LocationId)?.Available ?? 0))</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label asp-for="Transfer.ToLocationId" class="form-label small mb-0">@T["To"]</label>
+                                    <select asp-for="Transfer.ToLocationId" class="form-select">
+                                        @for (var i = 0; i < Model.ListedLocations.Count; i++)
+                                        {
+                                            var location = Model.ListedLocations[i];
+
+                                            <option value="@location.LocationId" selected="@(i == 1)">@location.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <input asp-for="Transfer.Quantity" type="number" min="1" class="form-control" aria-label="@T["Quantity"]" placeholder="@T["How many?"]" />
+                                <span class="hint">@T["Only available units move. The number next to each location is what it has available."]</span>
+                            </div>
+                            <div class="mb-2">
+                                <input asp-for="Transfer.Reason" class="form-control" maxlength="200" aria-label="@T["Note"]" placeholder="@T["Note (optional)"]" />
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">@T["Move"]</button>
+                        </form>
+                    </div>
+                </div>
+            }
         }
     </div>
 
@@ -92,7 +196,14 @@
                     {
                         <li class="list-group-item d-flex justify-content-between">
                             <a asp-route="OrdersDetail" asp-route-orderId="@hold.OrderId">@T["Order"]</a>
-                            <span>@T.Plural(hold.Quantity, "1 unit", "{0} units") · @T["until {0:g}", hold.ExpiresUtc]</span>
+                            <span>
+                                @T.Plural(hold.Quantity, "1 unit", "{0} units")
+                                @if (Model.HasLocations)
+                                {
+                                    <span>· @Model.LocationName(hold.LocationId)</span>
+                                }
+                                · @T["until {0:g}", await LocalAsync(hold.ExpiresUtc)]
+                            </span>
                         </li>
                     }
                 </ul>
@@ -128,7 +239,7 @@
                         @foreach (var movement in Model.Movements)
                         {
                             <tr>
-                                <td class="text-nowrap">@movement.Utc.ToString("g")</td>
+                                <td class="text-nowrap">@((await LocalAsync(movement.Utc)).ToString("g"))</td>
                                 <td>
                                     @switch (movement.Kind)
                                     {
@@ -144,9 +255,16 @@
                                         case StockMovementKind.Sold:
                                             @T["Sold"]
                                             break;
+                                        case StockMovementKind.Transferred:
+                                            @(movement.Quantity < 0 ? T["Moved out"] : T["Moved in"])
+                                            break;
                                         default:
                                             @T["Returned"]
                                             break;
+                                    }
+                                    @if (Model.HasLocations)
+                                    {
+                                        <span class="badge text-bg-light border fw-normal ms-1">@Model.LocationName(movement.LocationId)</span>
                                     }
                                     @if (!string.IsNullOrEmpty(movement.Reason))
                                     {

@@ -70,6 +70,11 @@ public sealed class OrderQuery
     public DateTime? CreatedBefore { get; set; }
 
     /// <summary>
+    /// Gets or sets the date on or after which the orders were placed.
+    /// </summary>
+    public DateTime? CreatedOnOrAfter { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to leave out orders whose personal details were already removed.
     /// </summary>
     public bool NotAnonymized { get; set; }
@@ -150,6 +155,11 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
         if (query.CreatedBefore is { } createdBefore)
         {
             orders = orders.Where(index => index.CreatedUtc < createdBefore);
+        }
+
+        if (query.CreatedOnOrAfter is { } createdOnOrAfter)
+        {
+            orders = orders.Where(index => index.CreatedUtc >= createdOnOrAfter);
         }
 
         if (query.NotAnonymized)

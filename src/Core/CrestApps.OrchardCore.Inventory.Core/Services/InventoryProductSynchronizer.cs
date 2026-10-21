@@ -112,6 +112,7 @@ public sealed class InventoryProductSynchronizer
                     Title = string.IsNullOrEmpty(variantTitle) ? product.DisplayText : $"{product.DisplayText} ({variantTitle})",
                     LowStockThreshold = threshold,
                     AllowBackorder = inventory.AllowBackorder,
+                    ReleaseDateUtc = inventory.ReleaseDateUtc,
                 };
             }
         }
@@ -123,6 +124,7 @@ public sealed class InventoryProductSynchronizer
                 Title = product.DisplayText,
                 LowStockThreshold = threshold,
                 AllowBackorder = inventory.AllowBackorder,
+                ReleaseDateUtc = inventory.ReleaseDateUtc,
             };
         }
 
@@ -135,12 +137,14 @@ public sealed class InventoryProductSynchronizer
             item.Title != target.Title ||
             item.LowStockThreshold != target.LowStockThreshold ||
             item.AllowBackorder != target.AllowBackorder ||
+            item.ReleaseDateUtc != target.ReleaseDateUtc ||
             item.Archived != archived;
 
         item.Sku = target.Sku;
         item.Title = target.Title;
         item.LowStockThreshold = target.LowStockThreshold;
         item.AllowBackorder = target.AllowBackorder;
+        item.ReleaseDateUtc = target.ReleaseDateUtc;
         item.Archived = archived;
 
         return changed;

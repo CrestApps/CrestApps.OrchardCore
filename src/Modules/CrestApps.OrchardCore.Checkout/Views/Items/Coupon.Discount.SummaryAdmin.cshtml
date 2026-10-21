@@ -9,6 +9,10 @@
     {
         @($"{Model.Value.Percentage:0.##}%")
     }
+    else if (Model.Value.Kind == CouponKind.FreeShipping)
+    {
+        @T["Free shipping"]
+    }
     else
     {
         @($"{Model.Value.Currency} {CurrencyScale.Format(Model.Value.Amount, Model.Value.Currency)}")
@@ -16,5 +20,10 @@
 </span>
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Applies to"]">
-    <i class="fa-solid fa-bullseye text-secondary me-1" aria-hidden="true"></i>@(Model.Value.Target == DiscountTarget.FirstCycle ? T["First cycle"] : T["One-time amount"])
+    <i class="fa-solid fa-bullseye text-secondary me-1" aria-hidden="true"></i>@(Model.Value.EffectiveTarget switch
+    {
+        DiscountTarget.FirstCycle => T["First cycle"],
+        DiscountTarget.Shipping => T["Shipping"],
+        _ => T["One-time amount"],
+    })
 </span>

@@ -52,4 +52,15 @@ public sealed class PaymentVerificationResult
     /// The provider mode the charge ran in (for example test or live).
     /// </summary>
     public GatewayMode GatewayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets how risky the gateway's fraud checks rated the payment: <c>normal</c>, <c>elevated</c> or
+    /// <c>highest</c>, or <see langword="null"/> when the gateway doesn't rate payments.
+    /// </summary>
+    public string RiskLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the gateway's fraud score of the payment, from 0 (safe) to 99, when it gives one.
+    /// </summary>
+    public int? RiskScore { get; set; }
 }

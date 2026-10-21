@@ -7,7 +7,7 @@ user_manual: user-manual/commerce/inventory
 
 | | |
 | --- | --- |
-| **Feature** | `CrestApps.OrchardCore.Inventory` |
+| **Features** | `CrestApps.OrchardCore.Inventory`, `CrestApps.OrchardCore.Inventory.StockAlerts` (Back-in-Stock Alerts), `CrestApps.OrchardCore.Inventory.PurchaseOrders` (Purchase Orders) |
 | **Core** | `CrestApps.OrchardCore.Inventory.Core` |
 | **Category** | Commerce |
 | **Depends on** | Commerce, Products, `OrchardCore.Contents` |
@@ -18,22 +18,27 @@ The **Inventory** feature counts the units of each product and variant on hand. 
 
 All of these live in the `Inventory` YesSql collection.
 
-- **`StockItem`** (concurrency-checked): `ContentItemId`, `VariantId` (null for a product without variants), `LocationId`, `Sku`, `Title`, `OnHand`, `Reserved`, `Available`, `LowStockThreshold`, `AllowBackorder`, `Archived`, plus created and modified dates.
-  - `LocationId` is always `default` for now. The schema is location-aware, so several locations can come later without a breaking migration.
+- **`StockItem`** (concurrency-checked): `ContentItemId`, `VariantId` (null for a product without variants), `LocationId`, `Sku`, `Title`, `OnHand`, `Reserved`, `Available`, `LowStockThreshold`, `AllowBackorder`, `ReleaseDateUtc`, `Archived`, plus created and modified dates.
+  - One stock item covers every location. Its units per location are in `Levels` (`StockLocationLevel`: `LocationId`, `OnHand`, `Reserved`, `Available`), and `OnHand` and `Reserved` are their totals. `GetLevel(locationId)` and `FindLevel(locationId)` read a location's units (`null` is the default location, `InventoryConstants.DefaultLocationId`, `default`). An item counted before there were locations has all its units at the default location: `NormalizeLevels()` puts any difference between the totals and the levels there, and `SumLevels()` sets the totals after a level changed.
   - `Available` is `OnHand` minus `Reserved`.
+  - `ReleaseDateUtc` comes from the product's **Ships from** date and makes a backorder a pre-order until then.
   - `StockItemIndex` maps the product, variant and location, the normalized SKU and title, `OnHand`, `Available`, `IsLow` (`Available <= LowStockThreshold`), `AllowBackorder` and `Archived`.
-- **`StockMovement`** (append-only): `StockItemId`, `Kind`, `Quantity` (signed), `OnHandAfter`, `Reason`, `OrderId`, `ActorId`, `ActorName`, `Utc`. `StockMovementIndex` maps the stock item, kind, order and time.
-  - `Kind` is one of `Received`, `Adjusted`, `Counted`, `Sold` or `Returned`. Sold and returned movements come with checkout reservations.
-- **`InventoryPart`** (attachable): `TrackInventory` (default true), `AllowBackorder`, `LowStockThreshold` (null for the site default).
-- **`StockReservation`**: `StockItemId`, `OrderId`, `Quantity`, `Status` (`Held`, `Committed`, `Released`), `ExpiresUtc`, `ReleaseReason`. `StockReservationIndex` maps the stock item, order, status and expiry. A committed reservation is also what keeps an order's sale from being recorded twice.
-- **`InventorySettings`** (Settings › Commerce › Inventory): `DefaultLowStockThreshold` (5) and `HoldMinutes` (60).
+- **`StockMovement`** (append-only): `StockItemId`, `Kind`, `Quantity` (signed), `OnHandAfter`, `Reason`, `OrderId`, `LocationId` (`null` for the default location), `PurchaseOrderId`, `ActorId`, `ActorName`, `Utc`. `StockMovementIndex` maps the stock item, kind, order and time.
+  - `Kind` is one of `Received`, `Adjusted`, `Counted`, `Sold`, `Returned` or `Transferred`. Sold and returned movements come with checkout reservations; a transfer is a movement out of one location and one into the other.
+- **`InventoryPart`** (attachable): `TrackInventory` (default true), `AllowBackorder`, `LowStockThreshold` (null for the site default), `ReleaseDateUtc` (the **Ships from** date, kept as noon UTC on the day so it reads as the same day in any time zone).
+- **`StockReservation`**: `StockItemId`, `OrderId`, `LocationId`, `Quantity`, `ReturnedQuantity` (units of the sale returned so far), `Status` (`Held`, `Committed`, `Released`), `ExpiresUtc`, `ReleaseReason`. `StockReservationIndex` maps the stock item, order, status and expiry. A committed reservation is also what keeps an order's sale from being recorded twice.
+- **`InventorySettings`** (Settings › Commerce › Inventory): `DefaultLowStockThreshold` (5), `HoldMinutes` (60) and `Locations` (up to 50 `InventoryLocation`: `LocationId`, `Name`, `Address` for staff), in the order orders take units from them. `GetLocations()` always includes the default location, named *Main location* until it's renamed.
 
 ## Services
 
-- **`IInventoryService`** returns a `StockChangeResult`. Its error is `NotFound`, `InvalidQuantity` or `Busy`, the last when someone else changed the same item at the same moment.
-  - `AdjustAsync(stockItemId, kind, quantity, reason, actor)` takes `Received` with a positive quantity, or `Adjusted` with any non-zero quantity.
-  - `SetCountAsync(stockItemId, count, reason, actor)` records a `Counted` movement holding the difference. A count that matches is recorded too, so the history shows when stock was last checked.
+- **`IInventoryService`** returns a `StockChangeResult`. Its error is `NotFound`, `InvalidQuantity`, `Busy` (someone else changed the same item at the same moment) or `NotEnoughAtLocation` (a transfer of more than the location has available, or to itself).
+  - `AdjustAsync(stockItemId, kind, quantity, reason, actor)` takes `Received` with a positive quantity, or `Adjusted` with any non-zero quantity. `AdjustAsync(stockItemId, locationId, kind, …)` does it at a location.
+  - `SetCountAsync(stockItemId, count, reason, actor)` records a `Counted` movement holding the difference. A count that matches is recorded too, so the history shows when stock was last checked. `SetCountAsync(stockItemId, locationId, count, …)` counts one location.
+  - `TransferAsync(stockItemId, fromLocationId, toLocationId, quantity, reason, actor)` moves available units between locations; the total on hand doesn't change.
+  - `ReceiveAsync(stockItemId, locationId, quantity, purchaseOrderId, reason, actor)` records units of a purchase order received at a location.
   - `RebuildAsync(stockItemId)` sets `OnHand` to the sum of the item's movements.
+- **Where units come from.** An order's units of an item come from one location that has them all: the one the order asked for (`StockRequest.LocationId`, such as a pickup shop's stock location), then the locations in their listed order, then any location no longer listed that still holds units. Failing that, from each in turn; units no location has (a backorder) are owed by the first. Units held before the buyer chose where the order is fulfilled from are sold from that location when it has them, and units go back to the location they were sold from.
+- **`IInventoryLocationService.GetLocationsAsync()`** lists the locations. `InventoryLocationService` also implements the Orders module's `IFulfillmentLocationProvider`, so Shipping offers the locations as a pickup location's **Stock comes from**.
 - **Reservations.**
   - `ReserveAsync(orderId, lines, expiresUtc)` holds every counted line or none: a line short of available units, on an item that doesn't allow backorders, returns a `StockShortage` and holds nothing. Uncounted products are skipped, and an item the order already holds isn't held again.
   - `CommitAsync(orderId, lines)` sells what the order holds: `Reserved` and `OnHand` go down and a `Sold` movement records the order. A line with no hold left (expired, or the order was replaced) is sold anyway, and an item already sold for the order is skipped, so a retried completion sells nothing twice.
@@ -83,6 +88,7 @@ With Product Listing on, `InventorySearchDocumentContributor` writes the built-i
   ```
 
 - **Deployment step `Stock`** (`StockDeploymentStep`, *Commerce*) exports every item that isn't archived with its ids, SKU and `OnHand`.
+- **Content Transfer.** `InventoryPartContentImportHandler` adds the `InventoryPart_*` columns: `TrackInventory`, `AllowBackorder`, `LowStockThreshold`, `ShipsFrom`, `Stock` (available, for a product without variants) and `VariantStock` (each variant's, by SKU or options, such as `TEE-S=4; M / Red=2`). Counts are set once the import has saved the product (`InventoryCountApplier`, in a deferred task after the stock items are synced), keeping the units unpaid orders hold on hand besides them.
 
 ## Orders
 
@@ -90,19 +96,30 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 - **Created:** reserves the order's lines for `HoldMinutes`. A shortage refuses the order with a message for the buyer: *Only 1 of Mug left. Lower the quantity to check out.* or *Mug is out of stock. Remove it to check out.*
 - **Paid:** sells them in the checkout's own unit of work. A concurrent change to the same item rolls the completion back, and the checkout's reconciliation sweep retries it.
-- **Canceled:** releases them.
+- **Canceled:** releases them, and when the store asks, puts back what a paid order sold.
+- **Refunded:** when the store refunds everything and asks for it, puts back what the order sold.
+- **Lines changed** (a store's draft order edited): releases the old hold and holds the new lines for `HoldMinutes`, all or none; a shortage refuses the change and keeps the old lines.
+- **Returned** (the Orders module's Returns feature): puts the lines the store ticked back into stock, bundles as their parts, at the location chosen or where they were sold from.
+
+`IInventoryService.RestockAsync(orderId, reason, actor)` returns an order's sold units to stock with a `Returned` movement per item, once: the reservation is marked `Returned`, so asking again changes nothing. `RestockAsync(orderId, lines, locationId, reason, actor)` returns some units, never more of an item than the order bought and hasn't returned yet (`StockReservation.ReturnedQuantity`), and returns how many went back.
 
 `ExpiredStockHoldsBackgroundTask` releases expired holds every five minutes, up to 500 per run. The cart's **Checkout** commits the order, and what it holds, before the checkout starts, and turns a concurrency conflict into *Someone else is buying the same items right now.* An item's admin page lists the orders holding it.
 
+## Reports
+
+With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Commerce**, permission `ViewInventory`) lists every counted item with its units on hand, held and available, out of stock and low first, with totals. It shows stock as it is when it runs.
+
 ## Availability
 
-`InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items at the default location: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
+`InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items, every location together: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant, and `ReleaseDateUtc` while the item's release date is to come, which makes a backorder `ProductAvailabilityStatus.Preorder`. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
+
+With **Product Bundles** on, `BundleAvailabilityProvider` answers for bundles before the stock items: the most bundles the counted parts can make, from `ProductBundleIndex`, taking backorders when every counted part does. `InventoryOrderEventHandler` holds, sells and restocks a bundle line's parts (`OrderLine.BundleItems`) rather than the bundle, and `BundleSearchIndexHandler` refreshes the search records of the bundles a product is in when it sells out or comes back.
 
 ## Admin
 
 - **Commerce > Inventory** (`inventory`, `InventoryAdminController`) lists stock items, fewest available first.
   - Search matches the start of the SKU or title. Filters: *Low stock*, *Out of stock*, *Backordered*.
-  - Each item's page (`inventory/{stockItemId}`) shows its counts and paged movement history, with forms to receive or adjust, count, and recount from history.
+  - Each item's page (`inventory/{stockItemId}`) shows its counts and paged movement history, with forms to receive or adjust, count, and recount from history. With more than one location it shows the units by location, the receive, adjust and count forms ask for a location, and `inventory/{stockItemId}/transfer` moves units between them.
   - **Export CSV** and **Import CSV** download and apply counts.
 - **Product editor.** The Inventory part sets the policy, and shows each variant's availability with a link to its page.
 
@@ -115,6 +132,20 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 Administrators have both by default.
 
-## Coming next
+## Back-in-stock alerts
 
-Shipping zones and rates, a shipping step at checkout, and shipments.
+The **Back-in-Stock Alerts** feature (`CrestApps.OrchardCore.Inventory.StockAlerts`, needs `OrchardCore.Email`) keeps `StockAlert` records (`StockItemId`, `ContentItemId`, `VariantId`, `Email`, `UserId`, `CreatedUtc`, `SentUtc`; `StockAlertIndex` with `Waiting`) in the `Inventory` collection.
+
+- `StockAlertDisplayDriver` renders the `StockAlertForm` shape in the `ProductAction` display of a product's own page, under **Add to cart**, when one of its counted items is out of stock and doesn't take backorders; for a product with variants it shows while a sold-out variant is picked.
+- `POST stock/alerts` (`StockAlertSubscribe`) records a request through `StockAlertService.SubscribeAsync`, refusing an item that can be bought and taking a repeat of a waiting request as done. It's limited to 10 requests per email a day (`MaxPerEmailPerDay`) and 20 per IP an hour, and answers JSON when asked.
+- `BackInStockAlertHandler`, an `IStockLevelHandler`, emails the item's waiting requests oldest first when `BackInStock`, up to 500 per restock (`MaxPerRestock`), and marks each sent. The product's link is built from the site's base URL.
+- `StockAlertPersonalDataContributor` exports a person's requests (by email or user id) with their commerce data and deletes them when the data is anonymized.
+
+## Purchase orders
+
+The **Purchase Orders** feature (`CrestApps.OrchardCore.Inventory.PurchaseOrders`) adds **Commerce > Purchase orders**. A `PurchaseOrder` (`Inventory` collection, `PurchaseOrderIndex` on number, supplier, status, location and dates) has a `Number` (such as `PO-261019-K3QZ`), `Supplier`, `SupplierEmail`, the `LocationId` received at, `Currency`, `ExpectedUtc`, `Note`, `Lines` (`PurchaseOrderLine`: `StockItemId`, title, SKU, `Ordered`, `Received`, `UnitCost`) and a `Status`: `Draft`, `Ordered`, `PartiallyReceived`, `Received` or `Canceled`.
+
+- `PurchaseOrdersAdminController` (`purchase-orders`, viewing with `ViewInventory`, changes with `ManageInventory`) lists them through an `AdminList` with a status filter and search by number or supplier, and creates (optionally from the location's low-stock items, each up to twice its threshold), edits, marks ordered, receives, cancels and deletes drafts. Lines can be added and removed only while it's a draft. Items are found through `Admin/api/crestapps/inventory/stock-items/search`.
+- `PurchaseOrderReceiver.ReceiveAsync(order, quantities, actor)` receives units of its lines at its location through `IInventoryService.ReceiveAsync`, never more than are still to come, with the order's number as the movement's reason, and marks it received once nothing is.
+
+The supplier isn't emailed.

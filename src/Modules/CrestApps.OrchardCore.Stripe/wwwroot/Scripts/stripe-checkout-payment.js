@@ -38,6 +38,20 @@
 				return data;
 			}
 			mountWallets();
+			var savedCards = options.savedCardsSelector ? document.querySelector(options.savedCardsSelector) : null;
+			var newCard = options.newCardSelector ? document.querySelector(options.newCardSelector) : null;
+			var rememberCard = options.rememberCardSelector ? document.querySelector(options.rememberCardSelector) : null;
+			function selectedSavedCard() {
+				var checked = savedCards ? savedCards.querySelector("input[type=radio]:checked") : null;
+				return checked ? checked.value : "";
+			}
+			function syncSavedCards() {
+				if (newCard) newCard.classList.toggle("d-none", !!selectedSavedCard());
+			}
+			if (savedCards) {
+				savedCards.addEventListener("change", syncSavedCards);
+				syncSavedCards();
+			}
 			function mountWallets() {
 				var container = options.walletSelector ? document.querySelector(options.walletSelector) : null;
 				if (!container || !options.walletAmount || !options.walletCurrency) return;
@@ -91,12 +105,18 @@
 			}
 			checkoutPayment.register(options.processorKey, {
 				prepare: async function() {
+					var savedCardId = selectedSavedCard();
+					if (savedCardId && !walletPaymentMethodId) {
+						preparedPaymentMethodId = savedCardId;
+						return { savedCardId };
+					}
 					if (walletPaymentMethodId) {
 						preparedPaymentMethodId = walletPaymentMethodId;
 						return needsReusablePaymentMethod() ? paymentMethodData(preparedPaymentMethodId) : null;
 					}
 					preparedPaymentMethodId = null;
-					if (!needsReusablePaymentMethod()) return null;
+					var remember = !!(rememberCard && rememberCard.checked);
+					if (!needsReusablePaymentMethod() && !remember) return null;
 					var result = await stripe.createPaymentMethod({
 						type: "card",
 						card,
@@ -107,6 +127,10 @@
 						return false;
 					}
 					preparedPaymentMethodId = result.paymentMethod.id;
+					if (remember && !needsReusablePaymentMethod()) return {
+						paymentMethodId: preparedPaymentMethodId,
+						rememberCard: "true"
+					};
 					return paymentMethodData(preparedPaymentMethodId);
 				},
 				confirm: async function(step) {

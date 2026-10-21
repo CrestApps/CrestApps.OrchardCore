@@ -1,11 +1,11 @@
-@model FindOrderViewModel
+@model IShape
 
-@* The same answer whether or not there are orders, so the page never tells who has bought here. *@
 <zone Name="Title">
     <breadcrumb name="OrdersFindSent" title="@T["Find my order"]" />
 </zone>
 
 <div class="container my-4" style="max-width: 640px;">
     <h1 class="h3 mb-3">@T["Check your email"]</h1>
-    <p>@T["If we have orders placed with {0}, we've emailed a link to each of them. It can take a few minutes to arrive.", Model.Email]</p>
+
+    @await DisplayAsync(Model)
 </div>

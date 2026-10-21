@@ -41,6 +41,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly IContentManager _contentManager;
     private readonly IYesSqlSession _session;
     private readonly ActivityHandlerDescriber _handlerDescriber;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     internal readonly IStringLocalizer S;
 
@@ -76,6 +77,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         IYesSqlSession session,
         IHttpContextAccessor httpContextAccessor,
         ActivityHandlerDescriber handlerDescriber,
+        IContactMethodsAccessor contactMethods,
         IStringLocalizer<OmnichannelActivityDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
@@ -92,6 +94,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _session = session;
         _httpContextAccessor = httpContextAccessor;
         _handlerDescriber = handlerDescriber;
+        _contactMethods = contactMethods;
         S = stringLocalizer;
     }
 
@@ -400,7 +403,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
                 if (!string.IsNullOrEmpty(flowSettings.Channel))
                 {
-                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, _contactMethods.Get(contact), flowSettings.Channel);
                 }
             }
 

@@ -1,0 +1,75 @@
+@using CrestApps.OrchardCore.Carts.Core
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CartViewModel
+
+@*
+    The slide-out mini cart's content, loaded from cart/mini. Changing quantities happens on the cart page; here a line
+    can be removed, and the buyer goes on to the cart or straight to checkout.
+*@
+
+@{
+    var pricing = Model.Pricing;
+
+    string Format(decimal amount) => ProductPriceFormatter.Format(amount, pricing.Currency);
+}
+
+@if (pricing.Lines.Count == 0)
+{
+    <div class="text-center py-5" role="status">
+        <span class="fa-solid fa-cart-shopping fa-2x text-muted mb-3 d-block" aria-hidden="true"></span>
+        <p class="mb-0">@T["Your cart is empty."]</p>
+    </div>
+
+    return;
+}
+
+<ul class="list-group list-group-flush mb-3">
+    @foreach (var line in pricing.Lines)
+    {
+        <li class="list-group-item px-0 py-3">
+            <div class="d-flex justify-content-between gap-2">
+                <div class="me-2">
+                    <div class="fw-semibold">@(line.ContentItem is null ? T["A product that is no longer available"].Value : line.Title)</div>
+                    @if (line.ShipsFromUtc is { } shipsFrom)
+                    {
+                        <div class="small text-info-emphasis">@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                    }
+                    @foreach (var addOn in line.AddOns)
+                    {
+                        <div class="small text-break">@(string.IsNullOrEmpty(addOn.Value) ? addOn.Label : addOn.Label + ": " + addOn.Value)</div>
+                    }
+                    <div class="small text-muted">@T["{0} × {1}", line.Line.Quantity, Format(line.UnitPrice)]</div>
+                    @if (!line.IsAvailable && line.Problem is not null)
+                    {
+                        <div class="small text-danger">@line.Problem</div>
+                    }
+                </div>
+                <div class="text-end">
+                    <div class="fw-semibold text-nowrap">@Format(line.LineTotal)</div>
+                    <form method="post" action="@Url.RouteUrl(CartConstants.RouteNames.Remove)" data-mini-cart-remove>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="lineId" value="@line.Line.LineId" />
+                        <button type="submit" class="btn btn-link btn-sm text-danger p-0" aria-label="@T["Remove {0}", line.Title]">@T["Remove"]</button>
+                    </form>
+                </div>
+            </div>
+        </li>
+    }
+</ul>
+
+<div class="d-flex justify-content-between fw-semibold mb-1">
+    <span>@T.Plural(pricing.Cart?.ItemCount ?? 0, "Subtotal (1 item)", "Subtotal ({0} items)")</span>
+    <span>@Format(pricing.Subtotal)</span>
+</div>
+<p class="small text-muted mb-3">@T["Discounts and taxes are worked out at checkout."]</p>
+
+<div class="d-grid gap-2">
+    @if (!string.IsNullOrEmpty(Model.CheckoutUrl) && pricing.CanCheckout)
+    {
+        <form method="post" action="@Model.CheckoutUrl" class="d-grid">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary">@T["Checkout"]</button>
+        </form>
+    }
+    <a class="btn btn-outline-secondary" href="@Url.RouteUrl(CartConstants.RouteNames.Cart)">@T["View cart"]</a>
+</div>

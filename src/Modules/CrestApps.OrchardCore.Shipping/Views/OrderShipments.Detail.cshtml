@@ -1,0 +1,65 @@
+@model OrderShipmentsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var isPickup = Model.Order.Shipping?.IsPickup == true;
+    var statusData = new ViewDataDictionary(ViewData) { ["IsPickup"] = isPickup };
+}
+
+<div class="card mt-4 mb-3">
+    <div class="card-header">@(isPickup ? T["Pickup"] : T["Shipments"])</div>
+    <ul class="list-group list-group-flush">
+        @foreach (var shipment in Model.Shipments)
+        {
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold">@(isPickup ? T["Pickup {0}", shipment.Number] : T["Shipment {0}", shipment.Number])</span>
+                    @await Html.PartialAsync("_ShipmentStatus", shipment.Status, statusData)
+                </div>
+                <div class="small">@string.Join(", ", shipment.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</div>
+                @if (!string.IsNullOrEmpty(shipment.TrackingUrl))
+                {
+                    <a href="@shipment.TrackingUrl" target="_blank" rel="noopener noreferrer" class="small">
+                        @T["Track with {0}: {1}", shipment.Carrier ?? T["the carrier"].Value, shipment.TrackingNumber]
+                    </a>
+                }
+                else if (!string.IsNullOrEmpty(shipment.TrackingNumber))
+                {
+                    <div class="small text-muted">@T["{0} tracking number: {1}", shipment.Carrier ?? T["Carrier"].Value, shipment.TrackingNumber]</div>
+                }
+                @if (!string.IsNullOrEmpty(shipment.TrackingStatus))
+                {
+                    <div class="small fw-semibold mt-1">@shipment.TrackingStatus</div>
+                }
+                @if (shipment.TrackingEvents is { Count: > 0 })
+                {
+                    <ul class="list-unstyled small text-muted mb-1 mt-1 border-start ps-2">
+                        @foreach (var tracked in shipment.TrackingEvents.Take(5))
+                        {
+                            <li>
+                                @((await LocalAsync(tracked.Utc)).ToString("g")) · @(tracked.Message ?? tracked.Status)
+                                @if (!string.IsNullOrEmpty(tracked.Location))
+                                {
+                                    <span>· @tracked.Location</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (isPickup && shipment.DeliveredUtc is { } pickedUp)
+                {
+                    <div class="small text-muted">@T["Picked up {0:D}", await LocalAsync(pickedUp)]</div>
+                }
+                else if (shipment.ShippedUtc is { } shipped)
+                {
+                    <div class="small text-muted">@(isPickup ? T["Ready since {0:D}", await LocalAsync(shipped)] : T["Shipped {0:D}", await LocalAsync(shipped)])</div>
+                }
+            </li>
+        }
+    </ul>
+</div>

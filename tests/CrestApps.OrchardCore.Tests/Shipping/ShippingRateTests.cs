@@ -102,6 +102,38 @@ public sealed class ShippingRateTests
     }
 
     [Fact]
+    public async Task LocalDelivery_IsOfferedOnlyToItsPostalCodes_AndIsFreeFromItsSubtotal()
+    {
+        var local = Method("Local delivery", ShippingConstants.Providers.LocalDelivery, new LocalDeliverySettings
+        {
+            PostalCodes = ["981*", "V6B 1A1"],
+            Amount = 8,
+            FreeFromSubtotal = 75,
+            MinimumSubtotal = 20,
+        });
+        var service = CreateService(Zone("North America", ["US", "CA"], local, Flat("Standard", 5)));
+
+        ShippingRateRequest At(string country, string postalCode, decimal subtotal)
+            => new()
+            {
+                Destination = new Address { Country = country, PostalCode = postalCode },
+                Currency = "USD",
+                Lines = [new() { Quantity = 1, UnitPrice = subtotal }],
+            };
+
+        Assert.Equal([("Local delivery", 8m), ("Standard", 5m)], (await RatesAsync(service, At("US", "98101", 30))).Select(rate => (rate.Name, rate.Amount)));
+        Assert.Equal(0m, (await RatesAsync(service, At("US", "98109-1234", 80)))[0].Amount);
+        Assert.Equal("Local delivery", (await RatesAsync(service, At("CA", "v6b1a1", 30)))[0].Name);
+        Assert.Equal(["Standard"], (await RatesAsync(service, At("US", "97201", 30))).Select(rate => rate.Name));
+        Assert.Equal(["Standard"], (await RatesAsync(service, At("US", "98101", 10))).Select(rate => rate.Name));
+        Assert.Equal(["Standard"], (await RatesAsync(service, At("US", null, 30))).Select(rate => rate.Name));
+    }
+
+    [Fact]
+    public void LocalDeliveryPostalCodes_AreReadOnePerLineOrCommaSeparated_WithoutABareWildcard()
+        => Assert.Equal(["981*", "98004", "V6B 1A1"], LocalDeliveryMethodDisplayDriver.ParsePostalCodes("981*, 98004\n*\r\nV6B 1A1\n981*"));
+
+    [Fact]
     public async Task ClassSurcharges_AddPerUnitOfTheClass()
     {
         var standard = Flat("Standard", 5);
@@ -203,6 +235,7 @@ public sealed class ShippingRateTests
             new FlatRateShippingProvider(new PassThroughStringLocalizer<FlatRateShippingProvider>()),
             new TableRateShippingProvider(new PassThroughStringLocalizer<TableRateShippingProvider>()),
             new FreeShippingProvider(new PassThroughStringLocalizer<FreeShippingProvider>()),
+            new LocalDeliveryShippingProvider(new PassThroughStringLocalizer<LocalDeliveryShippingProvider>()),
         ];
 
         return new DefaultShippingRateService(catalog.Object, providers, NullLogger<DefaultShippingRateService>.Instance);

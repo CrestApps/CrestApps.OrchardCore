@@ -18,9 +18,9 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.PayLater.Handlers;
 
 /// <summary>
-/// Turns a completed Pay Later checkout into outstanding <see cref="Transaction"/> ledger entries. Because
-/// Pay Later never moves money at a gateway, each succeeded Pay Later payment attempt leaves a balance the
-/// customer still owes; this handler records that balance so it can be reported, reminded about, and
+/// Turns a checkout completed with an offline method (Pay Later, Bank transfer or Cash on delivery) into
+/// outstanding <see cref="Transaction"/> ledger entries. Because an offline method never moves money at a gateway,
+/// each succeeded attempt leaves a balance the customer still owes; this handler records that balance so it can be reported, reminded about, and
 /// settled through the provider-agnostic Transactions module. Creation is idempotent per obligation so a
 /// checkout that completes more than once never duplicates the debt.
 /// </summary>
@@ -28,7 +28,8 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
 {
     private readonly IPaymentAttemptStore _paymentAttemptStore;
     private readonly ITransactionManager _transactionManager;
-    private readonly ISiteService _siteService;
+    private readonly IEnumerable<OfflineCheckoutPaymentProvider> _offlineProviders;
+    private readonly IEnumerable<ICheckoutReferenceDescriber> _referenceDescribers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -39,21 +40,24 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
     /// </summary>
     /// <param name="paymentAttemptStore">The payment attempt store used to find Pay Later commitments.</param>
     /// <param name="transactionManager">The transaction manager used to record outstanding balances.</param>
-    /// <param name="siteService">The site service used to read the Pay Later settings.</param>
+    /// <param name="offlineProviders">The offline payment methods, each of which says when its balance is due.</param>
+    /// <param name="referenceDescribers">Name what a checkout paid for, such as an order, to title its balance.</param>
     /// <param name="clock">The clock used to timestamp the created transactions.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PayLaterTransactionCheckoutHandler(
         IPaymentAttemptStore paymentAttemptStore,
         ITransactionManager transactionManager,
-        ISiteService siteService,
+        IEnumerable<OfflineCheckoutPaymentProvider> offlineProviders,
+        IEnumerable<ICheckoutReferenceDescriber> referenceDescribers,
         IClock clock,
         ILogger<PayLaterTransactionCheckoutHandler> logger,
         IStringLocalizer<PayLaterTransactionCheckoutHandler> stringLocalizer)
     {
         _paymentAttemptStore = paymentAttemptStore;
         _transactionManager = transactionManager;
-        _siteService = siteService;
+        _offlineProviders = offlineProviders;
+        _referenceDescribers = referenceDescribers;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -76,9 +80,11 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
 
         var attempts = await _paymentAttemptStore.GetBySessionAsync(session.SessionId);
 
+        var offlineProviders = _offlineProviders.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase);
         var payLaterAttempts = attempts
             .Where(attempt =>
-                string.Equals(attempt.ProviderKey, PayLaterCheckoutPaymentProvider.ProcessorKey, StringComparison.OrdinalIgnoreCase) &&
+                attempt.ProviderKey is not null &&
+                offlineProviders.ContainsKey(attempt.ProviderKey) &&
                 attempt.State == PaymentAttemptState.Succeeded)
             .ToArray();
 
@@ -87,16 +93,16 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
-        var settings = await _siteService.GetSettingsAsync<PayLaterSettings>();
         var now = _clock.UtcNow;
+
+        // An order's balance is titled after the order, such as "Order 261018-XTKM9Y", rather than its first product.
+        var referenceTitle = string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal)
+            ? await DescribeReferenceAsync(session)
+            : null;
 
         // The invoice is what says which obligations recur and on what cycle. Without it a recurring Pay
         // Later commitment would be recorded as a single debt and never bill again.
         session.TryGet<CheckoutInvoice>(out var invoice);
-
-        DateTime? dueUtc = settings.NetTermDays > 0
-            ? now.AddDays(settings.NetTermDays)
-            : null;
 
         // An authenticated buyer owns the debt by user id. A guest buyer has no user account, so the debt is
         // owned by a stable, tenant-scoped guest customer id derived from the checkout session id. Deriving
@@ -132,12 +138,14 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
                 continue;
             }
 
-            var title = ResolveTitle(session, attempt);
+            var provider = offlineProviders[attempt.ProviderKey];
+            var dueUtc = await provider.GetDueUtcAsync(now);
+            var title = referenceTitle ?? ResolveTitle(session, attempt);
 
             var transaction = await _transactionManager.NewAsync();
 
             transaction.Title = title;
-            transaction.Source = PayLaterCheckoutPaymentProvider.ProcessorKey;
+            transaction.Source = provider.Key;
             transaction.OwnerId = ownerId;
             transaction.OwnerKind = ownerKind;
 
@@ -169,14 +177,14 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             transaction.CreatedUtc = now;
             transaction.UpdatedUtc = now;
             transaction.DueUtc = deferred
-                ? (settings.NetTermDays > 0 ? recurrence.PeriodStartUtc.AddDays(settings.NetTermDays) : recurrence.PeriodStartUtc)
+                ? (dueUtc is { } due ? recurrence.PeriodStartUtc + (due - now) : recurrence.PeriodStartUtc)
                 : dueUtc;
             transaction.Recurrence = recurrence;
             transaction.Events.Add(new TransactionEvent
             {
                 CreatedUtc = now,
                 Type = TransactionEventType.Created,
-                Message = S["An outstanding Pay Later balance was recorded from checkout session '{0}'.", session.SessionId].Value,
+                Message = S["An outstanding {0} balance was recorded from checkout session '{1}'.", provider.DisplayName, session.SessionId].Value,
             });
 
             await _transactionManager.CreateAsync(transaction);
@@ -227,6 +235,24 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             recurrence.PeriodEndUtc = recurrence.Advance(periodStart);
 
             return recurrence;
+        }
+
+        return null;
+    }
+
+    private async Task<string> DescribeReferenceAsync(CheckoutSession session)
+    {
+        if (string.IsNullOrEmpty(session.ReferenceId))
+        {
+            return null;
+        }
+
+        foreach (var describer in _referenceDescribers)
+        {
+            if (await describer.DescribeAsync(session.ReferenceType, session.ReferenceId) is { Text.Length: > 0 } description)
+            {
+                return description.Text;
+            }
         }
 
         return null;

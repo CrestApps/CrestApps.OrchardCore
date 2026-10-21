@@ -1,0 +1,80 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model OrderDetailViewModel
+
+@{
+    var order = Model.Order;
+    var money = Model.Money;
+    string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
+    var canRefund = money is not null && money.Refundable > 0;
+    var canCancel = order.Status != OrderStatus.Canceled;
+}
+
+@if (canRefund || canCancel || Model.CanResendConfirmation)
+{
+    <div class="card mb-4">
+        <div class="card-header">@T["Manage"]</div>
+        <div class="card-body">
+            @if (money is not null && money.Outstanding > 0)
+            {
+                <p class="small text-muted">@T["{0} is still owed for this order.", Format(money.Outstanding)]</p>
+            }
+
+            @if (canRefund)
+            {
+                <form asp-action="Refund" asp-route-orderId="@order.ItemId" method="post" class="mb-4">
+                    <h6>@T["Refund"]</h6>
+                    <div class="mb-2">
+                        <label class="form-label" for="refund-amount">@T["Amount"]</label>
+                        <input id="refund-amount" name="Amount" type="number" step="0.01" min="0.01" max="@money.Refundable.ToString(System.Globalization.CultureInfo.InvariantCulture)" value="@money.Refundable.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" />
+                        <span class="hint">@T["Up to {0} can still be refunded.", Format(money.Refundable)]</span>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="refund-reason">@T["Reason"]</label>
+                        <input id="refund-reason" name="Reason" class="form-control" maxlength="250" />
+                        <span class="hint">@T["Optional. Kept with the refund and on the order's notes."]</span>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input id="refund-restock" name="Restock" type="checkbox" value="true" class="form-check-input" />
+                        <label class="form-check-label" for="refund-restock">@T["Put the items back in stock"]</label>
+                        <span class="hint dashed">@T["Only when everything is refunded: after a partial refund the customer keeps the goods."]</span>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">@T["Refund"]</button>
+                </form>
+            }
+
+            @if (canCancel)
+            {
+                <form asp-action="Cancel" asp-route-orderId="@order.ItemId" method="post" class="mb-4" onsubmit="return confirm('@T["Cancel this order? This can't be undone."]');">
+                    <h6>@T["Cancel the order"]</h6>
+                    <div class="mb-2">
+                        <label class="form-label" for="cancel-note">@T["Why"]</label>
+                        <input id="cancel-note" name="Note" class="form-control" maxlength="250" />
+                    </div>
+                    @if (canRefund)
+                    {
+                        <div class="form-check mb-2">
+                            <input id="cancel-refund" name="Refund" type="checkbox" value="true" checked class="form-check-input" />
+                            <label class="form-check-label" for="cancel-refund">@T["Refund everything paid ({0})", Format(money.Refundable)]</label>
+                        </div>
+                    }
+                    @if (order.Status == OrderStatus.Paid)
+                    {
+                        <div class="form-check mb-3">
+                            <input id="cancel-restock" name="Restock" type="checkbox" value="true" checked class="form-check-input" />
+                            <label class="form-check-label" for="cancel-restock">@T["Put the items back in stock"]</label>
+                        </div>
+                    }
+                    <button type="submit" class="btn btn-outline-danger">@T["Cancel order"]</button>
+                </form>
+            }
+
+            @if (Model.CanResendConfirmation)
+            {
+                <form asp-action="ResendConfirmation" asp-route-orderId="@order.ItemId" method="post">
+                    <button type="submit" class="btn btn-outline-secondary">@T["Send the confirmation again"]</button>
+                    <span class="hint d-block">@T["To {0}.", order.CustomerEmail]</span>
+                </form>
+            }
+        </div>
+    </div>
+}

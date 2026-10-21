@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Orders.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<OrderCanceledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ban" aria-hidden="true"></i>
+    @T["Order Canceled"]
+</h4>
+<p>@T["Starts when an order is canceled, with why."]</p>

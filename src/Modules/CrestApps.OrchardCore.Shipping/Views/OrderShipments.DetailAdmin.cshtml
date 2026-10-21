@@ -1,0 +1,222 @@
+@model OrderShipmentsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var carriersId = "shipment-carriers-" + Model.Order.ItemId;
+
+    // The buyer picks the order up: no carrier and no tracking, and "shipped" means ready to collect.
+    var isPickup = Model.Order.Shipping?.IsPickup == true;
+    var statusData = new ViewDataDictionary(ViewData) { ["IsPickup"] = isPickup };
+}
+
+<div class="card mt-4">
+    <div class="card-header">@(isPickup ? T["Pickup at {0}", Model.Order.ShippingAddress?.Name ?? T["the store"].Value] : T["Shipments"])</div>
+
+    @if (Model.Shipments.Count == 0)
+    {
+        <div class="card-body text-muted small">@(isPickup ? T["Nothing has been set aside for pickup yet."] : T["Nothing has been shipped yet."])</div>
+    }
+
+    <ul class="list-group list-group-flush">
+        @foreach (var shipment in Model.Shipments)
+        {
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <div class="fw-semibold">
+                            @(isPickup ? T["Pickup {0}", shipment.Number] : T["Shipment {0}", shipment.Number])
+                            @await Html.PartialAsync("_ShipmentStatus", shipment.Status, statusData)
+                        </div>
+                        <div class="small">
+                            @string.Join(", ", shipment.Lines.Select(line => $"{line.Quantity} × {line.Title}"))
+                        </div>
+                        @if (!string.IsNullOrEmpty(shipment.Carrier) || !string.IsNullOrEmpty(shipment.TrackingNumber))
+                        {
+                            <div class="small text-muted">
+                                @shipment.Carrier
+                                @if (!string.IsNullOrEmpty(shipment.TrackingNumber))
+                                {
+                                    @if (!string.IsNullOrEmpty(shipment.TrackingUrl))
+                                    {
+                                        <a href="@shipment.TrackingUrl" target="_blank" rel="noopener noreferrer">@shipment.TrackingNumber</a>
+                                    }
+                                    else
+                                    {
+                                        <span>@shipment.TrackingNumber</span>
+                                    }
+                                }
+                            </div>
+                        }
+                        <div class="small text-muted">
+                            @if (shipment.DeliveredUtc is { } delivered)
+                            {
+                                @(isPickup ? T["Picked up {0:g}", await LocalAsync(delivered)] : T["Delivered {0:g}", await LocalAsync(delivered)])
+                            }
+                            else if (shipment.ShippedUtc is { } shipped)
+                            {
+                                @(isPickup ? T["Ready since {0:g}", await LocalAsync(shipped)] : T["Shipped {0:g}", await LocalAsync(shipped)])
+                            }
+                            @if (shipment.ShippedEmailSentUtc is not null)
+                            {
+                                <span>· @T["Buyer emailed"]</span>
+                            }
+                            @if (!string.IsNullOrEmpty(shipment.Note))
+                            {
+                                <span>· @shipment.Note</span>
+                            }
+                            @if (!string.IsNullOrEmpty(shipment.TrackingStatus))
+                            {
+                                <span>· @shipment.TrackingStatus</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="text-nowrap d-flex gap-1">
+                        @* The shipment's packing slip: its lines and number, printed from the order. *@
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="@Url.Action("PackingSlip", "OrdersAdmin", new { area = "CrestApps.OrchardCore.Orders", orderId = Model.Order.ItemId, shipment = shipment.Number, lines = string.Join(",", shipment.Lines.Select(line => line.LineId + ":" + line.Quantity)) })"
+                           title="@T["Packing slip"]">
+                            <i class="fa-solid fa-box" aria-hidden="true"></i><span class="visually-hidden">@T["Packing slip for shipment {0}", shipment.Number]</span>
+                        </a>
+                        @if (!string.IsNullOrEmpty(shipment.LabelUrl))
+                        {
+                            <a class="btn btn-sm btn-outline-secondary" href="@shipment.LabelUrl" target="_blank" rel="noopener noreferrer" title="@T["Print label"]">
+                                <i class="fa-solid fa-print" aria-hidden="true"></i><span class="visually-hidden">@T["Print the label of shipment {0}", shipment.Number]</span>
+                            </a>
+                        }
+                        @if (shipment.Status == ShipmentStatus.Pending && Model.CanBuyLabels && !isPickup)
+                        {
+                            <a class="btn btn-sm btn-primary" asp-controller="ShipmentLabelsAdmin" asp-action="Label" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId">@T["Buy label"]</a>
+                        }
+                        @if (shipment.Status == ShipmentStatus.Shipped)
+                        {
+                            <form asp-controller="ShipmentsAdmin" asp-action="Deliver" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">
+                                <button type="submit" class="btn btn-sm btn-success">@(isPickup ? T["Picked up"] : T["Delivered"])</button>
+                            </form>
+                        }
+                        @if (shipment.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered)
+                        {
+                            <form asp-controller="ShipmentsAdmin" asp-action="Return" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">
+                                <button type="submit" class="btn btn-sm btn-secondary" data-title="@T["Returned"]" data-message="@T["Mark this shipment as returned? Its items can then be shipped again."]">@T["Returned"]</button>
+                            </form>
+                        }
+                        @if (shipment.Status == ShipmentStatus.Pending)
+                        {
+                            <form asp-controller="ShipmentsAdmin" asp-action="Delete" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">
+                                <button type="submit" class="btn btn-sm btn-danger">@T["Remove"]</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+
+                @if (shipment.Status == ShipmentStatus.Pending)
+                {
+                    <form asp-controller="ShipmentsAdmin" asp-action="Ship" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="row g-2 mt-2 align-items-end no-multisubmit">
+                        @if (!isPickup)
+                        {
+                        <div class="col-sm-4">
+                            <label class="form-label small mb-0" for="ship-carrier-@shipment.ItemId">@T["Carrier"]</label>
+                            <input id="ship-carrier-@shipment.ItemId" name="Ship.Carrier" value="@shipment.Carrier" list="@carriersId" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small mb-0" for="ship-tracking-@shipment.ItemId">@T["Tracking number"]</label>
+                            <input id="ship-tracking-@shipment.ItemId" name="Ship.TrackingNumber" value="@shipment.TrackingNumber" class="form-control form-control-sm" />
+                        </div>
+                        }
+                        <div class="col-sm-4">
+                            <button type="submit" class="btn btn-sm btn-primary">@(isPickup ? T["Ready for pickup"] : T["Mark shipped"])</button>
+                        </div>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+
+    @if (Model.Remaining.Count > 0)
+    {
+        <div class="card-body border-top">
+            <h6>@(isPickup ? T["Set aside for pickup"] : T["New shipment"])</h6>
+            <form asp-controller="ShipmentsAdmin" asp-action="Create" asp-area="@ShippingConstants.Features.Shipping" asp-route-orderId="@Model.Order.ItemId" method="post" class="no-multisubmit">
+                <table class="table table-sm align-middle mb-2">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Item"]</th>
+                            <th scope="col" class="text-end">@(isPickup ? T["Left"] : T["Left to ship"])</th>
+                            <th scope="col" class="text-end">@(isPickup ? T["Set aside"] : T["In this shipment"])</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Remaining.Count; i++)
+                        {
+                            var line = Model.Remaining[i];
+
+                            <tr>
+                                <td>
+                                    <label for="shipment-line-@i" class="mb-0">@line.Title</label>
+                                    @if (!string.IsNullOrEmpty(line.Sku))
+                                    {
+                                        <span class="small text-muted">@T["SKU {0}", line.Sku]</span>
+                                    }
+                                </td>
+                                <td class="text-end">@line.Remaining</td>
+                                <td class="text-end">
+                                    <input type="hidden" name="Shipment.Lines[@i].LineId" value="@line.LineId" />
+                                    <input id="shipment-line-@i" type="number" name="Shipment.Lines[@i].Quantity" value="@line.Remaining" min="0" max="@line.Remaining" class="form-control form-control-sm d-inline-block" style="width: 6rem;" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <div class="row g-2">
+                    @if (!isPickup)
+                    {
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-0" for="shipment-carrier-@Model.Order.ItemId">@T["Carrier"]</label>
+                        <input id="shipment-carrier-@Model.Order.ItemId" name="Shipment.Carrier" list="@carriersId" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-0" for="shipment-tracking-@Model.Order.ItemId">@T["Tracking number"]</label>
+                        <input id="shipment-tracking-@Model.Order.ItemId" name="Shipment.TrackingNumber" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-0" for="shipment-url-@Model.Order.ItemId">@T["Tracking link (optional)"]</label>
+                        <input id="shipment-url-@Model.Order.ItemId" name="Shipment.TrackingUrl" type="url" class="form-control form-control-sm" />
+                    </div>
+                    }
+                    <div class="col-12">
+                        <label class="form-label small mb-0" for="shipment-note-@Model.Order.ItemId">@T["Note for the store (optional)"]</label>
+                        <input id="shipment-note-@Model.Order.ItemId" name="Shipment.Note" class="form-control form-control-sm" />
+                    </div>
+                </div>
+
+                <div class="form-check mt-2">
+                    <input id="shipment-ship-@Model.Order.ItemId" type="checkbox" name="Shipment.Ship" value="true" checked class="form-check-input" />
+                    @if (isPickup)
+                    {
+                        <label for="shipment-ship-@Model.Order.ItemId" class="form-check-label">@T["It's ready: tell the buyer to come and get it"]</label>
+                        <span class="hint dashed">@T["Untick while the items are still being got ready, and mark them ready for pickup later."]</span>
+                    }
+                    else
+                    {
+                        <label for="shipment-ship-@Model.Order.ItemId" class="form-check-label">@T["It has left: mark it shipped now"]</label>
+                        <span class="hint dashed">@T["Untick to set the items aside while they're packed, and mark the shipment shipped later."]</span>
+                    }
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm mt-2">@(isPickup ? T["Set aside"] : T["Create shipment"])</button>
+            </form>
+        </div>
+    }
+
+    <datalist id="@carriersId">
+        @foreach (var carrier in Model.Carriers)
+        {
+            <option value="@carrier"></option>
+        }
+    </datalist>
+</div>

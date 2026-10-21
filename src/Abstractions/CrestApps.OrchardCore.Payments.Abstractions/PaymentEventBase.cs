@@ -55,6 +55,13 @@ public abstract class PaymentEventBase : IPaymentEvent
         => Task.CompletedTask;
 
     /// <summary>
+    /// Handles a change to a dispute. The default implementation does not perform any work.
+    /// </summary>
+    /// <param name="context">The context that describes the dispute.</param>
+    public virtual Task PaymentDisputeUpdatedAsync(PaymentDisputeUpdatedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
     /// Handles a failed recurring-cycle payment. The default implementation does not perform any work.
     /// </summary>
     /// <param name="context">The context that describes the failed cycle payment.</param>

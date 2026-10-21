@@ -1,0 +1,44 @@
+@model ShapeViewModel<Order>
+
+@*
+    How risky the gateway's fraud checks rated the order's payment. A risky one is a warning to look at the order
+    before shipping it; a normal one is a quiet line.
+*@
+
+@{
+    var risk = Model.Value.PaymentRisk;
+}
+
+@if (risk.IsElevated)
+{
+    <div class="alert @(risk.Level == "highest" ? "alert-danger" : "alert-warning") mb-3" role="alert">
+        <strong>
+            <span class="fa-solid fa-shield-halved me-1" aria-hidden="true"></span>
+            @(risk.Level == "highest" ? T["Highest fraud risk"] : T["Elevated fraud risk"])
+        </strong>
+        <div class="small mt-1">
+            @if (risk.Score is { } score)
+            {
+                @T["{0}'s fraud checks rated this payment {1} risk, a score of {2} out of 99.", risk.Gateway, risk.Level, score]
+            }
+            else
+            {
+                @T["{0}'s fraud checks rated this payment {1} risk.", risk.Gateway, risk.Level]
+            }
+            @T["Check the order, such as whether the billing and shipping addresses and the email fit together, before you ship it."]
+        </div>
+    </div>
+}
+else
+{
+    <p class="small text-body-secondary mb-3">
+        <span class="fa-solid fa-shield-halved me-1" aria-hidden="true"></span>@if (risk.Score is { } normalScore)
+        {
+            @T["{0}'s fraud checks rated this payment normal risk, a score of {1} out of 99.", risk.Gateway, normalScore]
+        }
+        else
+        {
+            @T["{0}'s fraud checks rated this payment normal risk.", risk.Gateway]
+        }
+    </p>
+}

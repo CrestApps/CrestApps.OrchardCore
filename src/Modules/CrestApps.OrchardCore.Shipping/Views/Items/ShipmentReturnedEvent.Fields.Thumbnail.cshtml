@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Shipping.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ShipmentReturnedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    @T["Shipment Returned"]
+</h4>
+<p>@T["Starts when a shipment comes back."]</p>

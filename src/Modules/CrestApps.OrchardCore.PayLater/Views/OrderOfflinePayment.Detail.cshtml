@@ -1,0 +1,44 @@
+@model OfflinePaymentMethodViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@*
+    How to pay an order placed with an offline method, on the buyer's order page, while something is still owed.
+*@
+
+@{
+    var due = Model.DueUtc is { } dueUtc ? (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(dueUtc, DateTimeKind.Utc))).DateTime : (DateTime?)null;
+}
+
+<div class="card border-warning-subtle mt-4 mb-4">
+    <div class="card-header bg-warning-subtle">@T["Payment due: {0}", Model.AmountDue]</div>
+    <div class="card-body">
+        @switch (Model.MethodKey)
+        {
+            case CrestApps.OrchardCore.PayLater.Services.BankTransferCheckoutPaymentProvider.ProcessorKey:
+                <p class="mb-2">@T["Transfer the amount to the account below, with the reference <strong class=\"font-monospace\">{0}</strong>.", Model.Reference]</p>
+                <div class="offline-payment-instructions border rounded p-2 bg-body-tertiary">@Model.Instructions</div>
+                break;
+            case CrestApps.OrchardCore.PayLater.Services.CashOnDeliveryCheckoutPaymentProvider.ProcessorKey:
+                <p class="mb-0">@T["Pay when your order is delivered."]</p>
+                if (!string.IsNullOrWhiteSpace(Model.Instructions))
+                {
+                    <p class="mb-0 mt-2 small text-body-secondary offline-payment-instructions">@Model.Instructions</p>
+                }
+                break;
+            default:
+                <p class="mb-0">@T["You chose {0}. You'll find the balance under Balances and invoices in your account, where you can pay it.", Model.MethodName]</p>
+                break;
+        }
+        @if (due.HasValue)
+        {
+            <p class="mt-3 mb-0 small text-body-secondary">@T["Due by {0:D}.", due.Value]</p>
+        }
+    </div>
+</div>
+
+<style at="Head">
+    .offline-payment-instructions {
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+    }
+</style>

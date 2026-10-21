@@ -680,7 +680,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services
     }
     public sealed class EmailMessagingChannel : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannel
     {
-        public EmailMessagingChannel(System.Lazy<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailDispatcher> dispatcher, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailMessagingChannel> stringLocalizer) { }
+        public EmailMessagingChannel(System.Lazy<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailDispatcher> dispatcher, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailMessagingChannel> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods) { }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingChannelCapabilities Capabilities { get; }
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public string IconCssClass { get; }

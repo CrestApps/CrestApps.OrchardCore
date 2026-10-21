@@ -86,6 +86,8 @@ public sealed class CheckoutInvoiceBuilder
                     TaxCategoryCode = billingItem.TaxCategoryCode,
                     TaxClassificationCode = billingItem.TaxClassificationCode,
                     TaxableKind = billingItem.TaxableKind,
+                    ProductId = billingItem.ProductId,
+                    CategoryIds = billingItem.CategoryIds,
                 };
 
                 if (billingItem.Plan == null)

@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CheckoutSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Layout">
+    <label asp-for="Layout" class="ocat-label">@T["Checkout layout"]</label>
+    <div class="ocat-end">
+        <select asp-for="Layout" class="form-select">
+            <option value="@CheckoutLayout.Steps">@T["A page per step"]</option>
+            <option value="@CheckoutLayout.OnePage">@T["One page"]</option>
+        </select>
+        <span class="hint">@T["A page per step shows a progress bar and asks for one thing at a time. One page shows every step together: the buyer fills in their details, and payment appears below them on the same page once they are complete."]</span>
+    </div>
+</div>

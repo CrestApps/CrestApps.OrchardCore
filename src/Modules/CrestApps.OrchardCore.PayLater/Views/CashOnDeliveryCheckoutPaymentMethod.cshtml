@@ -1,0 +1,19 @@
+@model OfflinePaymentMethodViewModel
+
+<div class="d-flex align-items-start gap-3">
+    <i class="fa-solid fa-money-bill-wave fa-lg text-body-secondary mt-1" aria-hidden="true"></i>
+    <div>
+        <p class="mb-1">@T["Your order is placed now, and you pay when it's delivered."]</p>
+        @if (!string.IsNullOrWhiteSpace(Model.Instructions))
+        {
+            <div class="offline-payment-instructions small text-body-secondary">@Model.Instructions</div>
+        }
+    </div>
+</div>
+
+<style at="Head">
+    .offline-payment-instructions {
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+    }
+</style>

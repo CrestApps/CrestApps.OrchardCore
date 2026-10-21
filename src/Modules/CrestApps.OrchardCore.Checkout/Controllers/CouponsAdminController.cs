@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -37,7 +38,12 @@ public sealed class CouponsAdminController : Controller
     private const string _optionsSearch = "Options.Search";
     private const string _optionsStatus = "Options.Status";
 
+    private const int RecentUses = 25;
+
     private readonly ICouponStore _couponStore;
+    private readonly ICouponRedemptionService _redemptions;
+    private readonly IDisplayManager<Coupon> _couponDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
 
@@ -54,12 +60,18 @@ public sealed class CouponsAdminController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public CouponsAdminController(
         ICouponStore couponStore,
+        ICouponRedemptionService redemptions,
+        IDisplayManager<Coupon> couponDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IHtmlLocalizer<CouponsAdminController> htmlLocalizer,
         IStringLocalizer<CouponsAdminController> stringLocalizer)
     {
         _couponStore = couponStore;
+        _redemptions = redemptions;
+        _couponDisplayManager = couponDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -205,6 +217,7 @@ public sealed class CouponsAdminController : Controller
 
         await PopulateCurrenciesAsync(model);
         PopulateSources(model);
+        model.Editor = await _couponDisplayManager.BuildEditorAsync(new Coupon(), _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }
@@ -222,17 +235,22 @@ public sealed class CouponsAdminController : Controller
             return Forbid();
         }
 
+        var coupon = new Coupon { ItemId = IdGenerator.GenerateId() };
+
+        // What other modules add, such as the products the coupon is for, is read into the coupon first; the
+        // fields of this form are applied after, once everything is valid.
+        var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: true);
+
         await ValidateAsync(model, existingItemId: null);
 
         if (!ModelState.IsValid)
         {
             await PopulateCurrenciesAsync(model);
             PopulateSources(model);
+            model.Editor = editor;
 
             return View(model);
         }
-
-        var coupon = new Coupon { ItemId = IdGenerator.GenerateId() };
 
         Apply(model, coupon);
 
@@ -276,6 +294,8 @@ public sealed class CouponsAdminController : Controller
             EndsUtc = coupon.EndsUtc,
             MaxRedemptions = coupon.MaxRedemptions,
             MinimumAmount = coupon.MinimumAmount,
+            MaximumAmount = coupon.MaximumAmount,
+            MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
             RedemptionCount = coupon.RedemptionCount,
             Sources = string.Join(", ", coupon.Sources ?? []),
             ReferenceTypes = string.Join(", ", coupon.ReferenceTypes ?? []),
@@ -285,6 +305,8 @@ public sealed class CouponsAdminController : Controller
 
         await PopulateCurrenciesAsync(model);
         PopulateSources(model);
+        await PopulateUsesAsync(model, coupon);
+        model.Editor = await _couponDisplayManager.BuildEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -310,6 +332,8 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
+        var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
+
         await ValidateAsync(model, coupon.ItemId);
 
         if (!ModelState.IsValid)
@@ -319,6 +343,8 @@ public sealed class CouponsAdminController : Controller
 
             await PopulateCurrenciesAsync(model);
             PopulateSources(model);
+            await PopulateUsesAsync(model, coupon);
+            model.Editor = editor;
 
             return View(model);
         }
@@ -412,6 +438,52 @@ public sealed class CouponsAdminController : Controller
         {
             ModelState.AddModelError(nameof(model.MaxRedemptions), S["Leave the limit blank for unlimited, or enter a number greater than zero."]);
         }
+
+        if (model.MaxRedemptionsPerCustomer is <= 0)
+        {
+            ModelState.AddModelError(nameof(model.MaxRedemptionsPerCustomer), S["Leave the limit blank for no limit, or enter a number greater than zero."]);
+        }
+
+        if (model.MaximumAmount is <= 0m)
+        {
+            ModelState.AddModelError(nameof(model.MaximumAmount), S["Leave the maximum blank, or enter an amount greater than zero."]);
+        }
+        else if (model.MaximumAmount.HasValue && model.MinimumAmount.HasValue && model.MaximumAmount.Value < model.MinimumAmount.Value)
+        {
+            ModelState.AddModelError(nameof(model.MaximumAmount), S["The maximum amount can't be less than the minimum amount."]);
+        }
+    }
+
+    private async Task PopulateUsesAsync(CouponEditViewModel model, Coupon coupon)
+    {
+        model.Redemptions = await _redemptions.ListAsync(coupon.Code, RecentUses, HttpContext.RequestAborted);
+        model.HeldCount = await _redemptions.CountHeldAsync(coupon.Code, HttpContext.RequestAborted);
+
+        // What each use paid for, such as an order, reads by its number rather than its id when a module knows it.
+        var describers = HttpContext.RequestServices.GetServices<ICheckoutReferenceDescriber>().ToArray();
+        var references = new Dictionary<string, CheckoutReferenceDescription>(StringComparer.Ordinal);
+
+        foreach (var redemption in model.Redemptions.Where(redemption => !string.IsNullOrEmpty(redemption.ReferenceId)))
+        {
+            var key = redemption.ReferenceType + "|" + redemption.ReferenceId;
+
+            if (references.ContainsKey(key))
+            {
+                continue;
+            }
+
+            foreach (var describer in describers)
+            {
+                if (await describer.DescribeAsync(redemption.ReferenceType, redemption.ReferenceId, HttpContext.RequestAborted) is { } description)
+                {
+                    references[key] = description;
+
+                    break;
+                }
+            }
+        }
+
+        model.References = references;
     }
 
     // A typed code was easy to get wrong and a wrong one silently never matched a checkout, so the currencies the
@@ -488,12 +560,15 @@ public sealed class CouponsAdminController : Controller
         coupon.Percentage = model.Kind == CouponKind.Percentage ? model.Percentage : 0m;
         coupon.Amount = model.Kind == CouponKind.FixedAmount ? model.Amount : 0m;
         coupon.Currency = model.Kind == CouponKind.FixedAmount ? model.Currency?.Trim().ToUpperInvariant() : null;
-        coupon.Target = model.Target;
+        // Free shipping takes off shipping, whatever it was set to apply to before.
+        coupon.Target = model.Kind == CouponKind.FreeShipping ? DiscountTarget.OneTime : model.Target;
         coupon.IsEnabled = model.IsEnabled;
         coupon.StartsUtc = model.StartsUtc;
         coupon.EndsUtc = model.EndsUtc;
         coupon.MaxRedemptions = model.MaxRedemptions;
         coupon.MinimumAmount = model.MinimumAmount;
+        coupon.MaximumAmount = model.MaximumAmount;
+        coupon.MaxRedemptionsPerCustomer = model.MaxRedemptionsPerCustomer;
         coupon.Sources = SplitList(model.Sources);
         coupon.ReferenceTypes = SplitList(model.ReferenceTypes);
         coupon.CustomerId = TrimToNull(model.CustomerId);

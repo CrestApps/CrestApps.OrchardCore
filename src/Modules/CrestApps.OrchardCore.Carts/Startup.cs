@@ -45,7 +45,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ILoginFormEvent, CartLoginFormEvent>();
 
         services.AddContentPart<ProductPart>()
-            .UseDisplayDriver<AddToCartDisplayDriver>();
+            .UseDisplayDriver<AddToCartDisplayDriver>()
+            .UseDisplayDriver<GroupedProductsDisplayDriver>();
 
         services.AddDisplayDriver<Navbar, CartNavbarDisplayDriver>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CartResourceManagementOptionsConfiguration>();

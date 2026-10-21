@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Commerce
+@using OrchardCore.DisplayManagement
+@model IShape
+
+@*
+    The cards the buyer saved at checkout. Stripe keeps them; this page lists them and removes one.
+*@
+
+<zone Name="Title">
+    <breadcrumb name="AccountPaymentMethods" title="@T["Payment methods"]">
+        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
+    </breadcrumb>
+</zone>
+
+<div class="commerce-account row g-4 my-3">
+    <div class="col-lg-3">
+        @await DisplayAsync(await New.CommerceAccountNavigation())
+    </div>
+    <div class="col-lg-9">
+        <h1 class="h3 mb-3">@T["Payment methods"]</h1>
+
+        @await DisplayAsync(Model)
+    </div>
+</div>

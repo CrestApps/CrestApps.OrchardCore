@@ -1,0 +1,40 @@
+@model CouponItemLimitsViewModel
+
+<h5 class="mt-2">@T["Products and categories"]</h5>
+<p class="text-muted">@T["Optional. Leave both blank for a code that applies to everything in the order. Otherwise it takes something off only these products and the products in these categories, and only they count toward its minimum and maximum amounts."]</p>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label" for="@Html.IdFor(model => model.ProductIds)">@T["Only for products"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.ProductIds),
+            inputName = Html.NameFor(model => model.ProductIds),
+            endpoint = Model.ProductSearchEndpoint,
+            initialItemsJson = Model.InitialProductsJson,
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Choose products"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products match."].Value,
+            smallButton = false,
+        })
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label" for="@Html.IdFor(model => model.CategoryIds)">@T["Only for categories"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.CategoryIds),
+            inputName = Html.NameFor(model => model.CategoryIds),
+            endpoint = Model.CategorySearchEndpoint,
+            initialItemsJson = Model.InitialCategoriesJson,
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Choose categories"].Value,
+            searchPlaceholder = T["Search categories"].Value,
+            emptyResultsText = T["No categories match."].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Categories are the terms of your taxonomies, such as a product type's category field."]</span>
+    </div>
+</div>

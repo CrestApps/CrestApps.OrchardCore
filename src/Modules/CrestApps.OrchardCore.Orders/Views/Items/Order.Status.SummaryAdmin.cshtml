@@ -1,11 +1,21 @@
 @model ShapeViewModel<Order>
+@inject CrestApps.OrchardCore.Orders.Services.OrderOperationsService Operations
 
 @switch (Model.Value.Status)
 {
+    case OrderStatus.Paid when await Operations.IsOwedAsync(Model.Value):
+        @* Placed and paid offline, such as by bank transfer: the money hasn't arrived yet. *@
+        <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-building-columns text-secondary me-1" aria-hidden="true"></i>@T["Payment due"]
+        </span>
+        @await Html.PartialAsync("_OrderFulfillment", Model.Value.FulfillmentStatus)
+        break;
     case OrderStatus.Paid:
         <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
             <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["Paid"]
         </span>
+        @await Html.PartialAsync("_OrderFulfillment", Model.Value.FulfillmentStatus)
+        @await Html.PartialAsync("_OrderRefundStatus", Model.Value.RefundStatus)
         break;
     case OrderStatus.AwaitingPayment:
         <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">

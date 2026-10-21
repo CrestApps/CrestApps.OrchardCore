@@ -112,6 +112,62 @@ public sealed class CartServiceTests
     }
 
     [Fact]
+    public async Task AnAddOn_AddsItsPriceToEachUnit_AndKeepsWhatWasTyped()
+    {
+        WithAddOns(_harness.AddProduct("mug", unitPrice: 12m));
+
+        var service = _harness.NewRequest();
+        var result = await service.AddAsync("mug", null, null, 2, new Dictionary<string, string> { ["name"] = "  Sam  ", ["wrap"] = "true", ["unknown"] = "x" }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        var line = Assert.Single(result.Cart.Lines);
+        Assert.Equal(15.5m, line.AddedUnitPrice);
+        Assert.Equal(new Dictionary<string, string> { ["name"] = "Sam", ["wrap"] = "true" }, line.AddOns);
+
+        var next = _harness.NextRequest();
+        var pricing = await next.PriceAsync(await next.GetCurrentAsync(TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+        var priced = Assert.Single(pricing.Lines);
+        Assert.Equal(15.5m, priced.UnitPrice);
+        Assert.Equal(31m, priced.LineTotal);
+        Assert.False(priced.PriceChanged);
+        Assert.Collection(priced.AddOns,
+            name => Assert.Equal(("Name", "Sam", 1m), (name.Label, name.Value, name.Price)),
+            wrap => Assert.Equal(("Gift wrap", (string)null, 2.5m), (wrap.Label, wrap.Value, wrap.Price)));
+    }
+
+    [Fact]
+    public async Task ARequiredAddOn_LeftOut_IsRefused()
+    {
+        WithAddOns(_harness.AddProduct("mug", unitPrice: 12m));
+
+        var result = await _harness.NewRequest().AddAsync("mug", null, null, 1, new Dictionary<string, string> { ["wrap"] = "true", ["name"] = "   " }, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Name", result.Message.Value);
+    }
+
+    [Fact]
+    public async Task TheSameProductWithOtherAddOns_IsAnotherLine()
+    {
+        WithAddOns(_harness.AddProduct("mug", unitPrice: 12m));
+
+        await _harness.NewRequest().AddAsync("mug", null, null, 1, new Dictionary<string, string> { ["name"] = "Sam" }, TestContext.Current.CancellationToken);
+        await _harness.NextRequest().AddAsync("mug", null, null, 1, new Dictionary<string, string> { ["name"] = "Alex" }, TestContext.Current.CancellationToken);
+        var result = await _harness.NextRequest().AddAsync("mug", null, null, 2, new Dictionary<string, string> { ["name"] = "Sam" }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, result.Cart.Lines.Count);
+        Assert.Equal(3, result.Cart.Lines.Single(line => line.AddOns["name"] == "Sam").Quantity);
+    }
+
+    private static void WithAddOns(ContentItem item)
+        => item.Alter<ProductPart>(part => part.AddOns =
+        [
+            new ProductAddOn { AddOnId = "name", Label = "Name", Kind = ProductAddOnKind.Text, Price = 1m, Required = true },
+            new ProductAddOn { AddOnId = "wrap", Label = "Gift wrap", Kind = ProductAddOnKind.Checkbox, Price = 2.5m },
+        ]);
+
+    [Fact]
     public async Task APriceBoughtOnlyOnce_CannotBeAddedTwice()
     {
         _harness.AddProduct("poster", unitPrice: 30m, price: new ProductPrice { PriceId = "p1", Amount = 30m, Currency = "USD", Kind = PriceKind.OneTime, AllowQuantity = false });

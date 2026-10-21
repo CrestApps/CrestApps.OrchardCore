@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Orders.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -21,5 +22,19 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
         "OrchardCore.Users",
         AddressConstants.Feature.ModuleId,
+    ]
+)]
+
+[assembly: Feature(
+    Id = CustomersConstants.Features.CheckoutDetails,
+    Name = "Checkout details",
+    Description = "Asks buyers for the store's own details at checkout, such as a gift message or a delivery note. Add the fields to the Checkout details content type; what the buyer enters is kept on the order.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CustomersConstants.Features.Customers,
+        OrderConstants.Features.Orders,
+        "OrchardCore.Contents",
+        "OrchardCore.ContentTypes",
     ]
 )]

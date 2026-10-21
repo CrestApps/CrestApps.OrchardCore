@@ -232,6 +232,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
 
         services
+            .AddContactMethods()
             .AddIndexProvider<OmnichannelContactIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
 

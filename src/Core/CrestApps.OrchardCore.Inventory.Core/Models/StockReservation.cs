@@ -16,6 +16,16 @@ public sealed class StockReservation : CatalogItem
 
     public int Quantity { get; set; }
 
+    /// <summary>
+    /// Gets or sets how many of the units sold came back into stock, from returns of some of them.
+    /// </summary>
+    public int ReturnedQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the location the units are held at, or <see langword="null"/> for the default location.
+    /// </summary>
+    public string LocationId { get; set; }
+
     public StockReservationStatus Status { get; set; }
 
     /// <summary>
@@ -49,4 +59,9 @@ public enum StockReservationStatus
     /// The hold ended without a sale.
     /// </summary>
     Released = 2,
+
+    /// <summary>
+    /// The units were sold, then put back into stock, such as when the order was refunded.
+    /// </summary>
+    Returned = 3,
 }

@@ -182,6 +182,7 @@ public sealed class CheckoutStartup : StartupBase
     {
         // Scoped so the one-time and recurring obligations of one begin resolve the same Stripe customer.
         services.AddScoped<IStripeCheckoutCustomerResolver, StripeCheckoutCustomerResolver>();
+        services.AddScoped<IStripeWalletService, StripeWalletService>();
         services.AddScoped<StripeCheckoutPaymentProvider>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
@@ -215,4 +216,15 @@ public sealed class StripeWorkflowsStartup : StartupBase
         services.AddActivity<StripeDisputeCreatedEvent, StripeEventActivityDisplayDriver<StripeDisputeCreatedEvent>>();
         services.AddActivity<StripeRequestFailedEvent, StripeEventActivityDisplayDriver<StripeRequestFailedEvent>>();
     }
+}
+
+/// <summary>
+/// The buyer's saved cards in their storefront account, when the Commerce account is there.
+/// </summary>
+[RequireFeatures(CheckoutConstants.Features.Area, CrestApps.OrchardCore.Commerce.CommerceConstants.Features.Area)]
+public sealed class CommerceAccountStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddNavigationProvider<Navigation.StripeAccountMenu>();
 }

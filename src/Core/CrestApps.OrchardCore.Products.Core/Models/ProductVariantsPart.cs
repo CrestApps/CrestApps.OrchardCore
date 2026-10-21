@@ -73,6 +73,12 @@ public sealed class ProductVariant
     public decimal? CompareAtPrice { get; set; }
 
     /// <summary>
+    /// Gets or sets the variant's sale price, during the product's sale. A variant without one is on sale at the
+    /// product's sale price when it sells at the product's price, and not on sale when it has a price of its own.
+    /// </summary>
+    public decimal? SalePrice { get; set; }
+
+    /// <summary>
     /// Gets or sets the path of the variant's image in the media library.
     /// </summary>
     public string ImagePath { get; set; }

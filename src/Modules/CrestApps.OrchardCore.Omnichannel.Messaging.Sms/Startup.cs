@@ -43,6 +43,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactMethods();
         services.AddMessagingChannel<SmsMessagingChannel>();
 
         // The built-in SMS service sends through one tenant-default provider only, so a tenant whose numbers span

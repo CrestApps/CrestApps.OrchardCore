@@ -46,6 +46,151 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="SalePrice">
+    <label asp-for="SalePrice" class="ocat-label">@T["Sale price"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="0.01" asp-for="SalePrice" class="form-control" />
+        <span class="hint">@T["Optional. The product sells at this price during the sale below, with the price struck through next to it. Leave the dates empty for a sale that runs until you remove the sale price."]</span>
+        <span asp-validation-for="SalePrice"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SaleEnds">
+    <label class="ocat-label" asp-for="SaleStarts">@T["Sale runs"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-sm-6">
+                <label asp-for="SaleStarts" class="form-label small text-body-secondary mb-1">@T["From"]</label>
+                <input type="datetime-local" asp-for="SaleStarts" class="form-control" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="SaleEnds" class="form-label small text-body-secondary mb-1">@T["Until"]</label>
+                <input type="datetime-local" asp-for="SaleEnds" class="form-control" />
+            </div>
+        </div>
+        <span class="hint">@T["In the site's time zone. Listings switch to and from the sale price within a minute of these times."]</span>
+        <span asp-validation-for="SaleEnds"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ExternalUrl">
+    <label asp-for="ExternalUrl" class="ocat-label">@T["Sold elsewhere"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-md-8">
+                <input type="url" asp-for="ExternalUrl" class="form-control" placeholder="https://" aria-label="@T["Where it's sold"]" />
+            </div>
+            <div class="col-md-4">
+                <input asp-for="ExternalButtonText" class="form-control" placeholder="@T["Buy now"]" aria-label="@T["Button label"]" />
+            </div>
+        </div>
+        <span class="hint">@T["Optional, for an external or affiliate product. It isn't sold here: instead of Add to cart, its card and page link to this address, with this label."]</span>
+        <span asp-validation-for="ExternalUrl"></span>
+    </div>
+</div>
+
+<h5 class="mt-4">@T["Quantities and volume pricing"]</h5>
+
+<div class="ocat-wrapper" asp-validation-class-for="MinQuantity">
+    <label class="ocat-label" asp-for="MinQuantity">@T["Quantity"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-sm-4">
+                <label asp-for="MinQuantity" class="form-label small text-body-secondary mb-1">@T["At least"]</label>
+                <input type="number" min="1" step="1" asp-for="MinQuantity" class="form-control" placeholder="1" />
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="MaxQuantity" class="form-label small text-body-secondary mb-1">@T["At most"]</label>
+                <input type="number" min="1" step="1" asp-for="MaxQuantity" class="form-control" />
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="QuantityStep" class="form-label small text-body-secondary mb-1">@T["In packs of"]</label>
+                <input type="number" min="1" step="1" asp-for="QuantityStep" class="form-control" placeholder="1" />
+            </div>
+        </div>
+        <span class="hint">@T["Optional. How many a buyer can put in their cart: at least so many, at most so many, and in packs, such as 6 for a six-pack."]</span>
+        <span asp-validation-for="MinQuantity"></span>
+        <span asp-validation-for="MaxQuantity"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PriceTiers">
+    <span class="ocat-label">@T["Volume discounts"]</span>
+    <div class="ocat-end">
+        <div class="row g-2 mb-1 small text-body-secondary">
+            <div class="col-6">@T["From quantity"]</div>
+            <div class="col-6">@T["% off each"]</div>
+        </div>
+        @for (var i = 0; i < Model.PriceTiers.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-6"><input type="number" min="2" step="1" asp-for="PriceTiers[i].MinQuantity" class="form-control" aria-label="@T["From quantity, row {0}", i + 1]" /></div>
+                <div class="col-6"><input type="number" min="0" max="100" step="0.01" asp-for="PriceTiers[i].PercentOff" class="form-control" aria-label="@T["Percentage off, row {0}", i + 1]" /></div>
+            </div>
+        }
+        <span class="hint">@T["Optional. Buyers who put at least this many in their cart pay this much less for each, such as 10% off from 5. The best one they reach applies."]</span>
+        <span asp-validation-for="PriceTiers"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RoleDiscounts">
+    <span class="ocat-label">@T["Role discounts"]</span>
+    <div class="ocat-end">
+        <div class="row g-2 mb-1 small text-body-secondary">
+            <div class="col-6">@T["Role"]</div>
+            <div class="col-6">@T["% off each"]</div>
+        </div>
+        @for (var i = 0; i < Model.RoleDiscounts.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <select asp-for="RoleDiscounts[i].Role" asp-items="Model.Roles" class="form-select" aria-label="@T["Role, row {0}", i + 1]">
+                        <option value="">@T["Choose a role"]</option>
+                    </select>
+                </div>
+                <div class="col-6"><input type="number" min="0" max="100" step="0.01" asp-for="RoleDiscounts[i].PercentOff" class="form-control" aria-label="@T["Percentage off, row {0}", i + 1]" /></div>
+            </div>
+        }
+        <span class="hint">@T["Optional. Signed-in buyers in the role pay this much less, such as 20% off for Wholesale. A buyer gets the best of their role and volume discounts, not both."]</span>
+        <span asp-validation-for="RoleDiscounts"></span>
+    </div>
+</div>
+
+<h5 class="mt-4">@T["Personalization"]</h5>
+
+<div class="ocat-wrapper" asp-validation-class-for="AddOns">
+    <span class="ocat-label">@T["Add-ons"]</span>
+    <div class="ocat-end">
+        <div class="row g-2 mb-1 small text-body-secondary d-none d-md-flex">
+            <div class="col-md-5">@T["Label"]</div>
+            <div class="col-md-3">@T["Buyer"]</div>
+            <div class="col-md-2">@T["Extra price"]</div>
+        </div>
+        @for (var i = 0; i < Model.AddOns.Count; i++)
+        {
+            <div class="row g-2 mb-2 align-items-center">
+                <input type="hidden" asp-for="AddOns[i].AddOnId" />
+                <div class="col-12 col-md-5"><input asp-for="AddOns[i].Label" class="form-control" maxlength="80" placeholder="@T["Such as Engraving or Gift wrap"]" aria-label="@T["Label, row {0}", i + 1]" /></div>
+                <div class="col-6 col-md-3">
+                    <select asp-for="AddOns[i].Kind" class="form-select" aria-label="@T["What the buyer does, row {0}", i + 1]">
+                        <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Text">@T["Types a text"]</option>
+                        <option value="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Checkbox">@T["Ticks a box"]</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2"><input type="number" min="0" step="0.01" asp-for="AddOns[i].Price" class="form-control" placeholder="0.00" aria-label="@T["Extra price, row {0}", i + 1]" /></div>
+                <div class="col-12 col-md-2">
+                    <div class="form-check">
+                        <input type="checkbox" asp-for="AddOns[i].Required" class="form-check-input" />
+                        <label asp-for="AddOns[i].Required" class="form-check-label">@T["Required"]</label>
+                    </div>
+                </div>
+            </div>
+        }
+        <span class="hint">@T["Optional. Personal touches a buyer chooses on the product's page, such as a name to engrave or gift wrap, each adding its price to every unit. Clear a label to remove one."]</span>
+        <span asp-validation-for="AddOns"></span>
+    </div>
+</div>
+
 @if (Model.ShowPriceDisplay)
 {
     <div class="ocat-wrapper" asp-validation-class-for="PriceDisplay">

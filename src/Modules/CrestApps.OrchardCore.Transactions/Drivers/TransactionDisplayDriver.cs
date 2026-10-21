@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.Localization;
 using CrestApps.OrchardCore.Users;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,17 +18,22 @@ public sealed class TransactionDisplayDriver : DisplayDriver<Transaction>
     private readonly IUserService _userService;
     private readonly IDisplayNameProvider _displayNameProvider;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionDisplayDriver"/> class.
     /// </summary>
     /// <param name="userService">The user service used to resolve transaction owners.</param>
     /// <param name="displayNameProvider">The display name provider used to describe owners.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionDisplayDriver(
         IUserService userService,
-        IDisplayNameProvider displayNameProvider)
+        IDisplayNameProvider displayNameProvider,
+        IStringLocalizer<TransactionDisplayDriver> stringLocalizer)
     {
         _userService = userService;
         _displayNameProvider = displayNameProvider;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -45,7 +52,7 @@ public sealed class TransactionDisplayDriver : DisplayDriver<Transaction>
             rowShape.Attributes["data-filter-value"] = transaction.Title?.ToLowerInvariant() ?? string.Empty;
         }
 
-        var ownerName = await ResolveOwnerNameAsync(transaction.OwnerId);
+        var ownerName = await ResolveOwnerNameAsync(transaction.OwnerId) ?? TransactionOwnerNames.GuestName(transaction, S["{0} (guest)"].Value);
 
         return Combine(
             View("Transaction_Fields_SummaryAdmin", transaction)
@@ -54,7 +61,12 @@ public sealed class TransactionDisplayDriver : DisplayDriver<Transaction>
             View("Transaction_Status_SummaryAdmin", transaction)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:5"),
-            Dynamic("Transaction_Owner_SummaryAdmin", (shape, name) => shape.OwnerName = name, ownerName)
+            Dynamic("Transaction_Owner_SummaryAdmin", (shape, name) =>
+            {
+                shape.OwnerName = name;
+
+                return ValueTask.CompletedTask;
+            }, ownerName)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Owner:5"),
             View("Transaction_Source_SummaryAdmin", transaction)

@@ -47,6 +47,7 @@ public sealed class ProductListingService
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ProductFacetStyleOptions _facetStyles;
+    private readonly IEnumerable<IProductListingEntryProvider> _entryProviders;
 
     // Several shapes of one page read the same listing or product, and they render in separate passes (the
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
@@ -75,6 +76,7 @@ public sealed class ProductListingService
         IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IOptions<ProductFacetStyleOptions> facetStyles,
+        IEnumerable<IProductListingEntryProvider> entryProviders,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
         _attributeCatalog = attributeCatalog;
@@ -92,6 +94,7 @@ public sealed class ProductListingService
         _contentItemDisplayManager = contentItemDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _facetStyles = facetStyles.Value;
+        _entryProviders = entryProviders;
         S = stringLocalizer;
     }
 
@@ -174,6 +177,12 @@ public sealed class ProductListingService
             Kind = ProductFacetKind.Toggle,
         });
 
+        // What other modules add, such as a customer rating; a filter with no data hides itself.
+        foreach (var provider in _entryProviders)
+        {
+            facets.AddRange(provider.GetFacets().Where(facet => !string.IsNullOrEmpty(facet?.Key)));
+        }
+
         facets.Add(new ProductListingFacet
         {
             Key = "price",
@@ -216,6 +225,11 @@ public sealed class ProductListingService
             new() { Key = "price-desc", Label = S["Price: high to low"], AttributeKey = ProductAttributeKeys.Price, Descending = true },
             new() { Key = "name", Label = S["Name: A to Z"], AttributeKey = ProductAttributeKeys.Title },
         });
+
+        foreach (var provider in _entryProviders)
+        {
+            sorts.AddRange(provider.GetSorts().Where(sort => !string.IsNullOrEmpty(sort?.Key)));
+        }
 
         foreach (var attribute in attributes.Where(attribute => attribute.Settings.Sortable && IsSortable(attribute.Kind)))
         {
@@ -1030,6 +1044,19 @@ public sealed class ProductListingService
         return height > 0
             ? $"{url}?width={width}&height={height}&rmode=crop"
             : $"{url}?width={width}&rmode=max";
+    }
+
+    /// <summary>
+    /// Builds the listing cards of the products, in the order given, leaving out any that aren't published or listed.
+    /// </summary>
+    public async Task<IList<IShape>> BuildCardsAsync(IReadOnlyList<string> contentItemIds, ProductImageAspectRatio ratio = ProductImageAspectRatio.Square, bool withSpecifications = false)
+    {
+        var model = new ProductListingViewModel { ImageAspectRatio = GetAspectRatio(ratio) };
+        var attributes = withSpecifications ? await _attributeCatalog.GetAttributesAsync([]) : [];
+
+        await BuildProductsAsync(model, contentItemIds ?? [], attributes, ProductListingView.Grid, ratio);
+
+        return model.Products;
     }
 
     private async Task BuildProductsAsync(ProductListingViewModel model, IReadOnlyList<string> ids, IReadOnlyList<ProductAttributeDescriptor> attributes, ProductListingView view, ProductImageAspectRatio ratio)

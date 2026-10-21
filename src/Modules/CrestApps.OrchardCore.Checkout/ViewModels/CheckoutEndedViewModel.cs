@@ -2,9 +2,9 @@ namespace CrestApps.OrchardCore.Checkout.ViewModels;
 
 /// <summary>
 /// The model behind the page shown for a checkout that can no longer be paid, because it was canceled, expired or
-/// failed.
+/// failed. It is the model of the <c>CheckoutEnded</c> shape, so it stays unsealed for the shape's proxy.
 /// </summary>
-public sealed class CheckoutEndedViewModel
+public class CheckoutEndedViewModel
 {
     /// <summary>
     /// Gets or sets the checkout session id.

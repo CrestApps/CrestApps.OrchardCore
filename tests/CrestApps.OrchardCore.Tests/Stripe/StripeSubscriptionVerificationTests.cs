@@ -217,6 +217,7 @@ public sealed class StripeSubscriptionVerificationTests
             subscriptionService,
             Mock.Of<IStripeRefundService>(),
             new StripeCheckoutCustomerResolver(Mock.Of<IStripeCustomerService>()),
+            Mock.Of<IStripeWalletService>(),
             new InMemoryPaymentRefundStore(),
             new TestClock(DateTime.UtcNow),
             NullLogger<StripeCheckoutPaymentProvider>.Instance,

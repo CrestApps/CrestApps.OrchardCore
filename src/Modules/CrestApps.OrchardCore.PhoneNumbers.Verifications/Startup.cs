@@ -43,6 +43,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<PhoneNumberVerificationRecord, PhoneNumberVerificationRecordDisplayDriver>();
         services.AddNavigationProvider<PhoneNumberVerificationsAdminMenu>();
         services.AddPermissionProvider<PhoneNumberVerificationsPermissionProvider>();
+        services.AddContactMethods();
         services.AddScoped<IPhoneNumberVerificationQueueProcessor, PhoneNumberVerificationQueueProcessor>();
         services.AddSingleton<IPhoneNumberVerificationRequestDelayer, DefaultPhoneNumberVerificationRequestDelayer>();
 
@@ -183,6 +184,7 @@ public sealed class OmnichannelContactVerificationStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactMethods();
         services.AddScoped<IContentHandler, OmnichannelContactPhoneNumberVerificationHandler>();
     }
 }

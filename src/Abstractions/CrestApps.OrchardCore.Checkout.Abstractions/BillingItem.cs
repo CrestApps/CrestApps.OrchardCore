@@ -72,4 +72,16 @@ public sealed class BillingItem
     /// a physical good and a recurring one as a service.
     /// </summary>
     public TaxableItemKind? TaxableKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the product the item is for, such as its content item id, so a discount
+    /// limited to some products can find it.
+    /// </summary>
+    public string ProductId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the product is in, such as its taxonomy term ids, so a discount limited to some
+    /// categories can find it.
+    /// </summary>
+    public string[] CategoryIds { get; set; }
 }

@@ -31,6 +31,7 @@ A guest customer has no user. Customers builds no registration of its own; a gue
 | `UserId` | The Orchard Core user, or `null` for a guest. |
 | `DisplayName`, `FirstName`, `LastName` | How the store addresses the customer. `GetName()` returns the display name, then a business's company, then the person's name, then the email. |
 | `CompanyName`, `TaxId` | For a business, such as a VAT number. |
+| `IsTaxExempt`, `TaxExemptionReason` | A customer who pays no tax, such as a reseller, and why, such as a certificate number. A signed-in exempt customer pays no tax at checkout; see [Taxation at checkout](checkout#taxation). |
 | `Email`, `Phone` | For a customer with an account, `Email` is the account's email when the record was made. |
 | `AcceptsMarketing` | Whether the customer agreed to news and offers. Order and payment messages are always sent. |
 | `ExternalIds` | Ids at outside services, such as a payment provider's customer id, by service name. |
@@ -66,6 +67,19 @@ With Orders enabled, Customers adds a **Contact** step to every order's checkout
 - **The billing address** uses the Addresses module's `AddressEditor` under the step's prefix, without a recipient name (the buyer named above is the recipient) and with the buyer's phone. A signed-in customer can pick one of their saved addresses and ask for a new one to be saved.
 - **What it keeps:** the entries as `CustomerContactStep` in the session's saved steps, and a `CheckoutContactInfo` (name, email, phone, billing address) on the session. The order copies that contact and billing address when it is paid, and Pay Later puts the guest's name and email on its transaction, so receipts and reminders reach them.
 - **When the order is paid** (`CompletingAsync`, inside the completion's transaction): the order is linked to the signed-in buyer's customer, or to a new guest customer made with `ICustomerService.CreateGuestAsync`; each guest checkout makes its own, since an email typed at checkout proves nothing. A guest's billing address goes into their address book as the default billing address; a signed-in customer's new address goes in when they asked, never twice.
+
+## Checkout details
+
+The **Checkout details** feature (`CrestApps.OrchardCore.Customers.CheckoutDetails`, depends on Customers, Orders, Contents and Content Types) creates a `CheckoutDetails` content type with no fields. Its fields are the store's own checkout fields:
+
+- `CheckoutDetailsCheckoutFlowDisplayDriver` renders the type's editor on the **Contact** step with the `CheckoutDetails` prefix, through `IContentItemDisplayManager`, so every field validates as it does in the admin. A valid post stores the item's parts on `Order.CheckoutDetails` (a `JsonObject`).
+- `CheckoutDetailsCheckoutHandler` keeps the Contact step visible (`Conceal = false`) when the type has fields, after every handler has initialized the checkout.
+- `OrderCheckoutDetailsDisplayDriver` shows the values, each with its field's name, on the order's admin and customer pages (`OrderConstants.DisplayTypes.DetailAdmin` and `Detail`).
+- `Order.Anonymize` removes them.
+
+## Storefront account pages
+
+`account/details` (`AccountDetails`) and `account/addresses` (`AccountAddresses`, with `.../add`, `.../{addressId}` and `.../{addressId}/delete`) edit the signed-in buyer's customer record and address book on the storefront, through `CustomerAccountPages`, the same validation as **My Account**.
 
 ## Merging guests into an account
 

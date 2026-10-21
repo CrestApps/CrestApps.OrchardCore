@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using OrchardCore.ContentManagement.Metadata.Records;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -8,11 +9,28 @@ using OrchardCore.Flows.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
+/// <summary>
+/// Gives every contact type the <c>ContactMethods</c> bag its phone numbers and email addresses are kept in.
+/// </summary>
+/// <remarks>
+/// A type registered with a contact-methods provider of its own keeps them elsewhere, so it is not given the bag.
+/// A bag such a type already has is left exactly as it is, so no stored contact method is ever lost by registering
+/// a provider.
+/// </remarks>
 internal sealed class OmnichannelContactDefinitionHandler : IContentDefinitionHandler
 {
+    private readonly IContactMethodsAccessor _contactMethods;
+
+    public OmnichannelContactDefinitionHandler(IContactMethodsAccessor contactMethods)
+    {
+        _contactMethods = contactMethods;
+    }
+
     public void ContentTypeBuilding(ContentTypeBuildingContext context)
     {
-        if (context?.Record is null || !HasOmnichannelContactPart(context.Record))
+        if (context?.Record is null ||
+            !HasOmnichannelContactPart(context.Record) ||
+            !_contactMethods.UsesContactMethodsBag(context.Record.Name))
         {
             return;
         }

@@ -60,6 +60,12 @@ public sealed class Cart : CatalogItem
 public sealed class CartLine
 {
     /// <summary>
+    /// Gets or sets the add-ons the buyer chose, by add-on id: what they typed, or <c>true</c> for a ticked box. The
+    /// same product with other add-ons is another line.
+    /// </summary>
+    public Dictionary<string, string> AddOns { get; set; }
+
+    /// <summary>
     /// Gets or sets the line's identifier, used to change or remove it.
     /// </summary>
     public string LineId { get; set; }

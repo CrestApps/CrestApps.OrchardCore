@@ -1,0 +1,12 @@
+@model IShape
+
+@{
+    var download = (DownloadPageViewModel)Model;
+    var entitlement = download.Entitlement;
+}
+
+<zone Name="Title">
+    <breadcrumb name="DigitalDownload" title="@(download.Problem == DownloadProblem.None ? (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(entitlement.FileName) : T["Download"])" />
+</zone>
+
+@await DisplayAsync(Model)

@@ -1,0 +1,3 @@
+@model OrderReturnRowViewModel
+
+<a class="btn btn-primary btn-sm" asp-controller="ReturnsAdmin" asp-action="Detail" asp-route-returnId="@Model.Return.ItemId">@(Model.Return.IsOpen ? T["Handle"] : T["View"])</a>

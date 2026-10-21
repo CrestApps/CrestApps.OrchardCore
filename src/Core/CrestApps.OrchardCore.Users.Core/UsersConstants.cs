@@ -16,6 +16,8 @@ public class UsersConstants
 
         public const string DisplayName = "CrestApps.OrchardCore.Users.DisplayName";
 
+        public const string EmailCodeSignIn = "CrestApps.OrchardCore.Users.EmailCodeSignIn";
+
         public const string Avatars = "CrestApps.OrchardCore.Users.Avatars";
     }
 }

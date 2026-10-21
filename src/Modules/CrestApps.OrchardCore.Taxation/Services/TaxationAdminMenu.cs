@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Drivers;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -50,6 +52,12 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
                         .AddClass("taxation-tables")
                         .Id("taxationTables")
                         .Action("Index", "TaxTables", "CrestApps.OrchardCore.Taxation")
+                        .Permission(TaxationPermissions.ManageTaxation)
+                        .LocalNav())
+                    .Add(S["Origin"], S["Origin"].PrefixPosition(), origin => origin
+                        .AddClass("taxation-origin")
+                        .Id("taxationOrigin")
+                        .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", TaxOriginSettingsDisplayDriver.GroupId } })
                         .Permission(TaxationPermissions.ManageTaxation)
                         .LocalNav())));
 

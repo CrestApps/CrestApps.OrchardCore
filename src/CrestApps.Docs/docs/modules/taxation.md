@@ -309,7 +309,7 @@ Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`)
 
 A rule with a `JurisdictionId` applies only when that jurisdiction is among the ones resolved for the item's address (`ITaxJurisdictionResolver`). With no address, or an address outside it, the rule does not apply; rules without a jurisdiction apply everywhere. So the address the checkout supplies decides which jurisdiction rules can apply.
 
-The built-in `DefaultCheckoutTaxProfileProvider` supplies no address, because the checkout collects none. To tax by jurisdiction at checkout, register an `ICheckoutTaxProfileProvider` that fills `CheckoutTaxProfile.Destination` (and `Origin` where it matters) from your own checkout data, such as an address step.
+The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Commerce > Taxation > Origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
 
 Do not assume the shipping address is always the tax location. Sourcing is pluggable through `ITaxSourcingStrategy` (resolved by `ITaxSourcingStrategyProvider`), with these built-in strategies: `Origin`, `Destination`, `CustomerResidence`, `CustomerBusiness`, `ServiceLocation`, and `EventLocation`. The engine picks a strategy from the taxable item's `Kind` (for example digital goods use the destination, services and bookings use the service location, and events use the event location) and falls back through destination, item origin, context origin, and customer residence.
 

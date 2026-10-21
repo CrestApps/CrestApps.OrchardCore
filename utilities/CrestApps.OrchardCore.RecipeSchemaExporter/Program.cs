@@ -5,10 +5,8 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -127,8 +125,7 @@ internal sealed class Program
         Directory.CreateDirectory(outputPath);
         ClearGeneratedArtifacts(outputPath);
 
-        using var memoryCache = new NoOpMemoryCache();
-        var schemaService = new RecipeSchemaService([], recipeSteps, memoryCache);
+        var schemaService = new RecipeSchemaService(recipeSteps);
         var indexEntries = new List<RecipeSchemaIndexEntry>();
 
         foreach (var recipeStep in recipeSteps)
@@ -703,51 +700,6 @@ internal sealed class Program
 
         public Task<IEnumerable<string>> GetThemeIdsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<string>>(_themeIds);
-    }
-
-    private sealed class NoOpMemoryCache : IMemoryCache
-    {
-        public void Dispose()
-        {
-        }
-
-        public bool TryGetValue(object key, out object value)
-        {
-            value = null;
-            return false;
-        }
-
-        public ICacheEntry CreateEntry(object key)
-            => new NoOpCacheEntry(key);
-
-        public void Remove(object key)
-        {
-        }
-    }
-
-    private sealed class NoOpCacheEntry(object key) : ICacheEntry
-    {
-        public object Key { get; } = key;
-
-        public object Value { get; set; }
-
-        public DateTimeOffset? AbsoluteExpiration { get; set; }
-
-        public TimeSpan? AbsoluteExpirationRelativeToNow { get; set; }
-
-        public TimeSpan? SlidingExpiration { get; set; }
-
-        public IList<IChangeToken> ExpirationTokens { get; } = [];
-
-        public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks { get; } = [];
-
-        public CacheItemPriority Priority { get; set; }
-
-        public long? Size { get; set; }
-
-        public void Dispose()
-        {
-        }
     }
 
     private sealed record RecipeSchemaIndexDocument(

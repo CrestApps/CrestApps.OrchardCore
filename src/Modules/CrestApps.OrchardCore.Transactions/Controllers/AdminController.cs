@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -220,7 +221,8 @@ public sealed class AdminController : Controller
         var model = new TransactionDetailViewModel
         {
             Transaction = transaction,
-            OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId),
+            OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId) ?? TransactionOwnerNames.GuestName(transaction, S["{0} (guest)"].Value),
+            Reference = await DescribeReferenceAsync(transaction),
             CanManage = true,
             CanSendReminder = _reminderService is not null,
             ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
@@ -486,6 +488,25 @@ public sealed class AdminController : Controller
         }
 
         return items;
+    }
+
+    // What the transaction paid for, such as an order, named and linked by the module that owns it.
+    private async Task<CheckoutReferenceDescription> DescribeReferenceAsync(Transaction transaction)
+    {
+        if (string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId))
+        {
+            return null;
+        }
+
+        foreach (var describer in HttpContext.RequestServices.GetServices<ICheckoutReferenceDescriber>())
+        {
+            if (await describer.DescribeAsync(transaction.ReferenceType, transaction.ReferenceId, HttpContext.RequestAborted) is { Text.Length: > 0 } description)
+            {
+                return description;
+            }
+        }
+
+        return null;
     }
 
     private async Task<string> ResolveOwnerNameAsync(string ownerId)

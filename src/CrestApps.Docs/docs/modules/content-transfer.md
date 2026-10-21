@@ -551,6 +551,8 @@ services.AddContentPartImportHandler<ProductPart, ProductPartContentImportHandle
 
 ## Content field handlers
 
+A taxonomy field imports and exports its terms by name (`{Part}_{Field}_Terms`, comma-separated, where `Clothing > Shirts` names the last part) or by id (`{Part}_{Field}_TermContentItemIds`). A name the taxonomy doesn't have is left out, and a unique field keeps the first.
+
 Implement `IContentFieldImportHandler` for custom fields. For most field types, inherit from `StandardFieldImportHandler` from `CrestApps.OrchardCore.ContentTransfer.Core`.
 
 `StandardFieldImportHandler` already handles the common pattern:
@@ -830,6 +832,34 @@ services.AddSingleton<IContentTransferFileFormatProvider, JsonLinesContentTransf
 ```
 
 If you want the format to be optional, place it in its own Orchard feature or module, following the same pattern as `CrestApps.OrchardCore.ContentTransfer.OpenXml`.
+
+## Reading another system's layout
+
+Implement `IContentTransferFileReaderTransformer` to import files another system lays out its own way, such as a store's product export where each product spans a row per variant. After a file is opened by its format provider, each transformer is asked to read it for the content type being imported; the first that recognizes it returns a reader of one row per content item with the type's import columns, and the import and its failed-rows download read that. A file no transformer recognizes is read as it is. `Describe(contentType)` returns what the import page tells merchants the transformer also reads for that type, or `null`.
+
+The Products module's `StoreExportReaderTransformer` is one: it reads Shopify's and WooCommerce's product exports into the product columns, and fills in `ContentItemId` for products already in the store so they're updated.
+
+```csharp
+public sealed class MyLayoutTransformer : IContentTransferFileReaderTransformer
+{
+    public async Task<IContentTransferFileReader> TransformAsync(IContentTransferFileReader reader, ContentTypeDefinition contentType, CancellationToken cancellationToken = default)
+    {
+        if (!reader.GetColumnNames().Contains("Their column"))
+        {
+            return null;
+        }
+
+        var rows = reader.ReadRows().Select(row => new[] { row[0] }).ToList();
+
+        return new InMemoryContentTransferFileReader(["TitlePart_Title"], rows);
+    }
+
+    public string Describe(ContentTypeDefinition contentType)
+        => "Their export is read as it is.";
+}
+```
+
+Register it with `services.AddScoped<IContentTransferFileReaderTransformer, MyLayoutTransformer>()`.
 
 ## Export completion notifications
 

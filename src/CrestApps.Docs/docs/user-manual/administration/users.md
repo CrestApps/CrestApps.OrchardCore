@@ -81,3 +81,14 @@ Open **Settings > User Avatars** to set how avatars work, then click **Save**.
 | **Use default CSS styles** | Uses the built-in look for avatars. Leave it ticked unless a developer has styled avatars for your site. |
 
 To give someone a picture, edit the user and use the **Avatar** box to pick or upload an image from the media library. Only image files are accepted. The box is shown only to people who have the **Manage Media** permission. The avatar appears next to the person's name in places that show who a user is.
+
+## Sign in with an email code
+
+With the **Sign in with an email code** feature on, the login page offers **Email me a sign-in code**. The user enters their email and gets a six-digit code, which they type on the next page to sign in, without a password.
+
+- A code works once, for ten minutes and five tries. A new code replaces the last one.
+- A few codes can be sent to an email, and from one visitor, every fifteen minutes.
+- The page answers the same way whether or not the email has an account, so it never tells anyone who is registered.
+- Users who are disabled, locked out or use two-factor authentication sign in with their password as before.
+
+Your site's email must be set up in Orchard Core's email settings for the codes to be sent.

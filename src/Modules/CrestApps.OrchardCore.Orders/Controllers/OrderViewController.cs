@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
@@ -18,7 +20,8 @@ namespace CrestApps.OrchardCore.Orders.Controllers;
 
 /// <summary>
 /// The pages a guest reaches without signing in: an order opened from its signed link, and Find my order, which emails
-/// those links to the address an order was placed with.
+/// those links to the address an order was placed with. Each page's content is a shape (<c>GuestOrder</c>,
+/// <c>GuestOrderInvalid</c>, <c>OrderLookup</c>, <c>OrderLookupSent</c>) that a theme can override.
 /// </summary>
 public sealed class OrderViewController : Controller
 {
@@ -32,6 +35,7 @@ public sealed class OrderViewController : Controller
     private readonly OrderLinksEmailBuilder _linksEmailBuilder;
     private readonly IPaymentAttemptLimiter _limiter;
     private readonly IClock _clock;
+    private readonly IShapeFactory _shapeFactory;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -42,6 +46,7 @@ public sealed class OrderViewController : Controller
         OrderLinksEmailBuilder linksEmailBuilder,
         IPaymentAttemptLimiter limiter,
         IClock clock,
+        IShapeFactory shapeFactory,
         ILogger<OrderViewController> logger,
         IStringLocalizer<OrderViewController> stringLocalizer)
     {
@@ -50,35 +55,102 @@ public sealed class OrderViewController : Controller
         _linksEmailBuilder = linksEmailBuilder;
         _limiter = limiter;
         _clock = clock;
+        _shapeFactory = shapeFactory;
         _logger = logger;
         S = stringLocalizer;
     }
 
     [HttpGet("orders/view/{token}", Name = OrderConstants.RouteNames.View)]
-    public async Task<IActionResult> Index(string token)
+    public async Task<IActionResult> Index(
+        string token,
+        [FromServices] IDisplayManager<Order> displayManager,
+        [FromServices] IUpdateModelAccessor updateModelAccessor)
     {
         var orderId = _orderLinks.GetOrderId(token);
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
-        // A link that was altered, expired or names an order that was never placed shows nothing about any order.
-        if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
+        // A link that was altered, expired or names an order that was never placed shows nothing about any order. An
+        // order the store sent the buyer to pay shows before it's paid.
+        if (order is null || order.Status == OrderStatus.Canceled || (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null))
         {
-            return View("Invalid");
+            return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
         }
 
-        return View(new OrderViewViewModel
+        var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
+        var payUrl = order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
+            ? Url.RouteUrl("GuestOrderPay", new { token })
+            : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
+            ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
+            : null;
+
+        return View(await _shapeFactory.CreateAsync<OrderViewViewModel>("GuestOrder", model =>
         {
-            Order = order,
-            PayUrl = await GetPayUrlAsync(order),
-            RegisterUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
-                ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
-                : null,
-        });
+            model.Order = order;
+            model.Sections = sections;
+            model.PayUrl = payUrl;
+            model.RegisterUrl = registerUrl;
+            model.InvoiceUrl = Url.RouteUrl("GuestOrderInvoice", new { token });
+        }));
+    }
+
+    /// <summary>
+    /// The invoice of an order opened from its signed link, to print or save as a PDF.
+    /// </summary>
+    [HttpGet("orders/view/{token}/invoice", Name = "GuestOrderInvoice")]
+    public async Task<IActionResult> Invoice(string token, [FromServices] OrderDocumentBuilder documents)
+    {
+        var orderId = _orderLinks.GetOrderId(token);
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
+
+        if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
+        {
+            return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
+        }
+
+        var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
+
+        return View(await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => OrdersAdminController.Copy(document, model)));
+    }
+
+    [HttpGet("orders/track", Name = "OrdersTrack")]
+    public async Task<IActionResult> Track()
+        => View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", model => { }));
+
+    [HttpPost("orders/track")]
+    [ValidateAntiForgeryToken]
+    [RateLimitGroup(OrderConstants.FindRateLimitGroup)]
+    public async Task<IActionResult> Track(TrackOrderViewModel model)
+    {
+        var number = model.OrderNumber?.Trim().TrimStart('#');
+        var email = model.Email?.Trim();
+        Order order = null;
+
+        // Both must match, and the guesses are limited, so a number alone or an email alone shows nothing.
+        if (!string.IsNullOrEmpty(number) && !string.IsNullOrEmpty(email) &&
+            await _limiter.AcquireAsync("track-order", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"))
+        {
+            order = await _orderStore.FindByNumberAsync(number.ToUpperInvariant());
+        }
+
+        if (order is { Status: OrderStatus.Paid } &&
+            string.Equals(order.CustomerEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase) &&
+            await _orderLinks.CreateUrlAsync(order) is { } url)
+        {
+            return Redirect(url);
+        }
+
+        return View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", shape =>
+        {
+            shape.OrderNumber = model.OrderNumber;
+            shape.Email = model.Email;
+            shape.NotFound = true;
+        }));
     }
 
     [HttpGet("orders/find", Name = OrderConstants.RouteNames.Find)]
-    public IActionResult Find()
-        => View(new FindOrderViewModel());
+    public async Task<IActionResult> Find()
+        => View(await LookupShapeAsync("OrderLookup", email: null));
 
     [HttpPost("orders/find")]
     [ValidateAntiForgeryToken]
@@ -91,7 +163,7 @@ public sealed class OrderViewController : Controller
         {
             ModelState.AddModelError(nameof(model.Email), S["Enter the email you placed the order with."]);
 
-            return View(model);
+            return View(await LookupShapeAsync("OrderLookup", model.Email));
         }
 
         // The answer is the same whether or not there are orders, so the page never tells who has bought here. The
@@ -102,8 +174,12 @@ public sealed class OrderViewController : Controller
             await SendLinksAsync(email);
         }
 
-        return View("FindSent", new FindOrderViewModel { Email = email });
+        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email));
     }
+
+    // Find my order and its answer are the OrderLookup and OrderLookupSent shapes, so a theme can override them.
+    private ValueTask<IShape> LookupShapeAsync(string shapeType, string email)
+        => _shapeFactory.CreateAsync<FindOrderViewModel>(shapeType, model => model.Email = email);
 
     private async Task SendLinksAsync(string email)
     {
@@ -150,23 +226,4 @@ public sealed class OrderViewController : Controller
     }
 
     // What is still owed on an order paid later, payable from its own link.
-    private async Task<string> GetPayUrlAsync(Order order)
-    {
-        if (HttpContext.RequestServices.GetService<ITransactionStore>() is not { } transactions ||
-            HttpContext.RequestServices.GetService<ITransactionPayLinkService>() is not { } payLinks)
-        {
-            return null;
-        }
-
-        var result = await transactions.PageAsync(1, 1, new TransactionQuery
-        {
-            ReferenceType = CheckoutReferenceTypes.Order,
-            ReferenceId = order.ItemId,
-            OutstandingOnly = true,
-        });
-
-        var outstanding = result.Entries.FirstOrDefault();
-
-        return outstanding is null ? null : await payLinks.CreatePayUrlAsync(outstanding);
-    }
 }

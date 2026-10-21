@@ -89,7 +89,7 @@ When a content type includes `OmnichannelContactPart`, the module enforces two c
 - `OmnichannelContactPart` stores the contact-level communication compliance flags (`DoNotCall`, `DoNotSms`, `DoNotEmail`) and their UTC timestamps.
 - A fixed `ContactMethods` bag part is added automatically and reserved for `ContactMethod` stereotype items so imports, exports, indexing, and activity-batch loading always read phone numbers and email addresses from a known location.
 
-Do not rename or replace the `ContactMethods` bag in custom definitions. Instead, add or extend content types with the `ContactMethod` stereotype (such as `EmailAddress` and `PhoneNumber`) so they can be stored there consistently.
+Do not rename or replace the `ContactMethods` bag in custom definitions. Instead, add or extend content types with the `ContactMethod` stereotype (such as `EmailAddress` and `PhoneNumber`) so they can be stored there consistently. A content type that already keeps its phone numbers and emails in fields of its own can read them from there instead; see [Keep phone numbers and emails in your own fields](#keep-phone-numbers-and-emails-in-your-own-fields).
 
 The management feature depends on `OrchardCore.Flows` so the enforced `ContactMethods` bag renders with the standard Orchard bag editor when you edit a contact content item. The bag is injected during Orchard's content-type definition build pipeline, so content types that attach `OmnichannelContactPart` always materialize with the named `ContactMethods` bag even when the stored type definition does not yet include it.
 
@@ -103,6 +103,43 @@ If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneFie
 | **Require time zone** (`RequireTimeZone`) | Off | Forces editors to choose a time zone before saving. Enforced only when auto detect is off. |
 | **Use Do not call** (`UseDoNotCall`) | On | Shows the Do not call preference in the contact editor. |
 | **Use Do not SMS** / **Use Do not email** (`UseDoNotSms`, `UseDoNotEmail`) | Off | Shows those preferences in the contact editor. |
+
+#### Keep phone numbers and emails in your own fields
+
+Every part of the product reads a contact's phone numbers and email addresses through `IContactMethodsAccessor`: the contact index (and so inbound call and SMS matching, the `phone:` search, lead matching, the shared-number opt-out and the import duplicate check), activity destinations, the contact header, the messaging workspace, time zone detection and phone verification. By default it reads the `ContactMethods` bag.
+
+A content type whose people already keep their phone numbers and emails in typed fields, such as a CRM person record, can register an `IContactMethodsProvider` that reads those fields instead:
+
+```csharp
+public sealed class PersonContactMethodsProvider : IContactMethodsProvider
+{
+    public ContactMethodSet GetContactMethods(ContentItem contact)
+    {
+        if (!contact.TryGet<PersonPart>(out var person))
+        {
+            return ContactMethodSet.Empty;
+        }
+
+        return new ContactMethodSet(
+            [
+                new ContactPhoneNumber { PhoneNumber = person.Mobile?.PhoneNumber, CountryCode = person.Mobile?.CountryCode, Type = ContactPhoneTypes.Cell },
+                new ContactPhoneNumber { PhoneNumber = person.Office?.PhoneNumber, CountryCode = person.Office?.CountryCode, Type = ContactPhoneTypes.Office },
+            ],
+            [
+                new ContactEmailAddress { Email = person.Email?.Text },
+            ]);
+    }
+}
+
+// In the startup of your module:
+services.AddContactMethodsProvider<PersonContactMethodsProvider>("Person");
+```
+
+- Return the numbers in the order the contact keeps them, as they were entered, with the region they were entered for. The accessor leaves out empty values, trims the rest and spells each phone type one way (`ContactPhoneTypes`: `Cell`, `Home`, `Office`, `Work`, `Other`; `Mobile` reads as `Cell`), and the contact index normalizes the numbers to E.164.
+- A provider is a singleton and must read only what is stored on the content item it is given: no database queries and no scoped services. The contact index is built from it while the item is saved, and is not rebuilt when another record changes.
+- A type with a provider is not given the `ContactMethods` bag, and the contact import leaves its **Email**, **Cell Phone** and **Phone** columns to the type's own fields. A bag the type already has is never changed or removed, so registering a provider loses no stored data; the bag is simply no longer read.
+- The product also writes what it learns: an email address given in an SMS or voice conversation, and the numbers and addresses of a lead converted into a contact. These go through `IContactMethodsWriter`. A type with a provider is read-only unless it also registers a writer with `services.AddContactMethodsWriter<TWriter>("Person")`, which decides how each write lands (for example, that it never overwrites a value the type's own system owns).
+- Phone verification stores its result on the contact itself, so it works for any provider. For a type that uses the bag, the result is also copied to the bag item that holds the number.
 
 #### Import and export contact methods
 

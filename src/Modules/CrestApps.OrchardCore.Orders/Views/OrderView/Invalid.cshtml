@@ -1,10 +1,11 @@
-@* An order link that was altered, expired, or names an order that no longer exists. Nothing about any order is shown,
-   so a guessed or tampered link learns nothing. *@
+@model IShape
+
 <zone Name="Title">
     <breadcrumb name="OrdersViewInvalid" title="@T["Order link"]" />
 </zone>
 
 <div class="container my-4" style="max-width: 640px;">
     <h1 class="h3 mb-3">@T["This order link no longer works"]</h1>
-    <p>@T["Links to an order work for 60 days."] <a asp-route="@CrestApps.OrchardCore.Orders.Core.OrderConstants.RouteNames.Find">@T["Get a new link"]</a></p>
+
+    @await DisplayAsync(Model)
 </div>

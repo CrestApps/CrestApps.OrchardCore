@@ -293,3 +293,150 @@ internal sealed class FreeShippingMethodDisplayDriver : DisplayDriver<ShippingMe
     private static bool IsFor(ShippingMethod method)
         => string.Equals(method.ProviderName, ShippingConstants.Providers.Free, StringComparison.OrdinalIgnoreCase);
 }
+
+internal sealed class LocalDeliveryMethodDisplayDriver : DisplayDriver<ShippingMethod>
+{
+    private const int MaxPostalCodes = 1000;
+
+    internal readonly IStringLocalizer S;
+
+    public LocalDeliveryMethodDisplayDriver(IStringLocalizer<LocalDeliveryMethodDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    {
+        if (!IsFor(method))
+        {
+            return null;
+        }
+
+        return Initialize<LocalDeliverySettingsViewModel>("LocalDeliverySettings_Edit", model =>
+        {
+            var settings = method.GetOrCreate<LocalDeliverySettings>();
+
+            model.PostalCodes = string.Join(Environment.NewLine, settings.PostalCodes ?? []);
+            model.Amount = settings.Amount;
+            model.FreeFromSubtotal = settings.FreeFromSubtotal;
+            model.MinimumSubtotal = settings.MinimumSubtotal;
+        }).Location("Content:5");
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    {
+        if (!IsFor(method))
+        {
+            return null;
+        }
+
+        var model = new LocalDeliverySettingsViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        var postalCodes = ParsePostalCodes(model.PostalCodes);
+
+        if (postalCodes.Count == 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PostalCodes), S["Enter the postal codes you deliver to."]);
+        }
+
+        if (model.Amount < 0 || model.FreeFromSubtotal < 0 || model.MinimumSubtotal < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Amount), S["Amounts can't be negative."]);
+        }
+
+        method.Put(new LocalDeliverySettings
+        {
+            PostalCodes = postalCodes,
+            Amount = model.Amount,
+            FreeFromSubtotal = model.FreeFromSubtotal,
+            MinimumSubtotal = model.MinimumSubtotal,
+        });
+
+        return Edit(method, context);
+    }
+
+    // One or more per line, separated by commas; a trailing * covers every code starting with what's before it.
+    internal static List<string> ParsePostalCodes(string text)
+        => (text ?? string.Empty)
+            .Split(['\r', '\n', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(code => code != "*")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxPostalCodes)
+            .ToList();
+
+    private static bool IsFor(ShippingMethod method)
+        => string.Equals(method.ProviderName, ShippingConstants.Providers.LocalDelivery, StringComparison.OrdinalIgnoreCase);
+}
+
+internal sealed class CarrierRateMethodDisplayDriver : DisplayDriver<ShippingMethod>
+{
+    private const int MaxCarriers = 20;
+
+    private readonly ICarrierProviderResolver _carriers;
+
+    internal readonly IStringLocalizer S;
+
+    public CarrierRateMethodDisplayDriver(ICarrierProviderResolver carriers, IStringLocalizer<CarrierRateMethodDisplayDriver> stringLocalizer)
+    {
+        _carriers = carriers;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    {
+        if (!IsFor(method))
+        {
+            return null;
+        }
+
+        return Initialize<CarrierRateSettingsViewModel>("CarrierRateSettings_Edit", async model =>
+        {
+            var settings = method.GetOrCreate<CarrierRateSettings>();
+
+            model.Carriers = string.Join(", ", settings.Carriers ?? []);
+            model.MaxRates = settings.MaxRates;
+            model.MarkupPercent = settings.MarkupPercent;
+            model.MarkupAmount = settings.MarkupAmount;
+            model.FallbackAmount = settings.FallbackAmount;
+
+            model.HasCarrierAccount = await _carriers.GetDefaultAsync() is not null;
+        }).Location("Content:5");
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    {
+        if (!IsFor(method))
+        {
+            return null;
+        }
+
+        var model = new CarrierRateSettingsViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (model.MarkupAmount < 0 || model.FallbackAmount < 0 || model.MaxRates < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MarkupAmount), S["Amounts can't be negative."]);
+        }
+
+        method.Put(new CarrierRateSettings
+        {
+            Carriers = (model.Carriers ?? string.Empty)
+                .Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(MaxCarriers)
+                .ToList(),
+            MaxRates = Math.Max(0, model.MaxRates),
+            MarkupPercent = model.MarkupPercent,
+            MarkupAmount = Math.Max(0, model.MarkupAmount),
+            FallbackAmount = model.FallbackAmount is >= 0 ? model.FallbackAmount : null,
+        });
+
+        return Edit(method, context);
+    }
+
+    private static bool IsFor(ShippingMethod method)
+        => string.Equals(method.ProviderName, ShippingConstants.Providers.Carrier, StringComparison.OrdinalIgnoreCase);
+}

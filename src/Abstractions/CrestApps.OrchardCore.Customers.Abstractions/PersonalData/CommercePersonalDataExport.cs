@@ -63,6 +63,11 @@ public sealed class CommercePersonalDataExport
     public IList<CommerceProviderCustomerRecord> ProviderCustomers { get; init; } = [];
 
     /// <summary>
+    /// Gets the person's requests to hear when sold-out products were back.
+    /// </summary>
+    public IList<CommerceStockAlertRecord> StockAlerts { get; init; } = [];
+
+    /// <summary>
     /// Gets what could not be exported, such as a payment provider that could not be reached.
     /// </summary>
     public IList<string> Warnings { get; init; } = [];

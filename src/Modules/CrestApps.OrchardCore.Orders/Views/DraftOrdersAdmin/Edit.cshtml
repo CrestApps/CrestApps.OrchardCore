@@ -1,0 +1,164 @@
+@model DraftOrderEditViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
+@{
+    var isNew = Model.Order is null;
+}
+
+<zone Name="Title">
+    <breadcrumb name="@(isNew ? "OrdersCreate" : "OrdersEdit")" title="@(isNew ? T["Create order"] : T["Edit order {0}", Model.Order.OrderNumber])">
+        <breadcrumb-item id="OrdersIndex" action="Index" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" permission="@CrestApps.OrchardCore.Orders.OrderPermissions.ManageOrders.Name">@T["Orders"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (!string.IsNullOrEmpty(Model.AddsToOrderNumber))
+{
+    <div class="alert alert-info">@T["These items are added to order {0} as a new order for the same buyer to pay.", Model.AddsToOrderNumber]</div>
+}
+
+@if (Model.Problems.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0 ps-3">
+            @foreach (var problem in Model.Problems)
+            {
+                <li>@problem</li>
+            }
+        </ul>
+    </div>
+}
+
+<form method="post" class="no-multisubmit">
+    <input type="hidden" asp-for="AddsToOrderId" />
+
+    <div class="card mb-4">
+        <div class="card-header">@T["Buyer"]</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CustomerEmail" class="form-label">@T["Email"]</label>
+                    <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="off" required />
+                    <span class="hint">@T["The invoice goes here. Someone with an account under this email gets their own prices and sees the order in their account."]</span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CustomerName" class="form-label">@T["Name"]</label>
+                    <input asp-for="CustomerName" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Items"]</div>
+        @if (Model.Lines.Count == 0)
+        {
+            <div class="card-body text-muted">@T["No items yet. Find products below, then update the order to price them."]</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Product"]</th>
+                            <th scope="col" class="text-end">@T["Quantity"]</th>
+                            <th scope="col" class="text-end">@T["Amount"]</th>
+                            <th scope="col" class="text-center">@T["Remove"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Lines.Count; i++)
+                        {
+                            var line = Model.Lines[i];
+
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="Lines[@i].LineId" value="@line.LineId" />
+                                    <input type="hidden" name="Lines[@i].ContentItemId" value="@line.ContentItemId" />
+                                    <div>@line.Title</div>
+                                    @if (line.Variants.Count > 0)
+                                    {
+                                        <select name="Lines[@i].VariantId" class="form-select form-select-sm mt-1 w-auto" aria-label="@T["Variant of {0}", line.Title]">
+                                            <option value="">@T["Choose a variant"]</option>
+                                            @foreach (var variant in line.Variants)
+                                            {
+                                                <option value="@variant.Value" selected="@variant.Selected">@variant.Text</option>
+                                            }
+                                        </select>
+                                    }
+                                    else if (!string.IsNullOrEmpty(line.VariantId))
+                                    {
+                                        <input type="hidden" name="Lines[@i].VariantId" value="@line.VariantId" />
+                                    }
+                                    @if (!string.IsNullOrEmpty(line.Problem))
+                                    {
+                                        <div class="small text-danger mt-1">@line.Problem</div>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" name="Lines[@i].Quantity" value="@line.Quantity" min="1" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Quantity of {0}", line.Title]" />
+                                </td>
+                                <td class="text-end text-nowrap">@(line.LineTotal is { } total ? ProductPriceFormatter.Format(total, Model.Currency) : "—")</td>
+                                <td class="text-center">
+                                    <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Remove {0}", line.Title]" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row" colspan="2" class="text-end">@T["Subtotal"]</th>
+                            <th class="text-end text-nowrap">@ProductPriceFormatter.Format(Model.Subtotal, Model.Currency)</th>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="card-footer small text-muted">@T["Shipping and tax are added when the buyer pays."]</div>
+        }
+    </div>
+
+    <div class="mb-4">
+        <label class="form-label" for="draft-order-add-products">@T["Add products"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "draft-order-add-products",
+            inputName = "AddProductIds",
+            endpoint = Model.ProductSearchEndpoint,
+            initialItemsJson = "[]",
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Find products"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products found."].Value,
+            noSelectionText = T["None chosen."].Value,
+            selectedItemsLabel = T["To add"].Value,
+        })
+        <span class="hint">@T["They're added with a quantity of 1 when you update or save."]</span>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">@T["Invoice"]</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="Note" class="form-label">@T["Note for the buyer"]</label>
+                    <textarea asp-for="Note" rows="2" maxlength="2000" class="form-control" placeholder="@T["Thanks for your call. Here's the order we discussed."]"></textarea>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="DueDate" class="form-label">@T["Pay by (optional)"]</label>
+                    <input asp-for="DueDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update prices"]</button>
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <a class="btn btn-outline-secondary" href="@(isNew ? Url.Action("Index", "OrdersAdmin") : Url.Action("Detail", "OrdersAdmin", new { orderId = Model.Order.ItemId }))">@T["Cancel"]</a>
+    </div>
+    @if (!Model.CanEmail)
+    {
+        <p class="small text-warning mt-2">@T["Email isn't set up, so the invoice can't be emailed. You can still copy the order's pay link from its page."]</p>
+    }
+</form>

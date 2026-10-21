@@ -1,0 +1,48 @@
+@*
+    The thanks on a checkout's confirmation (Part "Header") and the way back to the store (Part "Return"). A
+    checkout that isn't an order names itself, so it isn't thanked for a "purchase".
+*@
+
+@{
+    string title = Model.Title;
+    var hasTitle = !string.IsNullOrEmpty(title);
+    bool deferred = Model.PaymentDeferred ?? false;
+    string returnUrl = Model.ReturnUrl;
+    string returnText = Model.ReturnText;
+}
+
+@if (Model.Part == "Return")
+{
+    if (!string.IsNullOrEmpty(returnUrl))
+    {
+        <div class="text-center my-4">
+            <a class="btn btn-primary px-4" href="@Url.Content(returnUrl)" data-checkout-return>
+                @(string.IsNullOrEmpty(returnText) ? T["Continue"].Value : returnText)
+            </a>
+        </div>
+    }
+
+    return;
+}
+
+<div class="text-center my-5">
+    <div class="display-6 text-success mb-3">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    </div>
+    @if (hasTitle)
+    {
+        <h1 class="h3">@title</h1>
+        <p class="text-body-secondary">@T["Thank you. A confirmation is shown below."]</p>
+    }
+    else if (deferred)
+    {
+        @* Nothing was paid yet: the buyer pays later, by transfer or on delivery, as the page below says. *@
+        <h1 class="h3">@T["Thank you — your order is placed."]</h1>
+        <p class="text-body-secondary">@T["How to pay, and what you ordered, are below."]</p>
+    }
+    else
+    {
+        <h1 class="h3">@T["Thank you — your purchase is complete."]</h1>
+        <p class="text-body-secondary">@T["A confirmation of this purchase is shown below."]</p>
+    }
+</div>

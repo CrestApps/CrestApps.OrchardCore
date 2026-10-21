@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Orders.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<OrderRefundedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Order Refunded"])
+    </h4>
+</header>

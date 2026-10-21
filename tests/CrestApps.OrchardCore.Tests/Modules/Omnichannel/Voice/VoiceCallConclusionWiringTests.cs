@@ -376,7 +376,7 @@ public sealed class VoiceCallConclusionWiringTests
         await harness.ConcludeAsync();
 
         // Assert
-        Assert.Equal("jamie@example.com", OmnichannelSubjectWriter.GetContactEmail(harness.Contact));
+        Assert.Equal("jamie@example.com", TestContactMethods.Get(harness.Contact).GetPrimaryEmailAddress());
         harness.ContentManager.Verify(manager => manager.UpdateAsync(harness.Contact), Times.Once);
     }
 
@@ -399,7 +399,7 @@ public sealed class VoiceCallConclusionWiringTests
         await harness.ConcludeAsync();
 
         // Assert
-        Assert.Null(OmnichannelSubjectWriter.GetContactEmail(harness.Contact));
+        Assert.Null(TestContactMethods.Get(harness.Contact).GetPrimaryEmailAddress());
         harness.ContentManager.Verify(manager => manager.UpdateAsync(It.IsAny<ContentItem>()), Times.Never);
     }
 
@@ -658,6 +658,8 @@ public sealed class VoiceCallConclusionWiringTests
                 // bare mock here would otherwise hand back a null type definition and silently offer the model no
                 // fields to fill in.
                 .AddSingleton(Mock.Of<IContentDefinitionManager>())
+                .AddLogging()
+                .AddContactMethods()
                 .BuildServiceProvider();
 
             _loop = new VoiceAgentConversationLoop(

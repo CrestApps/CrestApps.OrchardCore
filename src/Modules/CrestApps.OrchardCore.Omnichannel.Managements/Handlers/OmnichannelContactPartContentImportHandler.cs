@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -22,12 +23,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 /// (email, cell phone, home phone) for the <see cref="OmnichannelContactPart"/>.
 /// Maps these columns to and from the BagPart named "ContactMethods".
 /// </summary>
+/// <remarks>
+/// A contact type with a contact-methods provider of its own keeps its numbers and addresses in its own fields, which
+/// import and export through their own columns. For such a type the email and phone columns are not offered, and
+/// only the contact's preferences and time zone are imported and exported here.
+/// </remarks>
 public sealed class OmnichannelContactPartContentImportHandler : ContentImportHandlerBase, IContentPartImportHandler
 {
     internal readonly IStringLocalizer S;
 
     private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IContactMethodsAccessor _contactMethods;
     private readonly ImportRowDoNotCallFlags _doNotCallFlags;
 
     private ImportColumn _emailColumn;
@@ -47,16 +54,19 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     /// <param name="clock">The clock.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="contactMethods">Reads the contact's phone numbers and email addresses for export.</param>
     /// <param name="doNotCallFlags">The rows the do-not-call screening chose to import marked Do not call.</param>
     public OmnichannelContactPartContentImportHandler(
         IClock clock,
         IPhoneNumberService phoneNumberService,
         IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer,
+        IContactMethodsAccessor contactMethods,
         ImportRowDoNotCallFlags doNotCallFlags = null)
     {
         _doNotCallFlags = doNotCallFlags;
         _clock = clock;
         _phoneNumberService = phoneNumberService;
+        _contactMethods = contactMethods;
         S = stringLocalizer;
     }
 
@@ -97,6 +107,20 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             AdditionalNames = ["TimeZone", "Time Zone", "Timezone"],
         };
 
+        if (!UsesContactMethodsBag(context?.ContentTypePartDefinition?.ContentTypeDefinition?.Name))
+        {
+            return
+            [
+                _timeZoneIdColumn,
+                _doNotCallColumn,
+                _doNotCallUtcColumn,
+                _doNotSmsColumn,
+                _doNotSmsUtcColumn,
+                _doNotEmailColumn,
+                _doNotEmailUtcColumn,
+            ];
+        }
+
         return
         [
             _emailColumn,
@@ -121,6 +145,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         ArgumentNullException.ThrowIfNull(context.Row, nameof(context.Row));
 
         _ = GetColumns(context);
+        var usesContactMethodsBag = UsesContactMethodsBag(context.ContentItem.ContentType);
         var countryCode = NormalizeCountryCode(context.Entry?.GetOrCreate<OmnichannelContactImportOptionsPart>()?.SelectedCountryCode);
         string email = null;
         string cellPhone = null;
@@ -141,17 +166,19 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         foreach (DataColumn column in context.Columns)
         {
+            // The email and phone columns fill the contact-methods bag. A type that keeps its numbers in its own
+            // fields imports them through those fields' columns instead.
             if (Is(column.ColumnName, _emailColumn))
             {
-                email = context.Row[column]?.ToString()?.Trim();
+                email = usesContactMethodsBag ? context.Row[column]?.ToString()?.Trim() : null;
             }
             else if (Is(column.ColumnName, _cellPhoneColumn))
             {
-                cellPhone = context.Row[column]?.ToString()?.Trim();
+                cellPhone = usesContactMethodsBag ? context.Row[column]?.ToString()?.Trim() : null;
             }
             else if (Is(column.ColumnName, _homePhoneColumn))
             {
-                homePhone = context.Row[column]?.ToString()?.Trim();
+                homePhone = usesContactMethodsBag ? context.Row[column]?.ToString()?.Trim() : null;
             }
             else if (Is(column.ColumnName, _timeZoneIdColumn))
             {
@@ -292,9 +319,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         _ = GetColumns(null);
 
-        var hasContactMethods = context.ContentItem.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
-            bagPart.ContentItems is not null &&
-            bagPart.ContentItems.Count > 0;
+        // A type that keeps its numbers in its own fields exports them through those fields' columns.
+        var contactMethods = UsesContactMethodsBag(context.ContentItem.ContentType)
+            ? _contactMethods.Get(context.ContentItem)
+            : ContactMethodSet.Empty;
+        var hasContactMethods = contactMethods.PhoneNumbers.Count > 0 || contactMethods.EmailAddresses.Count > 0;
         var hasContactPart = context.ContentItem.TryGet<OmnichannelContactPart>(out var contactPart);
 
         if (!hasContactMethods && !hasContactPart)
@@ -302,46 +331,9 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             return Task.CompletedTask;
         }
 
-        string email = null;
-        string cellPhone = null;
-        string homePhone = null;
-
-        if (hasContactMethods)
-        {
-            foreach (var contentMethod in bagPart.ContentItems)
-            {
-                if (email == null &&
-                    contentMethod.ContentType == OmnichannelConstants.ContentTypes.EmailAddress &&
-                    contentMethod.TryGet<EmailInfoPart>(out var emailPart) &&
-                    !string.IsNullOrEmpty(emailPart.Email?.Text))
-                {
-                    email = emailPart.Email.Text;
-                }
-
-                if (cellPhone == null &&
-                    contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
-                    contentMethod.TryGet<PhoneNumberInfoPart>(out var cellPart) &&
-                    cellPart.Type?.Text == "Cell" &&
-                    !string.IsNullOrEmpty(cellPart.Number?.PhoneNumber))
-                {
-                    cellPhone = cellPart.Number.PhoneNumber;
-                }
-
-                if (homePhone == null &&
-                    contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
-                    contentMethod.TryGet<PhoneNumberInfoPart>(out var homePart) &&
-                    homePart.Type?.Text == "Home" &&
-                    !string.IsNullOrEmpty(homePart.Number?.PhoneNumber))
-                {
-                    homePhone = homePart.Number.PhoneNumber;
-                }
-
-                if (email != null && cellPhone != null && homePhone != null)
-                {
-                    break;
-                }
-            }
-        }
+        var email = contactMethods.GetPrimaryEmailAddress();
+        var cellPhone = contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Cell)?.PhoneNumber;
+        var homePhone = contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Home)?.PhoneNumber;
 
         if (_emailColumn?.Name != null && email != null)
         {
@@ -387,6 +379,9 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         return Task.CompletedTask;
     }
+
+    private bool UsesContactMethodsBag(string contentType)
+        => _contactMethods.UsesContactMethodsBag(contentType);
 
     private static ImportColumn CreatePreferenceColumn(string name, LocalizedString description)
     {

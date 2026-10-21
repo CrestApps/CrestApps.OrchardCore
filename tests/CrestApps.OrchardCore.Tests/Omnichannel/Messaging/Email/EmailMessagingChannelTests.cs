@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using OrchardCore.ContentFields.Fields;
@@ -121,5 +122,6 @@ public sealed class EmailMessagingChannelTests
             new Lazy<IEmailDispatcher>(() => dispatcher),
             Mock.Of<IOmnichannelContactTypeProvider>(),
             Mock.Of<ISession>(),
-            new PassThroughStringLocalizer<EmailMessagingChannel>());
+            new PassThroughStringLocalizer<EmailMessagingChannel>(),
+            TestContactMethods.Accessor);
 }

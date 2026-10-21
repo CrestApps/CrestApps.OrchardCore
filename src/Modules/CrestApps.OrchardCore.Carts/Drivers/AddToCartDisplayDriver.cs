@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Carts.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -26,6 +27,8 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
     private readonly IEnumerable<IProductAvailabilityProvider> _availability;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
+    private readonly IContentManager _contentManager;
+    private readonly LinkGenerator _linkGenerator;
     private readonly CartOptions _options;
 
     internal readonly IStringLocalizer S;
@@ -35,9 +38,13 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         IEnumerable<IProductAvailabilityProvider> availability,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
+        IContentManager contentManager,
+        LinkGenerator linkGenerator,
         IOptions<CartOptions> options,
         IStringLocalizer<AddToCartDisplayDriver> stringLocalizer)
     {
+        _contentManager = contentManager;
+        _linkGenerator = linkGenerator;
         _snapshotResolver = snapshotResolver;
         _availability = availability;
         _httpContextAccessor = httpContextAccessor;
@@ -106,6 +113,18 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             : [new ProductStockKey(contentItem.ContentItemId, null)];
         var stock = await _availability.GetAvailabilityAsync(keys);
 
+        // Add-ons are chosen on the product's own page; a card links there when one is required.
+        var addOns = part.AddOns?.Where(addOn => !string.IsNullOrEmpty(addOn.AddOnId) && !string.IsNullOrWhiteSpace(addOn.Label)).ToList() ?? [];
+        var isProductPage = request?.RouteValues["contentItemId"] is string shown && shown == contentItem.ContentItemId;
+        string productUrl = null;
+
+        if (addOns.Count > 0 && !isProductPage && _httpContextAccessor.HttpContext is { } httpContext)
+        {
+            var metadata = await _contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+            productUrl = metadata.DisplayRouteValues is null ? null : _linkGenerator.GetPathByRouteValues(httpContext, routeName: null, metadata.DisplayRouteValues);
+        }
+
         return Initialize<AddToCartViewModel>("AddToCart", model =>
         {
             model.ContentItemId = contentItem.ContentItemId;
@@ -121,7 +140,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                     VariantId = variant.VariantId,
                     Title = variant.GetTitle(optionNames),
                     Sku = string.IsNullOrEmpty(variant.Sku) ? productPart?.Sku : variant.Sku,
-                    Price = (variant.Price ?? productPrice) is { } amount && !string.IsNullOrEmpty(product.Currency)
+                    Price = ProductSale.GetPrice(productPart, variant, _clock.UtcNow) is { } amount && !string.IsNullOrEmpty(product.Currency)
                         ? ProductPriceFormatter.Format(amount, product.Currency)
                         : null,
                     Options = new Dictionary<string, string>(variant.Options, StringComparer.OrdinalIgnoreCase),
@@ -150,6 +169,25 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                 ? _options.MaxQuantity
                 : defaultPrice.AllowQuantity ? Math.Min(defaultPrice.MaximumQuantity ?? _options.MaxQuantity, _options.MaxQuantity) : 1;
             model.ReturnUrl = request is null ? null : request.PathBase + request.Path + request.QueryString;
+            model.AddOns = addOns;
+            model.Currency = product.Currency;
+            model.IsProductPage = isProductPage;
+            model.ProductUrl = productUrl;
+
+            // The product's quantity rules and volume discounts.
+            if (productPart is not null)
+            {
+                model.MaxQuantity = productPart.MaxQuantity is > 0 and var max ? Math.Min(model.MaxQuantity, max) : model.MaxQuantity;
+                model.MinQuantity = ProductVolumePricing.GetStartingQuantity(productPart);
+                model.QuantityStep = Math.Max(1, productPart.QuantityStep ?? 1);
+                model.PriceTiers = [.. (productPart.PriceTiers ?? []).Where(tier => tier.MinQuantity > 1 && tier.PercentOff > 0).OrderBy(tier => tier.MinQuantity)];
+
+                var user = _httpContextAccessor.HttpContext?.User;
+                model.RoleDiscount = (productPart.RoleDiscounts ?? [])
+                    .Where(entry => !string.IsNullOrEmpty(entry.Role) && entry.PercentOff > 0 && user?.IsInRole(entry.Role) == true)
+                    .OrderByDescending(entry => entry.PercentOff)
+                    .FirstOrDefault();
+            }
 
             // A buyer can't add more than is left.
             if (model.Availability is { CanBuy: true } && stock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, null)) is { AllowBackorder: false } counted)
@@ -168,6 +206,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             ProductAvailabilityStatus.LowStock => new() { Label = S["Only {0} left", availability.Available], Tone = "warning", CanBuy = true },
             ProductAvailabilityStatus.OutOfStock => new() { Label = S["Out of stock"], Tone = "danger", CanBuy = false },
             ProductAvailabilityStatus.Backorder => new() { Label = S["Available on backorder"], Tone = "secondary", CanBuy = true },
+            ProductAvailabilityStatus.Preorder => new() { Label = S["Pre-order: ships {0}", availability.ReleaseDateUtc.Value.ToString("D", System.Globalization.CultureInfo.CurrentCulture)], Tone = "info", CanBuy = true, IsPreorder = true },
             _ => new() { Label = S["In stock"], Tone = "success", CanBuy = true },
         };
 }

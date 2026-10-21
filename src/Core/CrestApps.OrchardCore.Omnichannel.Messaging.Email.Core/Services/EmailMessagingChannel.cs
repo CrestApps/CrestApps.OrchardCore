@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
-using OrchardCore.Flows.Models;
 using YesSql;
 using YesSql.Services;
 
@@ -48,6 +47,7 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     // report, and the scope deadlocks (the same reason the SMS channel resolves its dispatcher lazily).
     private readonly Lazy<IEmailDispatcher> _dispatcher;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
+    private readonly IContactMethodsAccessor _contactMethods;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
@@ -58,16 +58,19 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     /// <param name="contactTypeProvider">The provider of the content types that are leads.</param>
     /// <param name="session">The session the contact indexes are read from.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="contactMethods">Reads a contact's email addresses.</param>
     public EmailMessagingChannel(
         Lazy<IEmailDispatcher> dispatcher,
         IOmnichannelContactTypeProvider contactTypeProvider,
         ISession session,
-        IStringLocalizer<EmailMessagingChannel> stringLocalizer)
+        IStringLocalizer<EmailMessagingChannel> stringLocalizer,
+        IContactMethodsAccessor contactMethods)
     {
         _dispatcher = dispatcher;
         _contactTypeProvider = contactTypeProvider;
         _session = session;
         S = stringLocalizer;
+        _contactMethods = contactMethods;
     }
 
     /// <inheritdoc/>
@@ -114,16 +117,13 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     /// <inheritdoc/>
     public IReadOnlyList<string> GetContactAddresses(ContentItem contact)
     {
-        if (contact is null ||
-            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bag) ||
-            bag.ContentItems is null)
+        if (contact is null)
         {
             return [];
         }
 
-        return bag.ContentItems
-            .Where(method => string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal))
-            .Select(method => method.TryGet<EmailInfoPart>(out var emailPart) ? emailPart.Email?.Text : null)
+        return _contactMethods.Get(contact).EmailAddresses
+            .Select(emailAddress => emailAddress?.Email)
             .Where(OmnichannelEmailAddress.IsValid)
             .Select(OmnichannelEmailAddress.Normalize)
             .Distinct(StringComparer.Ordinal)

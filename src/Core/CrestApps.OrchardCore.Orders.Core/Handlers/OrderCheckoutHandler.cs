@@ -80,6 +80,18 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.CheckoutSessionId = session.SessionId;
         order.ModifiedUtc = _clock.UtcNow;
 
+        // An order the store made for a buyer already knows who they are, so they needn't type it again.
+        if (order.Invoice is not null && !string.IsNullOrEmpty(order.CustomerEmail) &&
+            !global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutContactInfo>(session, out _))
+        {
+            global::OrchardCore.Entities.EntityExtensions.Put(session, new CheckoutContactInfo
+            {
+                DisplayName = order.CustomerName,
+                Email = order.CustomerEmail,
+                Phone = order.CustomerPhone,
+            });
+        }
+
         await _orderStore.UpdateAsync(order);
     }
 
@@ -121,6 +133,31 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
         var now = _clock.UtcNow;
 
+        // An order bump the buyer added on the payment step, and paid for, becomes a line of the order, so it's
+        // sold from stock, shipped and reported like the rest.
+        if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutOrderBump>(session, out var bump) &&
+            invoice.LineItems.Any(item => item.ItemId == CheckoutOrderBump.BillingItemId) &&
+            !order.Lines.Exists(line => line.LineId == CheckoutOrderBump.BillingItemId))
+        {
+            order.Lines.Add(new OrderLine
+            {
+                LineId = CheckoutOrderBump.BillingItemId,
+                ContentItemId = bump.ContentItemId,
+                ContentItemVersionId = bump.ContentItemVersionId,
+                ContentType = bump.ContentType,
+                Title = bump.Title,
+                Sku = bump.Sku,
+                Quantity = 1,
+                UnitPrice = bump.UnitPrice,
+                LineTotal = bump.UnitPrice,
+                ProductType = bump.ProductType,
+                TaxCategoryCode = bump.TaxCategoryCode,
+                TaxClassificationCode = bump.TaxClassificationCode,
+                CategoryIds = bump.CategoryIds ?? [],
+            });
+            order.Subtotal += bump.UnitPrice;
+        }
+
         // An order replaced by a newer one from the same cart is still what this payment bought.
         order.Status = OrderStatus.Paid;
         order.PaidUtc = now;
@@ -128,6 +165,17 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.CheckoutSessionId = session.SessionId;
         order.Total = invoice.GrandTotal;
         order.TaxAmount = invoice.TaxAmount;
+
+        // What the discounts took off, so the order's lines, shipping, discounts and tax add up to what was paid.
+        order.Discounts = [.. (invoice.Discounts ?? [])
+            .Where(discount => discount.Amount > 0m)
+            .Select(discount => new OrderDiscount
+            {
+                Code = discount.Code,
+                Description = discount.Description,
+                Amount = discount.Amount,
+                ProviderKey = discount.ProviderKey,
+            })];
 
         // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's
         // name or email for it.
@@ -137,6 +185,22 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             order.CustomerEmail = Prefer(contact.Email, order.CustomerEmail);
             order.CustomerPhone = Prefer(contact.Phone, order.CustomerPhone);
             order.BillingAddress = contact.BillingAddress?.Clone() ?? order.BillingAddress;
+        }
+
+        if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutShippingInfo>(session, out var shipping) && shipping.Address is not null)
+        {
+            order.ShippingAddress = shipping.Address.Clone();
+            order.Shipping = new OrderShipping
+            {
+                MethodId = shipping.MethodId,
+                RateId = shipping.RateId,
+                ZoneId = shipping.ZoneId,
+                ProviderName = shipping.ProviderName,
+                Name = shipping.Name,
+                Description = shipping.Description,
+                Amount = shipping.Amount,
+                LocationId = shipping.LocationId,
+            };
         }
 
         await _orderStore.UpdateAsync(order);
@@ -175,6 +239,16 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
         if (order is null || !string.Equals(order.CheckoutSessionId, session.SessionId, StringComparison.Ordinal))
         {
+            return;
+        }
+
+        // An order the store sent the buyer to pay stays open: the buyer can pay it again from its link.
+        if (order.Invoice is not null && order.Status == OrderStatus.AwaitingPayment)
+        {
+            order.Status = OrderStatus.Draft;
+            order.CheckoutSessionId = null;
+            await _orderStore.UpdateAsync(order);
+
             return;
         }
 
@@ -232,17 +306,38 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
     private static bool IsOrder(CheckoutSession session)
         => string.Equals(session?.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal);
 
+    /// <summary>
+    /// The billing line of an order bump, as the order's lines are billed.
+    /// </summary>
+    public static BillingItem ToBillingItem(CheckoutOrderBump bump)
+        => ToBillingItem(new OrderLine
+        {
+            LineId = CheckoutOrderBump.BillingItemId,
+            ContentItemId = bump.ContentItemId,
+            Title = bump.Title,
+            Sku = bump.Sku,
+            Quantity = 1,
+            UnitPrice = bump.UnitPrice,
+            LineTotal = bump.UnitPrice,
+            ProductType = bump.ProductType,
+            TaxCategoryCode = bump.TaxCategoryCode,
+            TaxClassificationCode = bump.TaxClassificationCode,
+            CategoryIds = bump.CategoryIds ?? [],
+        });
+
     private static BillingItem ToBillingItem(OrderLine line)
         => new()
         {
             ItemId = line.LineId,
-            Description = string.IsNullOrEmpty(line.PriceName) ? line.Title : $"{line.Title} ({line.PriceName})",
+            Description = OrderLineText.Describe(line),
             Amount = line.UnitPrice,
             Quantity = line.Quantity,
             PriceId = line.PriceId,
             Sku = line.Sku,
             TaxCategoryCode = line.TaxCategoryCode,
             TaxClassificationCode = line.TaxClassificationCode,
+            ProductId = line.ContentItemId,
+            CategoryIds = line.CategoryIds,
             TaxableKind = line.ProductType switch
             {
                 ProductType.Service => TaxableItemKind.Service,

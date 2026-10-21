@@ -1,0 +1,3 @@
+@model PurchaseOrderRowViewModel
+
+<a asp-controller="PurchaseOrdersAdmin" asp-action="Edit" asp-route-purchaseOrderId="@Model.Order.ItemId">@Model.Order.Number</a>

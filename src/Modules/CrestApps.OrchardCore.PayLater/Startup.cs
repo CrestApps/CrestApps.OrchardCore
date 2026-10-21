@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.PayLater.Drivers;
 using CrestApps.OrchardCore.PayLater.Handlers;
 using CrestApps.OrchardCore.PayLater.Navigation;
@@ -39,6 +41,18 @@ public sealed class Startup : StartupBase
         services.AddScoped<PayLaterCheckoutPaymentProvider>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutRecurringPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());
+        services.AddScoped<OfflineCheckoutPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());
+
+        // Bank transfer and Cash on delivery are offline methods too, each off until the store turns it on.
+        services.AddScoped<BankTransferCheckoutPaymentProvider>();
+        services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<BankTransferCheckoutPaymentProvider>());
+        services.AddScoped<OfflineCheckoutPaymentProvider>(sp => sp.GetRequiredService<BankTransferCheckoutPaymentProvider>());
+        services.AddScoped<CashOnDeliveryCheckoutPaymentProvider>();
+        services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<CashOnDeliveryCheckoutPaymentProvider>());
+        services.AddScoped<OfflineCheckoutPaymentProvider>(sp => sp.GetRequiredService<CashOnDeliveryCheckoutPaymentProvider>());
+        services.AddScoped<OfflinePaymentLookup>();
+        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, OfflinePaymentMethodDisplayDriver>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, OfflinePaymentConfirmationDisplayDriver>();
         services.AddSingleton<IBackgroundTask, PayLaterRenewalBackgroundTask>();
         services.AddScoped<ICheckoutHandler, PayLaterTransactionCheckoutHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, PayLaterCheckoutPaymentMethodDisplayDriver>();
@@ -49,12 +63,37 @@ public sealed class Startup : StartupBase
             source.Description = S["Outstanding balances committed through the offline Pay Later option."];
         });
 
+        services.AddTransactionSource(BankTransferCheckoutPaymentProvider.ProcessorKey, source =>
+        {
+            source.DisplayName = S["Bank transfer"];
+            source.Description = S["Orders the buyer pays by transferring the money from their bank."];
+        });
+
+        services.AddTransactionSource(CashOnDeliveryCheckoutPaymentProvider.ProcessorKey, source =>
+        {
+            source.DisplayName = S["Cash on delivery"];
+            source.Description = S["Orders the buyer pays when they are delivered."];
+        });
+
         services
             .AddSiteDisplayDriver<PayLaterSettingsDisplayDriver>()
+            .AddSiteDisplayDriver<BankTransferSettingsDisplayDriver>()
+            .AddSiteDisplayDriver<CashOnDeliverySettingsDisplayDriver>()
             .AddNavigationProvider<PayLaterAdminMenu>();
 
         // The Pay Later settings group is guarded by the transaction settings permission, so a role that holds
         // only that permission must be allowed to open the group's settings page.
         services.AddSiteSettingsPermission(PayLaterConstants.SettingsGroupId, TransactionsPermissions.ManageTransactionSettings);
     }
+}
+
+/// <summary>
+/// How to pay an order placed with an offline method, on its pages, when Orders is enabled.
+/// </summary>
+[RequireFeatures(OrderConstants.Features.Orders)]
+public sealed class OrdersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDisplayDriver<Order, OrderOfflinePaymentDisplayDriver>();
 }

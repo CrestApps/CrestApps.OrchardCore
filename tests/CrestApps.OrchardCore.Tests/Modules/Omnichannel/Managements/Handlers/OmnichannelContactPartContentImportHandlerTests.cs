@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.ContentFields.Fields;
@@ -26,7 +28,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             CreateClock(),
             Mock.Of<IPhoneNumberService>(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
 
         var columns = handler.GetColumns(new ImportContentPartContext
         {
@@ -49,12 +52,72 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     }
 
     [Fact]
+    public void GetColumns_WhenTheTypeHasAContactMethodsProvider_LeavesTheEmailAndPhoneColumnsToItsOwnFields()
+    {
+        var handler = new OmnichannelContactPartContentImportHandler(
+            CreateClock(),
+            Mock.Of<IPhoneNumberService>(),
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            CreateAccessorWithProviderFor("Person"));
+
+        var columns = handler.GetColumns(new ImportContentPartContext
+        {
+            ContentTypePartDefinition = new ContentTypePartDefinition(
+                nameof(OmnichannelContactPart),
+                new ContentPartDefinition(nameof(OmnichannelContactPart)),
+                new())
+            {
+                ContentTypeDefinition = new ContentTypeDefinition("Person", "Person"),
+            },
+        });
+
+        Assert.DoesNotContain(columns, column => column.Name.StartsWith("ContactMethods_", StringComparison.Ordinal));
+        Assert.Contains(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotCall));
+        Assert.Contains(columns, column => column.Name == nameof(OmnichannelContactPart.TimeZoneId));
+    }
+
+    [Fact]
+    public async Task ImportAsync_WhenTheTypeHasAContactMethodsProvider_WritesNoBagButStillImportsThePreferences()
+    {
+        var handler = new OmnichannelContactPartContentImportHandler(
+            CreateClock(),
+            new DefaultPhoneNumberService(),
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            CreateAccessorWithProviderFor("Person"));
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("Cell Phone");
+        dataTable.Columns.Add("Email");
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotCall));
+
+        var row = dataTable.NewRow();
+        row["Cell Phone"] = "+17024993350";
+        row["Email"] = "person@example.com";
+        row[nameof(OmnichannelContactPart.DoNotCall)] = "true";
+        dataTable.Rows.Add(row);
+
+        var contentItem = new ContentItem { ContentType = "Person" };
+
+        await handler.ImportAsync(new ContentPartImportMapContext
+        {
+            ContentItem = contentItem,
+            Entry = new ContentTransferEntry(),
+            Columns = dataTable.Columns,
+            Row = row,
+        });
+
+        Assert.False(contentItem.Has(CrestApps.OrchardCore.Omnichannel.Core.OmnichannelConstants.NamedParts.ContactMethods));
+        Assert.True(contentItem.TryGet<OmnichannelContactPart>(out var contactPart));
+        Assert.True(contactPart.DoNotCall);
+    }
+
+    [Fact]
     public async Task ImportAsync_ShouldNormalizePhoneNumbersUsingSelectedCountry()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
             Mock.Of<IClock>(),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add("Cell Phone");
         dataTable.Columns.Add("Phone");
@@ -102,7 +165,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             CreateClock("America/Los_Angeles"),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add("Phone");
 
@@ -137,7 +201,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             Mock.Of<IClock>(),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add("Email");
         dataTable.Columns.Add("Cell Phone");
@@ -185,7 +250,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             Mock.Of<IClock>(),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add("Cell Phone");
 
@@ -221,7 +287,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             CreateClock("America/Los_Angeles"),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add("Phone");
 
@@ -261,7 +328,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             CreateClock("America/Los_Angeles"),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add(nameof(OmnichannelContactPart.TimeZoneId));
 
@@ -295,7 +363,8 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var handler = new OmnichannelContactPartContentImportHandler(
             CreateClock("America/Los_Angeles"),
             new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>(),
+            TestContactMethods.Accessor);
         var dataTable = new DataTable();
         dataTable.Columns.Add(nameof(OmnichannelContactPart.TimeZoneId));
         dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotCall));
@@ -353,6 +422,11 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
 
         return contentItem;
     }
+
+    private static IContactMethodsAccessor CreateAccessorWithProviderFor(string contentType)
+        => TestContactMethods
+            .CreateServices(services => services.AddContactMethodsProvider<FieldContactMethodsProvider>(contentType))
+            .GetRequiredService<IContactMethodsAccessor>();
 
     private static IClock CreateClock(params string[] timeZoneIds)
     {

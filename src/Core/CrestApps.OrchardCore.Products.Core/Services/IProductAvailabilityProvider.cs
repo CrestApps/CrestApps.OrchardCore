@@ -30,10 +30,18 @@ public sealed class ProductAvailabilityRequest
 /// </summary>
 public sealed record ProductAvailability(int Available, bool AllowBackorder, int LowStockThreshold)
 {
+    /// <summary>
+    /// Gets when a product not out yet ships, which makes a backorder a pre-order, or <see langword="null"/>. Providers
+    /// set it only while the date is to come.
+    /// </summary>
+    public DateTime? ReleaseDateUtc { get; init; }
+
     public ProductAvailabilityStatus Status
         => Available > 0
             ? Available <= LowStockThreshold ? ProductAvailabilityStatus.LowStock : ProductAvailabilityStatus.InStock
-            : AllowBackorder ? ProductAvailabilityStatus.Backorder : ProductAvailabilityStatus.OutOfStock;
+            : AllowBackorder
+                ? ReleaseDateUtc.HasValue ? ProductAvailabilityStatus.Preorder : ProductAvailabilityStatus.Backorder
+                : ProductAvailabilityStatus.OutOfStock;
 
     public bool CanBuy(int quantity)
         => AllowBackorder || Available >= quantity;
@@ -54,6 +62,11 @@ public enum ProductAvailabilityStatus
     /// None left, but it can still be ordered.
     /// </summary>
     Backorder = 3,
+
+    /// <summary>
+    /// Not out yet, and ordered ahead: none in stock, backorders taken, with a release date to come.
+    /// </summary>
+    Preorder = 4,
 }
 
 public static class ProductAvailabilityProviderExtensions

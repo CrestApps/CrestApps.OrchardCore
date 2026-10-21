@@ -363,6 +363,27 @@ public sealed class InventoryStockTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ARefundedOrder_PutsWhatItSoldBackInStock_Once()
+    {
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 5);
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 2)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.CommitAsync("order-a", [new StockRequest("mug", null, 2)], TestContext.Current.CancellationToken));
+
+        var first = await InSessionAsync(service => service.RestockAsync("order-a", "Order 261018-ABC was refunded.", _admin, TestContext.Current.CancellationToken));
+        var second = await InSessionAsync(service => service.RestockAsync("order-a", "Again", _admin, TestContext.Current.CancellationToken));
+
+        Assert.Equal(2, first);
+        Assert.Equal(0, second);
+        Assert.Equal(5, (await FindAsync(itemId)).OnHand);
+
+        var returned = Assert.Single(await MovementsAsync(itemId), movement => movement.Kind == StockMovementKind.Returned);
+        Assert.Equal(2, returned.Quantity);
+        Assert.Equal("order-a", returned.OrderId);
+        Assert.Equal("admin", returned.ActorName);
+    }
+
+    [Fact]
     public async Task AnOrderPaidAfterItsHoldEnded_IsSoldAnyway_Once()
     {
         var itemId = await AddItemAsync();
@@ -447,7 +468,7 @@ public sealed class InventoryStockTests : IAsyncLifetime
             .BuildServiceProvider();
 
         await using var session = _store.CreateSession();
-        var provider = new CrestApps.OrchardCore.Inventory.Services.InventoryAvailabilityProvider(session, services);
+        var provider = new CrestApps.OrchardCore.Inventory.Services.InventoryAvailabilityProvider(session, services, Clock());
 
         var everyone = await provider.GetAvailabilityAsync(new CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityRequest
         {

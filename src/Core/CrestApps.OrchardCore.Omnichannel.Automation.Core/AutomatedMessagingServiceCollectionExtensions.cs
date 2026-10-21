@@ -30,6 +30,8 @@ public static class AutomatedMessagingServiceCollectionExtensions
         // One processor per channel: the automated activities task picks the processor by the activity's channel.
         services.AddScoped<IOmnichannelProcessor>(sp => ActivatorUtilities.CreateInstance<AutomatedConversationProcessor>(sp, sp.GetRequiredService<TChannel>()));
 
+        // The conclusion reads and writes the contact's email address through its type's contact methods.
+        services.AddContactMethods();
         services.TryAddScoped<AutomatedConversationHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelEventHandler, AutomatedConversationHandler>());
 

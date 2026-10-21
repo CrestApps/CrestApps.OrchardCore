@@ -21,6 +21,7 @@ public sealed class DefaultPriceResolver : IPriceResolver
     private readonly IProductSnapshotResolver _snapshotResolver;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultPriceResolver"/> class.
@@ -36,6 +37,20 @@ public sealed class DefaultPriceResolver : IPriceResolver
         _snapshotResolver = snapshotResolver;
         _clock = clock;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultPriceResolver"/> class that applies role discounts for the
+    /// signed-in buyer.
+    /// </summary>
+    public DefaultPriceResolver(
+        IProductSnapshotResolver snapshotResolver,
+        IClock clock,
+        ILogger<DefaultPriceResolver> logger,
+        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
+        : this(snapshotResolver, clock, logger)
+    {
+        _httpContextAccessor = httpContextAccessor;
     }
 
     /// <inheritdoc/>
@@ -76,8 +91,23 @@ public sealed class DefaultPriceResolver : IPriceResolver
             return null;
         }
 
-        return new PriceResult(product.UnitPrice, product.Currency, context.Quantity);
+        // Volume and role discounts come off the price the product sells at.
+        var unitPrice = product.UnitPrice;
+
+        if (context.ContentItem is not null && context.ContentItem.TryGet<ProductPart>(out var productPart))
+        {
+            unitPrice = ProductVolumePricing.Apply(unitPrice, ProductVolumePricing.GetPercentOff(productPart, Math.Max(1, context.Quantity), GetRoles()));
+        }
+
+        return new PriceResult(unitPrice, product.Currency, context.Quantity);
     }
+
+    // The signed-in buyer's roles, for role discounts. A request without a buyer, such as a webhook, gets none, but
+    // never reprices anyway: an order keeps the prices it was placed at.
+    private IEnumerable<string> GetRoles()
+        => _httpContextAccessor?.HttpContext?.User is { Identity.IsAuthenticated: true } user
+            ? user.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value)
+            : [];
 
     private PriceResult ResolveFromPrices(ProductSnapshotContext context, ISellableProduct product, ProductPricePart pricing)
     {

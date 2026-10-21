@@ -34,4 +34,9 @@ public enum OrderCancelReason
     /// Something the order needed couldn't be held for it when it was made, such as the last units of a product.
     /// </summary>
     Unavailable = 6,
+
+    /// <summary>
+    /// The store canceled it from the order's page.
+    /// </summary>
+    CanceledByStore = 7,
 }

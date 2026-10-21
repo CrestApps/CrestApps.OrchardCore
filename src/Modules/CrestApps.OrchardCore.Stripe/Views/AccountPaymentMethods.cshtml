@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Stripe.ViewModels
+@model AccountPaymentMethodsViewModel
+
+@* The cards the buyer saved at checkout, each with a way to remove it. *@
+
+@if (Model.Cards.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <span class="fa-regular fa-credit-card fa-2x text-muted mb-3 d-block" aria-hidden="true"></span>
+            <p class="mb-1">@T["You have no saved cards."]</p>
+            <p class="text-muted small mb-0">@T["Tick \"Save this card for next time\" when you pay by card, and it appears here."]</p>
+        </div>
+    </div>
+}
+else
+{
+    <ul class="list-group mb-3">
+        @foreach (var card in Model.Cards)
+        {
+            <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="fa-regular fa-credit-card fa-lg text-body-secondary" aria-hidden="true"></span>
+                    <div>
+                        <div class="fw-semibold">@T["{0} ending in {1}", card.Brand?.ToUpperInvariant(), card.Last4]</div>
+                        <div class="small text-body-secondary">@T["Expires {0:00}/{1}", card.ExpMonth, card.ExpYear]</div>
+                    </div>
+                </div>
+                <form method="post" action="@Url.RouteUrl("AccountPaymentMethodRemove", new { paymentMethodId = card.Id })">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="@T["Remove the {0} card ending in {1}", card.Brand, card.Last4]">@T["Remove"]</button>
+                </form>
+            </li>
+        }
+    </ul>
+    <p class="small text-body-secondary">@T["Your cards are kept securely by Stripe, not on this site."]</p>
+}

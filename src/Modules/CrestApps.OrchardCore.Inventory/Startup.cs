@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
@@ -5,10 +7,14 @@ using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
+using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Recipes;
+using CrestApps.OrchardCore.Inventory.Reports;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Inventory.Workflows;
 using CrestApps.OrchardCore.Orders.Core;
@@ -16,6 +22,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Transfer;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -48,6 +55,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IStockItemStore, StockItemStore>();
         services.AddScoped<IStockMovementStore, StockMovementStore>();
         services.AddScoped<IInventoryService, DefaultInventoryService>();
+        services.AddScoped<InventoryLocationService>();
+        services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
+        services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<InventoryProductSynchronizer>();
         services.AddScoped<InventorySyncService>();
         services.AddScoped<StockCountImporter>();
@@ -88,6 +98,36 @@ public sealed class OrdersStartup : StartupBase
     {
         services.AddScoped<IOrderEventHandler, InventoryOrderEventHandler>();
         services.AddSingleton<IBackgroundTask, ExpiredStockHoldsBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Imports and exports how a product's stock is kept, and how many are available, with Content Transfer.
+/// </summary>
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class ContentTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<InventoryCountApplier>();
+        services.AddContentPartImportHandler<InventoryPart, InventoryPartContentImportHandler>();
+    }
+}
+
+/// <summary>
+/// Works out a bundle's stock from its parts, and refreshes the bundles a product is in when its stock changes.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Bundles)]
+public sealed class BundlesStartup : StartupBase
+{
+    // Before the main startup, so bundles are answered for before the stock items.
+    public override int Order => -10;
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<InventoryAvailabilityProvider>();
+        services.AddScoped<IProductAvailabilityProvider, BundleAvailabilityProvider>();
+        services.AddScoped<IStockLevelHandler, BundleSearchIndexHandler>();
     }
 }
 
@@ -142,4 +182,55 @@ public sealed class DeploymentStartup : StartupBase
     {
         services.AddDeployment<StockDeploymentSource, StockDeploymentStep, StockDeploymentStepDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Adds the stock on hand and stock movements reports to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IReport, StockOnHandReport>();
+        services.AddScoped<IReport, StockMovementsReport>();
+    }
+}
+
+/// <summary>
+/// Lets shoppers ask to hear when a sold-out product is back, and emails them when it is.
+/// </summary>
+[Feature(InventoryConstants.Features.StockAlerts)]
+public sealed class StockAlertsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<StockAlertMigrations>()
+            .AddIndexProvider<StockAlertIndexProvider>();
+        services.AddScoped<StockAlertService>();
+        services.AddScoped<IStockLevelHandler, BackInStockAlertHandler>();
+        services.AddScoped<CrestApps.OrchardCore.Customers.PersonalData.ICommercePersonalDataContributor, StockAlertPersonalDataContributor>();
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<StockAlertDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Orders stock from suppliers and receives it at a location.
+/// </summary>
+[Feature(InventoryConstants.Features.PurchaseOrders)]
+public sealed class PurchaseOrdersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<PurchaseOrderMigrations>()
+            .AddIndexProvider<PurchaseOrderIndexProvider>();
+        services.AddScoped<IPurchaseOrderStore, PurchaseOrderStore>();
+        services.AddScoped<PurchaseOrderReceiver>();
+        services.AddDisplayDriver<PurchaseOrder, PurchaseOrderDisplayDriver>();
+        services.AddNavigationProvider<PurchaseOrdersAdminMenu>();
+    }
+
+    public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddStockItemSearchEndpoint();
 }

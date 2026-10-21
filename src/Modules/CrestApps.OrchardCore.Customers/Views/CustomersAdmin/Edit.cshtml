@@ -1,4 +1,10 @@
 @model CustomerEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var readOnly = !Model.CanManage || Model.Status is CustomerStatus.Anonymized or CustomerStatus.Merged;
@@ -59,6 +65,18 @@
                 <input asp-for="TaxId" class="form-control" autocomplete="off" />
                 <span class="hint">@T["Such as a VAT number. It is shown on invoices."]</span>
             </div>
+            <div class="col-md-6" data-customer-business>
+                <div class="form-check mt-md-4">
+                    <input asp-for="IsTaxExempt" type="checkbox" class="form-check-input" />
+                    <label asp-for="IsTaxExempt" class="form-check-label">@T["Exempt from tax"]</label>
+                    <span class="hint dashed">@T["The customer pays no tax when they check out signed in, such as a reseller or a charity you hold a certificate for."]</span>
+                </div>
+            </div>
+            <div class="col-md-6" data-customer-business>
+                <label asp-for="TaxExemptionReason" class="form-label">@T["Why they are exempt"]</label>
+                <input asp-for="TaxExemptionReason" class="form-control" autocomplete="off" />
+                <span class="hint">@T["Such as the resale certificate number, for your records."]</span>
+            </div>
 
             <div class="col-md-6" asp-validation-class-for="Email">
                 <label asp-for="Email" class="form-label">@T["Email"]</label>
@@ -103,9 +121,9 @@
                 }
             </dd>
             <dt class="col-sm-3">@T["Customer since"]</dt>
-            <dd class="col-sm-9">@Model.CreatedUtc?.ToString("g")</dd>
+            <dd class="col-sm-9">@(Model.CreatedUtc is { } createdUtc ? (await LocalAsync(createdUtc)).ToString("g") : null)</dd>
             <dt class="col-sm-3">@T["Last activity"]</dt>
-            <dd class="col-sm-9">@Model.LastActivityUtc?.ToString("g")</dd>
+            <dd class="col-sm-9">@(Model.LastActivityUtc is { } lastActivityUtc ? (await LocalAsync(lastActivityUtc)).ToString("g") : null)</dd>
         </dl>
     }
 
@@ -125,7 +143,7 @@
         <a asp-action="Edit" asp-route-customerId="@Model.MergedInto.CustomerId">@Model.MergedInto.Name</a>
         @if (Model.MergedUtc.HasValue)
         {
-            @T[" on {0:d}, when that account's email was verified.", Model.MergedUtc.Value]
+            @T[" on {0:d}, when that account's email was verified.", await LocalAsync(Model.MergedUtc.Value)]
         }
     </div>
 }
@@ -154,7 +172,7 @@
                     {
                         <tr>
                             <td><a asp-route="OrdersDetail" asp-route-orderId="@order.OrderId" class="font-monospace">@order.OrderNumber</a></td>
-                            <td>@order.CreatedUtc.ToString("d")</td>
+                            <td>@((await LocalAsync(order.CreatedUtc)).ToString("d"))</td>
                             <td>@order.Status</td>
                             <td class="text-end">@order.Total</td>
                         </tr>
@@ -209,13 +227,13 @@
                         @switch (entry.Action)
                         {
                             case CustomerPrivacyAction.Exported:
-                                @T["{0:g}: data downloaded by {1}", entry.Utc, by]
+                                @T["{0:g}: data downloaded by {1}", await LocalAsync(entry.Utc), by]
                                 break;
                             case CustomerPrivacyAction.Erased:
-                                @T["{0:g}: personal data erased by {1}", entry.Utc, by]
+                                @T["{0:g}: personal data erased by {1}", await LocalAsync(entry.Utc), by]
                                 break;
                             default:
-                                @T["{0:g}: personal data erased after the retention window", entry.Utc]
+                                @T["{0:g}: personal data erased after the retention window", await LocalAsync(entry.Utc)]
                                 break;
                         }
                     </li>

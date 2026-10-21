@@ -1,0 +1,179 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model OrderViewViewModel
+@inject IServiceProvider Services
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+@{
+    var order = Model.Order;
+    string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
+    var formatter = Services.GetService(typeof(CrestApps.OrchardCore.Addresses.Services.IAddressFormatter)) as CrestApps.OrchardCore.Addresses.Services.IAddressFormatter;
+    var billedTo = order.BillingAddress is null || formatter is null ? null : await formatter.GetLinesAsync(order.BillingAddress);
+    var shipsTo = order.ShippingAddress is null || formatter is null ? null : await formatter.GetLinesAsync(order.ShippingAddress);
+}
+
+
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+    <div>
+        <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
+        <p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.InvoiceUrl))
+    {
+        <a class="btn btn-outline-secondary btn-sm" href="@Model.InvoiceUrl">
+            <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
+        </a>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(Model.PayUrl))
+{
+    <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
+        @if (order.Invoice is not null && order.Status != OrderStatus.Paid)
+        {
+            <span>
+                @T["This order is waiting for your payment. Shipping and tax are added when you pay."]
+                @if (order.Invoice.DueUtc is { } due)
+                {
+                    <span class="d-block small">@T["Please pay by {0:D}.", due]</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(order.Invoice.Note))
+                {
+                    <span class="d-block small mt-1" style="white-space: pre-line">@order.Invoice.Note</span>
+                }
+            </span>
+        }
+        else
+        {
+            <span>@T["A balance is still owed on this order."]</span>
+        }
+        <a class="btn btn-primary btn-sm" href="@Model.PayUrl">@T["Pay now"]</a>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Item"]</th>
+                    <th scope="col" class="text-end">@T["Quantity"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in order.Lines)
+                {
+                    <tr>
+                        <td>
+                            @line.Title
+                            @if (!string.IsNullOrEmpty(line.PriceName))
+                            {
+                                <span class="text-muted">(@line.PriceName)</span>
+                            }
+                            @if (line.ShipsFromUtc is { } shipsFrom)
+                            {
+                                <div class="small text-info-emphasis">@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                            }
+                            @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
+                            {
+                                <div class="small text-muted text-break">@T["Includes {0}", contents]</div>
+                            }
+                            @foreach (var addOn in line.AddOns ?? [])
+                            {
+                                <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)</div>
+                            }
+                        </td>
+                        <td class="text-end">@line.Quantity</td>
+                        <td class="text-end">@Format(line.LineTotal)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                @foreach (var discount in order.Discounts ?? [])
+                {
+                    <tr>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@(string.IsNullOrEmpty(discount.Code) ? T["Discount: {0}", discount.Description] : T["Discount ({0})", discount.Code])</th>
+                        <td class="text-end">&minus;@Format(discount.Amount)</td>
+                    </tr>
+                }
+                @if (order.Shipping is not null)
+                {
+                    <tr>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@(order.Shipping.IsPickup ? order.Shipping.Name : T.GetString("Shipping ({0})", order.Shipping.Name).Value)</th>
+                        <td class="text-end">@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</td>
+                    </tr>
+                }
+                @if (order.TaxAmount is > 0)
+                {
+                    <tr>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@T["Tax"]</th>
+                        <td class="text-end">@Format(order.TaxAmount.Value)</td>
+                    </tr>
+                }
+                <tr>
+                    <th scope="row" colspan="2" class="text-end">@T["Total"]</th>
+                    <td class="text-end fw-bold">@Format(order.Total ?? order.Subtotal)</td>
+                </tr>
+                @foreach (var refund in order.Refunds ?? [])
+                {
+                    <tr>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@T["Refunded {0:d}", await LocalAsync(refund.CreatedUtc)]</th>
+                        <td class="text-end">&minus;@Format(refund.Amount)</td>
+                    </tr>
+                }
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@* What other modules add to the order, such as its shipments and their tracking links. *@
+@if (Model.Sections is not null)
+{
+    @await DisplayAsync(Model.Sections)
+}
+
+@if (shipsTo is { Count: > 0 })
+{
+    <h2 class="h6">@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</h2>
+    <address>
+        @for (var i = 0; i < shipsTo.Count; i++)
+        {
+            @shipsTo[i]
+            if (i < shipsTo.Count - 1)
+            {
+                <br />
+            }
+        }
+    </address>
+    @if (order.Shipping?.IsPickup == true && !string.IsNullOrEmpty(order.Shipping.Description))
+    {
+        <p class="small text-body-secondary">@order.Shipping.Description</p>
+    }
+}
+
+@if (billedTo is { Count: > 0 })
+{
+    <h2 class="h6">@T["Billed to"]</h2>
+    <address>
+        @for (var i = 0; i < billedTo.Count; i++)
+        {
+            @billedTo[i]
+            if (i < billedTo.Count - 1)
+            {
+                <br />
+            }
+        }
+    </address>
+}
+
+@if (!string.IsNullOrEmpty(Model.RegisterUrl))
+{
+    <p class="small text-muted mt-4">
+        @T["Create an account with the same email to see this order and future ones in your account."]
+        <a href="@Model.RegisterUrl">@T["Create an account"]</a>
+    </p>
+}

@@ -39,6 +39,12 @@ public sealed class CartPricing
 /// </summary>
 public sealed class CartLinePricing
 {
+    /// <summary>
+    /// Gets or sets the add-ons chosen for the line, as they read: label, the text typed (or nothing for a ticked
+    /// box) and the extra price per unit, which <see cref="UnitPrice"/> includes.
+    /// </summary>
+    public IReadOnlyList<ProductAddOnChoice> AddOns { get; set; } = [];
+
     public CartLine Line { get; init; }
 
     /// <summary>
@@ -60,6 +66,11 @@ public sealed class CartLinePricing
     /// Gets the most units of the line that can be bought.
     /// </summary>
     public int MaxQuantity { get; init; }
+
+    /// <summary>
+    /// Gets when a pre-ordered line ships, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? ShipsFromUtc { get; init; }
 
     /// <summary>
     /// Gets whether the price is not the one shown when the line was added.

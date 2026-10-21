@@ -1,0 +1,53 @@
+@model EasyPostSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsEnabled" checked="@Model.IsEnabled" role="button" data-bs-toggle="collapse" data-bs-target="#EasyPost_Provider_Settings" aria-expanded="@Model.IsEnabled.ToString().ToLowerInvariant()" aria-controls="EasyPost_Provider_Settings" />
+            <label class="form-check-label" asp-for="IsEnabled">@T["Enable EasyPost provider"]</label>
+            <span class="hint dashed">@T["Quotes UPS, USPS, FedEx, DHL and other carriers' rates and buys their labels through your EasyPost account."]</span>
+        </div>
+    </div>
+</div>
+
+<div id="EasyPost_Provider_Settings" class="collapse @(Model.IsEnabled ? "show" : string.Empty)">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <h4 class="mb-0">@T["EasyPost account"]</h4>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ApiKey">
+        <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+        <div class="ocat-end">
+            <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore value="" />
+            <span asp-validation-for="ApiKey"></span>
+            @if (Model.HasApiKey)
+            {
+                <span class="hint">@T["The API key was securely saved. Enter a new value if you wish to replace it."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["From your EasyPost dashboard, under API Keys. Use the test key to try it: test labels aren't charged."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-label">@T["Tracking updates"]</div>
+        <div class="ocat-end">
+            @if (!string.IsNullOrEmpty(Model.WebhookUrl))
+            {
+                <p class="mb-0"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Registered with EasyPost at {0}. Parcels show where they are on the buyer's order, and are marked delivered when they arrive.", Model.WebhookUrl]</p>
+            }
+            else if (string.IsNullOrEmpty(Model.PublicWebhookUrl))
+            {
+                <p class="mb-0 text-body-secondary">@T["Set the site's Base URL in Settings › General to its public https address, then save here: EasyPost is told where to send tracking updates. It can't reach a site on this computer. Rates and labels work without them."]</p>
+            }
+            else
+            {
+                <p class="mb-0 text-body-secondary">@T["Saving registers tracking updates with EasyPost at {0}.", Model.PublicWebhookUrl]</p>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@using OrchardCore.DisplayManagement
+@model ProductCardStripViewModel
+@inject IShapeFactory ShapeFactory
+
+@* The cards of a strip, for the templates that show one under their own heading. The cards themselves are the
+   ProductCardStrip shape, so a theme overrides that shape to change them. *@
+@await DisplayAsync(await ShapeFactory.CreateAsync<ProductCardStripViewModel>("ProductCardStrip", strip =>
+{
+    strip.Heading = Model.Heading;
+    strip.Cards = Model.Cards;
+}))

@@ -103,6 +103,10 @@ public sealed class EntryPointsController : ContactCenterCatalogController<Conta
         => H["The inbound entry point has been deleted successfully."];
 
     /// <inheritdoc/>
+    protected override void SetName(ContactCenterEntryPoint entry, string name)
+        => entry.Name = name;
+
+    /// <inheritdoc/>
     /// <remarks>
     /// A number is answered by one enabled entry point on each channel, so the copy starts without the source's numbers;
     /// keeping them would refuse the save until every one was removed by hand.

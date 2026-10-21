@@ -11,15 +11,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </summary>
 public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelContactDuplicateLookupService
 {
-    // SQL Server refuses a command with more than 2,100 parameters, and every value in an IN list is one. A lookup
-    // names its keys once for each of the indexed number columns it compares, so a command binds the keys of one
-    // chunk that many times, plus the published flag. However large an import batch is, its keys are split into
-    // chunks that stay inside the limit.
-    internal const int MaxParametersPerCommand = 2_000;
-
-    internal const int ComparedNumberColumns = 4;
-
-    internal const int LookupChunkSize = MaxParametersPerCommand / ComparedNumberColumns;
+    // Every number lookup compares one column per query, never an OR across columns: an OR keeps SQL Server from
+    // seeking the column's own index, so it scans the whole contact index instead. The numbers go in small batches,
+    // because every match is read back through the clustered index and a long IN list estimates enough matches that
+    // a scan looks cheaper again. A short batch is padded to the full size so every lookup sends the same command
+    // text, and the database compiles and keeps one plan for it rather than one per list length.
+    internal const int LookupBatchSize = 50;
 
     private readonly ISession _session;
     private readonly IPhoneNumberService _phoneNumberService;
@@ -58,8 +55,8 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         var cellPhoneMatches = new List<OmnichannelContactIndex>();
         var homePhoneMatches = new List<OmnichannelContactIndex>();
 
-        // Each query compares one column, so a chunk may name as many numbers as one command binds.
-        foreach (var chunk in normalizedPhoneNumbers.Chunk(MaxParametersPerCommand))
+        // One query per column; see LookupBatchSize.
+        foreach (var chunk in ToLookupBatches(normalizedPhoneNumbers))
         {
             cellPhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
                     index => index.Published &&
@@ -120,16 +117,23 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         var seenDocuments = new HashSet<long>();
 
-        // One query per chunk; see MaxParametersPerCommand.
-        foreach (var chunk in keys.Chunk(LookupChunkSize))
+        // One query per column; see LookupBatchSize. A record found by more than one column is counted once.
+        foreach (var chunk in ToLookupBatches(keys))
         {
-            var matches = await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Published &&
-                    (index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk) ||
-                    index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk) ||
-                    index.PrimaryCellPhoneNumber.IsIn(chunk) ||
-                    index.PrimaryHomePhoneNumber.IsIn(chunk)))
-                .ListAsync(cancellationToken);
+            var matches = new List<OmnichannelContactIndex>();
+
+            matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published && index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+            matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published && index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+            matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published && index.PrimaryCellPhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+            matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published && index.PrimaryHomePhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
 
             foreach (var index in matches)
             {
@@ -148,6 +152,30 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         return phoneOwners
             .Where(pair => requested.Contains(pair.Key))
             .ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Splits <paramref name="values"/> into batches of exactly <see cref="LookupBatchSize"/>, repeating the last
+    /// value of a short batch to fill it. A repeated value matches the same rows again, so callers that merge matches
+    /// by record see no difference.
+    /// </summary>
+    /// <param name="values">The values to look up; empty yields no batch.</param>
+    internal static IEnumerable<string[]> ToLookupBatches(IReadOnlyList<string> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+
+        for (var start = 0; start < values.Count; start += LookupBatchSize)
+        {
+            var last = Math.Min(start + LookupBatchSize, values.Count) - 1;
+            var batch = new string[LookupBatchSize];
+
+            for (var i = 0; i < LookupBatchSize; i++)
+            {
+                batch[i] = values[Math.Min(start + i, last)];
+            }
+
+            yield return batch;
+        }
     }
 
     private void AddPhoneFromIndex(HashSet<string> phoneNumbers, string normalizedValue, string rawValue)

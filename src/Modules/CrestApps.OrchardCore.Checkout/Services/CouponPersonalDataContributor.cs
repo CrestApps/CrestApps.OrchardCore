@@ -17,14 +17,17 @@ namespace CrestApps.OrchardCore.Checkout.Services;
 public sealed class CouponPersonalDataContributor : ICommercePersonalDataContributor
 {
     private readonly ICheckoutSessionStore _sessionStore;
+    private readonly ICouponRedemptionService _redemptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CouponPersonalDataContributor"/> class.
     /// </summary>
     /// <param name="sessionStore">The checkout session store.</param>
-    public CouponPersonalDataContributor(ICheckoutSessionStore sessionStore)
+    /// <param name="redemptions">The coupon uses, which forget who used them.</param>
+    public CouponPersonalDataContributor(ICheckoutSessionStore sessionStore, ICouponRedemptionService redemptions)
     {
         _sessionStore = sessionStore;
+        _redemptions = redemptions;
     }
 
     /// <inheritdoc/>
@@ -79,6 +82,9 @@ public sealed class CouponPersonalDataContributor : ICommercePersonalDataContrib
                 await _sessionStore.SaveAsync(session, cancellationToken);
             }
         }
+
+        // The uses keep their code, amount and checkout for the coupon's count; who used them is forgotten.
+        await _redemptions.ForgetCustomersAsync(context.Subject.CheckoutSessionIds, cancellationToken);
     }
 
     private async Task<List<(CheckoutSession Session, CheckoutInvoice Invoice, DiscountLine Discount)>> GetRedemptionsAsync(CommercePersonalDataSubject subject, CancellationToken cancellationToken)

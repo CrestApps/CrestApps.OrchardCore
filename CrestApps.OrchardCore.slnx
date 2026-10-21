@@ -83,11 +83,13 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer.Azure/CrestApps.OrchardCore.ContentTransfer.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer.OpenXml/CrestApps.OrchardCore.ContentTransfer.OpenXml.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Downloads/CrestApps.OrchardCore.Downloads.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Inventory/CrestApps.OrchardCore.Inventory.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Reviews/CrestApps.OrchardCore.Reviews.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Shipping/CrestApps.OrchardCore.Shipping.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />

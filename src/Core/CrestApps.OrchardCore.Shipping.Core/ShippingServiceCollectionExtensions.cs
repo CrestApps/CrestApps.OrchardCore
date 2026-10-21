@@ -18,9 +18,14 @@ public static class ShippingServiceCollectionExtensions
             .AddCatalogManagers();
 
         services.TryAddScoped<IShippingRateService, DefaultShippingRateService>();
+        services.TryAddScoped<IShipmentStore, ShipmentStore>();
+        services.TryAddScoped<IShipmentService, DefaultShipmentService>();
         services.AddScoped<IShippingRateProvider, FlatRateShippingProvider>();
         services.AddScoped<IShippingRateProvider, TableRateShippingProvider>();
         services.AddScoped<IShippingRateProvider, FreeShippingProvider>();
+        services.AddScoped<IShippingRateProvider, LocalDeliveryShippingProvider>();
+        services.AddScoped<IShippingRateProvider, CarrierShippingRateProvider>();
+        services.AddScoped<ICarrierProviderResolver, DefaultCarrierProviderResolver>();
 
         return services;
     }

@@ -8,6 +8,9 @@
     var currency = invoice.Currency;
 
     string Format(decimal amount) => $"{currency} {CurrencyScale.Format(amount, currency)}";
+
+    // The total is ruled off only from lines above it; with none, it sits alone.
+    var hasBreakdown = (invoice.Discounts?.Count ?? 0) > 0 || invoice.TaxAmount > 0m;
 }
 
 <div class="card mb-4">
@@ -36,6 +39,15 @@
         }
     </ul>
     <div class="card-body">
+        @* What the discounts took off, each on its own line, so the lines above and the total below add up. *@
+        @foreach (var discount in invoice.Discounts ?? [])
+        {
+            <div class="d-flex justify-content-between text-success">
+                <span>@if (string.IsNullOrEmpty(discount.Code)) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
+                <span>&minus;@Format(discount.Amount)</span>
+            </div>
+        }
+
         @* Tax is shown as its own line rather than folded into the total, so the customer can see exactly
            what they are being charged and why. *@
         @if (invoice.TaxAmount > 0m)
@@ -54,7 +66,7 @@
             }
         }
 
-        <div class="d-flex justify-content-between fw-semibold border-top pt-2 mt-2">
+        <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
             <span>@T["Due now"]</span>
             <span>@Format(invoice.GrandTotal)</span>
         </div>

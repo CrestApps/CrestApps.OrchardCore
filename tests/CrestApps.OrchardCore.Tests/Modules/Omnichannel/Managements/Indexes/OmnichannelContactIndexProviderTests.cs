@@ -15,7 +15,7 @@ public sealed class OmnichannelContactIndexProviderTests
     public void CreateIndex_WhenContactIsPublished_IndexesVersionAndPrimaryContactDetails()
     {
         // Arrange
-        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService());
+        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
         var contact = CreateContact(
             published: true,
             latest: false,
@@ -46,7 +46,7 @@ public sealed class OmnichannelContactIndexProviderTests
     public void CreateIndex_WhenContactIsLatestDraft_IndexesLatestVersion()
     {
         // Arrange
-        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService());
+        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
         var contact = CreateContact(
             published: false,
             latest: true,
@@ -68,7 +68,7 @@ public sealed class OmnichannelContactIndexProviderTests
     public void CreateIndex_WhenRegionIsNullAndNumberIsNational_PreservesNationalDigits()
     {
         // Arrange
-        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService());
+        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
         var contact = CreateContact(
             published: false,
             latest: true,
@@ -88,7 +88,7 @@ public sealed class OmnichannelContactIndexProviderTests
     public void CreateIndex_WhenRegionIsUnknown_PreservesAllDigitsAndExplicitE164()
     {
         // Arrange
-        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService());
+        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
         var contact = CreateContact(
             published: false,
             latest: true,
@@ -108,7 +108,7 @@ public sealed class OmnichannelContactIndexProviderTests
     public void CreateIndex_WhenContactHasNoMethods_StillIndexesEligibleVersion()
     {
         // Arrange
-        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService());
+        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
         var contact = CreateContact(
             published: true,
             latest: true,
@@ -130,7 +130,7 @@ public sealed class OmnichannelContactIndexProviderTests
     public void CreateIndex_WhenContentItemIsNeitherPublishedNorLatest_ReturnsNull()
     {
         // Arrange
-        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService());
+        var provider = new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
         var contact = CreateContact(
             published: false,
             latest: false,

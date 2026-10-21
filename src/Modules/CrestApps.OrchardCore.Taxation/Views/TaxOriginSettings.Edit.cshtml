@@ -1,0 +1,34 @@
+@model CrestApps.OrchardCore.Taxation.ViewModels.TaxOriginSettingsViewModel
+
+<p class="text-muted">@T["Where the store sells from. Taxes collected where the seller is, rather than where the buyer is, use it when an item doesn't say where it ships from. Leave the country blank if every tax you collect is based on where the buyer is."]</p>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="Country" class="form-label">@T["Country"]</label>
+        <input asp-for="Country" class="form-control" maxlength="2" placeholder="US" />
+        <span class="hint">@T["The two-letter country code."]</span>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="Region" class="form-label">@T["State or province"]</label>
+        <input asp-for="Region" class="form-control" maxlength="3" placeholder="WA" />
+        <span class="hint">@T["The code, such as WA or ON."]</span>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="County" class="form-label">@T["County"]</label>
+        <input asp-for="County" class="form-control" />
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="City" class="form-label">@T["City"]</label>
+        <input asp-for="City" class="form-control" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="PostalCode" class="form-label">@T["Postal code"]</label>
+        <input asp-for="PostalCode" class="form-control" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="AddressLine1" class="form-label">@T["Street address"]</label>
+        <input asp-for="AddressLine1" class="form-control" />
+    </div>
+</div>

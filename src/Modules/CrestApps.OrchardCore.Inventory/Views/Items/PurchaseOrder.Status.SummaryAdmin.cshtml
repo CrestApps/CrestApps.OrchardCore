@@ -1,0 +1,3 @@
+@model PurchaseOrderRowViewModel
+
+@await Html.PartialAsync("_PurchaseOrderStatus", Model.Order.Status)

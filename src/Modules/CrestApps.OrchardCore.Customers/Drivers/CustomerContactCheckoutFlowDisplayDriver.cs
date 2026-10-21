@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Json;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -36,6 +38,7 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
     private readonly CustomerAddressBook _addressBook;
     private readonly IAddressEditorService _addressEditor;
     private readonly IShapeFactory _shapeFactory;
+    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
     internal readonly IStringLocalizer S;
@@ -45,6 +48,7 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
         CustomerAddressBook addressBook,
         IAddressEditorService addressEditor,
         IShapeFactory shapeFactory,
+        CheckoutInvoiceBuilder invoiceBuilder,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IStringLocalizer<CustomerContactCheckoutFlowDisplayDriver> stringLocalizer)
     {
@@ -52,6 +56,7 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
         _addressBook = addressBook;
         _addressEditor = addressEditor;
         _shapeFactory = shapeFactory;
+        _invoiceBuilder = invoiceBuilder;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         S = stringLocalizer;
     }
@@ -156,6 +161,9 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
             BillingAddress = billingAddress,
         });
 
+        // An order that doesn't ship is taxed where it is billed, so the invoice is priced again for this address.
+        await _invoiceBuilder.BuildAsync(flow);
+
         return BuildEditor(flow, posted: null);
     }
 
@@ -191,12 +199,14 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
             }
             else
             {
-                // A signed-in customer starts with their own details and their default billing address.
+                // A signed-in customer starts with their own details and their default billing address; anyone else with
+                // what the checkout already knows, such as the buyer an order was made for.
                 var defaultAddress = customer?.GetDefaultBillingAddress();
+                var known = session.TryGet<CheckoutContactInfo>(out var contact) ? contact : null;
 
-                model.Name = customer is null ? null : CustomerAddressBook.NewAddressFor(customer).Name ?? customer.GetName();
-                model.Email = customer?.Email;
-                model.Phone = customer?.Phone;
+                model.Name = (customer is null ? null : CustomerAddressBook.NewAddressFor(customer).Name ?? customer.GetName()) ?? known?.DisplayName;
+                model.Email = customer?.Email ?? known?.Email;
+                model.Phone = customer?.Phone ?? known?.Phone;
                 model.BillingAddressId = defaultAddress?.AddressId;
                 model.SaveBillingAddress = customer is not null;
                 model.BillingAddress = await _addressEditor.BuildAsync(null, options);

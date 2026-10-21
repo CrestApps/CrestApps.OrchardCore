@@ -44,6 +44,8 @@ public class ProductVariantViewModel
 
     public decimal? CompareAtPrice { get; set; }
 
+    public decimal? SalePrice { get; set; }
+
     public string ImagePath { get; set; }
 
     public bool Enabled { get; set; }

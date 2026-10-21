@@ -62,6 +62,8 @@ Click a customer to open them, change their details, and click **Save**.
 | **Display name** | How your store addresses the customer. Leave it empty to use their name, or a business's company. |
 | **Company** | Required for a business. |
 | **Tax id** | Such as a VAT number. |
+| **Exempt from tax** | For a business that pays no tax, such as a reseller or a charity you hold a certificate for. When they check out signed in, no tax is charged. Guests are always taxed. |
+| **Why they are exempt** | Such as the resale certificate number, for your records. |
 | **Email** | For a guest, the email you write to. For a customer with an account, it's the account's email and is changed on the account. |
 | **Phone** | A number to reach them. |
 | **Accepts marketing** | Tick it when the customer agreed to news and offers. Order and payment messages are always sent. |
@@ -123,6 +125,8 @@ A signed-in customer manages their own details under **My Account**, with the **
 - **Addresses** lists their address book, where they add, edit and delete addresses the same way as above.
 
 The first time a user opens **My Account**, their customer record is made from their account, just as it is on their first order.
+
+On the storefront the same details are on **Account details** and **Addresses** in the buyer's account; see [The buyer's account](carts-and-orders.md#the-buyers-account).
 
 ## Try it with the sample store
 

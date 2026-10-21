@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Shipping.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ShipmentReturnedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Shipment Returned"])
+    </h4>
+</header>

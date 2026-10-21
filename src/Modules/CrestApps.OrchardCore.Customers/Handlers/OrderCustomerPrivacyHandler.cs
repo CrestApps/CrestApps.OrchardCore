@@ -74,7 +74,7 @@ public sealed class OrderCustomerPrivacyHandler : ICustomerPrivacyHandler
                 order.CustomerEmail,
                 order.CustomerPhone,
                 order.BillingAddress,
-                Lines = order.Lines.Select(line => new { line.Title, line.VariantTitle, line.Sku, line.Quantity, line.UnitPrice, line.LineTotal }),
+                Lines = order.Lines.Select(line => new { line.Title, line.VariantTitle, line.Sku, line.Quantity, line.UnitPrice, line.LineTotal, line.AddOns }),
             }, _options);
 
             if (transactions is not null)

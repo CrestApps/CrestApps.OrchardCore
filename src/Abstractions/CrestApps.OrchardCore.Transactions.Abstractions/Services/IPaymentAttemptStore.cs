@@ -76,4 +76,9 @@ public sealed class PaymentAttemptQuery
     /// Gets or sets the checkout session to restrict the results to.
     /// </summary>
     public string SessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the gateway's reference of the payment to restrict the results to, such as a payment intent id.
+    /// </summary>
+    public string ProviderReference { get; set; }
 }

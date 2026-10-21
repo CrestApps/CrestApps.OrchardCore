@@ -1,0 +1,175 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model ShippingCheckoutStepViewModel
+
+<div class="shipping-step">
+    @if (Model.PickupLocations.Count > 0)
+    {
+        <h5>@T["How do you want to get it?"]</h5>
+        <span asp-validation-for="PickupLocationId" class="text-danger d-block mb-2"></span>
+        <div class="list-group mb-4" data-fulfillment-choice>
+            <label class="list-group-item d-flex gap-3 align-items-center" for="@Html.IdFor(m => m.PickupLocationId)_Ship">
+                <input type="radio" class="form-check-input flex-shrink-0 mt-0" asp-for="PickupLocationId" value="" id="@Html.IdFor(m => m.PickupLocationId)_Ship" checked="@(string.IsNullOrEmpty(Model.PickupLocationId))" />
+                <span class="flex-grow-1">
+                    <span class="d-block">@T["Ship it to me"]</span>
+                    <small class="text-muted">@T["Sent to the address you choose below."]</small>
+                </span>
+            </label>
+            @foreach (var location in Model.PickupLocations)
+            {
+                var id = Html.IdFor(m => m.PickupLocationId) + "_" + location.LocationId;
+
+                <label class="list-group-item d-flex gap-3 align-items-center" for="@id">
+                    <input type="radio" class="form-check-input flex-shrink-0 mt-0" asp-for="PickupLocationId" value="@location.LocationId" id="@id" />
+                    <span class="flex-grow-1">
+                        <span class="d-block">@T["Pick up at {0}", location.Name]</span>
+                        <small class="text-muted d-block">@location.Describe()</small>
+                        @if (!string.IsNullOrEmpty(location.Instructions))
+                        {
+                            <small class="text-muted d-block">@location.Instructions</small>
+                        }
+                    </span>
+                    <strong class="text-nowrap">@(location.Fee == 0 ? T["Free"].Value : ProductPriceFormatter.Format(location.Fee, Model.Currency))</strong>
+                </label>
+            }
+        </div>
+    }
+
+    <fieldset class="border-0 p-0 m-0" style="min-width: 0" data-ship-fields>
+    <h5>@T["Ship to"]</h5>
+
+    @if (Model.SavedAddresses.Count > 0)
+    {
+        <div class="mb-3" data-address-choice>
+            @foreach (var address in Model.SavedAddresses)
+            {
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" asp-for="AddressId" value="@address.AddressId" id="@Html.IdFor(m => m.AddressId)_@address.AddressId" />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.AddressId)_@address.AddressId">
+                        @if (!string.IsNullOrEmpty(address.Label))
+                        {
+                            <strong>@address.Label</strong>
+                            <span>—</span>
+                        }
+                        @string.Join(", ", address.Lines)
+                        @if (address.IsDefault)
+                        {
+                            <span class="badge text-bg-light border ms-1">@T["Default"]</span>
+                        }
+                    </label>
+                </div>
+            }
+            <div class="form-check">
+                <input type="radio" class="form-check-input" asp-for="AddressId" value="" id="@Html.IdFor(m => m.AddressId)_New" />
+                <label class="form-check-label" for="@Html.IdFor(m => m.AddressId)_New">@T["A new address, entered below"]</label>
+            </div>
+        </div>
+    }
+
+    <fieldset data-new-address>
+        @await DisplayAsync(Model.AddressEditor)
+
+        @if (Model.CanSaveAddress)
+        {
+            <div class="form-check mb-3">
+                <input asp-for="SaveAddress" type="checkbox" class="form-check-input" />
+                <label asp-for="SaveAddress" class="form-check-label">@T["Save a new address to my address book"]</label>
+            </div>
+        }
+    </fieldset>
+
+    <h5 class="mt-4">@T["Shipping method"]</h5>
+    <span asp-validation-for="RateId" class="text-danger d-block mb-2"></span>
+    @if (Model.IsChoosing)
+    {
+        <p class="text-body-secondary mb-2">@T["Here are the ways to ship to this address. Choose one, then continue."]</p>
+    }
+
+    @if (Model.Rates.Count > 0)
+    {
+        <div class="list-group mb-2">
+            @foreach (var rate in Model.Rates)
+            {
+                var id = Html.IdFor(m => m.RateId) + "_" + rate.RateId.Replace(':', '_');
+
+                <label class="list-group-item d-flex gap-3 align-items-center" for="@id">
+                    <input type="radio" class="form-check-input flex-shrink-0 mt-0" asp-for="RateId" value="@rate.RateId" id="@id" />
+                    <span class="flex-grow-1">
+                        <span class="d-block">@rate.Name</span>
+                        @if (!string.IsNullOrEmpty(rate.Description))
+                        {
+                            <small class="text-muted">@rate.Description</small>
+                        }
+                    </span>
+                    <strong class="text-nowrap">@(rate.Amount == 0 ? T["Free"].Value : ProductPriceFormatter.Format(rate.Amount, Model.Currency))</strong>
+                </label>
+            }
+        </div>
+        <div class="form-text">@T["Changed the address? Continue, and the ways to ship there are shown before you go on."]</div>
+    }
+    else
+    {
+        <p class="text-muted">@T["Enter where the order goes, then continue to see the ways to ship it there."]</p>
+    }
+    </fieldset>
+</div>
+
+@* With saved addresses to pick from, the new address form shows only when "A new address" is chosen. Without script
+   it stays in view, and the server reads it only for a new address. *@
+<script at="Foot">
+    (function () {
+        if (window.crestAppsAddressChoice) {
+            return;
+        }
+
+        window.crestAppsAddressChoice = true;
+
+        document.querySelectorAll('[data-address-choice]').forEach(function (choice) {
+            var form = choice.parentElement.querySelector('[data-new-address]');
+
+            if (!form) {
+                return;
+            }
+
+            function sync() {
+                var checked = choice.querySelector('input[type=radio]:checked');
+                var isNew = !checked || checked.value === '';
+
+                form.hidden = !isNew;
+                form.disabled = !isNew;
+            }
+
+            choice.addEventListener('change', sync);
+            sync();
+        });
+    })();
+</script>
+
+<script at="Foot">
+    (function () {
+        if (window.crestAppsFulfillmentChoice) {
+            return;
+        }
+
+        window.crestAppsFulfillmentChoice = true;
+
+        // Picking the order up needs no address and no way to ship, so those hide and aren't posted.
+        document.querySelectorAll('[data-fulfillment-choice]').forEach(function (choice) {
+            var fields = choice.parentElement.querySelector('[data-ship-fields]');
+
+            if (!fields) {
+                return;
+            }
+
+            function sync() {
+                var checked = choice.querySelector('input[type=radio]:checked');
+                var isPickup = !!checked && checked.value !== '';
+
+                fields.hidden = isPickup;
+                fields.disabled = isPickup;
+            }
+
+            choice.addEventListener('change', sync);
+            sync();
+        });
+    })();
+</script>

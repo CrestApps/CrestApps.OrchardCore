@@ -1,4 +1,4 @@
-@model FindOrderViewModel
+@model IShape
 
 <zone Name="Title">
     <breadcrumb name="OrdersFind" title="@T["Find my order"]" />
@@ -6,14 +6,6 @@
 
 <div class="container my-4" style="max-width: 640px;">
     <h1 class="h3 mb-3">@T["Find my order"]</h1>
-    <p>@T["Enter the email you placed your order with. We'll email you a link to each of your recent orders."]</p>
 
-    <form asp-route="@CrestApps.OrchardCore.Orders.Core.OrderConstants.RouteNames.Find" method="post" class="no-multisubmit">
-        <div class="mb-3">
-            <label asp-for="Email" class="form-label">@T["Email"]</label>
-            <input asp-for="Email" type="email" class="form-control" autocomplete="email" required />
-            <span asp-validation-for="Email" class="text-danger"></span>
-        </div>
-        <button type="submit" class="btn btn-primary">@T["Send me the links"]</button>
-    </form>
+    @await DisplayAsync(Model)
 </div>

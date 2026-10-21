@@ -2,7 +2,7 @@
 
 @*
     The order number on the checkout's confirmation page. A guest gets a link to the order, also in their confirmation
-    email, and an invitation to create an account.
+    email, and can make an account here with just a password.
 *@
 
 <div class="alert alert-light border text-center mb-4" role="status">
@@ -10,25 +10,42 @@
     <div class="h4 mb-1 font-monospace">@Model.OrderNumber</div>
     @if (Model.IsSignedIn)
     {
-        <a asp-area="CrestApps.OrchardCore.Orders" asp-controller="OrdersAdmin" asp-action="Detail" asp-route-orderId="@Model.OrderId" class="small">@T["View your order"]</a>
+        <a href="@Url.RouteUrl("AccountOrder", new { orderId = Model.OrderId })" class="small">@T["View your order"]</a>
+    }
+    else if (!string.IsNullOrEmpty(Model.GuestOrderUrl))
+    {
+        <a href="@Model.GuestOrderUrl" class="small">@T["View your order"]</a>
+        <div class="small text-muted">@T["Keep this link to come back to your order."]</div>
     }
     else
     {
-        @if (!string.IsNullOrEmpty(Model.GuestOrderUrl))
-        {
-            <a href="@Model.GuestOrderUrl" class="small">@T["View your order"]</a>
-            <div class="small text-muted">@T["Keep this link to come back to your order."]</div>
-        }
-        else
-        {
-            <div class="small text-muted">@T["Keep this number if you need to contact us about your order."]</div>
-        }
-        @if (!string.IsNullOrEmpty(Model.RegisterUrl))
-        {
-            <div class="small mt-2">
-                @T["Create an account with the same email to see this order and future ones under My Orders."]
-                <a href="@Model.RegisterUrl">@T["Create an account"]</a>
-            </div>
-        }
+        <div class="small text-muted">@T["Keep this number if you need to contact us about your order."]</div>
     }
 </div>
+
+@if (!string.IsNullOrEmpty(Model.AccountToken))
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-1">@T["Save your details for next time"]</h2>
+            <p class="small text-muted mb-3">@T["Choose a password to make an account with {0}. This order goes into it, and next time you check out faster.", Model.Email]</p>
+            <form action="@Url.RouteUrl("OrderCreateAccount")" method="post" class="row g-2 align-items-end">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Token" value="@Model.AccountToken" />
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <input type="text" name="username" value="@Model.Email" autocomplete="username" hidden />
+                <div class="col-sm">
+                    <label for="order-account-password" class="form-label small">@T["Password"]</label>
+                    <input id="order-account-password" name="Password" type="password" class="form-control" autocomplete="new-password" data-account-password required />
+                </div>
+                <div class="col-sm">
+                    <label for="order-account-confirm" class="form-label small">@T["Confirm password"]</label>
+                    <input id="order-account-confirm" name="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-account-password required />
+                </div>
+                <div class="col-sm-auto">
+                    <button type="submit" class="btn btn-primary w-100 px-4">@T["Create account"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

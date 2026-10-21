@@ -1,7 +1,7 @@
 {
   "name": "ProductListingStore",
   "displayName": "Product listing: online store sample",
-  "description": "Creates a Store Product type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, and two sample customers with their addresses.",
+  "description": "Creates a Store Product type with category and brand taxonomies, color, size and material attributes, 30 products that can all be bought online, with stock (a few running low and one sold out) and shipping weights, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, shipping zones for the United States, Canada and the rest of the world with carriers, and two sample customers with their addresses, product reviews with a customer rating filter, and two coupons: WELCOME10 (10% off, once per customer) and FREESHIP75 (free shipping on orders of $75 or more).",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -33,7 +33,10 @@
         "OrchardCore.Placements",
         "OrchardCore.Seo",
         "CrestApps.OrchardCore.Products",
-        "CrestApps.OrchardCore.Products.Listing"
+        "CrestApps.OrchardCore.Products.Listing",
+        "CrestApps.OrchardCore.Inventory",
+        "CrestApps.OrchardCore.Shipping",
+        "CrestApps.OrchardCore.Reviews"
       ]
     },
     {
@@ -292,6 +295,26 @@
                   "Position": "5"
                 }
               }
+            },
+            {
+              "PartName": "InventoryPart",
+              "Name": "InventoryPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "6",
+                  "DisplayName": "Inventory"
+                }
+              }
+            },
+            {
+              "PartName": "ShippingPart",
+              "Name": "ShippingPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "7",
+                  "DisplayName": "Shipping"
+                }
+              }
             }
           ]
         },
@@ -500,29 +523,6 @@
                 "ProductAttributeSettings": {
                   "Searchable": true,
                   "ShowInSpecifications": true
-                }
-              }
-            },
-            {
-              "FieldName": "NumericField",
-              "Name": "Rating",
-              "Settings": {
-                "ContentPartFieldSettings": {
-                  "DisplayName": "Rating",
-                  "Position": "5"
-                },
-                "NumericFieldSettings": {
-                  "Scale": 1,
-                  "Minimum": 0,
-                  "Maximum": 5
-                },
-                "ProductAttributeSettings": {
-                  "Filterable": true,
-                  "Sortable": true,
-                  "ShowOnCard": true,
-                  "ShowInSpecifications": true,
-                  "NumberFormat": "0.0",
-                  "Suffix": "★"
                 }
               }
             },
@@ -867,9 +867,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.6
-            },
             "Featured": {
               "Value": true
             },
@@ -878,6 +875,15 @@
                 "store/t-shirts-white.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.2,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -942,9 +948,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.5
-            },
             "Featured": {
               "Value": false
             },
@@ -953,6 +956,15 @@
                 "store/t-shirts-black.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.2,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1017,9 +1029,6 @@
             "Material": {
               "Text": "Organic cotton"
             },
-            "Rating": {
-              "Value": 4.3
-            },
             "Featured": {
               "Value": false
             },
@@ -1028,6 +1037,15 @@
                 "store/t-shirts-green.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.2,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1092,9 +1110,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.1
-            },
             "Featured": {
               "Value": false
             },
@@ -1103,6 +1118,15 @@
                 "store/t-shirts-navy.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.2,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1165,9 +1189,6 @@
             "Material": {
               "Text": "Organic cotton"
             },
-            "Rating": {
-              "Value": 3.9
-            },
             "Featured": {
               "Value": false
             },
@@ -1176,6 +1197,15 @@
                 "store/t-shirts-grey.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.2,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1240,9 +1270,6 @@
             "Material": {
               "Text": "Fleece"
             },
-            "Rating": {
-              "Value": 4.7
-            },
             "Featured": {
               "Value": true
             },
@@ -1251,6 +1278,15 @@
                 "store/hoodies-grey.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.6,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1315,9 +1351,6 @@
             "Material": {
               "Text": "Fleece"
             },
-            "Rating": {
-              "Value": 4.4
-            },
             "Featured": {
               "Value": false
             },
@@ -1326,6 +1359,15 @@
                 "store/hoodies-navy.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.6,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1388,9 +1430,6 @@
             "Material": {
               "Text": "Fleece"
             },
-            "Rating": {
-              "Value": 4.8
-            },
             "Featured": {
               "Value": false
             },
@@ -1399,6 +1438,15 @@
                 "store/hoodies-black.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.6,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1463,9 +1511,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.0
-            },
             "Featured": {
               "Value": false
             },
@@ -1474,6 +1519,15 @@
                 "store/hoodies-red.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.6,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1538,9 +1592,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.5
-            },
             "Featured": {
               "Value": true
             },
@@ -1549,6 +1600,15 @@
                 "store/jackets-blue.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.9,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1611,9 +1671,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.2
-            },
             "Featured": {
               "Value": false
             },
@@ -1622,6 +1679,15 @@
                 "store/jackets-black.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.9,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1684,9 +1750,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.3
-            },
             "Featured": {
               "Value": false
             },
@@ -1695,6 +1758,15 @@
                 "store/jackets-tan.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.9,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1758,9 +1830,6 @@
             "Material": {
               "Text": "Wool blend"
             },
-            "Rating": {
-              "Value": 4.1
-            },
             "Featured": {
               "Value": false
             },
@@ -1769,6 +1838,15 @@
                 "store/jackets-grey.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.9,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1834,9 +1912,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.6
-            },
             "Featured": {
               "Value": true
             },
@@ -1845,6 +1920,15 @@
                 "store/sneakers-white.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.0,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1911,9 +1995,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.4
-            },
             "Featured": {
               "Value": false
             },
@@ -1922,6 +2003,15 @@
                 "store/sneakers-blue.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.0,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -1986,9 +2076,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.0
-            },
             "Featured": {
               "Value": false
             },
@@ -1997,6 +2084,15 @@
                 "store/sneakers-red.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.0,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2061,9 +2157,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.5
-            },
             "Featured": {
               "Value": false
             },
@@ -2072,6 +2165,15 @@
                 "store/sneakers-green.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.0,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2137,9 +2239,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.7
-            },
             "Featured": {
               "Value": true
             },
@@ -2148,6 +2247,15 @@
                 "store/boots-tan.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.6,
+            "ShippingClass": "Bulky",
+            "VariantWeights": {}
           }
         },
         {
@@ -2213,9 +2321,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.6
-            },
             "Featured": {
               "Value": false
             },
@@ -2224,6 +2329,15 @@
                 "store/boots-grey.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.6,
+            "ShippingClass": "Bulky",
+            "VariantWeights": {}
           }
         },
         {
@@ -2288,9 +2402,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.3
-            },
             "Featured": {
               "Value": false
             },
@@ -2299,6 +2410,15 @@
                 "store/boots-black.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 1.6,
+            "ShippingClass": "Bulky",
+            "VariantWeights": {}
           }
         },
         {
@@ -2357,9 +2477,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.5
-            },
             "Featured": {
               "Value": false
             },
@@ -2368,6 +2485,15 @@
                 "store/bags-tan.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.8,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2427,9 +2553,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.8
-            },
             "Featured": {
               "Value": true
             },
@@ -2438,6 +2561,15 @@
                 "store/bags-black.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.8,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2496,9 +2628,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.2
-            },
             "Featured": {
               "Value": false
             },
@@ -2507,6 +2636,15 @@
                 "store/bags-white.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.8,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2565,9 +2703,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.1
-            },
             "Featured": {
               "Value": false
             },
@@ -2576,6 +2711,15 @@
                 "store/bags-navy.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.8,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2636,9 +2780,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.4
-            },
             "Featured": {
               "Value": false
             },
@@ -2647,6 +2788,15 @@
                 "store/hats-navy.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.15,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2707,9 +2857,6 @@
             "Material": {
               "Text": "Wool blend"
             },
-            "Rating": {
-              "Value": 4.6
-            },
             "Featured": {
               "Value": false
             },
@@ -2718,6 +2865,15 @@
                 "store/hats-red.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.15,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2781,9 +2937,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 3.8
-            },
             "Featured": {
               "Value": false
             },
@@ -2792,6 +2945,15 @@
                 "store/hats-green.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.15,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2850,9 +3012,6 @@
             "Material": {
               "Text": "Stainless steel"
             },
-            "Rating": {
-              "Value": 4.5
-            },
             "Featured": {
               "Value": false
             },
@@ -2861,6 +3020,15 @@
                 "store/watches-black.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.3,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2920,9 +3088,6 @@
             "Material": {
               "Text": "Stainless steel"
             },
-            "Rating": {
-              "Value": 4.7
-            },
             "Featured": {
               "Value": true
             },
@@ -2931,6 +3096,15 @@
                 "store/watches-blue.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.3,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -2989,9 +3163,6 @@
             "Material": {
               "Text": "Stainless steel"
             },
-            "Rating": {
-              "Value": 4.2
-            },
             "Featured": {
               "Value": false
             },
@@ -3000,6 +3171,15 @@
                 "store/watches-white.jpg"
               ]
             }
+          },
+          "InventoryPart": {
+            "TrackInventory": true,
+            "AllowBackorder": false
+          },
+          "ShippingPart": {
+            "Weight": 0.3,
+            "ShippingClass": null,
+            "VariantWeights": {}
           }
         },
         {
@@ -3079,10 +3259,22 @@
                 "Collapsed": true
               },
               {
-                "Key": "rating",
-                "AttributeKey": "Rating",
-                "Label": "Rating",
+                "Key": "avg-rating",
+                "AttributeKey": "Product.Rating",
+                "Label": "Customer rating",
                 "Kind": "Range",
+                "ShowRanges": true,
+                "Ranges": [
+                  {
+                    "Min": 4
+                  },
+                  {
+                    "Min": 3
+                  },
+                  {
+                    "Min": 2
+                  }
+                ],
                 "Collapsed": true
               },
               {
@@ -3108,6 +3300,322 @@
           }
         }
       ]
+    },
+    {
+      "name": "Stock",
+      "Items": [
+        {
+          "ContentItemId": "4rmmtdqd6c7wakegn68pf30jhg",
+          "Sku": "T-S-86309",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4gbn9j97fd6g3eeeyz0vefvsjb",
+          "Sku": "T-S-80082",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4hhkfgwnsz1ms2p4shrpasnwkv",
+          "Sku": "T-S-51797",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4sm00g7339vy25z47w5yks5cye",
+          "Sku": "T-S-06946",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4wpthzesz6z77r47cxtfjgkawc",
+          "Sku": "T-S-96268",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4mefd9f9prr5t416kj9bxc8jvm",
+          "Sku": "HOO-60268",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4ezdw964bqabfrrq28nv7z6mtp",
+          "Sku": "HOO-84305",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "415x2mmmv292et3dpwy9fvtabh",
+          "Sku": "HOO-40949",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "45jvmavwx65vkjq9txmr7bjzze",
+          "Sku": "HOO-43396",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4h32hcrsmwb3htsh0m5vzxzxkz",
+          "Sku": "JAC-65118",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4p85e04zzpsw009ej3sm1g1bc6",
+          "Sku": "JAC-66832",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4h89ekvzmedq07pyfrv1yt44em",
+          "Sku": "JAC-44393",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4s4hsvj8bn6p9n2q3pex7bxah7",
+          "Sku": "JAC-27110",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4qfqne7rh3hfftm1k5hnvhyk03",
+          "Sku": "SNE-80667",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4rg5ekma1mdg438e51fv4tvmwq",
+          "Sku": "SNE-75493",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4rphknvp5rqzd45133cqksxegv",
+          "Sku": "SNE-55690",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4ajm7zr1td4e2tjb9he65qsc60",
+          "Sku": "SNE-72446",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4qzt7gf3pg1pd8dpan6wxmex83",
+          "Sku": "BOO-27366",
+          "OnHand": 3
+        },
+        {
+          "ContentItemId": "4zj4pg5ydnctzbkp9p7jqhqm40",
+          "Sku": "BOO-48345",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4snszqka4skv5amf031ahbg60b",
+          "Sku": "BOO-56919",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4pzgbp0ske9nsvq3bxrwzwyh79",
+          "Sku": "BAG-72312",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4mn0pntz4v4bk53zxjnh2qyy40",
+          "Sku": "BAG-73683",
+          "OnHand": 0
+        },
+        {
+          "ContentItemId": "497na17k1c9avgt0k4vchbkcxa",
+          "Sku": "BAG-52410",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4qf1s3ncn3a4hyn2456fy405xt",
+          "Sku": "BAG-91087",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4rgryp179mr10m6yvbt42xym8n",
+          "Sku": "HAT-78868",
+          "OnHand": 4
+        },
+        {
+          "ContentItemId": "4rfejp993d52b6zb4fy8h6jxvv",
+          "Sku": "HAT-42671",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "44bfkj2e9wf12yj2mxhxqsz87p",
+          "Sku": "HAT-22069",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "4wzy6cn4ftx8tbcw1waf2vywhy",
+          "Sku": "WAT-77268",
+          "OnHand": 25
+        },
+        {
+          "ContentItemId": "43bbj444bbvgcf5gs7e3sarsdb",
+          "Sku": "WAT-47122",
+          "OnHand": 2
+        },
+        {
+          "ContentItemId": "4bs2r0nmdqqcvhfhzjmnv2vwj3",
+          "Sku": "WAT-58972",
+          "OnHand": 25
+        }
+      ]
+    },
+    {
+      "name": "ShippingZones",
+      "Zones": [
+        {
+          "Name": "United States",
+          "Position": 1,
+          "Countries": [
+            "US"
+          ],
+          "Regions": [],
+          "RestOfWorld": false,
+          "Methods": [
+            {
+              "Name": "Standard",
+              "Description": "3 to 5 business days",
+              "ProviderName": "Flat",
+              "Enabled": true,
+              "Position": 0,
+              "ClassSurcharges": {
+                "Bulky": 10
+              },
+              "Properties": {
+                "FlatRateSettings": {
+                  "Amount": 5,
+                  "PerItemAmount": 1
+                }
+              }
+            },
+            {
+              "Name": "Express",
+              "Description": "Next business day",
+              "ProviderName": "Table",
+              "Enabled": true,
+              "Position": 1,
+              "ClassSurcharges": {
+                "Bulky": 10
+              },
+              "Properties": {
+                "TableRateSettings": {
+                  "Basis": 0,
+                  "Rows": [
+                    {
+                      "From": 0,
+                      "Amount": 15
+                    },
+                    {
+                      "From": 2,
+                      "Amount": 25
+                    },
+                    {
+                      "From": 5,
+                      "Amount": 40
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "Name": "Free shipping",
+              "Description": "On orders of $100 or more, 5 to 8 business days",
+              "ProviderName": "Free",
+              "Enabled": true,
+              "Position": 2,
+              "ClassSurcharges": {},
+              "Properties": {
+                "FreeShippingSettings": {
+                  "MinimumSubtotal": 100
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Name": "Canada",
+          "Position": 2,
+          "Countries": [
+            "CA"
+          ],
+          "Regions": [],
+          "RestOfWorld": false,
+          "Methods": [
+            {
+              "Name": "Standard",
+              "Description": "5 to 8 business days",
+              "ProviderName": "Flat",
+              "Enabled": true,
+              "Position": 0,
+              "ClassSurcharges": {
+                "Bulky": 15
+              },
+              "Properties": {
+                "FlatRateSettings": {
+                  "Amount": 12,
+                  "PerItemAmount": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Name": "Everywhere else",
+          "Position": 99,
+          "Countries": [],
+          "Regions": [],
+          "RestOfWorld": true,
+          "Methods": [
+            {
+              "Name": "International",
+              "Description": "7 to 14 business days",
+              "ProviderName": "Table",
+              "Enabled": true,
+              "Position": 0,
+              "ClassSurcharges": {},
+              "Properties": {
+                "TableRateSettings": {
+                  "Basis": 0,
+                  "Rows": [
+                    {
+                      "From": 0,
+                      "Amount": 25
+                    },
+                    {
+                      "From": 2,
+                      "Amount": 40
+                    },
+                    {
+                      "From": 5,
+                      "Amount": 60
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "ShippingSettings": {
+        "WeightUnit": 0,
+        "ShippingClasses": [
+          "Bulky"
+        ],
+        "Carriers": [
+          {
+            "Name": "UPS",
+            "TrackingUrlTemplate": "https://www.ups.com/track?tracknum={0}"
+          },
+          {
+            "Name": "FedEx",
+            "TrackingUrlTemplate": "https://www.fedex.com/fedextrack/?trknbr={0}"
+          },
+          {
+            "Name": "USPS",
+            "TrackingUrlTemplate": "https://tools.usps.com/go/TrackConfirmAction?tLabels={0}"
+          }
+        ],
+        "SendShippedEmails": true
+      }
     },
     {
       "name": "Customers",
@@ -3173,6 +3681,26 @@
           ],
           "DefaultBillingAddressId": "sample-contoso-office",
           "DefaultShippingAddressId": "sample-contoso-office"
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "Coupons": [
+        {
+          "Code": "WELCOME10",
+          "Description": "10% off your first order",
+          "Kind": "Percentage",
+          "Percentage": 10,
+          "MaxRedemptionsPerCustomer": 1,
+          "IsEnabled": true
+        },
+        {
+          "Code": "FREESHIP75",
+          "Description": "Free shipping on orders of $75 or more",
+          "Kind": "FreeShipping",
+          "MinimumAmount": 75,
+          "IsEnabled": true
         }
       ]
     }

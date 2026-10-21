@@ -65,6 +65,24 @@ public sealed class CheckoutLineItem
     public TaxableItemKind? TaxableKind { get; set; }
 
     /// <summary>
+    /// Gets or sets what discounts take off the whole line (all its units), which is left out of what the line is
+    /// taxed on. Set when the invoice is built.
+    /// </summary>
+    public decimal DiscountAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the product the item is for, such as its content item id, so a discount
+    /// limited to some products can find it.
+    /// </summary>
+    public string ProductId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the product is in, such as its taxonomy term ids, so a discount limited to some
+    /// categories can find it.
+    /// </summary>
+    public string[] CategoryIds { get; set; }
+
+    /// <summary>
     /// Returns the line total rounded to the precision of the supplied currency. Rounding at the currency's
     /// own scale keeps zero-decimal (for example JPY) and three-decimal (for example KWD) currencies exact.
     /// </summary>

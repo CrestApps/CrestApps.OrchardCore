@@ -18,6 +18,7 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     private readonly IPhoneNumberVerificationManager _verificationManager;
     private readonly IPhoneNumberVerificationRequestDelayer _requestDelayer;
     private readonly INotInServiceNumberService _notInServiceNumbers;
+    private readonly IContactMethodsAccessor _contactMethods;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -29,18 +30,21 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     /// <param name="notInServiceNumbers">
     /// The list of numbers known not to be in service, when activity management is enabled to keep one.
     /// </param>
+    /// <param name="contactMethods">Reads a contact's phone numbers, to copy the result onto the number it is about.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public PhoneNumberVerificationQueueProcessor(
         IPhoneNumberVerificationManager verificationManager,
         IPhoneNumberVerificationRequestDelayer requestDelayer,
         IEnumerable<INotInServiceNumberService> notInServiceNumbers,
+        IContactMethodsAccessor contactMethods,
         IClock clock,
         ILogger<PhoneNumberVerificationQueueProcessor> logger)
     {
         _verificationManager = verificationManager;
         _requestDelayer = requestDelayer;
         _notInServiceNumbers = notInServiceNumbers.FirstOrDefault();
+        _contactMethods = contactMethods;
         _clock = clock;
         _logger = logger;
     }
@@ -83,12 +87,18 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
                 result,
                 revalidationIntervalDays: settings.RevalidationIntervalDays);
 
-            if (OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem) is { } phoneNumberContentItem)
-            {
-                phoneNumberContentItem.AlterPhoneNumberVerificationResult(
-                    result,
-                    revalidationIntervalDays: settings.RevalidationIntervalDays);
-            }
+            OmnichannelContactPhoneNumberResolver.AlterPhoneNumberItem(
+                _contactMethods,
+                contentItem,
+                OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumber(_contactMethods, contentItem),
+                phoneNumberContentItem =>
+                {
+                    phoneNumberContentItem.AlterPhoneNumberVerificationResult(
+                        result,
+                        revalidationIntervalDays: settings.RevalidationIntervalDays);
+
+                    return true;
+                });
 
             await ApplyToNotInServiceNumbersAsync(contentItem, phoneNumber, result, cancellationToken);
 

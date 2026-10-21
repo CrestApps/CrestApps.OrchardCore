@@ -124,6 +124,28 @@ public sealed class ProductListingMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Adds when products' sales start and end, so their records are built again at those moments.
+    /// </summary>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<ProductSaleIndex>(table => table
+            .Column<string>(nameof(ProductSaleIndex.ContentItemId), column => column.WithLength(26))
+            .Column<DateTime?>(nameof(ProductSaleIndex.StartsUtc), column => column.Nullable())
+            .Column<DateTime?>(nameof(ProductSaleIndex.EndsUtc), column => column.Nullable())
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<ProductSaleIndex>(table => table
+            .CreateIndex("IDX_ProductSaleIndex_StartsUtc", "DocumentId", nameof(ProductSaleIndex.StartsUtc))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<ProductSaleIndex>(table => table
+            .CreateIndex("IDX_ProductSaleIndex_EndsUtc", "DocumentId", nameof(ProductSaleIndex.EndsUtc))
+        );
+
+        return 4;
+    }
+
     // Mirrors the Autoroute module's settings by name, so the type can be defined without a reference to it.
     private sealed class AutoroutePartSettings
     {

@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.Checkout
+@model CrestApps.OrchardCore.Orders.ViewModels.OrderBumpViewModel
+
+@*
+    The order bump: one tick adds the product to the order. Ticking saves at once and shows the new total; the
+    button is there for browsers without scripts, and is hidden with them.
+*@
+
+<div class="card mb-3 border-primary-subtle checkout-order-bump">
+    <div class="card-body">
+        <p class="fw-semibold mb-2">@(string.IsNullOrEmpty(Model.Headline) ? T["Add this to your order?"].Value : Model.Headline)</p>
+        <div class="form-check">
+            <input asp-for="Accept" type="checkbox" class="form-check-input" data-order-bump />
+            <label asp-for="Accept" class="form-check-label">
+                @T["Yes, add {0}", Model.Title]
+                <span class="d-block">
+                    <span class="fw-semibold">@Model.Price</span>
+                    @if (!string.IsNullOrEmpty(Model.ListPrice))
+                    {
+                        <span class="text-body-secondary text-decoration-line-through small ms-1">@Model.ListPrice</span>
+                    }
+                </span>
+            </label>
+        </div>
+        <button type="submit"
+                class="btn btn-sm btn-outline-secondary mt-2"
+                name="@CheckoutConstants.FormActions.FieldName"
+                value="@CheckoutConstants.FormActions.Update"
+                formnovalidate
+                data-order-bump-update>@T["Update total"]</button>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var box = document.querySelector('[data-order-bump]');
+        var button = document.querySelector('[data-order-bump-update]');
+
+        if (!box || !button) {
+            return;
+        }
+
+        button.hidden = true;
+        box.addEventListener('change', function () {
+            // The form is read as it's submitted, so the box is locked only afterwards, against a second click.
+            button.click();
+            box.disabled = true;
+        });
+    })();
+</script>

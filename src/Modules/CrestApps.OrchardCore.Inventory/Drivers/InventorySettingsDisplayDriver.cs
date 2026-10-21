@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Services;
@@ -24,6 +25,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
 {
     private const int MaxThreshold = 100_000;
     private const int MaxHoldMinutes = 7 * 24 * 60;
+    private const int MaxLocations = 50;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -56,6 +58,21 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                 .Where(role => !IsEveryone(role))
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+            model.Locations = settings.GetLocations()
+                .Select(location => new InventoryLocationViewModel
+                {
+                    LocationId = location.LocationId,
+                    Name = location.Name,
+                    Address = location.Address,
+                    IsDefault = location.LocationId == InventoryConstants.DefaultLocationId,
+                })
+                .ToList();
+
+            // A blank row to add a location with, while there is room for one.
+            if (model.Locations.Count < MaxLocations)
+            {
+                model.Locations.Add(new InventoryLocationViewModel());
+            }
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InventoryPermissions.ManageInventory))
         .OnGroup(SettingsGroupId);
@@ -100,7 +117,42 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        settings.Locations = ParseLocations(model.Locations, context);
+
         return Edit(site, settings, context);
+    }
+
+    // A blank row, such as the one to add a location with, is dropped, and so is one marked for removal, except the
+    // default location: stock counted before there were locations is there. A removed location's units stay on its
+    // items, where they can still be sold and moved to another location.
+    private List<InventoryLocation> ParseLocations(List<InventoryLocationViewModel> rows, UpdateEditorContext context)
+    {
+        var locations = new List<InventoryLocation>();
+
+        for (var i = 0; i < (rows?.Count ?? 0); i++)
+        {
+            var row = rows[i];
+            var isDefault = row?.LocationId == InventoryConstants.DefaultLocationId;
+
+            if (row is null || (row.Remove && !isDefault) || (!isDefault && string.IsNullOrWhiteSpace(row.Name) && string.IsNullOrWhiteSpace(row.Address)))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(row.Name))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, $"{nameof(InventorySettingsViewModel.Locations)}[{i}].{nameof(row.Name)}", S["Give the location a name, such as Main warehouse."]);
+            }
+
+            locations.Add(new InventoryLocation
+            {
+                LocationId = string.IsNullOrWhiteSpace(row.LocationId) ? UniqueId.GenerateId() : row.LocationId.Trim(),
+                Name = row.Name?.Trim(),
+                Address = string.IsNullOrWhiteSpace(row.Address) ? null : row.Address.Trim(),
+            });
+        }
+
+        return locations.DistinctBy(location => location.LocationId, StringComparer.Ordinal).Take(MaxLocations).ToList();
     }
 
     private static bool IsEveryone(string role)

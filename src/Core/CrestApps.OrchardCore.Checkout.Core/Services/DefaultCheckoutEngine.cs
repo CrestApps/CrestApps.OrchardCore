@@ -44,6 +44,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private readonly ICheckoutReconciliationService _reconciliationService;
     private readonly ICheckoutRefundService _refundService;
     private readonly IEnumerable<ICheckoutHandler> _handlers;
+    private readonly IEnumerable<ICheckoutPaymentGate> _paymentGates;
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -63,6 +64,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     /// <param name="session">The YesSql session used to commit a transition while the lock is held.</param>
     /// <param name="clock">The clock used for timestamps.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="paymentGates">The gates that hold what a purchase needs before it is paid for, such as a coupon's use.</param>
     public DefaultCheckoutEngine(
         ICheckoutSessionStore sessionStore,
         IPaymentAttemptStore attemptStore,
@@ -74,7 +76,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         IDistributedLock distributedLock,
         ISession session,
         IClock clock,
-        ILogger<DefaultCheckoutEngine> logger)
+        ILogger<DefaultCheckoutEngine> logger,
+        IEnumerable<ICheckoutPaymentGate> paymentGates = null)
     {
         _sessionStore = sessionStore;
         _attemptStore = attemptStore;
@@ -83,6 +86,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         _reconciliationService = reconciliationService;
         _refundService = refundService;
         _handlers = handlers;
+        _paymentGates = paymentGates ?? [];
         _distributedLock = distributedLock;
         _session = session;
         _clock = clock;
@@ -183,10 +187,28 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             var provider = _providerResolver.GetProvider(options.ProviderKey);
 
-            if (provider is null)
+            // A provider the store turned off, or one this checkout can't use, is refused here too: the payment step
+            // leaves it out, but a request can name any provider.
+            if (provider is null || !await CheckoutPaymentMethodSelector.IsAvailableAsync(provider, session, cancellationToken))
             {
                 return PaymentBeginOutcome.Failure("The selected payment method is not available.");
             }
+
+            // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
+            // a promotion code's last use, is told before paying rather than charged for something already gone.
+            var gate = await RunPaymentGatesAsync(session, options.ProviderKey, cancellationToken);
+
+            if (gate.IsRefused)
+            {
+                var refused = PaymentBeginOutcome.Failure(gate.ErrorMessage);
+
+                refused.InvoiceChanged = gate.InvoiceChanged;
+
+                return refused;
+            }
+
+            // A gate may have changed the invoice (it saves the session when it does), so it is read again.
+            session.TryGet(out invoice);
 
             var expectedObligations = CheckoutObligations.GetExpectedObligationIds(invoice);
 
@@ -315,6 +337,26 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             var expectedObligations = CheckoutObligations.GetExpectedObligationIds(invoice);
 
+            // A checkout with nothing to pay never begins a payment, so what it needs is held here instead, before it
+            // completes.
+            if (expectedObligations.Count == 0)
+            {
+                var gate = await RunPaymentGatesAsync(session, providerKey: null, cancellationToken);
+
+                if (gate.IsRefused)
+                {
+                    return new CheckoutCompletionResult
+                    {
+                        Status = CheckoutCompletionStatus.Blocked,
+                        BlockingStepKey = CheckoutConstants.PaymentStepKey,
+                        ErrorMessage = gate.ErrorMessage,
+                    };
+                }
+
+                session.TryGet(out invoice);
+                expectedObligations = CheckoutObligations.GetExpectedObligationIds(invoice);
+            }
+
             var reconciliation = await _reconciliationService.ReconcileAsync(session, expectedObligations, cancellationToken);
 
             if (reconciliation.FailedObligationIds.Count > 0)
@@ -368,6 +410,42 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             return await CompleteAsync(session, flow, cancellationToken);
         }
+    }
+
+    // Gives each gate its say. A gate that refuses and changed the invoice has the session saved, so the buyer sees
+    // the new total; anything the gates wrote is committed while the session's lock is still held.
+    private async Task<CheckoutPaymentBeginningContext> RunPaymentGatesAsync(CheckoutSession session, string providerKey, CancellationToken cancellationToken)
+    {
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), providerKey);
+
+        foreach (var gate in _paymentGates)
+        {
+            try
+            {
+                await gate.BeginningAsync(context, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "The payment gate '{Gate}' failed for checkout '{SessionId}'.", gate.GetType().Name, session.SessionId);
+
+                context.Refuse("The payment could not be started. Please try again.");
+            }
+
+            if (context.IsRefused)
+            {
+                break;
+            }
+        }
+
+        if (context.InvoiceChanged)
+        {
+            session.ModifiedUtc = _clock.UtcNow;
+
+            await _sessionStore.SaveAsync(session, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+
+        return context;
     }
 
     /// <inheritdoc/>

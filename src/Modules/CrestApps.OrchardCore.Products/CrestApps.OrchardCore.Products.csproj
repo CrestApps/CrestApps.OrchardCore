@@ -16,6 +16,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
       <PackageReference Include="OrchardCore.Admin.Abstractions" />
       <PackageReference Include="OrchardCore.ResourceManagement" />
@@ -43,6 +47,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Taxation.Abstractions\CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ContentTransfer.Core\CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>

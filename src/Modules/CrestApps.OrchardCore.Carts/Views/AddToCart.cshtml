@@ -10,6 +10,18 @@
 
 @{
     var formId = "add-to-cart-" + Model.ContentItemId;
+    var mustChoose = !Model.IsProductPage && !string.IsNullOrEmpty(Model.ProductUrl) && Model.AddOns.Any(addOn => addOn.Required);
+}
+
+@if (mustChoose)
+{
+    @* A card can't take the personal touch the product needs, so it sends the buyer to the product's page. *@
+    <a href="@Model.ProductUrl" class="btn btn-outline-primary w-100 position-relative" style="z-index: 2">
+        <span class="fa-solid fa-pen-to-square" aria-hidden="true"></span>
+        @T["Choose options"]
+    </a>
+
+    return;
 }
 
 @if (Model.Variants.Count > 0 && Model.Options.Count > 0)
@@ -86,22 +98,97 @@
     }
     <p class="product-availability small mb-2 text-@(initial?.Tone ?? "success")" data-product-availability hidden="@(initial is null)">@initial?.Label</p>
 
-    <div class="d-flex gap-2">
-        @if (Model.MaxQuantity > 1 && canBuy)
+    @if (Model.RoleDiscount is not null)
+    {
+        <p class="small text-success mb-2"><span class="fa-solid fa-tag me-1" aria-hidden="true"></span>@T["Your {0} pricing: {1}% off, in your cart.", Model.RoleDiscount.Role, Model.RoleDiscount.PercentOff.ToString("0.##")]</p>
+    }
+
+    @if (Model.PriceTiers.Count > 0)
+    {
+        <ul class="list-unstyled small mb-2 product-price-tiers">
+            @foreach (var tier in Model.PriceTiers)
+            {
+                <li><span class="fa-solid fa-layer-group text-body-secondary me-1" aria-hidden="true"></span>@T["Buy {0} or more: {1}% off each", tier.MinQuantity, tier.PercentOff.ToString("0.##")]</li>
+            }
+        </ul>
+    }
+
+    @if (Model.MinQuantity > 1 || Model.QuantityStep > 1)
+    {
+        <p class="small text-body-secondary mb-2">
+            @if (Model.QuantityStep > 1)
+            {
+                @T["Sold in packs of {0}.", Model.QuantityStep]
+            }
+            @if (Model.MinQuantity > Model.QuantityStep)
+            {
+                @T["Buy at least {0}.", Model.MinQuantity]
+            }
+        </p>
+    }
+
+    @if (Model.IsProductPage && Model.AddOns.Count > 0)
+    {
+        <fieldset class="product-add-ons mb-3">
+            <legend class="form-label small text-muted mb-1">@T["Personalize"]</legend>
+            @foreach (var addOn in Model.AddOns)
+            {
+                var inputId = formId + "-addon-" + addOn.AddOnId;
+                var extra = addOn.Price > 0 && !string.IsNullOrEmpty(Model.Currency) ? "+" + ProductPriceFormatter.Format(addOn.Price, Model.Currency) : null;
+
+                if (addOn.Kind == CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Checkbox)
+                {
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="@inputId" name="addOns[@addOn.AddOnId]" value="true" required="@addOn.Required" />
+                        <label class="form-check-label" for="@inputId">
+                            @addOn.Label
+                            @if (extra is not null)
+                            {
+                                <span class="text-body-secondary small">(@extra)</span>
+                            }
+                        </label>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="@inputId">
+                            @addOn.Label
+                            @if (extra is not null)
+                            {
+                                <span class="text-body-secondary">(@extra)</span>
+                            }
+                            @if (!addOn.Required)
+                            {
+                                <span class="text-body-secondary">· @T["optional"]</span>
+                            }
+                        </label>
+                        <input type="text" class="form-control form-control-sm" id="@inputId" name="addOns[@addOn.AddOnId]" maxlength="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOn.MaxTextLength" required="@addOn.Required" autocomplete="off" />
+                    </div>
+                }
+            }
+        </fieldset>
+    }
+
+    @* On a narrow card the button wraps under the quantity rather than breaking its label; alone on a card too narrow
+       for it, as when there's no quantity to choose, its label wraps instead of spilling out of the card. *@
+    <div class="d-flex flex-wrap gap-2">
+        @if ((Model.MaxQuantity > 1 || Model.MinQuantity > 1) && canBuy)
         {
             <input type="number"
                    name="quantity"
                    id="@(formId)-quantity"
-                   min="1"
+                   min="@Model.MinQuantity"
                    max="@Model.MaxQuantity"
-                   value="1"
+                   step="@Model.QuantityStep"
+                   value="@Model.MinQuantity"
                    class="form-control product-add-to-cart-quantity"
-                   style="max-width: 5rem"
+                   style="flex: 0 0 4.5rem; max-width: 4.5rem"
                    aria-label="@T["Quantity"]" />
         }
-        <button type="submit" class="btn btn-primary flex-grow-1" disabled="@(!canBuy)">
+        <button type="submit" class="btn btn-primary" style="flex: 1 1 8rem; min-width: 0" disabled="@(!canBuy)">
             <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
-            @T["Add to cart"]
+            @(initial?.IsPreorder == true ? T["Pre-order"].Value : T["Add to cart"].Value)
         </button>
     </div>
 </form>

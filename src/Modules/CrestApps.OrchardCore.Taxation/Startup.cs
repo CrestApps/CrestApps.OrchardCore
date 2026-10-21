@@ -70,6 +70,8 @@ public sealed class Startup : StartupBase
         services.AddTransient<IConfigureOptions<TaxCalculationMethodOptions>, TaxCalculationMethodOptionsConfiguration>();
 
         services.AddNavigationProvider<TaxationAdminMenu>();
+        services.AddSiteDisplayDriver<TaxOriginSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TaxOriginSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);
         services.AddPermissionProvider<TaxationPermissionsProvider>();
     }
 }

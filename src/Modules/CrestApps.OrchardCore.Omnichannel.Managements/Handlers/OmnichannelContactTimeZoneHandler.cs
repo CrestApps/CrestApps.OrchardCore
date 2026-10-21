@@ -1,12 +1,10 @@
-using CrestApps.OrchardCore.ContentFields.Fields;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
-using OrchardCore.Flows.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
@@ -20,18 +18,22 @@ internal sealed class OmnichannelContactTimeZoneHandler : ContentHandlerBase
 {
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactTimeZoneHandler"/> class.
     /// </summary>
     /// <param name="phoneNumberService">The phone number service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="contactMethods">Reads the contact's phone numbers.</param>
     public OmnichannelContactTimeZoneHandler(
         IPhoneNumberService phoneNumberService,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        IContactMethodsAccessor contactMethods)
     {
         _phoneNumberService = phoneNumberService;
         _contentDefinitionManager = contentDefinitionManager;
+        _contactMethods = contactMethods;
     }
 
     /// <inheritdoc/>
@@ -80,21 +82,9 @@ internal sealed class OmnichannelContactTimeZoneHandler : ContentHandlerBase
 
     private string ResolveTimeZoneId(ContentItem contentItem)
     {
-        if (!contentItem.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null)
+        foreach (var phoneNumber in _contactMethods.Get(contentItem).PhoneNumbers)
         {
-            return null;
-        }
-
-        foreach (var contactMethod in bagPart.ContentItems)
-        {
-            if (!string.Equals(contactMethod.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) ||
-                !contactMethod.TryGet<PhoneNumberInfoPart>(out var phonePart))
-            {
-                continue;
-            }
-
-            var timeZoneId = GetFirstKnownTimeZoneId(phonePart.Number);
+            var timeZoneId = GetFirstKnownTimeZoneId(phoneNumber);
 
             if (!string.IsNullOrEmpty(timeZoneId))
             {
@@ -105,7 +95,7 @@ internal sealed class OmnichannelContactTimeZoneHandler : ContentHandlerBase
         return null;
     }
 
-    private string GetFirstKnownTimeZoneId(PhoneField field)
+    private string GetFirstKnownTimeZoneId(ContactPhoneNumber field)
     {
         var rawNumber = field?.PhoneNumber?.Trim();
 

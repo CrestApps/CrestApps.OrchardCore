@@ -14,7 +14,8 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// the same ownership rules, so a customer who never uses the admin can see and print them.
 /// </summary>
 /// <remarks>
-/// Each page renders a shape (<see cref="TransactionsConstants.Shapes"/>) that a theme can override.
+/// Each page renders a shape (<see cref="TransactionsConstants.Shapes"/>) that a theme can override; the statement
+/// page's filter and statement together are the <c>AccountTransactions</c> shape.
 /// </remarks>
 public sealed class MyTransactionsController : Controller
 {
@@ -85,12 +86,14 @@ public sealed class MyTransactionsController : Controller
 
         result.Model.Pager = await _shapeFactory.PagerAsync(pager, result.Model.TotalCount, routeData);
 
-        return View(new MyTransactionsPageViewModel
+        var statement = await _shapeFactory.CreateAsync<TransactionStatementViewModel>(TransactionsConstants.Shapes.Statement, result.Model.CopyTo);
+
+        return View(await _shapeFactory.CreateAsync<MyTransactionsPageViewModel>("AccountTransactions", model =>
         {
-            Search = search,
-            Outstanding = outstanding,
-            Statement = await _shapeFactory.CreateAsync<TransactionStatementViewModel>(TransactionsConstants.Shapes.Statement, result.Model.CopyTo),
-        });
+            model.Search = search;
+            model.Outstanding = outstanding;
+            model.Statement = statement;
+        }));
     }
 
     /// <summary>

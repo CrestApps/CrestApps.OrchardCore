@@ -46,6 +46,11 @@ public sealed class CommercePersonalDataAnonymizeResult
     public int ProviderCustomers { get; set; }
 
     /// <summary>
+    /// Gets or sets how many back-in-stock requests were deleted.
+    /// </summary>
+    public int StockAlerts { get; set; }
+
+    /// <summary>
     /// Gets what could not be anonymized, such as a payment provider that could not be reached.
     /// </summary>
     public IList<string> Warnings { get; init; } = [];

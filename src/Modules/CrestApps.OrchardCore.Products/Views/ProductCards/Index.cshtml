@@ -1,0 +1,11 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+@* The cards of a few products, as a fragment for the shopper's recently viewed products. They are the ProductCardStrip
+   shape, which a theme can override. *@
+@{
+    // A fragment a script loads into the page, so it has no layout and no breadcrumb.
+    Layout = null;
+}
+
+@await DisplayAsync(Model)

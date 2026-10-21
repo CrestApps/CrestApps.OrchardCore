@@ -16,6 +16,12 @@
     </div>
 </div>
 
+<div class="mb-3">
+    <label asp-for="ReleaseDate" class="form-label">@T["Ships from"]</label>
+    <input asp-for="ReleaseDate" type="date" class="form-control w-auto" />
+    <span class="hint">@T["Optional, for a product not out yet. With backorders allowed, buyers pre-order it while none are in stock, and are told it ships from this date. After the date, it's sold as a backorder."]</span>
+</div>
+
 <div class="mb-3" asp-validation-class-for="LowStockThreshold">
     <label asp-for="LowStockThreshold" class="form-label">@T["Low-stock threshold"]</label>
     <input asp-for="LowStockThreshold" type="number" min="0" class="form-control w-auto" placeholder="@Model.DefaultLowStockThreshold" />

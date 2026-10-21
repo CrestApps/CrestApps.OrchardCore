@@ -87,6 +87,8 @@ public sealed partial class AutomatedConversationHandler
         var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
         var templateService = services.GetRequiredService<ITemplateService>();
         var contentManager = services.GetRequiredService<IContentManager>();
+        var contactMethods = services.GetRequiredService<IContactMethodsAccessor>();
+        var contactMethodsWriter = services.GetRequiredService<IContactMethodsWriter>();
         var contentDefinitionManager = services.GetRequiredService<IContentDefinitionManager>();
         var clock = services.GetRequiredService<IClock>();
         var logger = services.GetRequiredService<ILogger<AutomatedConversationHandler>>();
@@ -174,7 +176,7 @@ public sealed partial class AutomatedConversationHandler
 
             userPrompt += $"""
 
-                Current contact email: {OmnichannelSubjectWriter.GetContactEmail(contact) ?? "(none)"}
+                Current contact email: {contactMethods.Get(contact).GetPrimaryEmailAddress() ?? "(none)"}
                 """;
         }
 
@@ -200,7 +202,7 @@ public sealed partial class AutomatedConversationHandler
         }
 
         if (activity.AllowAIToUpdateContact && contact is not null &&
-            await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result.Result.ContactEmail))
+            await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contactMethodsWriter, contact, result.Result.ContactEmail))
         {
             await contentManager.UpdateAsync(contact);
         }

@@ -1,0 +1,28 @@
+@model CrestApps.OrchardCore.Users.Controllers.EmailSignInViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSignInCode" title="@T["Enter your code"]" />
+</zone>
+
+<div class="container my-5" style="max-width: 440px">
+    <h1 class="h3 mb-2">@T["Enter your code"]</h1>
+    <p class="text-muted">@T["If {0} has an account, a six-digit code is on its way. It works for 10 minutes.", Model.Email]</p>
+
+    <form action="@Url.RouteUrl("EmailSignInCode")" method="post" class="card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Email" value="@Model.Email" />
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <div class="card-body">
+            <label for="email-sign-in-code" class="form-label">@T["Code"]</label>
+            <input id="email-sign-in-code" name="Code" class="form-control form-control-lg text-center font-monospace" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" autofocus required style="letter-spacing: .4em" />
+            <span asp-validation-for="Code" class="text-danger small"></span>
+        </div>
+        <div class="card-footer d-grid">
+            <button type="submit" class="btn btn-primary">@T["Sign in"]</button>
+        </div>
+    </form>
+
+    <p class="small text-muted mt-3 text-center">
+        @T["No email?"] <a href="@Url.RouteUrl("EmailSignIn", new { returnUrl = Model.ReturnUrl })">@T["Ask for a new code"]</a>
+    </p>
+</div>

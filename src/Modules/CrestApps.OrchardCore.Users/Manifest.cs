@@ -30,6 +30,19 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Sign in with an email code",
+    Category = "Users",
+    Description = "Lets people sign in with a code emailed to them instead of a password. Accounts with two-factor sign-in keep using their password.",
+    Id = UsersConstants.Feature.EmailCodeSignIn,
+    Dependencies =
+    [
+        "OrchardCore.Users",
+        "OrchardCore.Email",
+        UsersConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Name = "User Avatar",
     Category = "Users",
     Description = "Provides a way to display an avatar for each user.",

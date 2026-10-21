@@ -339,7 +339,7 @@ public static class ProductSearchIndexFields
             new(Sequence, ProductIndexFieldKind.Number) { IsSortable = true },
         };
 
-        string[] builtIn = [ProductAttributeKeys.Price, ProductAttributeKeys.ContentType, ProductAttributeKeys.Purchasable, ProductAttributeKeys.Featured, ProductAttributeKeys.InStock];
+        string[] builtIn = [ProductAttributeKeys.Price, ProductAttributeKeys.ContentType, ProductAttributeKeys.Purchasable, ProductAttributeKeys.Featured, ProductAttributeKeys.InStock, ProductAttributeKeys.Rating];
 
         foreach (var key in builtIn.Concat(attributeKeys ?? []).Where(key => !string.IsNullOrEmpty(key)).Distinct(StringComparer.Ordinal))
         {

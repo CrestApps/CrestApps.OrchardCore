@@ -25,6 +25,19 @@
                             <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                         </div>
                     </div>
+                    <div class="col-auto">
+                        <a asp-controller="DraftOrdersAdmin" asp-action="Create" class="btn btn-secondary create">@T["Create order"]</a>
+                    </div>
+                    <div class="col-auto">
+                        @* The orders the list shows, with its search and status, a row per line. *@
+                        <a asp-action="Export"
+                           asp-route-Options.Search="@Model.Options.Search"
+                           asp-route-Options.Status="@(Model.Options.Status == OrderStatusFilter.Placed ? null : Model.Options.Status.ToString())"
+                           class="btn btn-outline-secondary"
+                           title="@T["Export the orders shown to a CSV file"]">
+                            <i class="fa-solid fa-file-csv" aria-hidden="true"></i><span class="d-none d-sm-inline ms-1">@T["Export CSV"]</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

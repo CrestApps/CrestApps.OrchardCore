@@ -142,7 +142,8 @@ public sealed class StripePersonalDataContributor : ICommercePersonalDataContrib
             {
                 foreach (var customer in await customerService.ListByEmailAsync(email))
                 {
-                    if (customer.Metadata?.ContainsKey(CheckoutSessionMetadataKey) == true)
+                    if (customer.Metadata?.ContainsKey(CheckoutSessionMetadataKey) == true ||
+                        customer.Metadata?.ContainsKey(StripeWalletService.WalletUserMetadataKey) == true)
                     {
                         customers.TryAdd(customer.Id, customer);
                     }

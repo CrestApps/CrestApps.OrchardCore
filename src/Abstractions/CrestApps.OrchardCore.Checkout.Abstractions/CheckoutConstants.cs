@@ -11,6 +11,11 @@ public static class CheckoutConstants
     public const string CouponCollectionName = "Coupon";
 
     /// <summary>
+    /// The name of the recipe and deployment step that sets coupons.
+    /// </summary>
+    public const string CouponsRecipeStep = "Coupons";
+
+    /// <summary>
     /// The name of the cookie that carries a guest's checkout ownership tokens.
     /// </summary>
     public const string GuestTokenCookieName = "checkout_owner";
@@ -25,6 +30,11 @@ public static class CheckoutConstants
     /// The reserved step key for the payment step that every paid checkout flow contains.
     /// </summary>
     public const string PaymentStepKey = "Payment";
+
+    /// <summary>
+    /// The site settings group of the checkout settings, under Settings › Commerce › Checkout.
+    /// </summary>
+    public const string SettingsGroupId = "checkout";
 
     /// <summary>
     /// The feature identifiers exposed by the checkout module.
@@ -64,6 +74,11 @@ public static class CheckoutConstants
         /// Saves the entered promotion code and re-renders the step with the recalculated invoice.
         /// </summary>
         public const string ApplyCoupon = "apply-coupon";
+
+        /// <summary>
+        /// Saves what was changed on a one-page checkout and shows it again with the new total, instead of paying.
+        /// </summary>
+        public const string Update = "update";
     }
 
     public static class RouteNames

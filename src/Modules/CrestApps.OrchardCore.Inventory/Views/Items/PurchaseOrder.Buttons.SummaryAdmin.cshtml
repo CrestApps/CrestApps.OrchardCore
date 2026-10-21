@@ -1,0 +1,5 @@
+@model PurchaseOrderRowViewModel
+
+<a class="btn btn-primary btn-sm" asp-controller="PurchaseOrdersAdmin" asp-action="Edit" asp-route-purchaseOrderId="@Model.Order.ItemId">
+    @(Model.CanManage && Model.Order.CanReceive ? T["Receive"] : Model.CanManage && Model.Order.IsDraft ? T["Edit"] : T["View"])
+</a>

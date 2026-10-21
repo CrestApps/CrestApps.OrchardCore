@@ -1,0 +1,14 @@
+@model ShapeViewModel<ProductReview>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rating"]">
+    <partial name="_Stars" model="(decimal)Model.Value.Rating" />
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Written"]">
+    <i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@((await LocalAsync(Model.Value.CreatedUtc)).ToString("g"))
+</span>

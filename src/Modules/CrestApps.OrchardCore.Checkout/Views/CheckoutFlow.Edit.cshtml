@@ -17,7 +17,8 @@
             }
 
             <div class="card-body">
-                @if (!ViewContext.ModelState.IsValid)
+                @* A step can keep the buyer on it without a message, such as to let them choose from what it just showed. *@
+                @if (ViewContext.ModelState.Values.SelectMany(entry => entry.Errors).Any(error => !string.IsNullOrEmpty(error.ErrorMessage)))
                 {
                     <div class="alert alert-danger" role="alert">
                         @Html.ValidationSummary()

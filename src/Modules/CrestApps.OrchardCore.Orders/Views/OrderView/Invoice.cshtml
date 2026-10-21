@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Orders.Core
+@model IShape
+
+@{
+    var document = (OrderDocumentViewModel)Model;
+    var page = new OrderDocumentPageViewModel
+    {
+        Order = document.Order,
+        PrintLabel = T["Print invoice"].Value,
+        BackUrl = ViewContext.RouteData.Values["token"] is string token ? Url.RouteUrl(OrderConstants.RouteNames.View, new { token }) : null,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="GuestOrderInvoice" title="@T["Invoice for {0}", document.Order.OrderNumber]" />
+</zone>
+
+<partial name="_OrderDocumentActions" model="page" />
+
+<div class="order-document-print-area">
+    @await DisplayAsync(Model)
+</div>

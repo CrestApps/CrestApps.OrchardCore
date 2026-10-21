@@ -45,6 +45,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactMethods();
         services.AddMessagingChannel<EmailMessagingChannel>();
 
         // The channel resolves its dispatcher lazily: the dispatcher reads the addresses, and the address editor asks the

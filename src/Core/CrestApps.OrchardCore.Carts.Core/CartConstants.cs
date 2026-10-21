@@ -26,6 +26,11 @@ public static class CartConstants
 
         public const string Add = "CartAdd";
 
+        /// <summary>
+        /// Adds several products at once, such as the ones a grouped product shows.
+        /// </summary>
+        public const string AddMany = "CartAddMany";
+
         public const string Update = "CartUpdate";
 
         public const string Remove = "CartRemove";

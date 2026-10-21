@@ -1,0 +1,58 @@
+@model CustomerAddressListViewModel
+
+@* The signed-in customer's address book on the storefront account: each saved address, with its defaults. *@
+
+@if (Model.Addresses.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <p class="mb-1">@T["You have no saved addresses yet."]</p>
+            <p class="text-muted small mb-0">@T["Addresses you save are offered at checkout, so you don't type them again."]</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-3">
+        @foreach (var address in Model.Addresses)
+        {
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            @if (!string.IsNullOrEmpty(address.Label))
+                            {
+                                <strong class="me-1">@address.Label</strong>
+                            }
+                            @if (address.IsDefaultShipping)
+                            {
+                                <span class="badge text-bg-info">@T["Default shipping"]</span>
+                            }
+                            @if (address.IsDefaultBilling)
+                            {
+                                <span class="badge text-bg-primary">@T["Default billing"]</span>
+                            }
+                        </div>
+                        <address class="mb-0">
+                            @for (var i = 0; i < address.Lines.Count; i++)
+                            {
+                                @address.Lines[i]
+                                @if (i < address.Lines.Count - 1)
+                                {
+                                    <br />
+                                }
+                            }
+                        </address>
+                    </div>
+                    <div class="card-footer d-flex gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="@Url.RouteUrl("AccountAddressEdit", new { addressId = address.AddressId })">@T["Edit"]</a>
+                        <form action="@Url.RouteUrl("AccountAddressDelete", new { addressId = address.AddressId })" method="post" onsubmit="return confirm('@T["Delete this address? Orders that used it keep their own copy."]');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">@T["Delete"]</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

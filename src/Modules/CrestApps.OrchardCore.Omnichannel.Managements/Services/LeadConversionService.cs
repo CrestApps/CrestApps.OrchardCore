@@ -67,6 +67,8 @@ internal sealed class LeadConversionService : ILeadConversionService
     private readonly IEnumerable<ILeadConversionHandler> _handlers;
     private readonly IEnumerable<ILeadConversionRepointer> _repointers;
     private readonly IClock _clock;
+    private readonly IContactMethodsAccessor _contactMethods;
+    private readonly IContactMethodsWriter _contactMethodsWriter;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -83,6 +85,8 @@ internal sealed class LeadConversionService : ILeadConversionService
         IEnumerable<ILeadConversionHandler> handlers,
         IEnumerable<ILeadConversionRepointer> repointers,
         IClock clock,
+        IContactMethodsAccessor contactMethods,
+        IContactMethodsWriter contactMethodsWriter,
         ILogger<LeadConversionService> logger,
         IStringLocalizer<LeadConversionService> stringLocalizer)
     {
@@ -94,6 +98,8 @@ internal sealed class LeadConversionService : ILeadConversionService
         _handlers = handlers;
         _repointers = repointers;
         _clock = clock;
+        _contactMethods = contactMethods;
+        _contactMethodsWriter = contactMethodsWriter;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -284,7 +290,7 @@ internal sealed class LeadConversionService : ILeadConversionService
         }
 
         CopyMatchingParts(lead, leadTypeDefinition, contact, contactDefinition, overwrite: context.ContactCreated);
-        MergeContactMethods(lead, contact);
+        await MergeContactMethodsAsync(lead, contact);
         MergeCommunicationPreferences(lead, contact);
 
         context.Contact = contact;
@@ -700,6 +706,37 @@ internal sealed class LeadConversionService : ILeadConversionService
             JsonObject obj => obj.Count > 0,
             _ => true,
         });
+
+    /// <summary>
+    /// Adds the lead's phone numbers and email addresses to the contact, wherever each of their types keeps them.
+    /// </summary>
+    /// <remarks>
+    /// When both keep them in the contact-methods bag, the lead's bag items are copied whole, so nothing stored on
+    /// them is lost. When either type keeps them in fields of its own, the lead's numbers and addresses are read
+    /// through its type and written through the contact type's writer, one at a time.
+    /// </remarks>
+    private async Task MergeContactMethodsAsync(ContentItem lead, ContentItem contact)
+    {
+        if (_contactMethods.UsesContactMethodsBag(lead.ContentType) &&
+            _contactMethods.UsesContactMethodsBag(contact.ContentType))
+        {
+            MergeContactMethods(lead, contact);
+
+            return;
+        }
+
+        var leadMethods = _contactMethods.Get(lead);
+
+        foreach (var phoneNumber in leadMethods.PhoneNumbers)
+        {
+            await _contactMethodsWriter.TryAddPhoneNumberAsync(contact, phoneNumber);
+        }
+
+        foreach (var emailAddress in leadMethods.EmailAddresses)
+        {
+            await _contactMethodsWriter.TryAddEmailAddressAsync(contact, emailAddress.Email);
+        }
+    }
 
     /// <summary>
     /// Adds the lead's phone numbers and email addresses to the contact. A new contact takes all of them; a contact

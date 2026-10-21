@@ -44,6 +44,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IContactOptOutResolver _optOutResolver;
     private readonly INotInServiceNumberService _notInServiceNumbers;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
+    private readonly IContactMethodsAccessor _contactMethods;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -75,6 +76,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IOptions<ActivityBatchSourceOptions> sourceOptions,
         IContactOptOutResolver optOutResolver,
         INotInServiceNumberService notInServiceNumbers,
+        IContactMethodsAccessor contactMethods,
         ILogger<DefaultContactActivityBatchLoader> logger,
         IEnumerable<IOmnichannelContactTypeProvider> contactTypeProviders = null)
     {
@@ -90,6 +92,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _sourceOptions = sourceOptions.Value;
         _optOutResolver = optOutResolver;
         _notInServiceNumbers = notInServiceNumbers;
+        _contactMethods = contactMethods;
         _contactTypeProvider = contactTypeProviders?.FirstOrDefault();
         _logger = logger;
     }
@@ -447,7 +450,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             // The numbers already found dead, for every contact on this page, in one query rather than one per contact.
             var notInServiceNumbers = await _notInServiceNumbers.GetNotInServiceAsync(
-                contacts.SelectMany(OmnichannelHelper.GetPhoneNumbers),
+                contacts.SelectMany(contact => OmnichannelHelper.GetPhoneNumbers(_contactMethods.Get(contact))),
                 cancellationToken);
 
             var preventDuplicates = batch.PreventDuplicates;
@@ -657,15 +660,16 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 // whose every number on the channel is dead is not loaded at all: there is nobody to reach, and a call
                 // sheet or dialer queue full of dead numbers is exactly the work this exists to save.
                 var usesPhoneNumbers = activity.Channel is OmnichannelConstants.Channels.Phone or OmnichannelConstants.Channels.Sms;
+                var contactMethods = _contactMethods.Get(contact);
 
                 activity.PreferredDestination = usesPhoneNumbers
-                    ? OmnichannelHelper.FindDestination(contact, activity.Channel, notInServiceNumbers.Contains)
-                    : OmnichannelHelper.FindDestination(contact, activity.Channel);
+                    ? OmnichannelHelper.FindDestination(contactMethods, activity.Channel, notInServiceNumbers.Contains)
+                    : OmnichannelHelper.FindDestination(contactMethods, activity.Channel);
 
                 if (usesPhoneNumbers &&
                     string.IsNullOrWhiteSpace(activity.PreferredDestination) &&
                     notInServiceNumbers.Count > 0 &&
-                    !string.IsNullOrWhiteSpace(OmnichannelHelper.FindDestination(contact, activity.Channel)))
+                    !string.IsNullOrWhiteSpace(OmnichannelHelper.FindDestination(contactMethods, activity.Channel)))
                 {
                     batch.TotalSkippedAsNotInService++;
 
@@ -932,10 +936,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         var numbers = leadsByNumber.Keys.ToArray();
 
         // One query per phone column rather than one OR across both: each can seek on its own phone index, where the
-        // OR made SQL Server scan the contact index for every page of leads.
+        // OR made SQL Server scan the contact index for every page of leads. See LookupBatchSize for the batch size.
         var matches = new Dictionary<string, OmnichannelContactIndex>(StringComparer.Ordinal);
 
-        foreach (var chunk in numbers.Chunk(OmnichannelContactDuplicateLookupService.MaxParametersPerCommand))
+        foreach (var chunk in OmnichannelContactDuplicateLookupService.ToLookupBatches(numbers))
         {
             var byCell = await session.QueryIndex<OmnichannelContactIndex>(index =>
                     index.Published &&

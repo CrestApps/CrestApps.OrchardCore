@@ -67,14 +67,22 @@ public sealed class LeadMatchFinder
 
         if (numbers.Length > 0)
         {
-            var byPhone = await _session.QueryIndex<OmnichannelContactIndex>(index =>
+            // One query per phone column rather than one OR across both, so each seeks its own phone index.
+            var byCell = await _session.QueryIndex<OmnichannelContactIndex>(index =>
                     index.Latest &&
                     index.ContentType.IsIn(contactTypes) &&
-                    (index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers) || index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers)))
+                    index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers))
                 .Take(MaxMatches)
                 .ListAsync();
 
-            matchIds.AddRange(byPhone.Select(index => index.ContentItemId));
+            var byHome = await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Latest &&
+                    index.ContentType.IsIn(contactTypes) &&
+                    index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers))
+                .Take(MaxMatches)
+                .ListAsync();
+
+            matchIds.AddRange(byCell.Concat(byHome).Select(index => index.ContentItemId));
         }
 
         if (!string.IsNullOrEmpty(email))

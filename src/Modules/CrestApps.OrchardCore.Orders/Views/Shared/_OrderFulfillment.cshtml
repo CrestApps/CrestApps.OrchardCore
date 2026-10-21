@@ -1,0 +1,21 @@
+@model OrderFulfillmentStatus?
+
+@* How much of an order with goods has left, once a module records shipments. *@
+@switch (Model)
+{
+    case OrderFulfillmentStatus.Fulfilled:
+        <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Fulfillment"]">
+            <i class="fa-solid fa-truck text-secondary me-1" aria-hidden="true"></i>@T["Fulfilled"]
+        </span>
+        break;
+    case OrderFulfillmentStatus.PartiallyFulfilled:
+        <span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Fulfillment"]">
+            <i class="fa-solid fa-truck-fast text-secondary me-1" aria-hidden="true"></i>@T["Partially fulfilled"]
+        </span>
+        break;
+    case OrderFulfillmentStatus.Unfulfilled:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Fulfillment"]">
+            <i class="fa-solid fa-box-open text-secondary me-1" aria-hidden="true"></i>@T["Unfulfilled"]
+        </span>
+        break;
+}

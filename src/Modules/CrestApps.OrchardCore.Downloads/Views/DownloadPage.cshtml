@@ -1,0 +1,58 @@
+@model DownloadPageViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var entitlement = Model.Entitlement;
+}
+
+@* Where a buyer's download link leads: the file with a Download button, or why the link no longer works. *@
+
+<div class="container my-5" style="max-width: 640px">
+    @if (Model.Problem == DownloadProblem.None)
+    {
+        <h1 class="h3 mb-3">@entitlement.FileName</h1>
+        <p class="text-muted">
+            @T["From order {0}: {1}.", entitlement.OrderNumber, entitlement.ProductTitle]
+            @if (entitlement.Remaining.HasValue)
+            {
+                @T.Plural(entitlement.Remaining.Value, " 1 download left.", " {0} downloads left.")
+            }
+            @if (entitlement.ExpiresUtc.HasValue)
+            {
+                @T[" The link works until {0:d}.", await LocalAsync(entitlement.ExpiresUtc.Value)]
+            }
+        </p>
+        <form method="post">
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="fa-solid fa-download me-1" aria-hidden="true"></i>@T["Download"]
+            </button>
+        </form>
+    }
+    else
+    {
+        <h1 class="h3 mb-3">@T["This download link no longer works"]</h1>
+        <p>
+            @switch (Model.Problem)
+            {
+                case DownloadProblem.Expired:
+                    @T["The link expired on {0:d}.", entitlement?.ExpiresUtc]
+                    break;
+                case DownloadProblem.LimitReached:
+                    @T["All of its downloads have been used."]
+                    break;
+                case DownloadProblem.Revoked:
+                    @T["The order it came with was canceled or refunded."]
+                    break;
+                default:
+                    @T["Check that you copied the whole link from your email."]
+                    break;
+            }
+        </p>
+        <p class="text-muted">@T["Contact us with your order number if you still need the file."]</p>
+    }
+</div>

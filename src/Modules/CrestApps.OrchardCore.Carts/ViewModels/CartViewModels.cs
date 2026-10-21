@@ -34,6 +34,47 @@ public class AddToCartViewModel
     public int MaxQuantity { get; set; }
 
     /// <summary>
+    /// Gets or sets the quantity the box starts at: the product's minimum, in packs.
+    /// </summary>
+    public int MinQuantity { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the pack size the quantity steps by.
+    /// </summary>
+    public int QuantityStep { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the product's volume discounts, smallest quantity first.
+    /// </summary>
+    public IList<CrestApps.OrchardCore.Products.Core.Models.ProductPriceTier> PriceTiers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the discount the signed-in buyer's role gets, when any.
+    /// </summary>
+    public CrestApps.OrchardCore.Products.Core.Models.ProductRoleDiscount RoleDiscount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the personal touches the buyer can choose, such as an engraving. They are chosen on the product's
+    /// page; a card offers them only through it.
+    /// </summary>
+    public IList<CrestApps.OrchardCore.Products.Core.Models.ProductAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the currency the add-on prices are shown in.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this is the product's own page, where add-ons are chosen.
+    /// </summary>
+    public bool IsProductPage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's page, which a card with a required add-on links to.
+    /// </summary>
+    public string ProductUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets where the visitor returns to after adding: the page they added from.
     /// </summary>
     public string ReturnUrl { get; set; }
@@ -43,6 +84,56 @@ public class AddToCartViewModel
     /// counted. Variants carry their own.
     /// </summary>
     public AddToCartAvailabilityViewModel Availability { get; set; }
+}
+
+/// <summary>
+/// The products a grouped product shows on its page, each with a quantity to buy, or on a card a link to that page.
+/// </summary>
+public class GroupedProductsViewModel
+{
+    public string ContentItemId { get; set; }
+
+    public IList<GroupedProductRowViewModel> Rows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether this is the grouped product's own page. A card links to it instead.
+    /// </summary>
+    public bool IsProductPage { get; set; }
+
+    public string ProductUrl { get; set; }
+
+    public string ReturnUrl { get; set; }
+}
+
+/// <summary>
+/// A product in a group: its price, stock, and whether it's bought here or on its own page (one with variants or
+/// options to choose).
+/// </summary>
+public class GroupedProductRowViewModel
+{
+    public string ContentItemId { get; set; }
+
+    public string Title { get; set; }
+
+    public string Url { get; set; }
+
+    public string Price { get; set; }
+
+    public AddToCartAvailabilityViewModel Availability { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the product has a variant, price or add-on to choose, which its own page offers.
+    /// </summary>
+    public bool ChooseOnItsPage { get; set; }
+
+    public int MaxQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets where an external product is sold, which the row links to instead of offering a quantity.
+    /// </summary>
+    public string ExternalUrl { get; set; }
+
+    public string ExternalButtonText { get; set; }
 }
 
 /// <summary>
@@ -58,6 +149,11 @@ public class AddToCartAvailabilityViewModel
     public string Tone { get; set; }
 
     public bool CanBuy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the product is ordered ahead of its release, so the button says Pre-order.
+    /// </summary>
+    public bool IsPreorder { get; set; }
 }
 
 /// <summary>

@@ -22,10 +22,10 @@ public sealed class OmnichannelSubjectWriterContactEmailTests
     {
         var contact = CreateContactWithPhone("+17024993350");
 
-        var changed = await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateContentManager(), contact, "buyer@example.com");
+        var changed = await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(), contact, "buyer@example.com");
 
         Assert.True(changed);
-        Assert.Equal("buyer@example.com", OmnichannelSubjectWriter.GetContactEmail(contact));
+        Assert.Equal("buyer@example.com", TestContactMethods.Get(contact).GetPrimaryEmailAddress());
 
         var methods = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods).ContentItems;
 
@@ -41,25 +41,25 @@ public sealed class OmnichannelSubjectWriterContactEmailTests
     public async Task TryApplyContactEmail_ReplacesExistingEmail_WithoutDuplicating()
     {
         var contact = CreateContactWithPhone("+17024993350");
-        Assert.True(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateContentManager(), contact, "old@example.com"));
+        Assert.True(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(), contact, "old@example.com"));
 
-        var changed = await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateContentManager(), contact, "new@example.com");
+        var changed = await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(), contact, "new@example.com");
 
         Assert.True(changed);
         var methods = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods).ContentItems;
         var email = Assert.Single(methods, m => m.ContentType == OmnichannelConstants.ContentTypes.EmailAddress);
         Assert.Equal("new@example.com", email.DisplayText);
-        Assert.Equal("new@example.com", OmnichannelSubjectWriter.GetContactEmail(contact));
+        Assert.Equal("new@example.com", TestContactMethods.Get(contact).GetPrimaryEmailAddress());
     }
 
     [Fact]
     public async Task TryApplyContactEmail_ReturnsFalse_WhenSameEmailAlreadyOnFile()
     {
         var contact = CreateContactWithPhone("+17024993350");
-        Assert.True(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateContentManager(), contact, "buyer@example.com"));
+        Assert.True(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(), contact, "buyer@example.com"));
 
         // A second call with the same address (any casing) is a no-op.
-        Assert.False(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateContentManager(), contact, "BUYER@example.com"));
+        Assert.False(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(), contact, "BUYER@example.com"));
 
         var methods = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods).ContentItems;
         Assert.Single(methods, m => m.ContentType == OmnichannelConstants.ContentTypes.EmailAddress);
@@ -76,7 +76,7 @@ public sealed class OmnichannelSubjectWriterContactEmailTests
     {
         var contact = CreateContactWithPhone("+17024993350");
 
-        var changed = await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateContentManager(), contact, email);
+        var changed = await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(), contact, email);
 
         Assert.False(changed);
         var methods = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods).ContentItems;
@@ -101,7 +101,7 @@ public sealed class OmnichannelSubjectWriterContactEmailTests
                 ContentItemId = "made-by-the-content-manager",
             });
 
-        Assert.True(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager.Object, contact, "buyer@example.com"));
+        Assert.True(await OmnichannelSubjectWriter.TryApplyContactEmailAsync(CreateWriter(contentManager.Object), contact, "buyer@example.com"));
 
         contentManager.Verify(manager => manager.NewAsync(OmnichannelConstants.ContentTypes.EmailAddress), Times.Once);
 
@@ -109,6 +109,9 @@ public sealed class OmnichannelSubjectWriterContactEmailTests
         var email = Assert.Single(methods, m => m.ContentType == OmnichannelConstants.ContentTypes.EmailAddress);
         Assert.Equal("made-by-the-content-manager", email.ContentItemId);
     }
+
+    private static BagContactMethodsWriter CreateWriter(IContentManager contentManager = null)
+        => new BagContactMethodsWriter(contentManager ?? CreateContentManager(), new BagContactMethodsProvider());
 
     /// <summary>
     /// Stands in for the content manager, which is what gives a new item its identifier. Building the item by

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -52,6 +53,17 @@ public sealed class Order : CatalogItem
     /// </summary>
     public decimal? TaxAmount { get; set; }
 
+    /// <summary>
+    /// Gets or sets what the discounts took off, such as a coupon, as the checkout applied them.
+    /// </summary>
+    public List<OrderDiscount> Discounts { get; set; } = [];
+
+    /// <summary>
+    /// Gets the total of the discounts.
+    /// </summary>
+    public decimal DiscountTotal
+        => Discounts?.Sum(discount => discount.Amount) ?? 0m;
+
     public OrderStatus Status { get; set; }
 
     /// <summary>
@@ -76,6 +88,28 @@ public sealed class Order : CatalogItem
     /// </summary>
     public Address BillingAddress { get; set; }
 
+    /// <summary>
+    /// Gets or sets where the order is shipped, or <see langword="null"/> when nothing in it ships.
+    /// </summary>
+    public Address ShippingAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the order is shipped and what it cost, or <see langword="null"/> when nothing in it ships.
+    /// </summary>
+    public OrderShipping Shipping { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer entered in the store's own checkout fields, as the content of a Checkout details
+    /// item, or <see langword="null"/> when the store asks for none.
+    /// </summary>
+    public JsonObject CheckoutDetails { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much of the order has been shipped, or <see langword="null"/> when nothing in it ships or
+    /// nothing records shipments.
+    /// </summary>
+    public OrderFulfillmentStatus? FulfillmentStatus { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime ModifiedUtc { get; set; }
@@ -86,6 +120,12 @@ public sealed class Order : CatalogItem
     /// Gets or sets when the order confirmation was emailed to the customer, so it is sent once.
     /// </summary>
     public DateTime? ConfirmationSentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the buyer was emailed a link back to this order's checkout after leaving it unpaid, or
+    /// <see langword="null"/> when they weren't.
+    /// </summary>
+    public DateTime? RecoveryEmailSentUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when the order's personal details were removed, at the customer's request or after the retention
@@ -104,8 +144,61 @@ public sealed class Order : CatalogItem
     public OrderCancelReason? CancelReason { get; set; }
 
     /// <summary>
-    /// Removes who the order was for: the name, email and phone, and the billing address but its country and region,
-    /// which tax records need. The lines, totals and dates stay for the store's accounts.
+    /// Gets or sets why the store canceled the order, in its own words, when it was canceled from its page.
+    /// </summary>
+    public string CancelNote { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notes on the order, oldest first: what the store wrote, and what happened, such as a refund.
+    /// </summary>
+    public List<OrderNote> Notes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the money given back for the order, one entry per refund that went through.
+    /// </summary>
+    public List<OrderRefund> Refunds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the disputes, or chargebacks, the payer opened against the order's payment, oldest first.
+    /// </summary>
+    public List<OrderDispute> Disputes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how risky the gateway's fraud checks rated the order's payment, or <see langword="null"/> when it
+    /// doesn't rate payments.
+    /// </summary>
+    public OrderPaymentRisk PaymentRisk { get; set; }
+
+    /// <summary>
+    /// Gets or sets the invoice of an order the store made for the buyer to pay, or <see langword="null"/> for one the
+    /// buyer made from their cart.
+    /// </summary>
+    public OrderInvoice Invoice { get; set; }
+
+    /// <summary>
+    /// Gets whether a dispute against the order's payment is still open.
+    /// </summary>
+    public bool HasOpenDispute
+        => Disputes?.Any(dispute => !dispute.IsClosed) == true;
+
+    /// <summary>
+    /// Gets how much was given back.
+    /// </summary>
+    public decimal RefundedAmount
+        => Refunds?.Sum(refund => refund.Amount) ?? 0m;
+
+    /// <summary>
+    /// Gets whether money was given back: none, part of what was paid, or all of it.
+    /// </summary>
+    public OrderRefundStatus RefundStatus
+        => RefundedAmount <= 0m
+            ? OrderRefundStatus.None
+            : Total.HasValue && RefundedAmount >= Total.Value ? OrderRefundStatus.Refunded : OrderRefundStatus.PartiallyRefunded;
+
+    /// <summary>
+    /// Removes who the order was for: the name, email and phone, what was entered in the store's checkout fields, and the
+    /// billing address but its country and region, which tax records need. The lines, totals and dates stay for the
+    /// store's accounts.
     /// </summary>
     public void Anonymize(DateTime now)
     {
@@ -113,6 +206,8 @@ public sealed class Order : CatalogItem
         CustomerEmail = null;
         CustomerPhone = null;
         BillingAddress = BillingAddress is null ? null : new Address { Country = BillingAddress.Country, Region = BillingAddress.Region };
+        ShippingAddress = ShippingAddress is null ? null : new Address { Country = ShippingAddress.Country, Region = ShippingAddress.Region };
+        CheckoutDetails = null;
         AnonymizedUtc ??= now;
         ModifiedUtc = now;
     }
@@ -172,11 +267,204 @@ public sealed class OrderLine
     public string TaxCategoryCode { get; set; }
 
     public string TaxClassificationCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the product was in when it was ordered (taxonomy term ids), for discounts limited
+    /// to some categories.
+    /// </summary>
+    public string[] CategoryIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the add-ons the buyer chose for the line, such as an engraving, which <see cref="UnitPrice"/>
+    /// includes.
+    /// </summary>
+    public List<OrderLineAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the products a bundle line is made of, per bundle, as the bundle was when the order was placed.
+    /// Stock is held and sold from them, not from the bundle.
+    /// </summary>
+    public List<OrderLineBundleItem> BundleItems { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets when a pre-ordered line ships, as it was when the order was placed, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? ShipsFromUtc { get; set; }
 }
 
 /// <summary>
 /// Where an order is in its life.
 /// </summary>
+/// <summary>
+/// A note on an order.
+/// </summary>
+public sealed class OrderNote
+{
+    public string Id { get; set; }
+
+    public string Text { get; set; }
+
+    public OrderNoteKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets who wrote it or did what it records, or <see langword="null"/> for the site itself.
+    /// </summary>
+    public string AuthorName { get; set; }
+
+    public DateTime CreatedUtc { get; set; }
+}
+
+/// <summary>
+/// What an <see cref="OrderNote"/> is.
+/// </summary>
+public enum OrderNoteKind
+{
+    /// <summary>
+    /// Something the store wrote.
+    /// </summary>
+    Note = 0,
+
+    /// <summary>
+    /// Something that happened to the order, such as a refund or a cancellation.
+    /// </summary>
+    Event = 1,
+}
+
+/// <summary>
+/// An order the store put together for the buyer, such as from a phone call, and sent them to pay.
+/// </summary>
+public sealed class OrderInvoice
+{
+    /// <summary>
+    /// Gets or sets who in the store made it.
+    /// </summary>
+    public string CreatedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer reads with it.
+    /// </summary>
+    public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it should be paid by, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? DueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was last emailed to the buyer, or <see langword="null"/> while it's being put together.
+    /// </summary>
+    public DateTime? SentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the order this one adds to, such as items added after that one was paid.
+    /// </summary>
+    public string AddsToOrderId { get; set; }
+
+    public string AddsToOrderNumber { get; set; }
+}
+
+/// <summary>
+/// Money given back for an order.
+/// </summary>
+public sealed class OrderRefund
+{
+    /// <summary>
+    /// Gets or sets the identifier of the payment refund, so the same refund is never counted twice.
+    /// </summary>
+    public string RefundId { get; set; }
+
+    public decimal Amount { get; set; }
+
+    public string Currency { get; set; }
+
+    public string Reason { get; set; }
+
+    public DateTime CreatedUtc { get; set; }
+}
+
+/// <summary>
+/// Whether money was given back for an order.
+/// </summary>
+public enum OrderRefundStatus
+{
+    None = 0,
+
+    PartiallyRefunded = 1,
+
+    Refunded = 2,
+}
+
+/// <summary>
+/// A discount an order was given, such as a coupon.
+/// </summary>
+public sealed class OrderDiscount
+{
+    /// <summary>
+    /// Gets or sets the code the buyer entered, or <see langword="null"/> for a discount without one.
+    /// </summary>
+    public string Code { get; set; }
+
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key of the discount provider that gave it, such as <c>Coupons</c>.
+    /// </summary>
+    public string ProviderKey { get; set; }
+}
+
+/// <summary>
+/// The shipping method an order was shipped by, and what it cost before tax.
+/// </summary>
+public sealed class OrderShipping
+{
+    /// <summary>
+    /// The provider name of an order the buyer picks up from one of the store's locations, rather than having it
+    /// shipped. Its shipping address is then the location's.
+    /// </summary>
+    public const string PickupProviderName = "Pickup";
+
+    public string MethodId { get; set; }
+
+    public string RateId { get; set; }
+
+    public string ZoneId { get; set; }
+
+    public string ProviderName { get; set; }
+
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the location the order is fulfilled from, such as the shop it's picked up at, or
+    /// <see langword="null"/> to let inventory choose.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
+    /// Gets whether the buyer picks the order up rather than having it shipped.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsPickup
+        => string.Equals(ProviderName, PickupProviderName, StringComparison.Ordinal);
+}
+
+public enum OrderFulfillmentStatus
+{
+    Unfulfilled = 0,
+
+    /// <summary>
+    /// Some of the goods have left, in one or more shipments.
+    /// </summary>
+    PartiallyFulfilled = 1,
+
+    Fulfilled = 2,
+}
+
 public enum OrderStatus
 {
     /// <summary>
@@ -198,4 +486,39 @@ public enum OrderStatus
     /// Replaced by a newer order from the same cart before it was paid.
     /// </summary>
     Canceled = 3,
+}
+
+/// <summary>
+/// An add-on chosen for an order line, as it read when the order was placed.
+/// </summary>
+public sealed class OrderLineAddOn
+{
+    public string AddOnId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the add-on was called, such as "Engraving".
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer typed, or <see langword="null"/> for a ticked box.
+    /// </summary>
+    public string Value { get; set; }
+
+    /// <summary>
+    /// Gets or sets the extra price per unit it cost.
+    /// </summary>
+    public decimal Price { get; set; }
+}
+
+/// <summary>
+/// A product in a bundle line, and how many of it each bundle holds.
+/// </summary>
+public sealed class OrderLineBundleItem
+{
+    public string ContentItemId { get; set; }
+
+    public string Title { get; set; }
+
+    public int Quantity { get; set; }
 }

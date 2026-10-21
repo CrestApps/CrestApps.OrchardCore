@@ -1,0 +1,65 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductCompareViewModel
+
+@*
+    The products the shopper picked, side by side: each one's card at the top, then a row per specification any of
+    them has. On a phone the table scrolls sideways within its frame.
+*@
+
+@{
+    var cards = Model.Cards.Cast<ProductCardViewModel>().ToList();
+    var rows = cards
+        .SelectMany(card => card.Specifications)
+        .GroupBy(row => row.Key, StringComparer.Ordinal)
+        .Select(group => (Key: group.Key, Label: group.First().Label))
+        .ToList();
+}
+
+<style asp-name="font-awesome"></style>
+<style asp-name="product-listing"></style>
+
+@if (cards.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <span class="fa-solid fa-scale-balanced fa-2x text-muted mb-3 d-block" aria-hidden="true"></span>
+            <p class="mb-1">@T["There's nothing to compare yet."]</p>
+            <p class="text-muted small mb-0">@T["Tick Compare on the products you're choosing between, up to four, then open the comparison."]</p>
+        </div>
+    </div>
+
+    return;
+}
+
+<style at="Head">
+    .product-compare-table thead th {
+        vertical-align: top;
+    }
+</style>
+
+@* Unticking Compare here takes the product off this page; the bar that opens the comparison isn't needed here. *@
+<div class="product-listing table-responsive" style="--product-image-aspect-ratio: 1 / 1" data-compare-page>
+    <table class="table align-top product-compare-table" style="min-width: @(cards.Count * 13)rem">
+        <thead>
+            <tr>
+                <th scope="col" class="visually-hidden">@T["Specification"]</th>
+                @foreach (var card in Model.Cards)
+                {
+                    <th scope="col" style="width: @(100 / cards.Count)%">@await DisplayAsync(card)</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in rows)
+            {
+                <tr>
+                    <th scope="row" class="text-body-secondary fw-normal small">@row.Label</th>
+                    @foreach (var card in cards)
+                    {
+                        <td>@(card.Specifications.FirstOrDefault(spec => spec.Key == row.Key)?.Value ?? "—")</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,17 @@
+@model OfflinePaymentMethodViewModel
+
+<div class="d-flex align-items-start gap-3">
+    <i class="fa-solid fa-building-columns fa-lg text-body-secondary mt-1" aria-hidden="true"></i>
+    <div>
+        <p class="mb-1">@T["Your order is placed now. Transfer the total from your bank using the details below, with your order number as the reference."]</p>
+        <p class="mb-2 text-body-secondary small">@T["We'll send your order once the money arrives. The details are also on your confirmation and your order's page."]</p>
+        <div class="offline-payment-instructions small border rounded p-2 bg-body-tertiary">@Model.Instructions</div>
+    </div>
+</div>
+
+<style at="Head">
+    .offline-payment-instructions {
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+    }
+</style>

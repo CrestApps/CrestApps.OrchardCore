@@ -1,9 +1,7 @@
-﻿using CrestApps.Core;
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.ContentManagement;
-using OrchardCore.Flows.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
@@ -31,43 +29,33 @@ internal static class OmnichannelHelper
     /// <summary>
     /// Every phone number on file for this contact, in the order they were entered.
     /// </summary>
-    /// <param name="contact">The contact.</param>
-    public static IReadOnlyList<string> GetPhoneNumbers(ContentItem contact)
+    /// <param name="contactMethods">The contact's contact methods.</param>
+    public static IReadOnlyList<string> GetPhoneNumbers(ContactMethodSet contactMethods)
     {
-        if (contact is null ||
-            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null)
+        if (contactMethods is null || contactMethods.PhoneNumbers.Count == 0)
         {
             return [];
         }
 
-        var numbers = new List<string>();
-
-        foreach (var contentMethod in bagPart.ContentItems)
-        {
-            if (contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) &&
-                !string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
-            {
-                numbers.Add(phonePart.Number.PhoneNumber);
-            }
-        }
-
-        return numbers;
+        return contactMethods.PhoneNumbers
+            .Select(phoneNumber => phoneNumber.PhoneNumber)
+            .ToArray();
     }
 
     /// <summary>
     /// Retrieves the preferred destenation.
     /// </summary>
     /// <param name="contact">The contact.</param>
+    /// <param name="contactMethods">The contact's contact methods.</param>
     /// <param name="channel">The channel.</param>
-    public static string GetPreferredDestenation(ContentItem contact, string channel)
+    public static string GetPreferredDestenation(ContentItem contact, ContactMethodSet contactMethods, string channel)
     {
         if (HasOptedOut(contact, channel))
         {
             return null;
         }
 
-        return FindDestination(contact, channel);
+        return FindDestination(contactMethods, channel);
     }
 
     /// <summary>
@@ -80,10 +68,10 @@ internal static class OmnichannelHelper
     /// it was entitled to use. Callers who have not made that decision should keep calling
     /// <see cref="GetPreferredDestenation"/>, which asks both.
     /// </remarks>
-    /// <param name="contact">The contact.</param>
+    /// <param name="contactMethods">The contact's contact methods.</param>
     /// <param name="channel">The channel.</param>
-    public static string FindDestination(ContentItem contact, string channel)
-        => FindDestination(contact, channel, isExcluded: null);
+    public static string FindDestination(ContactMethodSet contactMethods, string channel)
+        => FindDestination(contactMethods, channel, isExcluded: null);
 
     /// <summary>
     /// Where this contact would be reached on this channel, passing over the numbers that cannot be used.
@@ -92,30 +80,26 @@ internal static class OmnichannelHelper
     /// A contact whose cell number is dead is still reachable at home. Passing over an excluded number keeps the same
     /// order of preference for the ones left, rather than giving up on the contact.
     /// </remarks>
-    /// <param name="contact">The contact.</param>
+    /// <param name="contactMethods">The contact's contact methods.</param>
     /// <param name="channel">The channel.</param>
     /// <param name="isExcluded">Whether a phone number must be passed over, or <see langword="null"/> to use every number.</param>
-    public static string FindDestination(ContentItem contact, string channel, Func<string, bool> isExcluded)
+    public static string FindDestination(ContactMethodSet contactMethods, string channel, Func<string, bool> isExcluded)
     {
-
-        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null ||
-                bagPart.ContentItems.Count == 0)
+        if (contactMethods is null)
         {
             return null;
         }
 
         if (channel == OmnichannelConstants.Channels.Email)
         {
-            foreach (var contentMethod in bagPart.ContentItems)
+            foreach (var emailAddress in contactMethods.EmailAddresses)
             {
                 // The destination is the canonical form of the address, which is what a reply from the contact is
                 // matched to its activity by. An entry that is not an address at all is passed over.
-                if (contentMethod.TryGet<EmailInfoPart>(out var emailPart) &&
-                    OmnichannelEmailAddress.IsValid(emailPart.Email?.Text) &&
-                    isExcluded?.Invoke(emailPart.Email.Text) != true)
+                if (OmnichannelEmailAddress.IsValid(emailAddress?.Email) &&
+                    isExcluded?.Invoke(emailAddress.Email) != true)
                 {
-                    return OmnichannelEmailAddress.Normalize(emailPart.Email.Text);
+                    return OmnichannelEmailAddress.Normalize(emailAddress.Email);
                 }
             }
 
@@ -124,57 +108,13 @@ internal static class OmnichannelHelper
 
         if (channel == OmnichannelConstants.Channels.Phone)
         {
-            var phoneNumbers = new PriorityQueue<string, int>();
-
-            foreach (var contentMethod in bagPart.ContentItems)
-            {
-                if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
-                    phonePart.Type is null ||
-                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber) ||
-                    isExcluded?.Invoke(phonePart.Number.PhoneNumber) == true)
-                {
-                    continue;
-                }
-
-                switch (phonePart.Type.Text)
-                {
-                    case "Cell":
-                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 1);
-                        break;
-                    case "Home":
-                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 2);
-                        break;
-                    case "Office":
-                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 3);
-                        break;
-                    case "Work":
-                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 4);
-                        break;
-                    case "Other":
-                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 5);
-                        break;
-                    default:
-                        continue;
-                }
-            }
-
-            return phoneNumbers.Count > 0 ? phoneNumbers.Dequeue() : null;
+            return contactMethods.GetPreferredPhoneNumber(isExcluded)?.PhoneNumber;
         }
-        else if (channel == OmnichannelConstants.Channels.Sms)
-        {
-            foreach (var contentMethod in bagPart.ContentItems)
-            {
-                if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
-                    phonePart.Type is null ||
-                    phonePart.Type.Text != "Cell" ||
-                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber) ||
-                    isExcluded?.Invoke(phonePart.Number.PhoneNumber) == true)
-                {
-                    continue;
-                }
 
-                return phonePart.Number.PhoneNumber;
-            }
+        if (channel == OmnichannelConstants.Channels.Sms)
+        {
+            // Only a cell number can receive a text.
+            return contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Cell, isExcluded)?.PhoneNumber;
         }
 
         return null;

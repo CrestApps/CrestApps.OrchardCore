@@ -1,3 +1,4 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Core
 {
     public static class CrmFieldExtensions
@@ -627,6 +628,49 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OrchardCore.ContentManagement.ContentItem ContactContentItem { get; set; }
         public string ReturnUrl { get; set; }
         public OrchardCore.DisplayManagement.IShape Subject { get; set; }
+    }
+    public sealed class ContactEmailAddress
+    {
+        public ContactEmailAddress() { }
+        public string Email { get; set; }
+    }
+    public sealed class ContactMethodSet
+    {
+        public ContactMethodSet(System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.ContactPhoneNumber> phoneNumbers, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.ContactEmailAddress> emailAddresses) { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.ContactEmailAddress> EmailAddresses { get; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.ContactPhoneNumber> PhoneNumbers { get; }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.ContactMethodSet Empty { get; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.ContactPhoneNumber GetFirstPhoneNumber(string type, System.Func<string, bool> isExcluded = null) { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.ContactPhoneNumber GetPreferredPhoneNumber(System.Func<string, bool> isExcluded = null) { }
+        public string GetPrimaryEmailAddress() { }
+    }
+    public sealed class ContactMethodsOptions
+    {
+        public ContactMethodsOptions() { }
+        public System.Collections.Generic.Dictionary<string, System.Type> Providers { get; }
+        public System.Collections.Generic.Dictionary<string, System.Type> Writers { get; }
+        public bool UsesContactMethodsBag(string contentType) { }
+    }
+    public sealed class ContactPhoneNumber
+    {
+        public ContactPhoneNumber() { }
+        public string CountryCode { get; set; }
+        public string Extension { get; set; }
+        public string NationalNumber { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Type { get; set; }
+    }
+    public static class ContactPhoneTypes
+    {
+        public const string Cell = "Cell";
+        public const string Home = "Home";
+        public const string Mobile = "Mobile";
+        public const string Office = "Office";
+        public const string Other = "Other";
+        public const string Work = "Work";
+        public static int? GetCallPriority(string type) { }
+        public static bool IsMobile(string type) { }
+        public static string Normalize(string type) { }
     }
     public enum ContactResolutionStatus
     {
@@ -1564,6 +1608,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task ValidateAsync(CrestApps.Core.Models.ValidatingContext<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactMethodsAccessor
+    {
+        CrestApps.OrchardCore.Omnichannel.Core.Models.ContactMethodSet Get(OrchardCore.ContentManagement.ContentItem contact);
+        bool UsesContactMethodsBag(string contentType);
+    }
+    public interface IContactMethodsProvider
+    {
+        CrestApps.OrchardCore.Omnichannel.Core.Models.ContactMethodSet GetContactMethods(OrchardCore.ContentManagement.ContentItem contact);
+    }
+    public interface IContactMethodsWriter
+    {
+        System.Threading.Tasks.Task<bool> TryAddEmailAddressAsync(OrchardCore.ContentManagement.ContentItem contact, string emailAddress);
+        System.Threading.Tasks.Task<bool> TryAddPhoneNumberAsync(OrchardCore.ContentManagement.ContentItem contact, CrestApps.OrchardCore.Omnichannel.Core.Models.ContactPhoneNumber phoneNumber);
+        System.Threading.Tasks.Task<bool> TrySetEmailAddressAsync(OrchardCore.ContentManagement.ContentItem contact, string emailAddress);
+    }
     public interface IContactOptOutResolver
     {
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);
@@ -1833,12 +1892,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public static bool ApplySubjectFields(OrchardCore.ContentManagement.ContentItem subject, System.Collections.Generic.IDictionary<string, string> values, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "Part",
                 "Field"})] System.Collections.Generic.List<System.ValueTuple<string, string>> fields) { }
-        public static string GetContactEmail(OrchardCore.ContentManagement.ContentItem contact) { }
         [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "Part",
                 "Field"})]
         public static System.Collections.Generic.List<System.ValueTuple<string, string>> GetSubjectTextFields(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition typeDefinition) { }
-        public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.ContentItem contact, string email) { }
+        public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsWriter contactMethodsWriter, OrchardCore.ContentManagement.ContentItem contact, string email) { }
     }
     public sealed class SmsProviderRefusalScope : System.IDisposable
     {

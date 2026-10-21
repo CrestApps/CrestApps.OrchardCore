@@ -1,12 +1,11 @@
 using CrestApps.Core;
-using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement;
-using OrchardCore.Flows.Models;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
@@ -14,10 +13,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentItem>
 {
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IContactMethodsAccessor _contactMethods;
 
-    public OmnichannelContactIndexProvider(IPhoneNumberService phoneNumberService)
+    public OmnichannelContactIndexProvider(
+        IPhoneNumberService phoneNumberService,
+        IContactMethodsAccessor contactMethods)
     {
         _phoneNumberService = phoneNumberService;
+        _contactMethods = contactMethods;
     }
 
     public override void Describe(DescribeContext<ContentItem> context)
@@ -45,47 +48,27 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
             TimeZoneId = TruncateTrimmed(contactPart.TimeZoneId, 64),
         };
 
-        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null ||
-            bagPart.ContentItems.Count == 0)
+        var contactMethods = _contactMethods.Get(contact);
+
+        var primaryEmailAddress = contactMethods.GetPrimaryEmailAddress();
+
+        index.PrimaryEmailAddress = Truncate(primaryEmailAddress, 255);
+        index.NormalizedPrimaryEmailAddress = Truncate(OmnichannelEmailAddress.Normalize(primaryEmailAddress), 255);
+
+        if (contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Cell) is { } cellPhoneNumber)
         {
-            return index;
+            SetPrimaryCellPhoneNumber(index, cellPhoneNumber);
         }
 
-        foreach (var contactMethod in bagPart.ContentItems)
+        if (contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Home) is { } homePhoneNumber)
         {
-            if (string.Equals(contactMethod.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal) &&
-                string.IsNullOrEmpty(index.PrimaryEmailAddress) &&
-                contactMethod.TryGet<EmailInfoPart>(out var emailPart) &&
-                !string.IsNullOrEmpty(emailPart.Email?.Text))
-            {
-                index.PrimaryEmailAddress = Truncate(emailPart.Email.Text, 255);
-                index.NormalizedPrimaryEmailAddress = Truncate(OmnichannelEmailAddress.Normalize(emailPart.Email.Text), 255);
-            }
-
-            if (!string.Equals(contactMethod.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) ||
-                !contactMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
-                string.IsNullOrWhiteSpace(phonePart.Number?.PhoneNumber))
-            {
-                continue;
-            }
-
-            if (string.Equals(phonePart.Type?.Text, "Cell", StringComparison.OrdinalIgnoreCase) &&
-                string.IsNullOrEmpty(index.PrimaryCellPhoneNumber))
-            {
-                SetPrimaryCellPhoneNumber(index, phonePart.Number);
-            }
-            else if (string.Equals(phonePart.Type?.Text, "Home", StringComparison.OrdinalIgnoreCase) &&
-                string.IsNullOrEmpty(index.PrimaryHomePhoneNumber))
-            {
-                SetPrimaryHomePhoneNumber(index, phonePart.Number);
-            }
+            SetPrimaryHomePhoneNumber(index, homePhoneNumber);
         }
 
         return index;
     }
 
-    private void SetPrimaryCellPhoneNumber(OmnichannelContactIndex index, PhoneField field)
+    private void SetPrimaryCellPhoneNumber(OmnichannelContactIndex index, ContactPhoneNumber field)
     {
         index.NormalizedPrimaryCellPhoneNumber = NormalizeToE164(field);
         index.PrimaryCellPhoneNumber = NormalizeNationalNumber(
@@ -93,7 +76,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
             index.NormalizedPrimaryCellPhoneNumber);
     }
 
-    private void SetPrimaryHomePhoneNumber(OmnichannelContactIndex index, PhoneField field)
+    private void SetPrimaryHomePhoneNumber(OmnichannelContactIndex index, ContactPhoneNumber field)
     {
         index.NormalizedPrimaryHomePhoneNumber = NormalizeToE164(field);
         index.PrimaryHomePhoneNumber = NormalizeNationalNumber(
@@ -101,7 +84,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
             index.NormalizedPrimaryHomePhoneNumber);
     }
 
-    private string NormalizeToE164(PhoneField field)
+    private string NormalizeToE164(ContactPhoneNumber field)
     {
         var phoneNumber = field.PhoneNumber?.Trim();
 
@@ -118,7 +101,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
         return null;
     }
 
-    private string NormalizeNationalNumber(PhoneField field, string e164Number)
+    private string NormalizeNationalNumber(ContactPhoneNumber field, string e164Number)
     {
         var nationalNumber = PhoneNumberSearchTerm.NormalizeDigits(field.NationalNumber);
 

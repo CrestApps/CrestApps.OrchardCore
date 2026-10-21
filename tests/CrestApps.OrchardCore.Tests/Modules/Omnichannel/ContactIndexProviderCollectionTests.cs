@@ -11,7 +11,7 @@ public sealed class ContactIndexProviderCollectionTests
         var provider = CreateProvider(
             typeof(CrestApps.OrchardCore.Omnichannel.Managements.Startup).Assembly,
             "CrestApps.OrchardCore.Omnichannel.Managements.Indexes.OmnichannelContactIndexProvider",
-            [new CrestApps.OrchardCore.PhoneNumbers.Core.Services.DefaultPhoneNumberService()]);
+            [new CrestApps.OrchardCore.PhoneNumbers.Core.Services.DefaultPhoneNumberService(), TestContactMethods.Accessor]);
 
         // Act
         var collectionName = GetCollectionName(provider);

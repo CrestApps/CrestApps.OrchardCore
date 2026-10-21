@@ -1,32 +1,8 @@
-@using CrestApps.OrchardCore.Checkout
-@using CrestApps.OrchardCore.Checkout.ViewModels
-
-@model CheckoutEndedViewModel
-
-@{
-    var message = Model.Status switch
-    {
-        CheckoutSessionStatus.Canceled => T["This checkout was canceled."],
-        CheckoutSessionStatus.Expired => T["This checkout expired before it was completed."],
-        _ => T["This checkout could not be completed."],
-    };
-}
+@using OrchardCore.DisplayManagement
+@model IShape
 
 <zone Name="Title">
     <breadcrumb name="CheckoutEnded" title="@T["Checkout"]" />
 </zone>
 
-<div class="text-center my-5" data-checkout-ended="@Model.Status">
-    <div class="display-6 text-body-secondary mb-3">
-        <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
-    </div>
-    <h1 class="h3">@T["This checkout is no longer available."]</h1>
-    <p class="text-body-secondary">@message</p>
-
-    @if (!string.IsNullOrEmpty(Model.ReturnUrl))
-    {
-        <a class="btn btn-outline-primary mt-3" href="@Url.Content(Model.ReturnUrl)" data-checkout-return>
-            @(string.IsNullOrEmpty(Model.ReturnText) ? T["Back"].Value : Model.ReturnText)
-        </a>
-    }
-</div>
+@await DisplayAsync(Model)

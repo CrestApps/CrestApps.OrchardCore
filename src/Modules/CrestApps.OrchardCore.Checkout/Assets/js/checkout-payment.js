@@ -12,6 +12,9 @@ window.checkoutPayment = (function () {
     var handlers = {};
     var config = null;
 
+    // Carries a message across the reload that shows a changed total.
+    var noticeKey = 'checkout-payment-notice';
+
     /**
      * Registers a provider handler.
      *
@@ -206,6 +209,21 @@ window.checkoutPayment = (function () {
             });
 
             if (!begun.ok) {
+                // The total changed, such as a promotion code that ran out: the page is loaded again with the new
+                // total, and the message. It is loaded, not reloaded, because the page may be the answer to a post
+                // (applying a code), which a reload would send again.
+                if (begun.payload && begun.payload.invoiceChanged) {
+                    try {
+                        window.sessionStorage.setItem(noticeKey, begun.payload.errorMessage || '');
+                    } catch (e) {
+                        // Without storage the page still shows the new total.
+                    }
+
+                    window.location.assign(window.location.href);
+
+                    return false;
+                }
+
                 showError(begun.payload && begun.payload.errorMessage);
 
                 return false;
@@ -282,6 +300,24 @@ window.checkoutPayment = (function () {
 
         if (form) {
             form.addEventListener('submit', pay);
+        }
+
+        showNotice();
+    }
+
+    // Shows the message a reload carried, such as why the total changed, once.
+    function showNotice() {
+        var notice;
+
+        try {
+            notice = window.sessionStorage.getItem(noticeKey);
+            window.sessionStorage.removeItem(noticeKey);
+        } catch (e) {
+            return;
+        }
+
+        if (notice) {
+            showError(notice);
         }
     }
 

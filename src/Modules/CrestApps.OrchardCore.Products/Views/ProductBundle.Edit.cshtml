@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductBundleEditViewModel
+
+<h5 class="mt-4">@T["Bundle"]</h5>
+
+<div class="ocat-wrapper" asp-validation-class-for="Items">
+    <span class="ocat-label">@T["Made of"]</span>
+    <div class="ocat-end">
+        <div class="row g-2 mb-1 small text-body-secondary d-none d-sm-flex">
+            <div class="col-sm-9">@T["Product"]</div>
+            <div class="col-sm-3">@T["How many"]</div>
+        </div>
+        @for (var i = 0; i < Model.Items.Count; i++)
+        {
+            <div class="row g-2 mb-2 align-items-center">
+                <div class="col-8 col-sm-9">
+                    @await Component.InvokeAsync("ItemSelector", new
+                    {
+                        id = Html.IdFor(model => model.Items[i].ContentItemId),
+                        inputName = Html.NameFor(model => model.Items[i].ContentItemId),
+                        endpoint = Model.SearchEndpoint,
+                        initialItemsJson = Model.Items[i].InitialJson,
+                        multiple = false,
+                        enableSearch = true,
+                        buttonText = T["Choose a product"].Value,
+                        searchPlaceholder = T["Search products"].Value,
+                        emptyResultsText = T["No products match."].Value,
+                        smallButton = false,
+                    })
+                </div>
+                <div class="col-4 col-sm-3">
+                    <input type="number" min="1" max="100" step="1" asp-for="Items[i].Quantity" class="form-control" placeholder="1" aria-label="@T["How many, row {0}", i + 1]" />
+                </div>
+            </div>
+        }
+        <span class="hint">@T["Optional. Makes this product a bundle or kit of other products, sold at this product's price. Its stock is what the parts in stock can make, and selling one takes each part from stock, so don't count this product's own stock. Parts can't be sold in variants."]</span>
+        <span asp-validation-for="Items"></span>
+    </div>
+</div>

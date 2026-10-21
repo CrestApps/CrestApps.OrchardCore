@@ -109,7 +109,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Subscriptions.Core\CrestApps.OrchardCore.Subscriptions.Core.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Downloads\CrestApps.OrchardCore.Downloads.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Inventory\CrestApps.OrchardCore.Inventory.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Reviews\CrestApps.OrchardCore.Reviews.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Shipping\CrestApps.OrchardCore.Shipping.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj" />

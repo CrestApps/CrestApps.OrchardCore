@@ -1,92 +1,13 @@
-@using CrestApps.OrchardCore.Products.Core.Services
-@model OrderViewViewModel
-@inject IServiceProvider Services
+@model IShape
+
 @{
-    var order = Model.Order;
-    string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
-    var formatter = Services.GetService(typeof(CrestApps.OrchardCore.Addresses.Services.IAddressFormatter)) as CrestApps.OrchardCore.Addresses.Services.IAddressFormatter;
-    var billedTo = order.BillingAddress is null || formatter is null ? null : await formatter.GetLinesAsync(order.BillingAddress);
+    var order = (OrderViewViewModel)Model;
 }
 
 <zone Name="Title">
-    <breadcrumb name="OrdersView" title="@T["Order {0}", order.OrderNumber]" />
+    <breadcrumb name="OrdersView" title="@T["Order {0}", order.Order.OrderNumber]" />
 </zone>
 
 <div class="container my-4" style="max-width: 860px;">
-    <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
-    <p class="text-muted">@T["Placed {0:D}", order.CreatedUtc]</p>
-
-    @if (!string.IsNullOrEmpty(Model.PayUrl))
-    {
-        <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
-            <span>@T["A balance is still owed on this order."]</span>
-            <a class="btn btn-primary btn-sm" href="@Model.PayUrl">@T["Pay now"]</a>
-        </div>
-    }
-
-    <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table mb-0 align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Item"]</th>
-                        <th scope="col" class="text-end">@T["Quantity"]</th>
-                        <th scope="col" class="text-end">@T["Amount"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var line in order.Lines)
-                    {
-                        <tr>
-                            <td>
-                                @line.Title
-                                @if (!string.IsNullOrEmpty(line.PriceName))
-                                {
-                                    <span class="text-muted">(@line.PriceName)</span>
-                                }
-                            </td>
-                            <td class="text-end">@line.Quantity</td>
-                            <td class="text-end">@Format(line.LineTotal)</td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    @if (order.TaxAmount is > 0)
-                    {
-                        <tr>
-                            <th scope="row" colspan="2" class="text-end fw-normal">@T["Tax"]</th>
-                            <td class="text-end">@Format(order.TaxAmount.Value)</td>
-                        </tr>
-                    }
-                    <tr>
-                        <th scope="row" colspan="2" class="text-end">@T["Total"]</th>
-                        <td class="text-end fw-bold">@Format(order.Total ?? order.Subtotal)</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-
-    @if (billedTo is { Count: > 0 })
-    {
-        <h2 class="h6">@T["Billed to"]</h2>
-        <address>
-            @for (var i = 0; i < billedTo.Count; i++)
-            {
-                @billedTo[i]
-                if (i < billedTo.Count - 1)
-                {
-                    <br />
-                }
-            }
-        </address>
-    }
-
-    @if (!string.IsNullOrEmpty(Model.RegisterUrl))
-    {
-        <p class="small text-muted mt-4">
-            @T["Create an account with the same email to see this order and future ones under My Orders."]
-            <a href="@Model.RegisterUrl">@T["Create an account"]</a>
-        </p>
-    }
+    @await DisplayAsync(Model)
 </div>

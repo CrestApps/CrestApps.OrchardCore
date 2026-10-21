@@ -1,0 +1,95 @@
+@model ShipmentLabelViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
+
+<zone Name="Title">
+    <breadcrumb name="ShipmentsLabel" title="@T["Label for shipment {0}", Model.Shipment.Number]">
+        <breadcrumb-item id="OrdersDetail" action="Detail" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" route-orderId="@Model.Order.ItemId">@T["Order {0}", Model.Order.OrderNumber]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (!Model.HasShipFrom)
+{
+    <div class="alert alert-warning">@T["Enter where parcels are sent from in Settings › Commerce › Shipping first; the carriers price and print labels from it."]</div>
+}
+@if (Model.Order.ShippingAddress is null)
+{
+    <div class="alert alert-warning">@T["This order has no address to ship to."]</div>
+}
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">@T["The parcel"]</div>
+            <div class="card-body">
+                <p class="small mb-2">@string.Join(", ", Model.Shipment.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</p>
+                <form asp-action="Rates" asp-route-shipmentId="@Model.Shipment.ItemId" method="post" class="no-multisubmit">
+                    <div class="mb-2">
+                        <label asp-for="Weight" class="form-label small mb-0">@(Model.WeightUnit == WeightUnit.Pound ? T["Weight (lb)"] : T["Weight (kg)"])</label>
+                        <input asp-for="Weight" type="number" min="0" step="any" class="form-control w-auto" />
+                        <span class="hint">@T["The items' weight plus the box. Weigh the packed parcel to be sure."]</span>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label asp-for="Length" class="form-label small mb-0">@T["Length"]</label>
+                            <input asp-for="Length" type="number" min="0" step="any" class="form-control" />
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="Width" class="form-label small mb-0">@T["Width"]</label>
+                            <input asp-for="Width" type="number" min="0" step="any" class="form-control" />
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="Height" class="form-label small mb-0">@T["Height"]</label>
+                            <input asp-for="Height" type="number" min="0" step="any" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <span class="hint">@(Model.WeightUnit == WeightUnit.Pound ? T["In inches. Optional."] : T["In centimeters. Optional."])</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-sm" disabled="@(!Model.HasShipFrom || Model.Order.ShippingAddress is null)">@T["Compare rates"]</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">@T["Rates from {0}", Model.CarrierName]</div>
+            @if (Model.Rates.Count == 0)
+            {
+                <div class="card-body text-muted small">@T["Weigh the parcel, then compare the carriers' rates."]</div>
+            }
+            else
+            {
+                <form asp-action="Buy" asp-route-shipmentId="@Model.Shipment.ItemId" method="post" class="no-multisubmit">
+                    <input type="hidden" asp-for="QuoteId" />
+                    <div class="list-group list-group-flush">
+                        @for (var i = 0; i < Model.Rates.Count; i++)
+                        {
+                            var rate = Model.Rates[i];
+
+                            <label class="list-group-item d-flex gap-3 align-items-center" for="rate-@i">
+                                <input type="radio" class="form-check-input flex-shrink-0 mt-0" name="RateId" value="@rate.RateId" id="rate-@i" checked="@(i == 0)" />
+                                <span class="flex-grow-1">
+                                    <span class="d-block">@rate.Carrier @CrestApps.OrchardCore.Shipping.Services.CarrierShippingRateProvider.DescribeService(rate.Carrier, rate.Service)</span>
+                                    @if (rate.DeliveryDays is { } days)
+                                    {
+                                        <small class="text-muted">@T.Plural(days, "1 business day", "{0} business days")</small>
+                                    }
+                                </span>
+                                <strong class="text-nowrap">@ProductPriceFormatter.Format(rate.Amount, rate.Currency)</strong>
+                            </label>
+                        }
+                    </div>
+                    <div class="card-body">
+                        <button type="submit" class="btn btn-primary btn-sm" data-title="@T["Buy label"]" data-message="@T["Buy this label? The account is charged, and the shipment is marked shipped."]">@T["Buy label and ship"]</button>
+                        <span class="hint d-block mt-1">@T["The buyer is emailed the tracking number."]</span>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>

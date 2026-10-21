@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Products.Services
+@using CrestApps.OrchardCore.Products.ViewModels
+@using OrchardCore.ContentManagement
+@inject ProductListingService Listing
+
+@*
+    "Frequently bought together" on the cart page: the cross-sells of the products in the cart, the most recommended
+    first, leaving out what is already in it. The Carts module renders this shape, and Product Recommendations
+    provides it.
+*@
+
+@{
+    var products = ((IEnumerable<ContentItem>)Model.ContentItems ?? []).ToList();
+    var ids = ProductRecommendationService.GetCrossSellIds(products);
+    var strip = new ProductCardStripViewModel
+    {
+        Heading = Model.Heading as string ?? T["Frequently bought together"].Value,
+        Cards = ids.Count == 0 ? [] : await Listing.BuildCardsAsync(ids),
+    };
+}
+
+@if (strip.Cards.Count > 0)
+{
+    <section class="product-card-strip mt-4 mb-4" aria-label="@strip.Heading">
+        <h2 class="h5 mb-3">@strip.Heading</h2>
+        <partial name="ProductCardStripCards" model="strip" />
+    </section>
+}

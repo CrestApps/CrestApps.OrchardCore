@@ -6,7 +6,7 @@ technical_manual:
   - modules/commerce
 ---
 
-The commerce features let your site take money. You can sell subscriptions and whole websites online, set up a payment plan for a customer over the phone, and keep track of what every customer owes and has paid. Customers get receipts and invoices, and they can pay online. You set it all up in the admin screens under **Commerce**, **Subscriptions** and **Settings**.
+The commerce features let your site take money. You can run an online store that ships goods or delivers downloads, sell subscriptions and whole websites, set up a payment plan for a customer over the phone, and keep track of what every customer owes and has paid. Customers get receipts and invoices, and they can pay online. You set it all up in the admin screens under **Commerce**, **Subscriptions** and **Settings**.
 
 This section explains each feature in plain words. For installation, configuration files and the technical details, see the [Technical Manual commerce overview](../../modules/commerce.md).
 
@@ -23,6 +23,13 @@ This video walks through the commerce features, from connecting Stripe to refund
 | **Product listings** | Publish pages that list your products with filters, sorting, search and a page for each product, for a shop, homes, cars or your plans. | [Product listings](product-listings.md) |
 | **Taxes** | Charge the right tax for what you sell and where your customers are. | [Taxes](taxes.md) |
 | **Coupons** | Give customers a discount code to enter at checkout. | [Coupons](coupons.md) |
+| **Carts and orders** | Let shoppers fill a cart and check out, then follow, refund or cancel each order, print its invoice and packing slip, and create orders for buyers to pay. | [Carts and orders](carts-and-orders.md) |
+| **Returns** | Let buyers ask to send items back for a refund or an exchange, and approve, receive and restock them. | [Returns and exchanges](returns.md) |
+| **Customers** | Keep the people and businesses who buy from you, with their addresses, orders and tax exemption. | [Customers](customers.md) |
+| **Inventory** | Count your stock in one or more locations, hold it while a buyer pays, stop selling what has run out, take pre-orders, email shoppers when it's back, and order more from suppliers. | [Inventory](inventory.md) |
+| **Shipping** | Choose where you ship, the methods buyers can pick and what each costs, offer store pickup and local delivery, quote carriers' rates and buy their labels, and record shipments. | [Shipping](shipping.md) |
+| **Digital downloads** | Sell files such as ebooks; buyers download them after paying through links that expire. | [Digital downloads](digital-downloads.md) |
+| **Product reviews** | Let buyers rate what they bought, approve reviews, and sort listings by rating. | [Product reviews](reviews.md) |
 | **Checkout** | The pages a buyer goes through to pay, with or without an account. | [Checkout](checkout.md) |
 | **Subscriptions** | Sell plans that renew every month or year, with free trials, and let subscribers manage their own plans. | [Subscriptions](subscriptions.md) |
 | **Selling sites** | Sell a ready-made website: the customer pays and their site is created for them. | [Selling sites](sites.md) |
@@ -35,9 +42,9 @@ This video walks through the commerce features, from connecting Stripe to refund
 
 | Menu | What is there |
 | --- | --- |
-| **Commerce** | **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Currencies** and **Taxation**. |
+| **Commerce** | **Orders**, **My Orders**, **Returns**, **Customers**, **Inventory**, **Purchase orders**, **Shipping**, **Reviews**, **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Currencies** and **Taxation**. |
 | **Subscriptions** | **Agreements**, **My Plans**, **Installment Plans**, **Site provisioning** and **My Sites**. |
-| **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Transactions** (reminders), **Receipts** and **Pay Later**. |
+| **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Orders**, **Returns**, **Inventory**, **Shipping**, **Downloads**, **Reviews**, **Customers**, **Transactions** (reminders), **Receipts** and **Pay Later**. |
 
 You only see the menus your role allows, and only for the features your site has turned on. Customers open **My Plans**, **My Sites** and **My Transactions** with their own account; they need no other admin access, and the rest of the admin stays closed to them.
 
@@ -65,3 +72,16 @@ Every way of paying ends up in the same place, so there is one record of what ea
 
 - To sell plans online, follow [Sell subscriptions online](../use-cases/sell-subscriptions-online.md).
 - To sell on a payment plan, follow [Sell on a payment plan](../use-cases/sell-on-a-payment-plan.md).
+- To see a working store before you build your own, run a store sample.
+
+## Try a store sample
+
+Each sample sets up a working store on a site, under **Configuration > Recipes**. Run one on a test site first, because it adds content types, products and settings.
+
+| Your store sells | Run | What you get |
+| --- | --- | --- |
+| **Goods you ship** | **Product listing: online store sample** | 30 products with a **Shop** page at */shop*, stock, shipping zones, two customers, product reviews, and the coupons **WELCOME10** (10% off, once per customer) and **FREESHIP75** (free shipping on orders of $75 or more). |
+| **Files to download** | **Digital downloads sample** | Two ebooks with their PDF files and an **Ebooks** page at */ebooks*, download links that work 3 times for 14 days, and the coupons **WELCOME10** and **EBOOKS5** ($5 off orders of $15 or more). |
+| **Both** | The online store sample, then the digital downloads sample | One store selling both. A cart can hold goods and ebooks together: the buyer chooses shipping for the goods and gets download links for the ebooks. **WELCOME10** is added once. |
+
+The samples don't turn on a way to pay. Connect one under [Payment providers](payment-providers.md) before you sell; on a test site, your administrator can turn on **Test payments**, which confirms every payment without moving money.

@@ -9,3 +9,87 @@
         </div>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="SendRecoveryEmails" type="checkbox" class="form-check-input" data-recovery-toggle />
+            <label asp-for="SendRecoveryEmails" class="form-check-label">@T["Email buyers who leave a checkout"]</label>
+            <span class="hint dashed">@T["A buyer who gave their email and left without paying gets one email with what they chose and a link back to it, unless they paid since. Needs the site's email and its base URL."]</span>
+        </div>
+        @if (Model.SendRecoveryEmails && !Model.HasBaseUrl)
+        {
+            <div class="alert alert-warning mt-2 mb-0" role="alert">
+                @T["No recovery email is sent until the site has a base URL to link back to. Set it under <a href=\"{0}\">Settings › General</a>.", Url.Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = "general" })]
+            </div>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-recovery-delay>
+    <label asp-for="RecoveryDelayHours" class="ocat-label">@T["Send it after"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="RecoveryDelayHours" type="number" min="1" max="72" class="form-control" />
+            <span class="input-group-text">@T["hours"]</span>
+        </div>
+        <span class="hint">@T["From 1 to 72 hours after they left."]</span>
+    </div>
+</div>
+
+<h5 class="mt-4">@T["Order bump"]</h5>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.OrderBumpProductId)">@T["Product offered"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.OrderBumpProductId),
+            inputName = Html.NameFor(model => model.OrderBumpProductId),
+            endpoint = Model.ProductSearchEndpoint,
+            initialItemsJson = Model.InitialOrderBumpJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Choose a product"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products match."].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Optional. Offered on the payment step of every order that doesn't already have it: one tick adds it before paying. Choose something small that goes with most orders. Clear it to stop the offer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OrderBumpPercentOff">
+    <label asp-for="OrderBumpPercentOff" class="ocat-label">@T["Discount"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="OrderBumpPercentOff" type="number" min="0" max="99" step="0.01" class="form-control" />
+            <span class="input-group-text">%</span>
+        </div>
+        <span class="hint">@T["Optional. How much less it costs as an add-on to the order, such as 20."]</span>
+        <span asp-validation-for="OrderBumpPercentOff"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="OrderBumpHeadline" class="ocat-label">@T["Headline"]</label>
+    <div class="ocat-end">
+        <input asp-for="OrderBumpHeadline" class="form-control" maxlength="120" placeholder="@T["Add this to your order?"]" />
+        <span class="hint">@T["Optional. What the offer says above the product."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var toggle = document.querySelector('[data-recovery-toggle]');
+        var delay = document.querySelector('[data-recovery-delay]');
+
+        if (!toggle || !delay) {
+            return;
+        }
+
+        var sync = function () { delay.hidden = !toggle.checked; };
+        toggle.addEventListener('change', sync);
+        sync();
+    })();
+</script>

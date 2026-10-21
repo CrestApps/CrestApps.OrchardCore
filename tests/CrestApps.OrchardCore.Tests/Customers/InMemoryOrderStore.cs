@@ -25,8 +25,10 @@ internal sealed class InMemoryOrderStore : IOrderStore
             .Where(order => query.Statuses is not { Count: > 0 } || query.Statuses.Contains(order.Status))
             .Where(order => query.UserId is null || order.UserId == query.UserId)
             .Where(order => query.CustomerId is null || order.CustomerId == query.CustomerId)
+            .Where(order => query.CustomerEmail is null || string.Equals(order.CustomerEmail, query.CustomerEmail, StringComparison.OrdinalIgnoreCase))
             .Where(order => !query.GuestsOnly || order.UserId is null)
             .Where(order => query.CreatedBefore is null || order.CreatedUtc < query.CreatedBefore)
+            .Where(order => query.CreatedOnOrAfter is null || order.CreatedUtc >= query.CreatedOnOrAfter)
             .Where(order => !query.NotAnonymized || order.AnonymizedUtc is null)
             .OrderByDescending(order => order.CreatedUtc)
             .ToArray();

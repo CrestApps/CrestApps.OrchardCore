@@ -2,9 +2,18 @@
 @using CrestApps.OrchardCore.Products.Core.Services
 
 @model OrderDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var order = Model.Order;
+
+    // An order paid offline, such as by bank transfer, is placed before the money arrives.
+    var owed = order.Status == OrderStatus.Paid && Model.Money?.Outstanding > 0;
     string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
 }
 
@@ -21,12 +30,85 @@
     </breadcrumb>
 </zone>
 
+@if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            @if (order.Status == OrderStatus.AwaitingPayment)
+            {
+                @T["The buyer has opened the checkout to pay this order."]
+            }
+            else if (order.Invoice.SentUtc is { } sent)
+            {
+                @T["Invoice emailed to {0} {1:g}. Waiting for payment.", order.CustomerEmail, await LocalAsync(sent)]
+            }
+            else
+            {
+                @T["A draft made by {0}, not sent to the buyer yet.", order.Invoice.CreatedBy ?? T["the store"].Value]
+            }
+            @if (!string.IsNullOrEmpty(order.Invoice.AddsToOrderId))
+            {
+                <span class="d-block small">@T["Adds to order"] <a asp-action="Detail" asp-route-orderId="@order.Invoice.AddsToOrderId">@order.Invoice.AddsToOrderNumber</a></span>
+            }
+            @if (!string.IsNullOrEmpty(Model.PayUrl))
+            {
+                <span class="input-group input-group-sm mt-2">
+                    <label class="input-group-text" for="order-pay-link">@T["Pay link"]</label>
+                    <input id="order-pay-link" class="form-control" value="@Model.PayUrl" readonly onfocus="this.select()" />
+                </span>
+                <span class="d-block small text-body-secondary">@T["Send it to the buyer yourself, such as in a chat, if you don't email the invoice."]</span>
+            }
+        </span>
+        @if (Model.CanManage)
+        {
+            <span class="d-flex flex-wrap gap-2">
+                @if (order.Status == OrderStatus.Draft)
+                {
+                    <a class="btn btn-sm btn-secondary" asp-controller="DraftOrdersAdmin" asp-action="Edit" asp-route-orderId="@order.ItemId">@T["Edit"]</a>
+                }
+                <form asp-controller="DraftOrdersAdmin" asp-action="SendInvoice" asp-route-orderId="@order.ItemId" method="post" class="no-multisubmit">
+                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? T["Send invoice"] : T["Send again"])</button>
+                </form>
+            </span>
+        }
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    @if (Model.CanManage && order.Status == OrderStatus.Paid)
+    {
+        <a class="btn btn-outline-secondary btn-sm" asp-controller="DraftOrdersAdmin" asp-action="Create" asp-route-addsToOrderId="@order.ItemId">
+            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> @T["Add items"]
+        </a>
+    }
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Invoice" asp-route-orderId="@order.ItemId">
+        <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
+    </a>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="PackingSlip" asp-route-orderId="@order.ItemId">
+        <i class="fa-solid fa-box" aria-hidden="true"></i> @T["Packing slip"]
+    </a>
+</div>
+
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>@T.Plural(order.ItemCount, "1 item", "{0} items")</span>
-                @await Html.PartialAsync("_OrderStatus", order.Status)
+                <span>
+                    @if (order.Status == OrderStatus.Paid)
+                    {
+                        @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
+                    }
+                    @await Html.PartialAsync("_OrderRefundStatus", order.RefundStatus)
+                    @if (owed)
+                    {
+                        <span class="badge text-bg-warning">@T["Payment due"]</span>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_OrderStatus", order.Status)
+                    }
+                </span>
             </div>
             @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
             {
@@ -34,22 +116,29 @@
                     @switch (cancelReason)
                     {
                         case OrderCancelReason.Replaced:
-                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.PaymentFailed:
-                            @T["Canceled {0:g}: the payment was declined.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the payment was declined.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutCanceled:
-                            @T["Canceled {0:g}: the checkout was canceled.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the checkout was canceled.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutExpired:
-                            @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
+                            @T["Canceled {0:g}: nobody finished the checkout in time.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.Unavailable:
-                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
+                            break;
+                        case OrderCancelReason.CanceledByStore:
+                            @T["Canceled {0:g} by the store.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
+                            @if (!string.IsNullOrEmpty(order.CancelNote))
+                            {
+                                <span>@order.CancelNote</span>
+                            }
                             break;
                         default:
-                            @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
+                            @T["Canceled {0:g}: no checkout was left that could pay for it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                     }
                 </div>
@@ -71,6 +160,24 @@
                                 }
                                 <span>@T["{0} × {1}", line.Quantity, Format(line.UnitPrice)]</span>
                             </div>
+                            @if (line.ShipsFromUtc is { } shipsFrom)
+                            {
+                                <div class="small text-info-emphasis"><span class="fa-solid fa-calendar-day me-1" aria-hidden="true"></span>@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                            }
+                            @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
+                            {
+                                <div class="small text-break"><span class="fa-solid fa-box-open text-body-secondary me-1" aria-hidden="true"></span>@T["Includes {0}", contents]</div>
+                            }
+                            @foreach (var addOn in line.AddOns ?? [])
+                            {
+                                <div class="small text-break">
+                                    <span class="fa-solid fa-pen-to-square text-body-secondary me-1" aria-hidden="true"></span>@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)
+                                    @if (addOn.Price > 0)
+                                    {
+                                        <span class="text-muted">(+@Format(addOn.Price))</span>
+                                    }
+                                </div>
+                            }
                         </div>
                         <div class="text-nowrap fw-semibold">@Format(line.LineTotal)</div>
                     </li>
@@ -81,6 +188,20 @@
                     <span>@T["Subtotal"]</span>
                     <span>@Format(order.Subtotal)</span>
                 </div>
+                @foreach (var discount in order.Discounts ?? [])
+                {
+                    <div class="d-flex justify-content-between text-success">
+                        <span>@(string.IsNullOrEmpty(discount.Code) ? T["Discount: {0}", discount.Description] : T["Discount ({0})", discount.Code])</span>
+                        <span>&minus;@Format(discount.Amount)</span>
+                    </div>
+                }
+                @if (order.Shipping is not null)
+                {
+                    <div class="d-flex justify-content-between">
+                        <span>@(order.Shipping.IsPickup ? order.Shipping.Name : T.GetString("Shipping ({0})", order.Shipping.Name).Value)</span>
+                        <span>@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</span>
+                    </div>
+                }
                 @if (order.TaxAmount > 0)
                 {
                     <div class="d-flex justify-content-between text-muted">
@@ -91,26 +212,69 @@
                 @if (order.Total.HasValue)
                 {
                     <div class="d-flex justify-content-between fw-semibold border-top mt-2 pt-2">
-                        <span>@T["Total paid"]</span>
+                        <span>@(owed ? T["Total"] : T["Total paid"])</span>
                         <span>@Format(order.Total.Value)</span>
+                    </div>
+                }
+                @foreach (var refund in order.Refunds ?? [])
+                {
+                    <div class="d-flex justify-content-between text-info">
+                        <span>@T["Refunded {0:d}", await LocalAsync(refund.CreatedUtc)]</span>
+                        <span>&minus;@Format(refund.Amount)</span>
+                    </div>
+                }
+                @if (order.RefundedAmount > 0 && order.Total.HasValue)
+                {
+                    <div class="d-flex justify-content-between fw-semibold">
+                        <span>@T["Net"]</span>
+                        <span>@Format(order.Total.Value - order.RefundedAmount)</span>
                     </div>
                 }
             </div>
         </div>
+
+        @* What other modules add to the order, such as its shipments. *@
+        @if (Model.Sections is not null)
+        {
+            @await DisplayAsync(Model.Sections)
+        }
+
+        @if (Model.CanManage)
+        {
+            <partial name="_OrderNotes" model="Model" />
+        }
     </div>
 
     <div class="col-lg-4">
-        <div class="card">
+        @if (Model.CanManage)
+        {
+            <partial name="_OrderActions" model="Model" />
+        }
+        <div class="card mb-4">
             <div class="card-body">
                 <dl class="mb-0">
                     <dt>@T["Order number"]</dt>
                     <dd>@order.OrderNumber</dd>
                     <dt>@T["Placed"]</dt>
-                    <dd>@order.CreatedUtc.ToString("f")</dd>
-                    @if (order.PaidUtc.HasValue)
+                    <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
+                    @if (order.PaidUtc.HasValue && !owed)
                     {
                         <dt>@T["Paid"]</dt>
-                        <dd>@order.PaidUtc.Value.ToString("f")</dd>
+                        <dd>@((await LocalAsync(order.PaidUtc.Value)).ToString("f"))</dd>
+                    }
+                    @if (order.ShippingAddress is not null)
+                    {
+                        <dt>@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</dt>
+                        <dd>
+                            @foreach (var line in await BillingLinesAsync(order.ShippingAddress))
+                            {
+                                <div>@line</div>
+                            }
+                            @if (!string.IsNullOrEmpty(order.ShippingAddress.Phone))
+                            {
+                                <div class="text-muted small">@order.ShippingAddress.Phone</div>
+                            }
+                        </dd>
                     }
                     @if (order.BillingAddress is not null)
                     {

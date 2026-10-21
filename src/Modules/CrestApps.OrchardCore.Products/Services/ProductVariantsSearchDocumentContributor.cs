@@ -1,3 +1,5 @@
+using OrchardCore.Modules;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Services.Attributes;
@@ -16,6 +18,17 @@ public sealed class ProductVariantsSearchDocumentContributor : IProductSearchDoc
     /// The key of the variants' SKUs, which keyword search matches.
     /// </summary>
     public const string SkuKey = "Variant.Sku";
+
+    private readonly IClock _clock;
+
+    public ProductVariantsSearchDocumentContributor()
+    {
+    }
+
+    public ProductVariantsSearchDocumentContributor(IClock clock)
+    {
+        _clock = clock;
+    }
 
     public Task ContributeAsync(ContentItem contentItem, ProductSearchDocument document)
     {
@@ -69,8 +82,9 @@ public sealed class ProductVariantsSearchDocumentContributor : IProductSearchDoc
             return Task.CompletedTask;
         }
 
-        var productPrice = contentItem.TryGet<ProductPart>(out var product) ? product.Price : null;
-        var prices = available.Select(variant => variant.Price ?? productPrice).Where(price => price.HasValue).Select(price => price.Value).ToList();
+        contentItem.TryGet<ProductPart>(out var product);
+        var now = _clock?.UtcNow ?? DateTime.UtcNow;
+        var prices = available.Select(variant => ProductSale.GetPrice(product, variant, now)).Where(price => price.HasValue).Select(price => price.Value).ToList();
 
         if (prices.Count == 0)
         {
@@ -84,7 +98,7 @@ public sealed class ProductVariantsSearchDocumentContributor : IProductSearchDoc
         document.MaxPrice = max > min ? max : null;
 
         // A compare-at price is shown only when every variant shares it.
-        var compareAt = available.Select(variant => variant.CompareAtPrice ?? product?.CompareAtPrice).Distinct().ToList();
+        var compareAt = available.Select(variant => ProductSale.GetCompareAtPrice(product, variant, now)).Distinct().ToList();
         document.CompareAtPrice = compareAt.Count == 1 && document.MaxPrice is null ? compareAt[0] : null;
 
         // One price row per variant price, so a price filter finds the product when any variant is in range.

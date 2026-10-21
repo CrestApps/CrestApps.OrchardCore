@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Mvc.Localization
 @using CrestApps.OrchardCore.Checkout.Models
 @using CrestApps.OrchardCore.Checkout.ViewModels
 @model CouponEditViewModel
@@ -25,19 +26,21 @@
         <select asp-for="Kind" class="form-select">
             <option value="@((int)CouponKind.Percentage)">@T["Percentage"]</option>
             <option value="@((int)CouponKind.FixedAmount)">@T["Fixed amount"]</option>
+            <option value="@((int)CouponKind.FreeShipping)">@T["Free shipping"]</option>
         </select>
+        <span class="hint">@T["Free shipping takes off the shipping charged at checkout, whatever the method."]</span>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3" data-coupon-kinds="@((int)CouponKind.Percentage)">
         <label asp-for="Percentage" class="form-label">@T["Percentage"]</label>
         <input asp-for="Percentage" type="number" step="0.01" min="0" max="100" class="form-control" />
         <span asp-validation-for="Percentage"></span>
     </div>
-    <div class="col-md-2 mb-3">
+    <div class="col-md-2 mb-3" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
         <label asp-for="Amount" class="form-label">@T["Amount"]</label>
         <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="Amount"></span>
     </div>
-    <div class="col-md-2 mb-3">
+    <div class="col-md-2 mb-3" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
         <label asp-for="Currency" class="form-label">@T["Currency"]</label>
         @if (Model.Currencies is { Count: > 0 })
         {
@@ -54,7 +57,7 @@
 </div>
 
 <div class="row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount)">
         <label asp-for="Target" class="form-label">@T["Applies to"]</label>
         <select asp-for="Target" class="form-select">
             <option value="@((int)DiscountTarget.OneTime)">@T["The one-time amount"]</option>
@@ -66,13 +69,28 @@
         <label asp-for="MinimumAmount" class="form-label">@T["Minimum amount"]</label>
         <input asp-for="MinimumAmount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="MinimumAmount"></span>
-        <span class="hint">@T["Optional. The coupon does nothing below this."]</span>
+        <span class="hint">@T["Optional. The coupon does nothing below this. Only the items count, not shipping."]</span>
     </div>
     <div class="col-md-4 mb-3">
         <label asp-for="MaxRedemptions" class="form-label">@T["Usage limit"]</label>
         <input asp-for="MaxRedemptions" type="number" min="1" class="form-control" />
         <span asp-validation-for="MaxRedemptions"></span>
         <span class="hint">@T["Leave blank for unlimited. A code with no limit that leaks keeps discounting."]</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="MaximumAmount" class="form-label">@T["Maximum amount"]</label>
+        <input asp-for="MaximumAmount" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="MaximumAmount"></span>
+        <span class="hint">@T["Optional. The coupon does nothing above this, such as a code meant for small orders."]</span>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="MaxRedemptionsPerCustomer" class="form-label">@T["Uses per customer"]</label>
+        <input asp-for="MaxRedemptionsPerCustomer" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxRedemptionsPerCustomer"></span>
+        <span class="hint">@T["Leave blank for no limit. A customer is their account, or the email a guest checks out with."]</span>
     </div>
 </div>
 
@@ -130,7 +148,38 @@
     </div>
 </div>
 
+@if (Model.Editor is not null)
+{
+    @await DisplayAsync(Model.Editor)
+}
+
 @if (!string.IsNullOrEmpty(Model.ItemId))
 {
-    <p class="text-muted small">@T["Redeemed {0} times.", Model.RedemptionCount]</p>
+    <p class="text-muted small">
+        @T.Plural(Model.RedemptionCount, "Redeemed once.", "Redeemed {0} times.")
+        @if (Model.HeldCount > 0)
+        {
+            @T.Plural(Model.HeldCount, " 1 more use is held by a checkout that is paying.", " {0} more uses are held by checkouts that are paying.")
+        }
+    </p>
 }
+
+@* Shows only what the chosen kind of coupon uses: a percentage, or an amount in a currency; free shipping uses neither. *@
+<script at="Foot">
+    (function () {
+        var kind = document.getElementById('@Html.IdFor(m => m.Kind)');
+
+        if (!kind) {
+            return;
+        }
+
+        var sync = function () {
+            document.querySelectorAll('[data-coupon-kinds]').forEach(function (field) {
+                field.hidden = field.getAttribute('data-coupon-kinds').split(' ').indexOf(kind.value) < 0;
+            });
+        };
+
+        kind.addEventListener('change', sync);
+        sync();
+    })();
+</script>

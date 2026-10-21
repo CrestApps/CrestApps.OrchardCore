@@ -1,0 +1,16 @@
+@model ReviewSettingsViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="RequireApproval" type="checkbox" class="form-check-input" />
+        <label asp-for="RequireApproval" class="form-check-label">@T["Approve reviews before they show"]</label>
+        <span class="hint dashed">@T["A new or changed review waits under Commerce > Reviews until you approve it."]</span>
+    </div>
+</div>
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="BuyersOnly" type="checkbox" class="form-check-input" />
+        <label asp-for="BuyersOnly" class="form-check-label">@T["Only buyers can review"]</label>
+        <span class="hint dashed">@T["Only customers who paid for a product can review it. Untick it to let any signed-in user review; their reviews aren't marked as verified purchases."]</span>
+    </div>
+</div>

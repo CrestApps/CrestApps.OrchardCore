@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
@@ -16,10 +18,17 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
 /// <summary>
 /// Automatically verifies omnichannel contacts when their preferred phone number is created or changed.
 /// </summary>
+/// <remarks>
+/// Whether a number needs a lookup is decided from the verification stored on the contact, which records the number
+/// it is about. A lookup is paid for, so a save that leaves the preferred number as it was never queues one, even
+/// when the contact-methods bag item that holds the number lost its own copy of the verification because the save
+/// rebuilt it: that item gets the contact's copy back instead.
+/// </remarks>
 internal sealed class OmnichannelContactPhoneNumberVerificationHandler : ContentHandlerBase
 {
     private readonly HashSet<string> _contentItemIds = new(StringComparer.Ordinal);
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     private bool _taskAdded;
 
@@ -27,9 +36,13 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
     /// Initializes a new instance of the <see cref="OmnichannelContactPhoneNumberVerificationHandler"/> class.
     /// </summary>
     /// <param name="phoneNumberService">The phone number service.</param>
-    public OmnichannelContactPhoneNumberVerificationHandler(IPhoneNumberService phoneNumberService)
+    /// <param name="contactMethods">Reads the contact's phone numbers.</param>
+    public OmnichannelContactPhoneNumberVerificationHandler(
+        IPhoneNumberService phoneNumberService,
+        IContactMethodsAccessor contactMethods)
     {
         _phoneNumberService = phoneNumberService;
+        _contactMethods = contactMethods;
     }
 
     /// <inheritdoc/>
@@ -47,7 +60,7 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
             return Task.CompletedTask;
         }
 
-        if (!PreparePendingVerification(contentItem, _phoneNumberService))
+        if (!PreparePendingVerification(contentItem, _phoneNumberService, _contactMethods))
         {
             return Task.CompletedTask;
         }
@@ -116,32 +129,17 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
             || string.Equals(part.PhoneNumber, phoneNumber, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool RequiresVerificationUpdate(
-        ContentItem contact,
-        ContentItem phoneNumberContentItem,
-        string phoneNumber,
-        IPhoneNumberService phoneNumberService)
-    {
-        if (!contact.TryGet<PhoneNumberVerificationPart>(out var contactVerificationPart)
-            || !IsSamePhoneNumber(contactVerificationPart, phoneNumber, phoneNumberService))
-        {
-            return true;
-        }
-
-        return phoneNumberContentItem is null
-            || !phoneNumberContentItem.TryGet<PhoneNumberVerificationPart>(out var phoneVerificationPart)
-            || !IsSamePhoneNumber(phoneVerificationPart, phoneNumber, phoneNumberService);
-    }
-
     internal static bool PreparePendingVerification(
         ContentItem contentItem,
-        IPhoneNumberService phoneNumberService)
+        IPhoneNumberService phoneNumberService,
+        IContactMethodsAccessor contactMethods)
     {
         ArgumentNullException.ThrowIfNull(contentItem);
         ArgumentNullException.ThrowIfNull(phoneNumberService);
+        ArgumentNullException.ThrowIfNull(contactMethods);
 
-        var phoneNumberContentItem = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem);
-        var phoneNumber = OmnichannelContactPhoneNumberResolver.GetPhoneNumber(phoneNumberContentItem);
+        var preferredPhoneNumber = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumber(contactMethods, contentItem);
+        var phoneNumber = preferredPhoneNumber?.PhoneNumber;
 
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
@@ -153,15 +151,52 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
             return false;
         }
 
-        if (!RequiresVerificationUpdate(contentItem, phoneNumberContentItem, phoneNumber, phoneNumberService))
+        if (contentItem.TryGet<PhoneNumberVerificationPart>(out var contactVerificationPart) &&
+            IsSamePhoneNumber(contactVerificationPart, phoneNumber, phoneNumberService))
         {
+            // The contact already holds this number's verification, so no lookup is needed. A bag item that lost its own
+            // copy, because the save rebuilt it, gets the contact's copy back.
+            OmnichannelContactPhoneNumberResolver.AlterPhoneNumberItem(contactMethods, contentItem, preferredPhoneNumber, phoneNumberContentItem =>
+            {
+                if (phoneNumberContentItem.TryGet<PhoneNumberVerificationPart>(out var phoneVerificationPart) &&
+                    IsSamePhoneNumber(phoneVerificationPart, phoneNumber, phoneNumberService))
+                {
+                    return false;
+                }
+
+                return CopyVerification(contentItem, phoneNumberContentItem);
+            });
+
             return false;
         }
 
         var normalizedPhoneNumber = NormalizePhoneNumber(phoneNumber, phoneNumberService);
 
         contentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
-        phoneNumberContentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
+        OmnichannelContactPhoneNumberResolver.AlterPhoneNumberItem(
+            contactMethods,
+            contentItem,
+            preferredPhoneNumber,
+            phoneNumberContentItem =>
+            {
+                phoneNumberContentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
+
+                return true;
+            });
+
+        return true;
+    }
+
+    private static bool CopyVerification(ContentItem source, ContentItem target)
+    {
+        var verification = ((JsonObject)source.Content)[nameof(PhoneNumberVerificationPart)]?.DeepClone();
+
+        if (verification is null)
+        {
+            return false;
+        }
+
+        target.Apply(nameof(PhoneNumberVerificationPart), verification.ToObject<PhoneNumberVerificationPart>());
 
         return true;
     }

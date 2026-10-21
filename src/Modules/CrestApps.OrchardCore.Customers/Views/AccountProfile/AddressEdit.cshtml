@@ -1,0 +1,25 @@
+@model IShape
+
+@{
+    var address = (CustomerAddressViewModel)Model;
+}
+
+<zone Name="Title">
+    <breadcrumb name="@(address.IsNew ? "AccountAddressCreate" : "AccountAddressEdit")" title="@(address.IsNew ? T["Add address"] : T["Edit address"])">
+        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
+        <breadcrumb-item id="AccountAddresses" title="@T["Addresses"]" href="@Url.RouteUrl("AccountAddresses")" />
+    </breadcrumb>
+</zone>
+
+<div class="container my-4">
+    <div class="row g-4">
+        <div class="col-lg-3">
+            @await DisplayAsync(await New.CommerceAccountNavigation())
+        </div>
+        <div class="col-lg-9 commerce-account">
+            <h1 class="h3 mb-3">@(address.IsNew ? T["Add address"] : T["Edit address"])</h1>
+
+            @await DisplayAsync(Model)
+        </div>
+    </div>
+</div>

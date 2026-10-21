@@ -34,6 +34,7 @@ public sealed class InventoryPartDisplayDriver : ContentPartDisplayDriver<Invent
             model.TrackInventory = part.TrackInventory;
             model.AllowBackorder = part.AllowBackorder;
             model.LowStockThreshold = part.LowStockThreshold;
+            model.ReleaseDate = part.ReleaseDateUtc?.Date;
             model.DefaultLowStockThreshold = (await _siteService.GetSettingsAsync<InventorySettings>()).DefaultLowStockThreshold;
             model.IsNew = context.IsNew;
 
@@ -60,6 +61,9 @@ public sealed class InventoryPartDisplayDriver : ContentPartDisplayDriver<Invent
         part.TrackInventory = model.TrackInventory;
         part.AllowBackorder = model.AllowBackorder;
         part.LowStockThreshold = model.LowStockThreshold;
+
+        // A day, kept as noon UTC on it, so it reads as the same day in any time zone the store or its buyers are in.
+        part.ReleaseDateUtc = model.ReleaseDate is { } date ? DateTime.SpecifyKind(date.Date.AddHours(12), DateTimeKind.Utc) : null;
 
         return Edit(part, context);
     }

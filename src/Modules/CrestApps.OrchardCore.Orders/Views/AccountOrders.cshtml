@@ -1,0 +1,54 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model AccountOrdersViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@* The signed-in customer's orders on the storefront account, newest first, a page at a time. *@
+
+@if (Model.Orders.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <p class="mb-1">@T["You haven't placed an order yet."]</p>
+            <p class="text-muted small mb-0">@T["Orders you place while signed in, and earlier ones made with your email, appear here."]</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var order in Model.Orders)
+        {
+            <a class="list-group-item list-group-item-action py-3" href="@Url.RouteUrl("AccountOrder", new { orderId = order.ItemId })">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <div class="fw-semibold">@T["Order {0}", order.OrderNumber]</div>
+                        <div class="small text-muted">
+                            @((await LocalAsync(order.CreatedUtc)).ToString("D")) &middot; @T.Plural(order.ItemCount, "1 item", "{0} items")
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        @if (Model.OwedOrderIds.Contains(order.ItemId))
+                        {
+                            <span class="badge text-bg-warning">@T["Payment due"]</span>
+                        }
+                        else
+                        {
+                            <partial name="_OrderStatus" model="order.Status" />
+                        }
+                        <span class="fw-semibold text-nowrap">@ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)</span>
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+
+    @if (Model.Pager is not null)
+    {
+        <div class="mt-3">@await DisplayAsync(Model.Pager)</div>
+    }
+}

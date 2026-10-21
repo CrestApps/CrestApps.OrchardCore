@@ -18,6 +18,12 @@ public static class ProductPartExtensions
     {
         ArgumentNullException.ThrowIfNull(part);
 
+        // An external product is bought where it links to, not here.
+        if (!string.IsNullOrWhiteSpace(part.ExternalUrl))
+        {
+            return false;
+        }
+
         return (settings?.SalesMode ?? ProductSalesMode.Purchasable) switch
         {
             ProductSalesMode.ListingOnly => false,

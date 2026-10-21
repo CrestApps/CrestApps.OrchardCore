@@ -55,6 +55,20 @@
                                 {
                                     <div class="small text-muted">@T["SKU {0}", line.Product.Sku]</div>
                                 }
+                                @if (line.ShipsFromUtc is { } shipsFrom)
+                                {
+                                    <div class="small text-info-emphasis"><span class="fa-solid fa-calendar-day me-1" aria-hidden="true"></span>@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                                }
+                                @foreach (var addOn in line.AddOns)
+                                {
+                                    <div class="small">
+                                        <span class="fa-solid fa-pen-to-square text-body-secondary me-1" aria-hidden="true"></span>@(string.IsNullOrEmpty(addOn.Value) ? addOn.Label : addOn.Label + ": " + addOn.Value)
+                                        @if (addOn.Price > 0)
+                                        {
+                                            <span class="text-muted">(+@Format(addOn.Price))</span>
+                                        }
+                                    </div>
+                                }
                                 @if (line.IsAvailable)
                                 {
                                     <div class="small text-muted">@T["{0} each", Format(line.UnitPrice)]</div>
@@ -99,6 +113,9 @@
                     </li>
                 }
             </ul>
+
+            @* Product Recommendations fills this with what goes with the cart's products; without it, nothing shows. *@
+            @await DisplayAsync(await New.CartRecommendations(ContentItems: pricing.Lines.Select(line => line.ContentItem).Where(item => item is not null).ToArray()))
         </div>
 
         <div class="col-lg-4">

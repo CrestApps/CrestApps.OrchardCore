@@ -1,0 +1,32 @@
+@model OfflinePaymentMethodViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@*
+    Where to send a bank transfer, on the confirmation of a checkout paid that way.
+*@
+
+<div class="card border-primary-subtle mb-4">
+    <div class="card-header bg-primary-subtle">
+        <span class="fa-solid fa-building-columns me-2" aria-hidden="true"></span>@T["Pay by bank transfer"]
+    </div>
+    <div class="card-body">
+        <p class="mb-2">@T["Transfer the total to the account below, with this reference, so we can match your payment:"]</p>
+        <p class="mb-3"><span class="text-body-secondary small d-block">@T["Reference"]</span><strong class="font-monospace">@Model.Reference</strong></p>
+        <div class="offline-payment-instructions border rounded p-2 bg-body-tertiary">@Model.Instructions</div>
+        @if (Model.DueUtc is { } due)
+        {
+            <p class="mt-3 mb-0 small text-body-secondary">@T["Please pay by {0:D}. We'll send your order once the money arrives.", (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(due, DateTimeKind.Utc))).DateTime]</p>
+        }
+        else
+        {
+            <p class="mt-3 mb-0 small text-body-secondary">@T["We'll send your order once the money arrives."]</p>
+        }
+    </div>
+</div>
+
+<style at="Head">
+    .offline-payment-instructions {
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+    }
+</style>

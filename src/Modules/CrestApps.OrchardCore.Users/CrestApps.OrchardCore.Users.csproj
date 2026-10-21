@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.ContentFields" />
     <PackageReference Include="OrchardCore.Contents" />
     <PackageReference Include="OrchardCore.Media" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

@@ -18,6 +18,12 @@ public class TransactionDetailViewModel
     public string OwnerName { get; set; }
 
     /// <summary>
+    /// Gets or sets what the transaction paid for, such as an order, as its module names and links it, or
+    /// <see langword="null"/> when no module describes it.
+    /// </summary>
+    public CrestApps.OrchardCore.Checkout.Services.CheckoutReferenceDescription Reference { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the current user may manage the transaction (send reminders,
     /// record payments, and cancel it).
     /// </summary>

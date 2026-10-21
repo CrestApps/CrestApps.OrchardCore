@@ -121,6 +121,12 @@ The list shows each rule's tax type, method, rate or amount, and priority.
 A rule tied to a **Jurisdiction** only charges buyers whose address is in that jurisdiction. The checkout doesn't ask buyers for an address yet, so it can't tell where a buyer is: at checkout, only rules set to **Any jurisdiction** apply. To charge a tax on every sale, set its rule to **Any jurisdiction**. Your developer can give the checkout the buyer's address, and then rules for each jurisdiction apply to the buyers in it; see the [Taxation technical page](../../modules/taxation.md#tax-sourcing).
 :::
 
+## Where you sell from
+
+Some taxes are charged where the seller is rather than where the buyer is. Under **Commerce > Taxation > Origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
+
+Customers you mark **Exempt from tax** under [Customers](customers.md) pay no tax when they check out signed in.
+
 ## 6. Classify your products
 
 Rules only apply to items that carry the **Taxation** part. Add it to each content type you sell, usually the same type that has the **Product** part (see [Products and Currencies](products-and-currencies.md)).

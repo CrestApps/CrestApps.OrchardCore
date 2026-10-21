@@ -1,0 +1,37 @@
+@model ReturnSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="WindowDays">
+    <label asp-for="WindowDays" class="ocat-label">@T["Return window (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="WindowDays" type="number" min="1" max="365" class="form-control w-auto" />
+        <span asp-validation-for="WindowDays"></span>
+        <span class="hint">@T["Buyers can ask to return items for this many days after they pay. After that, the Return items button no longer shows."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Reasons">
+    <label asp-for="Reasons" class="ocat-label">@T["Reasons"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Reasons" rows="5" class="form-control"></textarea>
+        <span asp-validation-for="Reasons"></span>
+        <span class="hint">@T["One per line. Buyers choose one for each item they return."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AllowExchanges" type="checkbox" class="form-check-input" />
+            <label asp-for="AllowExchanges" class="form-check-label">@T["Let buyers ask for something else instead of a refund"]</label>
+            <span class="hint dashed">@T["Such as another size. You send the replacement and close the return."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label">@T["Return instructions"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Instructions" rows="4" class="form-control" placeholder="@T["Send the items to: Returns, 1 Main St, Seattle WA 98101. Use a tracked service."]"></textarea>
+        <span class="hint">@T["Emailed to the buyer when you approve a return, and shown on their order."]</span>
+    </div>
+</div>

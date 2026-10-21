@@ -29,6 +29,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     private readonly IStripeSubscriptionService _subscriptionService;
     private readonly IStripeRefundService _refundService;
     private readonly IStripeCheckoutCustomerResolver _customerResolver;
+    private readonly IStripeWalletService _walletService;
     private readonly IPaymentRefundStore _refundStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -43,6 +44,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     /// <param name="subscriptionService">The Stripe subscription service, used to verify recurring obligations.</param>
     /// <param name="refundService">The Stripe refund service.</param>
     /// <param name="customerResolver">The resolver for the customer this checkout belongs to.</param>
+    /// <param name="walletService">The signed-in buyer's saved cards.</param>
     /// <param name="refundStore">The durable refund ledger used to record compensation refunds.</param>
     /// <param name="clock">The clock used to stamp refund completion.</param>
     /// <param name="logger">The logger.</param>
@@ -53,6 +55,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         IStripeSubscriptionService subscriptionService,
         IStripeRefundService refundService,
         IStripeCheckoutCustomerResolver customerResolver,
+        IStripeWalletService walletService,
         IPaymentRefundStore refundStore,
         IClock clock,
         ILogger<StripeCheckoutPaymentProvider> logger,
@@ -63,11 +66,22 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         _subscriptionService = subscriptionService;
         _refundService = refundService;
         _customerResolver = customerResolver;
+        _walletService = walletService;
         _refundStore = refundStore;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
+
+    /// <summary>
+    /// The provider data key naming one of the signed-in buyer's saved cards to pay with.
+    /// </summary>
+    public const string SavedCardDataKey = "savedCardId";
+
+    /// <summary>
+    /// The provider data key asking to keep the card typed in for the signed-in buyer's next purchases.
+    /// </summary>
+    public const string RememberCardDataKey = "rememberCard";
 
     private static string GetProviderValue(IReadOnlyDictionary<string, string> providerData, string key)
     {
@@ -123,6 +137,15 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         var paymentMethodId = GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey);
         var savePaymentMethod = CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.SavePaymentMethod);
+
+        // A signed-in buyer pays with one of their saved cards, or keeps the card they typed for next time. Both are
+        // their own choice at checkout, unlike a card kept for charges made without them.
+        var wallet = await TryWalletAsync(context, paymentMethodId, grossAmount, savePaymentMethod);
+
+        if (wallet is not null)
+        {
+            return wallet;
+        }
 
         if (savePaymentMethod && string.IsNullOrEmpty(paymentMethodId))
         {
@@ -181,6 +204,93 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create a Stripe PaymentIntent for checkout attempt '{AttemptId}'.", attempt.ItemId);
+
+            return PaymentBeginResult.Failure(ex.Message);
+        }
+    }
+
+    // Returns the begun payment when the buyer chose a saved card or to keep their card; null to begin it as usual.
+    private async Task<PaymentBeginResult> TryWalletAsync(BeginPaymentContext context, string paymentMethodId, decimal grossAmount, bool savePaymentMethod)
+    {
+        var savedCardId = GetProviderValue(context.ProviderData, SavedCardDataKey);
+        var rememberCard = string.Equals(GetProviderValue(context.ProviderData, RememberCardDataKey), "true", StringComparison.OrdinalIgnoreCase);
+        var ownerId = context.Session?.OwnerId;
+
+        if ((string.IsNullOrEmpty(savedCardId) && !rememberCard) || savePaymentMethod)
+        {
+            return null;
+        }
+
+        // Saved cards belong to accounts; a guest's request naming one is refused rather than charged.
+        if (string.IsNullOrEmpty(ownerId))
+        {
+            return string.IsNullOrEmpty(savedCardId) ? null : PaymentBeginResult.Failure(S["Sign in to pay with a saved card."]);
+        }
+
+        var attempt = context.Attempt;
+        string customerId;
+        string cardId;
+
+        if (!string.IsNullOrEmpty(savedCardId))
+        {
+            if (await _walletService.FindCardAsync(ownerId, savedCardId) is null)
+            {
+                return PaymentBeginResult.Failure(S["That saved card isn't available. Choose another, or enter a card."]);
+            }
+
+            customerId = await _walletService.GetCustomerIdAsync(ownerId);
+            cardId = savedCardId;
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(paymentMethodId))
+            {
+                return PaymentBeginResult.Failure(S["The card could not be saved. Please enter it again."]);
+            }
+
+            CheckoutContactInfo contact = null;
+            if (context.Session is not null)
+            {
+                global::OrchardCore.Entities.EntityExtensions.TryGet(context.Session, out contact);
+            }
+
+            customerId = await _walletService.EnsureCustomerAsync(ownerId, contact?.DisplayName, contact?.Email);
+            cardId = paymentMethodId;
+        }
+
+        if (string.IsNullOrEmpty(customerId))
+        {
+            return PaymentBeginResult.Failure(S["Your saved cards are unavailable right now. Please enter a card."]);
+        }
+
+        try
+        {
+            var response = await _paymentIntentService.CreateForCheckoutAsync(new CreateCheckoutPaymentIntentRequest
+            {
+                Amount = grossAmount,
+                Currency = attempt.Currency,
+                CustomerId = customerId,
+                PaymentMethodId = cardId,
+                SaveForOnSessionUse = string.IsNullOrEmpty(savedCardId),
+                IdempotencyKey = attempt.IdempotencyKey,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["checkout_attempt_id"] = attempt.ItemId,
+                    ["checkout_session_id"] = attempt.SessionId,
+                },
+            });
+
+            return new PaymentBeginResult
+            {
+                Succeeded = true,
+                ProviderReference = response.Id,
+                ClientSecret = response.ClientSecret,
+                RequiresAction = true,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create a Stripe PaymentIntent with a saved card for checkout attempt '{AttemptId}'.", attempt.ItemId);
 
             return PaymentBeginResult.Failure(ex.Message);
         }
@@ -255,6 +365,8 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                     TaxSnapshot = attempt.TaxSnapshot,
                     Currency = intent.Currency,
                     GatewayMode = gatewayMode,
+                    RiskLevel = intent.RiskLevel,
+                    RiskScore = intent.RiskScore,
                 };
 
             case "canceled":
