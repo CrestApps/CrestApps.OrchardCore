@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Commerce.Webhooks.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -29,10 +28,17 @@ public sealed class WebhookMigrations : DataMigration
             collection: WebhookConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<WebhookSubscriptionIndex>(SchemaBuilder, "IDX_WebhookSubscriptionIndex_ItemId", WebhookConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<WebhookDeliveryIndex>(SchemaBuilder, "IDX_WebhookDeliveryIndex_ItemId", WebhookConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<WebhookDeliveryIndex>(SchemaBuilder, "IDX_WebhookDeliveryIndex_Due", WebhookConstants.CollectionName, "Status", "NextAttemptUtc");
-        await IndexTableIndexCreation.CreateIfMissingAsync<WebhookDeliveryIndex>(SchemaBuilder, "IDX_WebhookDeliveryIndex_Subscription", WebhookConstants.CollectionName, "SubscriptionId", "CreatedUtc");
+        await SchemaBuilder.AlterIndexTableAsync<WebhookSubscriptionIndex>(table => table
+            .CreateIndex("IDX_WebhookSubscriptionIndex_ItemId", "ItemId"),
+            collection: WebhookConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<WebhookDeliveryIndex>(table =>
+        {
+            table.CreateIndex("IDX_WebhookDeliveryIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_WebhookDeliveryIndex_Due", "Status", "NextAttemptUtc");
+            table.CreateIndex("IDX_WebhookDeliveryIndex_Subscription", "SubscriptionId", "CreatedUtc");
+        }, collection: WebhookConstants.CollectionName);
 
         return 1;
     }

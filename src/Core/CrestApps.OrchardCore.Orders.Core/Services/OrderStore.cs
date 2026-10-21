@@ -191,10 +191,7 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
         {
             var channel = query.Channel;
 
-            // Orders saved before channels were kept have none, and were all made online.
-            orders = string.Equals(channel, OrderChannels.Online, StringComparison.Ordinal)
-                ? orders.Where(index => index.Channel == channel || index.Channel == null)
-                : orders.Where(index => index.Channel == channel);
+            orders = orders.Where(index => index.Channel == channel);
         }
 
         if (!string.IsNullOrEmpty(query.LocationId))

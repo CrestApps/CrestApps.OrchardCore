@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -23,9 +22,11 @@ public sealed class OrderReturnMigrations : DataMigration
             .Column<DateTime>(nameof(OrderReturnIndex.CreatedUtc)),
             collection: OrderConstants.CollectionName);
 
-        // Safe to run again: a server that finished the step first has already made them.
-        await IndexTableIndexCreation.CreateIfMissingAsync<OrderReturnIndex>(SchemaBuilder, "IDX_OrderReturnIndex_OrderId", OrderConstants.CollectionName, nameof(OrderReturnIndex.OrderId));
-        await IndexTableIndexCreation.CreateIfMissingAsync<OrderReturnIndex>(SchemaBuilder, "IDX_OrderReturnIndex_Status", OrderConstants.CollectionName, nameof(OrderReturnIndex.Status), nameof(OrderReturnIndex.CreatedUtc));
+        await SchemaBuilder.AlterIndexTableAsync<OrderReturnIndex>(table =>
+        {
+            table.CreateIndex("IDX_OrderReturnIndex_OrderId", nameof(OrderReturnIndex.OrderId));
+            table.CreateIndex("IDX_OrderReturnIndex_Status", nameof(OrderReturnIndex.Status), nameof(OrderReturnIndex.CreatedUtc));
+        }, collection: OrderConstants.CollectionName);
 
         return 1;
     }

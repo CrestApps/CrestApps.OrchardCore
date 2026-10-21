@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
-using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -120,10 +119,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<CheckoutMigrations>()
             .AddIndexProvider<CheckoutSessionIndexProvider>()
             .AddIndexProvider<PaymentAttemptIndexProvider>()
-            .AddIndexProvider<PaymentRefundIndexProvider>();
-
-        // Finds a person's checkouts by owner and by email, for access and erasure requests.
-        services.AddDataMigration<CheckoutSessionCustomerIndexMigrations>()
+            .AddIndexProvider<PaymentRefundIndexProvider>()
             .AddIndexProvider<CheckoutSessionCustomerIndexProvider>();
 
         services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();

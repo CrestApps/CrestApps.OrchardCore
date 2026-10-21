@@ -156,11 +156,7 @@ public sealed class CommerceTenantIsolationTests
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var migration = new CouponMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) };
-        await migration.CreateAsync();
-        await migration.UpdateFrom1Async();
-        await migration.UpdateFrom2Async();
-        await migration.UpdateFrom3Async();
+        await new CouponMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) }.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

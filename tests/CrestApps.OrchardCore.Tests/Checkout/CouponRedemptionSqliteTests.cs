@@ -41,9 +41,6 @@ public sealed class CouponRedemptionSqliteTests : IAsyncLifetime
         var migration = new CouponMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) };
 
         await migration.CreateAsync();
-        await migration.UpdateFrom1Async();
-        await migration.UpdateFrom2Async();
-        await migration.UpdateFrom3Async();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 

@@ -60,7 +60,7 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 CheckoutSessionId = order.CheckoutSessionId,
                 Status = order.Status,
                 CreatedUtc = order.CreatedUtc,
-                Channel = OrderChannels.Of(order),
+                Channel = order.Channel,
                 LocationId = order.LocationId,
                 ShiftId = order.ShiftId,
                 CompanyId = order.CompanyId,

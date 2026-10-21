@@ -393,10 +393,7 @@ public sealed class CustomerPrivacyTests
             await using (var session = yesSql.CreateSession())
             {
                 var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-                var migrations = new OrderMigrations { SchemaBuilder = new SchemaBuilder(yesSql.Configuration, transaction) };
-                await migrations.CreateAsync();
-                await migrations.UpdateFrom4Async();
-                await migrations.UpdateFrom5Async();
+                await new OrderMigrations { SchemaBuilder = new SchemaBuilder(yesSql.Configuration, transaction) }.CreateAsync();
                 await transaction.CommitAsync(TestContext.Current.CancellationToken);
             }
 
