@@ -122,6 +122,32 @@ public sealed class UserRegistrationCheckoutHandlerTests
     }
 
     /// <summary>
+    /// A checkout that fails no longer names the account it deleted as its owner, so the visitor who started it can
+    /// still load it and a retry creates the account again.
+    /// </summary>
+    [Fact]
+    public async Task FailedAsync_ClearsTheOwnerItSet_SoARetryCreatesTheAccountAgain()
+    {
+        // Arrange
+        var registration = new Registration(new DefaultHttpContext());
+        var session = await registration.CreatePendingSessionAsync("session-1");
+        var flow = new CheckoutFlow(session);
+
+        await registration.Handler.CompletingAsync(new CheckoutFlowCompletingContext(flow));
+
+        // Act
+        await registration.Handler.FailedAsync(new CheckoutFlowFailedContext(flow));
+        var ownerAfterFailure = session.OwnerId;
+
+        await registration.Handler.CompletingAsync(new CheckoutFlowCompletingContext(flow));
+
+        // Assert
+        Assert.Null(ownerAfterFailure);
+        Assert.Equal("user-1", session.OwnerId);
+        registration.UserManager.Verify(manager => manager.CreateAsync(It.IsAny<IUser>(), "Password!1"), Times.Exactly(2));
+    }
+
+    /// <summary>
     /// A checkout that created no account deletes nothing, even when another checkout in the same scope did.
     /// </summary>
     [Fact]

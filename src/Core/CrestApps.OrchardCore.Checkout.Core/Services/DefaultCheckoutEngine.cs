@@ -1073,6 +1073,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         await _session.SaveChangesAsync(cancellationToken);
 
         await _handlers.InvokeAsync((handler, context) => handler.FailedAsync(context), new CheckoutFlowFailedContext(flow), _logger);
+
+        // A failed handler may change the session, for example to stop naming an account it deleted as the owner, and
+        // the commit above detached it, so it is saved again.
+        await _sessionStore.SaveAsync(session, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
         return new CheckoutCompletionResult

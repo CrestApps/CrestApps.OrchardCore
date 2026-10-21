@@ -198,7 +198,9 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     {
         // Only the account this checkout created is deleted: it is found by the id it was created with, never by
         // a name an existing account could share.
-        if (!_createdUserIds.Remove(context.Flow.Session.SessionId, out var userId))
+        var session = context.Flow.Session;
+
+        if (!_createdUserIds.Remove(session.SessionId, out var userId))
         {
             return;
         }
@@ -208,6 +210,13 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
         if (user is not null)
         {
             await _userManager.DeleteAsync(user);
+        }
+
+        // The checkout goes back to having no owner. Naming the deleted account would hide the checkout from the
+        // visitor who started it, and stop a retry from creating the account again.
+        if (string.Equals(session.OwnerId, userId, StringComparison.Ordinal))
+        {
+            session.OwnerId = null;
         }
     }
 
