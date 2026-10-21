@@ -54,11 +54,12 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly IOrderStore _orderStore;
-    private readonly ICheckoutSessionStore _sessionStore;
 
     internal readonly IStringLocalizer S;
 
-    // The order services raise the events this handles, so they're resolved when an event comes, not injected.
+    // The order services raise the events this handles, so they're resolved when an event comes, not injected. The
+    // checkout session store is one of them: it runs the checkout handlers, and the order's checkout handler needs the
+    // order service, which is built with this handler.
     public ReferralOrderEventHandler(
         IReferralStore store,
         ICustomerStore customerStore,
@@ -66,8 +67,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         IServiceProvider serviceProvider,
         IClock clock,
         IStringLocalizer<ReferralOrderEventHandler> stringLocalizer,
-        IOrderStore orderStore,
-        ICheckoutSessionStore sessionStore)
+        IOrderStore orderStore)
     {
         _store = store;
         _customerStore = customerStore;
@@ -75,7 +75,6 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         _serviceProvider = serviceProvider;
         _clock = clock;
         _orderStore = orderStore;
-        _sessionStore = sessionStore;
         S = stringLocalizer;
     }
 
@@ -100,7 +99,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         var friendEmail = order.CustomerEmail?.Trim().ToLowerInvariant();
 
         if (string.IsNullOrEmpty(friendEmail) || string.IsNullOrEmpty(order.CheckoutSessionId) ||
-            await _sessionStore.GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
+            await _serviceProvider.GetRequiredService<ICheckoutSessionStore>().GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
             !session.TryGet<CheckoutReferral>(out var referral) ||
             await _store.FindByCodeAsync(referral.Code, cancellationToken) is not { } profile ||
             await _customerStore.FindByIdAsync(profile.CustomerId, cancellationToken) is not { } referrer)
@@ -156,7 +155,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         var order = context.Order;
 
         if (string.IsNullOrEmpty(order.CheckoutSessionId) ||
-            await _sessionStore.GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
+            await _serviceProvider.GetRequiredService<ICheckoutSessionStore>().GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
             !session.TryGet<CheckoutReferral>(out var referral) ||
             await _store.FindByCodeAsync(referral.Code, cancellationToken) is not { } profile ||
             profile.Referrals.FirstOrDefault(record => record.OrderId == order.ItemId) is not { } record ||
