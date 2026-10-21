@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Creates the index table that backs the durable tenant provisioning jobs.
 /// </summary>
-public sealed class TenantProvisioningJobMigrations : DataMigration
+internal sealed class TenantProvisioningJobMigrations : DataMigration
 {
     /// <summary>
     /// Creates the initial schema.

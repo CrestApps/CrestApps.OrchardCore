@@ -7,7 +7,7 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Inventory.Migrations;
 
-public sealed class InventoryMigrations : DataMigration
+internal sealed class InventoryMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Orders.Migrations;
 /// <summary>
 /// Creates the index table that finds orders.
 /// </summary>
-public sealed class OrderMigrations : DataMigration
+internal sealed class OrderMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

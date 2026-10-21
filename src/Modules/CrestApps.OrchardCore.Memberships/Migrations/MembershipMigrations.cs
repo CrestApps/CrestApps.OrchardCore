@@ -34,6 +34,7 @@ internal sealed class MembershipMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<MembershipIndex>(table =>
         {
+            table.CreateIndex("IDX_MembershipIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_MembershipIndex_User", "UserId");
             table.CreateIndex("IDX_MembershipIndex_Ends", "Status", "EndsUtc");
         }, collection: MembershipsConstants.CollectionName);

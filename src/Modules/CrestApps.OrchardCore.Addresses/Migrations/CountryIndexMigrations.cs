@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Addresses.Migrations;
 /// <summary>
 /// Creates the YesSql map index table and database index that find Country content items by their ISO code.
 /// </summary>
-public sealed class CountryIndexMigrations : DataMigration
+internal sealed class CountryIndexMigrations : DataMigration
 {
     /// <summary>
     /// Creates the country index table and its lookup index.

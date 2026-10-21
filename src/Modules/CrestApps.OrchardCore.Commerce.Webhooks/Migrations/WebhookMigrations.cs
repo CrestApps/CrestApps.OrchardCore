@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks.Indexes;
+using CrestApps.OrchardCore.Commerce.Webhooks.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Commerce.Webhooks.Migrations;
 /// <summary>
 /// Creates the indexes of webhooks and their deliveries.
 /// </summary>
-public sealed class WebhookMigrations : DataMigration
+internal sealed class WebhookMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
@@ -22,7 +23,7 @@ public sealed class WebhookMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("SubscriptionId", column => column.WithLength(26))
             .Column<string>("EventName", column => column.WithLength(64))
-            .Column<int>("Status")
+            .Column<WebhookDeliveryStatus>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.Nullable())
             .Column<DateTime>("CreatedUtc"),
             collection: WebhookConstants.CollectionName

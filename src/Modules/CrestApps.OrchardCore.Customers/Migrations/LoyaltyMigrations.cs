@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Customers.Migrations;
 /// <summary>
 /// Creates the index of customers' loyalty points.
 /// </summary>
-public sealed class LoyaltyMigrations : DataMigration
+internal sealed class LoyaltyMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

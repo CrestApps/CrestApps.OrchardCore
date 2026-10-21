@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Taxation.Migrations;
 /// <summary>
 /// Defines the <c>TaxationPart</c> so it can be attached to any content type.
 /// </summary>
-public sealed class TaxationPartMigrations : DataMigration
+internal sealed class TaxationPartMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

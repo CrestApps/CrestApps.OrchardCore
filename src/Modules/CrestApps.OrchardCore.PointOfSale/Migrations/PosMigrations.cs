@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.PointOfSale.Migrations;
 /// <summary>
 /// Creates the indexes of registers and their shifts.
 /// </summary>
-public sealed class PosMigrations : DataMigration
+internal sealed class PosMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

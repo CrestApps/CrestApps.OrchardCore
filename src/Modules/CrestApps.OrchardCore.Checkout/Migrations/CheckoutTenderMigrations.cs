@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Checkout.Migrations;
 /// <summary>
 /// Creates the ledger of what balances, such as gift cards, pay toward checkouts.
 /// </summary>
-public sealed class CheckoutTenderMigrations : DataMigration
+internal sealed class CheckoutTenderMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

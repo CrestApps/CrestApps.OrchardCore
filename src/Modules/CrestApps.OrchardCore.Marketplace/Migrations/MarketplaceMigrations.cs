@@ -51,6 +51,11 @@ internal sealed class MarketplaceMigrations : DataMigration
             collection: MarketplaceConstants.CollectionName
         );
 
+        await SchemaBuilder.AlterIndexTableAsync<VendorIndex>(table => table
+            .CreateIndex("IDX_VendorIndex_ItemId", "ItemId"),
+            collection: MarketplaceConstants.CollectionName
+        );
+
         await SchemaBuilder.AlterIndexTableAsync<VendorUserIndex>(table => table
             .CreateIndex("IDX_VendorUserIndex_User", "UserId"),
             collection: MarketplaceConstants.CollectionName
@@ -58,15 +63,17 @@ internal sealed class MarketplaceMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<VendorEarningIndex>(table =>
         {
+            table.CreateIndex("IDX_VendorEarningIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_VendorEarningIndex_Vendor", "VendorId", "Status");
             table.CreateIndex("IDX_VendorEarningIndex_Order", "OrderId");
             table.CreateIndex("IDX_VendorEarningIndex_Hold", "Status", "HoldUntilUtc");
         }, collection: MarketplaceConstants.CollectionName);
 
-        await SchemaBuilder.AlterIndexTableAsync<VendorPayoutIndex>(table => table
-            .CreateIndex("IDX_VendorPayoutIndex_Vendor", "VendorId"),
-            collection: MarketplaceConstants.CollectionName
-        );
+        await SchemaBuilder.AlterIndexTableAsync<VendorPayoutIndex>(table =>
+        {
+            table.CreateIndex("IDX_VendorPayoutIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_VendorPayoutIndex_Vendor", "VendorId");
+        }, collection: MarketplaceConstants.CollectionName);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(VendorPart), part => part
             .Attachable()

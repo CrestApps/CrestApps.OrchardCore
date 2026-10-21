@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Transactions.Migrations;
 /// <summary>
 /// Creates the index table that backs the provider-agnostic transaction ledger.
 /// </summary>
-public sealed class TransactionMigrations : DataMigration
+internal sealed class TransactionMigrations : DataMigration
 {
     /// <summary>
     /// Creates the initial schema.

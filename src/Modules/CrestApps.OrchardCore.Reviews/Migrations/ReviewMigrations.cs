@@ -4,7 +4,7 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Reviews.Migrations;
 
-public sealed class ReviewMigrations : DataMigration
+internal sealed class ReviewMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Taxation.Migrations;
 /// Seeds the well-known tax types into the catalog, letting operators add, edit, or remove tax types through the admin
 /// UI.
 /// </summary>
-public sealed class TaxTypeMigrations : DataMigration
+internal sealed class TaxTypeMigrations : DataMigration
 {
     private readonly INamedCatalogManager<TaxType> _manager;
 

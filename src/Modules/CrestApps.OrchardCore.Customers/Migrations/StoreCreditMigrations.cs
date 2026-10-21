@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Customers.Migrations;
 /// <summary>
 /// Creates the index of customers' store credit.
 /// </summary>
-public sealed class StoreCreditMigrations : DataMigration
+internal sealed class StoreCreditMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

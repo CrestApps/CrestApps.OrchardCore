@@ -40,6 +40,9 @@ public sealed class Startup : StartupBase
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<ProductMarketsDisplayDriver>();
 
+        // The markets a product is left out of are kept on the product, beside its product part.
+        services.AddContentPart<ProductMarketsPart>();
+
         services.AddPermissionProvider<MarketsPermissionProvider>();
         services.AddNavigationProvider<MarketsAdminMenu>();
         services.AddDisplayDriver<Market, MarketDisplayDriver>();

@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Marketing.Migrations;
 /// <summary>
 /// Creates the indexes of customers' purchases, segments and campaigns.
 /// </summary>
-public sealed class MarketingMigrations : DataMigration
+internal sealed class MarketingMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

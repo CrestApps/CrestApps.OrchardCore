@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Customers.Migrations;
 /// <summary>
 /// Creates the index of customers' referral links.
 /// </summary>
-public sealed class ReferralMigrations : DataMigration
+internal sealed class ReferralMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

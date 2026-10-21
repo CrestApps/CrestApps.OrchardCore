@@ -53,7 +53,7 @@ public sealed class WishlistIndexProvider : IndexProvider<Wishlist>
 /// <summary>
 /// Creates the index of wishlists.
 /// </summary>
-public sealed class WishlistMigrations : DataMigration
+internal sealed class WishlistMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

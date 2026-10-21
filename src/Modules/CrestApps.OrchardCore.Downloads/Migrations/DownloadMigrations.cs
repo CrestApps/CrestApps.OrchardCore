@@ -6,7 +6,7 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Downloads.Migrations;
 
-public sealed class DownloadMigrations : DataMigration
+internal sealed class DownloadMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

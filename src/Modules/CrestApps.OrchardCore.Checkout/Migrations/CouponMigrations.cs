@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Checkout.Migrations;
 /// Creates the index tables that back the coupon catalog, the ledger of coupon uses, and the unique codes generated
 /// for a coupon.
 /// </summary>
-public sealed class CouponMigrations : DataMigration
+internal sealed class CouponMigrations : DataMigration
 {
     /// <summary>
     /// Creates the initial schema.

@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Markets.Migrations;
 /// <summary>
 /// Creates the index of markets.
 /// </summary>
-public sealed class MarketMigrations : DataMigration
+internal sealed class MarketMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

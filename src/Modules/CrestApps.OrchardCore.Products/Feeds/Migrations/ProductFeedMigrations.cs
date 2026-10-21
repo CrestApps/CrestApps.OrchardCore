@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Products.Feeds.Migrations;
 /// <summary>
 /// Defines the Product Feed part, to add to the product types that need a brand, GTIN or MPN in feeds.
 /// </summary>
-public sealed class ProductFeedMigrations : DataMigration
+internal sealed class ProductFeedMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

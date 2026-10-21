@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Addresses.Migrations;
 /// Defines the Country content type and its part. Regions come with each country's address format instead of being
 /// content, so they are not defined here.
 /// </summary>
-public sealed class AddressMigrations : DataMigration
+internal sealed class AddressMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

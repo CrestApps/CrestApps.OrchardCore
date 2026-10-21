@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Companies.Migrations;
 /// <summary>
 /// Creates the indexes of companies, their buyers and price lists.
 /// </summary>
-public sealed class CompanyMigrations : DataMigration
+internal sealed class CompanyMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

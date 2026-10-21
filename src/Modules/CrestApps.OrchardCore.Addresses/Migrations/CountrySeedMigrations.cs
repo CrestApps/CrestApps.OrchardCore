@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Addresses.Migrations;
 /// Seeds the canonical ISO 3166-1 country list as editable <c>Country</c> content items so administrators can
 /// manage the countries the site serves through the standard content management experience.
 /// </summary>
-public sealed class CountrySeedMigrations : DataMigration
+internal sealed class CountrySeedMigrations : DataMigration
 {
     private readonly IContentManager _contentManager;
 

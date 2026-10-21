@@ -4,7 +4,7 @@ using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.Products.Migrations;
 
-public sealed class ProductPartMigrations : DataMigration
+internal sealed class ProductPartMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

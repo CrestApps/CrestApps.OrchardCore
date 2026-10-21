@@ -57,21 +57,24 @@ internal sealed class BookingMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<BookingSlotIndex>(table =>
         {
+            table.CreateIndex("IDX_BookingSlotIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_BookingSlotIndex_Slot", "ContentItemId", "SlotKey");
             table.CreateIndex("IDX_BookingSlotIndex_Starts", "StartsUtc");
         }, collection: BookingsConstants.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<BookingIndex>(table =>
         {
+            table.CreateIndex("IDX_BookingIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_BookingIndex_Order", "OrderId");
             table.CreateIndex("IDX_BookingIndex_Starts", "StartsUtc", "Status");
             table.CreateIndex("IDX_BookingIndex_Hold", "Status", "HoldExpiresUtc");
         }, collection: BookingsConstants.CollectionName);
 
-        await SchemaBuilder.AlterIndexTableAsync<BookingBalanceIndex>(table => table
-            .CreateIndex("IDX_BookingBalanceIndex_Due", "Status", "DueUtc"),
-            collection: BookingsConstants.CollectionName
-        );
+        await SchemaBuilder.AlterIndexTableAsync<BookingBalanceIndex>(table =>
+        {
+            table.CreateIndex("IDX_BookingBalanceIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_BookingBalanceIndex_Due", "Status", "DueUtc");
+        }, collection: BookingsConstants.CollectionName);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(BookingPart), part => part
             .Attachable()

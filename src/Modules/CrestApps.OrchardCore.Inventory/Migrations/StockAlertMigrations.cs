@@ -8,25 +8,25 @@ namespace CrestApps.OrchardCore.Inventory.Migrations;
 /// <summary>
 /// Creates the table of shoppers' back-in-stock requests.
 /// </summary>
-public sealed class StockAlertMigrations : DataMigration
+internal sealed class StockAlertMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<StockAlertIndex>(table => table
-            .Column<string>(nameof(StockAlertIndex.StockItemId), column => column.WithLength(26))
-            .Column<string>(nameof(StockAlertIndex.ContentItemId), column => column.WithLength(26))
-            .Column<string>(nameof(StockAlertIndex.VariantId), column => column.Nullable().WithLength(26))
-            .Column<string>(nameof(StockAlertIndex.NormalizedEmail), column => column.WithLength(254))
-            .Column<string>(nameof(StockAlertIndex.UserId), column => column.Nullable().WithLength(26))
-            .Column<bool>(nameof(StockAlertIndex.Waiting))
-            .Column<DateTime>(nameof(StockAlertIndex.CreatedUtc)),
+            .Column<string>("StockItemId", column => column.WithLength(26))
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("VariantId", column => column.Nullable().WithLength(26))
+            .Column<string>("NormalizedEmail", column => column.WithLength(254))
+            .Column<string>("UserId", column => column.Nullable().WithLength(26))
+            .Column<bool>("Waiting")
+            .Column<DateTime>("CreatedUtc"),
             collection: InventoryConstants.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<StockAlertIndex>(table =>
         {
-            table.CreateIndex("IDX_StockAlertIndex_Item", nameof(StockAlertIndex.StockItemId), nameof(StockAlertIndex.Waiting));
-            table.CreateIndex("IDX_StockAlertIndex_Email", nameof(StockAlertIndex.NormalizedEmail), nameof(StockAlertIndex.CreatedUtc));
-            table.CreateIndex("IDX_StockAlertIndex_UserId", nameof(StockAlertIndex.UserId));
+            table.CreateIndex("IDX_StockAlertIndex_Item", "StockItemId", "Waiting");
+            table.CreateIndex("IDX_StockAlertIndex_Email", "NormalizedEmail", "CreatedUtc");
+            table.CreateIndex("IDX_StockAlertIndex_UserId", "UserId");
         }, collection: InventoryConstants.CollectionName);
 
         return 1;

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Creates the index installment plans are listed, searched and swept by.
 /// </summary>
-public sealed class InstallmentPlanMigrations : DataMigration
+internal sealed class InstallmentPlanMigrations : DataMigration
 {
     /// <summary>
     /// Creates the index table.

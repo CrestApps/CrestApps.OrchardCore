@@ -34,6 +34,7 @@ internal sealed class FundraisingMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<DonationIndex>(table =>
         {
+            table.CreateIndex("IDX_DonationIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_DonationIndex_Campaign", "CampaignId");
             table.CreateIndex("IDX_DonationIndex_Donor", "DonorUserId");
             table.CreateIndex("IDX_DonationIndex_Order", "OrderId");

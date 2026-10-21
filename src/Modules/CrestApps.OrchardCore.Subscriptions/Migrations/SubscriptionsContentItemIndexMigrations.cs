@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Creates the YesSql map index table and database indexes for subscription content items.
 /// </summary>
-public sealed class SubscriptionsContentItemIndexMigrations : DataMigration
+internal sealed class SubscriptionsContentItemIndexMigrations : DataMigration
 {
     /// <summary>
     /// Creates the subscription content item index table and its lookup indexes.

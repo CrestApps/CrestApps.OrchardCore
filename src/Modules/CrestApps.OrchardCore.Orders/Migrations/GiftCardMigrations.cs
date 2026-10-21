@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Orders.Migrations;
 /// <summary>
 /// Creates the gift card index, the part that makes a product a gift card, and a Gift card product type to sell them.
 /// </summary>
-public sealed class GiftCardMigrations : DataMigration
+internal sealed class GiftCardMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISiteService _siteService;
