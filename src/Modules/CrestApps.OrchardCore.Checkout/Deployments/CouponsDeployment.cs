@@ -27,7 +27,7 @@ public sealed class CouponsDeploymentStep : DeploymentStep
 internal sealed class CouponsDeploymentSource : DeploymentSourceBase<CouponsDeploymentStep>
 {
     // How often a coupon was used, and its document, belong to the site it was used on.
-    private static readonly string[] _environmentOwned = ["Id", "RedemptionCount", "CreatedUtc", "UpdatedUtc", "IsScoped", "HasItemLimits", "EffectiveTarget"];
+    private static readonly string[] _environmentOwned = ["Id", "RedemptionCount", "CreatedUtc", "UpdatedUtc"];
 
     private static readonly JsonSerializerOptions _options = new()
     {

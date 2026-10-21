@@ -228,7 +228,7 @@ A `CouponKind.BuyXGetY` coupon has `BuyQuantity`, `GetQuantity`, `Percentage` (o
 
 ### Coupons in recipes and deployments
 
-The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`.
+The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`. The step checks and maps each coupon with `CouponEditor`, the rules the coupon admin and the commerce API use, so it refuses what the editor refuses (with each reason in the recipe's errors) and stores what the editor would store; `ProductIds`, `CategoryIds` and, for a buy X get Y coupon, `BuyProductIds` and `BuyCategoryIds` are copied as they are. The computed members `IsScoped`, `HasItemLimits` and `EffectiveTarget` are never serialized.
 
 ```json
 {

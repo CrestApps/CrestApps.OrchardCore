@@ -216,12 +216,14 @@ public sealed class Coupon : CatalogItem
     /// <summary>
     /// Gets a value indicating whether the coupon is limited to some products or categories.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool HasItemLimits
         => ProductIds?.Count > 0 || CategoryIds?.Count > 0;
 
     /// <summary>
     /// Gets what the coupon takes something off: shipping for a free-shipping coupon, otherwise its <see cref="Target"/>.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public DiscountTarget EffectiveTarget
         => Kind == CouponKind.FreeShipping ? DiscountTarget.Shipping : Target;
 
@@ -257,6 +259,7 @@ public sealed class Coupon : CatalogItem
     /// <summary>
     /// Gets a value indicating whether the coupon is limited to some sources, reference types or one customer.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool IsScoped
         => Sources?.Count > 0 ||
             ReferenceTypes?.Count > 0 ||
