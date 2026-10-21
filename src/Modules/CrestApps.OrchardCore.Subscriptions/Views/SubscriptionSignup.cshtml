@@ -27,11 +27,13 @@
             <select name="priceId" id="@(formId)-price" class="form-select form-select-sm" data-signup-price>
                 @foreach (var price in Model.Prices)
                 {
+                    var priceText = PriceFormatting.Format(price.Amount, string.IsNullOrEmpty(price.Currency) ? Model.StoreCurrency : price.Currency);
+
                     <option value="@price.PriceId"
                             selected="@(price.PriceId == selected?.PriceId)"
                             data-custom="@price.AllowCustomAmount.ToString().ToLowerInvariant()"
                             data-quantity="@price.AllowQuantity.ToString().ToLowerInvariant()">
-                        @(string.IsNullOrWhiteSpace(price.Name) ? PriceFormatting.Format(price.Amount, price.Currency) : price.Name + " — " + PriceFormatting.Format(price.Amount, price.Currency))
+                        @(string.IsNullOrWhiteSpace(price.Name) ? priceText : price.Name + " — " + priceText)
                     </option>
                 }
             </select>

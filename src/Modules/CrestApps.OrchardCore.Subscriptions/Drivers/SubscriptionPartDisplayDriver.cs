@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -10,6 +11,7 @@ using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -18,6 +20,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 /// </summary>
 public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<SubscriptionPart>
 {
+    private readonly ISiteService _siteService;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -25,12 +28,15 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionPartDisplayDriver"/> class.
     /// </summary>
+    /// <param name="siteService">The site service the store's currency is read from, for a plan that names none.</param>
     /// <param name="clock">The clock used to decide which prices are still on offer.</param>
     /// <param name="stringLocalizer">The localizer used for editor labels and validation messages.</param>
     public SubscriptionPartDisplayDriver(
+        ISiteService siteService,
         IClock clock,
         IStringLocalizer<SubscriptionPartDisplayDriver> stringLocalizer)
     {
+        _siteService = siteService;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -44,7 +50,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
     public override Task<IDisplayResult> DisplayAsync(SubscriptionPart part, BuildPartDisplayContext context)
     {
         return CombineAsync(
-            Initialize<DisplaySubscriptionViewModel>(GetDisplayShapeType(context), model =>
+            Initialize<DisplaySubscriptionViewModel>(GetDisplayShapeType(context), async model =>
             {
                 var price = part.ContentItem.GetOrCreate<ProductPart>();
                 var offered = GetOfferedPrices(part);
@@ -54,6 +60,12 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
                 // plan that lists prices is summarized by its default rather than by the product part.
                 model.Price = headline?.Amount ?? price?.Price ?? 0;
                 model.Currency = headline is not null ? headline.Currency : price?.Currency;
+
+                if (string.IsNullOrEmpty(model.Currency))
+                {
+                    model.Currency = await GetStoreCurrencyAsync();
+                }
+
                 model.DurationType = part.DurationType;
                 model.BillingDuration = part.BillingDuration;
                 model.SubscriptionDayDelay = part.SubscriptionDayDelay;
@@ -63,11 +75,12 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             }).Location("Summary", "Content")
             .Location("Detail", "Content"),
 
-            Initialize<SubscriptionSignupViewModel>("SubscriptionSignup", model =>
+            Initialize<SubscriptionSignupViewModel>("SubscriptionSignup", async model =>
             {
                 var offered = GetOfferedPrices(part);
 
                 model.ContentItemId = part.ContentItem.ContentItemId;
+                model.StoreCurrency = await GetStoreCurrencyAsync();
                 model.Prices = offered;
                 model.DefaultPrice = offered.FirstOrDefault(candidate => candidate.IsDefault) ?? offered.FirstOrDefault();
             })
@@ -77,6 +90,10 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             .Location("ProductAction", "Actions")
         );
     }
+
+    // A price without a currency of its own is in the store's currency.
+    private async Task<string> GetStoreCurrencyAsync()
+        => (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
 
     // Only prices that can be bought right now, so a withdrawn or not-yet-started price is never offered.
     private List<ProductPrice> GetOfferedPrices(SubscriptionPart part)

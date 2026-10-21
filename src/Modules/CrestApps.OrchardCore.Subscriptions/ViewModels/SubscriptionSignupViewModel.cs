@@ -27,6 +27,11 @@ public class SubscriptionSignupViewModel
     public ProductPrice DefaultPrice { get; set; }
 
     /// <summary>
+    /// Gets or sets the store's currency, which a price without a currency of its own is in.
+    /// </summary>
+    public string StoreCurrency { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the visitor has to be asked anything before checkout starts.
     /// </summary>
     /// <remarks>

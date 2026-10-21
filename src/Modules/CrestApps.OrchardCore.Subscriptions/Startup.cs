@@ -12,7 +12,6 @@ using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
 using CrestApps.OrchardCore.Subscriptions.Endpoints;
-using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Navigation;
@@ -74,9 +73,6 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<SubscriptionSummaryWidgetMigrations>()
             .AddContentPart<SubscriptionSummaryPart>()
             .UseDisplayDriver<SubscriptionSummaryPartDisplayDriver>();
-
-        services.AddDataMigration<SubscriptionsContentItemIndexMigrations>()
-            .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
 
