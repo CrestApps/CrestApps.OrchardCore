@@ -8,22 +8,18 @@ namespace CrestApps.OrchardCore.Transactions.Navigation;
 /// <summary>
 /// Adds what the customer owes and has paid, with their invoices and receipts, to the storefront account.
 /// </summary>
-public sealed class TransactionsAccountMenu : INavigationProvider
+public sealed class TransactionsAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public TransactionsAccountMenu(IStringLocalizer<TransactionsAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder.Add(S["Balances and invoices"], "40", transactions => transactions
             .Id("account-transactions")
             .AddClass("fa-solid fa-file-invoice-dollar")

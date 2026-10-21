@@ -6,11 +6,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Modules;
-using OrchardCore.Notifications;
-using OrchardCore.Notifications.Models;
-using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
 
@@ -21,9 +17,7 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 /// </summary>
 public sealed class DefaultTransactionReminderService : ITransactionReminderService
 {
-    private readonly INotificationService _notificationService;
-    private readonly IUserService _userService;
-    private readonly ICustomerContactResolver _contactResolver;
+    private readonly ICustomerOwnerNotifier _ownerNotifier;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -33,25 +27,19 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTransactionReminderService"/> class.
     /// </summary>
-    /// <param name="notificationService">The notification service used to reach an authenticated owner.</param>
-    /// <param name="userService">The user service used to resolve an authenticated owner.</param>
-    /// <param name="contactResolver">The resolver that addresses the owner uniformly.</param>
-    /// <param name="serviceProvider">The service provider used to resolve the optional email service for guest delivery.</param>
+    /// <param name="ownerNotifier">The notifier that reaches the owner: a user through their notifications, a guest by email.</param>
+    /// <param name="serviceProvider">The service provider the optional invoice and pay-link services are resolved from.</param>
     /// <param name="clock">The clock used to stamp the reminder.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultTransactionReminderService(
-        INotificationService notificationService,
-        IUserService userService,
-        ICustomerContactResolver contactResolver,
+        ICustomerOwnerNotifier ownerNotifier,
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<DefaultTransactionReminderService> logger,
         IStringLocalizer<DefaultTransactionReminderService> stringLocalizer)
     {
-        _notificationService = notificationService;
-        _userService = userService;
-        _contactResolver = contactResolver;
+        _ownerNotifier = ownerNotifier;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
@@ -352,82 +340,17 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             : transaction.Title;
 
     private Task<bool> DeliverAsync(Transaction transaction, Reminder reminder, CancellationToken cancellationToken)
-        => transaction.OwnerKind == CustomerOwnerKind.Guest
-            ? SendGuestReminderAsync(transaction, reminder, cancellationToken)
-            : SendAuthenticatedReminderAsync(transaction, reminder, cancellationToken);
-
-    private async Task<bool> SendAuthenticatedReminderAsync(Transaction transaction, Reminder reminder, CancellationToken cancellationToken)
-    {
-        var user = await _userService.GetUserByUniqueIdAsync(transaction.OwnerId);
-
-        if (user is null)
-        {
-            _logger.LogWarning("Unable to send a transaction reminder because the owner '{OwnerId}' was not found.", transaction.OwnerId);
-
-            return false;
-        }
-
-        var htmlBody = BuildHtmlBody(reminder);
-        var message = new NotificationMessage
-        {
-            Subject = reminder.Subject,
-            Summary = reminder.Summary,
-            TextBody = reminder.Body,
-            HtmlBody = htmlBody,
-            IsHtmlPreferred = htmlBody is not null,
-        };
-
-        var result = await _notificationService.SendAsync(user, message, cancellationToken);
-
-        return result.SuccessfulCount > 0;
-    }
-
-    private async Task<bool> SendGuestReminderAsync(Transaction transaction, Reminder reminder, CancellationToken cancellationToken)
-    {
-        var owner = CustomerOwner.ForGuest(transaction.OwnerId);
-        var guestContact = new CustomerContact
-        {
-            DisplayName = transaction.GuestContactName,
-            Email = transaction.GuestContactEmail,
-        };
-
-        var contact = await _contactResolver.ResolveAsync(owner, guestContact, cancellationToken);
-
-        if (contact is null || string.IsNullOrEmpty(contact.Email))
-        {
-            _logger.LogWarning("Unable to send a transaction reminder because the guest owner '{OwnerId}' has no contact email.", transaction.OwnerId);
-
-            return false;
-        }
-
-        var emailService = _serviceProvider.GetService<IEmailService>();
-
-        if (emailService is null)
-        {
-            _logger.LogWarning("Unable to send a guest transaction reminder because no email service is registered.");
-
-            return false;
-        }
-
-        var message = new MailMessage
-        {
-            To = contact.Email,
-            Subject = reminder.Subject,
-            TextBody = reminder.Body,
-            HtmlBody = BuildHtmlBody(reminder),
-        };
-
-        var result = await emailService.SendAsync(message, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("Unable to deliver a guest transaction reminder email to the owner '{OwnerId}'.", transaction.OwnerId);
-
-            return false;
-        }
-
-        return true;
-    }
+        => _ownerNotifier.NotifyAsync(
+            transaction.GetOwner(),
+            transaction.GetGuestContact(),
+            new CustomerOwnerMessage
+            {
+                Subject = reminder.Subject,
+                Summary = reminder.Summary,
+                TextBody = reminder.Body,
+                HtmlBody = BuildHtmlBody(reminder),
+            },
+            cancellationToken);
 
     private static string FormatAmount(decimal amount, string currency)
     {

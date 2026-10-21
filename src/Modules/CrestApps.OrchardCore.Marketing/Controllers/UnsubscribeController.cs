@@ -25,7 +25,7 @@ public sealed class UnsubscribeController : Controller
         _clock = clock;
     }
 
-    [HttpGet("marketing/unsubscribe", Name = "MarketingUnsubscribe")]
+    [HttpGet("marketing/unsubscribe", Name = MarketingConstants.UnsubscribeRouteName)]
     public async Task<IActionResult> Index(string token)
     {
         var customer = await FindAsync(token);

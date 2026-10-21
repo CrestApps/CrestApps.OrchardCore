@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

@@ -84,79 +84,56 @@ internal static class CustomerAccountApiEndpoints
         };
         var modelState = new ModelStateDictionary();
 
-        pages.Validate(model, modelState);
-
-        if (!modelState.IsValid)
+        return await pages.SaveProfileAsync(customer, model, modelState, httpContext.RequestAborted) switch
         {
-            return ApiProblems.Validation(modelState);
-        }
-
-        CustomerAccountPages.Apply(customer, model);
-
-        return await pages.TrySaveAsync(customer, httpContext.RequestAborted)
-            ? TypedResults.Ok(ToApi(customer))
-            : ConcurrencyProblem();
+            CustomerAccountSaveResult.Invalid => ApiProblems.Validation(modelState),
+            CustomerAccountSaveResult.Conflict => ConcurrencyProblem(),
+            _ => TypedResults.Ok(ToApi(customer)),
+        };
     }
 
     private static async Task<Results<Created<ApiCustomerAddress>, ValidationProblem, ProblemHttpResult>> AddAddressAsync(
         ApiCustomerAddressRequest request,
         HttpContext httpContext,
-        CustomerAccountPages pages,
-        CustomerAddressBook addressBook)
+        CustomerAccountPages pages)
     {
         if (await pages.GetCustomerAsync(httpContext.User, httpContext.RequestAborted) is not { } customer)
         {
             return ApiProblems.Forbidden("This account has no customer record it may manage.");
         }
 
-        var model = ToModel(request);
         var modelState = new ModelStateDictionary();
+        var (result, entry) = await pages.SaveAddressAsync(customer, addressId: null, ToModel(request), modelState, httpContext.RequestAborted);
 
-        if (await addressBook.ValidateAsync(customer, model, isNew: true, modelState) is not { } address)
+        return result switch
         {
-            return ApiProblems.Validation(modelState);
-        }
-
-        var entry = CustomerAddressBook.Apply(customer, entry: null, model, address);
-
-        if (!await pages.TrySaveAsync(customer, httpContext.RequestAborted))
-        {
-            return ConcurrencyProblem();
-        }
-
-        return TypedResults.Created($"{httpContext.Request.PathBase}/{CommerceApi.RoutePrefix}/me/addresses/{entry.AddressId}", ToApi(customer, entry));
+            CustomerAccountSaveResult.Invalid => ApiProblems.Validation(modelState),
+            CustomerAccountSaveResult.Conflict => ConcurrencyProblem(),
+            _ => TypedResults.Created($"{httpContext.Request.PathBase}/{CommerceApi.RoutePrefix}/me/addresses/{entry.AddressId}", ToApi(customer, entry)),
+        };
     }
 
     private static async Task<Results<Ok<ApiCustomerAddress>, ValidationProblem, ProblemHttpResult>> UpdateAddressAsync(
         string addressId,
         ApiCustomerAddressRequest request,
         HttpContext httpContext,
-        CustomerAccountPages pages,
-        CustomerAddressBook addressBook)
+        CustomerAccountPages pages)
     {
         if (await pages.GetCustomerAsync(httpContext.User, httpContext.RequestAborted) is not { } customer)
         {
             return ApiProblems.Forbidden("This account has no customer record it may manage.");
         }
 
-        if (customer.FindAddress(addressId) is not { } entry)
-        {
-            return ApiProblems.NotFound();
-        }
-
-        var model = ToModel(request);
         var modelState = new ModelStateDictionary();
+        var (result, entry) = await pages.SaveAddressAsync(customer, addressId, ToModel(request), modelState, httpContext.RequestAborted);
 
-        if (await addressBook.ValidateAsync(customer, model, isNew: false, modelState) is not { } address)
+        return result switch
         {
-            return ApiProblems.Validation(modelState);
-        }
-
-        CustomerAddressBook.Apply(customer, entry, model, address);
-
-        return await pages.TrySaveAsync(customer, httpContext.RequestAborted)
-            ? TypedResults.Ok(ToApi(customer, entry))
-            : ConcurrencyProblem();
+            CustomerAccountSaveResult.NotFound => ApiProblems.NotFound(),
+            CustomerAccountSaveResult.Invalid => ApiProblems.Validation(modelState),
+            CustomerAccountSaveResult.Conflict => ConcurrencyProblem(),
+            _ => TypedResults.Ok(ToApi(customer, entry)),
+        };
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAddressAsync(
@@ -169,14 +146,12 @@ internal static class CustomerAccountApiEndpoints
             return ApiProblems.Forbidden("This account has no customer record it may manage.");
         }
 
-        if (!customer.RemoveAddress(addressId))
+        return await pages.DeleteAddressAsync(customer, addressId, httpContext.RequestAborted) switch
         {
-            return ApiProblems.NotFound();
-        }
-
-        return await pages.TrySaveAsync(customer, httpContext.RequestAborted)
-            ? TypedResults.NoContent()
-            : ConcurrencyProblem();
+            CustomerAccountSaveResult.NotFound => ApiProblems.NotFound(),
+            CustomerAccountSaveResult.Conflict => ConcurrencyProblem(),
+            _ => TypedResults.NoContent(),
+        };
     }
 
     private static ProblemHttpResult ConcurrencyProblem()

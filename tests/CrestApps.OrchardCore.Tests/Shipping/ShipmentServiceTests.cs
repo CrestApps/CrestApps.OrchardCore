@@ -6,9 +6,9 @@ using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Shipping.Handlers;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Email;
 using OrchardCore.Infrastructure;
@@ -181,9 +181,8 @@ public sealed class ShipmentServiceTests
             SiteService(),
             new ShipmentEmailBuilder(HtmlEncoder.Default, new PassThroughStringLocalizer<ShipmentEmailBuilder>()),
             links.Object,
-            services,
-            Clock(),
-            NullLogger<ShippedEmailShipmentHandler>.Instance);
+            CommerceEmailSenders.Create(services),
+            Clock());
 
         var service = CreateService(handler);
         var shipment = (await service.CreateAsync(_order, [new("cap", 2)], new ShipmentDetails("UPS", "1Z333"), ship: true, TestContext.Current.CancellationToken)).Shipment;

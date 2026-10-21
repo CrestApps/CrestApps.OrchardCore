@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Services;
 /// <summary>
 /// Provides the permissions and default role stereotypes for the subscriptions module.
 /// </summary>
-public class SubscriptionPermissionsProvider : IPermissionProvider
+internal sealed class SubscriptionPermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
@@ -41,6 +42,16 @@ public class SubscriptionPermissionsProvider : IPermissionProvider
             [
                 SubscriptionPermissions.ManageOwnSubscriptions,
             ],
+        },
+        new PermissionStereotype
+        {
+            Name = CommerceConstants.StaffRoles.StoreManager,
+            Permissions = [SubscriptionPermissions.ManageSubscriptions],
+        },
+        new PermissionStereotype
+        {
+            Name = CommerceConstants.StaffRoles.CustomerSupport,
+            Permissions = [SubscriptionPermissions.ManageSubscriptions],
         },
     ];
 }

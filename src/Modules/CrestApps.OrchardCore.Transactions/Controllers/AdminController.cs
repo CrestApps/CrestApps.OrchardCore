@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -45,6 +47,7 @@ public sealed class AdminController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly TransactionSourceOptions _sourceOptions;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -62,6 +65,7 @@ public sealed class AdminController : Controller
     /// <param name="sourceOptions">The registered transaction sources used to build the source filter.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="localizerFactory">The localizer factory that translates the registered transaction sources' names.</param>
     /// <param name="reminderService">The optional reminder service, available only when the Transaction Reminders feature is enabled.</param>
     public AdminController(
         ITransactionManager transactionManager,
@@ -74,6 +78,7 @@ public sealed class AdminController : Controller
         IOptions<TransactionSourceOptions> sourceOptions,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
+        IStringLocalizerFactory localizerFactory,
         ITransactionReminderService reminderService = null)
     {
         _transactionManager = transactionManager;
@@ -85,6 +90,7 @@ public sealed class AdminController : Controller
         _clock = clock;
         _notifier = notifier;
         _sourceOptions = sourceOptions.Value;
+        _localizerFactory = localizerFactory;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -135,10 +141,7 @@ public sealed class AdminController : Controller
         options.Sources = BuildSourceFilterItems(options.Source);
 
         // The status and source filters render at the end of the list's toolbar.
-        var filters = await shapeFactory.CreateAsync("TransactionsAdminListFilters", Arguments.From(new
-        {
-            Options = options,
-        }));
+        var filters = await shapeFactory.CreateAdminListFiltersAsync("Transactions", "transactions-filter", new AdminListFilter("Options.Status", options.Statuses, S["Filter by status"], S["Status"]), new AdminListFilter("Options.Source", options.Sources, S["Filter by source"], S["Source"]));
 
         var model = new TransactionsAdminIndexViewModel
         {
@@ -482,7 +485,7 @@ public sealed class AdminController : Controller
 
         foreach (var source in _sourceOptions.Sources.Values)
         {
-            var text = source.DisplayName?.Value ?? source.Name;
+            var text = source.DisplayName is null ? source.Name : _localizerFactory.Localize(source.DisplayName).Value;
 
             items.Add(new SelectListItem(text, source.Name, string.Equals(source.Name, selected, StringComparison.OrdinalIgnoreCase)));
         }

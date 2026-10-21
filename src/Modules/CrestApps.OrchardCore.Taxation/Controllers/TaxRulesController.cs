@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -26,7 +25,6 @@ namespace CrestApps.OrchardCore.Taxation.Controllers;
 public sealed class TaxRulesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-    private const string _nameFieldName = "Name";
 
     private readonly INamedSourceCatalogManager<TaxRule> _manager;
     private readonly IAuthorizationService _authorizationService;
@@ -36,7 +34,6 @@ public sealed class TaxRulesController : Controller
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TaxRulesController"/> class.
@@ -48,7 +45,6 @@ public sealed class TaxRulesController : Controller
     /// <param name="methodOptions">The tax calculation method options.</param>
     /// <param name="notifier">The notifier service.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
     public TaxRulesController(
         INamedSourceCatalogManager<TaxRule> manager,
         IAuthorizationService authorizationService,
@@ -56,8 +52,7 @@ public sealed class TaxRulesController : Controller
         IDisplayManager<TaxRule> displayManager,
         IOptions<TaxCalculationMethodOptions> methodOptions,
         INotifier notifier,
-        IHtmlLocalizer<TaxRulesController> htmlLocalizer,
-        IStringLocalizer<TaxRulesController> stringLocalizer)
+        IHtmlLocalizer<TaxRulesController> htmlLocalizer)
     {
         _manager = manager;
         _authorizationService = authorizationService;
@@ -66,7 +61,6 @@ public sealed class TaxRulesController : Controller
         _methodOptions = methodOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
-        S = stringLocalizer;
     }
 
     [Admin("taxation/rules", "TaxationRulesIndex")]
@@ -81,7 +75,7 @@ public sealed class TaxRulesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -97,7 +91,6 @@ public sealed class TaxRulesController : Controller
 
         var viewModel = new ListSourceModelViewModel<TaxCalculationMethodEntry, CatalogEntryViewModel<TaxRule>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxRule> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _methodOptions.Methods.Values
@@ -181,20 +174,10 @@ public sealed class TaxRulesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _manager.FindByNameAsync(model.Name);
+            await _manager.CreateAsync(model);
+            await _notifier.SuccessAsync(H["The tax rule has been created successfully."]);
 
-            if (existing != null)
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax rule with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _notifier.SuccessAsync(H["The tax rule has been created successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);
@@ -251,20 +234,10 @@ public sealed class TaxRulesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _manager.FindByNameAsync(model.Name);
+            await _manager.UpdateAsync(model);
+            await _notifier.SuccessAsync(H["The tax rule has been updated successfully."]);
 
-            if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax rule with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _notifier.SuccessAsync(H["The tax rule has been updated successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);

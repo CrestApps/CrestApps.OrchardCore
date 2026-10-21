@@ -1,7 +1,12 @@
 using System.Net;
+using System.Threading.RateLimiting;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Addresses.Endpoints;
 using CrestApps.OrchardCore.Addresses.GooglePlaces;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Tests.Addresses;
 
@@ -68,19 +73,46 @@ public sealed class AddressSuggestionTests
     }
 
     [Fact]
-    public void AVisitor_IsHeldToSoManyRequestsAMinute()
+    public void AVisitor_IsHeldToSoManyRequestsAMinute_ByTheRateLimitsFeature()
     {
-        using var cache = new MemoryCache(new MemoryCacheOptions());
-        var visitor = IPAddress.Parse("203.0.113.7");
-        var other = IPAddress.Parse("203.0.113.8");
+        // Arrange
+        var services = new ServiceCollection();
+        new RateLimitsStartup().ConfigureServices(services);
 
-        for (var i = 0; i < AddressAutocompleteEndpoints.RequestsPerMinute; i++)
-        {
-            Assert.True(AddressAutocompleteEndpoints.Allow(cache, visitor));
-        }
+        var limit = Assert.Single(
+            services.BuildServiceProvider().GetRequiredService<IOptions<RateLimitsOptions>>().Value.GroupRateLimits,
+            limit => limit.GroupName == AddressConstants.AutocompleteRateLimitGroup);
 
-        Assert.False(AddressAutocompleteEndpoints.Allow(cache, visitor));
-        Assert.True(AddressAutocompleteEndpoints.Allow(cache, other));
+        using var visitor = Limiter(limit, "203.0.113.7");
+        using var other = Limiter(limit, "203.0.113.8");
+
+        // Act
+        var allowed = Enumerable.Range(0, AddressAutocompleteEndpoints.RequestsPerMinute)
+            .Select(_ =>
+            {
+                using var lease = visitor.AttemptAcquire();
+
+                return lease.IsAcquired;
+            })
+            .ToList();
+
+        using var refused = visitor.AttemptAcquire();
+        using var otherVisitor = other.AttemptAcquire();
+
+        // Assert
+        Assert.All(allowed, Assert.True);
+        Assert.False(refused.IsAcquired);
+        Assert.True(otherVisitor.IsAcquired);
+    }
+
+    private static RateLimiter Limiter(GroupRateLimit limit, string address)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Connection.RemoteIpAddress = IPAddress.Parse(address);
+
+        var partition = limit.Partitioner(httpContext);
+
+        return partition.Factory(partition.PartitionKey);
     }
 
     private static GooglePlacesAddressAutocompleteProvider.AddressComponent Component(string longText, string shortText, params string[] types)

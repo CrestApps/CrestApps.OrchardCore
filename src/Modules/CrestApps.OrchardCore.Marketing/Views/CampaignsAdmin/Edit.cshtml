@@ -49,42 +49,52 @@
 <form method="post" class="no-multisubmit">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <fieldset disabled="@(!Model.CanChange)">
-        <div class="row g-3 mb-3">
-            <div class="col-md-6">
-                <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
                 <input asp-for="Name" class="form-control" maxlength="255" required />
                 <span asp-validation-for="Name" class="text-danger"></span>
                 <span class="hint">@T["Such as October win-back. Only staff see it."]</span>
             </div>
-            <div class="col-md-6">
-                <label asp-for="SegmentId" class="form-label">@T["Segment"]</label>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="SegmentId">
+            <label asp-for="SegmentId" class="ocat-label ocat-label-required">@T["Segment"]</label>
+            <div class="ocat-end">
                 <select asp-for="SegmentId" asp-items="Model.Segments" class="form-select"><option value="">@T["Choose a segment"]</option></select>
                 <span asp-validation-for="SegmentId" class="text-danger"></span>
                 <span class="hint">@T["It goes to the segment's customers who accept marketing, as the segment is when each batch goes out."]</span>
             </div>
         </div>
 
-        <div class="mb-3">
-            <label asp-for="Subject" class="form-label">@T["Subject"]</label>
-            <input asp-for="Subject" class="form-control" maxlength="255" />
-            <span asp-validation-for="Subject" class="text-danger"></span>
+        <div class="ocat-wrapper" asp-validation-class-for="Subject">
+            <label asp-for="Subject" class="ocat-label ocat-label-required">@T["Subject"]</label>
+            <div class="ocat-end">
+                <input asp-for="Subject" class="form-control" maxlength="255" />
+                <span asp-validation-for="Subject" class="text-danger"></span>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label asp-for="Body" class="form-label">@T["Email"]</label>
-            <textarea asp-for="Body" class="form-control font-monospace" rows="14"></textarea>
-            <span asp-validation-for="Body" class="text-danger"></span>
-            <span class="hint">@T["HTML with Liquid. Use {{{{ Customer.FirstName }}}}, {{{{ Customer.Name }}}}, {{{{ Customer.OrderCount }}}}, {{{{ Customer.TotalSpent }}}}, {{{{ StoreName }}}} and {{{{ UnsubscribeUrl }}}}. An unsubscribe link is added at the end when the email has none."]</span>
+        <div class="ocat-wrapper" asp-validation-class-for="Body">
+            <label asp-for="Body" class="ocat-label ocat-label-required">@T["Email"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Body" class="form-control font-monospace" rows="14"></textarea>
+                <span asp-validation-for="Body" class="text-danger"></span>
+                <span class="hint">@T["HTML with Liquid. Use {{{{ Customer.FirstName }}}}, {{{{ Customer.Name }}}}, {{{{ Customer.OrderCount }}}}, {{{{ Customer.TotalSpent }}}}, {{{{ StoreName }}}} and {{{{ UnsubscribeUrl }}}}. An unsubscribe link is added at the end when the email has none."]</span>
+            </div>
         </div>
 
-        <div class="row g-3 mb-3">
-            <div class="col-md-6">
-                <label asp-for="ScheduledLocal" class="form-label">@T["Send at"]</label>
+        <div class="ocat-wrapper">
+            <label asp-for="ScheduledLocal" class="ocat-label">@T["Send at"]</label>
+            <div class="ocat-end">
                 <input asp-for="ScheduledLocal" type="datetime-local" class="form-control" />
                 <span class="hint">@T["Optional, in the site's time zone. Blank sends it at once."]</span>
             </div>
-            <div class="col-md-6">
-                <label asp-for="TestEmail" class="form-label">@T["Send a test to"]</label>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="TestEmail" class="ocat-label">@T["Send a test to"]</label>
+            <div class="ocat-end">
                 <div class="input-group">
                     <input asp-for="TestEmail" type="email" class="form-control" autocomplete="off" />
                     <button type="submit" name="submit" value="test" class="btn btn-outline-secondary">@T["Send test"]</button>
@@ -93,10 +103,14 @@
             </div>
         </div>
 
-        <div class="d-flex flex-wrap gap-2">
-            <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save draft"]</button>
-            <button type="submit" name="submit" value="send" class="btn btn-primary">@T["Send"]</button>
-            <a asp-action="Index" class="btn btn-link">@T["Back to campaigns"]</a>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save draft"]</button>
+                    <button type="submit" name="submit" value="send" class="btn btn-primary">@T["Send"]</button>
+                    <a asp-action="Index" class="btn btn-link">@T["Back to campaigns"]</a>
+                </div>
+            </div>
         </div>
     </fieldset>
 </form>

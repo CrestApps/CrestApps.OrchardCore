@@ -28,6 +28,9 @@ public sealed class CompanyApprovalService
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IShopperCurrency _shopperCurrency;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
@@ -38,7 +41,10 @@ public sealed class CompanyApprovalService
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<CompanyApprovalService> logger,
-        IStringLocalizer<CompanyApprovalService> stringLocalizer)
+        IStringLocalizer<CompanyApprovalService> stringLocalizer,
+        IShopperCurrency shopperCurrency,
+        IHttpContextAccessor httpContextAccessor,
+        LinkGenerator linkGenerator)
     {
         _orders = orders;
         _orderService = orderService;
@@ -46,6 +52,9 @@ public sealed class CompanyApprovalService
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _shopperCurrency = shopperCurrency;
+        _httpContextAccessor = httpContextAccessor;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -185,10 +194,9 @@ public sealed class CompanyApprovalService
             return amount;
         }
 
-        return _serviceProvider.GetService<IShopperCurrency>() is { } shopperCurrency &&
-            await shopperCurrency.ConvertAsync(amount, currency, storeCurrency, isPrice: false, cancellationToken) is { } converted
-                ? converted
-                : amount;
+        return await _shopperCurrency.ConvertAsync(amount, currency, storeCurrency, isPrice: false, cancellationToken) is { } converted
+            ? converted
+            : amount;
     }
 
     private async Task EmailAsync(IEnumerable<string> recipients, string subject, string text, string routeName, CancellationToken cancellationToken)
@@ -200,8 +208,8 @@ public sealed class CompanyApprovalService
             return;
         }
 
-        var httpContext = _serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext;
-        var url = httpContext is null ? null : _serviceProvider.GetService<LinkGenerator>()?.GetUriByRouteValues(httpContext, routeName, values: null);
+        var httpContext = _httpContextAccessor.HttpContext;
+        var url = httpContext is null ? null : _linkGenerator.GetUriByRouteValues(httpContext, routeName, values: null);
         var body = new StringBuilder(text);
         var encoder = HtmlEncoder.Default;
 

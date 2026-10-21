@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -11,16 +10,15 @@ namespace CrestApps.OrchardCore.Products.Services;
 
 /// <summary>
 /// Converts a product content item (one that has a <see cref="ProductPart"/> and an opted-in
-/// <c>TaxationPart</c>) into an <see cref="ITaxableItem"/>. Unlike the generic content-item provider,
+/// <see cref="TaxationPart"/>) into an <see cref="ITaxableItem"/>. Unlike the generic content-item provider,
 /// this one resolves the product through the sellable snapshot seam, so the taxable item carries the
 /// product-owned currency, unit price, and product-type–derived <see cref="TaxableItemKind"/>. It never
 /// calculates tax; it only exposes the tax-relevant information so the taxation framework can determine the
 /// applicable tax.
 /// </summary>
 /// <remarks>
-/// The <c>TaxationPart</c> is read via its JSON projection (rather than the strongly typed part) so the
-/// Products module does not take a hard reference on the Taxation module, keeping taxation optional. This
-/// mirrors how the Subscriptions module consumes the same part.
+/// The <see cref="TaxationPart"/> is declared by the taxation abstractions, so reading it never needs the Taxation
+/// module, which stays optional.
 /// </remarks>
 public sealed class ProductTaxableItemProvider : ITaxableItemProvider
 {
@@ -41,7 +39,7 @@ public sealed class ProductTaxableItemProvider : ITaxableItemProvider
     public bool CanCreate(object source)
         => source is ContentItem contentItem &&
             contentItem.Has<ProductPart>() &&
-            contentItem.Content?["TaxationPart"] is not null;
+            contentItem.Has<TaxationPart>();
 
     public async ValueTask<ITaxableItem> CreateAsync(object source, CancellationToken cancellationToken = default)
     {
@@ -50,17 +48,7 @@ public sealed class ProductTaxableItemProvider : ITaxableItemProvider
             return null;
         }
 
-        JsonNode taxationPart = contentItem.Content?["TaxationPart"];
-
-        if (taxationPart is null)
-        {
-            return null;
-        }
-
-        // Default to taxable when the flag is absent to match the part's own default.
-        var taxable = taxationPart["Taxable"]?.GetValue<bool>() ?? true;
-
-        if (!taxable)
+        if (!contentItem.TryGet<TaxationPart>(out var taxationPart) || !taxationPart.Taxable)
         {
             return null;
         }
@@ -87,9 +75,9 @@ public sealed class ProductTaxableItemProvider : ITaxableItemProvider
             UnitPrice = snapshot.UnitPrice,
             Currency = snapshot.Currency,
             Quantity = 1m,
-            TaxCategoryCode = taxationPart["TaxCategoryCode"]?.GetValue<string>(),
-            TaxClassificationCode = taxationPart["TaxClassificationCode"]?.GetValue<string>(),
-            ExternalTaxCode = taxationPart["ExternalTaxCode"]?.GetValue<string>(),
+            TaxCategoryCode = taxationPart.TaxCategoryCode,
+            TaxClassificationCode = taxationPart.TaxClassificationCode,
+            ExternalTaxCode = taxationPart.ExternalTaxCode,
         };
 
         item.Metadata["ContentType"] = contentItem.ContentType;

@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -61,7 +62,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     /// <param name="shellHost">The shell host.</param>
     /// <param name="shellSettingsManager">The manager used to create tenant shell settings.</param>
     /// <param name="setupService">The setup service that initializes the new tenant.</param>
-    /// <param name="dataProtectionProvider">The provider used to unprotect the administrator password.</param>
+    /// <param name="dataProtectionProvider">The provider used to unprotect the administrator password and the onboarding connection string.</param>
     /// <param name="distributedLock">The lock that keeps two nodes from building the same tenant.</param>
     /// <param name="serviceProvider">The service provider used to resolve the optional workflow manager.</param>
     /// <param name="clock">The clock.</param>
@@ -272,9 +273,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         {
             settings["DatabaseProvider"] = onboarding.GetDatabaseProviderOrDefault();
 
-            if (!string.IsNullOrWhiteSpace(onboarding.ConnectionString))
+            if (!string.IsNullOrEmpty(onboarding.ProtectedConnectionString))
             {
-                settings["ConnectionString"] = onboarding.ConnectionString.Trim();
+                settings["ConnectionString"] = UnprotectConnectionString(onboarding.ProtectedConnectionString);
             }
 
             if (!string.IsNullOrWhiteSpace(onboarding.Schema))
@@ -319,15 +320,25 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             throw new InvalidOperationException("The provisioning job did not capture an administrator password.");
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep);
-
         try
         {
-            return protector.Unprotect(job.ProtectedAdminPassword);
+            return _dataProtectionProvider.UnprotectSetting(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep, job.ProtectedAdminPassword);
         }
         catch (CryptographicException exception)
         {
             throw new InvalidOperationException("The administrator password could not be unprotected. The site was not created.", exception);
+        }
+    }
+
+    private string UnprotectConnectionString(string protectedConnectionString)
+    {
+        try
+        {
+            return _dataProtectionProvider.UnprotectSetting(SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString, protectedConnectionString);
+        }
+        catch (CryptographicException exception)
+        {
+            throw new InvalidOperationException("The connection string for new sites could not be unprotected. Enter it again under the tenant onboarding settings. The site was not created.", exception);
         }
     }
 

@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -165,7 +167,7 @@ public sealed class CouponsAdminController : Controller
         };
 
         // The status filter renders at the end of the list's toolbar.
-        viewModel.List.ToolbarActions = await shapeFactory.CreateAsync("CouponsAdminListFilters", Arguments.From(new { Options = options }));
+        viewModel.List.ToolbarActions = await shapeFactory.CreateAdminListFiltersAsync("Coupons", "coupons-filter", new AdminListFilter("Options.Status", options.Statuses, S["Filter by status"], S["Status"]));
 
         return View(viewModel);
     }
@@ -564,8 +566,10 @@ public sealed class CouponsAdminController : Controller
             return;
         }
 
+        var localizerFactory = HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>();
+
         model.KnownSources = sources.Values
-            .Select(source => source.DisplayName is null ? source.Name : $"{source.Name} ({source.DisplayName.Value})")
+            .Select(source => source.DisplayName is null ? source.Name : $"{source.Name} ({localizerFactory.Localize(source.DisplayName).Value})")
             .OrderBy(text => text, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

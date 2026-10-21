@@ -16,44 +16,51 @@
     <div class="card mb-3">
         <div class="card-header">@T["Customer"]</div>
         <div class="card-body">
-            <div class="mb-3">
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-existing" value="false" checked="@(!Model.NewCustomer)" />
-                    <label class="form-check-label" for="customer-existing">@T["Existing customer"]</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-new" value="true" checked="@Model.NewCustomer" />
-                    <label class="form-check-label" for="customer-new">@T["New customer"]</label>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-existing" value="false" checked="@(!Model.NewCustomer)" />
+                        <label class="form-check-label" for="customer-existing">@T["Existing customer"]</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-new" value="true" checked="@Model.NewCustomer" />
+                        <label class="form-check-label" for="customer-new">@T["New customer"]</label>
+                    </div>
                 </div>
             </div>
 
-            <div id="customer-existing-fields" class="@(Model.NewCustomer ? "d-none" : string.Empty)">
-                @await Component.InvokeAsync("UserPicker", new
-                {
-                    name = Html.NameFor(m => m.CustomerUserId).ToString(),
-                    selectedValues = string.IsNullOrEmpty(Model.CustomerUserId) ? Array.Empty<string>() : new[] { Model.CustomerUserId },
-                    valueType = "userId",
-                    multiple = false,
-                    buttonText = T["Choose a customer"].Value,
-                    searchPlaceholder = T["Search customers"].Value,
-                    smallButton = false,
-                })
-                <span asp-validation-for="CustomerUserId" class="text-danger"></span>
+            <div id="customer-existing-fields" class="ocat-wrapper @(Model.NewCustomer ? "d-none" : string.Empty)" asp-validation-class-for="CustomerUserId">
+                <div class="ocat-end-offset">
+                    @await Component.InvokeAsync("UserPicker", new
+                    {
+                        name = Html.NameFor(m => m.CustomerUserId).ToString(),
+                        selectedValues = string.IsNullOrEmpty(Model.CustomerUserId) ? Array.Empty<string>() : new[] { Model.CustomerUserId },
+                        valueType = "userId",
+                        multiple = false,
+                        buttonText = T["Choose a customer"].Value,
+                        searchPlaceholder = T["Search customers"].Value,
+                        smallButton = false,
+                    })
+                    <span asp-validation-for="CustomerUserId" class="text-danger"></span>
+                </div>
             </div>
 
-            <div id="customer-new-fields" class="row g-3 @(Model.NewCustomer ? string.Empty : "d-none")">
-                <div class="col-md-6">
-                    <label asp-for="NewCustomerName" class="form-label">@T["Name"]</label>
-                    <input asp-for="NewCustomerName" class="form-control" autocomplete="off" />
-                    <span asp-validation-for="NewCustomerName" class="text-danger"></span>
+            <div id="customer-new-fields" class="@(Model.NewCustomer ? string.Empty : "d-none")">
+                <div class="ocat-wrapper" asp-validation-class-for="NewCustomerName">
+                    <label asp-for="NewCustomerName" class="ocat-label">@T["Name"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="NewCustomerName" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="NewCustomerName" class="text-danger"></span>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="NewCustomerEmail" class="form-label">@T["Email"]</label>
-                    <input asp-for="NewCustomerEmail" type="email" class="form-control" autocomplete="off" />
-                    <span asp-validation-for="NewCustomerEmail" class="text-danger"></span>
-                </div>
-                <div class="col-12">
-                    <span class="hint">@T["An account is created for the customer with this email. It has no password yet: the customer sets one with \"Forgot password\" when they want to sign in to see or pay their payments."]</span>
+
+                <div class="ocat-wrapper" asp-validation-class-for="NewCustomerEmail">
+                    <label asp-for="NewCustomerEmail" class="ocat-label">@T["Email"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="NewCustomerEmail" type="email" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="NewCustomerEmail" class="text-danger"></span>
+                        <span class="hint">@T["An account is created for the customer with this email. It has no password yet: the customer sets one with \"Forgot password\" when they want to sign in to see or pay their payments."]</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -62,15 +69,18 @@
     <div class="card mb-3">
         <div class="card-header">@T["Plan"]</div>
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <label asp-for="Title" class="form-label">@T["What the plan is for"]</label>
+            <div class="ocat-wrapper" asp-validation-class-for="Title">
+                <label asp-for="Title" class="ocat-label">@T["What the plan is for"]</label>
+                <div class="ocat-end">
                     <input asp-for="Title" class="form-control" />
                     <span asp-validation-for="Title" class="text-danger"></span>
                     <span class="hint">@T["Shown to the customer on every payment, reminder and receipt."]</span>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+                <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+                <div class="ocat-limited">
                     @if (Model.Currencies.Count > 0)
                     {
                         <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" data-installment-input></select>
@@ -82,27 +92,37 @@
                     }
                     <span asp-validation-for="Currency" class="text-danger"></span>
                 </div>
+            </div>
 
-                <div class="col-md-4">
-                    <label asp-for="TotalAmount" class="form-label">@T["Total"]</label>
+            <div class="ocat-limited-wrapper" asp-validation-class-for="TotalAmount">
+                <label asp-for="TotalAmount" class="ocat-label">@T["Total"]</label>
+                <div class="ocat-limited">
                     <input asp-for="TotalAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
                     <span asp-validation-for="TotalAmount" class="text-danger"></span>
                     <span class="hint">@T["Everything the customer pays, the down payment included."]</span>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="DownPaymentAmount" class="form-label">@T["Down payment today"]</label>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="DownPaymentAmount">
+                <label asp-for="DownPaymentAmount" class="ocat-label">@T["Down payment today"]</label>
+                <div class="ocat-limited">
                     <input asp-for="DownPaymentAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
                     <span asp-validation-for="DownPaymentAmount" class="text-danger"></span>
                     <span class="hint">@T["Enter 0 for no down payment. The first payment is then taken today instead, so its due date must be today."]</span>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="InstallmentCount" class="form-label">@T["Number of payments after it"]</label>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="InstallmentCount">
+                <label asp-for="InstallmentCount" class="ocat-label">@T["Number of payments after it"]</label>
+                <div class="ocat-limited">
                     <input asp-for="InstallmentCount" type="number" min="1" max="120" step="1" class="form-control" data-installment-input />
                     <span asp-validation-for="InstallmentCount" class="text-danger"></span>
                 </div>
+            </div>
 
-                <div class="col-md-4">
-                    <label asp-for="Frequency" class="form-label">@T["Payments fall due"]</label>
+            <div class="ocat-wrapper" asp-validation-class-for="Frequency">
+                <label asp-for="Frequency" class="ocat-label">@T["Payments fall due"]</label>
+                <div class="ocat-end">
                     <select asp-for="Frequency" class="form-select" data-installment-input>
                         <option value="@InstallmentFrequency.Weekly">@T["Every week"]</option>
                         <option value="@InstallmentFrequency.BiWeekly">@T["Every two weeks"]</option>
@@ -110,8 +130,11 @@
                         <option value="@InstallmentFrequency.Quarterly">@T["Every three months"]</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="FirstDueDate" class="form-label">@T["First payment due"]</label>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="FirstDueDate">
+                <label asp-for="FirstDueDate" class="ocat-label">@T["First payment due"]</label>
+                <div class="ocat-limited">
                     <input asp-for="FirstDueDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" data-installment-input />
                     <span asp-validation-for="FirstDueDate" class="text-danger"></span>
                 </div>
@@ -122,20 +145,26 @@
     <div class="card mb-3">
         <div class="card-header">@T["Collecting the payments"]</div>
         <div class="card-body">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-auto" value="@InstallmentCollectionMethod.AutoCharge" />
-                <label class="form-check-label" for="collection-auto">@T["Charge the card on each due date"]</label>
-                <span class="hint dashed">@T["The card used for the down payment is kept and charged automatically. The customer is told a few days before each charge. A declined card is retried, then left for the customer to pay."]</span>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-invoice" value="@InstallmentCollectionMethod.Invoice" />
-                <label class="form-check-label" for="collection-invoice">@T["Invoice the customer for each payment"]</label>
-                <span class="hint dashed">@T["The customer is reminded before each due date and pays from their transactions. The card is used for the down payment only."]</span>
+            <div class="ocat-wrapper" asp-validation-class-for="CollectionMethod">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-auto" value="@InstallmentCollectionMethod.AutoCharge" />
+                        <label class="form-check-label" for="collection-auto">@T["Charge the card on each due date"]</label>
+                    </div>
+                    <span class="hint dashed">@T["The card used for the down payment is kept and charged automatically. The customer is told a few days before each charge. A declined card is retried, then left for the customer to pay."]</span>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-invoice" value="@InstallmentCollectionMethod.Invoice" />
+                        <label class="form-check-label" for="collection-invoice">@T["Invoice the customer for each payment"]</label>
+                    </div>
+                    <span class="hint dashed">@T["The customer is reminded before each due date and pays from their transactions. The card is used for the down payment only."]</span>
+                </div>
             </div>
 
-            <div class="mt-3">
-                <label asp-for="Notes" class="form-label">@T["Internal note"]</label>
-                <textarea asp-for="Notes" rows="2" class="form-control"></textarea>
+            <div class="ocat-wrapper" asp-validation-class-for="Notes">
+                <label asp-for="Notes" class="ocat-label">@T["Internal note"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Notes" rows="2" class="form-control"></textarea>
+                </div>
             </div>
         </div>
     </div>
@@ -165,9 +194,11 @@
         </div>
     </div>
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary">@T["Continue to the down payment"]</button>
-        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Continue to the down payment"]</button>
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        </div>
     </div>
 </form>
 

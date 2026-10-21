@@ -1,11 +1,10 @@
 using CrestApps.OrchardCore.Reviews.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Reviews.Migrations;
 
-public sealed class ReviewMigrations : DataMigration
+internal sealed class ReviewMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
@@ -19,10 +18,12 @@ public sealed class ReviewMigrations : DataMigration
             collection: ReviewsConstants.CollectionName
         );
 
-        // Safe to run again: a server that finished the step first has already made them.
-        await IndexTableIndexCreation.CreateIfMissingAsync<ProductReviewIndex>(SchemaBuilder, "IDX_ProductReviewIndex_ItemId", ReviewsConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<ProductReviewIndex>(SchemaBuilder, "IDX_ProductReviewIndex_Product", ReviewsConstants.CollectionName, "ProductId", "Status");
-        await IndexTableIndexCreation.CreateIfMissingAsync<ProductReviewIndex>(SchemaBuilder, "IDX_ProductReviewIndex_Status", ReviewsConstants.CollectionName, "Status", "CreatedUtc");
+        await SchemaBuilder.AlterIndexTableAsync<ProductReviewIndex>(table =>
+        {
+            table.CreateIndex("IDX_ProductReviewIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_ProductReviewIndex_Product", "ProductId", "Status");
+            table.CreateIndex("IDX_ProductReviewIndex_Status", "Status", "CreatedUtc");
+        }, collection: ReviewsConstants.CollectionName);
 
         return 1;
     }

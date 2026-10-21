@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Models;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// <see cref="ParentCode"/> and are independent of the underlying object type. External codes map
 /// the category to provider-specific tax systems.
 /// </summary>
-public sealed class TaxCategory : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxCategory>
+public sealed class TaxCategory : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<TaxCategory>
 {
     /// <inheritdoc />
     public string Name { get; set; }

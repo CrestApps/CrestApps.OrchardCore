@@ -17,26 +17,27 @@ internal sealed class OrderPaymentRiskCheckoutHandler : CheckoutHandlerBase
     private static readonly string[] _levels = ["normal", "elevated", "highest"];
 
     private readonly IOrderStore _orderStore;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IPaymentAttemptStore _attemptStore;
 
-    public OrderPaymentRiskCheckoutHandler(IOrderStore orderStore, IServiceProvider serviceProvider)
+    public OrderPaymentRiskCheckoutHandler(
+        IOrderStore orderStore,
+        IPaymentAttemptStore attemptStore)
     {
         _orderStore = orderStore;
-        _serviceProvider = serviceProvider;
+        _attemptStore = attemptStore;
     }
 
     public override async Task CompletedAsync(CheckoutFlowCompletedContext context)
     {
         if (context.Flow.Session is not CheckoutSession session ||
             !string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ||
-            string.IsNullOrEmpty(session.ReferenceId) ||
-            _serviceProvider.GetService<IPaymentAttemptStore>() is not { } attempts)
+            string.IsNullOrEmpty(session.ReferenceId))
         {
             return;
         }
 
         // The riskiest payment of the checkout speaks for the order.
-        var rated = (await attempts.GetBySessionAsync(session.SessionId))
+        var rated = (await _attemptStore.GetBySessionAsync(session.SessionId))
             .Where(attempt => attempt.State == PaymentAttemptState.Succeeded && !string.IsNullOrEmpty(attempt.RiskLevel))
             .OrderByDescending(attempt => Array.IndexOf(_levels, attempt.RiskLevel))
             .ThenByDescending(attempt => attempt.RiskScore ?? 0)

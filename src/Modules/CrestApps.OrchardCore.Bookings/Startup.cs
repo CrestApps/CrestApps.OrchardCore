@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -19,6 +20,7 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -42,6 +44,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<BookingCapacityService>();
         services.AddScoped<BookingService>();
         services.AddScoped<BookingEmailSender>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(BookingEmailSender.EmailKind, LocalizationSource.Create<Startup>("Booking confirmed or canceled"));
         services.AddScoped<BookingDepositService>();
         services.AddScoped<BookingBalanceCharger>();
 

@@ -1,4 +1,5 @@
 @using System.Globalization
+@using OrchardCore.DisplayManagement.Html
 @model DonationReceiptViewModel
 
 @{
@@ -8,9 +9,9 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="AccountDonationReceipt" title="@Html.Raw(Html.Encode(donation.ReceiptNumber))">
-        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
-        <breadcrumb-item id="AccountDonations" title="@T["Donations"]" href="@Url.RouteUrl("AccountDonations")" />
+    <breadcrumb name="AccountDonationReceipt" title="@(new HtmlContentString(donation.ReceiptNumber ?? string.Empty))">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        <breadcrumb-item id="AccountDonations" url="@Url.RouteUrl("AccountDonations")">@T["Donations"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

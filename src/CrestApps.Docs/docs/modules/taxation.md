@@ -27,9 +27,9 @@ The framework is split into three assemblies:
 
 | Assembly | Purpose |
 |----------|---------|
-| `CrestApps.OrchardCore.Taxation.Abstractions` | Interfaces, models, DTOs, enums, and constants. Lightweight, no infrastructure dependencies. |
+| `CrestApps.OrchardCore.Taxation.Abstractions` | Interfaces, models, DTOs, enums, and constants, including the `TaxationPart` and its `TaxationPartSettings`, so a module such as Products reads an item's classification as the typed part without depending on the Taxation module. Lightweight, no infrastructure dependencies. |
 | `CrestApps.OrchardCore.Taxation.Core` | The determination engine, default calculation methods, sourcing strategies, resolvers, catalog stores, and dependency-injection wiring. |
-| `CrestApps.OrchardCore.Taxation` | The Orchard Core module: the `TaxationPart`, its editors, migration, and the content-item taxable-item provider. |
+| `CrestApps.OrchardCore.Taxation` | The Orchard Core module: the `TaxationPart` editors, its migration, and the content-item taxable-item provider, which prices an item from its `ProductPart.Price`. |
 
 ## Getting started
 
@@ -233,7 +233,7 @@ The `TaxName` is optional; when it is left empty the tax line falls back to the 
 
 #### Import duty
 
-`TaxTypeNames.ImportDuty` (`ImportDuty`) is a well-known tax type: a duty on goods brought into a country, charged at checkout. New sites are seeded with it, and `TaxTypeMigrations.UpdateFrom1Async` adds it to sites seeded before it, unless they have no tax types at all or already have one by that name. A duty is an ordinary rule:
+`TaxTypeNames.ImportDuty` (`ImportDuty`) is a well-known tax type: a duty on goods brought into a country, charged at checkout. New sites are seeded with it. A duty is an ordinary rule:
 
 ```json
 {
@@ -348,7 +348,7 @@ Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`)
 
 A rule with a `JurisdictionId` applies only when that jurisdiction is among the ones resolved for the item's address (`ITaxJurisdictionResolver`). With no address, or an address outside it, the rule does not apply; rules without a jurisdiction apply everywhere. So the address the checkout supplies decides which jurisdiction rules can apply.
 
-The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Commerce > Taxation > Origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
+The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
 
 Do not assume the shipping address is always the tax location. Sourcing is pluggable through `ITaxSourcingStrategy` (resolved by `ITaxSourcingStrategyProvider`), with these built-in strategies: `Origin`, `Destination`, `CustomerResidence`, `CustomerBusiness`, `ServiceLocation`, and `EventLocation`. The engine picks a strategy from the taxable item's `Kind` (for example digital goods use the destination, services and bookings use the service location, and events use the event location) and falls back through destination, item origin, context origin, and customer residence.
 
@@ -441,11 +441,11 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | | |
 | --- | --- |
-| **Settings** | **Commerce > Taxation > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
+| **Settings** | **Settings > Commerce > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
 | **Provider** | `TaxJarTaxDeterminationProvider` (`ITaxDeterminationProvider`, `Order` 100), with the named `HttpClient` `TaxJar` (10-second timeout) |
 | **Options** | `TaxJarOptions`: `ApiKey` (unprotected), `UseSandbox`, `Countries`, and `BaseUrl` (`https://api.taxjar.com/v2/`, or `https://api.sandbox.taxjar.com/v2/` with the sandbox) |
 
-`TaxJarSettings.ApiKey` is protected with data protection (purpose `CrestApps.OrchardCore.Taxation.TaxJar.ApiKey`). The settings page never shows it again, keeps it when the field is left blank, and removes it with **Remove the token**. `Countries` defaults to `US`. `TaxJarOptionsConfiguration` reads the settings into `TaxJarOptions` once per tenant, so saving the settings releases the shell (`IShellReleaseManager.RequestRelease`) and the tenant restarts with them.
+`TaxJarSettings.ApiKey` is protected with data protection (purpose `CrestApps.OrchardCore.Taxation.TaxJar.ApiKey`). The settings page never shows it again, keeps it when the field is left blank, and removes it with **Remove the token**. `Countries` defaults to `US`. `TaxJarOptionsConfiguration` reads the settings into `TaxJarOptions`, which the provider reads through `IOptionsMonitor<TaxJarOptions>.CurrentValue`. Saving the settings calls `IOptionsUpdateNotifier.RequestUpdate<TaxJarOptions>()` (the options are registered with `AddSignalOptionsChangeTokenSource`), so the new settings are used once they are saved, on every node when a distributed signal is enabled, without restarting the tenant.
 
 `CanHandle` is `true` when there's a token, `TaxCalculationContext.DefaultPriceType` is `Exclusive`, and the destination's country is in `Countries`. A context whose prices include tax, such as a checkout in a [market](markets.md#tax) whose prices include tax, stays with the store's rules, because TaxJar adds tax to a price.
 
@@ -453,7 +453,7 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | TaxJar field | From |
 | --- | --- |
-| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Commerce > Taxation > Origin**) |
+| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Settings > Commerce > Tax origin**) |
 | `to_country`, `to_zip`, `to_state`, `to_city`, `to_street` | `TaxCalculationContext.Destination` |
 | `amount`, `shipping` | The non-shipping and the shipping items' unit price times quantity, less their discounts |
 | `line_items` | Each non-shipping item: `id`, `quantity`, `unit_price`, `discount`, and `product_tax_code` from `TaxableItem.TaxClassificationCode` |
@@ -533,7 +533,7 @@ The whole setup is reproducible as a recipe — the taxonomy term simply carries
 
 The five catalog entities — **Tax categories**, **Tax types**, **Tax jurisdictions**, **Tax tables**, and **Tax rules** — can be imported and exported as code.
 
-**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxTable`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`, and `Version`) are never imported; `Version` is stamped by the environment and incremented on each save, so it stays an authoritative audit identity and a recipe can never regress or reuse it. An entry is matched by its `ItemId` and updated in place, or created when new:
+**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxTable`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`, and `Version`) are never imported; `Version` is stamped by the environment and incremented on each save, so it stays an authoritative audit identity and a recipe can never regress or reuse it. An entry is matched by its `ItemId` and updated in place, or created when new. Names are unique within each entity: an entry whose name another entry already uses is reported as a recipe error and not saved, the same as in the admin:
 
 ```json
 {

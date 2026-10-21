@@ -16,56 +16,78 @@
 <form method="post" class="no-multisubmit">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <div class="mb-3">
-        <label asp-for="Name" class="form-label">@T["Name"]</label>
-        <input asp-for="Name" class="form-control" maxlength="255" required />
-        <span asp-validation-for="Name" class="text-danger"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" maxlength="255" required />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="Description" class="form-label">@T["Description"]</label>
-        <input asp-for="Description" class="form-control" maxlength="500" />
-        <span class="hint">@T["Optional. Only staff see it."]</span>
+    <div class="ocat-wrapper">
+        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+        <div class="ocat-end">
+            <input asp-for="Description" class="form-control" maxlength="500" />
+            <span class="hint">@T["Optional. Only staff see it."]</span>
+        </div>
     </div>
 
     <fieldset class="mb-3">
         <legend class="h5">@T["Customers who"]</legend>
-        <span class="hint d-block mb-2">@T["Every rule you fill in has to hold. Leave them all blank for every customer who has bought."]</span>
-        <div class="row g-3">
-            <div class="col-md-4">
-                <label asp-for="LastOrderAtLeastDaysAgo" class="form-label">@T["Haven't ordered in (days)"]</label>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <span class="hint">@T["Every rule you fill in has to hold. Leave them all blank for every customer who has bought."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper">
+            <label asp-for="LastOrderAtLeastDaysAgo" class="ocat-label">@T["Haven't ordered in (days)"]</label>
+            <div class="ocat-limited">
                 <input asp-for="LastOrderAtLeastDaysAgo" type="number" min="0" class="form-control" />
                 <span class="hint">@T["Such as 90, for lapsed buyers."]</span>
             </div>
-            <div class="col-md-4">
-                <label asp-for="LastOrderWithinDays" class="form-label">@T["Ordered in the last (days)"]</label>
+        </div>
+        <div class="ocat-limited-wrapper">
+            <label asp-for="LastOrderWithinDays" class="ocat-label">@T["Ordered in the last (days)"]</label>
+            <div class="ocat-limited">
                 <input asp-for="LastOrderWithinDays" type="number" min="0" class="form-control" />
             </div>
-            <div class="col-md-4">
-                <label asp-for="FirstOrderWithinDays" class="form-label">@T["First ordered in the last (days)"]</label>
+        </div>
+        <div class="ocat-limited-wrapper">
+            <label asp-for="FirstOrderWithinDays" class="ocat-label">@T["First ordered in the last (days)"]</label>
+            <div class="ocat-limited">
                 <input asp-for="FirstOrderWithinDays" type="number" min="0" class="form-control" />
                 <span class="hint">@T["Such as 30, for new customers."]</span>
             </div>
-            <div class="col-md-3">
-                <label asp-for="MinOrders" class="form-label">@T["At least (orders)"]</label>
+        </div>
+        <div class="ocat-limited-wrapper">
+            <label asp-for="MinOrders" class="ocat-label">@T["At least (orders)"]</label>
+            <div class="ocat-limited">
                 <input asp-for="MinOrders" type="number" min="0" class="form-control" />
             </div>
-            <div class="col-md-3">
-                <label asp-for="MaxOrders" class="form-label">@T["At most (orders)"]</label>
+        </div>
+        <div class="ocat-limited-wrapper">
+            <label asp-for="MaxOrders" class="ocat-label">@T["At most (orders)"]</label>
+            <div class="ocat-limited">
                 <input asp-for="MaxOrders" type="number" min="0" class="form-control" />
             </div>
-            <div class="col-md-3">
-                <label asp-for="MinSpent" class="form-label">@T["Spent at least ({0})", Model.StoreCurrency]</label>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="MinSpent">
+            <label asp-for="MinSpent" class="ocat-label">@T["Spent at least ({0})", Model.StoreCurrency]</label>
+            <div class="ocat-limited">
                 <input asp-for="MinSpent" type="number" step="0.01" min="0" class="form-control" />
                 <span asp-validation-for="MinSpent" class="text-danger"></span>
             </div>
-            <div class="col-md-3">
-                <label asp-for="MaxSpent" class="form-label">@T["Spent at most ({0})", Model.StoreCurrency]</label>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="MaxSpent">
+            <label asp-for="MaxSpent" class="ocat-label">@T["Spent at most ({0})", Model.StoreCurrency]</label>
+            <div class="ocat-limited">
                 <input asp-for="MaxSpent" type="number" step="0.01" min="0" class="form-control" />
                 <span asp-validation-for="MaxSpent" class="text-danger"></span>
             </div>
-            <div class="col-md-3">
-                <label asp-for="Country" class="form-label">@T["Country"]</label>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="Country">
+            <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+            <div class="ocat-limited">
                 <input asp-for="Country" class="form-control" maxlength="2" placeholder="@T["Any"]" />
                 <span asp-validation-for="Country" class="text-danger"></span>
                 <span class="hint">@T["Two letters, such as DE: where their last order went."]</span>
@@ -73,8 +95,10 @@
         </div>
     </fieldset>
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
-        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        </div>
     </div>
 </form>

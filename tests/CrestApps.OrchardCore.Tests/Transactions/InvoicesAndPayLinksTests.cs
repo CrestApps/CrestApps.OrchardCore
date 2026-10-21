@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
@@ -8,9 +9,6 @@ using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -157,7 +155,7 @@ public sealed class InvoicesAndPayLinksTests
         var siteService = new Mock<ISiteService>();
         siteService.Setup(candidate => candidate.GetSiteSettingsAsync()).ReturnsAsync(site);
 
-        return new TransactionPayLinkService(new EphemeralDataProtectionProvider(), siteService.Object, new HttpContextAccessor(), Mock.Of<LinkGenerator>());
+        return new TransactionPayLinkService(SignedLinkDoubles.Tokens(), SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(TransactionsConstants.RouteNames.Pay, "/transactions/pay/")));
     }
 
     private static Mock<IFinancialDocumentNumberGenerator> CreateNumberGenerator()
@@ -196,9 +194,7 @@ public sealed class InvoicesAndPayLinksTests
         }
 
         return new DefaultTransactionReminderService(
-            notifications.Object,
-            userService.Object,
-            Mock.Of<ICustomerContactResolver>(),
+            TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,

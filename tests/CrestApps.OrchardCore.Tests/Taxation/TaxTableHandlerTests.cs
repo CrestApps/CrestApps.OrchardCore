@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Taxation.Handlers;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Moq;
@@ -256,6 +257,7 @@ public sealed class TaxTableHandlerTests
     {
         return new TaxTableHandler(
             httpContextAccessor ?? new Mock<IHttpContextAccessor>().Object,
+            new InMemoryNamedCatalog<TaxTable>(),
             clock ?? new Mock<IClock>().Object,
             new PassThroughStringLocalizer<TaxTableHandler>());
     }

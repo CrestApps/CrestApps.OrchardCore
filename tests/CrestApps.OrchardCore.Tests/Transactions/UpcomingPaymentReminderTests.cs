@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -8,7 +9,6 @@ using CrestApps.OrchardCore.Transactions.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Infrastructure;
 using OrchardCore.Notifications;
 using OrchardCore.Users;
 using OrchardCore.Users.Services;
@@ -157,9 +157,7 @@ public sealed class UpcomingPaymentReminderTests
             .ReturnsAsync(new NotificationSendResult { SuccessfulCount = 1 });
 
         return new DefaultTransactionReminderService(
-            notifications.Object,
-            userService.Object,
-            Mock.Of<ICustomerContactResolver>(),
+            TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), new ServiceCollection().BuildServiceProvider()),
             new ServiceCollection().BuildServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,

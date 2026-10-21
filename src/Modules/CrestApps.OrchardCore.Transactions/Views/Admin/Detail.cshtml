@@ -21,7 +21,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="TransactionsDetail" title="@(T["Transaction: {0}", string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title])">
+    <breadcrumb name="TransactionsDetail" title="@T["Transaction: {0}", string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"] : (object)transaction.Title]">
         <breadcrumb-item id="Transactions" action="Index" controller="Admin" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManageTransactions.Name">@T["Transactions"]</breadcrumb-item>
     </breadcrumb>
 </zone>

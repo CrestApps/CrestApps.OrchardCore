@@ -9,40 +9,45 @@
         => bytes >= 1024 * 1024 ? $"{bytes / 1024d / 1024d:0.#} MB" : $"{Math.Max(1, bytes / 1024d):0} KB";
 }
 
-<div class="mb-3" id="@listId" data-prefix="@prefix" data-upload-url="@Model.UploadUrl" data-file-url="@Model.FileUrlFormat">
-    <label class="form-label">@T["Files"]</label>
-    <ul class="list-group mb-2" data-digital-files>
-        @for (var i = 0; i < Model.Files.Count; i++)
-        {
-            var file = Model.Files[i];
-            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
-                <span>
-                    <i class="fa-regular fa-file me-1" aria-hidden="true"></i>
-                    <a href="@Model.FileUrlFormat?.Replace("__id__", file.FileId)">@file.FileName</a>
-                    <span class="text-muted small">@Size(file.Size)</span>
-                </span>
-                <span class="form-check mb-0">
-                    <input type="hidden" name="@(prefix)[@i].FileId" value="@file.FileId" />
-                    <input type="checkbox" class="form-check-input" id="@(listId)-remove-@i" name="@(prefix)[@i].Remove" value="true" />
-                    <label class="form-check-label" for="@(listId)-remove-@i">@T["Remove"]</label>
-                </span>
-            </li>
-        }
-    </ul>
-    <input type="file" id="@inputId" class="form-control" multiple />
-    <span class="hint">@T["Buyers download these after paying. They are kept privately, never in the media library, and nobody can open them without a buyer's link. Up to 1 GB each. Removing a file here doesn't take it from orders that have it."]</span>
-    <div class="text-danger small mt-1 d-none" data-digital-files-error></div>
+<div class="ocat-wrapper" id="@listId" data-prefix="@prefix" data-upload-url="@Model.UploadUrl" data-file-url="@Model.FileUrlFormat">
+    <label class="ocat-label">@T["Files"]</label>
+    <div class="ocat-end">
+        <ul class="list-group mb-2" data-digital-files>
+            @for (var i = 0; i < Model.Files.Count; i++)
+            {
+                var file = Model.Files[i];
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                    <span>
+                        <i class="fa-regular fa-file me-1" aria-hidden="true"></i>
+                        <a href="@Model.FileUrlFormat?.Replace("__id__", file.FileId)">@file.FileName</a>
+                        <span class="text-muted small">@Size(file.Size)</span>
+                    </span>
+                    <span class="form-check mb-0">
+                        <input type="hidden" name="@(prefix)[@i].FileId" value="@file.FileId" />
+                        <input type="checkbox" class="form-check-input" id="@(listId)-remove-@i" name="@(prefix)[@i].Remove" value="true" />
+                        <label class="form-check-label" for="@(listId)-remove-@i">@T["Remove"]</label>
+                    </span>
+                </li>
+            }
+        </ul>
+        <input type="file" id="@inputId" class="form-control" multiple />
+        <span class="hint">@T["Buyers download these after paying. They are kept privately, never in the media library, and nobody can open them without a buyer's link. Up to 1 GB each. Removing a file here doesn't take it from orders that have it."]</span>
+        <div class="text-danger small mt-1 d-none" data-digital-files-error></div>
+    </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label asp-for="DownloadLimit" class="form-label">@T["Downloads per buyer"]</label>
+<div class="ocat-limited-wrapper" asp-validation-class-for="DownloadLimit">
+    <label asp-for="DownloadLimit" class="ocat-label">@T["Downloads per buyer"]</label>
+    <div class="ocat-limited">
         <input asp-for="DownloadLimit" type="number" min="0" max="10000" class="form-control" placeholder="@Model.Defaults?.DownloadLimit" />
         <span asp-validation-for="DownloadLimit"></span>
         <span class="hint">@T["How many times a buyer can download each file. Blank uses the site's setting ({0}); 0 means no limit.", Model.Defaults?.DownloadLimit ?? 0]</span>
     </div>
-    <div class="col-md-6 mb-3">
-        <label asp-for="LinkLifetimeDays" class="form-label">@T["Days the links work"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="LinkLifetimeDays">
+    <label asp-for="LinkLifetimeDays" class="ocat-label">@T["Days the links work"]</label>
+    <div class="ocat-limited">
         <input asp-for="LinkLifetimeDays" type="number" min="0" max="3650" class="form-control" placeholder="@Model.Defaults?.LinkLifetimeDays" />
         <span asp-validation-for="LinkLifetimeDays"></span>
         <span class="hint">@T["How long after paying a buyer's links work. Blank uses the site's setting ({0}); 0 means they never expire.", Model.Defaults?.LinkLifetimeDays ?? 0]</span>

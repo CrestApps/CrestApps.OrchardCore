@@ -18,22 +18,25 @@ internal sealed class OrderDisputeRecorder : PaymentEventBase
 {
     private readonly IOrderStore _orderStore;
     private readonly IOrderService _orderService;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly IPaymentAttemptStore _attemptStore;
+    private readonly ICheckoutSessionStore _sessionStore;
 
     internal readonly IStringLocalizer S;
 
     public OrderDisputeRecorder(
         IOrderStore orderStore,
         IOrderService orderService,
-        IServiceProvider serviceProvider,
         IClock clock,
-        IStringLocalizer<OrderDisputeRecorder> stringLocalizer)
+        IStringLocalizer<OrderDisputeRecorder> stringLocalizer,
+        IPaymentAttemptStore attemptStore,
+        ICheckoutSessionStore sessionStore)
     {
         _orderStore = orderStore;
         _orderService = orderService;
-        _serviceProvider = serviceProvider;
         _clock = clock;
+        _attemptStore = attemptStore;
+        _sessionStore = sessionStore;
         S = stringLocalizer;
     }
 
@@ -102,14 +105,12 @@ internal sealed class OrderDisputeRecorder : PaymentEventBase
     // The dispute names the gateway's payment; the attempt that made it names the checkout, and the checkout its order.
     private async Task<Order> FindOrderAsync(string gateway, string transactionId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(transactionId) ||
-            _serviceProvider.GetService<IPaymentAttemptStore>() is not { } attempts ||
-            _serviceProvider.GetService<ICheckoutSessionStore>() is not { } sessions)
+        if (string.IsNullOrEmpty(transactionId))
         {
             return null;
         }
 
-        var found = await attempts.PageAsync(1, 1, new PaymentAttemptQuery
+        var found = await _attemptStore.PageAsync(1, 1, new PaymentAttemptQuery
         {
             ProviderKey = gateway,
             ProviderReference = transactionId,
@@ -122,7 +123,7 @@ internal sealed class OrderDisputeRecorder : PaymentEventBase
             return null;
         }
 
-        var matches = await sessions.GetManyAsync([attempt.SessionId], cancellationToken);
+        var matches = await _sessionStore.GetManyAsync([attempt.SessionId], cancellationToken);
         var session = matches.Count > 0 ? matches[0] : null;
 
         return session is not null &&

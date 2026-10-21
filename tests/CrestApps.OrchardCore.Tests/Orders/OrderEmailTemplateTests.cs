@@ -1,7 +1,5 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
-using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
-using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Orders;
 
@@ -10,14 +8,6 @@ namespace CrestApps.OrchardCore.Tests.Orders;
 /// </summary>
 public sealed class OrderEmailTemplateTests
 {
-    [Fact]
-    public async Task WithoutTemplates_AnEmailGoesAsBuilt()
-    {
-        var email = await Mock.Of<IServiceProvider>().ApplyOrderEmailTemplateAsync(OrderEmailKinds.Confirmation, new Order(), "Subject", "Text", "<p>Html</p>", cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.Equal(new OrderEmailMessage("Subject", "Text", "<p>Html</p>"), email);
-    }
-
     [Fact]
     public void ATemplate_ReadsTheOrderAsPlainValues_WithStatusesByName()
     {

@@ -1,9 +1,10 @@
 @model ClassifiedOwnViewModel
+@inject OrchardCore.Modules.IClock Clock
 
 @* A poster's own listings: where each is, renewing it, and upgrading it. *@
 
 @{
-    var now = DateTime.UtcNow;
+    var now = Clock.UtcNow;
     var culture = System.Globalization.CultureInfo.CurrentCulture;
 }
 

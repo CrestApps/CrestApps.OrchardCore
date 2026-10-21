@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Memberships.Indexes;
 using CrestApps.OrchardCore.Memberships.Models;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -33,8 +32,12 @@ internal sealed class MembershipMigrations : DataMigration
             collection: MembershipsConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<MembershipIndex>(SchemaBuilder, "IDX_MembershipIndex_User", MembershipsConstants.CollectionName, "UserId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<MembershipIndex>(SchemaBuilder, "IDX_MembershipIndex_Ends", MembershipsConstants.CollectionName, "Status", "EndsUtc");
+        await SchemaBuilder.AlterIndexTableAsync<MembershipIndex>(table =>
+        {
+            table.CreateIndex("IDX_MembershipIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_MembershipIndex_User", "UserId");
+            table.CreateIndex("IDX_MembershipIndex_Ends", "Status", "EndsUtc");
+        }, collection: MembershipsConstants.CollectionName);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(MembershipPart), part => part
             .Attachable()

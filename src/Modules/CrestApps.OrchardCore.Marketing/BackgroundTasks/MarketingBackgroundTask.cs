@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Marketing.Services;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -16,7 +16,8 @@ namespace CrestApps.OrchardCore.Marketing.BackgroundTasks;
     Schedule = "* * * * *",
     Description = "Builds customers' purchases from earlier orders, and sends campaigns in batches.",
     LockTimeout = 3_000,
-    LockExpiration = 600_000)]
+    LockExpiration = 600_000,
+    UsePipeline = true)]
 public sealed class MarketingBackgroundTask : IBackgroundTask
 {
     // Batches of each campaign a run sends, so one big campaign doesn't hold the task.
@@ -24,36 +25,29 @@ public sealed class MarketingBackgroundTask : IBackgroundTask
 
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var logger = serviceProvider.GetRequiredService<ILogger<MarketingBackgroundTask>>();
+        await serviceProvider.GetRequiredService<CustomerPurchasesService>().BackfillAsync(cancellationToken);
 
-        try
+        var baseUrl = (await serviceProvider.GetRequiredService<ISiteService>().GetSiteSettingsAsync()).BaseUrl;
+
+        // Without the site's address there's no unsubscribe link, so nothing goes out.
+        if (string.IsNullOrWhiteSpace(baseUrl))
         {
-            await serviceProvider.GetRequiredService<CustomerPurchasesService>().BackfillAsync(cancellationToken);
-
-            var baseUrl = (await serviceProvider.GetRequiredService<ISiteService>().GetSiteSettingsAsync()).BaseUrl;
-
-            // Without the site's address there's no unsubscribe link, so nothing goes out.
-            if (string.IsNullOrWhiteSpace(baseUrl))
-            {
-                return;
-            }
-
-            var campaigns = serviceProvider.GetRequiredService<CampaignService>();
-            var due = await serviceProvider.GetRequiredService<ICampaignStore>().ListDueAsync(serviceProvider.GetRequiredService<IClock>().UtcNow, cancellationToken);
-
-            foreach (var campaign in due)
-            {
-                for (var batch = 0; batch < BatchesPerRun && await campaigns.SendBatchAsync(campaign, token => UnsubscribeUrl(baseUrl, token), cancellationToken); batch++)
-                {
-                }
-            }
+            return;
         }
-        catch (Exception ex)
+
+        var linkGenerator = serviceProvider.GetRequiredService<LinkGenerator>();
+        var campaigns = serviceProvider.GetRequiredService<CampaignService>();
+        var due = await serviceProvider.GetRequiredService<ICampaignStore>().ListDueAsync(serviceProvider.GetRequiredService<IClock>().UtcNow, cancellationToken);
+
+        // The site's address holds the tenant's prefix, so the route's path goes after it as is.
+        string UnsubscribeUrl(string token)
+            => baseUrl.TrimEnd('/') + linkGenerator.GetPathByRouteValues(MarketingConstants.UnsubscribeRouteName, new { token });
+
+        foreach (var campaign in due)
         {
-            logger.LogError(ex, "An error occurred while building customers' purchases or sending campaigns.");
+            for (var batch = 0; batch < BatchesPerRun && await campaigns.SendBatchAsync(campaign, UnsubscribeUrl, cancellationToken); batch++)
+            {
+            }
         }
     }
-
-    internal static string UnsubscribeUrl(string baseUrl, string token)
-        => $"{baseUrl.TrimEnd('/')}/marketing/unsubscribe?token={Uri.EscapeDataString(token)}";
 }

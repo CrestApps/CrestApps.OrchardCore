@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
-using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -95,8 +94,8 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<CheckoutTenderMigrations>()
             .AddIndexProvider<CheckoutTenderHoldIndexProvider>();
         services.AddScoped<CheckoutCouponService>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
-        services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
+        services.AddDisplayDriver<CheckoutFlow, CouponCheckoutFlowDisplayDriver>();
+        services.AddPermissionProvider<CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();
         services.AddSiteDisplayDriver<CheckoutSettingsDisplayDriver>();
         services.AddNavigationProvider<CheckoutSettingsAdminMenu>();
@@ -120,25 +119,15 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<CheckoutMigrations>()
             .AddIndexProvider<CheckoutSessionIndexProvider>()
             .AddIndexProvider<PaymentAttemptIndexProvider>()
-            .AddIndexProvider<PaymentRefundIndexProvider>();
-
-        // Finds a person's checkouts by owner and by email, for access and erasure requests.
-        services.AddDataMigration<CheckoutSessionCustomerIndexMigrations>()
+            .AddIndexProvider<PaymentRefundIndexProvider>()
             .AddIndexProvider<CheckoutSessionCustomerIndexProvider>();
 
         services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();
         services.AddScoped<ICommercePersonalDataContributor, CouponPersonalDataContributor>();
 
-        services.Configure<PaymentSessionCacheOptions>(options =>
-        {
-            options.MaxLiveSession = TimeSpan.FromHours(2);
-        });
-
-        services.Configure<PaymentRateLimitOptions>(_ => { });
-
         // The public checkout experience: the flow chrome, the payment step, and the client resources.
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, DefaultCheckoutFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, PaymentStepCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, DefaultCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, PaymentStepCheckoutFlowDisplayDriver>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CheckoutResourceManagementOptionsConfiguration>();
     }
 

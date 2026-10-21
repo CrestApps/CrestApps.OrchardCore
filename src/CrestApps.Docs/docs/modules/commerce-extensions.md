@@ -40,6 +40,8 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | To | Implement | Lives in | See |
 | --- | --- | --- | --- |
 | React when an order is created, paid, canceled, refunded, returned or its lines change | `IOrderEventHandler` (derive from `OrderEventHandlerBase`) | Orders.Core | [Carts and orders](carts-and-orders.md) |
+| Email a customer through the store's email templates and layout, in the language they shopped in | `ICommerceEmailSender`, with `AddCommerceEmailSender()`; register the email's kind with `AddCommerceEmailKind` so the store can write its template | Orders.Core | [Carts and orders](carts-and-orders.md#commerce-emails-and-their-templates) |
+| Give the buyer what a paid order bought (files, a membership, a gift card) and take it back when the order is canceled or refunded in full | `OrderGrantHandlerBase`: implement `GrantAsync` and `RevokeAsync`, and register it as an `IOrderEventHandler`. After a partial refund the buyer keeps what they bought. | Orders.Core | [Downloads](downloads.md), [Memberships](memberships.md) |
 | Add a shipping rate, such as a carrier's | `IShippingRateProvider` | Shipping.Core | [Shipping](shipping.md) |
 | Buy labels and track parcels with a carrier | `ICarrierProvider` | Shipping.Core | [Shipping](shipping.md) |
 | React when a shipment ships or is delivered | `IShipmentEventHandler` | Shipping.Core | [Shipping](shipping.md) |
@@ -51,8 +53,11 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | --- | --- | --- | --- |
 | Pay marketplace vendors another way | `IVendorPayoutProvider` | Marketplace | [Marketplace](marketplace.md) |
 | Add a step to the store's setup guide | `IStoreSetupStep` | Abstractions | [Store setup](store-setup.md) |
+| Send a signed, time-limited link, such as one that opens an order | `SignedTokenService` to sign and read the token for a purpose, and `SiteUrlGenerator` for the route's absolute URL from the site's base URL; register both with `services.AddSignedLinks()` | CrestApps.OrchardCore.Core | [Carts and orders](carts-and-orders.md) |
+| Keep store configuration records (such as zones or tax rules) in a named catalog that recipes and deployment plans carry | `IAuditedModel` on the record; `AuditedCatalogEntryHandlerBase<T>` for its handler, which binds the recipe JSON and stamps `CreatedUtc`, `ModifiedUtc`, `OwnerId` and `Author`, so the handler only validates (check a unique name with `INamedCatalog<T>.IsNameUsedByAnotherEntryAsync`); `NamedCatalogRecipeStep<T>` for the recipe step and `NamedCatalogDeploymentSource<TStep, T>` for the deployment step, which read and write the same `{ "name": "...", "<Entries>": [ ... ] }` shape | CrestApps.OrchardCore.Core | [Taxation](taxation.md#recipes-and-deployment), [Shipping](shipping.md) |
+| Store a secret in your settings, such as a provider's API key | `ProtectSetting(purpose, value)` on `IDataProtectionProvider` to save it, and `UnprotectSettingOrDefault(purpose, value, logger, name)` to read it, which logs a warning and treats a value the site's keys can't read as not entered (`UnprotectSetting` throws instead) | CrestApps.OrchardCore.Core | [Shipping](shipping.md), [Taxation](taxation.md) |
 | Export and erase your module's records of a person | `ICommercePersonalDataContributor` | Customers.Abstractions | [Customers](customers.md) |
-| Add a page to the storefront account | An `INavigationProvider` for the `CommerceConstants.Account.MenuName` menu, and a view rendering `CommerceAccountNavigation` | Abstractions | [Commerce](commerce.md) |
+| Add a page to the storefront account | A `NamedNavigationProvider` created for the `CommerceConstants.Account.MenuName` menu, and a view rendering its content in the `CommerceAccountPage` shape | Abstractions | [Commerce](commerce.md) |
 | Add a screen under Commerce | An `AdminNavigationProvider` adding under the Commerce node | | [Commerce](commerce.md) |
 | Change how a storefront page looks | Override its shape in your theme | | [Commerce](commerce.md#theming-the-storefront) |
 
@@ -137,4 +142,4 @@ services.AddScoped<IOrderEventHandler, GiftWrapOrderHandler>();
 - **Line detail keys.** Prefix your keys with your module's name, such as `giftwrap.message`. Other handlers share the same dictionary.
 - **Products chosen on their page.** A product whose line needs details can't be added from a card. Add your part's name to `CartOptions.ChooseOnProductPageParts` so cards link to the page instead.
 - **Discounts.** A line that no discount may touch, such as a donation, sets `ExcludeFromDiscounts` in `EvaluateAsync`.
-- **Admin lists.** List records with Orchard Core's `<admin-list>` and an `AdminListContext<T>`, with a display driver for both the `SummaryAdmin` and `SummaryAdminGrid` display types, so lists follow the admin's list or grid setting.
+- **Admin lists.** List records with Orchard Core's `<admin-list>` and an `AdminListContext<T>`, with a display driver for both the `SummaryAdmin` and `SummaryAdminGrid` display types, so lists follow the admin's list or grid setting. Put the list's filter selects in its toolbar with `IShapeFactory.CreateAdminListFiltersAsync(listName, formId, filters)`, which builds the shared `CommerceAdminListFilters` shape; a theme overrides one list's filters with `CommerceAdminListFilters-{ListName}.cshtml`.

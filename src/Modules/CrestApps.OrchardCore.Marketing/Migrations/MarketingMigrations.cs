@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Marketing.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -8,7 +7,7 @@ namespace CrestApps.OrchardCore.Marketing.Migrations;
 /// <summary>
 /// Creates the indexes of customers' purchases, segments and campaigns.
 /// </summary>
-public sealed class MarketingMigrations : DataMigration
+internal sealed class MarketingMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
@@ -37,9 +36,16 @@ public sealed class MarketingMigrations : DataMigration
             collection: MarketingConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<CustomerPurchasesIndex>(SchemaBuilder, "IDX_CustomerPurchasesIndex_ItemId", MarketingConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<CustomerPurchasesIndex>(SchemaBuilder, "IDX_CustomerPurchasesIndex_LastOrder", MarketingConstants.CollectionName, "LastOrderUtc");
-        await IndexTableIndexCreation.CreateIfMissingAsync<CampaignIndex>(SchemaBuilder, "IDX_CampaignIndex_Status", MarketingConstants.CollectionName, "Status", "ScheduledUtc");
+        await SchemaBuilder.AlterIndexTableAsync<CustomerPurchasesIndex>(table =>
+        {
+            table.CreateIndex("IDX_CustomerPurchasesIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_CustomerPurchasesIndex_LastOrder", "LastOrderUtc");
+        }, collection: MarketingConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<CampaignIndex>(table => table
+            .CreateIndex("IDX_CampaignIndex_Status", "Status", "ScheduledUtc"),
+            collection: MarketingConstants.CollectionName
+        );
 
         return 1;
     }

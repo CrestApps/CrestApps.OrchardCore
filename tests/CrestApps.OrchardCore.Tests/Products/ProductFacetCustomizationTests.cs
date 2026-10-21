@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Services;
@@ -47,15 +46,6 @@ public sealed class ProductFacetCustomizationTests
         options.AddStyle("Compact");
 
         Assert.All(Enum.GetValues<ProductFacetKind>(), kind => Assert.True(options.Find("Compact").Supports(kind)));
-    }
-
-    [Fact]
-    public void AFilterSavedWithTheOldDisplayName_KeepsItsStyle()
-    {
-        var facet = JsonSerializer.Deserialize<ProductListingFacet>("""{ "Key": "color", "Display": "Swatches" }""");
-
-        Assert.Equal(ProductFacetStyles.Swatches, facet.Style);
-        Assert.DoesNotContain("Display", JsonSerializer.Serialize(facet));
     }
 
     [Theory]

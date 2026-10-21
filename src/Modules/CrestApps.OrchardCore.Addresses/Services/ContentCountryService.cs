@@ -25,8 +25,7 @@ public sealed class ContentCountryService : ICountryService
     /// <inheritdoc />
     public async ValueTask<IReadOnlyList<CountryInfo>> GetCountriesAsync()
     {
-        var indexed = await _session.QueryIndex<GeographicAreaIndex>(index =>
-                index.ContentType == AddressConstants.Country && index.Published)
+        var indexed = await _session.QueryIndex<CountryIndex>(index => index.Published)
             .ListAsync();
 
         var countries = new List<CountryInfo>();

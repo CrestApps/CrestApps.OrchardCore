@@ -31,6 +31,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
     private readonly IContentManager _contentManager;
     private readonly LinkGenerator _linkGenerator;
     private readonly CartOptions _options;
+    private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
 
@@ -42,7 +43,8 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         IContentManager contentManager,
         LinkGenerator linkGenerator,
         IOptions<CartOptions> options,
-        IStringLocalizer<AddToCartDisplayDriver> stringLocalizer)
+        IStringLocalizer<AddToCartDisplayDriver> stringLocalizer,
+        IShopperCurrency shopperCurrency)
     {
         _contentManager = contentManager;
         _linkGenerator = linkGenerator;
@@ -51,6 +53,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         _options = options.Value;
+        _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
 
@@ -115,8 +118,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
 
         // A shopper buying in another currency sees the product's prices there: those it lists in that currency, or else
         // its own converted. What they pick is priced again when it's added, so these are only for showing.
-        var shopperCurrency = _httpContextAccessor.HttpContext?.RequestServices.GetService<IShopperCurrency>();
-        var shownCurrency = shopperCurrency is null ? null : await shopperCurrency.GetCurrencyAsync();
+        var shownCurrency = await _shopperCurrency.GetCurrencyAsync();
 
         if (!string.IsNullOrEmpty(shownCurrency) && prices.Count > 0)
         {
@@ -132,7 +134,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
 
                 foreach (var price in prices)
                 {
-                    var (amount, currency) = await shopperCurrency.ToShopperAsync(price.Amount, price.Currency);
+                    var (amount, currency) = await _shopperCurrency.ToShopperAsync(price.Amount, price.Currency);
 
                     converted.Add(new ProductPrice
                     {
@@ -167,7 +169,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         // What an add-on adds, in the shopper's currency.
         if (!string.IsNullOrEmpty(shownCurrency) && !string.IsNullOrEmpty(product.Currency))
         {
-            currencyShown = (await shopperCurrency.ToShopperAsync(0m, product.Currency)).Currency;
+            currencyShown = (await _shopperCurrency.ToShopperAsync(0m, product.Currency)).Currency;
 
             var shownAddOns = new List<ProductAddOn>();
 
@@ -179,7 +181,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                     Label = addOn.Label,
                     Kind = addOn.Kind,
                     // A share of the price is a percent, not money.
-                    Price = addOn.PriceBasis == ProductAddOnPriceBasis.PercentOfPrice ? addOn.Price : (await shopperCurrency.ToShopperAsync(addOn.Price, product.Currency, isPrice: false)).Amount,
+                    Price = addOn.PriceBasis == ProductAddOnPriceBasis.PercentOfPrice ? addOn.Price : (await _shopperCurrency.ToShopperAsync(addOn.Price, product.Currency, isPrice: false)).Amount,
                     PriceBasis = addOn.PriceBasis,
                     Required = addOn.Required,
                 });
@@ -195,7 +197,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         {
             if (ProductSale.GetPrice(contentItem.TryGet<ProductPart>(out var owner) ? owner : null, variant, _clock.UtcNow) is { } amount && !string.IsNullOrEmpty(product.Currency))
             {
-                var (shownAmount, currency) = await shopperCurrency.ToShopperAsync(amount, product.Currency);
+                var (shownAmount, currency) = await _shopperCurrency.ToShopperAsync(amount, product.Currency);
 
                 variantPrices[variant.VariantId] = ProductPriceFormatter.Format(shownAmount, currency);
             }

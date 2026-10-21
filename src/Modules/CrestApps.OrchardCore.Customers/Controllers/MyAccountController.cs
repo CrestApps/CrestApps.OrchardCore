@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
-using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Customers.Controllers;
 
@@ -19,20 +18,14 @@ namespace CrestApps.OrchardCore.Customers.Controllers;
 public sealed class MyAccountController : Controller
 {
     private readonly CustomerAccountPages _pages;
-    private readonly CustomerAddressBook _addressBook;
-    private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
 
     public MyAccountController(
         CustomerAccountPages pages,
-        CustomerAddressBook addressBook,
-        INotifier notifier,
         IHtmlLocalizer<MyAccountController> htmlLocalizer)
     {
         _pages = pages;
-        _addressBook = addressBook;
-        _notifier = notifier;
         H = htmlLocalizer;
     }
 
@@ -61,19 +54,14 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
-        _pages.Validate(model, ModelState);
+        var result = await _pages.SaveProfileAsync(customer, model, ModelState, HttpContext.RequestAborted);
 
-        if (!ModelState.IsValid)
+        if (result == CustomerAccountSaveResult.Invalid)
         {
             return View(await _pages.BuildAccountAsync(customer, model));
         }
 
-        CustomerAccountPages.Apply(customer, model);
-
-        if (await TrySaveAsync(customer))
-        {
-            await _notifier.SuccessAsync(H["Your details were saved."]);
-        }
+        await _pages.NotifyAsync(result, H["Your details were saved."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -88,10 +76,7 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
-        var model = await _addressBook.BuildEditorAsync(customer, null);
-        model.IsOwn = true;
-
-        return View("AddressEdit", model);
+        return View("AddressEdit", await _pages.BuildAddressEditorAsync(customer, null));
     }
 
     [HttpPost]
@@ -117,10 +102,7 @@ public sealed class MyAccountController : Controller
             return NotFound();
         }
 
-        var model = await _addressBook.BuildEditorAsync(customer, address);
-        model.IsOwn = true;
-
-        return View(model);
+        return View(await _pages.BuildAddressEditorAsync(customer, address));
     }
 
     [HttpPost]
@@ -140,15 +122,14 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
-        if (!customer.RemoveAddress(addressId))
+        var result = await _pages.DeleteAddressAsync(customer, addressId, HttpContext.RequestAborted);
+
+        if (result == CustomerAccountSaveResult.NotFound)
         {
             return NotFound();
         }
 
-        if (await TrySaveAsync(customer))
-        {
-            await _notifier.SuccessAsync(H["The address was deleted."]);
-        }
+        await _pages.NotifyAsync(result, H["The address was deleted."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -162,45 +143,23 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
-        var address = customer.FindAddress(addressId);
+        var (result, entry) = await _pages.SaveAddressAsync(customer, addressId, model, ModelState, HttpContext.RequestAborted);
 
-        if (addressId is not null && address is null)
+        if (result == CustomerAccountSaveResult.NotFound)
         {
             return NotFound();
         }
 
-        var value = await _addressBook.ValidateAsync(customer, model, address is null, ModelState);
-
-        if (value is null)
+        if (result == CustomerAccountSaveResult.Invalid)
         {
-            var invalid = await _addressBook.BuildEditorAsync(customer, address, model);
-            invalid.IsOwn = true;
-
-            return View("AddressEdit", invalid);
+            return View("AddressEdit", await _pages.BuildAddressEditorAsync(customer, entry, model));
         }
 
-        CustomerAddressBook.Apply(customer, address, model, value);
-
-        if (await TrySaveAsync(customer))
-        {
-            await _notifier.SuccessAsync(H["The address was saved."]);
-        }
+        await _pages.NotifyAsync(result, H["The address was saved."]);
 
         return RedirectToAction(nameof(Index));
     }
 
     private Task<Customer> GetCustomerAsync()
         => _pages.GetCustomerAsync(User, HttpContext.RequestAborted);
-
-    private async Task<bool> TrySaveAsync(Customer customer)
-    {
-        if (await _pages.TrySaveAsync(customer, HttpContext.RequestAborted))
-        {
-            return true;
-        }
-
-        await _notifier.ErrorAsync(H["Your details were changed somewhere else at the same time. Your change was not saved; try again."]);
-
-        return false;
-    }
 }

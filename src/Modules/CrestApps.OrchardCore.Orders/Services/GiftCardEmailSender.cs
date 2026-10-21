@@ -4,10 +4,8 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Orders.Services;
@@ -17,27 +15,30 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// </summary>
 public sealed class GiftCardEmailSender
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly HtmlEncoder _encoder;
-    private readonly ILogger _logger;
+    private readonly IOrderStore _orderStore;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
     public GiftCardEmailSender(
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
         HtmlEncoder encoder,
-        ILogger<GiftCardEmailSender> logger,
-        IStringLocalizer<GiftCardEmailSender> stringLocalizer)
+        IStringLocalizer<GiftCardEmailSender> stringLocalizer,
+        IOrderStore orderStore,
+        ILocalClock localClock)
     {
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
         _encoder = encoder;
-        _logger = logger;
+        _orderStore = orderStore;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -49,15 +50,26 @@ public sealed class GiftCardEmailSender
     {
         ArgumentNullException.ThrowIfNull(card);
 
-        if (string.IsNullOrWhiteSpace(card.RecipientEmail) || _serviceProvider.GetService<IEmailService>() is not { } emailService)
+        if (string.IsNullOrWhiteSpace(card.RecipientEmail) || !_emailSender.CanSend)
         {
             return false;
         }
 
         // Written in the language the card was bought in.
-        var order = !string.IsNullOrEmpty(card.OrderId) && _serviceProvider.GetService<IOrderStore>() is { } orders ? await orders.FindByIdAsync(card.OrderId, cancellationToken) : null;
-        using var language = OrderCulture.Use(order?.Culture);
+        var order = string.IsNullOrEmpty(card.OrderId) ? null : await _orderStore.FindByIdAsync(card.OrderId, cancellationToken);
 
+        return await _emailSender.SendAsync(new CommerceEmail
+        {
+            Kind = OrderEmailKinds.GiftCard,
+            To = card.RecipientEmail,
+            Order = order,
+            Culture = order?.Culture,
+            Reference = card.ItemId,
+        }, _ => BuildAsync(card, message), cancellationToken);
+    }
+
+    private async Task<CommerceEmailContent> BuildAsync(GiftCard card, string message)
+    {
         var site = await _siteService.GetSiteSettingsAsync();
         var request = _httpContextAccessor.HttpContext?.Request;
         var storeUrl = request is null ? null : $"{request.Scheme}://{request.Host}{request.PathBase}/";
@@ -68,7 +80,7 @@ public sealed class GiftCardEmailSender
         var intro = S["You've been given a gift card worth {0} to spend at {1}.", value, site.SiteName].Value;
         var howTo = S["At checkout, enter the code under Gift card and click Apply. It pays toward your order, and what's left stays on the card for next time."].Value;
         var expires = card.ExpiresUtc.HasValue
-            ? S["It can be used until {0:d}.", (await _serviceProvider.GetRequiredService<global::OrchardCore.Modules.ILocalClock>().ConvertToLocalAsync(DateTime.SpecifyKind(card.ExpiresUtc.Value, DateTimeKind.Utc))).DateTime].Value
+            ? S["It can be used until {0:d}.", (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(card.ExpiresUtc.Value, DateTimeKind.Utc))).DateTime].Value
             : null;
 
         var text = new StringBuilder()
@@ -122,27 +134,18 @@ public sealed class GiftCardEmailSender
             html.Append("<p><a href=\"").Append(_encoder.Encode(storeUrl)).Append("\">").Append(_encoder.Encode(S["Shop at {0}", site.SiteName].Value)).Append("</a></p>");
         }
 
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.GiftCard, order, subject, text.ToString(), html.ToString(), new Dictionary<string, string>
+        return new CommerceEmailContent
         {
-            ["Code"] = card.Code,
-            ["Amount"] = value,
-            ["RecipientName"] = card.RecipientName,
-            ["Message"] = message,
-        }, cancellationToken);
-
-        var result = await emailService.SendAsync(new MailMessage
-        {
-            To = card.RecipientEmail,
-            Subject = email.Subject,
-            TextBody = email.Text,
-            HtmlBody = email.Html,
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("Gift card '{GiftCardId}' couldn't be emailed.", card.ItemId);
-        }
-
-        return result.Succeeded;
+            Subject = subject,
+            Text = text.ToString(),
+            Html = html.ToString(),
+            Values = new Dictionary<string, string>
+            {
+                ["Code"] = card.Code,
+                ["Amount"] = value,
+                ["RecipientName"] = card.RecipientName,
+                ["Message"] = message,
+            },
+        };
     }
 }

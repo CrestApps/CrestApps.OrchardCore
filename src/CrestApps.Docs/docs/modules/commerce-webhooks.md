@@ -42,15 +42,21 @@ public interface ICommerceWebhookPublisher
 
 `data` is serialized with `JsonSerializerOptions.Web` (camelCase). The event id is `evt_` and a new id, unless the caller passes one to `PublishAsync(eventName, data, eventId)`: an event that may be raised twice for the same thing passes a stable id, so receivers drop the repeat. A new delivery's `NextAttemptUtc` is a minute away (`Backoff[0]`), so the background task leaves it to the first send. It then adds a `ShellScope` deferred task that, after the request's work is committed, sends those deliveries in a scope of its own, so a slow receiver never holds up the request. An error while queuing is logged and swallowed: a webhook must never fail the order that raised it.
 
-A module offers an event to the admin's event picker with `AddCommerceWebhookEvent(name, displayName, group)`, and publishes it with the publisher, resolved with `GetService` so it runs without the feature:
+A module offers an event to the admin's event picker with `AddCommerceWebhookEvent(name, displayName, group)` and publishes it from a handler that takes the publisher in its constructor. Both are registered in a startup behind `[RequireFeatures(CommerceConstants.Features.Webhooks)]`, so nothing is published, and no publisher is needed, while the feature is off:
 
 ```csharp
-services.AddCommerceWebhookEvent("subscription.renewed", "Subscription renewed", "Subscriptions");
-
-if (serviceProvider.GetService<ICommerceWebhookPublisher>() is { } publisher)
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
 {
-    await publisher.PublishAsync("subscription.renewed", new { subscription = ToApi(subscription) }, cancellationToken);
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISubscriptionLifecycleHandler, SubscriptionWebhookHandler>();
+        services.AddCommerceWebhookEvent("subscription.renewed", "Subscription renewed", "Subscriptions");
+    }
 }
+
+// In SubscriptionWebhookHandler, which takes ICommerceWebhookPublisher in its constructor:
+await _publisher.PublishAsync("subscription.renewed", new { subscription = ToApi(subscription) }, cancellationToken);
 ```
 
 Send the commerce API's shapes in `data` where there is one, so a receiver reads one format.
@@ -65,10 +71,10 @@ Send the commerce API's shapes in `data` where there is one, so a receiver reads
 | `order.paid` | Orders, `OrderWebhookEventHandler.PaidAsync` | `order` |
 | `order.canceled` | Orders, `OrderWebhookEventHandler.CanceledAsync`, for every `OrderCancelReason` but `Replaced` | `order`, `reason` (camelCase `OrderCancelReason`) |
 | `order.refunded` | Orders, `OrderWebhookEventHandler.RefundedAsync`, once per refund | `order`, `refund` (`ApiOrderRefund`) |
-| `customer.created` | Customers, `WebhookCustomerService` (decorating `ICustomerService`: `CreateGuestAsync` and a new `GetOrCreateForUserAsync`) and **Add customer** in the admin, with the id `evt_customer-created_` and the customer's id | `customer` (`ApiCustomer`) |
+| `customer.created` | Customers, `CustomerWebhookHandler` (an `ICustomerHandler` that `CustomerStore.CreateAsync` runs for every new customer: a guest's order, an account's first customer record, **Add customer** in the admin and the `Customers` recipe step), with the id `evt_customer-created_` and the customer's id | `customer` (`ApiCustomer`) |
 | `shipment.shipped` | Shipping, `ShipmentWebhookHandler.ShippedAsync` | `shipment` (`ApiShipment`), `orderNumber`, `customerEmail` |
 | `shipment.delivered` | Shipping, `ShipmentWebhookHandler.DeliveredAsync` | the same |
-| `stock.changed` | Inventory, `StockWebhookObserver` (an `IStockLevelObserver`): after the unit of work commits, one event per stock item whose total `Available` differs from before its first change | `stock` (`ApiStockItem`), `previousAvailable` |
+| `stock.changed` | Inventory, `StockWebhookHandler.AvailableChangedAsync` (an `IStockLevelHandler`): after the unit of work commits, one event per stock item whose total `Available` differs from before its first change | `stock` (`ApiStockItem`), `previousAvailable` |
 | `stock.low` | Inventory, `StockWebhookHandler` (an `IStockLevelHandler`), when `RanLow` and not `SoldOut` | `stock`, `previousAvailable` |
 | `stock.sold-out` | Inventory, `StockWebhookHandler`, when `SoldOut` | `stock`, `previousAvailable` |
 | `webhook.ping` | The admin's **Send a test event**, to one subscription only | `webhookId`, `name` |

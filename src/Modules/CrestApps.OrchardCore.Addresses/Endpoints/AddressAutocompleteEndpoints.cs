@@ -1,16 +1,14 @@
 using System.Globalization;
-using System.Net;
-using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Addresses.Core.Autocomplete;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace CrestApps.OrchardCore.Addresses.Endpoints;
 
 /// <summary>
 /// Address suggestions for the address editor: addresses for what was typed, and the parts of the one picked. Anyone
-/// filling in an address may ask, so each visitor is held to a number of requests a minute: each one is a call the
-/// store pays for.
+/// filling in an address may ask, and each one is a call the store pays for, so both endpoints are in the
+/// <see cref="AddressConstants.AutocompleteRateLimitGroup"/> rate-limit group, which holds each visitor to
+/// <see cref="RequestsPerMinute"/> requests a minute when Orchard Core's Rate Limits feature is on.
 /// </summary>
 internal static class AddressAutocompleteEndpoints
 {
@@ -25,18 +23,13 @@ internal static class AddressAutocompleteEndpoints
 
     private const int MaximumText = 120;
 
-    public static async Task<IResult> SuggestAsync(string q, string country, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers, IMemoryCache cache)
+    public static async Task<IResult> SuggestAsync(string q, string country, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers)
     {
         var text = q?.Trim();
 
         if (string.IsNullOrEmpty(text) || text.Length < MinimumText || text.Length > MaximumText)
         {
             return Results.Json(Array.Empty<AddressSuggestion>());
-        }
-
-        if (!Allow(cache, httpContext.Connection.RemoteIpAddress))
-        {
-            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         if (await providers.GetAvailableAsync(httpContext.RequestAborted) is not { } provider)
@@ -55,16 +48,11 @@ internal static class AddressAutocompleteEndpoints
         return Results.Json(suggestions.Select(suggestion => new { id = suggestion.Id, text = suggestion.Text }));
     }
 
-    public static async Task<IResult> ResolveAsync(string id, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers, IMemoryCache cache)
+    public static async Task<IResult> ResolveAsync(string id, string session, HttpContext httpContext, IEnumerable<IAddressAutocompleteProvider> providers)
     {
         if (string.IsNullOrWhiteSpace(id) || id.Length > 512)
         {
             return Results.NotFound();
-        }
-
-        if (!Allow(cache, httpContext.Connection.RemoteIpAddress))
-        {
-            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         if (await providers.GetAvailableAsync(httpContext.RequestAborted) is not { } provider ||
@@ -83,20 +71,6 @@ internal static class AddressAutocompleteEndpoints
             postalCode = address.PostalCode,
             country = address.Country,
         });
-    }
-
-    // A visitor's requests this minute, counted by their address.
-    internal static bool Allow(IMemoryCache cache, IPAddress address)
-    {
-        var key = $"address-autocomplete:{address?.ToString() ?? "unknown"}:{DateTime.UtcNow:yyyyMMddHHmm}";
-        var count = cache.GetOrCreate(key, entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
-
-            return new StrongBox<int>();
-        });
-
-        return Interlocked.Increment(ref count.Value) <= RequestsPerMinute;
     }
 
     private static bool IsCountryCode(string value)

@@ -2,7 +2,6 @@ using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Carts.Core;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore;
 using OrchardCore.Data.Migration;
@@ -54,7 +53,7 @@ public sealed class WishlistIndexProvider : IndexProvider<Wishlist>
 /// <summary>
 /// Creates the index of wishlists.
 /// </summary>
-public sealed class WishlistMigrations : DataMigration
+internal sealed class WishlistMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
@@ -64,7 +63,10 @@ public sealed class WishlistMigrations : DataMigration
             collection: CartConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<WishlistIndex>(SchemaBuilder, "IDX_WishlistIndex_UserId", CartConstants.CollectionName, "UserId");
+        await SchemaBuilder.AlterIndexTableAsync<WishlistIndex>(table => table
+            .CreateIndex("IDX_WishlistIndex_UserId", "UserId"),
+            collection: CartConstants.CollectionName
+        );
 
         return 1;
     }

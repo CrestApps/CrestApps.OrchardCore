@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Inventory.Endpoints;
 
@@ -12,13 +15,17 @@ namespace CrestApps.OrchardCore.Inventory.Endpoints;
 /// </summary>
 public static class StockItemSearchEndpoints
 {
+    public const string RouteName = "CrestApps.Inventory.StockItemSearch";
+
     private const int MaxResults = 50;
 
     public static IEndpointRouteBuilder AddStockItemSearchEndpoint(this IEndpointRouteBuilder builder)
     {
-        builder.MapGet("Admin/api/crestapps/inventory/stock-items/search", SearchAsync)
+        var adminUrlPrefix = builder.ServiceProvider.GetRequiredService<IOptions<AdminOptions>>().Value.AdminUrlPrefix;
+
+        builder.MapGet($"{adminUrlPrefix}/api/crestapps/inventory/stock-items/search", SearchAsync)
             .RequireAuthorization()
-            .WithName("CrestApps.Inventory.StockItemSearch");
+            .WithName(RouteName);
 
         return builder;
     }

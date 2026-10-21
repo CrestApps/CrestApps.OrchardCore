@@ -87,7 +87,7 @@ public sealed class PriceListTests
         });
 
         var resolver = new DefaultPriceResolver(
-            new DefaultProductSnapshotResolver(CreateContentDefinitionManager()),
+            new DefaultProductSnapshotResolver(CreateContentDefinitionManager(), new TestClock(DateTime.UtcNow)),
             new TestClock(new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc)),
             NullLogger<DefaultPriceResolver>.Instance,
             new HttpContextAccessor(),

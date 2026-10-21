@@ -7,22 +7,18 @@ namespace CrestApps.OrchardCore.Customers.Navigation;
 /// <summary>
 /// Adds the customer's addresses and details to the storefront account.
 /// </summary>
-public sealed class CustomersAccountMenu : INavigationProvider
+public sealed class CustomersAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public CustomersAccountMenu(IStringLocalizer<CustomersAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder
             .Add(S["Addresses"], "50", addresses => addresses
                 .Id("account-addresses")

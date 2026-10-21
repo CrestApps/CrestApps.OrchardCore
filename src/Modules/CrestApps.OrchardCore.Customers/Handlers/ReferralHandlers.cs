@@ -53,23 +53,28 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly IOrderStore _orderStore;
 
     internal readonly IStringLocalizer S;
 
-    // The order services raise the events this handles, so they're resolved when an event comes, not injected.
+    // The order services raise the events this handles, so they're resolved when an event comes, not injected. The
+    // checkout session store is one of them: it runs the checkout handlers, and the order's checkout handler needs the
+    // order service, which is built with this handler.
     public ReferralOrderEventHandler(
         IReferralStore store,
         ICustomerStore customerStore,
         ISiteService siteService,
         IServiceProvider serviceProvider,
         IClock clock,
-        IStringLocalizer<ReferralOrderEventHandler> stringLocalizer)
+        IStringLocalizer<ReferralOrderEventHandler> stringLocalizer,
+        IOrderStore orderStore)
     {
         _store = store;
         _customerStore = customerStore;
         _siteService = siteService;
         _serviceProvider = serviceProvider;
         _clock = clock;
+        _orderStore = orderStore;
         S = stringLocalizer;
     }
 
@@ -79,18 +84,14 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
 
         // The referrer is rewarded once the order is saved, in a scope of their own: a reward changes a balance under
         // its own lock and commits, which inside a checkout's completion would commit the checkout halfway.
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
-            .GetServices<IOrderEventHandler>()
-            .OfType<ReferralOrderEventHandler>()
-            .First()
-            .RewardReferrerAsync(orderId));
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ReferralOrderEventHandler>().RewardReferrerAsync(orderId));
 
         return Task.CompletedTask;
     }
 
     internal async Task RewardReferrerAsync(string orderId, CancellationToken cancellationToken = default)
     {
-        if (await _serviceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
+        if (await _orderStore.FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
         {
             return;
         }
@@ -214,8 +215,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
 
     private async Task<bool> HasBoughtBeforeAsync(Order order, string email, CancellationToken cancellationToken)
     {
-        var orders = _serviceProvider.GetRequiredService<IOrderStore>();
-        var (count, _) = await orders.PageAsync(new OrderQuery
+        var (count, _) = await _orderStore.PageAsync(new OrderQuery
         {
             UserId = string.IsNullOrEmpty(order.UserId) ? null : order.UserId,
             CustomerEmail = string.IsNullOrEmpty(order.UserId) ? email : null,

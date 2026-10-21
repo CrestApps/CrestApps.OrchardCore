@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
-using CrestApps.OrchardCore.Checkout.Core.Migrations;
+using CrestApps.OrchardCore.Checkout.Migrations;
 using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -71,7 +71,7 @@ public sealed class CheckoutSessionStoreSqliteTests
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-        var migration = new CheckoutMigrations(session) { SchemaBuilder = schemaBuilder };
+        var migration = new CheckoutMigrations { SchemaBuilder = schemaBuilder };
         await migration.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

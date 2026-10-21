@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -81,9 +82,7 @@ public sealed class DefaultTransactionReminderServiceTests
         var contactResolver = new Mock<ICustomerContactResolver>(MockBehavior.Strict);
 
         var service = new DefaultTransactionReminderService(
-            notificationService.Object,
-            userService.Object,
-            contactResolver.Object,
+            TestCustomerOwnerNotifier.Create(notificationService.Object, userService.Object, contactResolver.Object, EmptyServiceProvider()),
             EmptyServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,
@@ -120,9 +119,7 @@ public sealed class DefaultTransactionReminderServiceTests
             .ReturnsAsync((CustomerOwner _, ICustomerContact guest, CancellationToken _) => guest);
 
         var service = new DefaultTransactionReminderService(
-            new Mock<INotificationService>(MockBehavior.Strict).Object,
-            new Mock<IUserService>(MockBehavior.Strict).Object,
-            contactResolver.Object,
+            TestCustomerOwnerNotifier.Create(new Mock<INotificationService>(MockBehavior.Strict).Object, new Mock<IUserService>(MockBehavior.Strict).Object, contactResolver.Object, ServiceProviderWithEmail(emailService.Object)),
             ServiceProviderWithEmail(emailService.Object),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,
@@ -153,9 +150,7 @@ public sealed class DefaultTransactionReminderServiceTests
             .ReturnsAsync((CustomerOwner _, ICustomerContact guest, CancellationToken _) => guest);
 
         var service = new DefaultTransactionReminderService(
-            new Mock<INotificationService>(MockBehavior.Strict).Object,
-            new Mock<IUserService>(MockBehavior.Strict).Object,
-            contactResolver.Object,
+            TestCustomerOwnerNotifier.Create(new Mock<INotificationService>(MockBehavior.Strict).Object, new Mock<IUserService>(MockBehavior.Strict).Object, contactResolver.Object, EmptyServiceProvider()),
             EmptyServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,
@@ -197,9 +192,7 @@ public sealed class DefaultTransactionReminderServiceTests
             .ReturnsAsync(ownerFound ? Mock.Of<IUser>() : null);
 
         return new DefaultTransactionReminderService(
-            notificationService.Object,
-            userService.Object,
-            new Mock<ICustomerContactResolver>().Object,
+            TestCustomerOwnerNotifier.Create(notificationService.Object, userService.Object, new Mock<ICustomerContactResolver>().Object, EmptyServiceProvider()),
             EmptyServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,

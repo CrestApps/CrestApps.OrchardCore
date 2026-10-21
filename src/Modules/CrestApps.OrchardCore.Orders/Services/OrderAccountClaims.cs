@@ -1,5 +1,4 @@
-using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Modules;
+using CrestApps.OrchardCore.Core.Services;
 
 namespace CrestApps.OrchardCore.Orders.Services;
 
@@ -9,37 +8,23 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// </summary>
 public sealed class OrderAccountClaims
 {
+    private const string ProtectionPurpose = "CrestApps.OrchardCore.Orders.AccountClaim";
+
     private static readonly TimeSpan _lifetime = TimeSpan.FromHours(2);
 
-    private readonly ITimeLimitedDataProtector _protector;
-    private readonly IClock _clock;
+    private readonly SignedTokenService _signedTokenService;
 
-    public OrderAccountClaims(IDataProtectionProvider dataProtectionProvider, IClock clock)
+    public OrderAccountClaims(SignedTokenService signedTokenService)
     {
-        _protector = dataProtectionProvider.CreateProtector("CrestApps.OrchardCore.Orders.AccountClaim").ToTimeLimitedDataProtector();
-        _clock = clock;
+        _signedTokenService = signedTokenService;
     }
 
     public string Create(string orderId)
-        => _protector.Protect(orderId, _clock.UtcNow + _lifetime);
+        => _signedTokenService.Protect(ProtectionPurpose, orderId, _lifetime);
 
     /// <summary>
     /// Returns the order id the token names, or <see langword="null"/> when it is altered or expired.
     /// </summary>
     public string Read(string token)
-    {
-        if (string.IsNullOrEmpty(token))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _protector.Unprotect(token, out var expires) is { Length: > 0 } orderId && expires > _clock.UtcNow ? orderId : null;
-        }
-        catch (System.Security.Cryptography.CryptographicException)
-        {
-            return null;
-        }
-    }
+        => _signedTokenService.Unprotect(ProtectionPurpose, token);
 }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -28,7 +29,6 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Handlers;
 
@@ -44,9 +44,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomerIndexProvider>();
 
         services.AddScoped<ICustomerStore, CustomerStore>();
-        services.AddScoped<DefaultCustomerService>();
-        services.AddScoped<ICustomerService>(serviceProvider => new WebhookCustomerService(serviceProvider.GetRequiredService<DefaultCustomerService>(), serviceProvider));
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
+        services.AddScoped<ICustomerService, DefaultCustomerService>();
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
@@ -78,7 +76,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<DefaultCustomerContactResolver>();
         services.Replace(ServiceDescriptor.Scoped<ICustomerContactResolver, CustomerRecordContactResolver>());
 
-        services.AddScoped<IPermissionProvider, CustomerPermissionsProvider>();
+        services.AddPermissionProvider<CustomerPermissionsProvider>();
         services.AddNavigationProvider<CustomersAdminMenu>();
         services.AddNavigationProvider<CustomersAccountMenu>();
         services.AddDisplayDriver<Customer, CustomerDisplayDriver>();
@@ -101,7 +99,7 @@ public sealed class OrdersStartup : StartupBase
         services.AddScoped<OrderAnonymizer>();
         services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
         services.AddScoped<CustomerContactStepService>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
     }
 }
@@ -118,7 +116,7 @@ public sealed class CheckoutDetailsStartup : StartupBase
         services.AddDataMigration<CheckoutDetailsMigrations>();
         services.AddScoped<CheckoutDetailsForm>();
         services.AddScoped<ICheckoutHandler, CheckoutDetailsCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CheckoutDetailsCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, CheckoutDetailsCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Order, OrderCheckoutDetailsDisplayDriver>();
     }
 }
@@ -138,7 +136,7 @@ public sealed class StoreCreditStartup : StartupBase
         services.AddScoped<StoreCreditTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
         services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, StoreCreditCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, StoreCreditCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerStoreCreditDisplayDriver>();
         services.AddNavigationProvider<StoreCreditAccountMenu>();
     }
@@ -158,8 +156,9 @@ public sealed class LoyaltyStartup : StartupBase
         services.AddScoped<LoyaltyService>();
         services.AddScoped<LoyaltyTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyTenderProvider>());
-        services.AddScoped<Orders.Core.Services.IOrderEventHandler, LoyaltyOrderEventHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, LoyaltyCheckoutFlowDisplayDriver>();
+        services.AddScoped<LoyaltyOrderEventHandler>();
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyOrderEventHandler>());
+        services.AddDisplayDriver<CheckoutFlow, LoyaltyCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerLoyaltyDisplayDriver>();
         services.AddSiteDisplayDriver<LoyaltySettingsDisplayDriver>();
         services.AddSiteSettingsPermission(CustomersConstants.LoyaltySettingsGroupId, CustomerPermissions.ManageCustomers);
@@ -181,7 +180,8 @@ public sealed class ReferralsStartup : StartupBase
         services.AddScoped<IReferralStore, ReferralStore>();
         services.AddScoped<ReferralService>();
         services.AddScoped<ICheckoutHandler, ReferralCheckoutHandler>();
-        services.AddScoped<Orders.Core.Services.IOrderEventHandler, ReferralOrderEventHandler>();
+        services.AddScoped<ReferralOrderEventHandler>();
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler>(serviceProvider => serviceProvider.GetRequiredService<ReferralOrderEventHandler>());
         services.AddSiteDisplayDriver<ReferralSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<ReferralAccountMenu>();
@@ -220,5 +220,18 @@ public sealed class AccountApiStartup : StartupBase
     {
         routes.MapCustomerAccountApi();
         routes.MapCustomerAdminApi();
+    }
+}
+
+/// <summary>
+/// Tells webhooks about new customers when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ICustomerHandler, CustomerWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
     }
 }

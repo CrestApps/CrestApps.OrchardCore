@@ -2,24 +2,30 @@
 
 <fieldset class="mb-3">
     <legend class="h6">@T["Shopping feeds"]</legend>
-    <div class="row g-3">
-        <div class="col-md-4">
-            <label asp-for="Brand" class="form-label">@T["Brand"]</label>
+    <div class="ocat-wrapper">
+        <label asp-for="Brand" class="ocat-label">@T["Brand"]</label>
+        <div class="ocat-end">
             <input asp-for="Brand" class="form-control" maxlength="70" />
         </div>
-        <div class="col-md-4">
-            <label asp-for="Gtin" class="form-label">@T["GTIN"]</label>
+    </div>
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Gtin">
+        <label asp-for="Gtin" class="ocat-label">@T["GTIN"]</label>
+        <div class="ocat-limited">
             <input asp-for="Gtin" class="form-control" maxlength="14" inputmode="numeric" />
             <span asp-validation-for="Gtin" class="text-danger"></span>
             <span class="hint">@T["The barcode's number: UPC, EAN or ISBN."]</span>
         </div>
-        <div class="col-md-4">
-            <label asp-for="Mpn" class="form-label">@T["MPN"]</label>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Mpn" class="ocat-label">@T["MPN"]</label>
+        <div class="ocat-end">
             <input asp-for="Mpn" class="form-control" maxlength="70" />
             <span class="hint">@T["The maker's part number."]</span>
         </div>
-        <div class="col-md-4">
-            <label asp-for="Condition" class="form-label">@T["Condition"]</label>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Condition" class="ocat-label">@T["Condition"]</label>
+        <div class="ocat-end">
             <select asp-for="Condition" class="form-select">
                 <option value="">@T["The store's default"]</option>
                 <option value="new">@T["New"]</option>
@@ -27,13 +33,19 @@
                 <option value="used">@T["Used"]</option>
             </select>
         </div>
-        <div class="col-md-8">
-            <label asp-for="GoogleProductCategory" class="form-label">@T["Google product category"]</label>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="GoogleProductCategory" class="ocat-label">@T["Google product category"]</label>
+        <div class="ocat-end">
             <input asp-for="GoogleProductCategory" class="form-control" maxlength="250" />
         </div>
     </div>
-    <div class="form-check mt-2">
-        <input asp-for="ExcludeFromFeeds" type="checkbox" class="form-check-input" />
-        <label asp-for="ExcludeFromFeeds" class="form-check-label">@T["Leave it out of shopping feeds"]</label>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="ExcludeFromFeeds" type="checkbox" class="form-check-input" />
+                <label asp-for="ExcludeFromFeeds" class="form-check-label">@T["Leave it out of shopping feeds"]</label>
+            </div>
+        </div>
     </div>
 </fieldset>

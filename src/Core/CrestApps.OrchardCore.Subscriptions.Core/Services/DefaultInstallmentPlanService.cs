@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Locking;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
@@ -14,15 +15,12 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using OrchardCore.Notifications;
-using OrchardCore.Notifications.Models;
 using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
@@ -62,7 +60,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     private readonly IDistributedLock _distributedLock;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICustomerOwnerNotifier _ownerNotifier;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -87,7 +85,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         IDistributedLock distributedLock,
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
-        IServiceProvider serviceProvider,
+        ICustomerOwnerNotifier ownerNotifier,
         ISession session,
         IClock clock,
         ILogger<DefaultInstallmentPlanService> logger,
@@ -107,7 +105,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         _distributedLock = distributedLock;
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
-        _serviceProvider = serviceProvider;
+        _ownerNotifier = ownerNotifier;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -1496,25 +1494,17 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
     private async Task NotifyCustomerAsync(InstallmentPlan plan, string subject, string body, CancellationToken cancellationToken)
     {
-        var notificationService = _serviceProvider.GetService<INotificationService>();
-
-        if (notificationService is null)
+        if (string.IsNullOrEmpty(plan.OwnerId))
         {
             return;
         }
 
         try
         {
-            var user = await _userService.GetUserByUniqueIdAsync(plan.OwnerId);
-
-            if (user is null)
-            {
-                return;
-            }
-
-            await notificationService.SendAsync(
-                user,
-                new NotificationMessage
+            await _ownerNotifier.NotifyAsync(
+                CustomerOwner.ForUser(plan.OwnerId),
+                guestContact: null,
+                new CustomerOwnerMessage
                 {
                     Subject = subject,
                     Summary = body,

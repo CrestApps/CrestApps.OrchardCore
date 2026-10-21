@@ -14,6 +14,7 @@ using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -29,13 +30,22 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
 
     private readonly DonationService _donations;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClock _clock;
+    private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
 
-    public FundraisingCampaignPartDisplayDriver(DonationService donations, IHttpContextAccessor httpContextAccessor, IStringLocalizer<FundraisingCampaignPartDisplayDriver> stringLocalizer)
+    public FundraisingCampaignPartDisplayDriver(
+        DonationService donations,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<FundraisingCampaignPartDisplayDriver> stringLocalizer,
+        IClock clock,
+        IShopperCurrency shopperCurrency)
     {
         _donations = donations;
         _httpContextAccessor = httpContextAccessor;
+        _clock = clock;
+        _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
 
@@ -44,7 +54,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         var progress = Initialize<CampaignProgressViewModel>("CampaignProgress", async model =>
         {
             model.Progress = await _donations.GetProgressAsync(part.ContentItem);
-            model.Ended = part.EndsUtc < DateTime.UtcNow;
+            model.Ended = part.EndsUtc < _clock.UtcNow;
         });
 
         if (context.DisplayType == ProductActionDisplayType)
@@ -116,14 +126,13 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
     {
         var item = part.ContentItem;
         var currency = item.TryGet<ProductPart>(out var product) ? product.Currency : null;
-        var shopperCurrency = _httpContextAccessor.HttpContext?.RequestServices.GetService<IShopperCurrency>();
-        var shown = (shopperCurrency is null ? null : await shopperCurrency.GetCurrencyAsync()) ?? currency;
+        var shown = (await _shopperCurrency.GetCurrencyAsync()) ?? currency;
         var amounts = new List<(decimal Amount, string Label)>();
 
         // The amounts are offered in the shopper's currency, rounded to whole units.
         foreach (var amount in part.SuggestedAmounts ?? [])
         {
-            var converted = shopperCurrency is null || string.IsNullOrEmpty(currency) ? amount : await shopperCurrency.ConvertAsync(amount, currency, shown, isPrice: false) ?? amount;
+            var converted = await _shopperCurrency.ConvertOrKeepAsync(amount, currency, shown, isPrice: false);
             var rounded = Math.Max(1m, Math.Round(converted, 0, MidpointRounding.AwayFromZero));
 
             amounts.Add((rounded, ProductPriceFormatter.Format(rounded, shown)));
@@ -132,11 +141,11 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         model.FormId = "add-to-cart-" + item.ContentItemId;
         model.Amounts = [.. amounts.DistinctBy(entry => entry.Amount)];
         model.Currency = shown;
-        model.Minimum = shopperCurrency is null || string.IsNullOrEmpty(currency)
+        model.Minimum = string.IsNullOrEmpty(currency)
             ? part.MinimumAmount
-            : Math.Round(await shopperCurrency.ConvertAsync(part.MinimumAmount, currency, shown, isPrice: false) ?? part.MinimumAmount, 2, MidpointRounding.AwayFromZero);
+            : Math.Round(await _shopperCurrency.ConvertOrKeepAsync(part.MinimumAmount, currency, shown, isPrice: false), 2, MidpointRounding.AwayFromZero);
         model.TaxDeductible = part.TaxDeductible;
-        model.Ended = part.EndsUtc < DateTime.UtcNow;
+        model.Ended = part.EndsUtc < _clock.UtcNow;
     }
 
     private static bool TryParse(string value, out decimal amount)

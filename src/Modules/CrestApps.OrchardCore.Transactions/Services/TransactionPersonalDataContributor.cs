@@ -63,9 +63,7 @@ public sealed class TransactionPersonalDataContributor : ICommercePersonalDataCo
                 ItemId = transaction.ItemId,
                 Title = transaction.Title,
                 Source = transaction.Source,
-                Owner = transaction.OwnerKind == CustomerOwnerKind.Guest
-                    ? CustomerOwner.ForGuest(transaction.OwnerId)
-                    : CustomerOwner.ForUser(transaction.OwnerId),
+                Owner = transaction.GetOwner(),
                 ReferenceType = transaction.ReferenceType,
                 ReferenceId = transaction.ReferenceId,
                 CheckoutSessionId = transaction.CheckoutSessionId,

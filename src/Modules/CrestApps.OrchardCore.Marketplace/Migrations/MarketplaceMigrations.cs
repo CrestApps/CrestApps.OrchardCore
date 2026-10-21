@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Marketplace.Indexes;
 using CrestApps.OrchardCore.Marketplace.Models;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -52,11 +51,29 @@ internal sealed class MarketplaceMigrations : DataMigration
             collection: MarketplaceConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<VendorUserIndex>(SchemaBuilder, "IDX_VendorUserIndex_User", MarketplaceConstants.CollectionName, "UserId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<VendorEarningIndex>(SchemaBuilder, "IDX_VendorEarningIndex_Vendor", MarketplaceConstants.CollectionName, "VendorId", "Status");
-        await IndexTableIndexCreation.CreateIfMissingAsync<VendorEarningIndex>(SchemaBuilder, "IDX_VendorEarningIndex_Order", MarketplaceConstants.CollectionName, "OrderId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<VendorEarningIndex>(SchemaBuilder, "IDX_VendorEarningIndex_Hold", MarketplaceConstants.CollectionName, "Status", "HoldUntilUtc");
-        await IndexTableIndexCreation.CreateIfMissingAsync<VendorPayoutIndex>(SchemaBuilder, "IDX_VendorPayoutIndex_Vendor", MarketplaceConstants.CollectionName, "VendorId");
+        await SchemaBuilder.AlterIndexTableAsync<VendorIndex>(table => table
+            .CreateIndex("IDX_VendorIndex_ItemId", "ItemId"),
+            collection: MarketplaceConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<VendorUserIndex>(table => table
+            .CreateIndex("IDX_VendorUserIndex_User", "UserId"),
+            collection: MarketplaceConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<VendorEarningIndex>(table =>
+        {
+            table.CreateIndex("IDX_VendorEarningIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_VendorEarningIndex_Vendor", "VendorId", "Status");
+            table.CreateIndex("IDX_VendorEarningIndex_Order", "OrderId");
+            table.CreateIndex("IDX_VendorEarningIndex_Hold", "Status", "HoldUntilUtc");
+        }, collection: MarketplaceConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<VendorPayoutIndex>(table =>
+        {
+            table.CreateIndex("IDX_VendorPayoutIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_VendorPayoutIndex_Vendor", "VendorId");
+        }, collection: MarketplaceConstants.CollectionName);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(VendorPart), part => part
             .Attachable()

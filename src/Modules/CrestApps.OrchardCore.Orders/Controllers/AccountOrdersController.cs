@@ -25,12 +25,18 @@ public sealed class AccountOrdersController : Controller
     private readonly IOrderStore _orderStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
+    private readonly OrderPayLinks _payLinks;
 
-    public AccountOrdersController(IOrderStore orderStore, IAuthorizationService authorizationService, IShapeFactory shapeFactory)
+    public AccountOrdersController(
+        IOrderStore orderStore,
+        IAuthorizationService authorizationService,
+        IShapeFactory shapeFactory,
+        OrderPayLinks payLinks)
     {
         _orderStore = orderStore;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
+        _payLinks = payLinks;
     }
 
     [HttpGet("account/orders", Name = "AccountOrders")]
@@ -97,11 +103,7 @@ public sealed class AccountOrdersController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = order.Status == OrderStatus.Canceled || !QuoteService.CanPay(order, DateTime.UtcNow)
-            ? null
-            : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
-                ? Url.RouteUrl("AccountOrderPay", new { orderId = order.ItemId })
-                : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = await _payLinks.GetPayUrlAsync(order, Url.RouteUrl("AccountOrderPay", new { orderId = order.ItemId }));
 
         return View(await _shapeFactory.CreateAsync<OrderViewViewModel>("AccountOrder", model =>
         {

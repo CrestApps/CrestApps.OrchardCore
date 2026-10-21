@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 
 namespace CrestApps.OrchardCore.Products.Core.Listing;
 
@@ -65,16 +64,4 @@ public sealed class ProductListingFacet
     /// values when it is empty.
     /// </summary>
     public List<ProductFacetRange> Ranges { get; set; } = [];
-
-    /// <summary>
-    /// Reads the style of a filter saved while styles were a fixed list, under the name <c>Display</c>.
-    /// </summary>
-    [JsonInclude]
-    [JsonPropertyName("Display")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    internal string LegacyDisplay
-    {
-        get => null;
-        set => Style ??= value;
-    }
 }

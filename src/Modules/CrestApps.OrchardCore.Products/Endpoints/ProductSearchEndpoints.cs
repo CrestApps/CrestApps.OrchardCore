@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.Products.Endpoints;
@@ -12,11 +15,15 @@ namespace CrestApps.OrchardCore.Products.Endpoints;
 /// </summary>
 internal static class ProductSearchEndpoints
 {
-    public const string SearchPath = "Admin/api/crestapps/products/search";
+    public const string RouteName = "CrestApps.Products.ProductSearch";
 
     public static IEndpointRouteBuilder AddProductSearchEndpoints(this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(SearchPath, SearchAsync).RequireAuthorization();
+        var adminUrlPrefix = builder.ServiceProvider.GetRequiredService<IOptions<AdminOptions>>().Value.AdminUrlPrefix;
+
+        builder.MapGet($"{adminUrlPrefix}/api/crestapps/products/search", SearchAsync)
+            .RequireAuthorization()
+            .WithName(RouteName);
 
         return builder;
     }

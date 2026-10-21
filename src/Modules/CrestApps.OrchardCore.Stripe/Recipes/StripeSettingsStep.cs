@@ -1,11 +1,12 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Deployments;
 using CrestApps.OrchardCore.Stripe.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Settings;
@@ -40,7 +41,7 @@ internal sealed class StripeSettingsStep : NamedRecipeStepHandler
 
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -49,18 +50,18 @@ internal sealed class StripeSettingsStep : NamedRecipeStepHandler
     /// </summary>
     /// <param name="siteService">The site service that stores the settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to protect supplied secrets.</param>
-    /// <param name="shellReleaseManager">The manager used to reload the tenant so the runtime options pick up the import.</param>
+    /// <param name="optionsUpdateNotifier">The notifier that refreshes the runtime Stripe options once the import is saved.</param>
     /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public StripeSettingsStep(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IStringLocalizer<StripeSettingsStep> stringLocalizer)
         : base(StripeDeploymentSteps.Settings)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         S = stringLocalizer;
     }
 
@@ -110,7 +111,8 @@ internal sealed class StripeSettingsStep : NamedRecipeStepHandler
 
         await _siteService.UpdateSiteSettingsAsync(site);
 
-        // The runtime StripeOptions are built once per tenant, as they are when the settings page saves a change.
-        _shellReleaseManager.RequestRelease();
+        // The runtime StripeOptions are rebuilt once the settings are committed, as they are when the settings page saves
+        // a change.
+        _optionsUpdateNotifier.RequestUpdate<StripeOptions>();
     }
 }

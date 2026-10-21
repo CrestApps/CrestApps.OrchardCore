@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Companies;
 using CrestApps.OrchardCore.Orders.Core;
@@ -21,6 +22,9 @@ using OrchardCore.Modules.Manifest;
     [
         CommerceConstants.Features.Area,
         OrderConstants.Features.Orders,
+
+        // A location's address is entered and checked with the shared address editor.
+        AddressConstants.Feature.ModuleId,
 
         // A company's terms are owed as transactions: what its deposit doesn't cover goes on its account in the ledger.
         TransactionsConstants.Features.Area,

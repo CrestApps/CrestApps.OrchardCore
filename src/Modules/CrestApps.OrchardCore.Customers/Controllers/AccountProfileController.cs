@@ -1,11 +1,9 @@
-using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.DisplayManagement;
-using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Customers.Controllers;
 
@@ -18,7 +16,6 @@ public sealed class AccountProfileController : Controller
 {
     private readonly CustomerAccountPages _pages;
     private readonly CustomerAddressBook _addressBook;
-    private readonly INotifier _notifier;
     private readonly IShapeFactory _shapeFactory;
 
     internal readonly IHtmlLocalizer H;
@@ -26,13 +23,11 @@ public sealed class AccountProfileController : Controller
     public AccountProfileController(
         CustomerAccountPages pages,
         CustomerAddressBook addressBook,
-        INotifier notifier,
         IShapeFactory shapeFactory,
         IHtmlLocalizer<AccountProfileController> htmlLocalizer)
     {
         _pages = pages;
         _addressBook = addressBook;
-        _notifier = notifier;
         _shapeFactory = shapeFactory;
         H = htmlLocalizer;
     }
@@ -57,19 +52,14 @@ public sealed class AccountProfileController : Controller
             return Forbid();
         }
 
-        _pages.Validate(model, ModelState);
+        var result = await _pages.SaveProfileAsync(customer, model, ModelState, HttpContext.RequestAborted);
 
-        if (!ModelState.IsValid)
+        if (result == CustomerAccountSaveResult.Invalid)
         {
             return View(await DetailsShapeAsync(await _pages.BuildAccountAsync(customer, model)));
         }
 
-        CustomerAccountPages.Apply(customer, model);
-
-        if (await SaveAsync(customer))
-        {
-            await _notifier.SuccessAsync(H["Your details were saved."]);
-        }
+        await _pages.NotifyAsync(result, H["Your details were saved."]);
 
         return RedirectToAction(nameof(Details));
     }
@@ -99,10 +89,7 @@ public sealed class AccountProfileController : Controller
             return Forbid();
         }
 
-        var model = await _addressBook.BuildEditorAsync(customer, null);
-        model.IsOwn = true;
-
-        return View("AddressEdit", await AddressShapeAsync(model));
+        return View("AddressEdit", await AddressShapeAsync(await _pages.BuildAddressEditorAsync(customer, null)));
     }
 
     [HttpPost("account/addresses/add")]
@@ -123,10 +110,7 @@ public sealed class AccountProfileController : Controller
             return NotFound();
         }
 
-        var model = await _addressBook.BuildEditorAsync(customer, address);
-        model.IsOwn = true;
-
-        return View(await AddressShapeAsync(model));
+        return View(await AddressShapeAsync(await _pages.BuildAddressEditorAsync(customer, address)));
     }
 
     [HttpPost("account/addresses/{addressId}")]
@@ -143,15 +127,14 @@ public sealed class AccountProfileController : Controller
             return Forbid();
         }
 
-        if (!customer.RemoveAddress(addressId))
+        var result = await _pages.DeleteAddressAsync(customer, addressId, HttpContext.RequestAborted);
+
+        if (result == CustomerAccountSaveResult.NotFound)
         {
             return NotFound();
         }
 
-        if (await SaveAsync(customer))
-        {
-            await _notifier.SuccessAsync(H["The address was deleted."]);
-        }
+        await _pages.NotifyAsync(result, H["The address was deleted."]);
 
         return RedirectToAction(nameof(Addresses));
     }
@@ -163,43 +146,21 @@ public sealed class AccountProfileController : Controller
             return Forbid();
         }
 
-        var address = customer.FindAddress(addressId);
+        var (result, entry) = await _pages.SaveAddressAsync(customer, addressId, model, ModelState, HttpContext.RequestAborted);
 
-        if (addressId is not null && address is null)
+        if (result == CustomerAccountSaveResult.NotFound)
         {
             return NotFound();
         }
 
-        var value = await _addressBook.ValidateAsync(customer, model, address is null, ModelState);
-
-        if (value is null)
+        if (result == CustomerAccountSaveResult.Invalid)
         {
-            var invalid = await _addressBook.BuildEditorAsync(customer, address, model);
-            invalid.IsOwn = true;
-
-            return View("AddressEdit", await AddressShapeAsync(invalid));
+            return View("AddressEdit", await AddressShapeAsync(await _pages.BuildAddressEditorAsync(customer, entry, model)));
         }
 
-        CustomerAddressBook.Apply(customer, address, model, value);
-
-        if (await SaveAsync(customer))
-        {
-            await _notifier.SuccessAsync(H["The address was saved."]);
-        }
+        await _pages.NotifyAsync(result, H["The address was saved."]);
 
         return RedirectToAction(nameof(Addresses));
-    }
-
-    private async Task<bool> SaveAsync(Customer customer)
-    {
-        if (await _pages.TrySaveAsync(customer, HttpContext.RequestAborted))
-        {
-            return true;
-        }
-
-        await _notifier.ErrorAsync(H["Your details were changed somewhere else at the same time. Your change was not saved; try again."]);
-
-        return false;
     }
 
     // The shape's model is a proxy Orchard Core derives from the view model, so the built page is copied onto it.

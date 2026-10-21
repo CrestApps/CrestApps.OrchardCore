@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Orders.Services;
 
@@ -13,14 +13,20 @@ namespace CrestApps.OrchardCore.Orders.Services;
 internal sealed class TestOrderSetupStep : IStoreSetupStep
 {
     private readonly IOrderStore _orders;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public TestOrderSetupStep(IOrderStore orders, IOptions<AdminOptions> adminOptions, IStringLocalizer<TestOrderSetupStep> stringLocalizer)
+    public TestOrderSetupStep(
+        IOrderStore orders,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<TestOrderSetupStep> stringLocalizer)
     {
         _orders = orders;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -40,7 +46,7 @@ internal sealed class TestOrderSetupStep : IStoreSetupStep
             Description = S["Open your store, add a product to the cart and check out as a customer would. With Stripe in test mode, pay with the card 4242 4242 4242 4242, any future date and any three digits: no money is taken. Then find the order under Commerce, Orders, and refund or cancel it."],
             IsDone = count > 0,
             Status = count == 0 ? null : S["Order {0} was paid.", orders[0].OrderNumber],
-            Url = count == 0 ? "~/" : $"~/{_adminOptions.AdminUrlPrefix}/orders",
+            Url = count == 0 ? "~/" : _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "OrdersIndex"),
             UrlText = count == 0 ? S["Open your store"] : S["Orders"],
         };
     }

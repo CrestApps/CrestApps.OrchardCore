@@ -22,12 +22,12 @@ using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
 using CrestApps.OrchardCore.Tests.Customers;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -304,7 +304,7 @@ public sealed class CommercePersonalDataServiceTests : IAsyncLifetime
                 new SubscriptionPersonalDataContributor(new SubscriptionManager(_subscriptions, [], NullLogger<CatalogManager<Subscription>>.Instance)),
                 new InstallmentPlanPersonalDataContributor(_plans),
                 new StripePersonalDataContributor(
-                    Options.Create(new StripeOptions { ApiKey = stripeApiKey }),
+                    new TestOptionsMonitor<StripeOptions>(new StripeOptions { ApiKey = stripeApiKey }),
                     services,
                     NullLogger<StripePersonalDataContributor>.Instance),
             ],

@@ -8,14 +8,14 @@ namespace CrestApps.OrchardCore.Subscriptions.Extensions;
 public static class PriceFormatting
 {
     /// <summary>
-    /// Formats a price in the currency it is charged in, for example <c>EUR 20.00</c>. The server's culture only
-    /// decides the symbol when the price names no currency, as older plans may not.
+    /// Formats a price in the currency it is charged in, for example <c>EUR 20.00</c>. A caller passes the store's
+    /// currency for a price that names none; without any, the amount is shown alone, never in the server's currency.
     /// </summary>
     /// <param name="amount">The amount.</param>
     /// <param name="currency">The ISO-4217 code of the currency the amount is in.</param>
     /// <returns>The formatted price.</returns>
     public static string Format(decimal amount, string currency)
         => string.IsNullOrEmpty(currency)
-            ? amount.ToString("C")
+            ? CurrencyScale.Format(amount, currency)
             : $"{currency} {CurrencyScale.Format(amount, currency)}";
 }

@@ -1,4 +1,5 @@
 @model ShapeViewModel<ClassifiedEntry>
+@inject OrchardCore.Modules.IClock Clock
 
 @{
     var part = Model.Value.Part;
@@ -12,7 +13,7 @@
 }
 <div class="admin-list-secondary">
     <span class="badge @css">@label</span>
-    @if (part.FeaturedUntilUtc > DateTime.UtcNow)
+    @if (part.FeaturedUntilUtc > Clock.UtcNow)
     {
         <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc]</span>
     }

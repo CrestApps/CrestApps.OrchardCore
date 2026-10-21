@@ -28,9 +28,8 @@ public sealed class WebhooksAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Webhooks"], S["Webhooks"].PrefixPosition("90"), webhooks => webhooks
-                    .AddClass("commerce-webhooks")
                     .Id("commerceWebhooks")
                     .Action(_routeValues)
                     .Permission(WebhookPermissions.ManageWebhooks)

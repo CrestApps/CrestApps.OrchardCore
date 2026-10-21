@@ -5,8 +5,7 @@ namespace CrestApps.OrchardCore.Addresses.Models;
 /// ignored by consumers such as tax jurisdiction resolution. No particular hierarchy is assumed.
 /// This is a money-safe value snapshot: its components are init-only, so once an address is constructed
 /// it is immutable and a snapshot captured on an order or shipment can never be changed by later edits to
-/// the customer-editable address content item it was resolved from. Use <see cref="Clone"/> to derive a
-/// modified copy.
+/// the address it was copied from. Use <see cref="Clone"/> to derive a modified copy.
 /// </summary>
 public sealed class Address
 {

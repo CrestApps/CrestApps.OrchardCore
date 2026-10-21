@@ -10,7 +10,7 @@ internal static class AddressFormatsEndpoint
 {
     public static async Task<IResult> HandleAsync(string countryCode, IAddressEditorService editor, HttpContext httpContext)
     {
-        if (string.IsNullOrEmpty(countryCode) || countryCode.Length != 2 || !char.IsAsciiLetter(countryCode[0]) || !char.IsAsciiLetter(countryCode[1]))
+        if (!CountryCodeUtility.IsCountryCode(countryCode))
         {
             return Results.NotFound();
         }

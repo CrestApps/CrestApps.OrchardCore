@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Products.Endpoints;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -23,6 +24,7 @@ public sealed class ProductBundleDisplayDriver : ContentPartDisplayDriver<Produc
     private readonly ProductRecommendationService _products;
     private readonly IContentManager _contentManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
@@ -30,11 +32,13 @@ public sealed class ProductBundleDisplayDriver : ContentPartDisplayDriver<Produc
         ProductRecommendationService products,
         IContentManager contentManager,
         IHttpContextAccessor httpContextAccessor,
-        IStringLocalizer<ProductBundleDisplayDriver> stringLocalizer)
+        IStringLocalizer<ProductBundleDisplayDriver> stringLocalizer,
+        LinkGenerator linkGenerator)
     {
         _products = products;
         _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -66,9 +70,7 @@ public sealed class ProductBundleDisplayDriver : ContentPartDisplayDriver<Produc
         {
             var items = part.ContentItem.TryGet<ProductBundlePart>(out var bundle) ? bundle.Items ?? [] : [];
             var names = (await _products.NameAsync([.. items.Select(item => item.ContentItemId)])).ToDictionary(name => name.Id, name => name.Text, StringComparer.Ordinal);
-            var pathBase = _httpContextAccessor.HttpContext?.Request.PathBase.Value ?? string.Empty;
-
-            model.SearchEndpoint = $"{pathBase}/{ProductSearchEndpoints.SearchPath}";
+            model.SearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, ProductSearchEndpoints.RouteName);
             model.Items = [.. items.Select(item => new ProductBundleItemViewModel
             {
                 ContentItemId = item.ContentItemId,

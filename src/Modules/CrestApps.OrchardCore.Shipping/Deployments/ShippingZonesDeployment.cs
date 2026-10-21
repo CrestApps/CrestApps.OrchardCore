@@ -1,6 +1,5 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Shipping.Models;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -25,39 +24,16 @@ public sealed class ShippingZonesDeploymentStep : DeploymentStep
     }
 }
 
-internal sealed class ShippingZonesDeploymentSource : DeploymentSourceBase<ShippingZonesDeploymentStep>
+internal sealed class ShippingZonesDeploymentSource : NamedCatalogDeploymentSource<ShippingZonesDeploymentStep, ShippingZone>
 {
-    private static readonly string[] _environmentOwned = ["CreatedUtc", "ModifiedUtc", "OwnerId", "Author"];
-
-    private readonly INamedCatalog<ShippingZone> _catalog;
-
-    public ShippingZonesDeploymentSource(INamedCatalog<ShippingZone> catalog)
+    public ShippingZonesDeploymentSource(INamedCatalogManager<ShippingZone> manager)
+        : base(ShippingConstants.ZonesRecipeStepEntries, manager)
     {
-        _catalog = catalog;
     }
 
-    protected override async Task ProcessAsync(ShippingZonesDeploymentStep step, DeploymentPlanResult result)
-    {
-        var zones = new JsonArray();
-
-        foreach (var zone in (await _catalog.GetAllAsync()).OrderBy(zone => zone.Position).ThenBy(zone => zone.Name, StringComparer.OrdinalIgnoreCase))
-        {
-            var node = JsonSerializer.SerializeToNode(zone)!.AsObject();
-
-            foreach (var member in _environmentOwned)
-            {
-                node.Remove(member);
-            }
-
-            zones.Add(node);
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["Zones"] = zones,
-        });
-    }
+    /// <inheritdoc/>
+    protected override IEnumerable<ShippingZone> Order(IEnumerable<ShippingZone> entries)
+        => entries.OrderBy(zone => zone.Position).ThenBy(zone => zone.Name, StringComparer.OrdinalIgnoreCase);
 }
 
 internal sealed class ShippingZonesDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, ShippingZonesDeploymentStep>

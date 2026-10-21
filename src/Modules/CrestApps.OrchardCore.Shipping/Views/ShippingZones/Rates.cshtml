@@ -13,39 +13,49 @@
 <p class="text-muted">@T["See which zone an address falls in and what each of its methods would charge for an order, without placing one."]</p>
 
 <form asp-action="Rates" method="get" class="mb-4">
-    <div class="row g-3">
-        <div class="col-md-4">
-            <label asp-for="Country" class="form-label">@T["Country"]</label>
+    <div class="ocat-wrapper">
+        <label asp-for="Country" class="ocat-label ocat-label-required">@T["Country"]</label>
+        <div class="ocat-end">
             <select asp-for="Country" asp-items="Model.Countries" class="form-select" required>
                 <option value="">@T["Choose a country"]</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <label asp-for="Region" class="form-label">@T["Region code"]</label>
+    </div>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Region" class="ocat-label">@T["Region code"]</label>
+        <div class="ocat-limited">
             <input asp-for="Region" class="form-control" placeholder="@T["Such as WA"]" />
         </div>
-        <div class="col-md-2">
-            <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+    </div>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+        <div class="ocat-limited">
             <select asp-for="Currency" asp-items="Model.Currencies" class="form-select"></select>
         </div>
     </div>
-    <div class="row g-3 mt-0">
-        <div class="col-md-2">
-            <label asp-for="Subtotal" class="form-label">@T["Subtotal"]</label>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Subtotal" class="ocat-label">@T["Subtotal"]</label>
+        <div class="ocat-limited">
             <input asp-for="Subtotal" type="number" min="0" step="any" class="form-control" />
         </div>
-        <div class="col-md-2">
-            <label asp-for="Weight" class="form-label">@T["Weight ({0})", unit]</label>
+    </div>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Weight" class="ocat-label">@T["Weight ({0})", unit]</label>
+        <div class="ocat-limited">
             <input asp-for="Weight" type="number" min="0" step="any" class="form-control" />
         </div>
-        <div class="col-md-2">
-            <label asp-for="Items" class="form-label">@T["Items"]</label>
+    </div>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Items" class="ocat-label">@T["Items"]</label>
+        <div class="ocat-limited">
             <input asp-for="Items" type="number" min="1" class="form-control" />
         </div>
-        @if (Model.ShippingClasses.Count > 0)
-        {
-            <div class="col-md-2">
-                <label asp-for="ShippingClass" class="form-label">@T["Shipping class"]</label>
+    </div>
+    @if (Model.ShippingClasses.Count > 0)
+    {
+        <div class="ocat-limited-wrapper">
+            <label asp-for="ShippingClass" class="ocat-label">@T["Shipping class"]</label>
+            <div class="ocat-limited">
                 <select asp-for="ShippingClass" class="form-select">
                     <option value="">@T["None"]</option>
                     @foreach (var shippingClass in Model.ShippingClasses)
@@ -54,8 +64,10 @@
                     }
                 </select>
             </div>
-        }
-        <div class="col-md-2 d-flex align-items-end">
+        </div>
+    }
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
             <button type="submit" class="btn btn-primary">@T["Show rates"]</button>
         </div>
     </div>

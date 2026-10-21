@@ -23,4 +23,17 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Adds the <see cref="SignedTokenService"/> and the <see cref="SiteUrlGenerator"/>, which create the signed,
+    /// time-limited links a site sends to its customers.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddSignedLinks(this IServiceCollection services)
+    {
+        services.TryAddSingleton<SignedTokenService>();
+        services.TryAddScoped<SiteUrlGenerator>();
+
+        return services;
+    }
 }

@@ -7,9 +7,8 @@ using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.TaxJar;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -130,9 +129,8 @@ public sealed class TaxJarProviderTests
         factory.Setup(value => value.CreateClient(It.IsAny<string>())).Returns(() => new HttpClient(handler, disposeHandler: false));
 
         return new TaxJarTaxDeterminationProvider(
-            Options.Create(new TaxJarOptions { ApiKey = apiKey, UseSandbox = true, Countries = ["US"] }),
-            factory.Object,
-            NullLogger<TaxJarTaxDeterminationProvider>.Instance);
+            new TestOptionsMonitor<TaxJarOptions>(new TaxJarOptions { ApiKey = apiKey, UseSandbox = true, Countries = ["US"] }),
+            factory.Object);
     }
 
     private static TaxCalculationContext Context(string country)

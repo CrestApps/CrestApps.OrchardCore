@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes;
@@ -18,6 +20,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     where T : CatalogItem
     where TIndex : CatalogItemIndex
 {
+    private static readonly MethodInfo _stringContains = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)]);
+
     /// <summary>
     /// Gets or sets the YesSql collection name used for storing documents.
     /// </summary>
@@ -139,6 +143,53 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         };
     }
 
+    /// <summary>
+    /// Returns a page of the records whose name contains <paramref name="search"/> (every record when it is blank),
+    /// ordered by name, and how many there are in all. For a catalog that lists its records by a name in its index.
+    /// </summary>
+    /// <param name="name">The index column that holds the record's name.</param>
+    /// <param name="search">The text the name must contain, or <see langword="null"/> for every record.</param>
+    /// <param name="skip">How many records to skip.</param>
+    /// <param name="take">How many records to return.</param>
+    /// <param name="cancellationToken">A token to cancel the query.</param>
+    /// <returns>How many records match, and the page of them.</returns>
+    protected async Task<(int Count, IReadOnlyList<T> Items)> PageByNameAsync(
+        Expression<Func<TIndex, string>> name,
+        string search,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        var query = Session.Query<T, TIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(Expression.Lambda<Func<TIndex, bool>>(
+                Expression.Call(name.Body, _stringContains, Expression.Constant(search.Trim())),
+                name.Parameters));
+        }
+
+        var count = await query.CountAsync(cancellationToken);
+        var page = await query.OrderBy(OrderKey(name)).Skip(skip).Take(take).ListAsync(cancellationToken);
+
+        return (count, await LoadedAsync(page));
+    }
+
+    /// <summary>
+    /// Returns every record, ordered by name, such as for a list to choose one from.
+    /// </summary>
+    /// <param name="name">The index column that holds the record's name.</param>
+    /// <param name="cancellationToken">A token to cancel the query.</param>
+    /// <returns>The records, by name.</returns>
+    protected async Task<IReadOnlyList<T>> ListByNameAsync(Expression<Func<TIndex, string>> name, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        return await LoadedAsync(await Session.Query<T, TIndex>(collection: CollectionName).OrderBy(OrderKey(name)).ListAsync(cancellationToken));
+    }
+
     protected virtual ValueTask PagingAsync<TQuery>(IQuery<T> query, TQuery context)
         where TQuery : QueryContext
     {
@@ -166,6 +217,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         await SavingAsync(record);
 
         await Session.SaveAsync(record, false, CollectionName, cancellationToken);
+
+        await CreatedAsync(record, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -187,12 +240,27 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
             cancellationToken: cancellationToken);
     }
 
+    private static Expression<Func<TIndex, object>> OrderKey(Expression<Func<TIndex, string>> name)
+        => Expression.Lambda<Func<TIndex, object>>(name.Body, name.Parameters);
+
     protected virtual ValueTask DeletingAsync(T model)
     {
         return ValueTask.CompletedTask;
     }
 
     protected virtual ValueTask SavingAsync(T record)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called after <see cref="CreateAsync(T, CancellationToken)"/> adds a new record to the session, so a derived
+    /// catalog can raise its own created event. The record is committed with the session.
+    /// </summary>
+    /// <param name="record">The record that was created.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task that completes when the created event has run.</returns>
+    protected virtual ValueTask CreatedAsync(T record, CancellationToken cancellationToken)
     {
         return ValueTask.CompletedTask;
     }

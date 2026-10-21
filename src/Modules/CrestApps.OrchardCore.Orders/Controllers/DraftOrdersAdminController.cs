@@ -262,10 +262,8 @@ public sealed class DraftOrdersAdminController : Controller
 
     private async Task PopulateAsync(DraftOrderEditViewModel model, Order order, Carts.Core.Models.CartPricing pricing)
     {
-        var pathBase = HttpContext.Request.PathBase.Value ?? string.Empty;
-
         model.Order = order;
-        model.ProductSearchEndpoint = $"{pathBase}/{CouponItemSearchEndpoints.ProductsPath}";
+        model.ProductSearchEndpoint = Url.RouteUrl(CouponItemSearchEndpoints.ProductsRouteName);
         model.CanEmail = HttpContext.RequestServices.GetService<IEmailService>() is not null;
         model.AddProductIds = [];
 

@@ -141,9 +141,21 @@ A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuot
 - **The account.** The account's orders list shows quotes and orders sent to pay, not paid or turned down, above the placed orders, and the order page titles a quote *Quote*.
 - **API.** `POST me/quotes` (`{ message, purchaseOrderNumber }`, 201 with the order, 400 for an empty cart) and `POST me/orders/{orderId}/decline-quote` (409 when it can't be). `ApiOrder.Quote` is an `ApiOrderQuote`.
 
-### Order email templates
+### Commerce emails and their templates
 
-`IOrderEmailTemplates` (Orders.Core) lets the store write its own emails about orders. Each sender calls `IServiceProvider.ApplyOrderEmailTemplateAsync(kind, order, subject, text, html, values)` with its `OrderEmailKinds`, and gets the email back as the store's template has it: `order-confirmation`, `order-invoice`, `order-quote`, `order-shipped`, `order-return`, `gift-card` and `checkout-recovery`. Without an implementation, an email goes as built.
+Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Orders.Core, registered with `services.AddCommerceEmailSender()`): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Order`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html` and the template's `Values`). `ICommerceEmailSender` then does the following:
+
+- It sends nothing, and returns `false`, when the Email feature is off, the email has no recipient, or the callback returns `null`.
+- It builds the email in `Culture`, such as the language the buyer shopped in (`Order.Culture`).
+- It passes an email with a `Kind` through `IOrderEmailTemplates`, the store's template of that kind and its layout. An email without a kind goes as built.
+- It sends the email, and logs a send that fails or throws and returns `false`. A failed send never undoes what the email is about.
+
+The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)`. The title and the description of the email's own values are `LocalizationSource`s, and **Settings > Commerce > Emails** lists the kinds in the order they were registered. Orders registers `order-confirmation`, `order-invoice`, `order-quote` and `checkout-recovery` (`OrderEmailKinds`), Returns `order-return`, Gift Cards `gift-card`, Shipping `order-shipped` and Bookings `booking`. Saving the page keeps the templates of kinds that no enabled feature registers.
+
+```csharp
+services.AddCommerceEmailSender()
+    .AddCommerceEmailKind("giftwrap-sent", LocalizationSource.Create<Startup>("Gift wrapped"), LocalizationSource.Create<Startup>("{{ Message }}: the gift message."));
+```
 
 `LiquidOrderEmailTemplates` reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`):
 
@@ -198,7 +210,7 @@ The **Gift Cards** feature (`CrestApps.OrchardCore.Orders.GiftCards`, depends on
 
 **Email.** `GiftCardEmailSender.SendAsync(card, message)` sends the card to `RecipientEmail` through `IEmailService`, when one is registered: the value (the current balance), the code, the optional personal message, how to use it, the expiry and a link to the store, all HTML-encoded. It returns whether the email went.
 
-**Admin.** `GiftCardsAdminController` (`Admin/gift-cards`, permission `ManageGiftCards`, menu **Commerce > Gift cards**) lists cards through an `AdminList` (`GiftCardDisplayDriver` renders the row in both `SummaryAdmin` and `SummaryAdminGrid`) with a search in the action bar and the status filter in the toolbar (`GiftCardsAdminListFilters`). `create` issues a card and can email it; `edit/{itemId}` shows the whole code, the balance, the order that bought it and the activity, and saves the recipient, expiry, note and `IsEnabled`; `adjust/{itemId}` posts an `amount` and a required `reason` to `AdjustAsync`; `email/{itemId}` sends the card again.
+**Admin.** `GiftCardsAdminController` (`Admin/gift-cards`, permission `ManageGiftCards`, menu **Commerce > Gift cards**) lists cards through an `AdminList` (`GiftCardDisplayDriver` renders the row in both `SummaryAdmin` and `SummaryAdminGrid`) with a search in the action bar and the status filter in the toolbar (the shared `CommerceAdminListFilters` shape). `create` issues a card and can email it; `edit/{itemId}` shows the whole code, the balance, the order that bought it and the activity, and saves the recipient, expiry, note and `IsEnabled`; `adjust/{itemId}` posts an `amount` and a required `reason` to `AdjustAsync`; `email/{itemId}` sends the card again.
 
 `GiftCardPermissionsProvider` declares **Manage gift cards** (`OrderPermissions.ManageGiftCards`), given to Administrator by default.
 

@@ -120,9 +120,9 @@ The Addresses feature maps two anonymous endpoints, at the tenant's root:
 | `GET` | `addresses/suggest?q=&country=&session=` | JSON `[{ "id": "...", "text": "..." }]`. `q` shorter than 3 or longer than 120 characters (trimmed) answers `[]` without asking the provider. `country` is used when it's two letters. |
 | `GET` | `addresses/resolve?id=&session=` | JSON `{ addressLine1, addressLine2, dependentLocality, city, region, postalCode, country }`. `404` for a missing id, one over 512 characters, or a suggestion the provider can't find. |
 
-Both answer `404` when no provider is available, and `429` when the visitor is over the limit. A `session` value is passed on only when it's up to 64 letters, digits and hyphens.
+Both answer `404` when no provider is available, and `429` when the visitor is over a rate limit. A `session` value is passed on only when it's up to 64 letters, digits and hyphens.
 
-Each call can cost the store money, so each visitor (`HttpContext.Connection.RemoteIpAddress`) may make 60 calls a minute across both endpoints (`AddressAutocompleteEndpoints.RequestsPerMinute`), counted in `IMemoryCache` by clock minute. Behind a reverse proxy, turn on Orchard Core's **Reverse Proxy Configuration** feature, so the visitor's address is counted rather than the proxy's.
+Each call can cost the store money, so both endpoints are in the `address-autocomplete` rate-limit group (`AddressConstants.AutocompleteRateLimitGroup`). With Orchard Core's **Rate Limits** feature (`OrchardCore.RateLimits`) on, the Addresses feature registers a built-in limit for the group: each visitor (`HttpContext.Connection.RemoteIpAddress`) may make 60 calls a minute across both endpoints (`AddressAutocompleteEndpoints.RequestsPerMinute`, a fixed window). It shows read-only under **Tools > Rate Limits**, where a `Group` policy on `address-autocomplete` can add stricter limits. Without the Rate Limits feature the endpoints aren't limited, so turn it on wherever a paid provider is set up. Behind a reverse proxy, turn on Orchard Core's **Reverse Proxy Configuration** feature, so the visitor's address is counted rather than the proxy's.
 
 ### The editor
 
@@ -148,20 +148,10 @@ The key is set under **Settings > Address suggestions** (settings group `address
 
 | Content type | Purpose |
 | --- | --- |
-| **Country** | A country with its ISO 3166-1 alpha-2 code in `CountryPart`'s `Code` field. The ISO list is seeded when the feature is enabled, and no two countries may share a code. |
+| **Country** | A country with its ISO 3166-1 alpha-2 code in `CountryPart`'s `Code` field, read and written with the `GetCountryCode()` and `SetCountryCode()` content item extensions. The ISO list is seeded when the feature is enabled, and no two countries may share a code. `CountryCodeUtility` (in `CrestApps.OrchardCore.Addresses.Abstractions`) normalizes a code and checks it is two letters. |
 
-Countries are indexed by `GeographicAreaIndex` (content item id, content type, code, display text, published and latest flags), so the list never loads whole content items. The address formats always come from the shipped data: managed countries decide which countries are offered and what they are called, not how their addresses are written.
+Countries are indexed by `CountryIndex` (content item id, code, display text, published and latest flags), so the list never loads whole content items. The address formats always come from the shipped data: managed countries decide which countries are offered and what they are called, not how their addresses are written.
 
 ## Money safety
 
 Taxation stores codes, not content item ids: the country's ISO code and the region, county, city and district as text. Addresses entered through the address rules carry region codes, so a tax jurisdiction for `CA` matches an address whose customer chose "California". Enabling or disabling either feature never orphans tax data.
-
-## Upgrading from an earlier 3.0 preview
-
-Earlier 3.0 previews kept the Country content in the Addresses feature and had an `AddressPart` whose country, region, county, city and district were content pickers, with Region, County, City and District content types and `IAddressResolver` to read them. A site upgrading from one of those keeps working:
-
-- **Countries.** A site that ran the earlier Addresses migration gets **Address Countries** turned on by itself the first time it starts, so its country list, with any renamed or removed countries, stays as it was. A new site starts without it.
-- **Content.** Content types that have `AddressPart` keep it, with its picker fields, and the Region, County, City and District items stay. Nothing is deleted. They are still indexed in `GeographicAreaIndex`, with their parents.
-- **Code.** `IAddressResolver`, `DefaultAddressResolver` and the `AddressConstants` names for the removed types and parts (`AddressPart`, `Region`, `RegionPart`, `County`, `CountyPart`, `City`, `CityPart`, `District`, `DistrictPart`) are still there, marked `[Obsolete]`, so code that used them builds with a warning. They will be removed in the next major version.
-
-To move to the new address, add an [Address field](content-fields#addressfield) (the ContentFields module's **Address Field** feature) to the content type, copy each item's address into it, and remove `AddressPart`; code reads the field's `Address` value instead of calling `IAddressResolver`.

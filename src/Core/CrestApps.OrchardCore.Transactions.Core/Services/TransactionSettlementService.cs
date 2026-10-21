@@ -94,23 +94,6 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
         }
 
         var now = _clock.UtcNow;
-
-        transaction.AmountPaid = CurrencyScale.Round(transaction.AmountPaid + confirmedTotal, transaction.Currency);
-
-        // What was adjusted (a discount or a waiver) is owed no more, so paying the rest settles the transaction.
-        var fullyPaid = transaction.OutstandingAmount <= 0m;
-
-        transaction.PaymentAttemptId = newAttempts.Last().ItemId;
-        transaction.Status = fullyPaid ? TransactionStatus.Paid : TransactionStatus.PartiallyPaid;
-        transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Online;
-        transaction.SettlementReference = settlementReference;
-        transaction.UpdatedUtc = now;
-
-        if (fullyPaid)
-        {
-            transaction.SettledUtc = now;
-        }
-
         var payments = new List<TransactionEvent>();
 
         foreach (var attempt in newAttempts)
@@ -127,6 +110,12 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
             transaction.Events.Add(payment);
             payments.Add(payment);
         }
+
+        transaction.PaymentAttemptId = newAttempts.Last().ItemId;
+        transaction.SettlementReference = settlementReference;
+
+        // What was adjusted (a discount or a waiver) is owed no more, so paying the rest settles the transaction.
+        transaction.ApplyPayment(confirmedTotal, TransactionsConstants.SettlementMethods.Online, now, S["The transaction was fully paid and settled."].Value);
 
         try
         {

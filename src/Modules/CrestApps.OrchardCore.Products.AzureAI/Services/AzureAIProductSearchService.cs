@@ -34,12 +34,7 @@ public sealed class AzureAIProductSearchService : IProductIndexSearchService
         var client = _clientFactory.CreateSearchClient(indexProfile.IndexFullName);
         var indexQuery = ProductSearchIndexQuery.Create(query);
         var searchText = AzureAIProductSearchFields.GetSearchText(indexQuery.Keyword);
-        var facets = (query.Facets ?? [])
-            .Where(facet => !string.IsNullOrEmpty(facet?.Key) && !string.IsNullOrEmpty(facet.AttributeKey))
-            .ToArray();
-
-        bool HasOwnFilter(ProductFacetRequest facet)
-            => indexQuery.Filters.Any(filter => filter.FacetKey == facet.Key);
+        var facets = indexQuery.Facets;
 
         var options = CreateOptions(indexQuery, excludedFacetKey: null);
         options.Skip = indexQuery.Skip;
@@ -52,7 +47,7 @@ public sealed class AzureAIProductSearchService : IProductIndexSearchService
             options.OrderBy.Add(sort);
         }
 
-        foreach (var facet in facets.Where(facet => !facet.IsRange && !HasOwnFilter(facet)))
+        foreach (var facet in facets.Where(facet => !facet.IsRange && !indexQuery.HasFilterFor(facet.Key)))
         {
             options.Facets.Add($"{ProductSearchIndexFields.Facets(facet.AttributeKey)},count:{MaxFacetValues}");
         }
@@ -88,7 +83,7 @@ public sealed class AzureAIProductSearchService : IProductIndexSearchService
             var field = ProductSearchIndexFields.Facets(facet.AttributeKey);
             var counts = response.Facets;
 
-            if (HasOwnFilter(facet))
+            if (indexQuery.HasFilterFor(facet.Key))
             {
                 var facetOptions = CreateOptions(indexQuery, facet.Key);
                 facetOptions.Size = 0;

@@ -63,7 +63,7 @@ public static class CreateWebhookEndpoint
         IHttpContextAccessor httpContextAccessor,
         ILogger<T> logger,
         IEnumerable<IPaymentEvent> paymentEvents,
-        IOptions<StripeOptions> stripeOptions,
+        IOptionsMonitor<StripeOptions> stripeOptions,
         YesSql.ISession session,
         IDistributedLock distributedLock,
         IClock clock,
@@ -78,7 +78,9 @@ public static class CreateWebhookEndpoint
             return TypedResults.BadRequest();
         }
 
-        if (string.IsNullOrEmpty(stripeOptions.Value.WebhookSecret))
+        var webhookSecret = stripeOptions.CurrentValue.WebhookSecret;
+
+        if (string.IsNullOrEmpty(webhookSecret))
         {
             return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
         }
@@ -90,7 +92,7 @@ public static class CreateWebhookEndpoint
             stripeEvent = EventUtility.ConstructEvent(
                 json: json,
                 stripeSignatureHeader: signature,
-                stripeOptions.Value.WebhookSecret,
+                webhookSecret,
                 throwOnApiVersionMismatch: false);
         }
         catch (Exception ex)
@@ -550,16 +552,15 @@ public static class CreateWebhookEndpoint
             "active" => RemoteSubscriptionStatus.Active,
             "past_due" => RemoteSubscriptionStatus.PastDue,
             "unpaid" => RemoteSubscriptionStatus.Unpaid,
-            "canceled" or "cancelled" => RemoteSubscriptionStatus.Canceled,
+            "canceled" => RemoteSubscriptionStatus.Canceled,
             "incomplete" => RemoteSubscriptionStatus.Incomplete,
             "incomplete_expired" => RemoteSubscriptionStatus.IncompleteExpired,
             "paused" => RemoteSubscriptionStatus.Paused,
             _ => RemoteSubscriptionStatus.Unknown,
         };
 
-    // Reads the end of the current paid period. Newer Stripe API versions moved the period boundaries from the
-    // subscription onto its items, so the subscription-level value is preferred and the items are used as the
-    // fallback. The latest end across items is used, because that is the date every item is paid through.
+    // Reads the end of the current paid period. Stripe keeps the period boundaries on the subscription's items, so the
+    // latest end across items is used, because that is the date every item is paid through.
     private static DateTime? GetCurrentPeriodEnd(Subscription subscription)
     {
         var items = subscription.Items?.Data;

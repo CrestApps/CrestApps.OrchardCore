@@ -68,7 +68,7 @@ public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, Webh
 
     public async Task<IReadOnlyList<WebhookDelivery>> ListDueAsync(DateTime utcNow, int take, CancellationToken cancellationToken = default)
     {
-        var pending = (int)WebhookDeliveryStatus.Pending;
+        var pending = WebhookDeliveryStatus.Pending;
 
         return [.. await Session.Query<WebhookDelivery, WebhookDeliveryIndex>(index => index.Status == pending && index.NextAttemptUtc <= utcNow, collection: CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
@@ -82,8 +82,7 @@ public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, Webh
 
         if (status is { } wanted)
         {
-            var value = (int)wanted;
-            query = query.Where(index => index.Status == value);
+            query = query.Where(index => index.Status == wanted);
         }
 
         var count = await query.CountAsync(cancellationToken);
@@ -110,7 +109,7 @@ public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, Webh
 
     public async Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default)
     {
-        var pending = (int)WebhookDeliveryStatus.Pending;
+        var pending = WebhookDeliveryStatus.Pending;
         var old = await Session.Query<WebhookDelivery, WebhookDeliveryIndex>(index => index.Status != pending && index.CreatedUtc < createdBeforeUtc, collection: CollectionName)
             .Take(take)
             .ListAsync(cancellationToken);

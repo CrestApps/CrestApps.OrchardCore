@@ -28,9 +28,8 @@ public sealed class MarketsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Markets"], S["Markets"].PrefixPosition("2"), markets => markets
-                    .AddClass("commerce-markets")
                     .Id("commerceMarkets")
                     .Action(_markets)
                     .Permission(MarketsPermissions.ManageMarkets)

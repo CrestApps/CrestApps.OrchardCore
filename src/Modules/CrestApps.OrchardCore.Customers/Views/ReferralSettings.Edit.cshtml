@@ -1,11 +1,15 @@
 @using CrestApps.OrchardCore.Customers.Models
 @model ReferralSettingsViewModel
 
-<p class="text-muted">@T["Each signed-in customer has a referral link on their account. A friend who opens it can get a discount on their first order, and the customer is rewarded when that order is placed."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["Each signed-in customer has a referral link on their account. A friend who opens it can get a discount on their first order, and the customer is rewarded when that order is placed."]</p>
+    </div>
+</div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label asp-for="FriendCouponId" class="form-label">@T["What a friend gets"]</label>
+<div class="ocat-wrapper">
+    <label asp-for="FriendCouponId" class="ocat-label">@T["What a friend gets"]</label>
+    <div class="ocat-end">
         <select asp-for="FriendCouponId" asp-items="Model.Coupons" class="form-select">
             <option value="">@T["Nothing"]</option>
         </select>
@@ -13,9 +17,9 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <label asp-for="RewardKind" class="form-label">@T["What the customer gets"]</label>
+<div class="ocat-wrapper">
+    <label asp-for="RewardKind" class="ocat-label">@T["What the customer gets"]</label>
+    <div class="ocat-end">
         <select asp-for="RewardKind" class="form-select">
             <option value="@ReferralRewardKind.None">@T["Nothing"]</option>
             <option value="@ReferralRewardKind.StoreCredit">@T["Store credit"]</option>
@@ -23,25 +27,35 @@
         </select>
         <span class="hint">@T["Store credit and points need the Store Credit or Loyalty Points feature."]</span>
     </div>
-    <div class="col-md-4 mb-3">
-        <label asp-for="RewardAmount" class="form-label">@T["Store credit"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="RewardAmount">
+    <label asp-for="RewardAmount" class="ocat-label">@T["Store credit"]</label>
+    <div class="ocat-limited">
         <input asp-for="RewardAmount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="RewardAmount"></span>
     </div>
-    <div class="col-md-4 mb-3">
-        <label asp-for="RewardPoints" class="form-label">@T["Points"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="RewardPoints">
+    <label asp-for="RewardPoints" class="ocat-label">@T["Points"]</label>
+    <div class="ocat-limited">
         <input asp-for="RewardPoints" type="number" min="0" class="form-control" />
         <span asp-validation-for="RewardPoints"></span>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <label asp-for="MinimumOrderAmount" class="form-label">@T["Least a friend's first order spends"]</label>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumOrderAmount">
+    <label asp-for="MinimumOrderAmount" class="ocat-label">@T["Least a friend's first order spends"]</label>
+    <div class="ocat-limited">
         <input asp-for="MinimumOrderAmount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="MinimumOrderAmount"></span>
         <span class="hint">@T["On goods, after discounts. 0 rewards any first order."]</span>
     </div>
 </div>
 
-<p class="text-muted small">@T["A customer is rewarded once per friend, only for the friend's first order, never for their own, and the reward is taken back if that order is canceled."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted small">@T["A customer is rewarded once per friend, only for the friend's first order, never for their own, and the reward is taken back if that order is canceled."]</p>
+    </div>
+</div>

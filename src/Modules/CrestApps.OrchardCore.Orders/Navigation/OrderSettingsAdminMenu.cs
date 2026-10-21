@@ -35,14 +35,12 @@ public sealed class OrderSettingsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Orders"], S["Orders"].PrefixPosition(), orders => orders
-                        .AddClass("orders-settings")
                         .Id("ordersSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(OrderPermissions.ManageOrders)
                         .LocalNav()
                     )
                     .Add(S["Emails"], S["Emails"].PrefixPosition(), emails => emails
-                        .AddClass("order-emails-settings")
                         .Id("orderEmailsSettings")
                         .Action("Index", "Admin", _emailRouteValues)
                         .Permission(OrderPermissions.ManageOrders)

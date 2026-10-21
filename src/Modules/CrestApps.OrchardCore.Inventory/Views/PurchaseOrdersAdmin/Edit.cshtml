@@ -54,9 +54,9 @@
     <div class="card mb-4">
         <div class="card-header">@T["Details"]</div>
         <div class="card-body">
-<div class="row g-3">
-                <div class="col-md-6" asp-validation-class-for="Supplier">
-                    <label asp-for="Supplier" class="form-label">@T["Supplier"]</label>
+            <div class="ocat-wrapper" asp-validation-class-for="Supplier">
+                <label asp-for="Supplier" class="ocat-label">@T["Supplier"]</label>
+                <div class="ocat-end">
                     <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
                     <datalist id="purchase-order-suppliers">
                         @foreach (var supplier in Model.Suppliers)
@@ -66,24 +66,34 @@
                     </datalist>
                     <span asp-validation-for="Supplier"></span>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="SupplierEmail" class="form-label">@T["Supplier's email"]</label>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="SupplierEmail" class="ocat-label">@T["Supplier's email"]</label>
+                <div class="ocat-end">
                     <input asp-for="SupplierEmail" type="email" class="form-control" autocomplete="off" disabled="@readOnly" />
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="LocationId" class="form-label">@T["Receive at"]</label>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="LocationId" class="ocat-label">@T["Receive at"]</label>
+                <div class="ocat-end">
                     <select asp-for="LocationId" asp-items="Model.Locations" class="form-select" disabled="@(readOnly || Model.Order?.Received > 0)"></select>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="Currency" class="form-label">@T["Costs in"]</label>
+            </div>
+            <div class="ocat-limited-wrapper">
+                <label asp-for="Currency" class="ocat-label">@T["Costs in"]</label>
+                <div class="ocat-limited">
                     <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" disabled="@readOnly"></select>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="ExpectedDate" class="form-label">@T["Expected"]</label>
+            </div>
+            <div class="ocat-limited-wrapper">
+                <label asp-for="ExpectedDate" class="ocat-label">@T["Expected"]</label>
+                <div class="ocat-limited">
                     <input asp-for="ExpectedDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" disabled="@readOnly" />
                 </div>
-                <div class="col-12">
-                    <label asp-for="Note" class="form-label">@T["Note"]</label>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+                <div class="ocat-end">
                     <textarea asp-for="Note" rows="2" class="form-control" maxlength="2000" disabled="@readOnly"></textarea>
                 </div>
             </div>
@@ -203,35 +213,41 @@
 
     @if (Model.CanManage && order.IsDraft)
     {
-        <div class="mb-3">
-            <label class="form-label" for="purchase-order-add-items">@T["Add items"]</label>
-            @await Component.InvokeAsync("ItemSelector", new
-            {
-                id = "purchase-order-add-items",
-                inputName = "AddStockItemIds",
-                endpoint = Model.SearchEndpoint,
-                initialItemsJson = "[]",
-                multiple = true,
-                enableSearch = true,
-                buttonText = T["Find items to order"].Value,
-                searchPlaceholder = T["Search by SKU or name"].Value,
-                emptyResultsText = T["No stock items found."].Value,
-                noSelectionText = T["None chosen."].Value,
-                selectedItemsLabel = T["To add"].Value,
-            })
-            <span class="hint">@T["They're added with a quantity of 1 when you save."]</span>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="purchase-order-add-items">@T["Add items"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("ItemSelector", new
+                {
+                    id = "purchase-order-add-items",
+                    inputName = "AddStockItemIds",
+                    endpoint = Model.SearchEndpoint,
+                    initialItemsJson = "[]",
+                    multiple = true,
+                    enableSearch = true,
+                    buttonText = T["Find items to order"].Value,
+                    searchPlaceholder = T["Search by SKU or name"].Value,
+                    emptyResultsText = T["No stock items found."].Value,
+                    noSelectionText = T["None chosen."].Value,
+                    selectedItemsLabel = T["To add"].Value,
+                })
+                <span class="hint">@T["They're added with a quantity of 1 when you save."]</span>
+            </div>
         </div>
     }
 
     @if (!readOnly)
     {
-        <div class="d-flex flex-wrap gap-2">
-            <button type="submit" class="btn btn-primary">@T["Save"]</button>
-            @if (canReceive)
-            {
-                <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
-                <button type="submit" class="btn btn-outline-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
-            }
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">@T["Save"]</button>
+                    @if (canReceive)
+                    {
+                        <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
+                        <button type="submit" class="btn btn-outline-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
+                    }
+                </div>
+            </div>
         </div>
     }
 </form>

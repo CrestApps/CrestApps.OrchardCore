@@ -20,17 +20,19 @@ namespace CrestApps.OrchardCore.Stripe.Drivers;
 /// </remarks>
 public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<CheckoutFlowPaymentMethod>
 {
-    private readonly StripeOptions _stripeOptions;
+    private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
     private readonly IStripeWalletService _walletService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StripeCheckoutPaymentMethodDisplayDriver"/> class.
     /// </summary>
-    /// <param name="stripeOptions">The resolved Stripe options for the tenant.</param>
+    /// <param name="stripeOptions">The Stripe options for the tenant, read when the editor is built.</param>
     /// <param name="walletService">The signed-in buyer's saved cards.</param>
-    public StripeCheckoutPaymentMethodDisplayDriver(IOptions<StripeOptions> stripeOptions, IStripeWalletService walletService)
+    public StripeCheckoutPaymentMethodDisplayDriver(
+        IOptionsMonitor<StripeOptions> stripeOptions,
+        IStripeWalletService walletService)
     {
-        _stripeOptions = stripeOptions.Value;
+        _stripeOptions = stripeOptions;
         _walletService = walletService;
     }
 
@@ -38,9 +40,11 @@ public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<Che
     public override IDisplayResult Edit(CheckoutFlowPaymentMethod method, BuildEditorContext context)
         => Initialize<StripeCheckoutPaymentMethodViewModel>("StripeCheckoutPaymentMethod", async model =>
         {
+            var stripeOptions = _stripeOptions.CurrentValue;
+
             model.SessionId = method.Flow.Session.SessionId;
-            model.PublishableKey = _stripeOptions.PublishableKey;
-            model.IsLive = _stripeOptions.IsLive;
+            model.PublishableKey = stripeOptions.PublishableKey;
+            model.IsLive = stripeOptions.IsLive;
             model.SavePaymentMethod = method.SavePaymentMethod;
 
             if (method.Flow?.Session is not null && method.Flow.Session.TryGet<CheckoutInvoice>(out var invoice))
@@ -64,7 +68,7 @@ public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<Che
 
             model.CanUseSavedCards = !string.IsNullOrEmpty(ownerId) && !model.HasRecurringItems && !model.SavePaymentMethod;
 
-            if (model.CanUseSavedCards && !string.IsNullOrEmpty(_stripeOptions.PublishableKey))
+            if (model.CanUseSavedCards && !string.IsNullOrEmpty(stripeOptions.PublishableKey))
             {
                 model.SavedCards = await _walletService.ListCardsAsync(ownerId);
             }

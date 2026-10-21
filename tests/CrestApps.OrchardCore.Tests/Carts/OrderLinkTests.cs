@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Services;
-using Microsoft.AspNetCore.DataProtection;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -22,7 +22,12 @@ public sealed class OrderLinkTests
         var siteService = new Mock<ISiteService>();
         siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
-        return new OrderLinkService(new EphemeralDataProtectionProvider(), siteService.Object, new HttpContextAccessor(), Mock.Of<LinkGenerator>());
+        // The view route, as the endpoint it names would generate it.
+        var links = new Mock<LinkGenerator>();
+        links.Setup(value => value.GetPathByAddress(It.IsAny<RouteValuesAddress>(), It.IsAny<RouteValueDictionary>(), It.IsAny<PathString>(), It.IsAny<FragmentString>(), It.IsAny<LinkOptions>()))
+            .Returns((RouteValuesAddress _, RouteValueDictionary values, PathString _, FragmentString _, LinkOptions _) => $"/orders/view/{Uri.EscapeDataString((string)values["token"])}");
+
+        return new OrderLinkService(SignedLinkDoubles.Tokens(), SignedLinkDoubles.Urls(siteService.Object, links.Object));
     }
 
     [Fact]

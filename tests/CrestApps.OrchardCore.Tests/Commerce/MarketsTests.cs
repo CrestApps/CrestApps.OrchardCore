@@ -244,7 +244,7 @@ public sealed class MarketsTests
     private static async Task<PriceResult> ResolveAsync(ContentItem product, string currency, IShopperCurrency shopper = null)
     {
         var resolver = new DefaultPriceResolver(
-            new DefaultProductSnapshotResolver(CreateContentDefinitionManager()),
+            new DefaultProductSnapshotResolver(CreateContentDefinitionManager(), new TestClock(DateTime.UtcNow)),
             new TestClock(_now),
             NullLogger<DefaultPriceResolver>.Instance,
             new HttpContextAccessor(),

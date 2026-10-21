@@ -13,9 +13,15 @@ public class SubscriptionOnboardingSettingsViewModel
     public string DatabaseProvider { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection string provisioned sites are created with.
+    /// Gets or sets a new connection string provisioned sites are created with. It is never filled with the stored
+    /// one; leaving it blank keeps the stored connection string.
     /// </summary>
     public string ConnectionString { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a connection string is stored.
+    /// </summary>
+    public bool HasConnectionString { get; set; }
 
     /// <summary>
     /// Gets or sets the schema provisioned sites are created in.

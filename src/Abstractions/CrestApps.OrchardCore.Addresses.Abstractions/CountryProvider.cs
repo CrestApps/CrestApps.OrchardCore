@@ -40,7 +40,7 @@ public static class CountryProvider
 
             var code = region.TwoLetterISORegionName;
 
-            if (!IsIsoAlpha2Code(code))
+            if (!CountryCodeUtility.IsCountryCode(code))
             {
                 continue;
             }
@@ -54,15 +54,5 @@ public static class CountryProvider
         return countries
             .OrderBy(country => country.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
-    }
-
-    private static bool IsIsoAlpha2Code(string code)
-    {
-        if (code is null || code.Length != 2)
-        {
-            return false;
-        }
-
-        return char.IsAsciiLetterUpper(code[0]) && char.IsAsciiLetterUpper(code[1]);
     }
 }

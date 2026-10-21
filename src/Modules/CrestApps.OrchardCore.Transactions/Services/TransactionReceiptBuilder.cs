@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts;
@@ -55,18 +54,7 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
         var currency = transaction.Currency;
         var taxAmount = GetTaxShare(transaction, paid);
 
-        var owner = transaction.OwnerKind == CustomerOwnerKind.Guest
-            ? CustomerOwner.ForGuest(transaction.OwnerId)
-            : CustomerOwner.ForUser(transaction.OwnerId);
-
-        var contact = await _contactResolver.ResolveAsync(
-            owner,
-            new CustomerContact
-            {
-                DisplayName = transaction.GuestContactName,
-                Email = transaction.GuestContactEmail,
-            },
-            cancellationToken);
+        var contact = await _contactResolver.ResolveAsync(transaction.GetOwner(), transaction.GetGuestContact(), cancellationToken);
 
         var request = new ReceiptRequest
         {

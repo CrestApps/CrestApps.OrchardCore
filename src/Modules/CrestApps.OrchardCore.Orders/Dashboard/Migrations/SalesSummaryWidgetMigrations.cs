@@ -21,7 +21,7 @@ public sealed class SalesSummaryPart : ContentPart
 /// <summary>
 /// Adds the Sales Summary dashboard widget.
 /// </summary>
-public sealed class SalesSummaryWidgetMigrations : DataMigration
+internal sealed class SalesSummaryWidgetMigrations : DataMigration
 {
     public const string WidgetType = "SalesSummaryWidget";
 

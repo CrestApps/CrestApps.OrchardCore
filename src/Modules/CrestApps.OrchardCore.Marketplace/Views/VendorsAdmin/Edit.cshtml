@@ -13,37 +13,49 @@
 <form method="post">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <div class="mb-3">
-        <label asp-for="Name" class="form-label">@T["Name"]</label>
-        <input asp-for="Name" class="form-control" maxlength="120" required />
-        <span asp-validation-for="Name" class="text-danger"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" maxlength="120" required />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="Email" class="form-label">@T["Email"]</label>
-        <input asp-for="Email" type="email" class="form-control" maxlength="254" />
-        <span class="hint">@T["Where Stripe's setup and the vendor's notices go."]</span>
+    <div class="ocat-wrapper">
+        <label asp-for="Email" class="ocat-label">@T["Email"]</label>
+        <div class="ocat-end">
+            <input asp-for="Email" type="email" class="form-control" maxlength="254" />
+            <span class="hint">@T["Where Stripe's setup and the vendor's notices go."]</span>
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="UserNames" class="form-label">@T["People who run it"]</label>
-        <textarea asp-for="UserNames" class="form-control" rows="3"></textarea>
-        <span class="hint">@T["Their usernames, one per line or separated by commas. They see the vendor's sales and payouts, and set up its payouts, under Vendor in their account."]</span>
-        <span asp-validation-for="UserNames" class="text-danger"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="UserNames">
+        <label asp-for="UserNames" class="ocat-label">@T["People who run it"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="UserNames" class="form-control" rows="3"></textarea>
+            <span class="hint">@T["Their usernames, one per line or separated by commas. They see the vendor's sales and payouts, and set up its payouts, under Vendor in their account."]</span>
+            <span asp-validation-for="UserNames" class="text-danger"></span>
+        </div>
     </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-6 col-md-3">
-            <label asp-for="CommissionPercent" class="form-label">@T["Commission (%)"]</label>
+    <div class="ocat-limited-wrapper" asp-validation-class-for="CommissionPercent">
+        <label asp-for="CommissionPercent" class="ocat-label">@T["Commission (%)"]</label>
+        <div class="ocat-limited">
             <input asp-for="CommissionPercent" inputmode="decimal" class="form-control" placeholder="@T["The store's"]" />
             <span asp-validation-for="CommissionPercent" class="text-danger"></span>
         </div>
-        <div class="col-6 col-md-3">
-            <label asp-for="Country" class="form-label">@T["Country"]</label>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+        <div class="ocat-limited">
             <input asp-for="Country" class="form-control" maxlength="2" placeholder="US" />
         </div>
-        <div class="col-12 col-md-4">
-            <label asp-for="Status" class="form-label">@T["Status"]</label>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Status" class="ocat-label">@T["Status"]</label>
+        <div class="ocat-end">
             <select asp-for="Status" class="form-select">
                 <option value="@VendorStatus.Active">@T["Active"]</option>
                 <option value="@VendorStatus.Suspended">@T["Suspended: nothing is paid out"]</option>
@@ -51,6 +63,10 @@
         </div>
     </div>
 
-    <button type="submit" class="btn btn-primary">@T["Save"]</button>
-    <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        </div>
+    </div>
 </form>

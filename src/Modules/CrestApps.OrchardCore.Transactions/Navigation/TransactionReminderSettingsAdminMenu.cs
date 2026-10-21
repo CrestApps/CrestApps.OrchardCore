@@ -35,7 +35,6 @@ public sealed class TransactionReminderSettingsAdminMenu : AdminNavigationProvid
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Transactions"], S["Transactions"].PrefixPosition(), transactions => transactions
-                        .AddClass("transactions-settings")
                         .Id("transactionsSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(TransactionsPermissions.ManageTransactionSettings)

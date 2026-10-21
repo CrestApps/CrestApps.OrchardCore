@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Creates the index table that backs the durable subscription agreements.
 /// </summary>
-public sealed class SubscriptionRecordMigrations : DataMigration
+internal sealed class SubscriptionRecordMigrations : DataMigration
 {
     /// <summary>
     /// Creates the initial schema.

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.PointOfSale.Api;
 using CrestApps.OrchardCore.PointOfSale.Drivers;
 using CrestApps.OrchardCore.PointOfSale.Indexes;
@@ -31,6 +32,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRegisterShiftStore, RegisterShiftStore>();
         services.AddScoped<PosShiftService>();
         services.AddScoped<PosSaleService>();
+        services.AddCommerceEmailSender();
 
         // Cash at the till is a tender, like a gift card; a card on the counter terminal pays the rest.
         services.AddScoped<ICheckoutTenderProvider, PosCashTenderProvider>();

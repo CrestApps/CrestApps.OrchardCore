@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Checkout.ViewModels;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -9,8 +11,9 @@ using OrchardCore.Recipes.Services;
 namespace CrestApps.OrchardCore.Checkout.Recipes;
 
 /// <summary>
-/// The "Coupons" step: creates or updates coupons, found by code. How often a coupon was used belongs to the site it
-/// was used on, so an import never changes it.
+/// The "Coupons" step: creates or updates coupons, found by code, with the same rules and mapping as the coupon editor
+/// (<see cref="CouponEditor"/>). How often a coupon was used belongs to the site it was used on, so an import never
+/// changes it.
 /// </summary>
 internal sealed class CouponsStep : NamedRecipeStepHandler
 {
@@ -20,11 +23,15 @@ internal sealed class CouponsStep : NamedRecipeStepHandler
     };
 
     private readonly ICouponStore _couponStore;
+    private readonly CouponEditor _couponEditor;
 
-    public CouponsStep(ICouponStore couponStore)
+    public CouponsStep(
+        ICouponStore couponStore,
+        CouponEditor couponEditor)
         : base(CheckoutConstants.CouponsRecipeStep)
     {
         _couponStore = couponStore;
+        _couponEditor = couponEditor;
     }
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -44,6 +51,8 @@ internal sealed class CouponsStep : NamedRecipeStepHandler
                 continue;
             }
 
+            // The step finds a coupon by its code, so a coupon without one, even an automatic discount, is refused
+            // rather than made up anew each time the recipe runs.
             var code = source?.Code?.Trim();
 
             if (string.IsNullOrEmpty(code))
@@ -53,95 +62,79 @@ internal sealed class CouponsStep : NamedRecipeStepHandler
                 continue;
             }
 
-            var error = Validate(source);
+            var coupon = await _couponStore.GetByCodeAsync(code);
 
-            if (error is not null)
+            // The admin editor's rules and mapping, so a recipe can't store a coupon the editor would refuse.
+            var model = ToModel(source);
+            var modelState = new ModelStateDictionary();
+
+            await _couponEditor.ValidateAsync(model, coupon?.ItemId, modelState);
+
+            if (!modelState.IsValid)
             {
-                context.Errors.Add($"Coupon '{code}': {error}");
+                var errors = modelState.Values.SelectMany(entry => entry.Errors).Select(error => error.ErrorMessage);
+
+                context.Errors.Add($"Coupon '{code}': {string.Join(" ", errors)}");
 
                 continue;
             }
 
-            var coupon = await _couponStore.GetByCodeAsync(code);
+            var isNew = coupon is null;
 
-            if (coupon is null)
+            coupon ??= new Coupon { ItemId = IdGenerator.GenerateId() };
+
+            CouponEditor.Apply(model, coupon);
+
+            // The products and categories are picked beside the editor's fields, so they are copied as they are.
+            coupon.ProductIds = [.. source.ProductIds ?? []];
+            coupon.CategoryIds = [.. source.CategoryIds ?? []];
+
+            if (coupon.Kind == CouponKind.BuyXGetY)
             {
-                coupon = new Coupon { ItemId = IdGenerator.GenerateId() };
-                Copy(source, coupon);
+                coupon.BuyProductIds = [.. source.BuyProductIds ?? []];
+                coupon.BuyCategoryIds = [.. source.BuyCategoryIds ?? []];
+            }
 
+            if (isNew)
+            {
                 await _couponStore.CreateAsync(coupon);
             }
             else
             {
-                Copy(source, coupon);
-
                 await _couponStore.UpdateAsync(coupon);
             }
         }
     }
 
-    internal static string Validate(Coupon coupon)
-    {
-        if (coupon.Kind is CouponKind.Percentage or CouponKind.BuyXGetY && coupon.Percentage is <= 0m or > 100m)
+    private static CouponEditViewModel ToModel(Coupon coupon)
+        => new()
         {
-            return "a percentage or buy X get Y coupon needs a Percentage between 1 and 100.";
-        }
-
-        if (coupon.Kind == CouponKind.BuyXGetY && (coupon.BuyQuantity < 1 || coupon.GetQuantity < 1))
-        {
-            return "a buy X get Y coupon needs a BuyQuantity and a GetQuantity of 1 or more.";
-        }
-
-        if (coupon.Kind == CouponKind.FixedAmount && (coupon.Amount <= 0m || string.IsNullOrWhiteSpace(coupon.Currency)))
-        {
-            return "a fixed-amount coupon needs an Amount greater than zero and a Currency.";
-        }
-
-        if (coupon.StartsUtc.HasValue && coupon.EndsUtc.HasValue && coupon.EndsUtc.Value <= coupon.StartsUtc.Value)
-        {
-            return "EndsUtc must be after StartsUtc.";
-        }
-
-        if (coupon.MaxRedemptions is <= 0 || coupon.MaxRedemptionsPerCustomer is <= 0)
-        {
-            return "usage limits must be greater than zero, or left out.";
-        }
-
-        return null;
-    }
-
-    private static void Copy(Coupon source, Coupon target)
-    {
-        target.Code = source.Code.Trim();
-        target.Method = source.Method;
-        target.OnlyGeneratedCodes = source.OnlyGeneratedCodes;
-        target.Description = source.Description;
-        target.Kind = source.Kind;
-        target.Percentage = source.Kind is CouponKind.Percentage or CouponKind.BuyXGetY ? source.Percentage : 0m;
-        target.Amount = source.Kind == CouponKind.FixedAmount ? source.Amount : 0m;
-        target.Currency = source.Kind == CouponKind.FixedAmount ? source.Currency?.Trim().ToUpperInvariant() : null;
-        target.Target = source.Kind is CouponKind.FreeShipping or CouponKind.BuyXGetY ? DiscountTarget.OneTime : source.Target;
-        target.BuyQuantity = source.BuyQuantity;
-        target.GetQuantity = source.GetQuantity;
-        target.MaxApplicationsPerOrder = source.MaxApplicationsPerOrder;
-        target.BuyProductIds = [.. source.BuyProductIds ?? []];
-        target.BuyCategoryIds = [.. source.BuyCategoryIds ?? []];
-        target.MinimumQuantity = source.MinimumQuantity;
-        target.CombinesWithProductDiscounts = source.CombinesWithProductDiscounts;
-        target.CombinesWithOrderDiscounts = source.CombinesWithOrderDiscounts;
-        target.CombinesWithShippingDiscounts = source.CombinesWithShippingDiscounts;
-        target.IsEnabled = source.IsEnabled;
-        target.StartsUtc = source.StartsUtc;
-        target.EndsUtc = source.EndsUtc;
-        target.MaxRedemptions = source.MaxRedemptions;
-        target.MaxRedemptionsPerCustomer = source.MaxRedemptionsPerCustomer;
-        target.MinimumAmount = source.MinimumAmount;
-        target.MaximumAmount = source.MaximumAmount;
-        target.ProductIds = [.. source.ProductIds ?? []];
-        target.CategoryIds = [.. source.CategoryIds ?? []];
-        target.Sources = [.. source.Sources ?? []];
-        target.ReferenceTypes = [.. source.ReferenceTypes ?? []];
-        target.CustomerId = source.CustomerId;
-        target.CustomerEmail = source.CustomerEmail;
-    }
+            Code = coupon.Code,
+            Method = coupon.Method,
+            OnlyGeneratedCodes = coupon.OnlyGeneratedCodes,
+            Description = coupon.Description,
+            Kind = coupon.Kind,
+            Percentage = coupon.Percentage,
+            Amount = coupon.Amount,
+            Currency = coupon.Currency,
+            Target = coupon.Target,
+            IsEnabled = coupon.IsEnabled,
+            StartsUtc = coupon.StartsUtc,
+            EndsUtc = coupon.EndsUtc,
+            MaxRedemptions = coupon.MaxRedemptions,
+            MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
+            MinimumAmount = coupon.MinimumAmount,
+            MaximumAmount = coupon.MaximumAmount,
+            MinimumQuantity = coupon.MinimumQuantity,
+            BuyQuantity = coupon.Kind == CouponKind.BuyXGetY ? coupon.BuyQuantity : null,
+            GetQuantity = coupon.Kind == CouponKind.BuyXGetY ? coupon.GetQuantity : null,
+            MaxApplicationsPerOrder = coupon.MaxApplicationsPerOrder,
+            CombinesWithProductDiscounts = coupon.CombinesWithProductDiscounts,
+            CombinesWithOrderDiscounts = coupon.CombinesWithOrderDiscounts,
+            CombinesWithShippingDiscounts = coupon.CombinesWithShippingDiscounts,
+            Sources = coupon.Sources is { Count: > 0 } sources ? string.Join(',', sources) : null,
+            ReferenceTypes = coupon.ReferenceTypes is { Count: > 0 } referenceTypes ? string.Join(',', referenceTypes) : null,
+            CustomerId = coupon.CustomerId,
+            CustomerEmail = coupon.CustomerEmail,
+        };
 }

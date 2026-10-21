@@ -1,27 +1,33 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Security;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Commerce.Services;
 
 /// <summary>
-/// The setup guide's staff roles: adds roles for the usual jobs in a store, each with the permissions it needs, so
-/// staff can be given one instead of picking permissions. A role that's there already is left as it is.
+/// The setup guide's staff roles: adds roles for the usual jobs in a store, so staff can be given one instead of picking
+/// permissions. Orchard Core grants each new role the permissions the enabled modules declare for it in their default
+/// stereotypes. A role that's there already is left as it is.
 /// </summary>
 internal sealed class StaffRolesSetupStep : IStoreSetupStep
 {
     private readonly RoleManager<IRole> _roleManager;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public StaffRolesSetupStep(RoleManager<IRole> roleManager, IOptions<AdminOptions> adminOptions, IStringLocalizer<StaffRolesSetupStep> stringLocalizer)
+    public StaffRolesSetupStep(
+        RoleManager<IRole> roleManager,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<StaffRolesSetupStep> stringLocalizer)
     {
         _roleManager = roleManager;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -50,7 +56,7 @@ internal sealed class StaffRolesSetupStep : IStoreSetupStep
             IsDone = missing.Count == 0,
             Status = missing.Count == 0 ? S["The staff roles are there."] : null,
             IsOptional = true,
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/Roles/Index",
+            Url = _linkGenerator.GetPathByAction(_httpContextAccessor.HttpContext, "Index", "Admin", new { area = "OrchardCore.Roles" }),
             UrlText = S["Roles"],
             ActionText = missing.Count == 0 ? null : S["Add the staff roles"],
         };
@@ -67,16 +73,12 @@ internal sealed class StaffRolesSetupStep : IStoreSetupStep
                 continue;
             }
 
+            // Orchard Core gives a new role the permissions every enabled module's stereotypes grant to its name.
             var role = new Role
             {
                 RoleName = preset.Name,
                 RoleDescription = preset.Description,
             };
-
-            foreach (var permission in preset.Permissions)
-            {
-                role.RoleClaims.Add(new RoleClaim { ClaimType = Permission.ClaimType, ClaimValue = permission });
-            }
 
             var result = await _roleManager.CreateAsync(role);
 
@@ -95,44 +97,34 @@ internal sealed class StaffRolesSetupStep : IStoreSetupStep
 }
 
 /// <summary>
-/// The roles the setup guide adds for a store's staff, with the permissions of each. A permission of a feature that
-/// isn't on does nothing until the feature is.
+/// The roles the setup guide adds for a store's staff. The guide only creates them: each commerce module grants its
+/// permissions to these role names through its permission provider's default stereotypes, which Orchard Core applies
+/// when a role is created and again when a module that grants it more is enabled later.
 /// </summary>
 public static class StaffRolePresets
 {
-    public sealed record Preset(string Name, string Description, IReadOnlyList<string> Permissions);
-
-    private const string AccessAdminPanel = "AccessAdminPanel";
+    /// <summary>
+    /// A staff role the setup guide adds.
+    /// </summary>
+    /// <param name="Name">The role's name, one of <see cref="CommerceConstants.StaffRoles"/>.</param>
+    /// <param name="Description">What the role is for.</param>
+    public sealed record Preset(string Name, string Description);
 
     public static readonly Preset StoreManager = new(
-        "Store manager",
-        "Runs the store day to day: products, orders, stock, shipping, customers, promotions and reports.",
-        [
-            AccessAdminPanel, "ListContent", "ViewContent", "EditContent", "PublishContent", "DeleteContent", "ManageMediaContent",
-            "ManageOrders", "ManageGiftCards", "ManageRefunds", "ManageTransactions",
-            "ManageInventory", "ViewInventory", "ManageShipping", "FulfillOrders",
-            "ManageCustomers", "ViewCustomers", "ManageCoupons", "ManageMarketing", "ManageProductReviews", "ManageProductFeeds",
-            "ManageSubscriptions", "ManageBookings", "ManageMemberships", "ManageDigitalDownloads", "ManageFundraising",
-            "ModerateClassifieds", "ViewAllReportDesigns",
-        ]);
+        CommerceConstants.StaffRoles.StoreManager,
+        "Runs the store day to day: products, orders, stock, shipping, customers, promotions and reports.");
 
     public static readonly Preset Warehouse = new(
-        "Warehouse",
-        "Picks, packs and ships orders, and receives and counts stock.",
-        [AccessAdminPanel, "FulfillOrders", "ViewInventory", "ManageInventory"]);
+        CommerceConstants.StaffRoles.Warehouse,
+        "Picks, packs and ships orders, and receives and counts stock.");
 
     public static readonly Preset CustomerSupport = new(
-        "Customer support",
-        "Answers customers: looks up their orders, changes and refunds them, and manages subscriptions and bookings.",
-        [AccessAdminPanel, "ManageOrders", "ManageRefunds", "ViewCustomers", "ManageCustomers", "ManageSubscriptions", "ManageBookings", "ManageMemberships", "ViewInventory"]);
+        CommerceConstants.StaffRoles.CustomerSupport,
+        "Answers customers: looks up their orders, changes and refunds them, and manages subscriptions and bookings.");
 
     public static readonly Preset Marketing = new(
-        "Marketing",
-        "Runs promotions, campaigns, reviews and product feeds, and edits products and pages.",
-        [
-            AccessAdminPanel, "ListContent", "ViewContent", "EditContent", "PublishContent", "ManageMediaContent",
-            "ManageMarketing", "ManageCoupons", "ManageProductReviews", "ManageProductFeeds", "ViewCustomers", "ViewAllReportDesigns",
-        ]);
+        CommerceConstants.StaffRoles.Marketing,
+        "Runs promotions, campaigns, reviews and product feeds, and edits products and pages.");
 
     public static readonly IReadOnlyList<Preset> All = [StoreManager, Warehouse, CustomerSupport, Marketing];
 }

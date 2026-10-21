@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Deployments;
 using CrestApps.OrchardCore.Stripe.Deployments.Sources;
 using CrestApps.OrchardCore.Stripe.Deployments.Steps;
@@ -10,7 +11,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Moq;
 using OrchardCore.Deployment;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Settings;
@@ -81,7 +82,7 @@ public sealed class StripeSettingsDeploymentTests
         var protector = dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
         var settings = new StripeSettings();
         var siteService = CreateSiteService(settings, out var siteServiceMock);
-        var step = CreateStep(siteService, dataProtectionProvider, out var shellReleaseManager);
+        var step = CreateStep(siteService, dataProtectionProvider, out var optionsUpdateNotifier);
         var context = CreateContext(new JsonObject
         {
             [nameof(StripeSettings.IsLive)] = false,
@@ -101,7 +102,7 @@ public sealed class StripeSettingsDeploymentTests
         Assert.Equal("sk_test_imported", protector.Unprotect(settings.TestPrivateSecret));
         Assert.Equal("whsec_imported", protector.Unprotect(settings.TestWebhookSecret));
         siteServiceMock.Verify(service => service.UpdateSiteSettingsAsync(It.IsAny<ISite>()), Times.Once);
-        shellReleaseManager.Verify(manager => manager.RequestRelease(), Times.Once);
+        optionsUpdateNotifier.Verify(notifier => notifier.RequestUpdate<StripeOptions>(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public sealed class StripeSettingsDeploymentTests
         // Arrange
         var settings = new StripeSettings();
         var siteService = CreateSiteService(settings, out var siteServiceMock);
-        var step = CreateStep(siteService, new EphemeralDataProtectionProvider(), out var shellReleaseManager);
+        var step = CreateStep(siteService, new EphemeralDataProtectionProvider(), out var optionsUpdateNotifier);
         var context = CreateContext(new JsonObject
         {
             [nameof(StripeSettings.TestPublishableKey)] = "pk_test_imported",
@@ -164,19 +165,19 @@ public sealed class StripeSettingsDeploymentTests
         Assert.Single(context.Errors);
         Assert.Null(settings.TestPublishableKey);
         siteServiceMock.Verify(service => service.UpdateSiteSettingsAsync(It.IsAny<ISite>()), Times.Never);
-        shellReleaseManager.Verify(manager => manager.RequestRelease(), Times.Never);
+        optionsUpdateNotifier.Verify(notifier => notifier.RequestUpdate<StripeOptions>(It.IsAny<string>()), Times.Never);
     }
 
     private static StripeSettingsStep CreateStep(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        out Mock<IShellReleaseManager> shellReleaseManager)
+        out Mock<IOptionsUpdateNotifier> optionsUpdateNotifier)
     {
-        shellReleaseManager = new Mock<IShellReleaseManager>();
+        optionsUpdateNotifier = new Mock<IOptionsUpdateNotifier>();
 
         // The step is internal, so its localizer can't be mocked: Moq can't proxy an interface over an internal type from a
         // strong-named assembly.
-        return new StripeSettingsStep(siteService, dataProtectionProvider, shellReleaseManager.Object, new PassThroughStringLocalizer<StripeSettingsStep>());
+        return new StripeSettingsStep(siteService, dataProtectionProvider, optionsUpdateNotifier.Object, new PassThroughStringLocalizer<StripeSettingsStep>());
     }
 
     private static RecipeExecutionContext CreateContext(JsonObject settings)

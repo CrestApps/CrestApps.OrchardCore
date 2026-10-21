@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Carts.Migrations;
 /// <summary>
 /// Creates the index table that finds carts by owner and by expiry.
 /// </summary>
-public sealed class CartMigrations : DataMigration
+internal sealed class CartMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

@@ -1,34 +1,46 @@
 @model CrestApps.OrchardCore.Taxation.TaxJar.TaxJarSettingsViewModel
 
-<p class="text-muted">@T["TaxJar works out sales tax for orders to the countries listed below, from each address's rate, in place of your own tax rules. Get a token under Account › TaxJar API in TaxJar. Orders to other countries, and prices that include tax, use your own rules."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["TaxJar works out sales tax for orders to the countries listed below, from each address's rate, in place of your own tax rules. Get a token under Account › TaxJar API in TaxJar. Orders to other countries, and prices that include tax, use your own rules."]</p>
+    </div>
+</div>
 
-<div class="mb-3">
-    <label asp-for="ApiKey" class="form-label">@T["TaxJar API token"]</label>
-    <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new token to replace it."] : null)" />
-    <span class="hint">@(Model.HasApiKey ? T["A token is saved, and TaxJar works out tax. It's never shown again."] : T["Without a token, your own tax rules work out tax."])</span>
+<div class="ocat-wrapper">
+    <label asp-for="ApiKey" class="ocat-label">@T["TaxJar API token"]</label>
+    <div class="ocat-end">
+        <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new token to replace it."] : null)" />
+        <span class="hint">@(Model.HasApiKey ? T["A token is saved, and TaxJar works out tax. It's never shown again."] : T["Without a token, your own tax rules work out tax."])</span>
+    </div>
 </div>
 
 @if (Model.HasApiKey)
 {
-    <div class="mb-3">
-        <div class="form-check">
-            <input asp-for="RemoveApiKey" type="checkbox" class="form-check-input" />
-            <label asp-for="RemoveApiKey" class="form-check-label">@T["Remove the token"]</label>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="RemoveApiKey" type="checkbox" class="form-check-input" />
+                <label asp-for="RemoveApiKey" class="form-check-label">@T["Remove the token"]</label>
+            </div>
             <span class="hint dashed">@T["Your own tax rules work out tax again."]</span>
         </div>
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="Countries" class="form-label">@T["Countries"]</label>
-    <input asp-for="Countries" class="form-control" placeholder="US" />
-    <span class="hint">@T["The two-letter codes of the countries TaxJar works tax out for, separated by commas."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="Countries" class="ocat-label">@T["Countries"]</label>
+    <div class="ocat-end">
+        <input asp-for="Countries" class="form-control" placeholder="US" />
+        <span class="hint">@T["The two-letter codes of the countries TaxJar works tax out for, separated by commas."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check form-switch">
-        <input asp-for="UseSandbox" type="checkbox" class="form-check-input" />
-        <label asp-for="UseSandbox" class="form-check-label">@T["Sandbox"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check form-switch">
+            <input asp-for="UseSandbox" type="checkbox" class="form-check-input" />
+            <label asp-for="UseSandbox" class="form-check-label">@T["Sandbox"]</label>
+        </div>
         <span class="hint dashed">@T["For a sandbox token, while you try it out."]</span>
     </div>
 </div>

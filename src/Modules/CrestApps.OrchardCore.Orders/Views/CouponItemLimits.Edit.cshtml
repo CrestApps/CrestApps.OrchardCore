@@ -3,12 +3,16 @@
 @* A buy X get Y offer counts what the customer buys separately from what they get; the coupon editor shows this part
    only for that kind of coupon. *@
 <div data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.BuyXGetY)">
-    <h5 class="mt-2">@T["What the customer buys"]</h5>
-    <p class="text-muted">@T["Optional. Leave both blank to count any item. Only these count toward the items bought and the minimums."]</p>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <h5 class="mt-2">@T["What the customer buys"]</h5>
+            <p class="text-muted">@T["Optional. Leave both blank to count any item. Only these count toward the items bought and the minimums."]</p>
+        </div>
+    </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label class="form-label" for="@Html.IdFor(model => model.BuyProductIds)">@T["Products bought"]</label>
+    <div class="ocat-wrapper">
+        <label class="ocat-label" for="@Html.IdFor(model => model.BuyProductIds)">@T["Products bought"]</label>
+        <div class="ocat-end">
             @await Component.InvokeAsync("ItemSelector", new
             {
                 id = Html.IdFor(model => model.BuyProductIds),
@@ -23,8 +27,11 @@
                 smallButton = false,
             })
         </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label" for="@Html.IdFor(model => model.BuyCategoryIds)">@T["Categories bought"]</label>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label" for="@Html.IdFor(model => model.BuyCategoryIds)">@T["Categories bought"]</label>
+        <div class="ocat-end">
             @await Component.InvokeAsync("ItemSelector", new
             {
                 id = Html.IdFor(model => model.BuyCategoryIds),
@@ -42,14 +49,18 @@
     </div>
 </div>
 
-<h5 class="mt-2" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.Percentage) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FixedAmount) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FreeShipping)">@T["Products and categories"]</h5>
-<h5 class="mt-2" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.BuyXGetY)">@T["What the customer gets"]</h5>
-<p class="text-muted" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.Percentage) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FixedAmount) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FreeShipping)">@T["Optional. Leave both blank for a code that applies to everything in the order. Otherwise it takes something off only these products and the products in these categories, and only they count toward its minimum and maximum amounts."]</p>
-<p class="text-muted" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.BuyXGetY)">@T["The items the customer gets at the percentage off. Leave both blank for any item; the cheapest are the ones discounted."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-2" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.Percentage) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FixedAmount) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FreeShipping)">@T["Products and categories"]</h5>
+        <h5 class="mt-2" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.BuyXGetY)">@T["What the customer gets"]</h5>
+        <p class="text-muted" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.Percentage) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FixedAmount) @((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.FreeShipping)">@T["Optional. Leave both blank for a code that applies to everything in the order. Otherwise it takes something off only these products and the products in these categories, and only they count toward its minimum and maximum amounts."]</p>
+        <p class="text-muted" data-coupon-kinds="@((int)CrestApps.OrchardCore.Checkout.Models.CouponKind.BuyXGetY)">@T["The items the customer gets at the percentage off. Leave both blank for any item; the cheapest are the ones discounted."]</p>
+    </div>
+</div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label class="form-label" for="@Html.IdFor(model => model.ProductIds)">@T["Only for products"]</label>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.ProductIds)">@T["Only for products"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = Html.IdFor(model => model.ProductIds),
@@ -64,8 +75,11 @@
             smallButton = false,
         })
     </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label" for="@Html.IdFor(model => model.CategoryIds)">@T["Only for categories"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="@Html.IdFor(model => model.CategoryIds)">@T["Only for categories"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = Html.IdFor(model => model.CategoryIds),

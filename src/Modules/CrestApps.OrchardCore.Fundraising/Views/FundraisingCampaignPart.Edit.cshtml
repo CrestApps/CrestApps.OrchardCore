@@ -1,35 +1,45 @@
 @model FundraisingCampaignPartViewModel
 
-<div class="mb-3">
-    <label asp-for="Goal" class="form-label">@T["Goal"]</label>
-    <input asp-for="Goal" inputmode="decimal" class="form-control" style="max-width: 12rem;" />
-    <span class="hint">@T["What the campaign raises toward, in the product's currency. Leave it empty for no goal."]</span>
-    <span asp-validation-for="Goal" class="text-danger"></span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="Goal">
+    <label asp-for="Goal" class="ocat-label">@T["Goal"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Goal" inputmode="decimal" class="form-control" />
+        <span class="hint">@T["What the campaign raises toward, in the product's currency. Leave it empty for no goal."]</span>
+        <span asp-validation-for="Goal" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="SuggestedAmounts" class="form-label">@T["Suggested amounts"]</label>
-    <input asp-for="SuggestedAmounts" class="form-control" style="max-width: 20rem;" />
-    <span class="hint">@T["The amounts offered as buttons, separated by commas, such as 25, 50, 100. Donors can also enter their own."]</span>
-    <span asp-validation-for="SuggestedAmounts" class="text-danger"></span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="SuggestedAmounts">
+    <label asp-for="SuggestedAmounts" class="ocat-label">@T["Suggested amounts"]</label>
+    <div class="ocat-limited">
+        <input asp-for="SuggestedAmounts" class="form-control" />
+        <span class="hint">@T["The amounts offered as buttons, separated by commas, such as 25, 50, 100. Donors can also enter their own."]</span>
+        <span asp-validation-for="SuggestedAmounts" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="MinimumAmount" class="form-label">@T["Least donation"]</label>
-    <input asp-for="MinimumAmount" inputmode="decimal" class="form-control" style="max-width: 10rem;" />
-    <span asp-validation-for="MinimumAmount" class="text-danger"></span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumAmount">
+    <label asp-for="MinimumAmount" class="ocat-label">@T["Least donation"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumAmount" inputmode="decimal" class="form-control" />
+        <span asp-validation-for="MinimumAmount" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="EndsUtc" class="form-label">@T["Ends (UTC)"]</label>
-    <input asp-for="EndsUtc" type="datetime-local" step="1" class="form-control" style="max-width: 16rem;" />
-    <span class="hint">@T["When it stops taking donations. Leave it empty for no end."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="EndsUtc" class="ocat-label">@T["Ends (UTC)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="EndsUtc" type="datetime-local" step="1" class="form-control" />
+        <span class="hint">@T["When it stops taking donations. Leave it empty for no end."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="TaxDeductible" type="checkbox" class="form-check-input" />
-        <label asp-for="TaxDeductible" class="form-check-label">@T["Donations get a tax receipt"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="TaxDeductible" type="checkbox" class="form-check-input" />
+            <label asp-for="TaxDeductible" class="form-check-label">@T["Donations get a tax receipt"]</label>
+        </div>
         <span class="hint dashed">@T["Donors are emailed a receipt with your organization's tax ID, and find it in their account."]</span>
     </div>
 </div>

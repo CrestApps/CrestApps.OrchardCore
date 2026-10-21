@@ -1,11 +1,11 @@
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Marketing.Models;
 using Fluid;
 using Fluid.Values;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
@@ -23,6 +23,8 @@ public sealed partial class CampaignService
 {
     public const int BatchSize = 50;
 
+    private const string UnsubscribePurpose = "CrestApps.Marketing.Unsubscribe";
+
     // An unsubscribe link keeps working for this long.
     private static readonly TimeSpan _unsubscribeLifetime = TimeSpan.FromDays(400);
 
@@ -33,7 +35,7 @@ public sealed partial class CampaignService
     private readonly ILiquidTemplateManager _liquid;
     private readonly ISiteService _siteService;
     private readonly IEmailService _emailService;
-    private readonly ITimeLimitedDataProtector _protector;
+    private readonly SignedTokenService _signedTokenService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -44,7 +46,7 @@ public sealed partial class CampaignService
         ICustomerStore customers,
         ILiquidTemplateManager liquid,
         ISiteService siteService,
-        IDataProtectionProvider dataProtectionProvider,
+        SignedTokenService signedTokenService,
         IClock clock,
         ILogger<CampaignService> logger,
         IStringLocalizer<CampaignService> stringLocalizer,
@@ -57,7 +59,7 @@ public sealed partial class CampaignService
         _liquid = liquid;
         _siteService = siteService;
         _emailService = emailService;
-        _protector = dataProtectionProvider.CreateProtector("CrestApps.Marketing.Unsubscribe").ToTimeLimitedDataProtector();
+        _signedTokenService = signedTokenService;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -72,27 +74,13 @@ public sealed partial class CampaignService
     /// Returns the token of a customer's unsubscribe link.
     /// </summary>
     public string CreateUnsubscribeToken(string customerId)
-        => _protector.Protect(customerId, _unsubscribeLifetime);
+        => _signedTokenService.Protect(UnsubscribePurpose, customerId, _unsubscribeLifetime);
 
     /// <summary>
     /// Returns the customer an unsubscribe token is for, or <see langword="null"/> when it isn't valid any more.
     /// </summary>
     public string ReadUnsubscribeToken(string token)
-    {
-        if (string.IsNullOrEmpty(token))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _protector.Unprotect(token);
-        }
-        catch (System.Security.Cryptography.CryptographicException)
-        {
-            return null;
-        }
-    }
+        => _signedTokenService.Unprotect(UnsubscribePurpose, token);
 
     /// <summary>
     /// Returns a campaign's subject and HTML body for a customer.

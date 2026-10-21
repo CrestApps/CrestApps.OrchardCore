@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -15,7 +14,7 @@ namespace CrestApps.OrchardCore.Orders.Migrations;
 /// <summary>
 /// Creates the gift card index, the part that makes a product a gift card, and a Gift card product type to sell them.
 /// </summary>
-public sealed class GiftCardMigrations : DataMigration
+internal sealed class GiftCardMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISiteService _siteService;
@@ -43,10 +42,13 @@ public sealed class GiftCardMigrations : DataMigration
         );
 
         // A buyer's code is looked up on every apply; staff search by the last characters; an order finds its cards.
-        await IndexTableIndexCreation.CreateIfMissingAsync<GiftCardIndex>(SchemaBuilder, "IDX_GiftCardIndex_Code", OrderConstants.CollectionName, "NormalizedCode");
-        await IndexTableIndexCreation.CreateIfMissingAsync<GiftCardIndex>(SchemaBuilder, "IDX_GiftCardIndex_ItemId", OrderConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<GiftCardIndex>(SchemaBuilder, "IDX_GiftCardIndex_Last", OrderConstants.CollectionName, "LastCharacters");
-        await IndexTableIndexCreation.CreateIfMissingAsync<GiftCardIndex>(SchemaBuilder, "IDX_GiftCardIndex_Order", OrderConstants.CollectionName, "OrderId");
+        await SchemaBuilder.AlterIndexTableAsync<GiftCardIndex>(table =>
+        {
+            table.CreateIndex("IDX_GiftCardIndex_Code", "NormalizedCode");
+            table.CreateIndex("IDX_GiftCardIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_GiftCardIndex_Last", "LastCharacters");
+            table.CreateIndex("IDX_GiftCardIndex_Order", "OrderId");
+        }, collection: OrderConstants.CollectionName);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync("GiftCardPart", part => part
             .Attachable()

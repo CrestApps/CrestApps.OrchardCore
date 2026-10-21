@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -13,15 +12,13 @@ namespace CrestApps.OrchardCore.Customers.Drivers;
 /// <summary>
 /// Settings › Commerce › Customers: what an order's checkout asks the buyer.
 /// </summary>
-public sealed class CustomerCheckoutSettingsDisplayDriver : SiteDisplayDriver<CustomerCheckoutSettings>
+public sealed class CustomerCheckoutSettingsDisplayDriver : CustomerSettingsDisplayDriverBase<CustomerCheckoutSettings>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public CustomerCheckoutSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    public CustomerCheckoutSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService)
+        : base(httpContextAccessor, authorizationService)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
     }
 
     protected override string SettingsGroupId
@@ -32,12 +29,12 @@ public sealed class CustomerCheckoutSettingsDisplayDriver : SiteDisplayDriver<Cu
         {
             model.BillingAddress = settings.BillingAddress;
         }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, CustomerCheckoutSettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        if (!await CanManageCustomersAsync())
         {
             return null;
         }

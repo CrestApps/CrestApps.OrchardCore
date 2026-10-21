@@ -6,9 +6,7 @@ using CrestApps.OrchardCore.Products.Indexes;
 using CrestApps.OrchardCore.Products.Migrations;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
-using Moq;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using Xunit;
 using YesSql;
@@ -34,9 +32,7 @@ public sealed class ProductImportRowFilterTests : IAsyncLifetime
 
         await using var session = _store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var definitions = new Mock<IContentDefinitionManager>();
-        definitions.Setup(manager => manager.ListTypeDefinitionsAsync()).ReturnsAsync([]);
-        await new ProductSkuMigrations(session, definitions.Object) { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
+        await new ProductSkuMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 

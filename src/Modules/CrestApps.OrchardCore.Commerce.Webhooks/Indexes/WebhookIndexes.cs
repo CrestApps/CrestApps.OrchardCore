@@ -34,7 +34,7 @@ public sealed class WebhookDeliveryIndex : CatalogItemIndex
 
     public string EventName { get; set; }
 
-    public int Status { get; set; }
+    public WebhookDeliveryStatus Status { get; set; }
 
     public DateTime? NextAttemptUtc { get; set; }
 
@@ -55,7 +55,7 @@ public sealed class WebhookDeliveryIndexProvider : IndexProvider<WebhookDelivery
                 ItemId = delivery.ItemId,
                 SubscriptionId = delivery.SubscriptionId,
                 EventName = delivery.EventName,
-                Status = (int)delivery.Status,
+                Status = delivery.Status,
                 NextAttemptUtc = delivery.Status == WebhookDeliveryStatus.Pending ? delivery.NextAttemptUtc : null,
                 CreatedUtc = delivery.CreatedUtc,
             });

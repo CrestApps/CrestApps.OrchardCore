@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Marketing.BackgroundTasks;
 using CrestApps.OrchardCore.Marketing.Models;
 using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.Marketing.ViewModels;
@@ -310,5 +309,5 @@ public sealed class CampaignsAdminController : Controller
     }
 
     private string UnsubscribeUrl(string token)
-        => MarketingBackgroundTask.UnsubscribeUrl($"{Request.Scheme}://{Request.Host}{Request.PathBase}", token);
+        => Url.RouteUrl(MarketingConstants.UnsubscribeRouteName, new { token }, Request.Scheme);
 }

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Reviews.Models;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -26,26 +27,32 @@ public sealed class ReviewRequestService
     private const int WindowDays = 60;
 
     private readonly IOrderStore _orders;
+    private readonly ICustomerStore _customers;
+    private readonly IEmailService _emailService;
     private readonly ISiteService _siteService;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
     public ReviewRequestService(
         IOrderStore orders,
+        ICustomerStore customers,
+        IEmailService emailService,
         ISiteService siteService,
-        IServiceProvider serviceProvider,
         IClock clock,
         ILogger<ReviewRequestService> logger,
-        IStringLocalizer<ReviewRequestService> stringLocalizer)
+        IStringLocalizer<ReviewRequestService> stringLocalizer,
+        LinkGenerator linkGenerator)
     {
         _orders = orders;
+        _customers = customers;
+        _emailService = emailService;
         _siteService = siteService;
-        _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -57,9 +64,7 @@ public sealed class ReviewRequestService
         var settings = await _siteService.GetSettingsAsync<ReviewSettings>();
         var site = await _siteService.GetSiteSettingsAsync();
 
-        if (!settings.SendReviewRequests || string.IsNullOrWhiteSpace(site.BaseUrl) ||
-            _serviceProvider.GetService<IEmailService>() is not { } emailService ||
-            _serviceProvider.GetService<ICustomerStore>() is not { } customers)
+        if (!settings.SendReviewRequests || string.IsNullOrWhiteSpace(site.BaseUrl))
         {
             return 0;
         }
@@ -93,7 +98,7 @@ public sealed class ReviewRequestService
             // Asked once either way: a buyer who doesn't accept marketing isn't asked later.
             order.ReviewRequestSentUtc = now;
 
-            var customer = string.IsNullOrEmpty(order.CustomerId) ? null : await customers.FindByIdAsync(order.CustomerId, cancellationToken);
+            var customer = string.IsNullOrEmpty(order.CustomerId) ? null : await _customers.FindByIdAsync(order.CustomerId, cancellationToken);
 
             if (customer is { AcceptsMarketing: true } && !string.IsNullOrWhiteSpace(order.CustomerEmail) && order.Lines.Any(line => !string.IsNullOrEmpty(line.ContentItemId)))
             {
@@ -103,7 +108,7 @@ public sealed class ReviewRequestService
 
                 try
                 {
-                    var result = await emailService.SendAsync(new MailMessage { To = order.CustomerEmail, Subject = subject, TextBody = text, HtmlBody = html }, cancellationToken: cancellationToken);
+                    var result = await _emailService.SendAsync(new MailMessage { To = order.CustomerEmail, Subject = subject, TextBody = text, HtmlBody = html }, cancellationToken: cancellationToken);
 
                     if (result.Succeeded)
                     {
@@ -136,7 +141,9 @@ public sealed class ReviewRequestService
 
         foreach (var line in order.Lines.Where(line => !string.IsNullOrEmpty(line.ContentItemId)).DistinctBy(line => line.ContentItemId))
         {
-            var url = $"{baseUrl.TrimEnd('/')}/Contents/ContentItems/{Uri.EscapeDataString(line.ContentItemId)}#reviews";
+            // The site's address holds the tenant's prefix, so the route's path goes after it as is.
+            var path = _linkGenerator.GetPathByAction("Display", "Item", new { area = "OrchardCore.Contents", contentItemId = line.ContentItemId });
+            var url = $"{baseUrl.TrimEnd('/')}{path}#reviews";
             var review = S["Review {0}", line.Title].Value;
 
             text.AppendLine($"{review}: {url}");
@@ -160,18 +167,10 @@ public sealed class ReviewRequestService
     Schedule = "15 * * * *",
     Description = "Asks buyers who accept marketing to review what they bought, some days after paying.",
     LockTimeout = 3_000,
-    LockExpiration = 900_000)]
+    LockExpiration = 900_000,
+    UsePipeline = true)]
 public sealed class ReviewRequestBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await serviceProvider.GetRequiredService<ReviewRequestService>().SendDueAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            serviceProvider.GetRequiredService<ILogger<ReviewRequestBackgroundTask>>().LogError(ex, "An error occurred while sending review requests.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ReviewRequestService>().SendDueAsync(cancellationToken);
 }

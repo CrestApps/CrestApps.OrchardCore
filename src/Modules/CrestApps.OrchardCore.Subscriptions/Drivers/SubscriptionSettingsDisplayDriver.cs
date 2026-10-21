@@ -11,7 +11,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -29,7 +28,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IShellReleaseManager _shellReleaseManager;
     private readonly IProductCurrencyProvider _currencyProvider;
 
     internal IStringLocalizer S;
@@ -39,18 +37,16 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor used to read the current user.</param>
     /// <param name="authorizationService">The authorization service used to check access to subscription settings.</param>
-    /// <param name="shellReleaseManager">The shell release manager used to restart the tenant after settings changes.</param>
+    /// <param name="currencyProvider">The provider of the currencies a subscription can be priced in.</param>
     /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public SubscriptionSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IProductCurrencyProvider currencyProvider,
-        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<SubscriptionSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _shellReleaseManager = shellReleaseManager;
         _currencyProvider = currencyProvider;
         S = stringLocalizer;
     }
@@ -75,8 +71,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             return null;
         }
 
-        context.AddTenantReloadWarningWrapper();
-
         return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", async model =>
         {
             model.AllowGuestSignup = settings.AllowGuestSignup;
@@ -87,7 +81,8 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
     }
 
     /// <summary>
-    /// Updates subscription settings from the posted site settings values and requests a tenant reload.
+    /// Updates subscription settings from the posted site settings values. Every consumer reads the settings when it
+    /// needs them, so no tenant reload is needed.
     /// </summary>
     /// <param name="site">The site being updated.</param>
     /// <param name="settings">The subscription settings to update.</param>
@@ -121,8 +116,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         }
 
         settings.AllowGuestSignup = model.AllowGuestSignup;
-
-        _shellReleaseManager.RequestRelease();
 
         return await EditAsync(site, settings, context);
     }

@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Taxation.TaxJar;
@@ -28,18 +27,15 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private readonly TaxJarOptions _options;
+    private readonly IOptionsMonitor<TaxJarOptions> _options;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger _logger;
 
     public TaxJarTaxDeterminationProvider(
-        IOptions<TaxJarOptions> options,
-        IHttpClientFactory httpClientFactory,
-        ILogger<TaxJarTaxDeterminationProvider> logger)
+        IOptionsMonitor<TaxJarOptions> options,
+        IHttpClientFactory httpClientFactory)
     {
-        _options = options.Value;
+        _options = options;
         _httpClientFactory = httpClientFactory;
-        _logger = logger;
     }
 
     // Its place among other tax providers; the first that can handle an order works out its tax.
@@ -47,23 +43,28 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         => 100;
 
     public bool CanHandle(TaxCalculationContext context)
-        => context is not null &&
-            !string.IsNullOrEmpty(_options.ApiKey) &&
+    {
+        var options = _options.CurrentValue;
+
+        return context is not null &&
+            !string.IsNullOrEmpty(options.ApiKey) &&
             context.DefaultPriceType == TaxPriceType.Exclusive &&
             context.Destination?.Country is { Length: 2 } country &&
-            _options.Countries.Contains(country, StringComparer.OrdinalIgnoreCase);
+            options.Countries.Contains(country, StringComparer.OrdinalIgnoreCase);
+    }
 
     public async Task<TaxCalculationResult> DetermineAsync(TaxCalculationContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        var options = _options.CurrentValue;
         var request = BuildRequest(context);
 
-        using var message = new HttpRequestMessage(HttpMethod.Post, _options.BaseUrl + "taxes")
+        using var message = new HttpRequestMessage(HttpMethod.Post, options.BaseUrl + "taxes")
         {
             Content = JsonContent.Create(request, options: _json),
         };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         TaxJarResponse answer;
 
@@ -82,9 +83,7 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
-            // The tax service then works the tax out by the store's own rules.
-            _logger.LogWarning(exception, "TaxJar couldn't be reached.");
-
+            // The tax service logs the failure and works the tax out by the store's own rules.
             throw new InvalidOperationException("TaxJar couldn't be reached to work out the tax.", exception);
         }
 

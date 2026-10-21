@@ -49,13 +49,9 @@ public sealed class OrderPaymentRiskTests
         var order = new Order { ItemId = "order-1", Status = OrderStatus.Paid, CheckoutSessionId = "session-1" };
         orders.Orders.Add(order);
 
-        var services = new ServiceCollection()
-            .AddSingleton<IPaymentAttemptStore>(new InMemoryPaymentAttemptStore(attempts))
-            .BuildServiceProvider();
-
         var session = new CheckoutSession { SessionId = "session-1", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = "order-1" };
 
-        await new OrderPaymentRiskCheckoutHandler(orders, services).CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(session)));
+        await new OrderPaymentRiskCheckoutHandler(orders, new InMemoryPaymentAttemptStore(attempts)).CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(session)));
 
         return order;
     }

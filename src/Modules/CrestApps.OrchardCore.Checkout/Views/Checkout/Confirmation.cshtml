@@ -1,4 +1,6 @@
 @using CrestApps.OrchardCore.Checkout.ViewModels
+@using Microsoft.AspNetCore.Html
+@using OrchardCore.DisplayManagement.Html
 
 @model CheckoutViewModel
 
@@ -6,11 +8,11 @@
     // A checkout that is not an order (a fee, a balance) names itself, so it is not headed "Order confirmation"
     // and not thanked for a "purchase".
     var hasTitle = !string.IsNullOrEmpty(Model.Title);
-    var title = hasTitle ? Model.Title : T["Order confirmation"].Value;
+    var title = hasTitle ? new HtmlContentString(Model.Title) : (IHtmlContent)T["Order confirmation"];
 }
 
 <zone Name="Title">
-    <breadcrumb name="CheckoutConfirmation" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(title))" />
+    <breadcrumb name="CheckoutConfirmation" title="@title" />
 </zone>
 
 @* The thanks and the way back are the CheckoutThankYou shape, so a theme can change them by overriding it. *@

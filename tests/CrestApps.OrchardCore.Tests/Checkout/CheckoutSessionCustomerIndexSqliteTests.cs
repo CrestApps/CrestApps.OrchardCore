@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
-using CrestApps.OrchardCore.Checkout.Core.Migrations;
+using CrestApps.OrchardCore.Checkout.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -8,7 +8,6 @@ using Moq;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 using YesSql;
-using YesSql.Indexes;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 
@@ -28,7 +27,7 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
     {
         // Arrange
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-checkout-customer-{Guid.NewGuid():N}.db");
-        var store = await CreateStoreAsync(path, withCustomerIndex: true);
+        var store = await CreateStoreAsync(path);
 
         try
         {
@@ -69,7 +68,7 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
     {
         // Arrange
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-checkout-reference-{Guid.NewGuid():N}.db");
-        var store = await CreateStoreAsync(path, withCustomerIndex: false);
+        var store = await CreateStoreAsync(path);
 
         try
         {
@@ -97,50 +96,6 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
         finally
         {
             TemporarySqliteDatabase.DisposeAndDelete(store, path);
-        }
-    }
-
-    [Fact]
-    public async Task BackfillAsync_IndexesSessionsSavedBeforeTheIndexExisted()
-    {
-        // Arrange
-        var path = Path.Combine(Path.GetTempPath(), $"crestapps-checkout-backfill-{Guid.NewGuid():N}.db");
-        var before = await CreateStoreAsync(path, withCustomerIndex: false);
-        IStore after = null;
-
-        try
-        {
-            await SeedAsync(before,
-                Session("s1", email: "pat@example.test", minutes: 1),
-                Session("s2", ownerId: "user-1", minutes: 2),
-                Session("s3", minutes: 3));
-
-            before.Dispose();
-            before = null;
-
-            after = await CreateStoreAsync(path, withCustomerIndex: true, createCheckoutSchema: false);
-
-            // Act
-            var saved = await CheckoutSessionCustomerIndexMigrations.BackfillAsync(after, TestContext.Current.CancellationToken);
-
-            // Assert
-            Assert.Equal(3, saved);
-
-            await using var session = after.CreateSession();
-            var sessionStore = CreateSessionStore(session);
-
-            var byEmail = await sessionStore.GetByCustomerAsync(null, "pat@example.test", 0, 10, TestContext.Current.CancellationToken);
-            var byOwner = await sessionStore.GetByCustomerAsync("user-1", null, 0, 10, TestContext.Current.CancellationToken);
-            var all = await session.Query<CheckoutSession, CheckoutSessionIndex>().ListAsync(TestContext.Current.CancellationToken);
-
-            Assert.Equal(new[] { "s1" }, byEmail.Select(item => item.SessionId));
-            Assert.Equal(new[] { "s2" }, byOwner.Select(item => item.SessionId));
-            Assert.Equal(3, all.Count);
-        }
-        finally
-        {
-            before?.Dispose();
-            TemporarySqliteDatabase.DisposeAndDelete(after, path);
         }
     }
 
@@ -197,31 +152,16 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
             session);
     }
 
-    private static async Task<IStore> CreateStoreAsync(string databasePath, bool withCustomerIndex, bool createCheckoutSchema = true)
+    private static async Task<IStore> CreateStoreAsync(string databasePath)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
-
-        IIndexProvider[] providers = withCustomerIndex
-            ? [new CheckoutSessionIndexProvider(), new CheckoutSessionCustomerIndexProvider()]
-            : [new CheckoutSessionIndexProvider()];
-
-        store.RegisterIndexes(providers);
+        store.RegisterIndexes([new CheckoutSessionIndexProvider(), new CheckoutSessionCustomerIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-        if (createCheckoutSchema)
-        {
-            await new CheckoutMigrations(session) { SchemaBuilder = schemaBuilder }.CreateAsync();
-        }
-
-        if (withCustomerIndex)
-        {
-            await new CheckoutSessionCustomerIndexMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
-        }
-
+        await new CheckoutMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) }.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

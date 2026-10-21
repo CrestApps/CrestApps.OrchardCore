@@ -122,16 +122,11 @@ public sealed class BookingsController : Controller
     [HttpPost("bookings/request")]
     [ValidateAntiForgeryToken]
     [ActionName(nameof(RequestBooking))]
-    public async Task<IActionResult> RequestBookingPost(BookingRequestViewModel model, [FromServices] IServiceProvider services)
+    public async Task<IActionResult> RequestBookingPost(BookingRequestViewModel model, [FromServices] IOrderRequestService requests)
     {
         if (User.Identity?.IsAuthenticated != true)
         {
             return Challenge();
-        }
-
-        if (services.GetService(typeof(IOrderRequestService)) is not IOrderRequestService requests)
-        {
-            return NotFound();
         }
 
         var (order, problems) = await requests.RequestAsync(User, model?.Message, HttpContext.RequestAborted);

@@ -2,93 +2,116 @@
 
 @model ProductAttributeSettingsViewModel
 
-<h5 class="mt-3">@T["Product listing"]</h5>
-<p class="hint">@T["Applies when this field is on a product type and the Product Listing feature is enabled."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-3">@T["Product listing"]</h5>
+        <p class="hint">@T["Applies when this field is on a product type and the Product Listing feature is enabled."]</p>
+    </div>
+</div>
 
 @if (!Model.IsRichText)
 {
-    <div class="mb-3">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="Filterable" />
-            <label class="form-check-label" asp-for="Filterable">@T["Filterable"]</label>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="Filterable" />
+                <label class="form-check-label" asp-for="Filterable">@T["Filterable"]</label>
+            </div>
             <span class="hint dashed">@T["Visitors can filter listings by this field."]</span>
         </div>
     </div>
 
     @if (Model.CanSort)
     {
-        <div class="mb-3">
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="Sortable" />
-                <label class="form-check-label" asp-for="Sortable">@T["Sortable"]</label>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Sortable" />
+                    <label class="form-check-label" asp-for="Sortable">@T["Sortable"]</label>
+                </div>
                 <span class="hint dashed">@T["Visitors can sort listings by this field."]</span>
             </div>
         </div>
     }
 }
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="Searchable" />
-        <label class="form-check-label" asp-for="Searchable">@T["Searchable"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Searchable" />
+            <label class="form-check-label" asp-for="Searchable">@T["Searchable"]</label>
+        </div>
         <span class="hint dashed">@T["Keyword search matches this field's value."]</span>
     </div>
 </div>
 
 @if (!Model.IsRichText)
 {
-    <div class="mb-3">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="ShowOnCard" />
-            <label class="form-check-label" asp-for="ShowOnCard">@T["Show on product cards"]</label>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="ShowOnCard" />
+                <label class="form-check-label" asp-for="ShowOnCard">@T["Show on product cards"]</label>
+            </div>
             <span class="hint dashed">@T["Shown as a short chip on the product's card in the grid."]</span>
         </div>
     </div>
 
-    <div class="mb-3">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="ShowInSpecifications" />
-            <label class="form-check-label" asp-for="ShowInSpecifications">@T["Show in specifications"]</label>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="ShowInSpecifications" />
+                <label class="form-check-label" asp-for="ShowInSpecifications">@T["Show in specifications"]</label>
+            </div>
             <span class="hint dashed">@T["Shown in the specification table of list rows and the product page."]</span>
         </div>
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="Label" class="form-label">@T["Listing label"]</label>
-    <input asp-for="Label" class="form-control" />
-    <span class="hint">@T["The label visitors see. Leave it empty to use the field's display name."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="Label" class="ocat-label">@T["Listing label"]</label>
+    <div class="ocat-end">
+        <input asp-for="Label" class="form-control" />
+        <span class="hint">@T["The label visitors see. Leave it empty to use the field's display name."]</span>
+    </div>
 </div>
 
 @if (Model.CanHaveSwatches)
 {
-    <div class="mb-3" asp-validation-class-for="SwatchColors">
-        <label asp-for="SwatchColors" class="form-label">@T["Swatch colors"]</label>
-        <textarea asp-for="SwatchColors" class="form-control font-monospace" rows="4" placeholder="Midnight = #191970&#10;Sky = light blue"></textarea>
-        <span asp-validation-for="SwatchColors"></span>
-        <span class="hint">@T["The colors of this field's values when a filter draws them as color swatches, one per line: the value's name, =, then a hex color or a CSS color name. A value not listed uses its own name when that is a color."]</span>
+    <div class="ocat-wrapper" asp-validation-class-for="SwatchColors">
+        <label asp-for="SwatchColors" class="ocat-label">@T["Swatch colors"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="SwatchColors" class="form-control font-monospace" rows="4" placeholder="Midnight = #191970&#10;Sky = light blue"></textarea>
+            <span asp-validation-for="SwatchColors"></span>
+            <span class="hint">@T["The colors of this field's values when a filter draws them as color swatches, one per line: the value's name, =, then a hex color or a CSS color name. A value not listed uses its own name when that is a color."]</span>
+        </div>
     </div>
 }
 
 @if (Model.IsTaxonomy)
 {
-    <div class="mb-3">
-        <label asp-for="TermColorField" class="form-label">@T["Color field on terms"]</label>
-        <input asp-for="TermColorField" class="form-control" placeholder="@T["Color"]" />
-        <span class="hint">@T["The name of a text field on this taxonomy's terms that holds each term's swatch color, so a color is set once on its term. Swatch colors above win over it."]</span>
+    <div class="ocat-wrapper">
+        <label asp-for="TermColorField" class="ocat-label">@T["Color field on terms"]</label>
+        <div class="ocat-end">
+            <input asp-for="TermColorField" class="form-control" placeholder="@T["Color"]" />
+            <span class="hint">@T["The name of a text field on this taxonomy's terms that holds each term's swatch color, so a color is set once on its term. Swatch colors above win over it."]</span>
+        </div>
     </div>
 }
 
 @if (Model.IsNumber)
 {
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label asp-for="NumberFormat" class="form-label">@T["Number format"]</label>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="NumberFormat" class="ocat-label">@T["Number format"]</label>
+        <div class="ocat-limited">
             <input asp-for="NumberFormat" class="form-control" placeholder="#,0.##" />
             <span class="hint">@T["A .NET format string, such as 0 for a year or #,0 for a mileage."]</span>
         </div>
-        <div class="col-md-6 mb-3">
-            <label asp-for="Suffix" class="form-label">@T["Unit"]</label>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Suffix" class="ocat-label">@T["Unit"]</label>
+        <div class="ocat-limited">
             <input asp-for="Suffix" class="form-control" placeholder="@T["mi"]" />
             <span class="hint">@T["Text shown after the number, such as mi or sq ft."]</span>
         </div>

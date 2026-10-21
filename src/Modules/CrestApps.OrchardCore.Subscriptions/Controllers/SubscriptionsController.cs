@@ -2,14 +2,15 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core;
-using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.RateLimits;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -24,7 +25,8 @@ namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 /// </remarks>
 public sealed class SubscriptionsController : Controller
 {
-    private readonly ISession _session;
+    private readonly IContentManager _contentManager;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ICheckoutEngine _engine;
     private readonly IPriceResolver _priceResolver;
     private readonly IShapeFactory _shapeFactory;
@@ -33,19 +35,22 @@ public sealed class SubscriptionsController : Controller
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionsController"/> class.
     /// </summary>
-    /// <param name="session">The YesSql session used to resolve the published plan.</param>
+    /// <param name="contentManager">The content manager used to load the published plan.</param>
+    /// <param name="contentDefinitionManager">The content definition manager used to check the plan is a subscription.</param>
     /// <param name="engine">The checkout engine that owns the purchase.</param>
     /// <param name="priceResolver">The pricing seam that decides whether the plan can be sold.</param>
     /// <param name="shapeFactory">The shape factory that builds the page shown when the plan can't be bought.</param>
     /// <param name="logger">The logger.</param>
     public SubscriptionsController(
-        ISession session,
+        IContentManager contentManager,
+        IContentDefinitionManager contentDefinitionManager,
         ICheckoutEngine engine,
         IPriceResolver priceResolver,
         IShapeFactory shapeFactory,
         ILogger<SubscriptionsController> logger)
     {
-        _session = session;
+        _contentManager = contentManager;
+        _contentDefinitionManager = contentDefinitionManager;
         _engine = engine;
         _priceResolver = priceResolver;
         _shapeFactory = shapeFactory;
@@ -66,11 +71,9 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
-        var plan = await _session
-            .Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
-            .FirstOrDefaultAsync();
+        var plan = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
 
-        if (plan is null)
+        if (plan is null || !plan.TryGet<SubscriptionPart>(out _) || !await IsSubscriptionTypeAsync(plan.ContentType))
         {
             return NotFound();
         }
@@ -112,5 +115,14 @@ public sealed class SubscriptionsController : Controller
             sessionId = session.SessionId,
             step = session.CurrentStep,
         });
+    }
+
+    // Only a plan of a subscription content type is sold here; a type without a definition is let through, as the
+    // part alone makes it one.
+    private async Task<bool> IsSubscriptionTypeAsync(string contentType)
+    {
+        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
+
+        return definition is null || definition.StereotypeEquals(SubscriptionConstants.Stereotype);
     }
 }

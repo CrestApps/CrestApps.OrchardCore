@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
-using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -15,20 +14,16 @@ namespace CrestApps.OrchardCore.Customers.Drivers;
 /// <summary>
 /// Settings > Commerce > Rewards: how customers earn loyalty points and what they're worth.
 /// </summary>
-public sealed class LoyaltySettingsDisplayDriver : SiteDisplayDriver<LoyaltySettings>
+public sealed class LoyaltySettingsDisplayDriver : CustomerSettingsDisplayDriverBase<LoyaltySettings>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
     internal readonly IStringLocalizer S;
 
     public LoyaltySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IStringLocalizer<LoyaltySettingsDisplayDriver> stringLocalizer)
+        : base(httpContextAccessor, authorizationService)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
         S = stringLocalizer;
     }
 
@@ -43,12 +38,12 @@ public sealed class LoyaltySettingsDisplayDriver : SiteDisplayDriver<LoyaltySett
             model.PointValue = settings.PointValue;
             model.MinimumPointsToRedeem = settings.MinimumPointsToRedeem;
         }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, LoyaltySettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        if (!await CanManageCustomersAsync())
         {
             return null;
         }

@@ -14,6 +14,7 @@ using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using UpdatePartEditorContext = OrchardCore.ContentManagement.Display.Models.UpdatePartEditorContext;
 
@@ -26,12 +27,17 @@ namespace CrestApps.OrchardCore.Classifieds.Drivers;
 internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<ClassifiedPart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
-    public ClassifiedPartDisplayDriver(IHttpContextAccessor httpContextAccessor, IStringLocalizer<ClassifiedPartDisplayDriver> stringLocalizer)
+    public ClassifiedPartDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<ClassifiedPartDisplayDriver> stringLocalizer,
+        IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -79,7 +85,7 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
         return Edit(part, context);
     }
 
-    private static void Fill(ClassifiedPartViewModel model, ClassifiedPart part)
+    private void Fill(ClassifiedPartViewModel model, ClassifiedPart part)
     {
         model.Status = part.Status;
         model.Place = part.Place;
@@ -88,7 +94,7 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
         model.ExpiresUtc = part.ExpiresUtc;
         model.FeaturedUntilUtc = part.FeaturedUntilUtc;
         model.RejectReason = part.RejectReason;
-        model.IsFeatured = part.FeaturedUntilUtc > DateTime.UtcNow;
+        model.IsFeatured = part.FeaturedUntilUtc > _clock.UtcNow;
     }
 
     private bool IsAdmin()

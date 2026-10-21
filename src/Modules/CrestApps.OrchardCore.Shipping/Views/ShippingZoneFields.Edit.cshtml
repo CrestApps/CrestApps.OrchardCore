@@ -3,40 +3,50 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
-<div class="mb-3" asp-validation-class-for="Name">
-    <label asp-for="Name" class="form-label">@T["Name"]</label>
-    <input asp-for="Name" class="form-control" autofocus />
-    <span asp-validation-for="Name"></span>
-    <span class="hint">@T["For you, such as Domestic or Europe. Buyers see the methods, not the zone."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" autofocus />
+        <span asp-validation-for="Name"></span>
+        <span class="hint">@T["For you, such as Domestic or Europe. Buyers see the methods, not the zone."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="RestOfWorld" type="checkbox" class="form-check-input" />
-        <label asp-for="RestOfWorld" class="form-check-label">@T["Rest of the world"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RestOfWorld" type="checkbox" class="form-check-input" />
+            <label asp-for="RestOfWorld" class="form-check-label">@T["Rest of the world"]</label>
+        </div>
         <span class="hint dashed">@T["Covers every address no other zone covers. Without such a zone, buyers elsewhere can't be shipped to."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="Countries" class="form-label">@T["Countries"]</label>
-    <select asp-for="Countries" asp-items="Model.AllCountries" multiple class="selectpicker show-tick" data-live-search="true" data-show-selected-tags="true" data-width="100%" title="@T["Choose countries"]"></select>
-    <span class="hint">@T["The countries the zone covers. Save to narrow a country to some of its regions."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="Countries" class="ocat-label">@T["Countries"]</label>
+    <div class="ocat-end">
+        <select asp-for="Countries" asp-items="Model.AllCountries" multiple class="selectpicker show-tick" data-live-search="true" data-show-selected-tags="true" data-width="100%" title="@T["Choose countries"]"></select>
+        <span class="hint">@T["The countries the zone covers. Save to narrow a country to some of its regions."]</span>
+    </div>
 </div>
 
 @foreach (var country in Model.CountryRegions)
 {
     var id = "regions-" + country.CountryCode;
 
-    <div class="mb-3">
-        <label for="@id" class="form-label">@T["Regions of {0}", country.CountryName]</label>
-        <select id="@id" name="@Html.NameFor(m => m.Regions)" asp-items="country.Regions" multiple class="selectpicker show-tick" data-live-search="true" data-show-selected-tags="true" data-width="100%" title="@T["All of {0}", country.CountryName]"></select>
-        <span class="hint">@T["Leave empty to cover all of {0}. Choose some to cover only those, such as the mainland without islands far away.", country.CountryName]</span>
+    <div class="ocat-wrapper">
+        <label for="@id" class="ocat-label">@T["Regions of {0}", country.CountryName]</label>
+        <div class="ocat-end">
+            <select id="@id" name="@Html.NameFor(m => m.Regions)" asp-items="country.Regions" multiple class="selectpicker show-tick" data-live-search="true" data-show-selected-tags="true" data-width="100%" title="@T["All of {0}", country.CountryName]"></select>
+            <span class="hint">@T["Leave empty to cover all of {0}. Choose some to cover only those, such as the mainland without islands far away.", country.CountryName]</span>
+        </div>
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="Position" class="form-label">@T["Position"]</label>
-    <input asp-for="Position" type="number" class="form-control w-auto" />
-    <span class="hint">@T["Zones are tried from the smallest position, and the first that covers an address wins, so put a zone for a few regions before the zone for their whole country."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Position" type="number" class="form-control" />
+        <span class="hint">@T["Zones are tried from the smallest position, and the first that covers an address wins, so put a zone for a few regions before the zone for their whole country."]</span>
+    </div>
 </div>

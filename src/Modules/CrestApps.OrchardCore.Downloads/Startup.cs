@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Downloads.Drivers;
 using CrestApps.OrchardCore.Downloads.Handlers;
 using CrestApps.OrchardCore.Downloads.Indexes;
@@ -10,6 +11,7 @@ using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -19,6 +21,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.FileStorage;
 using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -38,16 +41,21 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<DownloadMigrations>()
             .AddIndexProvider<DownloadEntitlementIndexProvider>();
 
-        // The files sit under the tenant's App_Data, which no URL serves.
-        services.AddSingleton<IDigitalFileStore>(serviceProvider =>
+        // The files sit under the tenant's App_Data, which no URL serves. Each upload goes through the file creation
+        // pipeline first, whose handlers can be scoped.
+        services.TryAddTransient<FileCreationService>();
+        services.AddScoped<IDigitalFileStore>(serviceProvider =>
         {
             var shellOptions = serviceProvider.GetRequiredService<IOptions<ShellOptions>>().Value;
             var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
             var path = Path.Combine(shellOptions.ShellsApplicationDataPath, shellOptions.ShellsContainerName, shellSettings.Name, DownloadsConstants.StoreFolder);
 
-            return new DigitalFileStore(new FileSystemStore(path, serviceProvider.GetRequiredService<ILogger<FileSystemStore>>()));
+            return new DigitalFileStore(
+                new FileSystemStore(path, serviceProvider.GetRequiredService<ILogger<FileSystemStore>>()),
+                serviceProvider.GetRequiredService<FileCreationService>());
         });
 
+        services.AddSignedLinks();
         services.AddScoped<DownloadService>();
         services.AddScoped<IOrderEventHandler, DownloadOrderEventHandler>();
         services.AddScoped<IOrderEmailSectionProvider, DownloadEmailSectionProvider>();

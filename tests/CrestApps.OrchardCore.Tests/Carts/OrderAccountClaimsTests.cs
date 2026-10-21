@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Moq;
 using OrchardCore.Modules;
@@ -73,6 +74,6 @@ public sealed class OrderAccountClaimsTests
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
 
-        return new OrderAccountClaims(_protection, clock.Object);
+        return new OrderAccountClaims(SignedLinkDoubles.Tokens(_protection, clock.Object));
     }
 }

@@ -15,11 +15,8 @@ internal sealed class ShippingAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Shipping"], S["Shipping"].PrefixPosition("0.4"), shipping => shipping
-                    .AddClass("shipping")
                     .Id("shipping")
                     .Action("Index", "ShippingZones", ShippingConstants.Features.Shipping)
                     .Permission(ShippingPermissions.ManageShipping)
@@ -29,7 +26,6 @@ internal sealed class ShippingAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Shipping"], S["Shipping"].PrefixPosition(), shipping => shipping
-                        .AddClass("shipping-settings")
                         .Id("shippingSettings")
                         .Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = ShippingConstants.SettingsGroupId })
                         .Permission(ShippingPermissions.ManageShipping)

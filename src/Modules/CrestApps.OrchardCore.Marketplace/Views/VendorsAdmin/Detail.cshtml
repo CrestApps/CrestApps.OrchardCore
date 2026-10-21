@@ -1,3 +1,4 @@
+@using OrchardCore.DisplayManagement.Html
 @model VendorDashboardViewModel
 
 @{
@@ -6,7 +7,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="VendorsDetail" title="@Html.Raw(Html.Encode(vendor.Name))">
+    <breadcrumb name="VendorsDetail" title="@(new HtmlContentString(vendor.Name ?? string.Empty))">
         <breadcrumb-item id="Vendors" action="Index" controller="VendorsAdmin" area="@MarketplaceConstants.Feature" permission="@MarketplacePermissions.ManageMarketplace.Name">@T["Vendors"]</breadcrumb-item>
     </breadcrumb>
 </zone>

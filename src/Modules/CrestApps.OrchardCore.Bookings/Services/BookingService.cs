@@ -28,9 +28,11 @@ public sealed class BookingService
     private readonly IOrderStore _orders;
     private readonly IOrderService _orderService;
     private readonly BookingEmailSender _emails;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IOrderRefunder _orderRefunder;
+    private readonly ITransactionManager _transactionManager;
+    private readonly ITransactionCommandService _transactionCommands;
 
     internal readonly IStringLocalizer S;
 
@@ -42,10 +44,12 @@ public sealed class BookingService
         IOrderStore orders,
         IOrderService orderService,
         BookingEmailSender emails,
-        IServiceProvider serviceProvider,
         IClock clock,
         ILogger<BookingService> logger,
-        IStringLocalizer<BookingService> stringLocalizer)
+        IStringLocalizer<BookingService> stringLocalizer,
+        IOrderRefunder orderRefunder,
+        ITransactionManager transactionManager,
+        ITransactionCommandService transactionCommands)
     {
         _bookings = bookings;
         _balances = balances;
@@ -54,9 +58,11 @@ public sealed class BookingService
         _orders = orders;
         _orderService = orderService;
         _emails = emails;
-        _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _orderRefunder = orderRefunder;
+        _transactionManager = transactionManager;
+        _transactionCommands = transactionCommands;
         S = stringLocalizer;
     }
 
@@ -302,9 +308,9 @@ public sealed class BookingService
         // What was paid toward this booking: its share of what can still be refunded for the order.
         var refundable = 0m;
 
-        if (order is not null && _serviceProvider.GetService<IOrderRefunder>() is { } refunder)
+        if (order is not null)
         {
-            var (orderRefundable, _) = await refunder.GetMoneyAsync(order, cancellationToken);
+            var (orderRefundable, _) = await _orderRefunder.GetMoneyAsync(order, cancellationToken);
 
             // What the balance put on the ledger counts as refundable, since it can be let go of, but it was never paid.
             var deferred = (order.Tenders ?? []).Where(tender => tender.ProviderKey == BookingsConstants.BalanceTenderKey).Sum(tender => tender.Amount);
@@ -337,12 +343,7 @@ public sealed class BookingService
 
         if (order is not null && amount > 0m)
         {
-            if (_serviceProvider.GetService<IOrderRefunder>() is not { } refunder)
-            {
-                return (false, [S["Refunds need the Orders feature."]]);
-            }
-
-            var (done, errors) = await refunder.RefundAsync(order, amount, string.IsNullOrWhiteSpace(reason) ? S["{0} canceled", booking.Title].Value : reason, actorName, cancellationToken);
+            var (done, errors) = await _orderRefunder.RefundAsync(order, amount, string.IsNullOrWhiteSpace(reason) ? S["{0} canceled", booking.Title].Value : reason, actorName, cancellationToken);
 
             if (errors.Count > 0 && done <= 0m)
             {
@@ -395,11 +396,9 @@ public sealed class BookingService
         balance.Status = BookingBalanceStatus.Canceled;
         await _balances.UpdateAsync(balance, cancellationToken);
 
-        if (_serviceProvider.GetService<ITransactionManager>() is { } transactions &&
-            _serviceProvider.GetService<ITransactionCommandService>() is { } commands &&
-            await transactions.FindByIdAsync(balance.TransactionId, cancellationToken) is { OutstandingAmount: > 0m } transaction)
+        if (await _transactionManager.FindByIdAsync(balance.TransactionId, cancellationToken) is { OutstandingAmount: > 0m } transaction)
         {
-            var result = await commands.AdjustAsync(transaction.ItemId, transaction.OutstandingAmount, TransactionAdjustmentKind.Waiver, reason, cancellationToken);
+            var result = await _transactionCommands.AdjustAsync(transaction.ItemId, transaction.OutstandingAmount, TransactionAdjustmentKind.Waiver, reason, cancellationToken);
 
             if (!result.Succeeded)
             {

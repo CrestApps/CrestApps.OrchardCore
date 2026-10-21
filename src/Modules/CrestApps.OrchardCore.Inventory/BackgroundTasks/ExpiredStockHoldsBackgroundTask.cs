@@ -22,18 +22,11 @@ public sealed class ExpiredStockHoldsBackgroundTask : IBackgroundTask
     {
         var logger = serviceProvider.GetRequiredService<ILogger<ExpiredStockHoldsBackgroundTask>>();
 
-        try
-        {
-            var released = await serviceProvider.GetRequiredService<IInventoryService>().ReleaseExpiredAsync(BatchSize, cancellationToken);
+        var released = await serviceProvider.GetRequiredService<IInventoryService>().ReleaseExpiredAsync(BatchSize, cancellationToken);
 
-            if (released > 0 && logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Released {Count} expired stock holds.", released);
-            }
-        }
-        catch (Exception exception)
+        if (released > 0 && logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogError(exception, "An error occurred while releasing expired stock holds.");
+            logger.LogInformation("Released {Count} expired stock holds.", released);
         }
     }
 }

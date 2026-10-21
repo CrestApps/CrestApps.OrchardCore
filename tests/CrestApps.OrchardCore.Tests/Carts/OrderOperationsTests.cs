@@ -136,9 +136,10 @@ public sealed class OrderOperationsTests
             _orders,
             OrderService(),
             scope,
-            new ServiceCollection().AddSingleton(sessions.Object).BuildServiceProvider(),
+            new ServiceCollection().BuildServiceProvider(),
             Clock(),
-            new PassThroughLocalizer<OrderRefundRecorder>());
+            new PassThroughLocalizer<OrderRefundRecorder>(),
+            sessions.Object);
 
         var refund = new PaymentRefund { ItemId = "refund-1", SessionId = "session-1", RefundGrossAmount = 50m, Currency = "USD", Reason = "Scratched strap" };
 
@@ -163,9 +164,26 @@ public sealed class OrderOperationsTests
             OrderService(),
             new OrderOperationScope(),
             confirmationSender: null,
+            services.GetService<ICheckoutEngine>() ?? Mock.Of<ICheckoutEngine>(),
+            services.GetService<ICheckoutTenderLedger>() ?? NoTenders(),
+            services.GetService<ICheckoutRefundService>() ?? Mock.Of<ICheckoutRefundService>(),
+            services.GetService<IPaymentAttemptStore>() ?? Mock.Of<IPaymentAttemptStore>(),
+            services.GetService<IPaymentRefundStore>() ?? Mock.Of<IPaymentRefundStore>(),
+            services.GetService<ICheckoutPaymentProviderResolver>() ?? Mock.Of<ICheckoutPaymentProviderResolver>(),
+            Clock(),
             services,
             NullLogger<OrderOperationsService>.Instance,
             new PassThroughLocalizer<OrderOperationsService>());
+
+    private static ICheckoutTenderLedger NoTenders()
+    {
+        var ledger = new Mock<ICheckoutTenderLedger>();
+        ledger
+            .Setup(value => value.GetRedeemedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        return ledger.Object;
+    }
 
     private static ServiceProvider CardPaymentServices(List<RequestPaymentRefundContext> refunds)
     {

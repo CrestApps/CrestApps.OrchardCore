@@ -115,24 +115,11 @@ public sealed class SegmentStore : DocumentCatalog<Segment, SegmentIndex>, ISegm
         CollectionName = MarketingConstants.CollectionName;
     }
 
-    public async Task<(int Count, IReadOnlyList<Segment> Segments)> PageAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
-    {
-        var query = Session.Query<Segment, SegmentIndex>(collection: CollectionName);
+    public Task<(int Count, IReadOnlyList<Segment> Segments)> PageAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
+        => PageByNameAsync(index => index.Name, search, skip, take, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var text = search.Trim();
-
-            query = query.Where(index => index.Name.Contains(text));
-        }
-
-        var count = await query.CountAsync(cancellationToken);
-
-        return (count, [.. await query.OrderBy(index => index.Name).Skip(skip).Take(take).ListAsync(cancellationToken)]);
-    }
-
-    public async Task<IReadOnlyList<Segment>> ListAllAsync(CancellationToken cancellationToken = default)
-        => [.. await Session.Query<Segment, SegmentIndex>(collection: CollectionName).OrderBy(index => index.Name).ListAsync(cancellationToken)];
+    public Task<IReadOnlyList<Segment>> ListAllAsync(CancellationToken cancellationToken = default)
+        => ListByNameAsync(index => index.Name, cancellationToken);
 }
 
 public interface ICampaignStore : ICatalog<Campaign>

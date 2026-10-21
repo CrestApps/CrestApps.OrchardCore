@@ -4,9 +4,9 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Shipping.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -23,7 +23,8 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
     private readonly INamedCatalog<ShippingZone> _catalog;
     private readonly INamedCatalogManager<ShippingZone> _manager;
     private readonly ISiteService _siteService;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -31,13 +32,15 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
         INamedCatalog<ShippingZone> catalog,
         INamedCatalogManager<ShippingZone> manager,
         ISiteService siteService,
-        IOptions<AdminOptions> adminOptions,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<ShippingSetupStep> stringLocalizer)
     {
         _catalog = catalog;
         _manager = manager;
         _siteService = siteService;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -57,7 +60,7 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
             Description = S["Where you ship and what it costs. Start with one flat rate for every order, wherever it goes; later you can add zones by country, rates by weight, free shipping over an amount, or pickup. Skip it if you sell only services or downloads."],
             IsDone = zones.Count > 0,
             Status = zones.Count == 0 ? null : S["You ship to {0}.", string.Join(", ", zones.Select(zone => zone.Name))],
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/shipping/zones",
+            Url = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "ShippingZonesIndex"),
             UrlText = S["Shipping zones"],
             ActionText = zones.Count == 0 ? S["Ship everywhere at this rate"] : null,
             Fields = zones.Count > 0

@@ -16,11 +16,16 @@ namespace CrestApps.OrchardCore.Checkout;
 [RequireFeatures(CheckoutConstants.Features.Area, TaxationConstants.Feature.Taxation)]
 public sealed class TaxationStartup : StartupBase
 {
+    /// <summary>
+    /// Runs after the checkout's own startup, whose no-op tax service this one replaces.
+    /// </summary>
+    public override int Order
+        => 10;
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.RemoveAll<ICheckoutTaxService>();
-        services.AddScoped<ICheckoutTaxService, CheckoutTaxService>();
+        services.Replace(ServiceDescriptor.Scoped<ICheckoutTaxService, CheckoutTaxService>());
         services.TryAddScoped<ICheckoutTaxProfileProvider, DefaultCheckoutTaxProfileProvider>();
 
         // Where the store sells from reaches checkout tax, for taxes sourced at the origin.

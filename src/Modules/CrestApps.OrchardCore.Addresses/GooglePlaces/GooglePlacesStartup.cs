@@ -41,7 +41,6 @@ public sealed class GooglePlacesAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Settings"], settings => settings
                 .Add(S["Address suggestions"], S["Address suggestions"].PrefixPosition(), suggestions => suggestions
-                    .AddClass("address-suggestions")
                     .Id("addressSuggestions")
                     .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", GooglePlacesSettingsDisplayDriver.GroupId } })
                     .Permission(AddressPermissions.ManageAddressSuggestions)

@@ -162,7 +162,7 @@ Sending a quote needs your site's email to be set up.
 On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.
 
 - **Layout** goes around every one of them, such as your logo at the top and your address at the bottom. Put `{{ Content }}` where the email goes.
-- Each email has its own **Subject** and **Body**: the order confirmation, the order to pay you send a buyer, the quote, the shipped email, the return emails, the gift card, and the email to a buyer who left their checkout. Tick **Use my template** to use yours.
+- Each email has its own **Subject** and **Body**: the order confirmation, the order to pay you send a buyer, the quote, the shipped email, the return emails, the gift card, the email to a buyer who left their checkout, and, with Bookings, the booking emails. Tick **Use my template** to use yours.
 
 In a template, `{{ Content }}` is the email as the store would send it, so a body of *Thanks so much!* followed by `{{ Content }}` adds a line above it. `{{ Order.OrderNumber }}` and `{{ Order.CustomerName }}` put in the order's details, and each email lists its own links, such as `{{ PayUrl }}`. A template that has a mistake can't be saved, and one that can't be filled in sends the store's own email instead.
 

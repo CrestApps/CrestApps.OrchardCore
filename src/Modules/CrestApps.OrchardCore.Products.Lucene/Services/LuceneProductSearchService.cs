@@ -38,7 +38,7 @@ public sealed class LuceneProductSearchService : IProductIndexSearchService
         // The callback runs only when the index exists.
         await _indexStore.SearchAsync(indexProfile, searcher =>
         {
-            result = Search(searcher, indexQuery, query.Facets ?? []);
+            result = Search(searcher, indexQuery);
 
             return Task.CompletedTask;
         });
@@ -46,7 +46,7 @@ public sealed class LuceneProductSearchService : IProductIndexSearchService
         return result ?? throw new InvalidOperationException($"The Lucene index '{indexProfile.IndexName}' does not exist.");
     }
 
-    private static ProductSearchResult Search(IndexSearcher searcher, ProductSearchIndexQuery indexQuery, IEnumerable<ProductFacetRequest> facets)
+    private static ProductSearchResult Search(IndexSearcher searcher, ProductSearchIndexQuery indexQuery)
     {
         var main = BuildQuery(indexQuery, excludedFacetKey: null);
         var sort = new Sort(indexQuery.Sort.Select(ToSortField).ToArray());
@@ -60,15 +60,10 @@ public sealed class LuceneProductSearchService : IProductIndexSearchService
 
         var results = new Dictionary<string, ProductFacetResult>(StringComparer.Ordinal);
 
-        foreach (var facet in facets)
+        foreach (var facet in indexQuery.Facets)
         {
-            if (string.IsNullOrEmpty(facet?.Key) || string.IsNullOrEmpty(facet.AttributeKey))
-            {
-                continue;
-            }
-
             // A facet's counts ignore its own selection, so the other options say how many products they add.
-            var facetQuery = indexQuery.Filters.Any(filter => filter.FacetKey == facet.Key)
+            var facetQuery = indexQuery.HasFilterFor(facet.Key)
                 ? BuildQuery(indexQuery, facet.Key)
                 : main;
 

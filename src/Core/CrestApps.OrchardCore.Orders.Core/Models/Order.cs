@@ -79,8 +79,7 @@ public sealed class Order : CatalogItem
 
     /// <summary>
     /// Gets or sets where the order was made: <see cref="OrderChannels.Online"/>, at a store's register
-    /// (<see cref="OrderChannels.PointOfSale"/>), or by staff (<see cref="OrderChannels.Draft"/>). Orders made before
-    /// channels were recorded have none, and count as online.
+    /// (<see cref="OrderChannels.PointOfSale"/>), or by staff (<see cref="OrderChannels.Draft"/>).
     /// </summary>
     public string Channel { get; set; }
 

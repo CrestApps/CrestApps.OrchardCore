@@ -1,8 +1,5 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Services;
@@ -16,31 +13,28 @@ public sealed class OrderConfirmationSender
     private readonly IOrderStore _orderStore;
     private readonly OrderConfirmationEmailBuilder _emailBuilder;
     private readonly IOrderLinkService _orderLinks;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     public OrderConfirmationSender(
         IOrderStore orderStore,
         OrderConfirmationEmailBuilder emailBuilder,
         IOrderLinkService orderLinks,
-        IServiceProvider serviceProvider,
-        IClock clock,
-        ILogger<OrderConfirmationSender> logger)
+        ICommerceEmailSender emailSender,
+        IClock clock)
     {
         _orderStore = orderStore;
         _emailBuilder = emailBuilder;
         _orderLinks = orderLinks;
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _clock = clock;
-        _logger = logger;
     }
 
     /// <summary>
     /// Gets a value indicating whether the site can send email.
     /// </summary>
     public bool CanSend
-        => _serviceProvider.GetService<IEmailService>() is not null;
+        => _emailSender.CanSend;
 
     /// <summary>
     /// Sends the confirmation. A failed send is logged and returns <see langword="false"/>; it never undoes the order.
@@ -49,34 +43,34 @@ public sealed class OrderConfirmationSender
     {
         ArgumentNullException.ThrowIfNull(order);
 
-        if (_serviceProvider.GetService<IEmailService>() is not { } emailService || string.IsNullOrWhiteSpace(order.CustomerEmail))
-        {
-            return false;
-        }
-
         // Written in the language the buyer shopped in.
-        using var language = OrderCulture.Use(order.Culture);
-
-        // A guest opens the order from the email; a signed-in customer finds it under My Orders.
-        var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
-        var built = await _emailBuilder.BuildAsync(order, orderUrl);
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Confirmation, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        var sent = await _emailSender.SendAsync(new CommerceEmail
         {
-            ["OrderUrl"] = orderUrl,
+            Kind = OrderEmailKinds.Confirmation,
+            To = order.CustomerEmail,
+            Order = order,
+            Culture = order.Culture,
+            Reference = order.OrderNumber,
+        }, async _ =>
+        {
+            // A guest opens the order from the email; a signed-in customer finds it under My Orders.
+            var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
+            var built = await _emailBuilder.BuildAsync(order, orderUrl);
+
+            return new CommerceEmailContent
+            {
+                Subject = built.Subject,
+                Text = built.Text,
+                Html = built.Html,
+                Values = new Dictionary<string, string>
+                {
+                    ["OrderUrl"] = orderUrl,
+                },
+            };
         }, cancellationToken);
 
-        var result = await emailService.SendAsync(new MailMessage
+        if (!sent)
         {
-            To = order.CustomerEmail,
-            Subject = email.Subject,
-            TextBody = email.Text,
-            HtmlBody = email.Html,
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("The confirmation of order '{OrderNumber}' could not be emailed.", order.OrderNumber);
-
             return false;
         }
 

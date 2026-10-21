@@ -11,11 +11,13 @@
     <div class="alert alert-warning">@T["Set the site's base URL under Settings > General: a feed's links and photos need it, and items without them are left out."]</div>
 }
 
-<div class="mb-4">
-    <h5>@T["Feed addresses"]</h5>
-    <p class="mb-1">@T["Google Merchant Center, Meta and TikTok:"] <code>@Model.XmlUrl</code></p>
-    <p class="mb-1">@T["As a spreadsheet (CSV):"] <code>@Model.CsvUrl</code></p>
-    <span class="hint">@T["Add a market's currency, such as &amp;currency=EUR (or ?currency=EUR), for a feed in it. A feed is rebuilt every 15 minutes."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5>@T["Feed addresses"]</h5>
+        <p class="mb-1">@T["Google Merchant Center, Meta and TikTok:"] <code>@Model.XmlUrl</code></p>
+        <p class="mb-1">@T["As a spreadsheet (CSV):"] <code>@Model.CsvUrl</code></p>
+        <span class="hint">@T["Add a market's currency, such as &amp;currency=EUR (or ?currency=EUR), for a feed in it. A feed is rebuilt every 15 minutes."]</span>
+    </div>
 </div>
 
 @if (feed is not null)
@@ -47,44 +49,54 @@
     }
 }
 
-<div class="mb-3">
-    <label asp-for="DefaultBrand" class="form-label">@T["Brand"]</label>
-    <input asp-for="DefaultBrand" class="form-control" maxlength="70" />
-    <span class="hint">@T["For products that name none, such as your own brand. A term from a taxonomy whose name starts with Brand is the product's brand too."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultBrand" class="ocat-label">@T["Brand"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultBrand" class="form-control" maxlength="70" />
+        <span class="hint">@T["For products that name none, such as your own brand. A term from a taxonomy whose name starts with Brand is the product's brand too."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="DefaultCondition" class="form-label">@T["Condition"]</label>
-    <select asp-for="DefaultCondition" class="form-select" style="max-width: 16rem;">
-        <option value="new">@T["New"]</option>
-        <option value="refurbished">@T["Refurbished"]</option>
-        <option value="used">@T["Used"]</option>
-    </select>
+<div class="ocat-limited-wrapper">
+    <label asp-for="DefaultCondition" class="ocat-label">@T["Condition"]</label>
+    <div class="ocat-limited">
+        <select asp-for="DefaultCondition" class="form-select">
+            <option value="new">@T["New"]</option>
+            <option value="refurbished">@T["Refurbished"]</option>
+            <option value="used">@T["Used"]</option>
+        </select>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="DefaultGoogleProductCategory" class="form-label">@T["Google product category"]</label>
-    <input asp-for="DefaultGoogleProductCategory" class="form-control" maxlength="250" placeholder="@T["Such as Apparel & Accessories > Clothing, or its number"]" />
-    <span class="hint">@T["Optional. For products that name none."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultGoogleProductCategory" class="ocat-label">@T["Google product category"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultGoogleProductCategory" class="form-control" maxlength="250" placeholder="@T["Such as Apparel & Accessories > Clothing, or its number"]" />
+        <span class="hint">@T["Optional. For products that name none."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="IncludeOutOfStock" type="checkbox" class="form-check-input" />
-        <label asp-for="IncludeOutOfStock" class="form-check-label">@T["Keep products that are out of stock, marked so"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeOutOfStock" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeOutOfStock" class="form-check-label">@T["Keep products that are out of stock, marked so"]</label>
+        </div>
         <span class="hint dashed">@T["Untick it to leave them out until they're back."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="KeyAction" class="form-label">@T["Feed key"]</label>
-    <select asp-for="KeyAction" class="form-select" style="max-width: 20rem;">
-        <option value="">@(Model.HasKey ? T["Keep the key"] : T["Public: no key"])</option>
-        <option value="new">@(Model.HasKey ? T["Make a new key"] : T["Make a key"])</option>
-        @if (Model.HasKey)
-        {
-            <option value="remove">@T["Remove the key, so it's public"]</option>
-        }
-    </select>
-    <span class="hint">@T["With a key, the feed's address carries it and others can't read the feed. A new key stops the old address working."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="KeyAction" class="ocat-label">@T["Feed key"]</label>
+    <div class="ocat-limited">
+        <select asp-for="KeyAction" class="form-select">
+            <option value="">@(Model.HasKey ? T["Keep the key"] : T["Public: no key"])</option>
+            <option value="new">@(Model.HasKey ? T["Make a new key"] : T["Make a key"])</option>
+            @if (Model.HasKey)
+            {
+                <option value="remove">@T["Remove the key, so it's public"]</option>
+            }
+        </select>
+        <span class="hint">@T["With a key, the feed's address carries it and others can't read the feed. A new key stops the old address working."]</span>
+    </div>
 </div>

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Markets.Services;
 using CrestApps.OrchardCore.Markets.ViewModels;
@@ -9,7 +8,6 @@ using OrchardCore.Admin.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Markets.Drivers;
 
@@ -52,16 +50,13 @@ internal sealed class MarketDisplayDriver : DisplayDriver<Market>
 internal sealed class MarketNavbarDisplayDriver : DisplayDriver<Navbar>
 {
     private readonly ShopperMarketService _markets;
-    private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public MarketNavbarDisplayDriver(
         ShopperMarketService markets,
-        ISiteService siteService,
         IHttpContextAccessor httpContextAccessor)
     {
         _markets = markets;
-        _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -82,7 +77,7 @@ internal sealed class MarketNavbarDisplayDriver : DisplayDriver<Navbar>
         }
 
         var current = await _markets.GetCurrentAsync(httpContext.RequestAborted);
-        var storeCurrency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
+        var storeCurrency = await _markets.GetStoreCurrencyAsync(httpContext.RequestAborted);
 
         return Initialize<MarketPickerViewModel>("MarketPicker", picker =>
         {

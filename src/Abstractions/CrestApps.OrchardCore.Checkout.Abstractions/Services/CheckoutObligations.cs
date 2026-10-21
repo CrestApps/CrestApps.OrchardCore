@@ -31,11 +31,6 @@ public static class CheckoutObligations
     }
 
     /// <summary>
-    /// Returns the obligations the supplied invoice must settle to be considered fully paid: the one-time
-    /// amount when it is greater than zero, plus one obligation for every distinct recurring interval.
-    /// </summary>
-    /// <param name="invoice">The checkout invoice.</param>
-    /// <summary>
     /// Gets the number of days before the first cycle of a recurring group is billed.
     /// </summary>
     /// <param name="lineItems">The line items that share one billing interval.</param>
@@ -58,6 +53,64 @@ public static class CheckoutObligations
         return days;
     }
 
+    /// <summary>
+    /// Gets what one full cycle of a recurring group costs: the lines' totals, never what is due now. A
+    /// first-cycle discount or a trial's zero applies to the first payment only.
+    /// </summary>
+    /// <param name="lineItems">The line items that share one billing interval.</param>
+    /// <param name="currency">The checkout's currency.</param>
+    public static decimal GetCycleAmount(IEnumerable<CheckoutLineItem> lineItems, string currency)
+        => Money.Round((lineItems ?? []).Sum(lineItem => lineItem.GetLineTotal(currency)), currency);
+
+    /// <summary>
+    /// Gets how many cycles a recurring group bills at most, or <see langword="null"/> for no limit.
+    /// </summary>
+    /// <param name="lineItems">The line items that share one billing interval.</param>
+    /// <returns>The lowest limit among the lines: billing past any line's limit charges for something the customer did not agree to.</returns>
+    public static int? GetCycleLimit(IEnumerable<CheckoutLineItem> lineItems)
+        => (lineItems ?? [])
+            .Select(lineItem => lineItem.Plan?.BillingCycleLimit)
+            .Where(limit => limit > 0)
+            .DefaultIfEmpty(null)
+            .Min();
+
+    /// <summary>
+    /// Finds the recurring group an obligation settles.
+    /// </summary>
+    /// <param name="invoice">The checkout invoice.</param>
+    /// <param name="obligationId">The obligation id, as <see cref="Recurring(BillingDurationKey)"/> builds it.</param>
+    /// <param name="interval">The group's billing interval, when found.</param>
+    /// <param name="lineItems">The group's line items, when found.</param>
+    /// <returns>Whether the obligation is one of the invoice's recurring groups.</returns>
+    public static bool TryGetRecurringGroup(CheckoutInvoice invoice, string obligationId, out BillingDurationKey interval, out IList<CheckoutLineItem> lineItems)
+    {
+        interval = null;
+        lineItems = null;
+
+        if (invoice is null || string.IsNullOrEmpty(obligationId) || string.Equals(obligationId, OneTime, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        foreach (var group in invoice.GetRecurringGroups())
+        {
+            if (string.Equals(Recurring(group.Key), obligationId, StringComparison.Ordinal))
+            {
+                interval = group.Key;
+                lineItems = group.Value;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the obligations the supplied invoice must settle to be considered fully paid: the one-time
+    /// amount when it is greater than zero, plus one obligation for every distinct recurring interval.
+    /// </summary>
+    /// <param name="invoice">The checkout invoice.</param>
     public static IReadOnlyList<string> GetExpectedObligationIds(CheckoutInvoice invoice)
     {
         ArgumentNullException.ThrowIfNull(invoice);

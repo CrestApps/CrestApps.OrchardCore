@@ -1,3 +1,4 @@
+@using OrchardCore.DisplayManagement.Html
 @model BookingCalendarViewModel
 
 @{
@@ -11,7 +12,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="BookingsCalendar" title="@Html.Raw(Html.Encode(first.ToDateTime(TimeOnly.MinValue).ToString("Y", culture)))">
+    <breadcrumb name="BookingsCalendar" title="@(new HtmlContentString(first.ToDateTime(TimeOnly.MinValue).ToString("Y", culture)))">
         <breadcrumb-item id="Bookings" action="Index" controller="BookingsAdmin" area="@BookingsConstants.Feature" permission="@BookingsPermissions.ManageBookings.Name">@T["Bookings"]</breadcrumb-item>
     </breadcrumb>
 </zone>

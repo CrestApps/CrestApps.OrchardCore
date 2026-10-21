@@ -10,9 +10,9 @@ using CrestApps.OrchardCore.PayLater.Navigation;
 using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
@@ -25,17 +25,6 @@ namespace CrestApps.OrchardCore.PayLater;
 /// </summary>
 public sealed class Startup : StartupBase
 {
-    internal readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Startup"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public Startup(IStringLocalizer<Startup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -53,28 +42,28 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<CashOnDeliveryCheckoutPaymentProvider>());
         services.AddScoped<OfflineCheckoutPaymentProvider>(sp => sp.GetRequiredService<CashOnDeliveryCheckoutPaymentProvider>());
         services.AddScoped<OfflinePaymentLookup>();
-        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, OfflinePaymentMethodDisplayDriver>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, OfflinePaymentConfirmationDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlowPaymentMethod, OfflinePaymentMethodDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, OfflinePaymentConfirmationDisplayDriver>();
         services.AddSingleton<IBackgroundTask, PayLaterRenewalBackgroundTask>();
         services.AddScoped<ICheckoutHandler, PayLaterTransactionCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, PayLaterCheckoutPaymentMethodDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlowPaymentMethod, PayLaterCheckoutPaymentMethodDisplayDriver>();
 
         services.AddTransactionSource(PayLaterCheckoutPaymentProvider.ProcessorKey, source =>
         {
-            source.DisplayName = S["Pay Later"];
-            source.Description = S["Outstanding balances committed through the offline Pay Later option."];
+            source.DisplayName = LocalizationSource.Create<Startup>("Pay Later");
+            source.Description = LocalizationSource.Create<Startup>("Outstanding balances committed through the offline Pay Later option.");
         });
 
         services.AddTransactionSource(BankTransferCheckoutPaymentProvider.ProcessorKey, source =>
         {
-            source.DisplayName = S["Bank transfer"];
-            source.Description = S["Orders the buyer pays by transferring the money from their bank."];
+            source.DisplayName = LocalizationSource.Create<Startup>("Bank transfer");
+            source.Description = LocalizationSource.Create<Startup>("Orders the buyer pays by transferring the money from their bank.");
         });
 
         services.AddTransactionSource(CashOnDeliveryCheckoutPaymentProvider.ProcessorKey, source =>
         {
-            source.DisplayName = S["Cash on delivery"];
-            source.Description = S["Orders the buyer pays when they are delivered."];
+            source.DisplayName = LocalizationSource.Create<Startup>("Cash on delivery");
+            source.Description = LocalizationSource.Create<Startup>("Orders the buyer pays when they are delivered.");
         });
 
         services

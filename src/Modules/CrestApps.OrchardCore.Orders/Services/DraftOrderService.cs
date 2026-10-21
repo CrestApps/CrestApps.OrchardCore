@@ -10,8 +10,6 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 
@@ -34,7 +32,7 @@ public sealed class DraftOrderService
     private readonly IServiceProvider _serviceProvider;
     private readonly HtmlEncoder _encoder;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
+    private readonly ICommerceEmailSender _emailSender;
 
     internal readonly IStringLocalizer S;
 
@@ -47,8 +45,8 @@ public sealed class DraftOrderService
         IServiceProvider serviceProvider,
         HtmlEncoder encoder,
         IClock clock,
-        ILogger<DraftOrderService> logger,
-        IStringLocalizer<DraftOrderService> stringLocalizer)
+        IStringLocalizer<DraftOrderService> stringLocalizer,
+        ICommerceEmailSender emailSender)
     {
         _cartService = cartService;
         _orderService = orderService;
@@ -58,7 +56,7 @@ public sealed class DraftOrderService
         _serviceProvider = serviceProvider;
         _encoder = encoder;
         _clock = clock;
-        _logger = logger;
+        _emailSender = emailSender;
         S = stringLocalizer;
     }
 
@@ -207,39 +205,42 @@ public sealed class DraftOrderService
     {
         ArgumentNullException.ThrowIfNull(order);
 
-        if (order.Invoice is null || order.Status is OrderStatus.Paid or OrderStatus.Canceled ||
-            _serviceProvider.GetService<IEmailService>() is not { } emailService || string.IsNullOrWhiteSpace(order.CustomerEmail))
+        if (order.Invoice is null || order.Status is OrderStatus.Paid or OrderStatus.Canceled)
         {
             return false;
         }
 
-        var viewUrl = await _links.CreateUrlAsync(order);
-
-        if (string.IsNullOrEmpty(viewUrl))
+        var sent = await _emailSender.SendAsync(new CommerceEmail
         {
-            return false;
-        }
-
-        var (builtSubject, builtText, builtHtml) = BuildInvoiceEmail(order, viewUrl + "/pay");
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
-        {
-            ["PayUrl"] = viewUrl + "/pay",
-        }, cancellationToken);
-        var result = await emailService.SendAsync(new MailMessage
-        {
+            Kind = order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote,
             To = order.CustomerEmail,
-            Subject = email.Subject,
-            TextBody = email.Text,
-            HtmlBody = email.Html,
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
+            Order = order,
+            Reference = order.ItemId,
+        }, async _ =>
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
+            var payUrl = await _links.CreatePayUrlAsync(order);
+
+            if (string.IsNullOrEmpty(payUrl))
             {
-                _logger.LogWarning("The invoice for order '{OrderId}' couldn't be emailed.", order.ItemId);
+                return null;
             }
 
+            var (subject, text, html) = BuildInvoiceEmail(order, payUrl);
+
+            return new CommerceEmailContent
+            {
+                Subject = subject,
+                Text = text,
+                Html = html,
+                Values = new Dictionary<string, string>
+                {
+                    ["PayUrl"] = payUrl,
+                },
+            };
+        }, cancellationToken);
+
+        if (!sent)
+        {
             return false;
         }
 

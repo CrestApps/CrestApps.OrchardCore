@@ -6,7 +6,7 @@
 
 <zone Name="Title">
     <breadcrumb name="GuestOrderReturn" title="@T["Return items"]">
-        <breadcrumb-item id="OrdersView" title="@T["Order {0}", form.Order.OrderNumber]" href="@form.BackUrl" />
+        <breadcrumb-item id="OrdersView" url="@form.BackUrl">@T["Order {0}", form.Order.OrderNumber]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

@@ -1,11 +1,10 @@
+using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Search;
-using CrestApps.OrchardCore.Products.Services;
 using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Elasticsearch;
 using OrchardCore.Elasticsearch.Core.Models;
 using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
-using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
 
@@ -15,32 +14,19 @@ namespace CrestApps.OrchardCore.Products.Elasticsearch.Handlers;
 /// Writes the mapping of an Elasticsearch product search index: the fields every product has and those of each
 /// attribute, with dynamic templates so an attribute added before the next rebuild is still mapped by kind.
 /// </summary>
-public sealed class ProductElasticsearchIndexProfileHandler : IndexProfileHandlerBase
+public sealed class ProductElasticsearchIndexProfileHandler : ProductSearchIndexProfileHandlerBase
 {
     private readonly ProductAttributeCatalog _attributeCatalog;
 
     public ProductElasticsearchIndexProfileHandler(ProductAttributeCatalog attributeCatalog)
+        : base(ElasticsearchConstants.ProviderName)
     {
         _attributeCatalog = attributeCatalog;
     }
 
-    public override Task InitializingAsync(InitializingContext<IndexProfile> context)
-        => SetMappingAsync(context.Model);
-
-    public override Task CreatingAsync(CreatingContext<IndexProfile> context)
-        => SetMappingAsync(context.Model);
-
-    public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
-        => SetMappingAsync(context.Model);
-
-    private async Task SetMappingAsync(IndexProfile indexProfile)
+    /// <inheritdoc/>
+    protected override async Task ConfigureAsync(IndexProfile indexProfile)
     {
-        if (!string.Equals(indexProfile.ProviderName, ElasticsearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(indexProfile.Type, ProductSearchIndexFields.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var attributeKeys = (await _attributeCatalog.GetAttributesAsync([], includeUnused: true)).Select(attribute => attribute.Key);
         var metadata = indexProfile.GetOrCreate<ElasticsearchIndexMetadata>();
 

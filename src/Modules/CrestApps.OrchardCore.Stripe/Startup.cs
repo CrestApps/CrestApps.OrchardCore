@@ -42,7 +42,7 @@ namespace CrestApps.OrchardCore.Stripe;
 /// <summary>
 /// Configures the Stripe module services and routes.
 /// </summary>
-public class Startup : StartupBase
+public sealed class Startup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
 
@@ -65,12 +65,15 @@ public class Startup : StartupBase
         // wins over the one stored on the settings page; see StripeOptionsConfiguration.
         services.Configure<StripeConfigurationOptions>(_shellConfiguration.GetSection(StripeConfigurationOptions.SectionName));
 
-        services.AddScoped<IDisplayDriver<ISite>, StripeSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<StripeSettingsDisplayDriver>();
         services.AddScoped<IStoreSetupStep, StripeSetupStep>();
         services.AddTransient<IConfigureOptions<StripeOptions>, StripeOptionsConfiguration>();
+
+        // The options are rebuilt when the Stripe settings change, so a new key is used without a tenant restart.
+        services.AddSignalOptionsChangeTokenSource<StripeOptions>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
         services.AddNavigationProvider<AdminMenu>();
-        services.AddScoped<IPermissionProvider, StripePermissionsProvider>();
+        services.AddPermissionProvider<StripePermissionsProvider>();
 
         // Lets a role that holds only the Stripe permission open Settings > Payments > Stripe,
         // not just users who hold the global ManageSettings permission.
@@ -89,11 +92,7 @@ public class Startup : StartupBase
         services.AddScoped<IStripeSubscriptionService, StripeSubscriptionService>();
         services.AddScoped<IStripePaymentIntentService, StripePaymentIntentService>();
         services.AddScoped<IStripePaymentMethodService, StripePaymentMethodService>();
-        services.AddScoped<IStripeProductService, StripeProductService>();
-        services.AddScoped<IStripePriceService, StripePriceService>();
-        services.AddScoped<IStripeSetupIntentService, StripeSetupIntentService>();
         services.AddScoped<IStripeCustomerService, StripeCustomerService>();
-        services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
         services.AddScoped<IStripeRefundService, StripeRefundService>();
 
         // Exports and redacts the Stripe customers that hold a person's contact, for access and erasure requests.
@@ -101,7 +100,7 @@ public class Startup : StartupBase
 
         services.AddScoped(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<StripeOptions>>();
+            var options = sp.GetRequiredService<IOptionsMonitor<StripeOptions>>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
             // Route Stripe API calls through a named HttpClient so a delegating handler can observe
@@ -114,7 +113,8 @@ public class Startup : StartupBase
                 httpClientFactory.CreateClient(StripeConstants.HttpClientName),
                 maxNetworkRetries: 3);
 
-            return new StripeClient(options.Value.ApiKey, httpClient: httpClient);
+            // Built per scope from the current options, so a changed key is used from the next request on.
+            return new StripeClient(options.CurrentValue.ApiKey, httpClient: httpClient);
         });
     }
 
@@ -148,8 +148,7 @@ public sealed class DeploymentStartup : StartupBase
     /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<StripeSettingsDeploymentSource, StripeSettingsDeploymentStep>();
-        services.AddDisplayDriver<DeploymentStep, StripeSettingsDeploymentStepDisplayDriver>();
+        services.AddDeployment<StripeSettingsDeploymentSource, StripeSettingsDeploymentStep, StripeSettingsDeploymentStepDisplayDriver>();
     }
 }
 
@@ -191,7 +190,7 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutSavedPaymentMethodProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutRecurringPaymentProvider, StripeRecurringPaymentProvider>();
-        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, StripeCheckoutPaymentMethodDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlowPaymentMethod, StripeCheckoutPaymentMethodDisplayDriver>();
         services.AddScoped<ICheckoutPaymentClientConfigurationProvider, StripeCheckoutClientConfigurationProvider>();
     }
 }

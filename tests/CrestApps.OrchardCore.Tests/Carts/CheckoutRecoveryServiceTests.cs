@@ -2,15 +2,16 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Tests.Customers;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Email;
 using OrchardCore.Entities;
+using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -34,7 +35,8 @@ public sealed class CheckoutRecoveryServiceTests
     {
         _email
             .Setup(email => email.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<MailMessage, string, CancellationToken>((message, _, _) => _sent.Add(message));
+            .Callback<MailMessage, string, CancellationToken>((message, _, _) => _sent.Add(message))
+            .ReturnsAsync(Result.Success());
     }
 
     [Fact]
@@ -53,6 +55,22 @@ public sealed class CheckoutRecoveryServiceTests
         Assert.Contains("Jordan Guest, you left something behind.", message.TextBody);
         Assert.Contains("https://store.test/orders/resume/", message.TextBody);
         Assert.Equal(_now, order.RecoveryEmailSentUtc);
+    }
+
+    [Fact]
+    public async Task ASendThatFails_IsTriedAgainOnTheNextRun()
+    {
+        var order = LeftOrder("order-1", "session-1");
+        AddSession("session-1", "Jordan Guest", "jordan@example.test");
+
+        _email
+            .Setup(email => email.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failed());
+
+        var service = CreateService();
+
+        Assert.Equal(0, await service.SendDueAsync(TestContext.Current.CancellationToken));
+        Assert.Null(order.RecoveryEmailSentUtc);
     }
 
     [Fact]
@@ -174,7 +192,7 @@ public sealed class CheckoutRecoveryServiceTests
     }
 
     private CheckoutRecoveryLinks CreateLinks()
-        => new(_protection, new ResumeLinkGenerator(), SiteService(true, "https://store.test/").Object, Clock());
+        => new(SignedLinkDoubles.Tokens(_protection), SignedLinkDoubles.Urls(SiteService(true, "https://store.test/").Object, new ResumeLinkGenerator()));
 
     private CheckoutRecoveryService CreateService(bool enabled = true, string baseUrl = "https://store.test/")
     {
@@ -184,15 +202,13 @@ public sealed class CheckoutRecoveryServiceTests
             .ReturnsAsync((string id, CancellationToken _) => _sessions.GetValueOrDefault(id));
 
         var siteService = SiteService(enabled, baseUrl);
-        var links = new CheckoutRecoveryLinks(_protection, new ResumeLinkGenerator(), siteService.Object, Clock());
-        var services = new ServiceCollection().AddSingleton(_email.Object).BuildServiceProvider();
-
+        var links = new CheckoutRecoveryLinks(SignedLinkDoubles.Tokens(_protection), SignedLinkDoubles.Urls(siteService.Object, new ResumeLinkGenerator()));
         return new CheckoutRecoveryService(
             _orders,
             sessions.Object,
             links,
             siteService.Object,
-            services,
+            CommerceEmailSenders.Create(_email.Object),
             Clock(),
             NullLogger<CheckoutRecoveryService>.Instance,
             new PassThroughLocalizer<CheckoutRecoveryService>());

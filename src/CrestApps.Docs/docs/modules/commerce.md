@@ -107,7 +107,7 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### Storefront account
 
-The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with an `INavigationProvider` that builds only for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
 
 ```csharp
 public sealed class MyAccountMenu : INavigationProvider
@@ -127,7 +127,23 @@ public sealed class MyAccountMenu : INavigationProvider
 }
 ```
 
-An account page renders `await DisplayAsync(await New.CommerceAccountNavigation())` in its side column. Orders, Digital Downloads, Subscriptions, Transactions and Customers add **Orders**, **Downloads**, **Subscriptions**, **Balances and invoices**, **Addresses** and **Account details**.
+An account page keeps its own breadcrumb and renders the `CommerceAccountPage` shape (`CommerceConstants.Account.PageShape`), which frames it: the `CommerceAccountNavigation` menu in the side column, then the page's heading and content. The shape takes these properties:
+
+- `Title`: the page's heading. Without one, the page shows no heading, such as an order whose content has its own.
+- `Content`: the page's content, a shape or HTML.
+- `Actions`: optional HTML beside the heading, such as an **Add address** button.
+
+```cshtml
+<zone Name="Title">
+    <breadcrumb name="AccountGiftCards" title="@T["Gift cards"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Gift cards"], Content: Model))
+```
+
+A theme overrides `CommerceAccountPage.cshtml` to change the frame of every account page. Orders, Digital Downloads, Subscriptions, Transactions and Customers add **Orders**, **Downloads**, **Subscriptions**, **Balances and invoices**, **Addresses** and **Account details**.
 
 ### The shared admin list UI
 

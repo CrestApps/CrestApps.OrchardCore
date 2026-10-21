@@ -1,19 +1,27 @@
 @model CrestApps.OrchardCore.Addresses.GooglePlaces.GooglePlacesSettingsViewModel
 
-<p class="text-muted">@T["Suggests addresses as shoppers type their street, and fills in the rest of the address from the one they pick. Suggestions come from Google Places: create a key for the Places API (New) in the Google Cloud console, restricted to that API. Google bills the store for each session."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["Suggests addresses as shoppers type their street, and fills in the rest of the address from the one they pick. Suggestions come from Google Places: create a key for the Places API (New) in the Google Cloud console, restricted to that API. Google bills the store for each session."]</p>
+    </div>
+</div>
 
-<div class="mb-3">
-    <label asp-for="ApiKey" class="form-label">@T["Google Places API key"]</label>
-    <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new key to replace it."] : null)" />
-    <span class="hint">@(Model.HasApiKey ? T["A key is saved, and addresses are suggested. It's never shown again."] : T["Without a key, shoppers type their address themselves."])</span>
+<div class="ocat-wrapper">
+    <label asp-for="ApiKey" class="ocat-label">@T["Google Places API key"]</label>
+    <div class="ocat-end">
+        <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new key to replace it."] : null)" />
+        <span class="hint">@(Model.HasApiKey ? T["A key is saved, and addresses are suggested. It's never shown again."] : T["Without a key, shoppers type their address themselves."])</span>
+    </div>
 </div>
 
 @if (Model.HasApiKey)
 {
-    <div class="mb-3">
-        <div class="form-check">
-            <input asp-for="RemoveApiKey" type="checkbox" class="form-check-input" />
-            <label asp-for="RemoveApiKey" class="form-check-label">@T["Remove the key"]</label>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="RemoveApiKey" type="checkbox" class="form-check-input" />
+                <label asp-for="RemoveApiKey" class="form-check-label">@T["Remove the key"]</label>
+            </div>
             <span class="hint dashed">@T["Stops suggesting addresses."]</span>
         </div>
     </div>

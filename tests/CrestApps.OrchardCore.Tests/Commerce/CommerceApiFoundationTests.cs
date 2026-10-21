@@ -57,7 +57,12 @@ public sealed class CommerceApiFoundationTests
             return ValueTask.FromResult<object>(TypedResults.Created("/orders/1", new { Number = "1001", Call = calls }));
         };
 
-        var first = await new IdempotencyEndpointFilter().InvokeAsync(Invocation(services, "key-1"), handler);
+        var firstInvocation = Invocation(services, "key-1");
+        var first = await new IdempotencyEndpointFilter().InvokeAsync(firstInvocation, handler);
+
+        // A created answer is kept once it has run and written where the new thing is.
+        await Assert.IsAssignableFrom<IResult>(first).ExecuteAsync(firstInvocation.HttpContext);
+
         var second = await new IdempotencyEndpointFilter().InvokeAsync(Invocation(services, "key-1"), handler);
         var other = await new IdempotencyEndpointFilter().InvokeAsync(Invocation(services, "key-2"), handler);
 
@@ -135,6 +140,7 @@ public sealed class CommerceApiFoundationTests
 
     private static ServiceProvider Services()
         => new ServiceCollection()
+            .AddLogging()
             .AddSingleton<IDistributedCache>(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())))
             .AddSingleton<IDistributedLock>(new LocalLock(NullLogger<LocalLock>.Instance))
             .BuildServiceProvider();
@@ -142,6 +148,7 @@ public sealed class CommerceApiFoundationTests
     private static EndpointFilterInvocationContext Invocation(IServiceProvider services, string key)
     {
         var context = new DefaultHttpContext { RequestServices = services };
+        context.Response.Body = new MemoryStream();
         context.Request.Method = "POST";
         context.Request.Path = "/api/commerce/v1/cart/checkout";
 

@@ -228,7 +228,7 @@ A `CouponKind.BuyXGetY` coupon has `BuyQuantity`, `GetQuantity`, `Percentage` (o
 
 ### Coupons in recipes and deployments
 
-The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`.
+The **`Coupons`** recipe step adds or updates coupons by code; a deployment plan's **Coupons** step exports them. How often a coupon was used belongs to the site, so neither carries `RedemptionCount`. The step checks and maps each coupon with `CouponEditor`, the rules the coupon admin and the commerce API use, so it refuses what the editor refuses (with each reason in the recipe's errors) and stores what the editor would store; `ProductIds`, `CategoryIds` and, for a buy X get Y coupon, `BuyProductIds` and `BuyCategoryIds` are copied as they are. The computed members `IsScoped`, `HasItemLimits` and `EffectiveTarget` are never serialized.
 
 ```json
 {
@@ -277,7 +277,7 @@ An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer dest
 
 The default provider then runs every **`ICheckoutTaxProfileHandler`**, at checkout and when a recurring charge is taxed, so modules add what they know without replacing it:
 
-- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Commerce > Taxation > Origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
+- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
 - `CustomerCheckoutTaxProfileHandler` (with [Customers](customers)) sets `CheckoutTaxProfile.Customer` for a signed-in buyer: business (`B2B`) or person, their tax id as the registration and VAT number, `IsTaxExempt`, and the ids of the exemption certificates on file for them. A rule the customer is exempt from charges nothing (`TaxTreatment.Exempt`). A guest is taxed as a person.
 
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the

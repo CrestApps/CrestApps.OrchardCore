@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 
 namespace CrestApps.OrchardCore.Inventory.Core.Services;
@@ -87,7 +88,20 @@ public interface IInventoryService
 /// <summary>
 /// Who changed the stock: an administrator, or <see langword="null"/> for the store itself.
 /// </summary>
-public sealed record StockActor(string Id, string Name);
+public sealed record StockActor(string Id, string Name)
+{
+    /// <summary>
+    /// The signed-in user making a change.
+    /// </summary>
+    /// <param name="user">The user.</param>
+    /// <param name="fallbackName">The name to record when the user has none, such as for an API client.</param>
+    public static StockActor ForUser(ClaimsPrincipal user, string fallbackName = null)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        return new(user.FindFirstValue(ClaimTypes.NameIdentifier), user.Identity?.Name ?? fallbackName);
+    }
+}
 
 /// <summary>
 /// Units of a product, or one of its variants, that an order needs.

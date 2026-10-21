@@ -178,8 +178,8 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         // today's rules would silently change what the customer signed up for.
         // Priced from the agreement's cycle amount rather than the previous debt: the first cycle may have
         // carried a one-off discount, and copying it forward would grant that discount on every cycle.
-        next.Amount = recurrence.CycleAmount > 0m ? recurrence.CycleAmount : source.Amount;
-        next.TaxAmount = recurrence.CycleAmount > 0m ? recurrence.CycleTaxAmount : source.TaxAmount;
+        next.Amount = recurrence.CycleAmount;
+        next.TaxAmount = recurrence.CycleTaxAmount;
         next.TotalAmount = next.Amount + next.TaxAmount;
         next.AmountPaid = 0m;
         next.Status = TransactionStatus.Outstanding;

@@ -131,7 +131,7 @@ How shoppers use it:
 - Picking an address fills in the street, the second line, the city, the state or province, and the postal code, and switches the country when the address is in another one. The shopper checks it and adds what's missing, such as an apartment number.
 
 :::note[Google bills each search]
-Google charges your account for the searches. To keep a visitor from running up the bill, each one can ask for suggestions at most 60 times a minute; typing an address takes about a dozen.
+Google charges your account for the searches. To keep a visitor from running up the bill, turn on the **Rate Limits** feature: each visitor can then ask for suggestions at most 60 times a minute; typing an address takes about a dozen. Without it, suggestions aren't limited.
 :::
 
 ## Privacy requests

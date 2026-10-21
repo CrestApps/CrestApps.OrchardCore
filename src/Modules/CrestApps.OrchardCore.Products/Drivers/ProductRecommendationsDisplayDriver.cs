@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Products.Endpoints;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -23,6 +24,7 @@ public sealed class ProductRecommendationsDisplayDriver : ContentPartDisplayDriv
     private readonly ProductRecommendationService _recommendations;
     private readonly ProductListingService _listing;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
@@ -30,11 +32,13 @@ public sealed class ProductRecommendationsDisplayDriver : ContentPartDisplayDriv
         ProductRecommendationService recommendations,
         ProductListingService listing,
         IHttpContextAccessor httpContextAccessor,
-        IStringLocalizer<ProductRecommendationsDisplayDriver> stringLocalizer)
+        IStringLocalizer<ProductRecommendationsDisplayDriver> stringLocalizer,
+        LinkGenerator linkGenerator)
     {
         _recommendations = recommendations;
         _listing = listing;
         _httpContextAccessor = httpContextAccessor;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -69,11 +73,9 @@ public sealed class ProductRecommendationsDisplayDriver : ContentPartDisplayDriv
         => Initialize<ProductRecommendationsEditViewModel>("ProductRecommendations_Edit", async model =>
         {
             var recommendations = part.ContentItem.TryGet<ProductRecommendationsPart>(out var found) ? found : new ProductRecommendationsPart();
-            var pathBase = _httpContextAccessor.HttpContext?.Request.PathBase.Value ?? string.Empty;
-
             model.UpsellIds = [.. recommendations.UpsellIds ?? []];
             model.CrossSellIds = [.. recommendations.CrossSellIds ?? []];
-            model.SearchEndpoint = $"{pathBase}/{ProductSearchEndpoints.SearchPath}";
+            model.SearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, ProductSearchEndpoints.RouteName);
             model.InitialUpsellsJson = ToJson(await _recommendations.NameAsync(model.UpsellIds));
             model.InitialCrossSellsJson = ToJson(await _recommendations.NameAsync(model.CrossSellIds));
         }).Location("Content:20");

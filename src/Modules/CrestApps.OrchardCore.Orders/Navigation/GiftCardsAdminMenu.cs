@@ -26,9 +26,8 @@ public sealed class GiftCardsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Gift cards"], S["Gift cards"].PrefixPosition("5.5"), giftCards => giftCards
-                    .AddClass("gift-cards")
                     .Id("giftCards")
                     .Action(_routeValues)
                     .Permission(OrderPermissions.ManageGiftCards)

@@ -23,6 +23,7 @@ internal sealed class OrderRefundRecorder : IPaymentRefundHandler
     private readonly OrderOperationScope _scope;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly ICheckoutSessionStore _sessionStore;
 
     internal readonly IStringLocalizer S;
 
@@ -32,13 +33,15 @@ internal sealed class OrderRefundRecorder : IPaymentRefundHandler
         OrderOperationScope scope,
         IServiceProvider serviceProvider,
         IClock clock,
-        IStringLocalizer<OrderRefundRecorder> stringLocalizer)
+        IStringLocalizer<OrderRefundRecorder> stringLocalizer,
+        ICheckoutSessionStore sessionStore)
     {
         _orderStore = orderStore;
         _orderService = orderService;
         _scope = scope;
         _serviceProvider = serviceProvider;
         _clock = clock;
+        _sessionStore = sessionStore;
         S = stringLocalizer;
     }
 
@@ -81,12 +84,12 @@ internal sealed class OrderRefundRecorder : IPaymentRefundHandler
     // The refund names its checkout: an order's own, or a pay link's for the order's Pay Later transaction.
     private async Task<Order> FindOrderAsync(PaymentRefund refund, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(refund.SessionId) || _serviceProvider.GetService<ICheckoutSessionStore>() is not { } sessions)
+        if (string.IsNullOrEmpty(refund.SessionId))
         {
             return null;
         }
 
-        var found = await sessions.GetManyAsync([refund.SessionId], cancellationToken);
+        var found = await _sessionStore.GetManyAsync([refund.SessionId], cancellationToken);
         var session = found.Count > 0 ? found[0] : null;
 
         if (session is null || string.IsNullOrEmpty(session.ReferenceId))

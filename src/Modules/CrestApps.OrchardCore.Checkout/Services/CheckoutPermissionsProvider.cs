@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -28,6 +29,16 @@ internal sealed class CheckoutPermissionsProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.StoreManager,
+                Permissions = [CheckoutPermissions.ManageCoupons],
+            },
+            new PermissionStereotype
+            {
+                Name = CommerceConstants.StaffRoles.Marketing,
+                Permissions = [CheckoutPermissions.ManageCoupons],
             },
         ];
     }

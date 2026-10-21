@@ -2,16 +2,18 @@
 
 @if (Model.Markets.Count > 0)
 {
-    <div class="mb-3" role="group" aria-labelledby="product-markets-label">
-        <div class="form-label" id="product-markets-label">@T["Not sold in"]</div>
-        @foreach (var market in Model.Markets)
-        {
-            var id = Html.IdFor(m => m.NotSoldIn) + "-" + market.ItemId;
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.NotSoldIn)" value="@market.ItemId" id="@id" checked="@Model.NotSoldIn.Contains(market.ItemId)" />
-                <label class="form-check-label" for="@id">@market.Name <span class="text-body-secondary">· @string.Join(", ", market.Countries)</span></label>
-            </div>
-        }
-        <span class="hint">@T["Shoppers in a market ticked here see that the product isn't sold to them, and can't add it to their cart."]</span>
+    <div class="ocat-wrapper" role="group" aria-labelledby="product-markets-label">
+        <span class="ocat-label" id="product-markets-label">@T["Not sold in"]</span>
+        <div class="ocat-end">
+            @foreach (var market in Model.Markets)
+            {
+                var id = Html.IdFor(m => m.NotSoldIn) + "-" + market.ItemId;
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.NotSoldIn)" value="@market.ItemId" id="@id" checked="@Model.NotSoldIn.Contains(market.ItemId)" />
+                    <label class="form-check-label" for="@id">@market.Name <span class="text-body-secondary">· @string.Join(", ", market.Countries)</span></label>
+                </div>
+            }
+            <span class="hint">@T["Shoppers in a market ticked here see that the product isn't sold to them, and can't add it to their cart."]</span>
+        </div>
     </div>
 }

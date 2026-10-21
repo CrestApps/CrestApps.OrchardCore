@@ -99,7 +99,8 @@ public sealed class CommerceWebhookTests
     [Fact]
     public void ARetry_GetsBackTheGuestTokenAndLocation_TheFirstAnswerHadInItsHeaders()
     {
-        var headers = new HeaderDictionary { [CommerceApi.CheckoutTokenHeader] = "token-1", ["X-Other"] = "not kept" };
+        // The headers the endpoint and its created result wrote.
+        var headers = new HeaderDictionary { [CommerceApi.CheckoutTokenHeader] = "token-1", ["Location"] = "/api/commerce/v1/checkout/1", ["X-Other"] = "not kept" };
         Results<Created<ApiMoney>, ProblemHttpResult> created = TypedResults.Created("/api/commerce/v1/checkout/1", new ApiMoney(5m, "USD"));
 
         var stored = IdempotencyEndpointFilter.Capture(created, headers);

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Companies.Models;
 using CrestApps.OrchardCore.Companies.Services;
@@ -35,6 +35,8 @@ public sealed class CompaniesAdminController : Controller
     private readonly IPriceListStore _priceLists;
     private readonly UserManager<IUser> _userManager;
     private readonly ISiteService _siteService;
+    private readonly IAddressEditorService _addressEditor;
+    private readonly IShapeFactory _shapeFactory;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
@@ -47,6 +49,8 @@ public sealed class CompaniesAdminController : Controller
         IPriceListStore priceLists,
         UserManager<IUser> userManager,
         ISiteService siteService,
+        IAddressEditorService addressEditor,
+        IShapeFactory shapeFactory,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
@@ -57,6 +61,8 @@ public sealed class CompaniesAdminController : Controller
         _priceLists = priceLists;
         _userManager = userManager;
         _siteService = siteService;
+        _addressEditor = addressEditor;
+        _shapeFactory = shapeFactory;
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
@@ -65,7 +71,7 @@ public sealed class CompaniesAdminController : Controller
     }
 
     [Admin("companies", "Companies")]
-    public async Task<IActionResult> Index(string q, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
+    public async Task<IActionResult> Index(string q, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CompaniesPermissions.ManageCompanies))
         {
@@ -81,7 +87,7 @@ public sealed class CompaniesAdminController : Controller
             routeData.Values.TryAdd("q", q);
         }
 
-        var pagerShape = await shapeFactory.PagerAsync(pager, count, routeData);
+        var pagerShape = await _shapeFactory.PagerAsync(pager, count, routeData);
 
         return View(new CompaniesIndexViewModel
         {
@@ -139,7 +145,7 @@ public sealed class CompaniesAdminController : Controller
             return NotFound();
         }
 
-        return View(await PopulateAsync(new CompanyEditViewModel
+        var model = new CompanyEditViewModel
         {
             Name = company.Name,
             TaxId = company.TaxId,
@@ -155,17 +161,19 @@ public sealed class CompaniesAdminController : Controller
             PunchoutUser = company.FindBuyer(company.Punchout?.UserId) is { } punchoutBuyer ? punchoutBuyer.Email ?? punchoutBuyer.UserName : null,
             PunchoutKeyCreatedUtc = company.Punchout?.KeyCreatedUtc,
             Buyers = [.. company.Buyers.Select(buyer => new CompanyBuyerRowViewModel { User = buyer.Email ?? buyer.UserName, Role = buyer.Role, OrderLimit = buyer.OrderLimit })],
-            Locations = [.. company.Locations.Select(location => new CompanyLocationRowViewModel
+        };
+
+        foreach (var location in company.Locations)
+        {
+            model.Locations.Add(new CompanyLocationRowViewModel
             {
                 LocationId = location.LocationId,
                 Name = location.Name,
-                AddressLine1 = location.Address?.AddressLine1,
-                City = location.Address?.City,
-                Region = location.Address?.Region,
-                PostalCode = location.Address?.PostalCode,
-                Country = location.Address?.Country,
-            })],
-        }, company.ItemId));
+                Address = await _addressEditor.BuildAsync(location.Address, LocationEditorOptions(model)),
+            });
+        }
+
+        return View(await PopulateAsync(model, company.ItemId));
     }
 
     [HttpPost]
@@ -278,31 +286,36 @@ public sealed class CompaniesAdminController : Controller
             });
         }
 
+        // Each location is checked against its country's rules by the shared address editor; a row left blank is
+        // no location. Its recipient is the company.
         var locations = new List<CompanyLocation>();
+        var locationOptions = LocationEditorOptions(model);
 
-        foreach (var row in (model.Locations ?? []).Where(row => !string.IsNullOrWhiteSpace(row.Name) || !string.IsNullOrWhiteSpace(row.AddressLine1)))
+        for (var i = 0; i < (model.Locations?.Count ?? 0); i++)
         {
-            if (string.IsNullOrWhiteSpace(row.AddressLine1) || string.IsNullOrWhiteSpace(row.City) || row.Country?.Trim().Length != 2)
-            {
-                ModelState.AddModelError(nameof(model.Locations), S["Give each location its street, city and two-letter country code."]);
+            var row = model.Locations[i];
+            row.Address ??= new AddressEditorViewModel();
 
+            if (string.IsNullOrWhiteSpace(row.Name) && !row.Address.HasAnyValue())
+            {
+                continue;
+            }
+
+            row.Address.Name = model.Name?.Trim();
+            row.Address.Company = model.Name?.Trim();
+
+            var result = await _addressEditor.ValidateAsync(row.Address, ModelState, LocationEditorPrefix(i), locationOptions);
+
+            if (!result.IsValid)
+            {
                 continue;
             }
 
             locations.Add(new CompanyLocation
             {
                 LocationId = string.IsNullOrEmpty(row.LocationId) ? IdGenerator.GenerateId() : row.LocationId,
-                Name = string.IsNullOrWhiteSpace(row.Name) ? row.City.Trim() : row.Name.Trim(),
-                Address = new Address
-                {
-                    Name = model.Name?.Trim(),
-                    Company = model.Name?.Trim(),
-                    AddressLine1 = row.AddressLine1.Trim(),
-                    City = row.City.Trim(),
-                    Region = string.IsNullOrWhiteSpace(row.Region) ? null : row.Region.Trim().ToUpperInvariant(),
-                    PostalCode = string.IsNullOrWhiteSpace(row.PostalCode) ? null : row.PostalCode.Trim(),
-                    Country = row.Country.Trim().ToUpperInvariant(),
-                },
+                Name = string.IsNullOrWhiteSpace(row.Name) ? result.Address.City : row.Name.Trim(),
+                Address = result.Address,
             });
         }
 
@@ -391,9 +404,34 @@ public sealed class CompaniesAdminController : Controller
         for (var i = 0; i < SpareRows; i++)
         {
             model.Buyers.Add(new CompanyBuyerRowViewModel());
-            model.Locations.Add(new CompanyLocationRowViewModel());
+        }
+
+        model.Locations.Add(new CompanyLocationRowViewModel());
+
+        var locationOptions = LocationEditorOptions(model);
+
+        for (var i = 0; i < model.Locations.Count; i++)
+        {
+            var row = model.Locations[i];
+            row.Address ??= new AddressEditorViewModel();
+
+            await _addressEditor.PopulateAsync(row.Address, locationOptions);
+            row.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(row.Address, LocationEditorPrefix(i));
         }
 
         return model;
     }
+
+    // A location is where the company receives orders, addressed to the company itself, so the editor asks for neither
+    // a recipient nor a company. A new one starts in the country of the company's first location.
+    private static AddressEditorOptions LocationEditorOptions(CompanyEditViewModel model)
+        => new()
+        {
+            ShowName = false,
+            ShowCompany = false,
+            DefaultCountry = model.Locations?.Select(row => row.Address?.Country).FirstOrDefault(country => !string.IsNullOrWhiteSpace(country)),
+        };
+
+    private static string LocationEditorPrefix(int index)
+        => $"{nameof(CompanyEditViewModel.Locations)}[{index}].{nameof(CompanyLocationRowViewModel.Address)}";
 }

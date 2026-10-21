@@ -3,7 +3,10 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
 using CrestApps.OrchardCore.Shipping.Drivers;
+using CrestApps.OrchardCore.Shipping.Endpoints;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Handlers;
 using CrestApps.OrchardCore.Shipping.Indexes;
 using CrestApps.OrchardCore.Shipping.Workflows;
@@ -25,6 +28,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -79,9 +83,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Order, OrderShipmentsDisplayDriver>();
         services.AddScoped<ShipmentEmailBuilder>();
         services.AddScoped<IShipmentEventHandler, ShippedEmailShipmentHandler>();
-        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(OrderEmailKinds.Shipped, LocalizationSource.Create<Startup>("Shipment on its way"), LocalizationSource.Create<Startup>("{{ TrackingUrl }}, {{ Carrier }}, {{ ShipmentNumber }} and {{ OrderUrl }}."));
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
@@ -149,8 +152,10 @@ public sealed class EasyPostStartup : StartupBase
         services.AddScoped<ICarrierProvider>(serviceProvider => serviceProvider.GetRequiredService<EasyPostCarrierProvider>());
         services.AddScoped<EasyPostTrackingUpdater>();
         services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddEasyPostWebhookEndpoint();
 }
 
 [Feature(ShippingConstants.Features.Api)]
@@ -160,5 +165,19 @@ public sealed class ApiStartup : StartupBase
     {
         routes.MapShippingCheckoutApi();
         routes.MapShipmentApi();
+    }
+}
+
+/// <summary>
+/// Tells webhooks about shipments when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
     }
 }

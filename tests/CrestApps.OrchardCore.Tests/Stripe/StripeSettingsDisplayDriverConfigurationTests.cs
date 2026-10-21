@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Stripe.ViewModels;
@@ -12,7 +13,7 @@ using Moq;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Stripe;
@@ -88,14 +89,14 @@ public sealed class StripeSettingsDisplayDriverConfigurationTests
         };
 
         var context = CreateContext(new StripeSettingsViewModel());
-        var driver = CreateDriver(new EphemeralDataProtectionProvider(), configuration, out var shellReleaseManager);
+        var driver = CreateDriver(new EphemeralDataProtectionProvider(), configuration, out var optionsUpdateNotifier);
 
         // Act
         await driver.UpdateAsync(Mock.Of<ISite>(), settings, context);
 
         // Assert
         Assert.Equal("pk_test_stored", settings.TestPublishableKey);
-        shellReleaseManager.Verify(manager => manager.RequestRelease(), Times.Never);
+        optionsUpdateNotifier.Verify(notifier => notifier.RequestUpdate<StripeOptions>(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public sealed class StripeSettingsDisplayDriverConfigurationTests
             LivePrivateSecret = "sk_live_posted",
         });
 
-        var driver = CreateDriver(dataProtectionProvider, new StripeConfigurationOptions(), out var shellReleaseManager);
+        var driver = CreateDriver(dataProtectionProvider, new StripeConfigurationOptions(), out var optionsUpdateNotifier);
 
         // Act
         await driver.UpdateAsync(Mock.Of<ISite>(), settings, context);
@@ -153,21 +154,21 @@ public sealed class StripeSettingsDisplayDriverConfigurationTests
         Assert.True(settings.IsLive);
         Assert.Equal("pk_live_posted", settings.LivePublishableKey);
         Assert.Equal("sk_live_posted", protector.Unprotect(settings.LivePrivateSecret));
-        shellReleaseManager.Verify(manager => manager.RequestRelease(), Times.Once);
+        optionsUpdateNotifier.Verify(notifier => notifier.RequestUpdate<StripeOptions>(It.IsAny<string>()), Times.Once);
     }
 
     private static StripeSettingsDisplayDriver CreateDriver(
         IDataProtectionProvider dataProtectionProvider,
         StripeConfigurationOptions configuration,
-        out Mock<IShellReleaseManager> shellReleaseManager)
+        out Mock<IOptionsUpdateNotifier> optionsUpdateNotifier)
     {
-        shellReleaseManager = new Mock<IShellReleaseManager>();
+        optionsUpdateNotifier = new Mock<IOptionsUpdateNotifier>();
 
         return new StripeSettingsDisplayDriver(
             CreateAuthorizationService(),
             CreateHttpContextAccessor(),
             dataProtectionProvider,
-            shellReleaseManager.Object,
+            optionsUpdateNotifier.Object,
             Options.Create(configuration),
             CreateLocalizer());
     }

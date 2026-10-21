@@ -14,10 +14,14 @@ namespace CrestApps.OrchardCore.Orders.Handlers;
 /// </summary>
 internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
 {
+    private readonly ICommerceWebhookPublisher _publisher;
     private readonly IServiceProvider _serviceProvider;
 
-    public OrderWebhookEventHandler(IServiceProvider serviceProvider)
+    public OrderWebhookEventHandler(
+        ICommerceWebhookPublisher publisher,
+        IServiceProvider serviceProvider)
     {
+        _publisher = publisher;
         _serviceProvider = serviceProvider;
     }
 
@@ -25,7 +29,7 @@ internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
     // the order is saved and still stands.
     public override Task CreatedAsync(OrderCreatedContext context, CancellationToken cancellationToken = default)
     {
-        if (context.Problems.Count > 0 || _serviceProvider.GetService<ICommerceWebhookPublisher>() is null)
+        if (context.Problems.Count > 0)
         {
             return Task.CompletedTask;
         }
@@ -34,10 +38,10 @@ internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            if (await scope.ServiceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId) is { Status: not OrderStatus.Canceled } order &&
-                scope.ServiceProvider.GetService<ICommerceWebhookPublisher>() is { } publisher)
+            if (await scope.ServiceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId) is { Status: not OrderStatus.Canceled } order)
             {
-                await publisher.PublishAsync(CommerceWebhookEvents.OrderCreated, new { order = await ToApiAsync(scope.ServiceProvider, order) }, $"evt_order-created_{order.ItemId}");
+                await scope.ServiceProvider.GetRequiredService<ICommerceWebhookPublisher>()
+                    .PublishAsync(CommerceWebhookEvents.OrderCreated, new { order = await ToApiAsync(scope.ServiceProvider, order) }, $"evt_order-created_{order.ItemId}");
             }
         });
 
@@ -45,7 +49,7 @@ internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
     }
 
     public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
-        => await PublishAsync(CommerceWebhookEvents.OrderPaid, new { order = await ToApiAsync(_serviceProvider, context.Order) }, cancellationToken);
+        => await _publisher.PublishAsync(CommerceWebhookEvents.OrderPaid, new { order = await ToApiAsync(_serviceProvider, context.Order) }, cancellationToken);
 
     // A cart checked out again replaces its earlier unpaid order; that's housekeeping, not news.
     public override async Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
@@ -55,26 +59,22 @@ internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
             return;
         }
 
-        await PublishAsync(CommerceWebhookEvents.OrderCanceled, new { order = await ToApiAsync(_serviceProvider, context.Order), reason = OrderApiMapper.ToCamel(context.Reason.ToString()) }, cancellationToken);
+        await _publisher.PublishAsync(CommerceWebhookEvents.OrderCanceled, new { order = await ToApiAsync(_serviceProvider, context.Order), reason = OrderApiMapper.ToCamel(context.Reason.ToString()) }, cancellationToken);
     }
 
     public override async Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
-        => await PublishAsync(CommerceWebhookEvents.OrderRefunded, new
+        => await _publisher.PublishAsync(CommerceWebhookEvents.OrderRefunded, new
         {
             order = await ToApiAsync(_serviceProvider, context.Order),
             refund = new ApiOrderRefund(context.Refund.RefundId, Commerce.Api.ApiMoney.From(context.Refund.Amount, context.Refund.Currency ?? context.Order.Currency), context.Refund.Reason, context.Refund.CreatedUtc),
         }, cancellationToken);
 
-    // Whether money is still owed is worked out as the API does, so a receiver reads the same answer.
+    // Whether money is still owed is worked out as the API does, so a receiver reads the same answer. The operations
+    // service is resolved here because it needs IOrderService, which is built with every order event handler, this one
+    // included.
     private static async Task<ApiOrder> ToApiAsync(IServiceProvider services, Order order)
         => OrderApiMapper.ToApi(
             order,
-            services.GetService<OrderOperationsService>() is { } operations && await operations.IsOwedAsync(order),
+            await services.GetRequiredService<OrderOperationsService>().IsOwedAsync(order),
             payUrl: null);
-
-    // Resolved when an event is raised: with the Commerce Webhooks feature off there's no publisher.
-    private Task PublishAsync(string eventName, object data, CancellationToken cancellationToken)
-        => _serviceProvider.GetService<ICommerceWebhookPublisher>() is { } publisher
-            ? publisher.PublishAsync(eventName, data, cancellationToken)
-            : Task.CompletedTask;
 }

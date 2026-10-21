@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Routing;
-using OrchardCore.Modules;
-using OrchardCore.Settings;
+using CrestApps.OrchardCore.Core.Services;
 
 namespace CrestApps.OrchardCore.Orders.Services;
 
@@ -11,52 +8,27 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// </summary>
 public sealed class CheckoutRecoveryLinks
 {
+    private const string ProtectionPurpose = "CrestApps.OrchardCore.Orders.Recovery";
+
     private static readonly TimeSpan _lifetime = TimeSpan.FromDays(14);
 
-    private readonly ITimeLimitedDataProtector _protector;
-    private readonly LinkGenerator _linkGenerator;
-    private readonly ISiteService _siteService;
-    private readonly IClock _clock;
+    private readonly SignedTokenService _signedTokenService;
+    private readonly SiteUrlGenerator _siteUrlGenerator;
 
-    public CheckoutRecoveryLinks(IDataProtectionProvider dataProtectionProvider, LinkGenerator linkGenerator, ISiteService siteService, IClock clock)
+    public CheckoutRecoveryLinks(
+        SignedTokenService signedTokenService,
+        SiteUrlGenerator siteUrlGenerator)
     {
-        _protector = dataProtectionProvider.CreateProtector("CrestApps.OrchardCore.Orders.Recovery").ToTimeLimitedDataProtector();
-        _linkGenerator = linkGenerator;
-        _siteService = siteService;
-        _clock = clock;
+        _signedTokenService = signedTokenService;
+        _siteUrlGenerator = siteUrlGenerator;
     }
 
     /// <summary>
     /// Returns the absolute link for an order, from the site's base URL, or <see langword="null"/> without one.
     /// </summary>
-    public async Task<string> CreateUrlAsync(string orderId)
-    {
-        var site = await _siteService.GetSiteSettingsAsync();
-
-        if (string.IsNullOrEmpty(site.BaseUrl))
-        {
-            return null;
-        }
-
-        var path = _linkGenerator.GetPathByRouteValues("OrderResume", new { token = _protector.Protect(orderId, _clock.UtcNow + _lifetime) }, pathBase: string.Empty);
-
-        return string.IsNullOrEmpty(path) ? null : site.BaseUrl.TrimEnd('/') + path;
-    }
+    public Task<string> CreateUrlAsync(string orderId)
+        => _siteUrlGenerator.GetSiteUrlAsync("OrderResume", new { token = _signedTokenService.Protect(ProtectionPurpose, orderId, _lifetime) });
 
     public string Read(string token)
-    {
-        if (string.IsNullOrEmpty(token))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _protector.Unprotect(token, out var expires) is { Length: > 0 } orderId && expires > _clock.UtcNow ? orderId : null;
-        }
-        catch (System.Security.Cryptography.CryptographicException)
-        {
-            return null;
-        }
-    }
+        => _signedTokenService.Unprotect(ProtectionPurpose, token);
 }

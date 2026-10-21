@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Tests.Checkout;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
@@ -353,7 +354,8 @@ public sealed class TransactionLifecycleEventsTests
             Mock.Of<INotifier>(),
             Options.Create(new TransactionSourceOptions()),
             new PassThroughHtmlLocalizer<AdminController>(),
-            new PassThroughStringLocalizer<AdminController>());
+            new PassThroughStringLocalizer<AdminController>(),
+            new SourceTextLocalizerFactory());
 
         controller.ControllerContext = new ControllerContext
         {

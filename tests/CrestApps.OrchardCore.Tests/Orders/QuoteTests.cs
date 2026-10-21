@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 
@@ -90,7 +89,7 @@ public sealed class QuoteTests
     [Fact]
     public void AQuotesEmail_SaysItsAQuote_AndUntilWhenItsOffered()
     {
-        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, NullLogger<DraftOrderService>.Instance, new PassThroughStringLocalizer<DraftOrderService>());
+        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, new PassThroughStringLocalizer<DraftOrderService>(), null);
         var order = Quote(OrderQuoteStatus.Requested);
 
         order.OrderNumber = "261020-QUOTE1";

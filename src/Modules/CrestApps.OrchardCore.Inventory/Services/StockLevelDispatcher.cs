@@ -4,7 +4,8 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.Inventory.Services;
 
 /// <summary>
-/// Tells the <see cref="IStockLevelHandler"/>s about committed changes to stock levels.
+/// Tells the <see cref="IStockLevelHandler"/>s about committed changes to the units stock items have available and to
+/// their levels.
 /// </summary>
 /// <remarks>
 /// The items are read again, as committed. A change that was rolled back, such as a checkout that lost a race for
@@ -41,22 +42,33 @@ internal sealed class StockLevelDispatcher
 
             var context = new StockLevelChangedContext(item, previous);
 
-            if (context.Level == context.PreviousLevel)
+            if (context.AvailableChanged)
             {
-                continue;
+                await InvokeAsync(context, static (handler, change, token) => handler.AvailableChangedAsync(change, token), cancellationToken);
             }
 
-            foreach (var handler in _handlers)
+            if (context.Level != context.PreviousLevel)
             {
-                try
-                {
-                    await handler.ChangedAsync(context, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    // A failed notification must not keep listings, workflows or other handlers from hearing of it.
-                    _logger.LogError(ex, "The stock level handler '{Handler}' failed for the stock item '{StockItemId}'.", handler.GetType().FullName, stockItemId);
-                }
+                await InvokeAsync(context, static (handler, change, token) => handler.ChangedAsync(change, token), cancellationToken);
+            }
+        }
+    }
+
+    private async Task InvokeAsync(
+        StockLevelChangedContext context,
+        Func<IStockLevelHandler, StockLevelChangedContext, CancellationToken, Task> invoke,
+        CancellationToken cancellationToken)
+    {
+        foreach (var handler in _handlers)
+        {
+            try
+            {
+                await invoke(handler, context, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // A failed notification must not keep listings, workflows or other handlers from hearing of it.
+                _logger.LogError(ex, "The stock level handler '{Handler}' failed for the stock item '{StockItemId}'.", handler.GetType().FullName, context.Item.ItemId);
             }
         }
     }

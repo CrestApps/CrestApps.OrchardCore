@@ -18,6 +18,7 @@ internal sealed class LoyaltyOrderEventHandler : OrderEventHandlerBase
     private readonly ILoyaltyStore _store;
     private readonly LoyaltyService _loyalty;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IOrderStore _orderStore;
 
     internal readonly IStringLocalizer S;
 
@@ -27,12 +28,14 @@ internal sealed class LoyaltyOrderEventHandler : OrderEventHandlerBase
         ILoyaltyStore store,
         LoyaltyService loyalty,
         IServiceProvider serviceProvider,
-        IStringLocalizer<LoyaltyOrderEventHandler> stringLocalizer)
+        IStringLocalizer<LoyaltyOrderEventHandler> stringLocalizer,
+        IOrderStore orderStore)
     {
         _customerStore = customerStore;
         _store = store;
         _loyalty = loyalty;
         _serviceProvider = serviceProvider;
+        _orderStore = orderStore;
         S = stringLocalizer;
     }
 
@@ -42,18 +45,14 @@ internal sealed class LoyaltyOrderEventHandler : OrderEventHandlerBase
 
         // Points are given once the order is saved, in a scope of their own: a balance changes under its own lock and
         // commits, which inside a checkout's completion would commit the checkout halfway.
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
-            .GetServices<IOrderEventHandler>()
-            .OfType<LoyaltyOrderEventHandler>()
-            .First()
-            .AwardAsync(orderId));
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<LoyaltyOrderEventHandler>().AwardAsync(orderId));
 
         return Task.CompletedTask;
     }
 
     internal async Task AwardAsync(string orderId, CancellationToken cancellationToken = default)
     {
-        if (await _serviceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
+        if (await _orderStore.FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
         {
             return;
         }

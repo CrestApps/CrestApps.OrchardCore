@@ -42,7 +42,7 @@ public sealed class Startup : StartupBase
         // A company's terms are a tender, like a gift card: they pay what the deposit doesn't, on an invoice due later.
         services.AddScoped<CompanyTermsService>();
         services.AddScoped<ICheckoutTenderProvider, CompanyTermsTenderProvider>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CompanyTermsCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, CompanyTermsCheckoutFlowDisplayDriver>();
 
         // The Company step: the purchase order number, before payment.
         services.AddScoped<CompanyCheckoutStepService>();
@@ -51,7 +51,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICartActionProvider, PunchoutCartActionProvider>();
         services.AddScoped<ICheckoutPaymentGate, CompanyApprovalPaymentGate>();
         services.AddScoped<ICheckoutHandler, CompanyCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CompanyCheckoutStepDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, CompanyCheckoutStepDisplayDriver>();
 
         services.AddPermissionProvider<CompaniesPermissionProvider>();
         services.AddNavigationProvider<CompaniesAdminMenu>();

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Markets.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -8,7 +7,7 @@ namespace CrestApps.OrchardCore.Markets.Migrations;
 /// <summary>
 /// Creates the index of markets.
 /// </summary>
-public sealed class MarketMigrations : DataMigration
+internal sealed class MarketMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
@@ -20,7 +19,10 @@ public sealed class MarketMigrations : DataMigration
             collection: MarketsConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<MarketIndex>(SchemaBuilder, "IDX_MarketIndex_ItemId", MarketsConstants.CollectionName, "ItemId");
+        await SchemaBuilder.AlterIndexTableAsync<MarketIndex>(table => table
+            .CreateIndex("IDX_MarketIndex_ItemId", "ItemId"),
+            collection: MarketsConstants.CollectionName
+        );
 
         return 1;
     }

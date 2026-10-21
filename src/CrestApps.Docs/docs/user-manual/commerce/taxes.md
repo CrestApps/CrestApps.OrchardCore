@@ -124,7 +124,7 @@ A rule tied to a **Jurisdiction** only charges buyers whose address is in that j
 
 ## Where you sell from
 
-Some taxes are charged where the seller is rather than where the buyer is. Under **Commerce > Taxation > Origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
+Some taxes are charged where the seller is rather than where the buyer is. Under **Settings > Commerce > Tax origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
 
 Customers you mark **Exempt from tax** under [Customers](customers.md) pay no tax when they check out signed in.
 
@@ -229,7 +229,7 @@ Sellers in the EU who sell to buyers in other EU countries declare the VAT on th
 
 <AskYourAdmin />
 
-1. Set your store's country under **Commerce > Taxation > Origin** (see [Where you sell from](#where-you-sell-from)).
+1. Set your store's country under **Settings > Commerce > Tax origin** (see [Where you sell from](#where-you-sell-from)).
 2. Open the report and choose the quarter's first and last day as the period. Click **Show**.
 
 For the orders paid in the period, the report adds up the VAT charged on orders to EU countries other than your own, by the country they went to (the shipping address, or the billing address when nothing shipped) and the rate. For each currency you sold in it shows the **VAT due**, the number of countries, and a table with each country and rate: the orders, the **Taxable amount** and the **VAT**, with a total. A refund takes its share of the order's VAT off.
@@ -242,14 +242,14 @@ For sales tax in the United States, where rates change by state, county and city
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > TaxJar |
+| **Menu** | Settings > Commerce > TaxJar |
 | **Permission** | Manage taxation |
 | **Feature** | TaxJar |
 
 <AskYourAdmin />
 
 1. In TaxJar, get an API token under **Account > TaxJar API**.
-2. Open **Commerce > Taxation > TaxJar**, fill in the fields (below), and save.
+2. Open **Settings > Commerce > TaxJar**, fill in the fields (below), and save.
 
 | Field | What it does |
 | --- | --- |
@@ -260,6 +260,6 @@ For sales tax in the United States, where rates change by state, county and city
 
 Saving restarts your site, so the new settings are used at once. This takes a moment.
 
-For an order to one of those countries, with prices that don't include tax, TaxJar works out the tax on each item and on shipping from your store's address (**Commerce > Taxation > Origin**) and the address the order goes to. The order summary shows it as *Sales tax* (*VAT* for a country other than the United States), with the combined rate of the places that tax the address. Your own rules aren't used for that order. Orders to other countries, and orders in a market whose prices include tax, use your own rules.
+For an order to one of those countries, with prices that don't include tax, TaxJar works out the tax on each item and on shipping from your store's address (**Settings > Commerce > Tax origin**) and the address the order goes to. The order summary shows it as *Sales tax* (*VAT* for a country other than the United States), with the combined rate of the places that tax the address. Your own rules aren't used for that order. Orders to other countries, and orders in a market whose prices include tax, use your own rules.
 
 If TaxJar can't be reached, or can't work out the tax, your own tax rules work it out instead, so the sale goes on, and the problem is written to the site's log. Customers marked **Exempt from tax** are sent to TaxJar as exempt.

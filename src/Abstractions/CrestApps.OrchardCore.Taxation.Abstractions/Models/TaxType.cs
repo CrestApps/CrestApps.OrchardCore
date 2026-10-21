@@ -2,6 +2,7 @@ using System;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Models;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// references a tax type by its <see cref="Name"/>, which is the value stored on the resulting tax
 /// lines.
 /// </summary>
-public sealed class TaxType : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxType>
+public sealed class TaxType : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<TaxType>
 {
     /// <inheritdoc />
     public string Name { get; set; }

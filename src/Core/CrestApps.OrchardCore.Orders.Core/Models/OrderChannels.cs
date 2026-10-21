@@ -21,12 +21,6 @@ public static class OrderChannels
     public const string Draft = "draft";
 
     /// <summary>
-    /// Returns an order's channel, online for orders made before channels were recorded.
-    /// </summary>
-    public static string Of(Order order)
-        => string.IsNullOrEmpty(order?.Channel) ? Online : order.Channel;
-
-    /// <summary>
     /// Returns whether the order is sold over a counter: the buyer takes it, so nothing is shipped and no contact
     /// details are asked for.
     /// </summary>

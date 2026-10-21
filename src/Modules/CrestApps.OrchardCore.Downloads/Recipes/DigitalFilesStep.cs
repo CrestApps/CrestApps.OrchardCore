@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using OrchardCore.ContentManagement;
+using OrchardCore.FileStorage;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -73,8 +74,19 @@ internal sealed class DigitalFilesStep : NamedRecipeStepHandler
                 continue;
             }
 
-            using var stream = new MemoryStream(bytes);
-            var stored = await _fileStore.SaveAsync(fileName, stream);
+            StoredDigitalFile stored;
+
+            try
+            {
+                using var stream = new MemoryStream(bytes);
+                stored = await _fileStore.SaveAsync(fileName, stream);
+            }
+            catch (FileStoreException ex)
+            {
+                context.Errors.Add($"The file '{fileName}' in the '{RecipeStepName}' step was refused: {ex.Message}");
+
+                continue;
+            }
 
             product.Alter<DigitalFilesPart>(digitalFiles => digitalFiles.Files.Add(new DigitalFile { FileId = stored.FileId, FileName = stored.FileName, Size = stored.Size }));
 

@@ -33,18 +33,14 @@ public sealed class CustomersAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Customers"], S["Customers"].PrefixPosition("2"), customers => customers
-                    .AddClass("customers")
                     .Id("customers")
                     .Action(_routeValues)
                     .Permission(CustomerPermissions.ViewCustomers)
                     .LocalNav()
                 )
                 .Add(S["My Account"], S["My Account"].PrefixPosition("1"), account => account
-                    .AddClass("my-account")
                     .Id("my-account")
                     .Action(_myAccountRouteValues)
                     .Permission(CustomerPermissions.ManageOwnCustomerProfile)

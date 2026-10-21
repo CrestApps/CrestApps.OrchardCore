@@ -1,7 +1,7 @@
 @model OrderReturnIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="ReturnsIndex" title="@T["Returns"]" />
+    <breadcrumb name="Returns" title="@T["Returns"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="returns-filter" class="no-multisubmit">

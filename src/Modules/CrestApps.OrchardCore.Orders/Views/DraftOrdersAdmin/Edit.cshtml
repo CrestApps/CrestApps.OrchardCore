@@ -45,14 +45,17 @@
     <div class="card mb-4">
         <div class="card-header">@T["Buyer"]</div>
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label asp-for="CustomerEmail" class="form-label">@T["Email"]</label>
+            <div class="ocat-wrapper" asp-validation-class-for="CustomerEmail">
+                <label asp-for="CustomerEmail" class="ocat-label ocat-label-required">@T["Email"]</label>
+                <div class="ocat-end">
                     <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="off" required />
                     <span class="hint">@T["The invoice goes here. Someone with an account under this email gets their own prices and sees the order in their account."]</span>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="CustomerName" class="form-label">@T["Name"]</label>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="CustomerName">
+                <label asp-for="CustomerName" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
                     <input asp-for="CustomerName" class="form-control" autocomplete="off" />
                 </div>
             </div>
@@ -133,48 +136,57 @@
         }
     </div>
 
-    <div class="mb-4">
-        <label class="form-label" for="draft-order-add-products">@T["Add products"]</label>
-        @await Component.InvokeAsync("ItemSelector", new
-        {
-            id = "draft-order-add-products",
-            inputName = "AddProductIds",
-            endpoint = Model.ProductSearchEndpoint,
-            initialItemsJson = "[]",
-            multiple = true,
-            enableSearch = true,
-            buttonText = T["Find products"].Value,
-            searchPlaceholder = T["Search products"].Value,
-            emptyResultsText = T["No products found."].Value,
-            noSelectionText = T["None chosen."].Value,
-            selectedItemsLabel = T["To add"].Value,
-        })
-        <span class="hint">@T["They're added with a quantity of 1 when you update or save."]</span>
+    <div class="ocat-wrapper">
+        <label class="ocat-label" for="draft-order-add-products">@T["Add products"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = "draft-order-add-products",
+                inputName = "AddProductIds",
+                endpoint = Model.ProductSearchEndpoint,
+                initialItemsJson = "[]",
+                multiple = true,
+                enableSearch = true,
+                buttonText = T["Find products"].Value,
+                searchPlaceholder = T["Search products"].Value,
+                emptyResultsText = T["No products found."].Value,
+                noSelectionText = T["None chosen."].Value,
+                selectedItemsLabel = T["To add"].Value,
+            })
+            <span class="hint">@T["They're added with a quantity of 1 when you update or save."]</span>
+        </div>
     </div>
 
     <div class="card mb-4">
         <div class="card-header">@T["Invoice"]</div>
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <label asp-for="Note" class="form-label">@T["Note for the buyer"]</label>
+            <div class="ocat-wrapper" asp-validation-class-for="Note">
+                <label asp-for="Note" class="ocat-label">@T["Note for the buyer"]</label>
+                <div class="ocat-end">
                     <textarea asp-for="Note" rows="2" maxlength="2000" class="form-control" placeholder="@T["Thanks for your call. Here's the order we discussed."]"></textarea>
                 </div>
-                <div class="col-md-4">
-                    <label asp-for="DueDate" class="form-label">@T["Pay by (optional)"]</label>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="DueDate">
+                <label asp-for="DueDate" class="ocat-label">@T["Pay by (optional)"]</label>
+                <div class="ocat-limited">
                     <input asp-for="DueDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="d-flex flex-wrap gap-2">
-        <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update prices"]</button>
-        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
-        <a class="btn btn-outline-secondary" href="@(isNew ? Url.Action("Index", "OrdersAdmin") : Url.Action("Detail", "OrdersAdmin", new { orderId = Model.Order.ItemId }))">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update prices"]</button>
+                <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+                <a class="btn btn-outline-secondary" href="@(isNew ? Url.Action("Index", "OrdersAdmin") : Url.Action("Detail", "OrdersAdmin", new { orderId = Model.Order.ItemId }))">@T["Cancel"]</a>
+            </div>
+            @if (!Model.CanEmail)
+            {
+                <p class="small text-warning mt-2">@T["Email isn't set up, so the invoice can't be emailed. You can still copy the order's pay link from its page."]</p>
+            }
+        </div>
     </div>
-    @if (!Model.CanEmail)
-    {
-        <p class="small text-warning mt-2">@T["Email isn't set up, so the invoice can't be emailed. You can still copy the order's pay link from its page."]</p>
-    }
 </form>

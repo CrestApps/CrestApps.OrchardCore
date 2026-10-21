@@ -40,6 +40,18 @@ public sealed class TransactionIndex : CatalogItemIndex
     public string ReferenceId { get; set; }
 
     /// <summary>
+    /// The kind of record the transaction ultimately belongs to, such as the registration an installment plan pays
+    /// for, or <see langword="null"/> when it names none.
+    /// </summary>
+    public string ParentReferenceType { get; set; }
+
+    /// <summary>
+    /// The identifier of the record the transaction ultimately belongs to, or <see langword="null"/> when it names
+    /// none.
+    /// </summary>
+    public string ParentReferenceId { get; set; }
+
+    /// <summary>
     /// The originating checkout session id.
     /// </summary>
     public string CheckoutSessionId { get; set; }

@@ -129,7 +129,7 @@ internal static class StripeTerminalApiEndpoints
         string readerId,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IOptions<StripeOptions> options,
+        IOptionsMonitor<StripeOptions> options,
         StripeClient stripeClient)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, _sellAtRegister))
@@ -138,7 +138,7 @@ internal static class StripeTerminalApiEndpoints
         }
 
         // Only a test account has simulated readers and test cards.
-        if (options.Value.IsLive)
+        if (options.CurrentValue.IsLive)
         {
             return ApiProblems.Conflict(ApiProblems.Codes.Unsupported, "Test cards are only for a Stripe account in test mode.");
         }

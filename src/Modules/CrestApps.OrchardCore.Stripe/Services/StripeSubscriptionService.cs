@@ -50,14 +50,7 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
 
         if (model.TrialDuration.HasValue && model.TrialDuration.Value > 0)
         {
-            subscriptionOptions.TrialEnd = model.TrialDurationType switch
-            {
-                DurationType.Day => now.AddDays(model.TrialDuration.Value),
-                DurationType.Week => now.AddDays(model.TrialDuration.Value * 7),
-                DurationType.Month => now.AddMonths(model.TrialDuration.Value),
-                DurationType.Year => now.AddYears(model.TrialDuration.Value),
-                _ => null
-            };
+            subscriptionOptions.TrialEnd = model.TrialDurationType.AddTo(now, model.TrialDuration.Value);
         }
 
         var usesInlinePrices = model.LineItems.Any(x => string.IsNullOrEmpty(x.PriceId));
@@ -263,15 +256,15 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
     // The moment the last of a fixed number of cycles ends, counted from when billing starts.
     private static DateTime AdvanceCycles(DateTime from, SubscriptionInlinePrice price, int cycles)
     {
-        var count = Math.Max(1, price.IntervalCount) * Math.Max(1, cycles);
-
-        return price.Interval switch
+        var durationType = price.Interval switch
         {
-            "day" => from.AddDays(count),
-            "week" => from.AddDays(count * 7),
-            "year" => from.AddYears(count),
-            _ => from.AddMonths(count),
+            "day" => DurationType.Day,
+            "week" => DurationType.Week,
+            "year" => DurationType.Year,
+            _ => DurationType.Month,
         };
+
+        return durationType.AddTo(from, Math.Max(1, price.IntervalCount) * Math.Max(1, cycles));
     }
 
     private async Task<List<SubscriptionItemOptions>> BuildItemsAsync(IList<CreateSubscriptionLineItem> lineItems)

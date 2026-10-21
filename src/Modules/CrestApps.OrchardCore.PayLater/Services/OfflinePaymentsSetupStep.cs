@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.PayLater.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -16,14 +16,20 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
     private const string InstructionsField = "instructions";
 
     private readonly ISiteService _siteService;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public OfflinePaymentsSetupStep(ISiteService siteService, IOptions<AdminOptions> adminOptions, IStringLocalizer<OfflinePaymentsSetupStep> stringLocalizer)
+    public OfflinePaymentsSetupStep(
+        ISiteService siteService,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<OfflinePaymentsSetupStep> stringLocalizer)
     {
         _siteService = siteService;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -65,7 +71,7 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
             IsDone = done,
             IsOptional = true,
             Status = offered.Count == 0 ? null : S["Customers can pay by {0}.", string.Join(", ", offered)],
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/Settings/{PayLaterConstants.SettingsGroupId}",
+            Url = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "AdminSettings", new { groupId = PayLaterConstants.SettingsGroupId }),
             UrlText = S["Offline payment settings"],
             ActionText = S["Take bank transfers"],
             Fields =

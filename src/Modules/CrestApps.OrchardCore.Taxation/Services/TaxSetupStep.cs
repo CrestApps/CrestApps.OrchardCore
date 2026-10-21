@@ -1,9 +1,9 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Taxation.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Taxation.Services;
 
@@ -13,14 +13,20 @@ namespace CrestApps.OrchardCore.Taxation.Services;
 internal sealed class TaxSetupStep : IStoreSetupStep
 {
     private readonly INamedCatalog<TaxRule> _rules;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public TaxSetupStep(INamedCatalog<TaxRule> rules, IOptions<AdminOptions> adminOptions, IStringLocalizer<TaxSetupStep> stringLocalizer)
+    public TaxSetupStep(
+        INamedCatalog<TaxRule> rules,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<TaxSetupStep> stringLocalizer)
     {
         _rules = rules;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -40,7 +46,7 @@ internal sealed class TaxSetupStep : IStoreSetupStep
             Description = S["The tax added to orders, or included in prices, and where. Add a rule for each rate you charge, such as a sales tax for your state or VAT for your country. Skip it if you don't charge tax yet, or if an accountant should set it up."],
             IsDone = count > 0,
             Status = count == 0 ? null : S.Plural(count, "1 tax rule is set up.", "{0} tax rules are set up."),
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/taxation/rules",
+            Url = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "TaxationRulesIndex"),
             UrlText = S["Tax rules"],
         };
     }

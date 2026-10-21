@@ -32,9 +32,8 @@ public sealed class ReturnsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Returns"], S["Returns"].PrefixPosition("3.5"), returns => returns
-                    .AddClass("returns")
                     .Id("returns")
                     .Action(_routeValues)
                     .Permission(OrderPermissions.ManageOrders)
@@ -44,7 +43,6 @@ public sealed class ReturnsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Returns"], S["Returns"].PrefixPosition(), returns => returns
-                        .AddClass("returns-settings")
                         .Id("returnsSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(OrderPermissions.ManageOrders)

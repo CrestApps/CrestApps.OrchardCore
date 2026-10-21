@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Stripe.Core;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Stripe.ViewModels;
@@ -12,11 +11,6 @@ public class StripeSettingsViewModel
     /// Gets or sets a value indicating whether Stripe live mode is enabled.
     /// </summary>
     public bool IsLive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Stripe checkout mode used by the site.
-    /// </summary>
-    public StripeCheckoutMode CheckoutMode { get; set; }
 
     /// <summary>
     /// Gets or sets the live publishable API key.

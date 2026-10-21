@@ -29,7 +29,7 @@ Download links are sent to the email the buyer gives at checkout, which the **Cu
 3. Optionally set **Downloads per buyer** and **Days the links work** for this product. Leave them blank to use the site's settings.
 4. **Publish** the product.
 
-The files are kept privately: they are not in the media library, and nobody can open them without a buyer's link. To replace a file, tick **Remove** next to the old one and upload the new one. Buyers who already have the old file keep it.
+The files are kept privately: they are not in the media library, and nobody can open them without a buyer's link. When the site checks uploads for viruses, a file that fails the check, or that can't be checked, isn't kept and an error shows under **Files**. To replace a file, tick **Remove** next to the old one and upload the new one. Buyers who already have the old file keep it.
 
 A buyer of digital products only isn't asked for a shipping address.
 

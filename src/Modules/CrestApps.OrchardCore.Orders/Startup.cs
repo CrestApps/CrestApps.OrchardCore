@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -27,6 +28,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -69,10 +71,12 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<Dashboard.SalesSummaryPartDisplayDriver>();
         services.AddScoped<QuoteService>();
         services.AddScoped<ICartActionProvider, QuoteCartActionProvider>();
+        services.AddSignedLinks();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
+        services.AddScoped<OrderPayLinks>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
-        services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();
+        services.AddPermissionProvider<OrderPermissionsProvider>();
         services.AddNavigationProvider<OrdersAdminMenu>();
         services.AddNavigationProvider<OrdersAccountMenu>();
         services.AddSingleton<OrderAccountClaims>();
@@ -85,22 +89,20 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(OrderEmailTemplateSettingsDisplayDriver.GroupId, OrderPermissions.ManageOrders);
         services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(OrderEmailKinds.Confirmation, LocalizationSource.Create<Startup>("Order confirmation"), LocalizationSource.Create<Startup>("{{ OrderUrl }}: the order's page, for a guest."))
+            .AddCommerceEmailKind(OrderEmailKinds.Invoice, LocalizationSource.Create<Startup>("Order to pay (sent by staff)"), LocalizationSource.Create<Startup>("{{ PayUrl }}: where the buyer pays."))
+            .AddCommerceEmailKind(OrderEmailKinds.Quote, LocalizationSource.Create<Startup>("Quote"), LocalizationSource.Create<Startup>("{{ PayUrl }}: where the buyer accepts it by paying."))
+            .AddCommerceEmailKind(OrderEmailKinds.Recovery, LocalizationSource.Create<Startup>("Left checkout"), LocalizationSource.Create<Startup>("{{ RecoveryUrl }}: back to the checkout."));
 
         // The order bump on the payment step: one tick adds the product the store offers before paying.
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, OrderBumpCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, OrderBumpCheckoutFlowDisplayDriver>();
 
         // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
         services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
 
         // A canceled order gives back its coupon uses, and coupons can be limited to some products and categories.
         services.AddScoped<IOrderEventHandler, OrderCouponEventHandler>();
-
-        // Webhooks hear about orders when the Commerce Webhooks feature is on.
-        services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
 
         // What the store does to an order from its page, and the refunds it records wherever they were started.
         services.AddScoped<OrderOperationScope>();
@@ -191,6 +193,7 @@ public sealed class ReturnsStartup : StartupBase
         services.AddScoped<IOrderReturnStore, OrderReturnStore>();
         services.AddScoped<OrderReturnService>();
         services.AddScoped<OrderReturnEmailSender>();
+        services.AddCommerceEmailKind(OrderEmailKinds.Return, LocalizationSource.Create<ReturnsStartup>("Return"), LocalizationSource.Create<ReturnsStartup>("{{ ReturnNumber }}, {{ ReturnStatus }} and {{ OrderUrl }}."));
         services.AddDisplayDriver<Order, OrderReturnsDisplayDriver>();
         services.AddDisplayDriver<OrderReturn, OrderReturnDisplayDriver>();
         services.AddSiteDisplayDriver<ReturnSettingsDisplayDriver>();
@@ -214,6 +217,7 @@ public sealed class GiftCardsStartup : StartupBase
         services.AddScoped<IGiftCardStore, GiftCardStore>();
         services.AddScoped<GiftCardService>();
         services.AddScoped<GiftCardEmailSender>();
+        services.AddCommerceEmailKind(OrderEmailKinds.GiftCard, LocalizationSource.Create<GiftCardsStartup>("Gift card"), LocalizationSource.Create<GiftCardsStartup>("{{ Code }}, {{ Amount }}, {{ RecipientName }} and {{ Message }}."));
         services.AddScoped<GiftCardTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<GiftCardTenderProvider>());
         services.AddScoped<IOrderEventHandler, GiftCardOrderEventHandler>();
@@ -221,8 +225,8 @@ public sealed class GiftCardsStartup : StartupBase
             .UseDisplayDriver<GiftCardPartDisplayDriver>();
         services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
         services.AddScoped<GiftCardCheckoutService>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, GiftCardCheckoutFlowDisplayDriver>();
-        services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
+        services.AddDisplayDriver<CheckoutFlow, GiftCardCheckoutFlowDisplayDriver>();
+        services.AddPermissionProvider<GiftCardPermissionsProvider>();
         services.AddNavigationProvider<GiftCardsAdminMenu>();
     }
 }
@@ -252,4 +256,20 @@ public sealed class GiftCardsApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapGiftCardCheckoutApi();
+}
+
+/// <summary>
+/// Tells webhooks about orders when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
+    }
 }
