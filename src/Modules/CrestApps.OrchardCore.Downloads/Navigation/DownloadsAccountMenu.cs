@@ -7,22 +7,18 @@ namespace CrestApps.OrchardCore.Downloads.Navigation;
 /// <summary>
 /// Adds the customer's downloads to the storefront account.
 /// </summary>
-public sealed class DownloadsAccountMenu : INavigationProvider
+public sealed class DownloadsAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public DownloadsAccountMenu(IStringLocalizer<DownloadsAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder.Add(S["Downloads"], "20", downloads => downloads
             .Id("account-downloads")
             .AddClass("fa-solid fa-download")

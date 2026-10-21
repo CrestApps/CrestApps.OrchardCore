@@ -23,11 +23,8 @@ internal sealed class CurrencyAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Currencies"], S["Currencies"].PrefixPosition("1"), currencies => currencies
-                    .AddClass("commerce-currencies")
                     .Id("commerceCurrencies")
                 .Action("Index", "Currencies", ProductConstants.Feature.ModuleId)
                     .Permission(ProductsConstants.Permissions.ManageCurrencies)

@@ -35,9 +35,8 @@ public sealed class PosAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Point of sale"], S["Point of sale"].PrefixPosition("7"), pos => pos
-                    .AddClass("point-of-sale")
                     .Id("pointOfSale")
                     .Add(S["Registers"], S["Registers"].PrefixPosition("1"), registers => registers
                         .Action(_registers)

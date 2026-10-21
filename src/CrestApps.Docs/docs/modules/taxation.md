@@ -348,7 +348,7 @@ Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`)
 
 A rule with a `JurisdictionId` applies only when that jurisdiction is among the ones resolved for the item's address (`ITaxJurisdictionResolver`). With no address, or an address outside it, the rule does not apply; rules without a jurisdiction apply everywhere. So the address the checkout supplies decides which jurisdiction rules can apply.
 
-The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Commerce > Taxation > Origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
+The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
 
 Do not assume the shipping address is always the tax location. Sourcing is pluggable through `ITaxSourcingStrategy` (resolved by `ITaxSourcingStrategyProvider`), with these built-in strategies: `Origin`, `Destination`, `CustomerResidence`, `CustomerBusiness`, `ServiceLocation`, and `EventLocation`. The engine picks a strategy from the taxable item's `Kind` (for example digital goods use the destination, services and bookings use the service location, and events use the event location) and falls back through destination, item origin, context origin, and customer residence.
 
@@ -441,7 +441,7 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | | |
 | --- | --- |
-| **Settings** | **Commerce > Taxation > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
+| **Settings** | **Settings > Commerce > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
 | **Provider** | `TaxJarTaxDeterminationProvider` (`ITaxDeterminationProvider`, `Order` 100), with the named `HttpClient` `TaxJar` (10-second timeout) |
 | **Options** | `TaxJarOptions`: `ApiKey` (unprotected), `UseSandbox`, `Countries`, and `BaseUrl` (`https://api.taxjar.com/v2/`, or `https://api.sandbox.taxjar.com/v2/` with the sandbox) |
 
@@ -453,7 +453,7 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | TaxJar field | From |
 | --- | --- |
-| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Commerce > Taxation > Origin**) |
+| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Settings > Commerce > Tax origin**) |
 | `to_country`, `to_zip`, `to_state`, `to_city`, `to_street` | `TaxCalculationContext.Destination` |
 | `amount`, `shipping` | The non-shipping and the shipping items' unit price times quantity, less their discounts |
 | `line_items` | Each non-shipping item: `id`, `quantity`, `unit_price`, `discount`, and `product_tax_code` from `TaxableItem.TaxClassificationCode` |

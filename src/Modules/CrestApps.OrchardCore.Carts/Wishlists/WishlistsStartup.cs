@@ -67,29 +67,3 @@ internal sealed class WishlistButtonDisplayDriver : ContentPartDisplayDriver<Pro
         }).Location("Detail", "Content:before:6");
     }
 }
-
-/// <summary>
-/// Adds Wishlist to the storefront account menu.
-/// </summary>
-public sealed class WishlistAccountMenu : INavigationProvider
-{
-    internal readonly IStringLocalizer S;
-
-    public WishlistAccountMenu(IStringLocalizer<WishlistAccountMenu> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
-    {
-        if (string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            builder.Add(S["Wishlist"], "12", wishlist => wishlist
-                .Id("account-wishlist")
-                .AddClass("fa-regular fa-heart")
-                .Action("Index", "Wishlist", new { area = CartConstants.Features.Carts }));
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}

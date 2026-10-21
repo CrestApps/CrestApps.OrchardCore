@@ -26,9 +26,8 @@ public sealed class PurchaseOrdersAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Purchase orders"], S["Purchase orders"].PrefixPosition("0.31"), orders => orders
-                    .AddClass("purchase-orders")
                     .Id("purchaseOrders")
                     .Action(_routeValues)
                     .Permission(InventoryPermissions.ViewInventory)

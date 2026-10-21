@@ -34,7 +34,6 @@ public sealed class CheckoutSettingsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Checkout"], S["Checkout"].PrefixPosition(), checkout => checkout
-                        .AddClass("checkout-settings")
                         .Id("checkoutSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(CheckoutPermissions.ManageCheckoutSettings)

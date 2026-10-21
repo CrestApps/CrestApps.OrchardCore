@@ -75,40 +75,10 @@ public sealed class ClassifiedsAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Content"], content => content
                 .Add(S["Posted listings"], S["Posted listings"].PrefixPosition("5"), listings => listings
-                    .AddClass("classifieds")
                     .Id("classifieds")
                     .Action(_classifieds)
                     .Permission(ClassifiedsPermissions.ModerateClassifieds)
                     .LocalNav()));
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-/// <summary>
-/// Adds the poster's listings to the storefront account.
-/// </summary>
-public sealed class ClassifiedsAccountMenu : INavigationProvider
-{
-    internal readonly IStringLocalizer S;
-
-    public ClassifiedsAccountMenu(IStringLocalizer<ClassifiedsAccountMenu> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
-    {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        builder.Add(S["My listings"], "23", listings => listings
-            .Id("account-listings")
-            .AddClass("fa-solid fa-bullhorn")
-            .Action(nameof(ClassifiedsController.Own), "Classifieds", new { area = ClassifiedsConstants.Feature })
-            .Permission(ClassifiedsPermissions.PostClassifieds));
 
         return ValueTask.CompletedTask;
     }

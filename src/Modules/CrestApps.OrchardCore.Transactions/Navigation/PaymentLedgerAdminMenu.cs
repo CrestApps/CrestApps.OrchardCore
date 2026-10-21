@@ -44,18 +44,14 @@ public sealed class PaymentLedgerAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Payments"], S["Payments"].PrefixPosition("7"), payments => payments
-                    .AddClass("payments")
                     .Id("payments")
                     .Action("Index", "PaymentsAdmin", _paymentsRouteValues)
                     .Permission(TransactionsPermissions.ManageRefunds)
                     .LocalNav()
                 )
                 .Add(S["Refunds"], S["Refunds"].PrefixPosition("8"), refunds => refunds
-                    .AddClass("refunds")
                     .Id("refunds")
                     .Action("Index", "RefundsAdmin", _refundsRouteValues)
                     .Permission(TransactionsPermissions.ManageRefunds)

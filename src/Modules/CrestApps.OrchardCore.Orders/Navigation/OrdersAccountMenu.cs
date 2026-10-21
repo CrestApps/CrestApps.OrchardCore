@@ -7,22 +7,18 @@ namespace CrestApps.OrchardCore.Orders.Navigation;
 /// <summary>
 /// Adds the customer's orders to the storefront account.
 /// </summary>
-public sealed class OrdersAccountMenu : INavigationProvider
+public sealed class OrdersAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public OrdersAccountMenu(IStringLocalizer<OrdersAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder.Add(S["Orders"], "10", orders => orders
             .Id("account-orders")
             .AddClass("fa-solid fa-box")

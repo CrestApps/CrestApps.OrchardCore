@@ -6,22 +6,18 @@ namespace CrestApps.OrchardCore.Commerce.Navigation;
 /// <summary>
 /// Puts the account's home page first in the account menu.
 /// </summary>
-public sealed class CommerceAccountMenu : INavigationProvider
+public sealed class CommerceAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public CommerceAccountMenu(IStringLocalizer<CommerceAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder.Add(S["Overview"], "0", overview => overview
             .Id(Controllers.AccountController.HomeItemId)
             .AddClass("fa-solid fa-house")

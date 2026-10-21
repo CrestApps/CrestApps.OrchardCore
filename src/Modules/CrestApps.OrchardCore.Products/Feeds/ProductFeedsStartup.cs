@@ -330,7 +330,6 @@ internal sealed class ProductFeedsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Product feeds"], S["Product feeds"].PrefixPosition(), feeds => feeds
-                        .AddClass("product-feeds-settings")
                         .Id("productFeedsSettings")
                         .Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = ProductFeedSettingsDisplayDriver.GroupId })
                         .Permission(ProductFeedPermissions.ManageProductFeeds)

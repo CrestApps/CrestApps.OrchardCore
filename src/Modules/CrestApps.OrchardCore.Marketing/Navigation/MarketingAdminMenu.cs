@@ -35,15 +35,13 @@ public sealed class MarketingAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Segments"], S["Segments"].PrefixPosition("4"), segments => segments
-                    .AddClass("commerce-segments")
                     .Id("commerceSegments")
                     .Action(_segments)
                     .Permission(MarketingPermissions.ManageMarketing)
                     .LocalNav())
                 .Add(S["Campaigns"], S["Campaigns"].PrefixPosition("4.1"), campaigns => campaigns
-                    .AddClass("commerce-campaigns")
                     .Id("commerceCampaigns")
                     .Action(_campaigns)
                     .Permission(MarketingPermissions.ManageMarketing)

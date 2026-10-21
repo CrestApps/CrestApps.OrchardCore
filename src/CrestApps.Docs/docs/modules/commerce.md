@@ -107,7 +107,7 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### Storefront account
 
-The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with an `INavigationProvider` that builds only for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
 
 ```csharp
 public sealed class MyAccountMenu : INavigationProvider

@@ -25,7 +25,6 @@ public sealed class DownloadSettingsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Downloads"], S["Downloads"].PrefixPosition(), downloads => downloads
-                        .AddClass("downloads-settings")
                         .Id("downloadsSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(DownloadsPermissions.ManageDownloads)

@@ -19,8 +19,8 @@ public static class CommerceConstants
 
     /// <summary>
     /// The storefront account: the pages a signed-in customer opens for their own orders, downloads, addresses and
-    /// more. Each module adds its pages to the account menu with an <c>INavigationProvider</c> that builds only when
-    /// the menu name is <see cref="MenuName"/>.
+    /// more. Each module adds its pages to the account menu with a <c>NamedNavigationProvider</c> created for
+    /// <see cref="MenuName"/>.
     /// </summary>
     public static class Account
     {

@@ -48,7 +48,6 @@ public sealed class InstallmentPlansAdminMenu : AdminNavigationProvider
             )
             .Add(S["Settings"], settings => settings
                 .Add(S["Installment Plans"], S["Installment Plans"].PrefixPosition(), plans => plans
-                    .AddClass("installment-plans-settings")
                     .Id("installmentPlansSettings")
                     .Action("Index", "Admin", _settingsRouteValues)
                     .Permission(SubscriptionPermissions.ManageInstallmentPlans)

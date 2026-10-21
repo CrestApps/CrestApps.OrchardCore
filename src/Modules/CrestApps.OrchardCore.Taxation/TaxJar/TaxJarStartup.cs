@@ -118,7 +118,7 @@ public class TaxJarSettingsViewModel
 }
 
 /// <summary>
-/// Commerce › Taxation › TaxJar.
+/// Settings › Commerce › TaxJar.
 /// </summary>
 public sealed class TaxJarAdminMenu : AdminNavigationProvider
 {
@@ -132,10 +132,9 @@ public sealed class TaxJarAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .Add(S["Taxation"], taxation => taxation
+            .Add(S["Settings"], settings => settings
+                .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["TaxJar"], S["TaxJar"].PrefixPosition(), taxJar => taxJar
-                        .AddClass("taxation-taxjar")
                         .Id("taxationTaxJar")
                         .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", TaxJarSettingsDisplayDriver.GroupId } })
                         .Permission(TaxationPermissions.ManageTaxation)

@@ -56,7 +56,6 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Settings"], settings => settings
                 .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
-                    .AddClass("subscriptions")
                     .Id("subscriptionsSettings")
                     .Action(_routeValues)
                     .Permission(SubscriptionPermissions.ManageSubscriptionSettings)
@@ -64,7 +63,6 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
                 )
             )
             .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
-                .AddClass("subscriptions")
                 .Id("subscriptions")
                 .Add(S["Agreements"], S["Agreements"].PrefixPosition("1"), agreements => agreements
                     .Action(_agreementRouteValues)

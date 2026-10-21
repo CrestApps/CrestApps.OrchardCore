@@ -28,9 +28,8 @@ public sealed class BookingsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Bookings"], S["Bookings"].PrefixPosition("2.5"), bookings => bookings
-                    .AddClass("commerce-bookings")
                     .Id("commerceBookings")
                     .Action(_bookings)
                     .Permission(BookingsPermissions.ManageBookings)

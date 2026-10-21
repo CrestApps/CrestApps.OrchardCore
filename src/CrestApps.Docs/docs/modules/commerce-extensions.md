@@ -52,7 +52,7 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | Pay marketplace vendors another way | `IVendorPayoutProvider` | Marketplace | [Marketplace](marketplace.md) |
 | Add a step to the store's setup guide | `IStoreSetupStep` | Abstractions | [Store setup](store-setup.md) |
 | Export and erase your module's records of a person | `ICommercePersonalDataContributor` | Customers.Abstractions | [Customers](customers.md) |
-| Add a page to the storefront account | An `INavigationProvider` for the `CommerceConstants.Account.MenuName` menu, and a view rendering `CommerceAccountNavigation` | Abstractions | [Commerce](commerce.md) |
+| Add a page to the storefront account | A `NamedNavigationProvider` created for the `CommerceConstants.Account.MenuName` menu, and a view rendering `CommerceAccountNavigation` | Abstractions | [Commerce](commerce.md) |
 | Add a screen under Commerce | An `AdminNavigationProvider` adding under the Commerce node | | [Commerce](commerce.md) |
 | Change how a storefront page looks | Override its shape in your theme | | [Commerce](commerce.md#theming-the-storefront) |
 
