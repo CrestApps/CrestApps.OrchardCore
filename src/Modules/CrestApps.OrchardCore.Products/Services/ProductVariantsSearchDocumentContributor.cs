@@ -2,7 +2,6 @@ using OrchardCore.Modules;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
-using CrestApps.OrchardCore.Products.Services.Attributes;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Products.Services;

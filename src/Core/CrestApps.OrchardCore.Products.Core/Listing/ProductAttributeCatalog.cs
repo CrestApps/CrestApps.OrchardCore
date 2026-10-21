@@ -1,9 +1,8 @@
-using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 
-namespace CrestApps.OrchardCore.Products.Services;
+namespace CrestApps.OrchardCore.Products.Core.Listing;
 
 /// <summary>
 /// Answers which content types are products and which of their fields are product attributes.
@@ -85,7 +84,7 @@ public sealed class ProductAttributeCatalog
                     Settings = settings,
                     Order = attributes.Count,
                     TaxonomyContentItemId = field.Field.FieldDefinition.Name == "TaxonomyField"
-                        ? Attributes.FieldValueReader.GetSettingString(field.Field, "TaxonomyFieldSettings", "TaxonomyContentItemId")
+                        ? FieldValueReader.GetSettingString(field.Field, "TaxonomyFieldSettings", "TaxonomyContentItemId")
                         : null,
                 };
 
@@ -174,37 +173,4 @@ public sealed class ProductAttributeCatalog
             ? productTypes
             : productTypes.Where(type => requested.Contains(type.Name, StringComparer.Ordinal)).ToArray();
     }
-}
-
-/// <summary>
-/// A field a provider can read, with the type part it belongs to.
-/// </summary>
-/// <param name="Part">The content type part that holds the field.</param>
-/// <param name="Field">The field definition.</param>
-/// <param name="Provider">The provider that reads the field.</param>
-public sealed record ProductAttributeField(ContentTypePartDefinition Part, ContentPartFieldDefinition Field, IProductAttributeValueProvider Provider);
-
-/// <summary>
-/// One product attribute as the listing sees it.
-/// </summary>
-public sealed class ProductAttributeDescriptor
-{
-    public string Key { get; set; }
-
-    public string Label { get; set; }
-
-    public string FieldType { get; set; }
-
-    public ProductAttributeValueKind Kind { get; set; }
-
-    public ProductAttributeSettings Settings { get; set; }
-
-    public int Order { get; set; }
-
-    /// <summary>
-    /// The taxonomy a taxonomy field picks its terms from, or <see langword="null"/> for any other field.
-    /// </summary>
-    public string TaxonomyContentItemId { get; set; }
-
-    public List<string> ContentTypes { get; } = [];
 }

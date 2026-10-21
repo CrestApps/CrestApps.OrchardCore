@@ -3,17 +3,17 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using OrchardCore.ContentManagement.Metadata.Models;
 
-namespace CrestApps.OrchardCore.Products.Services.Attributes;
+namespace CrestApps.OrchardCore.Products.Core.Listing;
 
 /// <summary>
-/// Reads stored field values and field settings as JSON.
+/// Reads stored field values and field settings as JSON, for an <see cref="IProductAttributeValueProvider"/>.
 /// </summary>
 /// <remarks>
-/// The providers read the standard Orchard fields through their stored JSON rather than their CLR types, the
-/// way the snapshot resolver reads the taxation part, so the Products module needs no reference to the field
-/// modules and listing keeps working whichever of them a site enables.
+/// The attribute value providers read the standard Orchard fields through their stored JSON rather than their CLR
+/// types, so the Products modules need no reference to the field modules and listing keeps working whichever of them a
+/// site enables.
 /// </remarks>
-internal static class FieldValueReader
+public static class FieldValueReader
 {
     public static string GetString(JsonObject value, string propertyName)
         => value?[propertyName] is JsonValue node && node.TryGetValue<string>(out var text) ? text : null;

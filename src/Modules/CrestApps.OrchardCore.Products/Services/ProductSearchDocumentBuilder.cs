@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
-using CrestApps.OrchardCore.Products.Services.Attributes;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Modules;
