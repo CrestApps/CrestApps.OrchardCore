@@ -7,7 +7,7 @@
 
 <zone Name="Title">
     <breadcrumb name="VendorPortal" title="@T["Vendor"]">
-        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

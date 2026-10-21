@@ -6,9 +6,9 @@
 
 <zone Name="Title">
     <breadcrumb name="AccountOrderReturn" title="@T["Return items"]">
-        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
-        <breadcrumb-item id="AccountOrders" title="@T["Orders"]" href="@Url.RouteUrl("AccountOrders")" />
-        <breadcrumb-item id="AccountOrder" title="@T["Order {0}", form.Order.OrderNumber]" href="@form.BackUrl" />
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        <breadcrumb-item id="AccountOrders" url="@Url.RouteUrl("AccountOrders")">@T["Orders"]</breadcrumb-item>
+        <breadcrumb-item id="AccountOrder" url="@form.BackUrl">@T["Order {0}", form.Order.OrderNumber]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

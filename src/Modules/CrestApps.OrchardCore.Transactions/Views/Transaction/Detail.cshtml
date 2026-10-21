@@ -13,7 +13,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="TransactionsMyTransactionsDetail" title="@(new HtmlContentString(string.IsNullOrEmpty(transaction.Title) ? T["Transaction"].Value : transaction.Title))">
+    <breadcrumb name="TransactionsMyTransactionsDetail" title="@(string.IsNullOrEmpty(transaction.Title) ? T["Transaction"] : (Microsoft.AspNetCore.Html.IHtmlContent)new HtmlContentString(transaction.Title))">
         <breadcrumb-item id="TransactionsMyTransactions" action="Index" controller="Transaction" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ViewOwnTransactions.Name">@T["My Transactions"]</breadcrumb-item>
     </breadcrumb>
 </zone>

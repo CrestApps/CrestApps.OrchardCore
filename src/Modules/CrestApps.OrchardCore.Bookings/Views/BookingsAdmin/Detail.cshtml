@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.Bookings.Services
 @using CrestApps.OrchardCore.Products.Core.Services
+@using OrchardCore.DisplayManagement.Html
 @model BookingDetailViewModel
 
 @{
@@ -26,7 +27,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="BookingsDetail" title="@Html.Raw(Html.Encode(booking.Title))">
+    <breadcrumb name="BookingsDetail" title="@(new HtmlContentString(booking.Title ?? string.Empty))">
         <breadcrumb-item id="Bookings" action="Index" controller="BookingsAdmin" area="@BookingsConstants.Feature" permission="@BookingsPermissions.ManageBookings.Name">@T["Bookings"]</breadcrumb-item>
     </breadcrumb>
 </zone>
