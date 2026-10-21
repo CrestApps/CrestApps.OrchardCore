@@ -2,6 +2,7 @@
 @model OrderViewViewModel
 @inject IServiceProvider Services
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject OrchardCore.Modules.IClock Clock
 @functions {
     // Stored times are UTC; people read them in the site's time zone.
     private async Task<DateTime> LocalAsync(DateTime utc)
@@ -45,7 +46,7 @@
 
 @if (order.Quote is { } quote && order.Status is not (OrderStatus.Paid or OrderStatus.Canceled))
 {
-    var expired = quote.Status == OrderQuoteStatus.Sent && quote.ExpiresUtc is { } ends && ends <= DateTime.UtcNow;
+    var expired = quote.Status == OrderQuoteStatus.Sent && quote.ExpiresUtc is { } ends && ends <= Clock.UtcNow;
 
     <div class="alert @(expired ? "alert-secondary" : "alert-info") d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
         <span>

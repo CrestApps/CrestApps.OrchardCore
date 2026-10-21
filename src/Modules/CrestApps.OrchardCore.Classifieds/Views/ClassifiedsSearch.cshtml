@@ -1,4 +1,5 @@
 @model ClassifiedSearchViewModel
+@inject OrchardCore.Modules.IClock Clock
 
 @* Finding posted listings: of a kind, with words in their title, and near a place, featured ones first. The map shows
    those with a place. *@
@@ -88,7 +89,7 @@ else
         @foreach (var (item, kilometers, url) in Model.Results)
         {
             var part = item.TryGet<ClassifiedPart>(out var classified) ? classified : null;
-            var featured = part?.FeaturedUntilUtc > DateTime.UtcNow;
+            var featured = part?.FeaturedUntilUtc > Clock.UtcNow;
 
             <a href="@url" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2 @(featured ? "border-warning" : null)">
                 <span>

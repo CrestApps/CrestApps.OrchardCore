@@ -3,6 +3,7 @@
 
 @model OrderDetailViewModel
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject OrchardCore.Modules.IClock Clock
 @functions {
     // Stored times are UTC; people read them in the site's time zone.
     private async Task<DateTime> LocalAsync(DateTime utc)
@@ -46,7 +47,7 @@
                     <span class="d-block small mt-1" style="white-space: pre-line">@requested.Message</span>
                 }
             }
-            else if (order.Quote is { Status: OrderQuoteStatus.Sent, ExpiresUtc: { } expires } && expires <= DateTime.UtcNow)
+            else if (order.Quote is { Status: OrderQuoteStatus.Sent, ExpiresUtc: { } expires } && expires <= Clock.UtcNow)
             {
                 @T["The quote expired {0:g}. Change the date to pay by and send it again to offer it again.", await LocalAsync(expires)]
             }

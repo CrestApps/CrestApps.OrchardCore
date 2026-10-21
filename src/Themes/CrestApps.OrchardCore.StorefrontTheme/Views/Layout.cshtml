@@ -1,6 +1,7 @@
 @using System.Text.Json.Nodes
 @using OrchardCore.Settings
 @inject ISiteService SiteService
+@inject OrchardCore.Modules.IClock Clock
 
 @*
     The storefront's page: the store's header (name, search, the market, cart and account from the Navbar shape, and
@@ -119,7 +120,7 @@
                 </div>
             </div>
             @await RenderSectionAsync("Footer", required: false)
-            <p class="small text-body-secondary mt-4 mb-0">&copy; @DateTime.UtcNow.Year @brand</p>
+            <p class="small text-body-secondary mt-4 mb-0">&copy; @Clock.UtcNow.Year @brand</p>
         </div>
     </footer>
 
