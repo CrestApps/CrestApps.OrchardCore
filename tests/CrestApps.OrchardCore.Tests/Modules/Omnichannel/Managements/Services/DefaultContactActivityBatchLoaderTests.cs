@@ -805,7 +805,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         IStore store,
         string connectionString,
         string source,
-        IReadOnlyCollection<string> leadContentTypes = null)
+        IReadOnlyCollection<string> leadContentTypes = null,
+        ICatalog<OmnichannelActivityBatch> batchCatalog = null)
     {
         var sourceOptions = new ActivityBatchSourceOptions();
 
@@ -814,7 +815,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         sourceOptions.AddSource(source, entry => entry.RequiresUserAssignment = false);
 
         return new DefaultContactActivityBatchLoader(
-            CreateBatchCatalog(),
+            batchCatalog ?? CreateBatchCatalog(),
             session,
             new UtcLocalClock(),
             new StubClock(_now),

@@ -29,7 +29,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 {
     private const int _batchSize = 100;
-    private const int _countPageSize = 1000;
+
+    // How many record ids one lookup names, well inside every engine's parameter limit.
+    private const int _idLookupChunkSize = 500;
 
     private readonly ICatalog<OmnichannelActivityBatch> _catalog;
     private readonly ISession _session;
@@ -412,6 +414,44 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             }
         }
 
+        // When a filter has already picked the records, they are turned into their document ids before anything is read,
+        // and the load reads those records and nothing else. It used to read every record of the type, a hundred whole
+        // documents, a round of lookups and a commit at a time, only to pass over the ones the filter had not picked: a
+        // load of twenty leads out of a large lead list sat on "Loading" with nothing loaded for as long as that took.
+        var candidateDocumentIds = eligibleContactIds is null
+            ? null
+            : await FindCandidateDocumentIdsAsync(
+                readonlySession,
+                batch,
+                eligibleContactIds,
+                documentId,
+                leadCreatedFrom,
+                leadCreatedTo,
+                cancellationToken);
+        var candidatePosition = 0;
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            if (candidateDocumentIds is null)
+            {
+                _logger.LogInformation(
+                    "The activity batch '{BatchId}' has no filter that picks records ahead of loading, so it reads every '{ContactContentType}' record after document {LoadCursor}.",
+                    batch.ItemId.SanitizeLogValue(),
+                    batch.ContactContentType.SanitizeLogValue(),
+                    documentId);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "The filters of the activity batch '{BatchId}' picked {EligibleCount} records, {CandidateCount} of them '{ContactContentType}' records left to read after document {LoadCursor}.",
+                    batch.ItemId.SanitizeLogValue(),
+                    eligibleContactIds.Count,
+                    candidateDocumentIds.Count,
+                    batch.ContactContentType.SanitizeLogValue(),
+                    documentId);
+            }
+        }
+
         var activityCounter = 0;
         var limitReached = false;
 
@@ -419,37 +459,47 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var contactQuery = readonlySession.Query<ContentItem, ContentItemIndex>(index =>
-                    index.ContentType == batch.ContactContentType &&
-                    index.DocumentId > documentId);
+            IEnumerable<ContentItem> contacts;
 
-            if (leadCreatedFrom.HasValue)
+            if (candidateDocumentIds is null)
             {
-                contactQuery = contactQuery.Where(index => index.CreatedUtc >= leadCreatedFrom);
-            }
+                contacts = await BuildContactPageQuery(readonlySession, batch, documentId, leadCreatedFrom, leadCreatedTo)
+                    .OrderBy(x => x.DocumentId)
+                    .Take(_batchSize)
+                    .ListAsync(cancellationToken);
 
-            if (leadCreatedTo.HasValue)
-            {
-                contactQuery = contactQuery.Where(index => index.CreatedUtc <= leadCreatedTo);
-            }
-
-            if (batch.OnlyPublishedLeads)
-            {
-                contactQuery = contactQuery.Where(contact => contact.Published);
+                if (!contacts.Any())
+                {
+                    break;
+                }
             }
             else
             {
-                contactQuery = contactQuery.Where(contact => contact.Latest);
-            }
+                if (candidatePosition >= candidateDocumentIds.Count)
+                {
+                    break;
+                }
 
-            var contacts = await contactQuery
-                .OrderBy(x => x.DocumentId)
-                .Take(_batchSize)
-                .ListAsync(cancellationToken);
+                var pageDocumentIds = candidateDocumentIds
+                    .GetRange(candidatePosition, Math.Min(_batchSize, candidateDocumentIds.Count - candidatePosition))
+                    .ToArray();
 
-            if (!contacts.Any())
-            {
-                break;
+                candidatePosition += pageDocumentIds.Length;
+
+                // The version rule is asked again: a record whose version changed since its id was read is passed over.
+                contacts = await ApplyVersionFilter(
+                        readonlySession.Query<ContentItem, ContentItemIndex>(index => index.DocumentId.IsIn(pageDocumentIds)),
+                        batch)
+                    .OrderBy(x => x.DocumentId)
+                    .ListAsync(cancellationToken);
+
+                // The cursor moves past the whole page, including a record that was passed over.
+                documentId = Math.Max(documentId, pageDocumentIds[^1]);
+
+                if (!contacts.Any())
+                {
+                    continue;
+                }
             }
 
             // The numbers already found dead, for every contact on this page, in one query rather than one per contact.
@@ -503,12 +553,6 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             {
                 documentId = Math.Max(documentId, contact.Id);
 
-                // Skip contacts not in the pre-computed eligible set.
-                if (eligibleContactIds is not null && !eligibleContactIds.Contains(contact.ContentItemId))
-                {
-                    continue;
-                }
-
                 // Respect the limit if specified. The contacts it cuts are counted rather than examined, so a
                 // small trial load over a large list does not have to read the rest of the list to report on it.
                 if (batch.Limit.HasValue && batch.Limit.Value > 0 && batch.TotalLoaded >= batch.Limit.Value)
@@ -519,7 +563,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                         contact.Id,
                         leadCreatedFrom,
                         leadCreatedTo,
-                        eligibleContactIds,
+                        candidateDocumentIds,
                         cancellationToken);
 
                     batch.TotalMatched += remaining;
@@ -957,8 +1001,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// leaves unexamined.
     /// </summary>
     /// <remarks>
-    /// Only the index is read. Without a pre-computed filter set the database counts the rows itself; with one, the
-    /// index rows are paged so that neither the contacts nor an unbounded id list are held in memory at once.
+    /// Without records picked ahead of loading the database counts the index rows itself; with them, the ids already
+    /// read are counted.
     /// </remarks>
     private static async Task<long> CountRemainingMatchesAsync(
         ISession readonlySession,
@@ -966,44 +1010,87 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         long fromDocumentId,
         DateTime? leadCreatedFrom,
         DateTime? leadCreatedTo,
-        HashSet<string> eligibleContactIds,
+        List<long> candidateDocumentIds,
         CancellationToken cancellationToken)
     {
-        if (eligibleContactIds is null)
+        if (candidateDocumentIds is not null)
         {
-            return await BuildContactIndexQuery(readonlySession, batch, fromDocumentId - 1, leadCreatedFrom, leadCreatedTo)
-                .CountAsync(cancellationToken);
+            var position = candidateDocumentIds.BinarySearch(fromDocumentId);
+
+            return candidateDocumentIds.Count - (position < 0 ? ~position : position);
         }
 
-        long count = 0;
-        var cursor = fromDocumentId - 1;
+        return await BuildContactIndexQuery(readonlySession, batch, fromDocumentId - 1, leadCreatedFrom, leadCreatedTo)
+            .CountAsync(cancellationToken);
+    }
 
-        while (true)
+    /// <summary>
+    /// Returns, in order, the document ids of the records a filter picked that also have the load's type, creation window
+    /// and version, after <paramref name="afterDocumentId"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only the index is read, each record found through the index on its id, a chunk of ids at a time so that a query
+    /// never names more parameters than a database accepts.
+    /// </remarks>
+    private static async Task<List<long>> FindCandidateDocumentIdsAsync(
+        ISession readonlySession,
+        OmnichannelActivityBatch batch,
+        HashSet<string> eligibleContactIds,
+        long afterDocumentId,
+        DateTime? leadCreatedFrom,
+        DateTime? leadCreatedTo,
+        CancellationToken cancellationToken)
+    {
+        var documentIds = new List<long>();
+
+        foreach (var chunk in eligibleContactIds.Chunk(_idLookupChunkSize))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rows = (await BuildContactIndexQuery(readonlySession, batch, cursor, leadCreatedFrom, leadCreatedTo)
-                .OrderBy(index => index.DocumentId)
-                .Take(_countPageSize)
-                .ListAsync(cancellationToken))
-                .ToArray();
+            var rows = await BuildContactIndexQuery(readonlySession, batch, afterDocumentId, leadCreatedFrom, leadCreatedTo)
+                .Where(index => index.ContentItemId.IsIn(chunk))
+                .ListAsync(cancellationToken);
 
-            foreach (var row in rows)
-            {
-                cursor = Math.Max(cursor, row.DocumentId);
-
-                if (eligibleContactIds.Contains(row.ContentItemId))
-                {
-                    count++;
-                }
-            }
-
-            if (rows.Length < _countPageSize)
-            {
-                return count;
-            }
+            documentIds.AddRange(rows.Select(row => row.DocumentId));
         }
+
+        documentIds.Sort();
+
+        return documentIds;
     }
+
+    /// <summary>
+    /// The contact page query: the records of the load's type, creation window and version after <paramref name="afterDocumentId"/>.
+    /// </summary>
+    private static IQuery<ContentItem, ContentItemIndex> BuildContactPageQuery(
+        ISession readonlySession,
+        OmnichannelActivityBatch batch,
+        long afterDocumentId,
+        DateTime? leadCreatedFrom,
+        DateTime? leadCreatedTo)
+    {
+        var contactContentType = batch.ContactContentType;
+        var query = readonlySession.Query<ContentItem, ContentItemIndex>(index =>
+            index.ContentType == contactContentType &&
+            index.DocumentId > afterDocumentId);
+
+        if (leadCreatedFrom.HasValue)
+        {
+            query = query.Where(index => index.CreatedUtc >= leadCreatedFrom);
+        }
+
+        if (leadCreatedTo.HasValue)
+        {
+            query = query.Where(index => index.CreatedUtc <= leadCreatedTo);
+        }
+
+        return ApplyVersionFilter(query, batch);
+    }
+
+    private static IQuery<ContentItem, ContentItemIndex> ApplyVersionFilter(IQuery<ContentItem, ContentItemIndex> query, OmnichannelActivityBatch batch)
+        => batch.OnlyPublishedLeads
+            ? query.Where(index => index.Published)
+            : query.Where(index => index.Latest);
 
     /// <summary>
     /// The index-only twin of the contact page query, with the same content type, creation window and version rules.
