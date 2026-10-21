@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Email;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.PointOfSale.Api;
@@ -303,7 +302,8 @@ internal static class PosApiEndpoints
         IOrderStore orders,
         IRegisterStore registers,
         PosShiftService shifts,
-        IStringLocalizerFactory localizerFactory)
+        IStringLocalizerFactory localizerFactory,
+        ICommerceEmailSender emailSender)
     {
         var email = request?.Email?.Trim();
 
@@ -317,19 +317,23 @@ internal static class PosApiEndpoints
             return ApiProblems.NotFound();
         }
 
-        if (await PosReceipts.RenderAsync(order, httpContext.RequestServices) is not { } html || httpContext.RequestServices.GetService<IEmailService>() is not { } emailService)
+        if (await PosReceipts.RenderAsync(order, httpContext.RequestServices) is not { } html || !emailSender.CanSend)
         {
             return ApiProblems.Conflict(ApiProblems.Codes.Unsupported, "Turn on Receipts and Email to email receipts.");
         }
 
-        var sent = await emailService.SendAsync(new MailMessage
+        var sent = await emailSender.SendAsync(new CommerceEmail
         {
             To = email,
+            Order = order,
+            Reference = order.OrderNumber,
+        }, _ => Task.FromResult(new CommerceEmailContent
+        {
             Subject = localizerFactory.Create(typeof(PosApiEndpoints))["Receipt for order {0}", order.OrderNumber],
-            HtmlBody = html,
-        }, cancellationToken: httpContext.RequestAborted);
+            Html = html,
+        }), httpContext.RequestAborted);
 
-        return sent.Succeeded
+        return sent
             ? TypedResults.NoContent()
             : ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, "The receipt couldn't be sent.");
     }

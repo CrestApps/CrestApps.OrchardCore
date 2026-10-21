@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
 using CrestApps.OrchardCore.Classifieds.ViewModels;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,7 @@ public sealed class Startup : StartupBase
     {
         services.AddDataMigration<ClassifiedMigrations>()
             .AddIndexProvider<ClassifiedIndexProvider>();
+        services.AddCommerceEmailSender();
         services.AddScoped<ClassifiedService>();
         services.AddScoped<ICartLineHandler, ClassifiedUpgradeLineHandler>();
         services.AddScoped<IOrderEventHandler, ClassifiedUpgradeOrderHandler>();

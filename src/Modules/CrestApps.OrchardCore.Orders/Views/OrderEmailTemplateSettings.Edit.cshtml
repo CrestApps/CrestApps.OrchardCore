@@ -1,18 +1,4 @@
 @model CrestApps.OrchardCore.Orders.Drivers.OrderEmailTemplateSettingsViewModel
-@using CrestApps.OrchardCore.Orders.Core.Services
-
-@{
-    var names = new Dictionary<string, (LocalizedHtmlString Name, LocalizedHtmlString Values)>
-    {
-        [OrderEmailKinds.Confirmation] = (T["Order confirmation"], T["{{{{ OrderUrl }}}}: the order's page, for a guest."]),
-        [OrderEmailKinds.Invoice] = (T["Order to pay (sent by staff)"], T["{{{{ PayUrl }}}}: where the buyer pays."]),
-        [OrderEmailKinds.Quote] = (T["Quote"], T["{{{{ PayUrl }}}}: where the buyer accepts it by paying."]),
-        [OrderEmailKinds.Shipped] = (T["Shipment on its way"], T["{{{{ TrackingUrl }}}}, {{{{ Carrier }}}}, {{{{ ShipmentNumber }}}} and {{{{ OrderUrl }}}}."]),
-        [OrderEmailKinds.Return] = (T["Return"], T["{{{{ ReturnNumber }}}}, {{{{ ReturnStatus }}}} and {{{{ OrderUrl }}}}."]),
-        [OrderEmailKinds.GiftCard] = (T["Gift card"], T["{{{{ Code }}}}, {{{{ Amount }}}}, {{{{ RecipientName }}}} and {{{{ Message }}}}."]),
-        [OrderEmailKinds.Recovery] = (T["Left checkout"], T["{{{{ RecoveryUrl }}}}: back to the checkout."]),
-    };
-}
 
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
@@ -32,10 +18,9 @@
 @for (var i = 0; i < Model.Templates.Count; i++)
 {
     var template = Model.Templates[i];
-    var (name, values) = names.TryGetValue(template.Kind, out var found) ? found : (new LocalizedHtmlString(template.Kind, template.Kind), null);
 
     <fieldset class="mb-4 border-top pt-3">
-        <legend class="h6">@name</legend>
+        <legend class="h6">@(template.Title ?? template.Kind)</legend>
         <input type="hidden" name="@Html.NameFor(m => m.Templates[i].Kind)" value="@template.Kind" />
         <div class="ocat-wrapper" asp-validation-class-for="Templates[i].IsEnabled">
             <div class="ocat-end-offset">
@@ -58,9 +43,9 @@
             <div class="ocat-end">
                 <textarea asp-for="Templates[i].Body" class="form-control font-monospace" rows="5"></textarea>
                 <span asp-validation-for="Templates[i].Body" class="text-danger"></span>
-                @if (values is not null)
+                @if (!string.IsNullOrEmpty(template.Values))
                 {
-                    <span class="hint">@T["Also:"] @values</span>
+                    <span class="hint">@T["Also:"] @template.Values</span>
                 }
             </div>
         </div>

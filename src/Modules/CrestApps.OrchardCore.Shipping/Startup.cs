@@ -4,7 +4,9 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
 using CrestApps.OrchardCore.Shipping.Drivers;
 using CrestApps.OrchardCore.Shipping.Endpoints;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Handlers;
 using CrestApps.OrchardCore.Shipping.Indexes;
 using CrestApps.OrchardCore.Shipping.Workflows;
@@ -26,6 +28,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -80,6 +83,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Order, OrderShipmentsDisplayDriver>();
         services.AddScoped<ShipmentEmailBuilder>();
         services.AddScoped<IShipmentEventHandler, ShippedEmailShipmentHandler>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(OrderEmailKinds.Shipped, LocalizationSource.Create<Startup>("Shipment on its way"), LocalizationSource.Create<Startup>("{{ TrackingUrl }}, {{ Carrier }}, {{ ShipmentNumber }} and {{ OrderUrl }}."));
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);

@@ -1,11 +1,9 @@
 using CrestApps.OrchardCore.Classifieds.Indexes;
 using CrestApps.OrchardCore.Classifieds.Models;
-using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using OrchardCore.Users.Models;
@@ -24,9 +22,8 @@ public sealed class ClassifiedService
     private readonly IContentManager _contentManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISession _session;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
     private readonly IUserService _userService;
     private readonly ISiteService _siteService;
 
@@ -36,9 +33,8 @@ public sealed class ClassifiedService
         IContentManager contentManager,
         IContentDefinitionManager contentDefinitionManager,
         ISession session,
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         IClock clock,
-        ILogger<ClassifiedService> logger,
         IStringLocalizer<ClassifiedService> stringLocalizer,
         IUserService userService,
         ISiteService siteService)
@@ -46,9 +42,8 @@ public sealed class ClassifiedService
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
         _session = session;
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _clock = clock;
-        _logger = logger;
         _userService = userService;
         _siteService = siteService;
         S = stringLocalizer;
@@ -335,23 +330,25 @@ public sealed class ClassifiedService
     private async Task NotifyAsync(ContentItem item, string subject, string body)
     {
         if (string.IsNullOrEmpty(item.Owner) ||
-            _serviceProvider.GetService<IEmailService>() is not { } email ||
+            !_emailSender.CanSend ||
             await _userService.GetUserByUniqueIdAsync(item.Owner) is not User { Email.Length: > 0 } user)
         {
             return;
         }
 
-        var site = await _siteService.GetSiteSettingsAsync();
-        var result = await email.SendAsync(new MailMessage
+        await _emailSender.SendAsync(new CommerceEmail
         {
             To = user.Email,
-            Subject = subject,
-            TextBody = S["Hello {0},", user.UserName] + Environment.NewLine + Environment.NewLine + body + Environment.NewLine + Environment.NewLine + site.SiteName,
-        });
-
-        if (!result.Succeeded)
+            Reference = item.ContentItemId,
+        }, async _ =>
         {
-            _logger.LogWarning("The email about listing '{ContentItemId}' couldn't be sent.", item.ContentItemId);
-        }
+            var site = await _siteService.GetSiteSettingsAsync();
+
+            return new CommerceEmailContent
+            {
+                Subject = subject,
+                Text = S["Hello {0},", user.UserName] + Environment.NewLine + Environment.NewLine + body + Environment.NewLine + Environment.NewLine + site.SiteName,
+            };
+        });
     }
 }

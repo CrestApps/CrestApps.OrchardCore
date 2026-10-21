@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Fundraising.Migrations;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Fundraising.Navigation;
 using CrestApps.OrchardCore.Fundraising.Services;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<FundraisingMigrations>()
             .AddIndexProvider<DonationIndexProvider>();
         services.AddScoped<IDonationStore, DonationStore>();
+        services.AddCommerceEmailSender();
         services.AddScoped<DonationService>();
 
         // The amount a donor chose rides on its cart line, and the paid order records it.

@@ -2,14 +2,10 @@ using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Bookings.Models;
-using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Bookings.Services;
@@ -22,68 +18,60 @@ public sealed class BookingEmailSender
 {
     internal const string EmailKind = "booking";
 
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly ISiteService _siteService;
     private readonly HtmlEncoder _encoder;
-    private readonly ILogger _logger;
-    private readonly IOrderEmailTemplates _emailTemplates;
 
     internal readonly IStringLocalizer S;
 
     public BookingEmailSender(
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         ISiteService siteService,
         HtmlEncoder encoder,
-        ILogger<BookingEmailSender> logger,
-        IStringLocalizer<BookingEmailSender> stringLocalizer,
-        IOrderEmailTemplates emailTemplates)
+        IStringLocalizer<BookingEmailSender> stringLocalizer)
     {
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _siteService = siteService;
         _encoder = encoder;
-        _logger = logger;
-        _emailTemplates = emailTemplates;
         S = stringLocalizer;
     }
 
     public Task<bool> SendConfirmedAsync(Order order, IReadOnlyList<Booking> bookings, BookingBalance balance, TimeZoneInfo timeZone, CancellationToken cancellationToken = default)
     {
-        using var language = OrderCulture.Use(order?.Culture);
+        ArgumentNullException.ThrowIfNull(bookings);
 
-        var lines = bookings.Select(booking => Describe(booking, timeZone)).ToList();
-
-        if (balance is { Status: BookingBalanceStatus.Scheduled })
+        return SendAsync(order, (bookings.Count > 0 ? bookings[0].CustomerEmail : null) ?? order?.CustomerEmail, (bookings.Count > 0 ? bookings[0].CustomerName : null) ?? order?.CustomerName, () =>
         {
-            lines.Add(S["The rest, {0}, is charged to the card you paid with on {1}. You can pay it sooner from your account.", ProductPriceFormatter.Format(balance.Amount, balance.Currency), ToLocal(balance.DueUtc, timeZone).ToString("D", CultureInfo.CurrentCulture)].Value);
-        }
+            var lines = bookings.Select(booking => Describe(booking, timeZone)).ToList();
 
-        return SendAsync(order, (bookings.Count > 0 ? bookings[0].CustomerEmail : null) ?? order?.CustomerEmail, (bookings.Count > 0 ? bookings[0].CustomerName : null) ?? order?.CustomerName,
-            S["Your booking is confirmed: order {0}", order?.OrderNumber].Value,
-            S["Your booking is confirmed. Here's what you booked:"].Value,
-            lines,
-            cancellationToken);
+            if (balance is { Status: BookingBalanceStatus.Scheduled })
+            {
+                lines.Add(S["The rest, {0}, is charged to the card you paid with on {1}. You can pay it sooner from your account.", ProductPriceFormatter.Format(balance.Amount, balance.Currency), ToLocal(balance.DueUtc, timeZone).ToString("D", CultureInfo.CurrentCulture)].Value);
+            }
+
+            return (S["Your booking is confirmed: order {0}", order?.OrderNumber].Value, S["Your booking is confirmed. Here's what you booked:"].Value, lines);
+        }, cancellationToken);
     }
 
     public Task<bool> SendCanceledAsync(Order order, Booking booking, decimal refunded, TimeZoneInfo timeZone, CancellationToken cancellationToken = default)
     {
-        using var language = OrderCulture.Use(order?.Culture);
+        ArgumentNullException.ThrowIfNull(booking);
 
-        var lines = new List<string> { Describe(booking, timeZone) };
-
-        lines.Add(refunded > 0m
-            ? S["{0} is refunded to how you paid. It can take a few days to show.", ProductPriceFormatter.Format(refunded, booking.Currency)].Value
-            : S["Under the cancellation policy, nothing is refunded."].Value);
-
-        if (!string.IsNullOrWhiteSpace(booking.CancelReason))
+        return SendAsync(order, booking.CustomerEmail ?? order?.CustomerEmail, booking.CustomerName ?? order?.CustomerName, () =>
         {
-            lines.Add(booking.CancelReason);
-        }
+            var lines = new List<string> { Describe(booking, timeZone) };
 
-        return SendAsync(order, booking.CustomerEmail ?? order?.CustomerEmail, booking.CustomerName ?? order?.CustomerName,
-            S["Your booking is canceled: order {0}", order?.OrderNumber ?? booking.OrderNumber].Value,
-            S["Your booking is canceled."].Value,
-            lines,
-            cancellationToken);
+            lines.Add(refunded > 0m
+                ? S["{0} is refunded to how you paid. It can take a few days to show.", ProductPriceFormatter.Format(refunded, booking.Currency)].Value
+                : S["Under the cancellation policy, nothing is refunded."].Value);
+
+            if (!string.IsNullOrWhiteSpace(booking.CancelReason))
+            {
+                lines.Add(booking.CancelReason);
+            }
+
+            return (S["Your booking is canceled: order {0}", order?.OrderNumber ?? booking.OrderNumber].Value, S["Your booking is canceled."].Value, lines);
+        }, cancellationToken);
     }
 
     internal string Describe(Booking booking, TimeZoneInfo timeZone)
@@ -103,13 +91,20 @@ public sealed class BookingEmailSender
         return S["{0}: {1}, {2}", booking.Title, when, who].Value;
     }
 
-    private async Task<bool> SendAsync(Order order, string to, string name, string subject, string intro, IReadOnlyList<string> lines, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(to) || _serviceProvider.GetService<IEmailService>() is not { } emailService)
+    // Written in the language the buyer shopped in: the subject, the intro and the lines are described in it.
+    private Task<bool> SendAsync(Order order, string to, string name, Func<(string Subject, string Intro, List<string> Lines)> describe, CancellationToken cancellationToken)
+        => _emailSender.SendAsync(new CommerceEmail
         {
-            return false;
-        }
+            Kind = EmailKind,
+            To = to,
+            Order = order,
+            Culture = order?.Culture,
+            Reference = order?.OrderNumber,
+        }, _ => BuildAsync(name, describe), cancellationToken);
 
+    private async Task<CommerceEmailContent> BuildAsync(string name, Func<(string Subject, string Intro, List<string> Lines)> describe)
+    {
+        var (subject, intro, lines) = describe();
         var site = await _siteService.GetSiteSettingsAsync();
         var greeting = string.IsNullOrWhiteSpace(name) ? S["Hello,"].Value : S["Hello {0},", name].Value;
         var text = new StringBuilder().AppendLine(greeting).AppendLine().AppendLine(intro).AppendLine();
@@ -126,22 +121,12 @@ public sealed class BookingEmailSender
         html.Append("</ul><p>").Append(_encoder.Encode(site.SiteName)).Append("</p>");
         text.AppendLine().AppendLine(site.SiteName);
 
-        var email = await _emailTemplates.ApplyAsync(EmailKind, order, subject, text.ToString(), html.ToString(), cancellationToken: cancellationToken);
-
-        var result = await emailService.SendAsync(new MailMessage
+        return new CommerceEmailContent
         {
-            To = to,
-            Subject = email.Subject,
-            TextBody = email.Text,
-            HtmlBody = email.Html,
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("The booking email for order '{OrderNumber}' couldn't be sent.", order?.OrderNumber);
-        }
-
-        return result.Succeeded;
+            Subject = subject,
+            Text = text.ToString(),
+            Html = html.ToString(),
+        };
     }
 
     internal static DateTime ToLocal(DateTime utc, TimeZoneInfo timeZone)

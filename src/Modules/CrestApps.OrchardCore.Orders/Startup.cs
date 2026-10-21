@@ -28,6 +28,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -88,6 +89,11 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(OrderEmailTemplateSettingsDisplayDriver.GroupId, OrderPermissions.ManageOrders);
         services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(OrderEmailKinds.Confirmation, LocalizationSource.Create<Startup>("Order confirmation"), LocalizationSource.Create<Startup>("{{ OrderUrl }}: the order's page, for a guest."))
+            .AddCommerceEmailKind(OrderEmailKinds.Invoice, LocalizationSource.Create<Startup>("Order to pay (sent by staff)"), LocalizationSource.Create<Startup>("{{ PayUrl }}: where the buyer pays."))
+            .AddCommerceEmailKind(OrderEmailKinds.Quote, LocalizationSource.Create<Startup>("Quote"), LocalizationSource.Create<Startup>("{{ PayUrl }}: where the buyer accepts it by paying."))
+            .AddCommerceEmailKind(OrderEmailKinds.Recovery, LocalizationSource.Create<Startup>("Left checkout"), LocalizationSource.Create<Startup>("{{ RecoveryUrl }}: back to the checkout."));
 
         // The order bump on the payment step: one tick adds the product the store offers before paying.
         services.AddDisplayDriver<CheckoutFlow, OrderBumpCheckoutFlowDisplayDriver>();
@@ -187,6 +193,7 @@ public sealed class ReturnsStartup : StartupBase
         services.AddScoped<IOrderReturnStore, OrderReturnStore>();
         services.AddScoped<OrderReturnService>();
         services.AddScoped<OrderReturnEmailSender>();
+        services.AddCommerceEmailKind(OrderEmailKinds.Return, LocalizationSource.Create<ReturnsStartup>("Return"), LocalizationSource.Create<ReturnsStartup>("{{ ReturnNumber }}, {{ ReturnStatus }} and {{ OrderUrl }}."));
         services.AddDisplayDriver<Order, OrderReturnsDisplayDriver>();
         services.AddDisplayDriver<OrderReturn, OrderReturnDisplayDriver>();
         services.AddSiteDisplayDriver<ReturnSettingsDisplayDriver>();
@@ -210,6 +217,7 @@ public sealed class GiftCardsStartup : StartupBase
         services.AddScoped<IGiftCardStore, GiftCardStore>();
         services.AddScoped<GiftCardService>();
         services.AddScoped<GiftCardEmailSender>();
+        services.AddCommerceEmailKind(OrderEmailKinds.GiftCard, LocalizationSource.Create<GiftCardsStartup>("Gift card"), LocalizationSource.Create<GiftCardsStartup>("{{ Code }}, {{ Amount }}, {{ RecipientName }} and {{ Message }}."));
         services.AddScoped<GiftCardTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<GiftCardTenderProvider>());
         services.AddScoped<IOrderEventHandler, GiftCardOrderEventHandler>();

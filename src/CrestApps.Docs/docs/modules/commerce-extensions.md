@@ -40,6 +40,7 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | To | Implement | Lives in | See |
 | --- | --- | --- | --- |
 | React when an order is created, paid, canceled, refunded, returned or its lines change | `IOrderEventHandler` (derive from `OrderEventHandlerBase`) | Orders.Core | [Carts and orders](carts-and-orders.md) |
+| Email a customer through the store's email templates and layout, in the language they shopped in | `ICommerceEmailSender`, with `AddCommerceEmailSender()`; register the email's kind with `AddCommerceEmailKind` so the store can write its template | Orders.Core | [Carts and orders](carts-and-orders.md#commerce-emails-and-their-templates) |
 | Give the buyer what a paid order bought (files, a membership, a gift card) and take it back when the order is canceled or refunded in full | `OrderGrantHandlerBase`: implement `GrantAsync` and `RevokeAsync`, and register it as an `IOrderEventHandler`. After a partial refund the buyer keeps what they bought. | Orders.Core | [Downloads](downloads.md), [Memberships](memberships.md) |
 | Add a shipping rate, such as a carrier's | `IShippingRateProvider` | Shipping.Core | [Shipping](shipping.md) |
 | Buy labels and track parcels with a carrier | `ICarrierProvider` | Shipping.Core | [Shipping](shipping.md) |
@@ -52,6 +53,7 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | --- | --- | --- | --- |
 | Pay marketplace vendors another way | `IVendorPayoutProvider` | Marketplace | [Marketplace](marketplace.md) |
 | Add a step to the store's setup guide | `IStoreSetupStep` | Abstractions | [Store setup](store-setup.md) |
+| Send a signed, time-limited link, such as one that opens an order | `SignedTokenService` to sign and read the token for a purpose, and `SiteUrlGenerator` for the route's absolute URL from the site's base URL; register both with `services.AddSignedLinks()` | CrestApps.OrchardCore.Core | [Carts and orders](carts-and-orders.md) |
 | Export and erase your module's records of a person | `ICommercePersonalDataContributor` | Customers.Abstractions | [Customers](customers.md) |
 | Add a page to the storefront account | A `NamedNavigationProvider` created for the `CommerceConstants.Account.MenuName` menu, and a view rendering `CommerceAccountNavigation` | Abstractions | [Commerce](commerce.md) |
 | Add a screen under Commerce | An `AdminNavigationProvider` adding under the Commerce node | | [Commerce](commerce.md) |

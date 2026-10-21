@@ -11,6 +11,8 @@ public interface IOrderEmailTemplates
     /// <summary>
     /// Returns the email to send: the built one, or the store's template of it.
     /// </summary>
+    /// <param name="context">The email as it was built, and what its template can use.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     Task<OrderEmailMessage> ApplyAsync(OrderEmailContext context, CancellationToken cancellationToken = default);
 }
 
@@ -20,7 +22,8 @@ public interface IOrderEmailTemplates
 public sealed class OrderEmailContext
 {
     /// <summary>
-    /// Gets or sets which email it is, one of <see cref="OrderEmailKinds"/>.
+    /// Gets or sets which email it is, the name of a <see cref="CommerceEmailKind"/>, such as one of
+    /// <see cref="OrderEmailKinds"/>.
     /// </summary>
     public string Kind { get; init; }
 
@@ -44,7 +47,8 @@ public sealed class OrderEmailContext
 public sealed record OrderEmailMessage(string Subject, string Text, string Html);
 
 /// <summary>
-/// The emails about orders a store can write its own templates of.
+/// The names of the emails about orders a store can write its own templates of. Each is registered as a
+/// <see cref="CommerceEmailKind"/> by the feature that sends it.
 /// </summary>
 public static class OrderEmailKinds
 {
@@ -61,35 +65,4 @@ public static class OrderEmailKinds
     public const string GiftCard = "gift-card";
 
     public const string Recovery = "checkout-recovery";
-
-    public static readonly IReadOnlyList<string> All = [Confirmation, Invoice, Quote, Shipped, Return, GiftCard, Recovery];
-}
-
-public static class OrderEmailTemplateExtensions
-{
-    /// <summary>
-    /// Returns an email as the store's template of it has it, or as built when there's none.
-    /// </summary>
-    public static Task<OrderEmailMessage> ApplyAsync(
-        this IOrderEmailTemplates templates,
-        string kind,
-        Order order,
-        string subject,
-        string text,
-        string html,
-        IReadOnlyDictionary<string, string> values = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(templates);
-
-        return templates.ApplyAsync(new OrderEmailContext
-        {
-            Kind = kind,
-            Order = order,
-            Subject = subject,
-            Text = text,
-            Html = html,
-            Values = values ?? new Dictionary<string, string>(),
-        }, cancellationToken);
-    }
 }

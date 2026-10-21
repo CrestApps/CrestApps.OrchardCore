@@ -5,14 +5,12 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Fundraising.Indexes;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql;
@@ -70,10 +68,9 @@ public sealed class DonationService
     private readonly IDonationStore _donations;
     private readonly IContentManager _contentManager;
     private readonly ISiteService _siteService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly HtmlEncoder _encoder;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
     private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
@@ -82,20 +79,18 @@ public sealed class DonationService
         IDonationStore donations,
         IContentManager contentManager,
         ISiteService siteService,
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         HtmlEncoder encoder,
         IClock clock,
-        ILogger<DonationService> logger,
         IStringLocalizer<DonationService> stringLocalizer,
         IShopperCurrency shopperCurrency)
     {
         _donations = donations;
         _contentManager = contentManager;
         _siteService = siteService;
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _encoder = encoder;
         _clock = clock;
-        _logger = logger;
         _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
@@ -201,13 +196,15 @@ public sealed class DonationService
         return new CampaignProgress(Math.Round(raised, 2, MidpointRounding.AwayFromZero), part?.Goal ?? 0m, donors, currency, daysLeft);
     }
 
-    private async Task SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(donation.DonorEmail) || _serviceProvider.GetService<IEmailService>() is not { } email)
+    private Task<bool> SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)
+        => _emailSender.SendAsync(new CommerceEmail
         {
-            return;
-        }
+            To = donation.DonorEmail,
+            Reference = donation.ItemId,
+        }, _ => BuildReceiptAsync(donation, settings), cancellationToken);
 
+    private async Task<CommerceEmailContent> BuildReceiptAsync(Donation donation, FundraisingSettings settings)
+    {
         var site = await _siteService.GetSiteSettingsAsync();
         var organization = string.IsNullOrWhiteSpace(settings.OrganizationName) ? site.SiteName : settings.OrganizationName;
         var amount = ProductPriceFormatter.Format(donation.Amount, donation.Currency);
@@ -245,17 +242,11 @@ public sealed class DonationService
         html.Append("</table><p>").Append(_encoder.Encode(S["Keep this receipt for your records. You'll also find it under Donations in your account."])).Append("</p>");
         text.AppendLine().AppendLine(S["Keep this receipt for your records. You'll also find it under Donations in your account."]);
 
-        var result = await email.SendAsync(new MailMessage
+        return new CommerceEmailContent
         {
-            To = donation.DonorEmail,
             Subject = S["Your donation receipt {0}: {1}", donation.ReceiptNumber, amount],
-            TextBody = text.ToString(),
-            HtmlBody = html.ToString(),
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("The receipt of donation '{DonationId}' couldn't be sent.", donation.ItemId);
-        }
+            Text = text.ToString(),
+            Html = html.ToString(),
+        };
     }
 }

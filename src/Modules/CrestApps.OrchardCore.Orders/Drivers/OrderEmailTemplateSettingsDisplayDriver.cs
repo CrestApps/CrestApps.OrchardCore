@@ -4,10 +4,12 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
+using OrchardCore.Localization;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -23,6 +25,8 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly ILiquidTemplateManager _liquid;
+    private readonly IOptions<CommerceEmailOptions> _emailOptions;
+    private readonly IStringLocalizerFactory _stringLocalizerFactory;
 
     internal readonly IStringLocalizer S;
 
@@ -30,11 +34,15 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         ILiquidTemplateManager liquid,
+        IOptions<CommerceEmailOptions> emailOptions,
+        IStringLocalizerFactory stringLocalizerFactory,
         IStringLocalizer<OrderEmailTemplateSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _liquid = liquid;
+        _emailOptions = emailOptions;
+        _stringLocalizerFactory = stringLocalizerFactory;
         S = stringLocalizer;
     }
 
@@ -45,9 +53,17 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
         => Initialize<OrderEmailTemplateSettingsViewModel>("OrderEmailTemplateSettings_Edit", model =>
         {
             model.Layout = settings.Layout;
-            model.Templates = [.. OrderEmailKinds.All.Select(kind => settings.Templates.TryGetValue(kind, out var template)
-                ? new OrderEmailTemplateViewModel { Kind = kind, IsEnabled = template.IsEnabled, Subject = template.Subject, Body = template.Body }
-                : new OrderEmailTemplateViewModel { Kind = kind, Body = "{{ Content }}" })];
+            model.Templates = [.. _emailOptions.Value.Kinds.Select(kind =>
+            {
+                var entry = settings.Templates.TryGetValue(kind.Name, out var template)
+                    ? new OrderEmailTemplateViewModel { Kind = kind.Name, IsEnabled = template.IsEnabled, Subject = template.Subject, Body = template.Body }
+                    : new OrderEmailTemplateViewModel { Kind = kind.Name, Body = "{{ Content }}" };
+
+                entry.Title = _stringLocalizerFactory.Localize(kind.Title);
+                entry.Values = kind.Values is null ? null : _stringLocalizerFactory.Localize(kind.Values);
+
+                return entry;
+            })];
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
         .OnGroup(SettingsGroupId);
@@ -76,15 +92,25 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
             }
         }
 
-        settings.Layout = string.IsNullOrWhiteSpace(model.Layout) ? null : model.Layout;
-        settings.Templates = (model.Templates ?? [])
-            .Where(template => OrderEmailKinds.All.Contains(template.Kind))
-            .ToDictionary(template => template.Kind, template => new OrderEmailTemplate
+        var options = _emailOptions.Value;
+
+        // A template of a kind no feature registers now, such as one whose feature is off, is kept as it was.
+        var templates = settings.Templates
+            .Where(pair => !options.HasKind(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+
+        foreach (var template in (model.Templates ?? []).Where(template => options.HasKind(template.Kind)))
+        {
+            templates[template.Kind] = new OrderEmailTemplate
             {
                 IsEnabled = template.IsEnabled,
                 Subject = string.IsNullOrWhiteSpace(template.Subject) ? null : template.Subject.Trim(),
                 Body = string.IsNullOrWhiteSpace(template.Body) ? null : template.Body,
-            }, StringComparer.Ordinal);
+            };
+        }
+
+        settings.Layout = string.IsNullOrWhiteSpace(model.Layout) ? null : model.Layout;
+        settings.Templates = templates;
 
         return Edit(site, settings, context);
     }
@@ -100,6 +126,16 @@ public class OrderEmailTemplateSettingsViewModel
 public class OrderEmailTemplateViewModel
 {
     public string Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind's title, shown on the page and not posted back.
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the email's own values are, shown on the page and not posted back.
+    /// </summary>
+    public string Values { get; set; }
 
     public bool IsEnabled { get; set; }
 

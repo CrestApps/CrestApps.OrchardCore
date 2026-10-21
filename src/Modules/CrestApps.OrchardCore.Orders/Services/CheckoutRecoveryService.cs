@@ -5,10 +5,8 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -39,10 +37,9 @@ public sealed class CheckoutRecoveryService
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly CheckoutRecoveryLinks _links;
     private readonly ISiteService _siteService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly IClock _clock;
     private readonly ILogger _logger;
-    private readonly IOrderEmailTemplates _emailTemplates;
 
     internal readonly IStringLocalizer S;
 
@@ -51,20 +48,18 @@ public sealed class CheckoutRecoveryService
         ICheckoutSessionStore sessionStore,
         CheckoutRecoveryLinks links,
         ISiteService siteService,
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         IClock clock,
         ILogger<CheckoutRecoveryService> logger,
-        IStringLocalizer<CheckoutRecoveryService> stringLocalizer,
-        IOrderEmailTemplates emailTemplates)
+        IStringLocalizer<CheckoutRecoveryService> stringLocalizer)
     {
         _orderStore = orderStore;
         _sessionStore = sessionStore;
         _links = links;
         _siteService = siteService;
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _clock = clock;
         _logger = logger;
-        _emailTemplates = emailTemplates;
         S = stringLocalizer;
     }
 
@@ -75,7 +70,7 @@ public sealed class CheckoutRecoveryService
     {
         var settings = await _siteService.GetSettingsAsync<OrderSettings>();
 
-        if (!settings.SendRecoveryEmails || _serviceProvider.GetService<IEmailService>() is not { } emailService)
+        if (!settings.SendRecoveryEmails || !_emailSender.CanSend)
         {
             return 0;
         }
@@ -111,28 +106,31 @@ public sealed class CheckoutRecoveryService
             }
 
             // Written in the language the buyer shopped in.
-            using var language = OrderCulture.Use(order.Culture);
-
-            var (builtSubject, builtText, builtHtml) = Build(order, name, url, site.SiteName);
-            var message = await _emailTemplates.ApplyAsync(OrderEmailKinds.Recovery, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
+            var wasSent = await _emailSender.SendAsync(new CommerceEmail
             {
-                ["RecoveryUrl"] = url,
+                Kind = OrderEmailKinds.Recovery,
+                To = email,
+                Order = order,
+                Culture = order.Culture,
+                Reference = order.OrderNumber,
+            }, _ =>
+            {
+                var (subject, text, html) = Build(order, name, url, site.SiteName);
+
+                return Task.FromResult(new CommerceEmailContent
+                {
+                    Subject = subject,
+                    Text = text,
+                    Html = html,
+                    Values = new Dictionary<string, string>
+                    {
+                        ["RecoveryUrl"] = url,
+                    },
+                });
             }, cancellationToken);
 
-            try
+            if (!wasSent)
             {
-                await emailService.SendAsync(new MailMessage
-                {
-                    To = email,
-                    Subject = message.Subject,
-                    TextBody = message.Text,
-                    HtmlBody = message.Html,
-                }, cancellationToken: cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError(exception, "The recovery email for order {OrderNumber} couldn't be sent.", order.OrderNumber);
-
                 continue;
             }
 
