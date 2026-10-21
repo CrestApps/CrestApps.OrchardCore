@@ -81,7 +81,7 @@ public sealed class TaxRulesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -97,7 +97,6 @@ public sealed class TaxRulesController : Controller
 
         var viewModel = new ListSourceModelViewModel<TaxCalculationMethodEntry, CatalogEntryViewModel<TaxRule>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxRule> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _methodOptions.Methods.Values

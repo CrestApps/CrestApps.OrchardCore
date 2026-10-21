@@ -70,7 +70,7 @@ public sealed class TaxTypesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -86,7 +86,6 @@ public sealed class TaxTypesController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxType>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxType> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };

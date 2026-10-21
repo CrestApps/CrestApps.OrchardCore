@@ -70,7 +70,7 @@ public sealed class TaxJurisdictionsController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -86,7 +86,6 @@ public sealed class TaxJurisdictionsController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxJurisdiction>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxJurisdiction> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };

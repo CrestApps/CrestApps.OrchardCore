@@ -88,7 +88,7 @@ public sealed class CurrenciesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
@@ -103,7 +103,6 @@ public sealed class CurrenciesController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<CurrencyEntry>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<CurrencyEntry> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };

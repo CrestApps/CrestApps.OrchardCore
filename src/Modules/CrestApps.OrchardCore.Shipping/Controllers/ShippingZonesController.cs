@@ -83,7 +83,7 @@ public sealed class ShippingZonesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         // Zones are listed in the order they are tried.
         var all = (await _catalog.GetAllAsync())
@@ -103,7 +103,6 @@ public sealed class ShippingZonesController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<ShippingZone>>
         {
-            Models = [.. page.Select(model => new CatalogEntryViewModel<ShippingZone> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, all.Length, routeData),
         };
