@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using OrchardCore;
 
 namespace CrestApps.OrchardCore.Commerce.Api;
 
@@ -37,7 +38,7 @@ public static class CommerceApi
     /// The scheme API callers authenticate with: a bearer token from the tenant's OpenID server. Session cookies are
     /// never used, so no endpoint needs an antiforgery token.
     /// </summary>
-    public const string AuthenticationScheme = "Api";
+    public const string AuthenticationScheme = OrchardCoreConstants.AuthenticationSchemes.Api;
 
     /// <summary>
     /// Maps the commerce API's route group. Endpoints require a signed-in caller unless they call

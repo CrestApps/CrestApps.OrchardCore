@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Reviews.Models;
 using CrestApps.OrchardCore.Reviews.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Email;
@@ -55,7 +57,11 @@ public sealed class ReviewRequestTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
 
-        var service = new ReviewRequestService(orders.Object, customers.Object, email.Object, SiteService(), clock.Object, NullLogger<ReviewRequestService>.Instance, new PassThroughStringLocalizer<ReviewRequestService>());
+        var links = new Mock<LinkGenerator>();
+        links.Setup(value => value.GetPathByAddress(It.IsAny<RouteValuesAddress>(), It.IsAny<RouteValueDictionary>(), It.IsAny<PathString>(), It.IsAny<FragmentString>(), It.IsAny<LinkOptions>()))
+            .Returns((RouteValuesAddress _, RouteValueDictionary values, PathString _, FragmentString _, LinkOptions _) => $"/Contents/ContentItems/{values["contentItemId"]}");
+
+        var service = new ReviewRequestService(orders.Object, customers.Object, email.Object, SiteService(), clock.Object, NullLogger<ReviewRequestService>.Instance, new PassThroughStringLocalizer<ReviewRequestService>(), links.Object);
 
         Assert.Equal(1, await service.SendDueAsync(TestContext.Current.CancellationToken));
 

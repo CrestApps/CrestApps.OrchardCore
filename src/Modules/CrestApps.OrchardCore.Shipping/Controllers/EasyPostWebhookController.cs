@@ -39,7 +39,7 @@ public sealed class EasyPostWebhookController : Controller
         _logger = logger;
     }
 
-    [HttpPost("shipping/easypost/webhook", Name = "EasyPostWebhook")]
+    [HttpPost(ShippingConstants.EasyPostWebhookPath, Name = "EasyPostWebhook")]
     [IgnoreAntiforgeryToken]
     [RequestSizeLimit(MaxBodyBytes)]
     public async Task<IActionResult> Receive()

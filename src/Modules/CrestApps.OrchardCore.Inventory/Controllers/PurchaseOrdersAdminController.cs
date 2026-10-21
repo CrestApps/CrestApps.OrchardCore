@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -580,7 +581,7 @@ public sealed class PurchaseOrdersAdminController : Controller
         model.Currencies = currencies.Select(currency => new SelectListItem($"{currency.CurrencyCode} ({currency.DisplayName})", currency.CurrencyCode, currency.CurrencyCode == model.Currency)).ToArray();
         model.Suppliers = await _orders.ListSuppliersAsync(HttpContext.RequestAborted);
         model.CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory);
-        model.SearchEndpoint = Url.RouteUrl("CrestApps.Inventory.StockItemSearch");
+        model.SearchEndpoint = Url.RouteUrl(StockItemSearchEndpoints.RouteName);
     }
 
     // A number staff can read out: the date and four characters, such as PO-261019-K3QZ.

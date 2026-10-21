@@ -35,24 +35,31 @@ public sealed class OrderLinkService : IOrderLinkService
         _linkGenerator = linkGenerator;
     }
 
-    public async Task<string> CreateUrlAsync(Order order)
+    public Task<string> CreateUrlAsync(Order order)
+        => CreateUrlAsync(order, OrderConstants.RouteNames.View);
+
+    public Task<string> CreatePayUrlAsync(Order order)
+        => CreateUrlAsync(order, OrderConstants.RouteNames.Pay);
+
+    private async Task<string> CreateUrlAsync(Order order, string routeName)
     {
         ArgumentNullException.ThrowIfNull(order);
 
-        var token = _protector.Protect(order.ItemId, Lifetime);
+        var values = new { token = _protector.Protect(order.ItemId, Lifetime) };
         var site = await _siteService.GetSiteSettingsAsync();
 
-        // An email is often sent where there is no request, so the site's own address comes first.
-        if (!string.IsNullOrWhiteSpace(site.BaseUrl))
+        // An email is often sent where there is no request, so the site's own address comes first. It already holds the
+        // tenant's prefix, so the route's path goes after it as is.
+        if (!string.IsNullOrWhiteSpace(site.BaseUrl) && _linkGenerator.GetPathByRouteValues(routeName, values) is { } path)
         {
-            return $"{site.BaseUrl.TrimEnd('/')}/orders/view/{Uri.EscapeDataString(token)}";
+            return site.BaseUrl.TrimEnd('/') + path;
         }
 
         var httpContext = _httpContextAccessor.HttpContext;
 
         return httpContext is null
             ? null
-            : _linkGenerator.GetUriByRouteValues(httpContext, OrderConstants.RouteNames.View, new { token });
+            : _linkGenerator.GetUriByRouteValues(httpContext, routeName, values);
     }
 
     public string GetOrderId(string token)

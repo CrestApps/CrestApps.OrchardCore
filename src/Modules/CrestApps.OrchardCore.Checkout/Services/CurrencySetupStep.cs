@@ -1,10 +1,11 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Products.Core.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -21,15 +22,22 @@ internal sealed class CurrencySetupStep : IStoreSetupStep
 
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public CurrencySetupStep(ISiteService siteService, IServiceProvider serviceProvider, IOptions<AdminOptions> adminOptions, IStringLocalizer<CurrencySetupStep> stringLocalizer)
+    public CurrencySetupStep(
+        ISiteService siteService,
+        IServiceProvider serviceProvider,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<CurrencySetupStep> stringLocalizer)
     {
         _siteService = siteService;
         _serviceProvider = serviceProvider;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -64,7 +72,7 @@ internal sealed class CurrencySetupStep : IStoreSetupStep
             Title = S["Your currency"],
             Description = S["The currency your prices are in and customers pay in. Prices you enter on products are in it."],
             Status = S["Prices are in {0}.", settings.Currency],
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/Settings/{CheckoutConstants.SettingsGroupId}",
+            Url = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "AdminSettings", new { groupId = CheckoutConstants.SettingsGroupId }),
             UrlText = S["Checkout settings"],
             ActionText = S["Use this currency"],
             Fields =

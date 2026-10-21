@@ -18,6 +18,11 @@ public static class ShippingConstants
     public const string CheckoutStepKey = "Shipping";
 
     /// <summary>
+    /// The path, under the site's address, EasyPost posts tracking updates to.
+    /// </summary>
+    public const string EasyPostWebhookPath = "shipping/easypost/webhook";
+
+    /// <summary>
     /// The YesSql collection shipments and their index live in.
     /// </summary>
     public const string CollectionName = "Shipping";

@@ -6,10 +6,10 @@ using CrestApps.OrchardCore.Shipping;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Moq;
 using OrchardCore.Entities;
-using OrchardCore.Admin;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Commerce;
@@ -102,6 +102,6 @@ public sealed class StoreSetupTests
         var siteService = new Mock<ISiteService>();
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
-        return new ShippingSetupStep(catalog.Object, manager.Object, siteService.Object, Options.Create(new AdminOptions()), new PassThroughStringLocalizer<ShippingSetupStep>());
+        return new ShippingSetupStep(catalog.Object, manager.Object, siteService.Object, Mock.Of<LinkGenerator>(), new HttpContextAccessor { HttpContext = new DefaultHttpContext() }, new PassThroughStringLocalizer<ShippingSetupStep>());
     }
 }

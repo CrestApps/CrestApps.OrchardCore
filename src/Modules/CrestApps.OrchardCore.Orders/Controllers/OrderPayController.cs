@@ -39,7 +39,7 @@ public sealed class OrderPayController : Controller
         _clock = clock;
     }
 
-    [HttpGet("orders/view/{token}/pay", Name = "GuestOrderPay")]
+    [HttpGet("orders/view/{token}/pay", Name = OrderConstants.RouteNames.Pay)]
     public async Task<IActionResult> Guest(string token)
     {
         var orderId = string.IsNullOrEmpty(token) ? null : _links.GetOrderId(token);

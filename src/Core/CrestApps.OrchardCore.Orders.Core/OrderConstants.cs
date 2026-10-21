@@ -76,6 +76,11 @@ public static class OrderConstants
 
         public const string View = "OrdersView";
 
+        /// <summary>
+        /// The page that pays an order a guest opened from its link.
+        /// </summary>
+        public const string Pay = "GuestOrderPay";
+
         public const string Find = "OrdersFind";
     }
 }

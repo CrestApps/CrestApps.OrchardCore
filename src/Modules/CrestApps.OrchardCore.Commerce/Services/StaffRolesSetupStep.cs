@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 
@@ -14,14 +14,20 @@ namespace CrestApps.OrchardCore.Commerce.Services;
 internal sealed class StaffRolesSetupStep : IStoreSetupStep
 {
     private readonly RoleManager<IRole> _roleManager;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public StaffRolesSetupStep(RoleManager<IRole> roleManager, IOptions<AdminOptions> adminOptions, IStringLocalizer<StaffRolesSetupStep> stringLocalizer)
+    public StaffRolesSetupStep(
+        RoleManager<IRole> roleManager,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<StaffRolesSetupStep> stringLocalizer)
     {
         _roleManager = roleManager;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -50,7 +56,7 @@ internal sealed class StaffRolesSetupStep : IStoreSetupStep
             IsDone = missing.Count == 0,
             Status = missing.Count == 0 ? S["The staff roles are there."] : null,
             IsOptional = true,
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/Roles/Index",
+            Url = _linkGenerator.GetPathByAction(_httpContextAccessor.HttpContext, "Index", "Admin", new { area = "OrchardCore.Roles" }),
             UrlText = S["Roles"],
             ActionText = missing.Count == 0 ? null : S["Add the staff roles"],
         };

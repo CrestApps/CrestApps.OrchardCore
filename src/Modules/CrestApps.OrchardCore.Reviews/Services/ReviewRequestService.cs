@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Reviews.Models;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,7 @@ public sealed class ReviewRequestService
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
@@ -41,7 +43,8 @@ public sealed class ReviewRequestService
         ISiteService siteService,
         IClock clock,
         ILogger<ReviewRequestService> logger,
-        IStringLocalizer<ReviewRequestService> stringLocalizer)
+        IStringLocalizer<ReviewRequestService> stringLocalizer,
+        LinkGenerator linkGenerator)
     {
         _orders = orders;
         _customers = customers;
@@ -49,6 +52,7 @@ public sealed class ReviewRequestService
         _siteService = siteService;
         _clock = clock;
         _logger = logger;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -137,7 +141,9 @@ public sealed class ReviewRequestService
 
         foreach (var line in order.Lines.Where(line => !string.IsNullOrEmpty(line.ContentItemId)).DistinctBy(line => line.ContentItemId))
         {
-            var url = $"{baseUrl.TrimEnd('/')}/Contents/ContentItems/{Uri.EscapeDataString(line.ContentItemId)}#reviews";
+            // The site's address holds the tenant's prefix, so the route's path goes after it as is.
+            var path = _linkGenerator.GetPathByAction("Display", "Item", new { area = "OrchardCore.Contents", contentItemId = line.ContentItemId });
+            var url = $"{baseUrl.TrimEnd('/')}{path}#reviews";
             var review = S["Review {0}", line.Title].Value;
 
             text.AppendLine($"{review}: {url}");
@@ -161,7 +167,8 @@ public sealed class ReviewRequestService
     Schedule = "15 * * * *",
     Description = "Asks buyers who accept marketing to review what they bought, some days after paying.",
     LockTimeout = 3_000,
-    LockExpiration = 900_000)]
+    LockExpiration = 900_000,
+    UsePipeline = true)]
 public sealed class ReviewRequestBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)

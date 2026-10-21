@@ -23,8 +23,6 @@ namespace CrestApps.OrchardCore.Shipping.Drivers;
 /// </summary>
 public sealed class EasyPostSettingsDisplayDriver : SiteDisplayDriver<EasyPostSettings>
 {
-    private const string WebhookPath = "shipping/easypost/webhook";
-
     private readonly EasyPostCarrierProvider _provider;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -164,6 +162,6 @@ public sealed class EasyPostSettingsDisplayDriver : SiteDisplayDriver<EasyPostSe
             return null;
         }
 
-        return baseUrl.TrimEnd('/') + "/" + WebhookPath;
+        return baseUrl.TrimEnd('/') + "/" + ShippingConstants.EasyPostWebhookPath;
     }
 }

@@ -271,9 +271,9 @@ public sealed class OrdersAdminController : Controller
             // quote, once it's sent.
             if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment &&
                 QuoteService.CanPay(order, _clock.UtcNow) &&
-                await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreateUrlAsync(order) is { } viewUrl)
+                await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreatePayUrlAsync(order) is { } payUrl)
             {
-                model.PayUrl = viewUrl + "/pay";
+                model.PayUrl = payUrl;
             }
         }
 

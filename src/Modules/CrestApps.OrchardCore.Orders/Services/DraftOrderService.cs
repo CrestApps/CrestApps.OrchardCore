@@ -216,17 +216,17 @@ public sealed class DraftOrderService
             return false;
         }
 
-        var viewUrl = await _links.CreateUrlAsync(order);
+        var payUrl = await _links.CreatePayUrlAsync(order);
 
-        if (string.IsNullOrEmpty(viewUrl))
+        if (string.IsNullOrEmpty(payUrl))
         {
             return false;
         }
 
-        var (builtSubject, builtText, builtHtml) = BuildInvoiceEmail(order, viewUrl + "/pay");
+        var (builtSubject, builtText, builtHtml) = BuildInvoiceEmail(order, payUrl);
         var email = await _emailTemplates.ApplyAsync(order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
         {
-            ["PayUrl"] = viewUrl + "/pay",
+            ["PayUrl"] = payUrl,
         }, cancellationToken);
         var result = await emailService.SendAsync(new MailMessage
         {

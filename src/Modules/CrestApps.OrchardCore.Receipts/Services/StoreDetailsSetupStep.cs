@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Receipts.Core;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -20,14 +20,20 @@ internal sealed class StoreDetailsSetupStep : IStoreSetupStep
     private const string AddressField = "address";
 
     private readonly ISiteService _siteService;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public StoreDetailsSetupStep(ISiteService siteService, IOptions<AdminOptions> adminOptions, IStringLocalizer<StoreDetailsSetupStep> stringLocalizer)
+    public StoreDetailsSetupStep(
+        ISiteService siteService,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<StoreDetailsSetupStep> stringLocalizer)
     {
         _siteService = siteService;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -48,7 +54,7 @@ internal sealed class StoreDetailsSetupStep : IStoreSetupStep
             Description = S["Your store's name and how customers reach you. They're printed on receipts, invoices and the emails customers get."],
             IsDone = done,
             Status = done ? S["{0}, {1}", settings.BusinessName, settings.ContactEmail] : null,
-            Url = $"~/{_adminOptions.AdminUrlPrefix}/Settings/{ReceiptsConstants.SettingsGroupId}",
+            Url = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "AdminSettings", new { groupId = ReceiptsConstants.SettingsGroupId }),
             UrlText = S["Receipt settings, with your logo"],
             ActionText = S["Save the details"],
             Fields =

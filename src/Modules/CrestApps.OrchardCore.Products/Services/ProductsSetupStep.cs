@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -11,6 +11,7 @@ using OrchardCore.ContentManagement.Records;
 using OrchardCore.Settings;
 using YesSql;
 using YesSql.Services;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Products.Services;
 
@@ -29,7 +30,8 @@ internal sealed class ProductsSetupStep : IStoreSetupStep
     private readonly ProductContentTypes _productTypes;
     private readonly ISession _session;
     private readonly ISiteService _siteService;
-    private readonly AdminOptions _adminOptions;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -38,14 +40,16 @@ internal sealed class ProductsSetupStep : IStoreSetupStep
         ProductContentTypes productTypes,
         ISession session,
         ISiteService siteService,
-        IOptions<AdminOptions> adminOptions,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<ProductsSetupStep> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _productTypes = productTypes;
         _session = session;
         _siteService = siteService;
-        _adminOptions = adminOptions.Value;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -71,7 +75,7 @@ internal sealed class ProductsSetupStep : IStoreSetupStep
                 : S["Add a product with its name, price, description and pictures, and publish it. It's on sale as soon as it's published."],
             IsDone = count > 0,
             Status = count == 0 ? null : S.Plural(count, "1 product is on sale.", "{0} products are on sale."),
-            Url = type is null ? null : $"~/{_adminOptions.AdminUrlPrefix}/Contents/ContentTypes/{type}/Create",
+            Url = type is null ? null : _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "CreateContentItem", new { id = type }),
             UrlText = S["Add a product"],
             ActionText = types.Count == 0 ? S["Add the Product type"] : null,
         };
