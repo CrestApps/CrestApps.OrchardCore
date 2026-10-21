@@ -53,7 +53,7 @@ Each event has a name, which the receiver reads, and a label you see when choosi
 | `order.paid` | Order paid | The order's checkout is completed. An order placed to pay offline, such as by bank transfer, is sent when it's placed, before the money arrives. | `order` |
 | `order.canceled` | Order canceled | The order is canceled, by your store or because its checkout didn't finish. | `order`, and `reason` |
 | `order.refunded` | Order refunded | Money is given back on the order, once for each refund, in full or in part. | `order`, and `refund` |
-| `customer.created` | Customer created | A customer record is made: for a guest who buys, the first time a signed-in buyer needs one (their first checkout, or opening **My account**), or when you add one under **Commerce > Customers**. Customers added by a recipe aren't sent. | `customer` |
+| `customer.created` | Customer created | A customer record is made: for a guest who buys, the first time a signed-in buyer needs one (their first checkout, or opening **My account**), when you add one under **Commerce > Customers**, or when a recipe adds one. | `customer` |
 | `shipment.shipped` | Shipment shipped | A shipment is marked shipped, with its carrier and tracking. | `shipment`, `orderNumber` and `customerEmail` |
 | `shipment.delivered` | Shipment delivered | A shipment is marked delivered. | `shipment`, `orderNumber` and `customerEmail` |
 | `stock.changed` | Stock changed | What's available of a product or variant changes: a sale, units held while a buyer pays and let go again, units received, an adjustment or a count. Several changes saved together send one event. A move between locations doesn't change what's available, so it sends nothing. | `stock`, and `previousAvailable` |

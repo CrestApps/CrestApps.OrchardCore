@@ -94,7 +94,7 @@ public sealed class CustomerRecordTests
         {
             await using (var session = yesSql.CreateSession())
             {
-                var store = new CustomerStore(session);
+                var store = new CustomerStore(session, []);
                 var now = DateTime.UtcNow;
 
                 await store.CreateAsync(new Customer { ItemId = "c1", DisplayName = "Pat Lee", Email = "pat@example.test", UserId = "user-1", LastActivityUtc = now }, TestContext.Current.CancellationToken);
@@ -107,7 +107,7 @@ public sealed class CustomerRecordTests
 
             await using (var session = yesSql.CreateSession())
             {
-                var store = new CustomerStore(session);
+                var store = new CustomerStore(session, []);
 
                 Assert.Equal(["c1", "c4", "c5"], await IdsAsync(store, new CustomerQuery { Search = "pat" }));
                 Assert.Equal(["c2"], await IdsAsync(store, new CustomerQuery { Search = "CONTO" }));
@@ -126,6 +126,30 @@ public sealed class CustomerRecordTests
                 Assert.Equal(["c4"], (await store.ListGuestsByEmailAsync("PAT@example.TEST", TestContext.Current.CancellationToken)).Select(customer => customer.ItemId));
                 Assert.Equal("c1", (await store.FindByUserIdAsync("user-1", TestContext.Current.CancellationToken)).ItemId);
             }
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(yesSql, path);
+        }
+    }
+
+    [Fact]
+    public async Task MakingACustomer_RunsTheCreatedHandlersOnce_AndUpdatingItDoesNot()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"crestapps-customers-{Guid.NewGuid():N}.db");
+        var yesSql = await CreateStoreAsync(path);
+        var handler = new Mock<ICustomerHandler>();
+
+        try
+        {
+            await using var session = yesSql.CreateSession();
+            var store = new CustomerStore(session, [handler.Object]);
+            var customer = new Customer { ItemId = "c1", DisplayName = "Pat Lee", LastActivityUtc = DateTime.UtcNow };
+
+            await store.CreateAsync(customer, TestContext.Current.CancellationToken);
+            await store.UpdateAsync(customer, TestContext.Current.CancellationToken);
+
+            handler.Verify(created => created.CreatedAsync(customer, It.IsAny<CancellationToken>()), Times.Once);
         }
         finally
         {

@@ -224,7 +224,6 @@ public sealed class CustomersAdminController : Controller
         Apply(model, customer, now);
 
         await _store.CreateAsync(customer, HttpContext.RequestAborted);
-        await WebhookCustomerService.PublishCreatedAsync(HttpContext.RequestServices, customer, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The customer {0} was added.", customer.GetName()]);
 
         return RedirectToAction(nameof(Edit), new { customerId = customer.ItemId });

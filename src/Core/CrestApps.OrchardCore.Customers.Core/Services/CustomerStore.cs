@@ -53,9 +53,14 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
     // Two editors, or an editor and a checkout, must not overwrite each other's changes.
     protected override bool CheckConcurrency => true;
 
-    public CustomerStore(ISession session)
+    private readonly IEnumerable<ICustomerHandler> _handlers;
+
+    public CustomerStore(
+        ISession session,
+        IEnumerable<ICustomerHandler> handlers)
         : base(session)
     {
+        _handlers = handlers;
         CollectionName = CustomersConstants.CollectionName;
     }
 
@@ -130,5 +135,13 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
         var page = await customers.OrderByDescending(index => index.LastActivityUtc).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, page.ToArray());
+    }
+
+    protected override async ValueTask CreatedAsync(Customer record, CancellationToken cancellationToken)
+    {
+        foreach (var handler in _handlers)
+        {
+            await handler.CreatedAsync(record, cancellationToken);
+        }
     }
 }

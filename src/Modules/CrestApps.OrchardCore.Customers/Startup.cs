@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -44,9 +45,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomerIndexProvider>();
 
         services.AddScoped<ICustomerStore, CustomerStore>();
-        services.AddScoped<DefaultCustomerService>();
-        services.AddScoped<ICustomerService>(serviceProvider => new WebhookCustomerService(serviceProvider.GetRequiredService<DefaultCustomerService>(), serviceProvider));
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
+        services.AddScoped<ICustomerService, DefaultCustomerService>();
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
@@ -222,5 +221,18 @@ public sealed class AccountApiStartup : StartupBase
     {
         routes.MapCustomerAccountApi();
         routes.MapCustomerAdminApi();
+    }
+}
+
+/// <summary>
+/// Tells webhooks about new customers when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ICustomerHandler, CustomerWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
     }
 }

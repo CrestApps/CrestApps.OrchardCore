@@ -166,6 +166,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         await SavingAsync(record);
 
         await Session.SaveAsync(record, false, CollectionName, cancellationToken);
+
+        await CreatedAsync(record, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -193,6 +195,18 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     }
 
     protected virtual ValueTask SavingAsync(T record)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called after <see cref="CreateAsync(T, CancellationToken)"/> adds a new record to the session, so a derived
+    /// catalog can raise its own created event. The record is committed with the session.
+    /// </summary>
+    /// <param name="record">The record that was created.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task that completes when the created event has run.</returns>
+    protected virtual ValueTask CreatedAsync(T record, CancellationToken cancellationToken)
     {
         return ValueTask.CompletedTask;
     }

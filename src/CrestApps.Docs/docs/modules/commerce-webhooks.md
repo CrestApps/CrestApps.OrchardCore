@@ -71,7 +71,7 @@ Send the commerce API's shapes in `data` where there is one, so a receiver reads
 | `order.paid` | Orders, `OrderWebhookEventHandler.PaidAsync` | `order` |
 | `order.canceled` | Orders, `OrderWebhookEventHandler.CanceledAsync`, for every `OrderCancelReason` but `Replaced` | `order`, `reason` (camelCase `OrderCancelReason`) |
 | `order.refunded` | Orders, `OrderWebhookEventHandler.RefundedAsync`, once per refund | `order`, `refund` (`ApiOrderRefund`) |
-| `customer.created` | Customers, `WebhookCustomerService` (decorating `ICustomerService`: `CreateGuestAsync` and a new `GetOrCreateForUserAsync`) and **Add customer** in the admin, with the id `evt_customer-created_` and the customer's id | `customer` (`ApiCustomer`) |
+| `customer.created` | Customers, `CustomerWebhookHandler` (an `ICustomerHandler` that `CustomerStore.CreateAsync` runs for every new customer: a guest's order, an account's first customer record, **Add customer** in the admin and the `Customers` recipe step), with the id `evt_customer-created_` and the customer's id | `customer` (`ApiCustomer`) |
 | `shipment.shipped` | Shipping, `ShipmentWebhookHandler.ShippedAsync` | `shipment` (`ApiShipment`), `orderNumber`, `customerEmail` |
 | `shipment.delivered` | Shipping, `ShipmentWebhookHandler.DeliveredAsync` | the same |
 | `stock.changed` | Inventory, `StockWebhookHandler.AvailableChangedAsync` (an `IStockLevelHandler`): after the unit of work commits, one event per stock item whose total `Available` differs from before its first change | `stock` (`ApiStockItem`), `previousAvailable` |
