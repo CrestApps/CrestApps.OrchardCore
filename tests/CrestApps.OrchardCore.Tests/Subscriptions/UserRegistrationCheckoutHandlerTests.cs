@@ -192,7 +192,7 @@ public sealed class UserRegistrationCheckoutHandlerTests
 
     private sealed class Registration
     {
-        private readonly IDataProtectionProvider _protection = new EphemeralDataProtectionProvider();
+        private readonly EphemeralDataProtectionProvider _protection = new();
         private readonly User _created = new() { UserName = "subscriber", Email = "subscriber@example.com" };
 
         public Registration(HttpContext httpContext)

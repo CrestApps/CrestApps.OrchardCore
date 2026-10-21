@@ -28,7 +28,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriverTests
         new() { Name = "Postgres", Value = "Postgres", HasConnectionString = true },
     ];
 
-    private readonly IDataProtectionProvider _protection = new EphemeralDataProtectionProvider();
+    private readonly EphemeralDataProtectionProvider _protection = new();
 
     [Fact]
     public async Task UpdateAsync_WithANewConnectionString_StoresItProtected()

@@ -34,7 +34,7 @@ namespace CrestApps.OrchardCore.Tests.Subscriptions;
 public sealed class TenantProvisioningServiceTests
 {
     private static readonly DateTime _now = new(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly IDataProtectionProvider _protection = new EphemeralDataProtectionProvider();
+    private static readonly EphemeralDataProtectionProvider _protection = new();
 
     /// <summary>
     /// Setup refuses without a database provider, and nobody is around to choose one for a self-service
