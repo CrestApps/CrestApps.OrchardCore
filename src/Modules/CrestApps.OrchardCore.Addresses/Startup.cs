@@ -13,6 +13,7 @@ using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Addresses;
 
@@ -37,9 +38,29 @@ public sealed class Startup : StartupBase
 
         // Address suggestions, when a provider is set up; none answers 404 and the editor offers none.
         routes.MapGet("/" + AddressAutocompleteEndpoints.SuggestPath, AddressAutocompleteEndpoints.SuggestAsync)
-            .WithName("AddressSuggestions");
+            .WithName("AddressSuggestions")
+            .WithRateLimitGroup(AddressConstants.AutocompleteRateLimitGroup);
         routes.MapGet("/" + AddressAutocompleteEndpoints.ResolvePath, AddressAutocompleteEndpoints.ResolveAsync)
-            .WithName("AddressSuggestionResolve");
+            .WithName("AddressSuggestionResolve")
+            .WithRateLimitGroup(AddressConstants.AutocompleteRateLimitGroup);
+    }
+}
+
+/// <summary>
+/// Holds each visitor to a number of address suggestion calls a minute, across both endpoints, when Orchard Core's
+/// Rate Limits feature is on: each call is one the store pays its provider for.
+/// </summary>
+[RequireFeatures("OrchardCore.RateLimits")]
+public sealed class RateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+            AddressConstants.AutocompleteRateLimitGroup,
+            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
+                policyName: AddressConstants.AutocompleteRateLimitGroup,
+                permitLimit: AddressAutocompleteEndpoints.RequestsPerMinute,
+                window: TimeSpan.FromMinutes(1))));
     }
 }
 

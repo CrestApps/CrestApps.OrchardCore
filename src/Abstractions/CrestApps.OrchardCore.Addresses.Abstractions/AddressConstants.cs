@@ -30,6 +30,12 @@ public static class AddressConstants
     }
 
     /// <summary>
+    /// The rate-limit group of the address suggestion endpoints. With Orchard Core's Rate Limits feature on, each
+    /// visitor may make a set number of suggestion calls a minute, and a Rate Limits policy can target this group.
+    /// </summary>
+    public const string AutocompleteRateLimitGroup = "address-autocomplete";
+
+    /// <summary>
     /// The technical name of the country content type.
     /// </summary>
     public const string Country = "Country";

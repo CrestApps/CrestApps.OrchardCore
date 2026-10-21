@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.ContentFields" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
     <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.Title" />
   </ItemGroup>

@@ -120,9 +120,9 @@ The Addresses feature maps two anonymous endpoints, at the tenant's root:
 | `GET` | `addresses/suggest?q=&country=&session=` | JSON `[{ "id": "...", "text": "..." }]`. `q` shorter than 3 or longer than 120 characters (trimmed) answers `[]` without asking the provider. `country` is used when it's two letters. |
 | `GET` | `addresses/resolve?id=&session=` | JSON `{ addressLine1, addressLine2, dependentLocality, city, region, postalCode, country }`. `404` for a missing id, one over 512 characters, or a suggestion the provider can't find. |
 
-Both answer `404` when no provider is available, and `429` when the visitor is over the limit. A `session` value is passed on only when it's up to 64 letters, digits and hyphens.
+Both answer `404` when no provider is available, and `429` when the visitor is over a rate limit. A `session` value is passed on only when it's up to 64 letters, digits and hyphens.
 
-Each call can cost the store money, so each visitor (`HttpContext.Connection.RemoteIpAddress`) may make 60 calls a minute across both endpoints (`AddressAutocompleteEndpoints.RequestsPerMinute`), counted in `IMemoryCache` by clock minute. Behind a reverse proxy, turn on Orchard Core's **Reverse Proxy Configuration** feature, so the visitor's address is counted rather than the proxy's.
+Each call can cost the store money, so both endpoints are in the `address-autocomplete` rate-limit group (`AddressConstants.AutocompleteRateLimitGroup`). With Orchard Core's **Rate Limits** feature (`OrchardCore.RateLimits`) on, the Addresses feature registers a built-in limit for the group: each visitor (`HttpContext.Connection.RemoteIpAddress`) may make 60 calls a minute across both endpoints (`AddressAutocompleteEndpoints.RequestsPerMinute`, a fixed window). It shows read-only under **Tools > Rate Limits**, where a `Group` policy on `address-autocomplete` can add stricter limits. Without the Rate Limits feature the endpoints aren't limited, so turn it on wherever a paid provider is set up. Behind a reverse proxy, turn on Orchard Core's **Reverse Proxy Configuration** feature, so the visitor's address is counted rather than the proxy's.
 
 ### The editor
 
