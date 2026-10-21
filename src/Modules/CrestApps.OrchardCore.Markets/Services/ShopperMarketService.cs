@@ -126,10 +126,14 @@ public sealed class ShopperMarketService : IShopperCurrency
 
     public async ValueTask<string> GetStoreCurrencyAsync(CancellationToken cancellationToken = default)
     {
-        _storeCurrency ??= (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency ?? string.Empty;
+        var storeCurrency = await LoadStoreCurrencyAsync();
 
-        return _storeCurrency.Length == 0 ? null : _storeCurrency;
+        return storeCurrency.Length == 0 ? null : storeCurrency;
     }
+
+    // The store's currency from the checkout settings, read once per scope; empty when the store has none.
+    private async ValueTask<string> LoadStoreCurrencyAsync()
+        => _storeCurrency ??= (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency ?? string.Empty;
 
     public async ValueTask<decimal?> ConvertAsync(decimal amount, string fromCurrency, string toCurrency, bool isPrice = true, CancellationToken cancellationToken = default)
     {
@@ -141,8 +145,7 @@ public sealed class ShopperMarketService : IShopperCurrency
         // An amount without a currency, such as a shipping rate, is in the store's.
         if (string.IsNullOrEmpty(fromCurrency))
         {
-            _storeCurrency ??= (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency ?? string.Empty;
-            fromCurrency = _storeCurrency;
+            fromCurrency = await LoadStoreCurrencyAsync();
 
             if (string.IsNullOrEmpty(fromCurrency))
             {
@@ -176,9 +179,7 @@ public sealed class ShopperMarketService : IShopperCurrency
     // the market's.
     private async Task<decimal?> GetRateAsync(string currency, Market current, IReadOnlyList<Market> markets)
     {
-        _storeCurrency ??= (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency ?? string.Empty;
-
-        if (string.Equals(currency, _storeCurrency, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(currency, await LoadStoreCurrencyAsync(), StringComparison.OrdinalIgnoreCase))
         {
             return 1m;
         }

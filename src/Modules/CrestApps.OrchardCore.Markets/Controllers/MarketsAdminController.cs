@@ -1,9 +1,9 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Markets.Services;
 using CrestApps.OrchardCore.Markets.ViewModels;
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -18,7 +18,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Markets.Controllers;
 
@@ -30,7 +29,7 @@ namespace CrestApps.OrchardCore.Markets.Controllers;
 public sealed class MarketsAdminController : Controller
 {
     private readonly IMarketStore _markets;
-    private readonly ISiteService _siteService;
+    private readonly IShopperCurrency _shopperCurrency;
     private readonly ILocalizationService _localizationService;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -41,7 +40,7 @@ public sealed class MarketsAdminController : Controller
 
     public MarketsAdminController(
         IMarketStore markets,
-        ISiteService siteService,
+        IShopperCurrency shopperCurrency,
         ILocalizationService localizationService,
         IAuthorizationService authorizationService,
         INotifier notifier,
@@ -50,7 +49,7 @@ public sealed class MarketsAdminController : Controller
         IStringLocalizer<MarketsAdminController> stringLocalizer)
     {
         _markets = markets;
-        _siteService = siteService;
+        _shopperCurrency = shopperCurrency;
         _localizationService = localizationService;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -288,5 +287,5 @@ public sealed class MarketsAdminController : Controller
     }
 
     private async Task<string> GetStoreCurrencyAsync()
-        => (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
+        => await _shopperCurrency.GetStoreCurrencyAsync(HttpContext.RequestAborted);
 }
