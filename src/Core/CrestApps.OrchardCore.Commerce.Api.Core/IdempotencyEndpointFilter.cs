@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Net.Http.Headers;
+using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Commerce.Api;
@@ -54,7 +56,9 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
             return ApiProblems.Conflict(ApiProblems.Codes.IdempotencyInProgress, "A request with this idempotency key is still being processed. Try again in a moment.");
         }
 
-        await using (locker)
+        var lockHeldByResult = false;
+
+        try
         {
             if (await cache.GetStringAsync(cacheKey, httpContext.RequestAborted) is { } storedMeanwhile)
             {
@@ -63,15 +67,47 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
             var result = await next(context);
 
-            // Only a final answer is kept. A server error, a "too many requests", and a conflict that clears by itself
-            // (someone else changing the same thing) are worth sending again with the same key.
-            if (Capture(result, httpContext.Response.Headers) is { } response && IsFinal(response))
+            // Where a created thing is only shows once the result has written its Location header, so a created
+            // answer is kept after it runs, and the key stays locked until then.
+            if (result is IResult created && Unwrap(result) is IStatusCodeHttpResult { StatusCode: StatusCodes.Status201Created })
             {
-                await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(response), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = _lifetime }, httpContext.RequestAborted);
+                lockHeldByResult = true;
+
+                return new KeepAfterExecutionResult(created, cache, cacheKey, locker);
             }
+
+            await KeepAsync(cache, cacheKey, result, httpContext);
 
             return result;
         }
+        finally
+        {
+            if (!lockHeldByResult)
+            {
+                await locker.DisposeAsync();
+            }
+        }
+    }
+
+    // Only a final answer is kept. A server error, a "too many requests", and a conflict that clears by itself (someone
+    // else changing the same thing) are worth sending again with the same key.
+    private static async Task KeepAsync(IDistributedCache cache, string cacheKey, object result, HttpContext httpContext)
+    {
+        if (Capture(result, httpContext.Response.Headers) is { } response && IsFinal(response))
+        {
+            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(response), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = _lifetime }, httpContext.RequestAborted);
+        }
+    }
+
+    // A typed union, such as Results<Ok<T>, ProblemHttpResult>, wraps the result it returned.
+    private static object Unwrap(object result)
+    {
+        while (result is INestedHttpResult nested)
+        {
+            result = nested.Result;
+        }
+
+        return result;
     }
 
     internal static string GetCacheKey(HttpContext httpContext, string key)
@@ -91,15 +127,11 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         => string.IsNullOrEmpty(first) ? second : first;
 
     // The headers a client acts on: the guest tokens the first answer handed out, and where a created thing is.
-    private static readonly string[] _replayedHeaders = [CommerceApi.CartTokenHeader, CommerceApi.CheckoutTokenHeader];
+    private static readonly string[] _replayedHeaders = [CommerceApi.CartTokenHeader, CommerceApi.CheckoutTokenHeader, HeaderNames.Location];
 
     internal static StoredResponse Capture(object result, IHeaderDictionary responseHeaders = null)
     {
-        // A typed union, such as Results<Ok<T>, ProblemHttpResult>, wraps the result it returned.
-        while (result is INestedHttpResult nested)
-        {
-            result = nested.Result;
-        }
+        result = Unwrap(result);
 
         var statusCode = result is IStatusCodeHttpResult { StatusCode: { } code } ? code : StatusCodes.Status200OK;
         var value = result is IValueHttpResult valueResult ? valueResult.Value : result is IResult ? null : result;
@@ -111,12 +143,6 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
             {
                 headers[name] = headerValue.ToString();
             }
-        }
-
-        // Created<T> and its kin say where the new thing is; there's no interface for it, so it's read by name.
-        if (statusCode == StatusCodes.Status201Created && result?.GetType().GetProperty("Location")?.GetValue(result) is string { Length: > 0 } location)
-        {
-            headers["Location"] = location;
         }
 
         return new StoredResponse(
@@ -153,6 +179,37 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     }
 
     internal sealed record StoredResponse(int StatusCode, string Body, string ContentType = null, IReadOnlyDictionary<string, string> Headers = null);
+
+    // Runs a created answer, then keeps it with the headers it wrote, and only then lets a retry with the same key in.
+    private sealed class KeepAfterExecutionResult : IResult, INestedHttpResult
+    {
+        private readonly IDistributedCache _cache;
+        private readonly string _cacheKey;
+        private readonly ILocker _locker;
+
+        public KeepAfterExecutionResult(
+            IResult result,
+            IDistributedCache cache,
+            string cacheKey,
+            ILocker locker)
+        {
+            Result = result;
+            _cache = cache;
+            _cacheKey = cacheKey;
+            _locker = locker;
+        }
+
+        public IResult Result { get; }
+
+        public async Task ExecuteAsync(HttpContext httpContext)
+        {
+            await using (_locker)
+            {
+                await Result.ExecuteAsync(httpContext);
+                await KeepAsync(_cache, _cacheKey, Result, httpContext);
+            }
+        }
+    }
 }
 
 public static class IdempotencyEndpointExtensions
