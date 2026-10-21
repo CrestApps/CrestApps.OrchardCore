@@ -181,7 +181,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     internal sealed record StoredResponse(int StatusCode, string Body, string ContentType = null, IReadOnlyDictionary<string, string> Headers = null);
 
     // Runs a created answer, then keeps it with the headers it wrote, and only then lets a retry with the same key in.
-    private sealed class KeepAfterExecutionResult : IResult, INestedHttpResult
+    private sealed class KeepAfterExecutionResult : IResult, INestedHttpResult, IStatusCodeHttpResult
     {
         private readonly IDistributedCache _cache;
         private readonly string _cacheKey;
@@ -200,6 +200,9 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         }
 
         public IResult Result { get; }
+
+        public int? StatusCode
+            => StatusCodes.Status201Created;
 
         public async Task ExecuteAsync(HttpContext httpContext)
         {
