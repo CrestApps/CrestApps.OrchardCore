@@ -4,76 +4,10 @@
 
 <form asp-route="AccountDetails" method="post" class="card">
     <div class="card-body">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label asp-for="Kind" class="form-label">@T["I buy for"]</label>
-                <select asp-for="Kind" asp-items="Model.Kinds" class="form-select" data-customer-kind></select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label" for="account-email">@T["Email"]</label>
-                <input id="account-email" value="@Model.Email" class="form-control" readonly />
-                <div class="form-text">@T["Where your orders and receipts are sent."]</div>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="FirstName" class="form-label">@T["First name"]</label>
-                <input asp-for="FirstName" class="form-control" autocomplete="given-name" />
-            </div>
-            <div class="col-md-6">
-                <label asp-for="LastName" class="form-label">@T["Last name"]</label>
-                <input asp-for="LastName" class="form-control" autocomplete="family-name" />
-            </div>
-            <div class="col-md-6">
-                <label asp-for="DisplayName" class="form-label">@T["Name we call you by"]</label>
-                <input asp-for="DisplayName" class="form-control" autocomplete="nickname" />
-                <div class="form-text">@T["Optional. Your name is used when it is empty."]</div>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="Phone" class="form-label">@T["Phone"]</label>
-                <input asp-for="Phone" type="tel" class="form-control" autocomplete="tel" />
-            </div>
-            <div class="col-md-6" data-customer-business>
-                <label asp-for="CompanyName" class="form-label">@T["Company"]</label>
-                <input asp-for="CompanyName" class="form-control" autocomplete="organization" />
-                <span asp-validation-for="CompanyName" class="text-danger small"></span>
-            </div>
-            <div class="col-md-6" data-customer-business>
-                <label asp-for="TaxId" class="form-label">@T["Tax id"]</label>
-                <input asp-for="TaxId" class="form-control" />
-                <div class="form-text">@T["Such as a VAT number, shown on your invoices."]</div>
-            </div>
-            <div class="col-12">
-                <div class="form-check">
-                    <input asp-for="AcceptsMarketing" type="checkbox" class="form-check-input" />
-                    <label asp-for="AcceptsMarketing" class="form-check-label">@T["Send me news and offers"]</label>
-                    <div class="form-text">@T["Messages about your orders and payments are always sent."]</div>
-                </div>
-            </div>
-        </div>
+        <partial name="_CustomerProfileFields" model="Model" />
     </div>
     <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-2">
         <button type="submit" class="btn btn-primary px-4">@T["Save"]</button>
         <a href="@Url.Action("ChangePassword", "Account", new { area = "OrchardCore.Users" })">@T["Change your password"]</a>
     </div>
 </form>
-
-<script at="Foot">
-    // Company and tax id are for businesses.
-    (function () {
-        var kind = document.querySelector('[data-customer-kind]');
-
-        if (!kind) {
-            return;
-        }
-
-        var sync = function () {
-            document.querySelectorAll('[data-customer-business]').forEach(function (field) {
-                field.hidden = kind.value !== 'Business';
-            });
-        };
-
-        kind.addEventListener('change', sync);
-        sync();
-    })();
-</script>
