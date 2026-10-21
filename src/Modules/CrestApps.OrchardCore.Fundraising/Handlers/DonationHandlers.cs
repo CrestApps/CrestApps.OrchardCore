@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Fundraising.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -92,21 +91,18 @@ internal sealed class DonationLineHandler : ICartLineHandler
 /// </summary>
 internal sealed class DonationOrderHandler : OrderEventHandlerBase
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly DonationService _donations;
 
-    public DonationOrderHandler(IServiceProvider serviceProvider)
+    public DonationOrderHandler(DonationService donations)
     {
-        _serviceProvider = serviceProvider;
+        _donations = donations;
     }
 
-    private DonationService Donations
-        => _serviceProvider.GetRequiredService<DonationService>();
-
     public override Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
-        => Donations.RecordAsync(context.Order, cancellationToken);
+        => _donations.RecordAsync(context.Order, cancellationToken);
 
     public override Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
-        => Donations.RefundAsync(context.Order, context.Refund, cancellationToken);
+        => _donations.RefundAsync(context.Order, context.Refund, cancellationToken);
 }
 
 /// <summary>

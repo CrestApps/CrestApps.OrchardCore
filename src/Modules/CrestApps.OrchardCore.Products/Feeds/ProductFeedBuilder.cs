@@ -33,6 +33,7 @@ public sealed class ProductFeedBuilder
     private readonly IServiceProvider _serviceProvider;
     private readonly LinkGenerator _linkGenerator;
     private readonly IClock _clock;
+    private readonly IShopperCurrency _shopperCurrency;
 
     public ProductFeedBuilder(
         ISession session,
@@ -42,7 +43,8 @@ public sealed class ProductFeedBuilder
         ISiteService siteService,
         IServiceProvider serviceProvider,
         LinkGenerator linkGenerator,
-        IClock clock)
+        IClock clock,
+        IShopperCurrency shopperCurrency)
     {
         _session = session;
         _contentManager = contentManager;
@@ -52,6 +54,7 @@ public sealed class ProductFeedBuilder
         _serviceProvider = serviceProvider;
         _linkGenerator = linkGenerator;
         _clock = clock;
+        _shopperCurrency = shopperCurrency;
     }
 
     /// <summary>
@@ -65,7 +68,6 @@ public sealed class ProductFeedBuilder
         var baseUrl = site.BaseUrl?.TrimEnd('/');
         var types = await _productTypes.GetProductTypesAsync(_contentDefinitionManager);
         var terms = await LoadTermsAsync(cancellationToken);
-        var shopperCurrency = _serviceProvider.GetService<IShopperCurrency>();
         var availabilityProviders = _serviceProvider.GetServices<IProductAvailabilityProvider>();
         var media = _serviceProvider.GetService<IMediaFileStore>();
 
@@ -190,7 +192,7 @@ public sealed class ProductFeedBuilder
                         continue;
                     }
 
-                    if (!await PriceAsync(item, contentItem, product, variant, now, currency, shopperCurrency, cancellationToken))
+                    if (!await PriceAsync(item, contentItem, product, variant, now, currency, _shopperCurrency, cancellationToken))
                     {
                         problems.Add(new ProductFeedProblem(item.Id, item.Title, $"it can't be priced in {currency}", LeftOut: true));
 
@@ -237,7 +239,7 @@ public sealed class ProductFeedBuilder
 
         if (!string.Equals(item.Currency, from, StringComparison.OrdinalIgnoreCase))
         {
-            if (shopperCurrency is null || await shopperCurrency.ConvertAsync(regular, from, item.Currency, isPrice: true, cancellationToken) is not { } converted)
+            if (await shopperCurrency.ConvertAsync(regular, from, item.Currency, isPrice: true, cancellationToken) is not { } converted)
             {
                 return false;
             }

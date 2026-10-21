@@ -117,11 +117,6 @@ public sealed class OrderDisputeRecorderTests
                 ? [new CheckoutSession { SessionId = "session-1", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = "order-1" }]
                 : []);
 
-        var services = new ServiceCollection()
-            .AddSingleton<IPaymentAttemptStore>(attempts)
-            .AddSingleton(sessions.Object)
-            .BuildServiceProvider();
-
-        return new OrderDisputeRecorder(_orders, _orderService.Object, services, new TestClock(_now), new PassThroughStringLocalizer<OrderDisputeRecorder>());
+        return new OrderDisputeRecorder(_orders, _orderService.Object, new TestClock(_now), new PassThroughStringLocalizer<OrderDisputeRecorder>(), attempts, sessions.Object);
     }
 }

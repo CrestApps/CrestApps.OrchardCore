@@ -11,9 +11,13 @@ namespace CrestApps.OrchardCore.Tests.Orders;
 public sealed class OrderEmailTemplateTests
 {
     [Fact]
-    public async Task WithoutTemplates_AnEmailGoesAsBuilt()
+    public async Task AnEmail_ReachesTheTemplatesAsBuilt()
     {
-        var email = await Mock.Of<IServiceProvider>().ApplyOrderEmailTemplateAsync(OrderEmailKinds.Confirmation, new Order(), "Subject", "Text", "<p>Html</p>", cancellationToken: TestContext.Current.CancellationToken);
+        var templates = new Mock<IOrderEmailTemplates>();
+        templates.Setup(value => value.ApplyAsync(It.IsAny<OrderEmailContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OrderEmailContext context, CancellationToken _) => new OrderEmailMessage(context.Subject, context.Text, context.Html));
+
+        var email = await templates.Object.ApplyAsync(OrderEmailKinds.Confirmation, new Order(), "Subject", "Text", "<p>Html</p>", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(new OrderEmailMessage("Subject", "Text", "<p>Html</p>"), email);
     }

@@ -56,6 +56,7 @@ public sealed class ProductListingService
     private readonly Dictionary<string, ProductListingViewModel> _listings = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProductDetailsViewModel> _products = new(StringComparer.Ordinal);
     private readonly IClock _clock;
+    private readonly IShopperCurrency _shopperCurrency;
     private IReadOnlyList<ContentItem> _listingItems;
 
     // How many automatic filters start open.
@@ -81,7 +82,8 @@ public sealed class ProductListingService
         IOptions<ProductFacetStyleOptions> facetStyles,
         IEnumerable<IProductListingEntryProvider> entryProviders,
         IStringLocalizer<ProductListingService> stringLocalizer,
-        IClock clock)
+        IClock clock,
+        IShopperCurrency shopperCurrency)
     {
         _attributeCatalog = attributeCatalog;
         _searchService = searchService;
@@ -100,6 +102,7 @@ public sealed class ProductListingService
         _facetStyles = facetStyles.Value;
         _entryProviders = entryProviders;
         _clock = clock;
+        _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
 
@@ -974,8 +977,7 @@ public sealed class ProductListingService
         var settings = ProductAttributeCatalog.GetProductSettings(await _contentDefinitionManager.GetTypeDefinitionAsync(contentType));
 
         // Shown in the shopper's currency. Sorting and the price filter stay in the product's own.
-        var shopperCurrency = _httpContextAccessor.HttpContext?.RequestServices.GetService<IShopperCurrency>();
-        var target = shopperCurrency is null ? null : await shopperCurrency.GetCurrencyAsync();
+        var target = await _shopperCurrency.GetCurrencyAsync();
         var price = document.Price ?? 0m;
         var currency = document.Currency;
         var compareAtPrice = document.CompareAtPrice ?? 0m;
@@ -995,8 +997,8 @@ public sealed class ProductListingService
             }
             else if (document.BillingInterval is null)
             {
-                (price, currency) = await shopperCurrency.ToShopperAsync(price, document.Currency);
-                compareAtPrice = (await shopperCurrency.ToShopperAsync(compareAtPrice, document.Currency)).Amount;
+                (price, currency) = await _shopperCurrency.ToShopperAsync(price, document.Currency);
+                compareAtPrice = (await _shopperCurrency.ToShopperAsync(compareAtPrice, document.Currency)).Amount;
             }
         }
 

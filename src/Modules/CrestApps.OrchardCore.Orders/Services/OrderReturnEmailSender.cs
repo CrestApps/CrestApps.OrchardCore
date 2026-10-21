@@ -32,6 +32,7 @@ public sealed class OrderReturnEmailSender
     private readonly ISiteService _siteService;
     private readonly HtmlEncoder _encoder;
     private readonly ILogger _logger;
+    private readonly IOrderEmailTemplates _emailTemplates;
 
     internal readonly IStringLocalizer S;
 
@@ -42,7 +43,8 @@ public sealed class OrderReturnEmailSender
         ISiteService siteService,
         HtmlEncoder encoder,
         ILogger<OrderReturnEmailSender> logger,
-        IStringLocalizer<OrderReturnEmailSender> stringLocalizer)
+        IStringLocalizer<OrderReturnEmailSender> stringLocalizer,
+        IOrderEmailTemplates emailTemplates)
     {
         _serviceProvider = serviceProvider;
         _orders = orders;
@@ -50,6 +52,7 @@ public sealed class OrderReturnEmailSender
         _siteService = siteService;
         _encoder = encoder;
         _logger = logger;
+        _emailTemplates = emailTemplates;
         S = stringLocalizer;
     }
 
@@ -67,7 +70,7 @@ public sealed class OrderReturnEmailSender
 
         var orderUrl = order is null ? null : await _links.CreateUrlAsync(order);
         var built = Build(orderReturn, kind, (await _siteService.GetSettingsAsync<ReturnSettings>()).Instructions, orderUrl);
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Return, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        var email = await _emailTemplates.ApplyAsync(OrderEmailKinds.Return, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
         {
             ["ReturnNumber"] = orderReturn.Number,
             ["ReturnStatus"] = kind.ToString(),

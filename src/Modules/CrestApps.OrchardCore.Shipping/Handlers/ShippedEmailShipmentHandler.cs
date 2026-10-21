@@ -20,6 +20,7 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IOrderEmailTemplates _emailTemplates;
 
     public ShippedEmailShipmentHandler(
         ISiteService siteService,
@@ -27,7 +28,8 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
         IOrderLinkService orderLinks,
         IServiceProvider serviceProvider,
         IClock clock,
-        ILogger<ShippedEmailShipmentHandler> logger)
+        ILogger<ShippedEmailShipmentHandler> logger,
+        IOrderEmailTemplates emailTemplates)
     {
         _siteService = siteService;
         _emailBuilder = emailBuilder;
@@ -35,6 +37,7 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _emailTemplates = emailTemplates;
     }
 
     public override async Task ShippedAsync(ShipmentContext context)
@@ -55,7 +58,7 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
         // A guest follows the order by its link; a signed-in buyer finds it under My Orders.
         var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
         var built = _emailBuilder.Build(order, shipment, orderUrl);
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Shipped, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        var email = await _emailTemplates.ApplyAsync(OrderEmailKinds.Shipped, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
         {
             ["TrackingUrl"] = shipment.TrackingUrl,
             ["Carrier"] = shipment.Carrier,

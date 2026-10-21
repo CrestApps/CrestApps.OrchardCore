@@ -19,6 +19,7 @@ public sealed class OrderConfirmationSender
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IOrderEmailTemplates _emailTemplates;
 
     public OrderConfirmationSender(
         IOrderStore orderStore,
@@ -26,7 +27,8 @@ public sealed class OrderConfirmationSender
         IOrderLinkService orderLinks,
         IServiceProvider serviceProvider,
         IClock clock,
-        ILogger<OrderConfirmationSender> logger)
+        ILogger<OrderConfirmationSender> logger,
+        IOrderEmailTemplates emailTemplates)
     {
         _orderStore = orderStore;
         _emailBuilder = emailBuilder;
@@ -34,6 +36,7 @@ public sealed class OrderConfirmationSender
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _emailTemplates = emailTemplates;
     }
 
     /// <summary>
@@ -60,7 +63,7 @@ public sealed class OrderConfirmationSender
         // A guest opens the order from the email; a signed-in customer finds it under My Orders.
         var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
         var built = await _emailBuilder.BuildAsync(order, orderUrl);
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Confirmation, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
+        var email = await _emailTemplates.ApplyAsync(OrderEmailKinds.Confirmation, order, built.Subject, built.Text, built.Html, new Dictionary<string, string>
         {
             ["OrderUrl"] = orderUrl,
         }, cancellationToken);

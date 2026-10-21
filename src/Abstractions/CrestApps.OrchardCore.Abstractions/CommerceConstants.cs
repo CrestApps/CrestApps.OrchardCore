@@ -15,6 +15,12 @@ public static class CommerceConstants
         /// by dependency only, so any module that contributes to the Commerce menu should depend on it.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Commerce";
+
+        /// <summary>
+        /// The Commerce Webhooks feature. Modules register what tells webhooks about their records behind
+        /// <c>[RequireFeatures]</c> on it.
+        /// </summary>
+        public const string Webhooks = "CrestApps.OrchardCore.Commerce.Webhooks";
     }
 
     /// <summary>

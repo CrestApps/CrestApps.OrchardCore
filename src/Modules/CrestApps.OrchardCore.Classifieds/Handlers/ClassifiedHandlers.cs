@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 
@@ -84,24 +83,25 @@ internal sealed class ClassifiedUpgradeLineHandler : ICartLineHandler
 /// </summary>
 internal sealed class ClassifiedUpgradeOrderHandler : OrderEventHandlerBase
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IContentManager _contentManager;
+    private readonly ClassifiedService _classifieds;
 
-    public ClassifiedUpgradeOrderHandler(IServiceProvider serviceProvider)
+    public ClassifiedUpgradeOrderHandler(
+        IContentManager contentManager,
+        ClassifiedService classifieds)
     {
-        _serviceProvider = serviceProvider;
+        _contentManager = contentManager;
+        _classifieds = classifieds;
     }
 
     public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
     {
-        var contentManager = _serviceProvider.GetRequiredService<IContentManager>();
-        var classifieds = _serviceProvider.GetRequiredService<ClassifiedService>();
-
         foreach (var line in context.Order.Lines ?? [])
         {
             if (line.Details?.GetValueOrDefault(ClassifiedsConstants.ListingDetail) is { Length: > 0 } listingId &&
-                (await contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest))?.TryGet<ClassifiedUpgradePart>(out var upgrade) == true)
+                (await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest))?.TryGet<ClassifiedUpgradePart>(out var upgrade) == true)
             {
-                await classifieds.UpgradeAsync(listingId, upgrade, line.Quantity);
+                await _classifieds.UpgradeAsync(listingId, upgrade, line.Quantity);
             }
         }
     }

@@ -95,13 +95,6 @@ public sealed class Startup : StartupBase
         // A canceled order gives back its coupon uses, and coupons can be limited to some products and categories.
         services.AddScoped<IOrderEventHandler, OrderCouponEventHandler>();
 
-        // Webhooks hear about orders when the Commerce Webhooks feature is on.
-        services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
-
         // What the store does to an order from its page, and the refunds it records wherever they were started.
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
@@ -252,4 +245,20 @@ public sealed class GiftCardsApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapGiftCardCheckoutApi();
+}
+
+/// <summary>
+/// Tells webhooks about orders when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
+    }
 }

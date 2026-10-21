@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Tests.Customers;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -195,7 +196,8 @@ public sealed class CheckoutRecoveryServiceTests
             services,
             Clock(),
             NullLogger<CheckoutRecoveryService>.Instance,
-            new PassThroughLocalizer<CheckoutRecoveryService>());
+            new PassThroughLocalizer<CheckoutRecoveryService>(),
+            new AsBuiltOrderEmailTemplates());
     }
 
     private static Mock<ISiteService> SiteService(bool enabled, string baseUrl)

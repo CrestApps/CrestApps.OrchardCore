@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Marketing.Models;
 using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Fluid.Values;
 using Microsoft.AspNetCore.DataProtection;
@@ -29,7 +31,7 @@ public sealed class MarketingTests
     [Fact]
     public async Task AnOrder_CountsOnce_AndARefundComesOffOnce()
     {
-        var service = new CustomerPurchasesService(Mock.Of<ICustomerPurchasesStore>(), SiteService(), Mock.Of<IServiceProvider>(), Clock());
+        var service = new CustomerPurchasesService(Mock.Of<ICustomerPurchasesStore>(), SiteService(), Clock(), Mock.Of<IShopperCurrency>(), Mock.Of<IOrderStore>(), Mock.Of<global::YesSql.ISession>());
         var purchases = new CustomerPurchases { ItemId = "customer-1" };
         var order = new Order
         {

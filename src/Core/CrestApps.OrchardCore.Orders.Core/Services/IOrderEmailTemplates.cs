@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Orders.Core.Services;
 
@@ -71,8 +70,8 @@ public static class OrderEmailTemplateExtensions
     /// <summary>
     /// Returns an email as the store's template of it has it, or as built when there's none.
     /// </summary>
-    public static async Task<OrderEmailMessage> ApplyOrderEmailTemplateAsync(
-        this IServiceProvider services,
+    public static Task<OrderEmailMessage> ApplyAsync(
+        this IOrderEmailTemplates templates,
         string kind,
         Order order,
         string subject,
@@ -81,14 +80,9 @@ public static class OrderEmailTemplateExtensions
         IReadOnlyDictionary<string, string> values = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(templates);
 
-        if (services.GetService<IOrderEmailTemplates>() is not { } templates)
-        {
-            return new OrderEmailMessage(subject, text, html);
-        }
-
-        return await templates.ApplyAsync(new OrderEmailContext
+        return templates.ApplyAsync(new OrderEmailContext
         {
             Kind = kind,
             Order = order,

@@ -52,14 +52,10 @@ public sealed class ReviewRequestTests
             .Callback<MailMessage, string, CancellationToken>((message, _, _) => sent.Add(message))
             .ReturnsAsync(Result.Success());
 
-        var services = new Mock<IServiceProvider>();
-        services.Setup(value => value.GetService(typeof(IEmailService))).Returns(email.Object);
-        services.Setup(value => value.GetService(typeof(ICustomerStore))).Returns(customers.Object);
-
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
 
-        var service = new ReviewRequestService(orders.Object, SiteService(), services.Object, clock.Object, NullLogger<ReviewRequestService>.Instance, new PassThroughStringLocalizer<ReviewRequestService>());
+        var service = new ReviewRequestService(orders.Object, customers.Object, email.Object, SiteService(), clock.Object, NullLogger<ReviewRequestService>.Instance, new PassThroughStringLocalizer<ReviewRequestService>());
 
         Assert.Equal(1, await service.SendDueAsync(TestContext.Current.CancellationToken));
 

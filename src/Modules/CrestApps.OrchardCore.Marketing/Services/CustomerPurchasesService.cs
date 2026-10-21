@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Marketing.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql;
@@ -20,15 +19,25 @@ public sealed class CustomerPurchasesService
 
     private readonly ICustomerPurchasesStore _store;
     private readonly ISiteService _siteService;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly IShopperCurrency _shopperCurrency;
+    private readonly IOrderStore _orderStore;
+    private readonly ISession _session;
 
-    public CustomerPurchasesService(ICustomerPurchasesStore store, ISiteService siteService, IServiceProvider serviceProvider, IClock clock)
+    public CustomerPurchasesService(
+        ICustomerPurchasesStore store,
+        ISiteService siteService,
+        IClock clock,
+        IShopperCurrency shopperCurrency,
+        IOrderStore orderStore,
+        ISession session)
     {
         _store = store;
         _siteService = siteService;
-        _serviceProvider = serviceProvider;
         _clock = clock;
+        _shopperCurrency = shopperCurrency;
+        _orderStore = orderStore;
+        _session = session;
     }
 
     /// <summary>
@@ -129,8 +138,7 @@ public sealed class CustomerPurchasesService
     /// </summary>
     public async Task<bool> BackfillAsync(CancellationToken cancellationToken = default)
     {
-        var session = _serviceProvider.GetRequiredService<ISession>();
-        var state = await session.Query<PurchasesBackfill>(collection: MarketingConstants.CollectionName).FirstOrDefaultAsync(cancellationToken)
+        var state = await _session.Query<PurchasesBackfill>(collection: MarketingConstants.CollectionName).FirstOrDefaultAsync(cancellationToken)
             ?? new PurchasesBackfill { ItemId = PurchasesBackfill.Id };
 
         if (state.CompletedUtc is not null)
@@ -140,7 +148,7 @@ public sealed class CustomerPurchasesService
 
         // Newest first: orders paid since only push older ones further down, so none is skipped, and counting is
         // idempotent, so one read twice isn't counted twice.
-        var (_, orders) = await _serviceProvider.GetRequiredService<IOrderStore>().PageAsync(new OrderQuery
+        var (_, orders) = await _orderStore.PageAsync(new OrderQuery
         {
             Statuses = [OrderStatus.Paid],
         }, state.Offset, BackfillBatchSize, cancellationToken);
@@ -157,7 +165,7 @@ public sealed class CustomerPurchasesService
             state.CompletedUtc = _clock.UtcNow;
         }
 
-        await session.SaveAsync(state, checkConcurrency: false, collection: MarketingConstants.CollectionName, cancellationToken: cancellationToken);
+        await _session.SaveAsync(state, checkConcurrency: false, collection: MarketingConstants.CollectionName, cancellationToken: cancellationToken);
 
         return state.CompletedUtc is null;
     }
@@ -169,9 +177,8 @@ public sealed class CustomerPurchasesService
             return amount;
         }
 
-        return _serviceProvider.GetService<IShopperCurrency>() is { } shopperCurrency &&
-            await shopperCurrency.ConvertAsync(amount, currency, storeCurrency, isPrice: false, cancellationToken) is { } converted
-                ? converted
-                : amount;
+        return await _shopperCurrency.ConvertAsync(amount, currency, storeCurrency, isPrice: false, cancellationToken) is { } converted
+            ? converted
+            : amount;
     }
 }

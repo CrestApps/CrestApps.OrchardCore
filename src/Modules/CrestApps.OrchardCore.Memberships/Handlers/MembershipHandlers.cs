@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.Users;
@@ -19,46 +18,50 @@ namespace CrestApps.OrchardCore.Memberships.Handlers;
 /// </summary>
 internal sealed class MembershipOrderEventHandler : OrderEventHandlerBase
 {
-    // Resolved when an order changes, so the order service this handler is part of isn't needed to build it.
-    private readonly IServiceProvider _serviceProvider;
+    private readonly MembershipService _memberships;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly SignInManager<IUser> _signInManager;
+    private readonly IUserService _userService;
 
     internal readonly IStringLocalizer S;
 
-    public MembershipOrderEventHandler(IServiceProvider serviceProvider, IStringLocalizer<MembershipOrderEventHandler> stringLocalizer)
+    public MembershipOrderEventHandler(
+        MembershipService memberships,
+        IHttpContextAccessor httpContextAccessor,
+        SignInManager<IUser> signInManager,
+        IUserService userService,
+        IStringLocalizer<MembershipOrderEventHandler> stringLocalizer)
     {
-        _serviceProvider = serviceProvider;
+        _memberships = memberships;
+        _httpContextAccessor = httpContextAccessor;
+        _signInManager = signInManager;
+        _userService = userService;
         S = stringLocalizer;
     }
 
-    private MembershipService Memberships
-        => _serviceProvider.GetRequiredService<MembershipService>();
-
     public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
     {
-        if (await Memberships.GrantAsync(context.Order, cancellationToken) == 0)
+        if (await _memberships.GrantAsync(context.Order, cancellationToken) == 0)
         {
             return;
         }
 
         // Roles are read from the sign-in, so a buyer paying now is signed in again to open what they bought at once.
         // Paid any other way, such as by a payment provider's webhook, the sign-in catches up when it's next checked.
-        var httpContext = _serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext;
-
-        if (httpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId &&
+        if (_httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId &&
             userId == context.Order.UserId &&
-            _serviceProvider.GetService<SignInManager<IUser>>() is { } signInManager &&
-            await _serviceProvider.GetRequiredService<IUserService>().GetUserByUniqueIdAsync(userId) is { } user)
+            await _userService.GetUserByUniqueIdAsync(userId) is { } user)
         {
-            await signInManager.RefreshSignInAsync(user);
+            await _signInManager.RefreshSignInAsync(user);
         }
     }
 
     public override Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
-        => Memberships.RevokeOrderAsync(context.Order, S["Its order was canceled."], cancellationToken);
+        => _memberships.RevokeOrderAsync(context.Order, S["Its order was canceled."], cancellationToken);
 
     public override Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
         => context.Order.RefundStatus == OrderRefundStatus.Refunded
-            ? Memberships.RevokeOrderAsync(context.Order, S["Its order was refunded."], cancellationToken)
+            ? _memberships.RevokeOrderAsync(context.Order, S["Its order was refunded."], cancellationToken)
             : Task.CompletedTask;
 }
 

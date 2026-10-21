@@ -42,6 +42,7 @@ public sealed class CheckoutRecoveryService
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IOrderEmailTemplates _emailTemplates;
 
     internal readonly IStringLocalizer S;
 
@@ -53,7 +54,8 @@ public sealed class CheckoutRecoveryService
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<CheckoutRecoveryService> logger,
-        IStringLocalizer<CheckoutRecoveryService> stringLocalizer)
+        IStringLocalizer<CheckoutRecoveryService> stringLocalizer,
+        IOrderEmailTemplates emailTemplates)
     {
         _orderStore = orderStore;
         _sessionStore = sessionStore;
@@ -62,6 +64,7 @@ public sealed class CheckoutRecoveryService
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _emailTemplates = emailTemplates;
         S = stringLocalizer;
     }
 
@@ -111,7 +114,7 @@ public sealed class CheckoutRecoveryService
             using var language = OrderCulture.Use(order.Culture);
 
             var (builtSubject, builtText, builtHtml) = Build(order, name, url, site.SiteName);
-            var message = await _serviceProvider.ApplyOrderEmailTemplateAsync(OrderEmailKinds.Recovery, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
+            var message = await _emailTemplates.ApplyAsync(OrderEmailKinds.Recovery, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
             {
                 ["RecoveryUrl"] = url,
             }, cancellationToken);

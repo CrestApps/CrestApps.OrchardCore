@@ -74,6 +74,7 @@ public sealed class DonationService
     private readonly HtmlEncoder _encoder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
 
@@ -85,7 +86,8 @@ public sealed class DonationService
         HtmlEncoder encoder,
         IClock clock,
         ILogger<DonationService> logger,
-        IStringLocalizer<DonationService> stringLocalizer)
+        IStringLocalizer<DonationService> stringLocalizer,
+        IShopperCurrency shopperCurrency)
     {
         _donations = donations;
         _contentManager = contentManager;
@@ -94,6 +96,7 @@ public sealed class DonationService
         _encoder = encoder;
         _clock = clock;
         _logger = logger;
+        _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
 
@@ -200,12 +203,12 @@ public sealed class DonationService
 
     private async Task<decimal> ConvertAsync(decimal amount, string from, string to, CancellationToken cancellationToken)
     {
-        if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase) || _serviceProvider.GetService<IShopperCurrency>() is not { } currencies)
+        if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
         {
             return amount;
         }
 
-        return await currencies.ConvertAsync(amount, from, to, isPrice: false, cancellationToken) ?? amount;
+        return await _shopperCurrency.ConvertAsync(amount, from, to, isPrice: false, cancellationToken) ?? amount;
     }
 
     private async Task SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)

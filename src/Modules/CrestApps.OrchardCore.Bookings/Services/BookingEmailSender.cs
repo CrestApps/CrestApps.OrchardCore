@@ -26,6 +26,7 @@ public sealed class BookingEmailSender
     private readonly ISiteService _siteService;
     private readonly HtmlEncoder _encoder;
     private readonly ILogger _logger;
+    private readonly IOrderEmailTemplates _emailTemplates;
 
     internal readonly IStringLocalizer S;
 
@@ -34,12 +35,14 @@ public sealed class BookingEmailSender
         ISiteService siteService,
         HtmlEncoder encoder,
         ILogger<BookingEmailSender> logger,
-        IStringLocalizer<BookingEmailSender> stringLocalizer)
+        IStringLocalizer<BookingEmailSender> stringLocalizer,
+        IOrderEmailTemplates emailTemplates)
     {
         _serviceProvider = serviceProvider;
         _siteService = siteService;
         _encoder = encoder;
         _logger = logger;
+        _emailTemplates = emailTemplates;
         S = stringLocalizer;
     }
 
@@ -123,7 +126,7 @@ public sealed class BookingEmailSender
         html.Append("</ul><p>").Append(_encoder.Encode(site.SiteName)).Append("</p>");
         text.AppendLine().AppendLine(site.SiteName);
 
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(EmailKind, order, subject, text.ToString(), html.ToString(), cancellationToken: cancellationToken);
+        var email = await _emailTemplates.ApplyAsync(EmailKind, order, subject, text.ToString(), html.ToString(), cancellationToken: cancellationToken);
 
         var result = await emailService.SendAsync(new MailMessage
         {

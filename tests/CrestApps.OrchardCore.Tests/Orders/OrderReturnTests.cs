@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -68,7 +69,8 @@ public sealed class OrderReturnTests
             Mock.Of<ISiteService>(),
             HtmlEncoder.Default,
             NullLogger<OrderReturnEmailSender>.Instance,
-            new PassThroughStringLocalizer<OrderReturnEmailSender>());
+            new PassThroughStringLocalizer<OrderReturnEmailSender>(),
+            new AsBuiltOrderEmailTemplates());
 
         var orderReturn = Return(OrderReturnStatus.Approved, ("mug", 2));
         orderReturn.StoreMessage = "Use the prepaid label.";
@@ -86,7 +88,7 @@ public sealed class OrderReturnTests
     [Fact]
     public void ADraftOrdersInvoice_ListsItsLines_TheNote_AndTheLinkToPay()
     {
-        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, NullLogger<DraftOrderService>.Instance, new PassThroughStringLocalizer<DraftOrderService>());
+        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, NullLogger<DraftOrderService>.Instance, new PassThroughStringLocalizer<DraftOrderService>(), new AsBuiltOrderEmailTemplates());
         var order = new Order
         {
             OrderNumber = "261019-DRAFT1",

@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Marketplace.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Marketplace.Handlers;
 
@@ -9,20 +8,16 @@ namespace CrestApps.OrchardCore.Marketplace.Handlers;
 /// </summary>
 internal sealed class MarketplaceOrderEventHandler : OrderEventHandlerBase
 {
-    // Resolved when an order changes, so the order service this handler is part of isn't needed to build it.
-    private readonly IServiceProvider _serviceProvider;
+    private readonly MarketplaceService _marketplace;
 
-    public MarketplaceOrderEventHandler(IServiceProvider serviceProvider)
+    public MarketplaceOrderEventHandler(MarketplaceService marketplace)
     {
-        _serviceProvider = serviceProvider;
+        _marketplace = marketplace;
     }
 
-    private MarketplaceService Marketplace
-        => _serviceProvider.GetRequiredService<MarketplaceService>();
-
     public override Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
-        => Marketplace.RecordSaleAsync(context.Order, cancellationToken);
+        => _marketplace.RecordSaleAsync(context.Order, cancellationToken);
 
     public override Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
-        => Marketplace.RecordRefundAsync(context.Order, context.Refund, cancellationToken);
+        => _marketplace.RecordRefundAsync(context.Order, context.Refund, cancellationToken);
 }

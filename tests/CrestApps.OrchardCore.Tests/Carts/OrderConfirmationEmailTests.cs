@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Handlers;
 using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -70,7 +71,7 @@ public sealed class OrderConfirmationEmailTests
         var links = new Mock<IOrderLinkService>();
         links.Setup(l => l.CreateUrlAsync(It.IsAny<Order>())).ReturnsAsync("https://store.test/orders/view/token");
 
-        var sender = new OrderConfirmationSender(_orders.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationSender>.Instance);
+        var sender = new OrderConfirmationSender(_orders.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationSender>.Instance, new AsBuiltOrderEmailTemplates());
 
         return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, sender);
     }

@@ -27,6 +27,8 @@ public sealed class ClassifiedService
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IUserService _userService;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
@@ -37,7 +39,9 @@ public sealed class ClassifiedService
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<ClassifiedService> logger,
-        IStringLocalizer<ClassifiedService> stringLocalizer)
+        IStringLocalizer<ClassifiedService> stringLocalizer,
+        IUserService userService,
+        ISiteService siteService)
     {
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
@@ -45,6 +49,8 @@ public sealed class ClassifiedService
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
+        _userService = userService;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
@@ -330,12 +336,12 @@ public sealed class ClassifiedService
     {
         if (string.IsNullOrEmpty(item.Owner) ||
             _serviceProvider.GetService<IEmailService>() is not { } email ||
-            await _serviceProvider.GetRequiredService<IUserService>().GetUserByUniqueIdAsync(item.Owner) is not User { Email.Length: > 0 } user)
+            await _userService.GetUserByUniqueIdAsync(item.Owner) is not User { Email.Length: > 0 } user)
         {
             return;
         }
 
-        var site = await _serviceProvider.GetRequiredService<ISiteService>().GetSiteSettingsAsync();
+        var site = await _siteService.GetSiteSettingsAsync();
         var result = await email.SendAsync(new MailMessage
         {
             To = user.Email,

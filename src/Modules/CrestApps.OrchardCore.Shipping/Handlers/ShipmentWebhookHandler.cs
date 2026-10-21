@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Shipping.Api;
 using CrestApps.OrchardCore.Shipping.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Shipping.Handlers;
 
@@ -10,11 +9,11 @@ namespace CrestApps.OrchardCore.Shipping.Handlers;
 /// </summary>
 internal sealed class ShipmentWebhookHandler : ShipmentEventHandlerBase
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceWebhookPublisher _publisher;
 
-    public ShipmentWebhookHandler(IServiceProvider serviceProvider)
+    public ShipmentWebhookHandler(ICommerceWebhookPublisher publisher)
     {
-        _serviceProvider = serviceProvider;
+        _publisher = publisher;
     }
 
     public override Task ShippedAsync(ShipmentContext context)
@@ -24,12 +23,10 @@ internal sealed class ShipmentWebhookHandler : ShipmentEventHandlerBase
         => PublishAsync(CommerceWebhookEvents.ShipmentDelivered, context);
 
     private Task PublishAsync(string eventName, ShipmentContext context)
-        => _serviceProvider.GetService<ICommerceWebhookPublisher>() is { } publisher
-            ? publisher.PublishAsync(eventName, new
-            {
-                shipment = ShipmentApiEndpoints.ToApi(context.Shipment),
-                orderNumber = context.Order.OrderNumber,
-                customerEmail = context.Order.CustomerEmail,
-            })
-            : Task.CompletedTask;
+        => _publisher.PublishAsync(eventName, new
+        {
+            shipment = ShipmentApiEndpoints.ToApi(context.Shipment),
+            orderNumber = context.Order.OrderNumber,
+            customerEmail = context.Order.CustomerEmail,
+        });
 }

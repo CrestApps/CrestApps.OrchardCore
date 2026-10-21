@@ -158,7 +158,8 @@ public sealed class LoyaltyStartup : StartupBase
         services.AddScoped<LoyaltyService>();
         services.AddScoped<LoyaltyTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyTenderProvider>());
-        services.AddScoped<Orders.Core.Services.IOrderEventHandler, LoyaltyOrderEventHandler>();
+        services.AddScoped<LoyaltyOrderEventHandler>();
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyOrderEventHandler>());
         services.AddDisplayDriver<CheckoutFlow, LoyaltyCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerLoyaltyDisplayDriver>();
         services.AddSiteDisplayDriver<LoyaltySettingsDisplayDriver>();
@@ -181,7 +182,8 @@ public sealed class ReferralsStartup : StartupBase
         services.AddScoped<IReferralStore, ReferralStore>();
         services.AddScoped<ReferralService>();
         services.AddScoped<ICheckoutHandler, ReferralCheckoutHandler>();
-        services.AddScoped<Orders.Core.Services.IOrderEventHandler, ReferralOrderEventHandler>();
+        services.AddScoped<ReferralOrderEventHandler>();
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler>(serviceProvider => serviceProvider.GetRequiredService<ReferralOrderEventHandler>());
         services.AddSiteDisplayDriver<ReferralSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<ReferralAccountMenu>();

@@ -35,6 +35,7 @@ public sealed class DraftOrderService
     private readonly HtmlEncoder _encoder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IOrderEmailTemplates _emailTemplates;
 
     internal readonly IStringLocalizer S;
 
@@ -48,7 +49,8 @@ public sealed class DraftOrderService
         HtmlEncoder encoder,
         IClock clock,
         ILogger<DraftOrderService> logger,
-        IStringLocalizer<DraftOrderService> stringLocalizer)
+        IStringLocalizer<DraftOrderService> stringLocalizer,
+        IOrderEmailTemplates emailTemplates)
     {
         _cartService = cartService;
         _orderService = orderService;
@@ -59,6 +61,7 @@ public sealed class DraftOrderService
         _encoder = encoder;
         _clock = clock;
         _logger = logger;
+        _emailTemplates = emailTemplates;
         S = stringLocalizer;
     }
 
@@ -221,7 +224,7 @@ public sealed class DraftOrderService
         }
 
         var (builtSubject, builtText, builtHtml) = BuildInvoiceEmail(order, viewUrl + "/pay");
-        var email = await _serviceProvider.ApplyOrderEmailTemplateAsync(order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
+        var email = await _emailTemplates.ApplyAsync(order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote, order, builtSubject, builtText, builtHtml, new Dictionary<string, string>
         {
             ["PayUrl"] = viewUrl + "/pay",
         }, cancellationToken);

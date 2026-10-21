@@ -26,8 +26,9 @@ public sealed class ReviewRequestService
     private const int WindowDays = 60;
 
     private readonly IOrderStore _orders;
+    private readonly ICustomerStore _customers;
+    private readonly IEmailService _emailService;
     private readonly ISiteService _siteService;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -35,15 +36,17 @@ public sealed class ReviewRequestService
 
     public ReviewRequestService(
         IOrderStore orders,
+        ICustomerStore customers,
+        IEmailService emailService,
         ISiteService siteService,
-        IServiceProvider serviceProvider,
         IClock clock,
         ILogger<ReviewRequestService> logger,
         IStringLocalizer<ReviewRequestService> stringLocalizer)
     {
         _orders = orders;
+        _customers = customers;
+        _emailService = emailService;
         _siteService = siteService;
-        _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -57,9 +60,7 @@ public sealed class ReviewRequestService
         var settings = await _siteService.GetSettingsAsync<ReviewSettings>();
         var site = await _siteService.GetSiteSettingsAsync();
 
-        if (!settings.SendReviewRequests || string.IsNullOrWhiteSpace(site.BaseUrl) ||
-            _serviceProvider.GetService<IEmailService>() is not { } emailService ||
-            _serviceProvider.GetService<ICustomerStore>() is not { } customers)
+        if (!settings.SendReviewRequests || string.IsNullOrWhiteSpace(site.BaseUrl))
         {
             return 0;
         }
@@ -93,7 +94,7 @@ public sealed class ReviewRequestService
             // Asked once either way: a buyer who doesn't accept marketing isn't asked later.
             order.ReviewRequestSentUtc = now;
 
-            var customer = string.IsNullOrEmpty(order.CustomerId) ? null : await customers.FindByIdAsync(order.CustomerId, cancellationToken);
+            var customer = string.IsNullOrEmpty(order.CustomerId) ? null : await _customers.FindByIdAsync(order.CustomerId, cancellationToken);
 
             if (customer is { AcceptsMarketing: true } && !string.IsNullOrWhiteSpace(order.CustomerEmail) && order.Lines.Any(line => !string.IsNullOrEmpty(line.ContentItemId)))
             {
@@ -103,7 +104,7 @@ public sealed class ReviewRequestService
 
                 try
                 {
-                    var result = await emailService.SendAsync(new MailMessage { To = order.CustomerEmail, Subject = subject, TextBody = text, HtmlBody = html }, cancellationToken: cancellationToken);
+                    var result = await _emailService.SendAsync(new MailMessage { To = order.CustomerEmail, Subject = subject, TextBody = text, HtmlBody = html }, cancellationToken: cancellationToken);
 
                     if (result.Succeeded)
                     {

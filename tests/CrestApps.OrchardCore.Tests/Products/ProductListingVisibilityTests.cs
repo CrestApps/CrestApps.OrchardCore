@@ -68,5 +68,5 @@ public sealed class ProductListingVisibilityTests
     }
 
     private static ProductListingService CreateService()
-        => new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, Options.Create(new ProductFacetStyleOptions()), [], null, null);
+        => new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, Options.Create(new ProductFacetStyleOptions()), [], null, null, null);
 }

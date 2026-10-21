@@ -53,6 +53,8 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly IOrderStore _orderStore;
+    private readonly ICheckoutSessionStore _sessionStore;
 
     internal readonly IStringLocalizer S;
 
@@ -63,13 +65,17 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         ISiteService siteService,
         IServiceProvider serviceProvider,
         IClock clock,
-        IStringLocalizer<ReferralOrderEventHandler> stringLocalizer)
+        IStringLocalizer<ReferralOrderEventHandler> stringLocalizer,
+        IOrderStore orderStore,
+        ICheckoutSessionStore sessionStore)
     {
         _store = store;
         _customerStore = customerStore;
         _siteService = siteService;
         _serviceProvider = serviceProvider;
         _clock = clock;
+        _orderStore = orderStore;
+        _sessionStore = sessionStore;
         S = stringLocalizer;
     }
 
@@ -79,18 +85,14 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
 
         // The referrer is rewarded once the order is saved, in a scope of their own: a reward changes a balance under
         // its own lock and commits, which inside a checkout's completion would commit the checkout halfway.
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
-            .GetServices<IOrderEventHandler>()
-            .OfType<ReferralOrderEventHandler>()
-            .First()
-            .RewardReferrerAsync(orderId));
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ReferralOrderEventHandler>().RewardReferrerAsync(orderId));
 
         return Task.CompletedTask;
     }
 
     internal async Task RewardReferrerAsync(string orderId, CancellationToken cancellationToken = default)
     {
-        if (await _serviceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
+        if (await _orderStore.FindByIdAsync(orderId, cancellationToken) is not { Status: OrderStatus.Paid } order)
         {
             return;
         }
@@ -98,7 +100,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         var friendEmail = order.CustomerEmail?.Trim().ToLowerInvariant();
 
         if (string.IsNullOrEmpty(friendEmail) || string.IsNullOrEmpty(order.CheckoutSessionId) ||
-            await _serviceProvider.GetRequiredService<ICheckoutSessionStore>().GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
+            await _sessionStore.GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
             !session.TryGet<CheckoutReferral>(out var referral) ||
             await _store.FindByCodeAsync(referral.Code, cancellationToken) is not { } profile ||
             await _customerStore.FindByIdAsync(profile.CustomerId, cancellationToken) is not { } referrer)
@@ -154,7 +156,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
         var order = context.Order;
 
         if (string.IsNullOrEmpty(order.CheckoutSessionId) ||
-            await _serviceProvider.GetRequiredService<ICheckoutSessionStore>().GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
+            await _sessionStore.GetAsync(order.CheckoutSessionId, cancellationToken) is not { } session ||
             !session.TryGet<CheckoutReferral>(out var referral) ||
             await _store.FindByCodeAsync(referral.Code, cancellationToken) is not { } profile ||
             profile.Referrals.FirstOrDefault(record => record.OrderId == order.ItemId) is not { } record ||
@@ -214,8 +216,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
 
     private async Task<bool> HasBoughtBeforeAsync(Order order, string email, CancellationToken cancellationToken)
     {
-        var orders = _serviceProvider.GetRequiredService<IOrderStore>();
-        var (count, _) = await orders.PageAsync(new OrderQuery
+        var (count, _) = await _orderStore.PageAsync(new OrderQuery
         {
             UserId = string.IsNullOrEmpty(order.UserId) ? null : order.UserId,
             CustomerEmail = string.IsNullOrEmpty(order.UserId) ? email : null,

@@ -79,9 +79,6 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Order, OrderShipmentsDisplayDriver>();
         services.AddScoped<ShipmentEmailBuilder>();
         services.AddScoped<IShipmentEventHandler, ShippedEmailShipmentHandler>();
-        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
@@ -159,5 +156,19 @@ public sealed class ApiStartup : StartupBase
     {
         routes.MapShippingCheckoutApi();
         routes.MapShipmentApi();
+    }
+}
+
+/// <summary>
+/// Tells webhooks about shipments when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
     }
 }

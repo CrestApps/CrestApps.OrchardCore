@@ -5,9 +5,11 @@ using CrestApps.OrchardCore.Companies.Models;
 using CrestApps.OrchardCore.Companies.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Moq;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -178,7 +180,10 @@ public sealed class CompaniesTests
             Mock.Of<IServiceProvider>(),
             clock.Object,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<CompanyApprovalService>.Instance,
-            new PassThroughStringLocalizer<CompanyApprovalService>());
+            new PassThroughStringLocalizer<CompanyApprovalService>(),
+            Mock.Of<IShopperCurrency>(),
+            Mock.Of<IHttpContextAccessor>(),
+            Mock.Of<LinkGenerator>());
     }
 
     private static ISiteService SiteService()

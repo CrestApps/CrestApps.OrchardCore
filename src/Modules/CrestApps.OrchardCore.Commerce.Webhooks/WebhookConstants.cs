@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.Commerce.Webhooks;
 
 public static class WebhookConstants
 {
-    public const string Feature = "CrestApps.OrchardCore.Commerce.Webhooks";
+    public const string Feature = CommerceConstants.Features.Webhooks;
 
     /// <summary>
     /// The YesSql collection webhooks and their deliveries live in.
