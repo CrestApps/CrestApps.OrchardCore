@@ -28,7 +28,7 @@ public sealed class SiteSettingsGroupPermissionRegistrationTests
         "CustomerPrivacySettingsDisplayDriver",
     };
 
-    private static readonly Regex _driverDeclaration = new(@"class\s+(?<name>\w+)\s*:\s*SiteDisplayDriver<", RegexOptions.Compiled);
+    private static readonly Regex _driverDeclaration = new(@"class\s+(?<name>\w+)\s*:\s*(?<base>SiteDisplayDriver|\w+SettingsDisplayDriverBase)<", RegexOptions.Compiled);
     private static readonly Regex _groupDeclaration = new(@"SettingsGroupId\s*=>\s*(?<group>[\w.]+)\s*;", RegexOptions.Compiled);
     private static readonly Regex _permissionCheck = new(@"AuthorizeAsync\(\s*[\w.?]+\s*,\s*(?<permission>[\w.]+)\s*\)", RegexOptions.Compiled);
     private static readonly Regex _registration = new(@"AddSiteSettingsPermission\(\s*(?<group>[\w.]+)\s*,\s*(?<permission>[\w.]+)\s*\)", RegexOptions.Compiled);
@@ -62,6 +62,14 @@ public sealed class SiteSettingsGroupPermissionRegistrationTests
                 var driver = declaration.Groups["name"].Value;
                 var groupMatch = _groupDeclaration.Match(text);
                 var permissionMatch = _permissionCheck.Match(text);
+
+                // A driver built on a module's settings driver base checks the permission the base checks.
+                if (!permissionMatch.Success && declaration.Groups["base"].Value is var baseDriver && baseDriver != "SiteDisplayDriver")
+                {
+                    var baseText = sources.FirstOrDefault(source => source.Text.Contains($"class {baseDriver}<", StringComparison.Ordinal)).Text;
+
+                    permissionMatch = baseText is null ? permissionMatch : _permissionCheck.Match(baseText);
+                }
 
                 // A driver that checks no permission of its own relies on whatever already grants the group.
                 if (!groupMatch.Success || !permissionMatch.Success || _registeredElsewhere.Contains(driver))

@@ -24,22 +24,8 @@ public sealed class CompanyStore : DocumentCatalog<Company, CompanyIndex>, IComp
         CollectionName = CompaniesConstants.CollectionName;
     }
 
-    public async Task<(int Count, IReadOnlyList<Company> Companies)> PageAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
-    {
-        var query = Session.Query<Company, CompanyIndex>(collection: CollectionName);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var text = search.Trim();
-
-            query = query.Where(index => index.Name.Contains(text));
-        }
-
-        var count = await query.CountAsync(cancellationToken);
-        var page = await query.OrderBy(index => index.Name).Skip(skip).Take(take).ListAsync(cancellationToken);
-
-        return (count, [.. page]);
-    }
+    public Task<(int Count, IReadOnlyList<Company> Companies)> PageAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
+        => PageByNameAsync(index => index.Name, search, skip, take, cancellationToken);
 
     public async Task<Company> FindByBuyerAsync(string userId, CancellationToken cancellationToken = default)
         => string.IsNullOrEmpty(userId)

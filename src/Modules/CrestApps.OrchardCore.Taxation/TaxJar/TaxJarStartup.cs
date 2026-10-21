@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Taxation.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -94,8 +95,8 @@ public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettin
         settings.UseSandbox = model.UseSandbox;
         settings.Countries = [.. (model.Countries ?? string.Empty)
             .Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(code => code.Length == 2 && code.All(char.IsAsciiLetter))
-            .Select(code => code.ToUpperInvariant())
+            .Where(CountryCodeUtility.IsCountryCode)
+            .Select(CountryCodeUtility.Normalize)
             .Distinct(StringComparer.Ordinal)];
 
         // The provider reads the options when it works tax out; they are rebuilt once the settings are saved.

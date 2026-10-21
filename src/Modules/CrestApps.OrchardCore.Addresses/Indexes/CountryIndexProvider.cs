@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses;
 using OrchardCore.ContentManagement;
 using OrchardCore.Data;
@@ -16,18 +15,13 @@ public sealed class CountryIndexProvider : IndexProvider<ContentItem>, IScopedIn
         context.For<CountryIndex>()
             .When(contentItem => string.Equals(contentItem.ContentType, AddressConstants.Country, StringComparison.Ordinal))
             .Map(contentItem =>
-            {
-                JsonNode content = contentItem.Content;
-                var code = content?[AddressConstants.CountryPart]?[AddressConstants.CodeField]?["Text"]?.GetValue<string>()?.Trim();
-
-                return new CountryIndex
+                new CountryIndex
                 {
                     ContentItemId = contentItem.ContentItemId,
-                    Code = code?.ToUpperInvariant(),
+                    Code = CountryCodeUtility.Normalize(contentItem.GetCountryCode()),
                     DisplayText = contentItem.DisplayText,
                     Published = contentItem.Published,
                     Latest = contentItem.Latest,
-                };
-            });
+                });
     }
 }

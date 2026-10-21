@@ -34,7 +34,7 @@ internal sealed class CountrySeedMigrations : DataMigration
 
             contentItem.DisplayText = country.Name;
             contentItem.Alter<TitlePart>(part => part.Title = country.Name);
-            contentItem.Content.CountryPart.Code.Text = country.Code;
+            contentItem.SetCountryCode(country.Code);
 
             await _contentManager.CreateAsync(contentItem, VersionOptions.Published);
         }

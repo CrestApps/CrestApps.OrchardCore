@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -17,11 +16,9 @@ namespace CrestApps.OrchardCore.Customers.Drivers;
 /// <summary>
 /// Settings > Commerce > Referrals: what a referred friend gets, and what the customer who referred them gets.
 /// </summary>
-public sealed class ReferralSettingsDisplayDriver : SiteDisplayDriver<ReferralSettings>
+public sealed class ReferralSettingsDisplayDriver : CustomerSettingsDisplayDriverBase<ReferralSettings>
 {
     private readonly ICouponStore _couponStore;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
 
@@ -30,10 +27,9 @@ public sealed class ReferralSettingsDisplayDriver : SiteDisplayDriver<ReferralSe
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IStringLocalizer<ReferralSettingsDisplayDriver> stringLocalizer)
+        : base(httpContextAccessor, authorizationService)
     {
         _couponStore = couponStore;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
         S = stringLocalizer;
     }
 
@@ -53,12 +49,12 @@ public sealed class ReferralSettingsDisplayDriver : SiteDisplayDriver<ReferralSe
                 .OrderBy(coupon => coupon.Code, StringComparer.OrdinalIgnoreCase)
                 .Select(coupon => new SelectListItem(string.IsNullOrEmpty(coupon.Description) ? coupon.Code : $"{coupon.Code} ({coupon.Description})", coupon.ItemId, coupon.ItemId == settings.FriendCouponId))];
         }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, ReferralSettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        if (!await CanManageCustomersAsync())
         {
             return null;
         }

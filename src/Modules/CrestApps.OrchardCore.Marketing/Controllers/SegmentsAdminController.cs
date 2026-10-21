@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Marketing.Models;
 using CrestApps.OrchardCore.Marketing.Services;
@@ -205,7 +206,7 @@ public sealed class SegmentsAdminController : Controller
             ModelState.AddModelError(string.Empty, S["Counts and days can't be negative."]);
         }
 
-        if (!string.IsNullOrWhiteSpace(model.Country) && model.Country.Trim().Length != 2)
+        if (!string.IsNullOrWhiteSpace(model.Country) && !CountryCodeUtility.IsCountryCode(model.Country))
         {
             ModelState.AddModelError(nameof(model.Country), S["Enter the country's two-letter code, such as DE, or leave it blank."]);
         }

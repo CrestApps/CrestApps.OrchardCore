@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
 using CrestApps.OrchardCore.Marketplace.ViewModels;
@@ -132,7 +133,7 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
         settings.HoldDays = Math.Clamp(model.HoldDays, 0, 365);
         settings.ReleaseOnFulfillment = model.ReleaseOnFulfillment;
         settings.AutomaticPayouts = model.AutomaticPayouts;
-        settings.DefaultCountry = model.DefaultCountry?.Trim().Length == 2 ? model.DefaultCountry.Trim().ToUpperInvariant() : settings.DefaultCountry;
+        settings.DefaultCountry = CountryCodeUtility.IsCountryCode(model.DefaultCountry) ? CountryCodeUtility.Normalize(model.DefaultCountry) : settings.DefaultCountry;
 
         return Edit(site, settings, context);
     }

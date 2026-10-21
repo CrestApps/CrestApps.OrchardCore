@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -64,7 +65,7 @@ internal sealed class TaxJarOptionsConfiguration : IConfigureOptions<TaxJarOptio
         var settings = _siteService.GetSettings<TaxJarSettings>();
 
         options.UseSandbox = settings.UseSandbox;
-        options.Countries = [.. (settings.Countries ?? []).Where(code => code?.Length == 2).Select(code => code.ToUpperInvariant())];
+        options.Countries = [.. (settings.Countries ?? []).Where(CountryCodeUtility.IsCountryCode).Select(CountryCodeUtility.Normalize)];
         options.ApiKey = _dataProtectionProvider.UnprotectSettingOrDefault(TaxJarSettings.ProtectionPurpose, settings.ApiKey, _logger, "TaxJar token");
     }
 }

@@ -24,23 +24,9 @@ public sealed class PriceListStore : DocumentCatalog<PriceList, PriceListIndex>,
         CollectionName = CompaniesConstants.CollectionName;
     }
 
-    public async Task<(int Count, IReadOnlyList<PriceList> PriceLists)> PageAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
-    {
-        var query = Session.Query<PriceList, PriceListIndex>(collection: CollectionName);
+    public Task<(int Count, IReadOnlyList<PriceList> PriceLists)> PageAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
+        => PageByNameAsync(index => index.Name, search, skip, take, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var text = search.Trim();
-
-            query = query.Where(index => index.Name.Contains(text));
-        }
-
-        var count = await query.CountAsync(cancellationToken);
-        var page = await query.OrderBy(index => index.Name).Skip(skip).Take(take).ListAsync(cancellationToken);
-
-        return (count, [.. page]);
-    }
-
-    public async Task<IReadOnlyList<PriceList>> ListAllAsync(CancellationToken cancellationToken = default)
-        => [.. await Session.Query<PriceList, PriceListIndex>(collection: CollectionName).OrderBy(index => index.Name).ListAsync(cancellationToken)];
+    public Task<IReadOnlyList<PriceList>> ListAllAsync(CancellationToken cancellationToken = default)
+        => ListByNameAsync(index => index.Name, cancellationToken);
 }

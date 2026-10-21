@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.PointOfSale.Models;
@@ -275,7 +276,7 @@ public sealed class RegistersAdminController : Controller
             ModelState.AddModelError(nameof(model.LocationId), S["Choose the store location the register sells from."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.AddressLine1) || string.IsNullOrWhiteSpace(model.City) || string.IsNullOrWhiteSpace(model.Country) || model.Country.Trim().Length != 2)
+        if (string.IsNullOrWhiteSpace(model.AddressLine1) || string.IsNullOrWhiteSpace(model.City) || !CountryCodeUtility.IsCountryCode(model.Country))
         {
             ModelState.AddModelError(nameof(model.AddressLine1), S["Enter the store's street address, city and two-letter country code: its sales are taxed by it."]);
         }

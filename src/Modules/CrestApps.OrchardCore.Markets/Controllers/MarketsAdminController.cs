@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Markets.Services;
 using CrestApps.OrchardCore.Markets.ViewModels;
@@ -207,7 +208,7 @@ public sealed class MarketsAdminController : Controller
 
         var countries = ParseCountries(model.Countries);
 
-        if (countries.Count == 0 || countries.Any(code => code.Length != 2 || !code.All(char.IsAsciiLetter)))
+        if (countries.Count == 0 || !countries.All(CountryCodeUtility.IsCountryCode))
         {
             ModelState.AddModelError(nameof(model.Countries), S["List the market's countries by their two-letter codes, such as DE, AT."]);
         }

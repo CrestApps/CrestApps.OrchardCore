@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
 using CrestApps.OrchardCore.Marketplace.ViewModels;
@@ -305,7 +306,7 @@ public sealed class VendorsAdminController : Controller
         vendor.UserIds = userIds;
         vendor.UserNames = userNames;
         vendor.CommissionPercent = commission;
-        vendor.Country = model.Country?.Trim().Length == 2 ? model.Country.Trim().ToUpperInvariant() : null;
+        vendor.Country = CountryCodeUtility.IsCountryCode(model.Country) ? CountryCodeUtility.Normalize(model.Country) : null;
         vendor.Status = Enum.IsDefined(model.Status) ? model.Status : VendorStatus.Active;
         vendor.ModifiedUtc = _clock.UtcNow;
 

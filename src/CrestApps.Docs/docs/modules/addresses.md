@@ -148,7 +148,7 @@ The key is set under **Settings > Address suggestions** (settings group `address
 
 | Content type | Purpose |
 | --- | --- |
-| **Country** | A country with its ISO 3166-1 alpha-2 code in `CountryPart`'s `Code` field. The ISO list is seeded when the feature is enabled, and no two countries may share a code. |
+| **Country** | A country with its ISO 3166-1 alpha-2 code in `CountryPart`'s `Code` field, read and written with the `GetCountryCode()` and `SetCountryCode()` content item extensions. The ISO list is seeded when the feature is enabled, and no two countries may share a code. `CountryCodeUtility` (in `CrestApps.OrchardCore.Addresses.Abstractions`) normalizes a code and checks it is two letters. |
 
 Countries are indexed by `CountryIndex` (content item id, code, display text, published and latest flags), so the list never loads whole content items. The address formats always come from the shipped data: managed countries decide which countries are offered and what they are called, not how their addresses are written.
 
