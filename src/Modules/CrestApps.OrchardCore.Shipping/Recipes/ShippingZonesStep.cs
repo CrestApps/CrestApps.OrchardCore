@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Shipping.Handlers;
 using CrestApps.OrchardCore.Shipping.Models;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -31,6 +32,7 @@ internal sealed class ShippingZonesStep : NamedRecipeStepHandler
             zone ??= !string.IsNullOrEmpty(name) ? await _manager.FindByNameAsync(name) : null;
 
             var isNew = zone is null;
+            ShippingZone candidate;
 
             if (isNew)
             {
@@ -40,13 +42,18 @@ internal sealed class ShippingZonesStep : NamedRecipeStepHandler
                 {
                     zone.ItemId = id;
                 }
+
+                candidate = zone;
             }
             else
             {
-                await _manager.UpdateAsync(zone, token);
+                // The update is checked on a detached copy first, so an invalid zone is reported as a recipe error
+                // instead of being written to the store.
+                candidate = zone.Clone();
+                ShippingZoneHandler.Populate(candidate, token);
             }
 
-            var validation = await _manager.ValidateAsync(zone);
+            var validation = await _manager.ValidateAsync(candidate);
 
             if (!validation.Succeeded)
             {
@@ -61,6 +68,10 @@ internal sealed class ShippingZonesStep : NamedRecipeStepHandler
             if (isNew)
             {
                 await _manager.CreateAsync(zone);
+            }
+            else
+            {
+                await _manager.UpdateAsync(zone, token);
             }
         }
     }

@@ -35,7 +35,6 @@ internal sealed class TaxRuleStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             TaxRule entry = null;
-            var isNew = false;
 
             var id = token[nameof(TaxRule.ItemId)]?.GetValue<string>();
             var hasId = !string.IsNullOrEmpty(id);
@@ -47,17 +46,33 @@ internal sealed class TaxRuleStep : NamedRecipeStepHandler
 
             if (entry is not null)
             {
-                await _manager.UpdateAsync(entry, token);
-            }
-            else
-            {
-                isNew = true;
-                entry = await _manager.NewAsync(token);
+                // Validate the resulting state on a detached copy before persisting, so an invalid imported
+                // entry is reported as a recipe error instead of being written to the store.
+                var candidate = entry.Clone();
+                TaxationDeploymentSerializer.Populate(candidate, token);
 
-                if (hasId && UniqueId.IsValid(id))
+                var updateValidation = await _manager.ValidateAsync(candidate);
+
+                if (!updateValidation.Succeeded)
                 {
-                    entry.ItemId = id;
+                    foreach (var error in updateValidation.Errors)
+                    {
+                        context.Errors.Add(error.ErrorMessage);
+                    }
+
+                    continue;
                 }
+
+                await _manager.UpdateAsync(entry, token);
+
+                continue;
+            }
+
+            entry = await _manager.NewAsync(token);
+
+            if (hasId && UniqueId.IsValid(id))
+            {
+                entry.ItemId = id;
             }
 
             var validationResult = await _manager.ValidateAsync(entry);
@@ -72,10 +87,7 @@ internal sealed class TaxRuleStep : NamedRecipeStepHandler
                 continue;
             }
 
-            if (isNew)
-            {
-                await _manager.CreateAsync(entry);
-            }
+            await _manager.CreateAsync(entry);
         }
     }
 
