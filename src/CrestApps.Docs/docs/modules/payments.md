@@ -191,7 +191,7 @@ Under the **Stripe** category you can start a workflow from any of these events:
 | **Stripe Dispute Created** | A dispute or chargeback is opened. |
 | **Stripe Request Failed** | A request to Stripe fails, typically due to an authentication or connectivity problem. |
 
-The lifecycle events (everything except *Request Failed*) are raised from the provider-neutral payment events, so they carry the same normalized values — transaction id, amount, currency, and gateway mode — as workflow input. The **Stripe Request Failed** event is raised when an outgoing Stripe API call returns `401`/`403` or cannot connect, and also when key verification or webhook provisioning fails while connecting; it is throttled to avoid flooding when many calls fail together. Use it to notify an administrator that an account's credentials or connectivity need attention.
+The lifecycle events (everything except *Request Failed*) are raised from the provider-neutral payment events, so they carry the same normalized values — transaction id, amount, currency, and gateway mode — as workflow input. The **Stripe Request Failed** event is raised when an outgoing Stripe API call returns `401`/`403` or cannot connect, and also when key verification or webhook provisioning fails while connecting; it is throttled per tenant (once every five minutes) to avoid flooding when many calls fail together. Use it to notify an administrator that an account's credentials or connectivity need attention.
 
 ### Local development
 
