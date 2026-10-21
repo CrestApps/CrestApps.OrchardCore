@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -132,10 +134,7 @@ public sealed class PaymentsAdminController : Controller
         options.Providers = BuildProviderItems(options.ProviderKey);
 
         // The state and method filters render at the end of the list's toolbar.
-        var filters = await shapeFactory.CreateAsync("PaymentsAdminListFilters", Arguments.From(new
-        {
-            Options = options,
-        }));
+        var filters = await shapeFactory.CreateAdminListFiltersAsync("Payments", "payments-filter", new AdminListFilter("Options.State", options.States, S["Filter by state"], S["State"]), new AdminListFilter("Options.ProviderKey", options.Providers, S["Filter by method"], S["Method"]));
 
         return View(new PaymentsAdminIndexViewModel
         {

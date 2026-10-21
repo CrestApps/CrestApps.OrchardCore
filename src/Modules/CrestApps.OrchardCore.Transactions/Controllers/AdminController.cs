@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -139,10 +141,7 @@ public sealed class AdminController : Controller
         options.Sources = BuildSourceFilterItems(options.Source);
 
         // The status and source filters render at the end of the list's toolbar.
-        var filters = await shapeFactory.CreateAsync("TransactionsAdminListFilters", Arguments.From(new
-        {
-            Options = options,
-        }));
+        var filters = await shapeFactory.CreateAdminListFiltersAsync("Transactions", "transactions-filter", new AdminListFilter("Options.Status", options.Statuses, S["Filter by status"], S["Status"]), new AdminListFilter("Options.Source", options.Sources, S["Filter by source"], S["Source"]));
 
         var model = new TransactionsAdminIndexViewModel
         {

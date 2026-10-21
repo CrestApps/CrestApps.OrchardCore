@@ -197,13 +197,16 @@ The view keeps the form, its hidden inputs and the action bar, and renders the l
   button. The controller creates a small filter shape and passes it as `AdminListContext.ToolbarActions`:
 
   ```csharp
-  viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("CustomersAdminListFilters", Arguments.From(new { Options = options }));
+  viewModel.List.ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Customers", "customers-filter",
+      new AdminListFilter("Options.Filter", options.Filters, S["Show"], S["Show"]));
   ```
 
-  Its template (`Views/CustomersAdminListFilters.cshtml`) renders the selects in a `<div class="btn-group filter">`,
-  each with `data-style="btn-sm"` and `form="<the filter form's id>"` so it submits the filter form wherever the list
-  is rendered. Keep the existing script hooks (e.g. `data-commerce-list-filter`). Reference: Customers, Orders,
-  Coupons, Inventory and Transactions.
+  A commerce list uses the shared `CommerceAdminListFilters` shape (Commerce module, model `AdminListFiltersViewModel`
+  in `CrestApps.OrchardCore.Core.Models`). It renders the selects in a `<div class="btn-group filter">`, each with
+  `data-style="btn-sm"`, `data-commerce-list-filter` and `form="<the filter form's id>"`, so it submits the filter form
+  wherever the list is rendered. A theme overrides one list's filters with `CommerceAdminListFilters-{ListName}.cshtml`.
+  A list whose filters need other markup keeps its own small template (e.g. `OrdersAdminListFilters`). Reference:
+  Customers, Coupons, Inventory and Transactions.
 - An onboarding empty state (a card with a call to action) may be shown **instead of** `<admin-list>` when there are
   no records and no search; otherwise use `empty-message`.
 - Remove leftovers: `int startIndex = ...` computations, `id="rewrite-rules-sortable-list"` on lists that are not

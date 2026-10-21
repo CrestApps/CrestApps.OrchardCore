@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -124,10 +126,7 @@ public sealed class RefundsAdminController : Controller
         options.Providers = BuildProviderItems(options.ProviderKey);
 
         // The status and method filters render at the end of the list's toolbar.
-        var filters = await shapeFactory.CreateAsync("RefundsAdminListFilters", Arguments.From(new
-        {
-            Options = options,
-        }));
+        var filters = await shapeFactory.CreateAdminListFiltersAsync("Refunds", "refunds-filter", new AdminListFilter("Options.Status", options.Statuses, S["Filter by status"], S["Status"]), new AdminListFilter("Options.ProviderKey", options.Providers, S["Filter by method"], S["Method"]));
 
         return View(new RefundsAdminIndexViewModel
         {

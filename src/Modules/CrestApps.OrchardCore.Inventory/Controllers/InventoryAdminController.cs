@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using System.Text;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
 using CrestApps.OrchardCore.Inventory.Core.Models;
@@ -128,7 +130,7 @@ public sealed class InventoryAdminController : Controller
                 Pager = pagerShape,
 
                 // The "Show" filter renders at the end of the list's toolbar.
-                ToolbarActions = await _shapeFactory.CreateAsync("InventoryAdminListFilters", Arguments.From(new { Options = options })),
+                ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Inventory", "inventory-filter", new AdminListFilter("Options.Filter", options.Filters, S["Show"], S["Show"])),
             },
         });
     }

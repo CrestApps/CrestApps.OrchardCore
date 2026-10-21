@@ -47,6 +47,18 @@ public static class CommerceConstants
     }
 
     /// <summary>
+    /// The shapes the Commerce module renders for the other commerce modules, which a theme can override.
+    /// </summary>
+    public static class Shapes
+    {
+        /// <summary>
+        /// The filters at the end of a commerce admin list's toolbar. Its model is an <c>AdminListFiltersViewModel</c>,
+        /// and it has the alternate <c>CommerceAdminListFilters__{ListName}</c>.
+        /// </summary>
+        public const string AdminListFilters = "CommerceAdminListFilters";
+    }
+
+    /// <summary>
     /// The names of the roles the store setup guide adds for a store's staff. Each commerce module grants its own
     /// permissions to these roles through <c>IPermissionProvider.GetDefaultStereotypes()</c>, so a role gets them when
     /// it is created and when a module that grants it more is enabled later.

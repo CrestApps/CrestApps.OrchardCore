@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Memberships.Models;
 using CrestApps.OrchardCore.Memberships.Services;
 using CrestApps.OrchardCore.Memberships.ViewModels;
@@ -83,16 +85,15 @@ public sealed class MembershipsAdminController : Controller
         };
 
         // The status filter renders at the end of the list's toolbar.
-        model.List.ToolbarActions = await _shapeFactory.CreateAsync("MembershipsAdminListFilters", Arguments.From(new
+        var statuses = new List<SelectListItem>
         {
-            Statuses = new List<SelectListItem>
-            {
-                new(S["Every membership"], string.Empty, status is null),
-                new(S["Active"], nameof(MembershipStatus.Active), status == MembershipStatus.Active),
-                new(S["Expired"], nameof(MembershipStatus.Expired), status == MembershipStatus.Expired),
-                new(S["Ended early"], nameof(MembershipStatus.Revoked), status == MembershipStatus.Revoked),
-            },
-        }));
+            new(S["Every membership"], string.Empty, status is null),
+            new(S["Active"], nameof(MembershipStatus.Active), status == MembershipStatus.Active),
+            new(S["Expired"], nameof(MembershipStatus.Expired), status == MembershipStatus.Expired),
+            new(S["Ended early"], nameof(MembershipStatus.Revoked), status == MembershipStatus.Revoked),
+        };
+
+        model.List.ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Memberships", "memberships-filter", new AdminListFilter("status", statuses, S["Filter by status"], S["Status"]));
 
         return View(model);
     }

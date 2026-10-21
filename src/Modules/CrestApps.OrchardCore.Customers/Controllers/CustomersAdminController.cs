@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Services;
@@ -161,7 +163,7 @@ public sealed class CustomersAdminController : Controller
         };
 
         // The filters render at the end of the list's toolbar.
-        viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("CustomersAdminListFilters", Arguments.From(new { Options = options }));
+        viewModel.List.ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Customers", "customers-filter", new AdminListFilter("Options.Filter", options.Filters, S["Show"], S["Show"]));
 
         return View(viewModel);
     }

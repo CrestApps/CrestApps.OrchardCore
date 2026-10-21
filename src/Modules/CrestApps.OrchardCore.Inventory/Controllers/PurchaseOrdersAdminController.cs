@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
@@ -132,7 +134,7 @@ public sealed class PurchaseOrdersAdminController : Controller
             {
                 Source = orders,
                 Pager = pagerShape,
-                ToolbarActions = await _shapeFactory.CreateAsync("PurchaseOrdersAdminListFilters", Arguments.From(new { Options = options })),
+                ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("PurchaseOrders", "purchase-orders-filter", new AdminListFilter("Options.Show", options.Filters, S["Show"], S["Show"])),
             },
         });
     }

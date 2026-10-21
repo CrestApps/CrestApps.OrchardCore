@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Customers.PersonalData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -31,6 +32,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IFinancialDocumentPolicy, ReceiptsOnlyFinancialDocumentPolicy>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CommerceResourceManagementOptionsConfiguration>();
         services.AddScoped<IAuthorizationHandler, CustomerAdminPageAuthorizationHandler>();
+        services.AddShapeTableProvider<AdminListFiltersShapeTableProvider>();
 
         // Exports and anonymizes a person's commerce data. Each enabled commerce feature adds its own records through
         // an ICommercePersonalDataContributor, so the service sees only what is enabled.

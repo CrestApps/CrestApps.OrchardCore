@@ -1,0 +1,17 @@
+@model CrestApps.OrchardCore.Core.Models.AdminListFiltersViewModel
+@*
+    The filters of a commerce admin list, passed to the admin list as its 'ToolbarActions' so they render at the end of
+    the list's toolbar. The selects name the filter form, so they submit it wherever the list is rendered; the
+    commerce-admin-list script submits it when one changes. A theme overrides one list's filters with
+    CommerceAdminListFilters-{ListName}.cshtml.
+*@
+
+<div class="btn-group filter">
+    @for (var i = 0; i < Model.Filters.Count; i++)
+    {
+        var filter = Model.Filters[i];
+        var cssClass = i < Model.Filters.Count - 1 ? "selectpicker show-tick me-2" : "selectpicker show-tick";
+
+        <select name="@filter.Name" asp-items="filter.Items" form="@Model.FormId" class="@cssClass" data-style="btn-sm" data-width="fit" data-header="@filter.Header" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@filter.Label"></select>
+    }
+</div>

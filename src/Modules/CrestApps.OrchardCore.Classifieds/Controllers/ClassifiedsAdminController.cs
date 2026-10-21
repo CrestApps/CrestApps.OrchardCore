@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
 using CrestApps.OrchardCore.Classifieds.ViewModels;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -106,17 +108,16 @@ public sealed class ClassifiedsAdminController : Controller
             },
         };
 
-        model.List.ToolbarActions = await _shapeFactory.CreateAsync("ClassifiedsAdminListFilters", Arguments.From(new
+        var statuses = new List<SelectListItem>
         {
-            Statuses = new List<SelectListItem>
-            {
-                new(S["Waiting for approval"], nameof(ClassifiedStatus.Pending), status == ClassifiedStatus.Pending),
-                new(S["Up"], nameof(ClassifiedStatus.Approved), status == ClassifiedStatus.Approved),
-                new(S["Rejected"], nameof(ClassifiedStatus.Rejected), status == ClassifiedStatus.Rejected),
-                new(S["Expired"], nameof(ClassifiedStatus.Expired), status == ClassifiedStatus.Expired),
-                new(S["Every listing"], string.Empty, status is null),
-            },
-        }));
+            new(S["Waiting for approval"], nameof(ClassifiedStatus.Pending), status == ClassifiedStatus.Pending),
+            new(S["Up"], nameof(ClassifiedStatus.Approved), status == ClassifiedStatus.Approved),
+            new(S["Rejected"], nameof(ClassifiedStatus.Rejected), status == ClassifiedStatus.Rejected),
+            new(S["Expired"], nameof(ClassifiedStatus.Expired), status == ClassifiedStatus.Expired),
+            new(S["Every listing"], string.Empty, status is null),
+        };
+
+        model.List.ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Classifieds", "classifieds-filter", new AdminListFilter("status", statuses, S["Filter by status"], S["Status"]));
 
         return View(model);
     }

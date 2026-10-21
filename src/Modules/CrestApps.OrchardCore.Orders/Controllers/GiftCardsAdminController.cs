@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -115,7 +117,7 @@ public sealed class GiftCardsAdminController : Controller
             {
                 Source = cards,
                 Pager = (IShape)pagerShape,
-                ToolbarActions = await shapeFactory.CreateAsync("GiftCardsAdminListFilters", Arguments.From(new { Options = options })),
+                ToolbarActions = await shapeFactory.CreateAdminListFiltersAsync("GiftCards", "gift-cards-filter", new AdminListFilter("Options.Status", options.Statuses, S["Filter by status"], S["Status"])),
             },
         };
 

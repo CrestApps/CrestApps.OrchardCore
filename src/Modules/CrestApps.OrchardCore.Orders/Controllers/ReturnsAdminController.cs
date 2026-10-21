@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -130,7 +132,7 @@ public sealed class ReturnsAdminController : Controller
             {
                 Source = returns,
                 Pager = pagerShape,
-                ToolbarActions = await _shapeFactory.CreateAsync("ReturnsAdminListFilters", Arguments.From(new { Options = options })),
+                ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Returns", "returns-filter", new AdminListFilter("Options.Show", options.Filters, S["Show"], S["Show"])),
             },
         });
     }
