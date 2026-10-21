@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

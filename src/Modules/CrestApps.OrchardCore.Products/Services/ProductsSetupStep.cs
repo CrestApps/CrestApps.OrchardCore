@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Autoroute.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -128,15 +129,5 @@ internal sealed class ProductsSetupStep : IStoreSetupStep
                 .WithDisplayName("Description")));
 
         return StoreSetupActionResult.Success(S["Added the Product type. Now add your first product."]);
-    }
-
-    /// <summary>
-    /// The settings of Orchard Core's Autoroute part, stored by name.
-    /// </summary>
-    private sealed class AutoroutePartSettings
-    {
-        public bool AllowCustomPath { get; set; }
-
-        public string Pattern { get; set; }
     }
 }

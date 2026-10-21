@@ -1,10 +1,10 @@
 using OrchardCore.Modules;
 using System.Linq;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 
@@ -13,13 +13,9 @@ namespace CrestApps.OrchardCore.Products.Services;
 /// <summary>
 /// The default <see cref="IProductSnapshotResolver"/>. It reads the strongly typed <see cref="ProductPart"/>
 /// for identity and price, the content type's <see cref="ProductPartSettings"/> for the product type, and
-/// the optional <c>TaxationPart</c> JSON projection for tax classification. It never calculates tax or
+/// the optional <see cref="TaxationPart"/> for tax classification. It never calculates tax or
 /// price; it only projects the content item into a stable, provider-neutral snapshot.
 /// </summary>
-/// <remarks>
-/// The <c>TaxationPart</c> is read via its JSON projection (rather than the strongly typed part) so the
-/// Products module does not take a hard reference on the Taxation module, keeping taxation optional.
-/// </remarks>
 public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -94,7 +90,7 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
             return null;
         }
 
-        JsonNode taxationPart = contentItem.Content?["TaxationPart"];
+        contentItem.TryGet<TaxationPart>(out var taxationPart);
 
         return new SellableProduct
         {
@@ -106,9 +102,9 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
             UnitPrice = unitPrice ?? 0m,
             Currency = ResolveCurrency(productPart, settings),
             ProductType = settings?.Type ?? ProductType.Undefined,
-            TaxCategoryCode = taxationPart?["TaxCategoryCode"]?.GetValue<string>(),
-            TaxClassificationCode = taxationPart?["TaxClassificationCode"]?.GetValue<string>(),
-            ExternalTaxCode = taxationPart?["ExternalTaxCode"]?.GetValue<string>(),
+            TaxCategoryCode = taxationPart?.TaxCategoryCode,
+            TaxClassificationCode = taxationPart?.TaxClassificationCode,
+            ExternalTaxCode = taxationPart?.ExternalTaxCode,
             VariantId = variant?.VariantId,
             VariantTitle = variantTitle,
         };

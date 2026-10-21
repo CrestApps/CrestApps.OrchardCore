@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Autoroute" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentManagement.Display" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />

@@ -91,6 +91,6 @@ A module that adds a staff permission declares it in its own permission provider
 - The `alias:main-menu` menu.
 - The `Title` zone, where account and admin-style pages put their breadcrumb.
 - The `Header`, `Messages` and `Footer` zones.
-- A footer with the business name, address, email and phone from `ReceiptSettings`, read by name so the theme doesn't depend on the Receipts module.
+- A footer with the business name, address, email and phone from the typed `ReceiptSettings` of `CrestApps.OrchardCore.Receipts.Core`, which the theme references; the Receipts module itself doesn't have to be enabled.
 
 `wwwroot/styles/storefront.css` styles it with Bootstrap variables, so a child theme can restyle it by overriding `--storefront-accent`, `--storefront-header-bg` and `--storefront-footer-bg`. To change a commerce page, override its shape, as described in [Theming the storefront](commerce.md#theming-the-storefront).

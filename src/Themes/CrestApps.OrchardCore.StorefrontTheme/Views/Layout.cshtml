@@ -1,4 +1,5 @@
-@using System.Text.Json.Nodes
+@using CrestApps.OrchardCore.Receipts.Core
+@using OrchardCore.Entities
 @using OrchardCore.Settings
 @inject ISiteService SiteService
 @inject OrchardCore.Modules.IClock Clock
@@ -11,12 +12,12 @@
 
 @{
     var site = await SiteService.GetSiteSettingsAsync();
-    var receipts = site.Properties["ReceiptSettings"] as JsonObject;
-    var storeName = receipts?["BusinessName"]?.GetValue<string>();
-    var email = receipts?["ContactEmail"]?.GetValue<string>();
-    var phone = receipts?["ContactPhone"]?.GetValue<string>();
-    var address = receipts?["BusinessAddress"]?.GetValue<string>();
-    var logo = receipts?["LogoUrl"]?.GetValue<string>();
+    site.TryGet<ReceiptSettings>(out var receipts);
+    var storeName = receipts?.BusinessName;
+    var email = receipts?.ContactEmail;
+    var phone = receipts?.ContactPhone;
+    var address = receipts?.BusinessAddress;
+    var logo = receipts?.LogoUrl;
     var brand = string.IsNullOrWhiteSpace(storeName) ? Site.SiteName : storeName;
     var keyword = Context.Request.Query["q"].ToString();
 }

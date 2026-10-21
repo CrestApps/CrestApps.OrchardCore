@@ -27,9 +27,9 @@ The framework is split into three assemblies:
 
 | Assembly | Purpose |
 |----------|---------|
-| `CrestApps.OrchardCore.Taxation.Abstractions` | Interfaces, models, DTOs, enums, and constants. Lightweight, no infrastructure dependencies. |
+| `CrestApps.OrchardCore.Taxation.Abstractions` | Interfaces, models, DTOs, enums, and constants, including the `TaxationPart` and its `TaxationPartSettings`, so a module such as Products reads an item's classification as the typed part without depending on the Taxation module. Lightweight, no infrastructure dependencies. |
 | `CrestApps.OrchardCore.Taxation.Core` | The determination engine, default calculation methods, sourcing strategies, resolvers, catalog stores, and dependency-injection wiring. |
-| `CrestApps.OrchardCore.Taxation` | The Orchard Core module: the `TaxationPart`, its editors, migration, and the content-item taxable-item provider. |
+| `CrestApps.OrchardCore.Taxation` | The Orchard Core module: the `TaxationPart` editors, its migration, and the content-item taxable-item provider, which prices an item from its `ProductPart.Price`. |
 
 ## Getting started
 

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Indexes;
+using OrchardCore.Autoroute.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -102,13 +103,5 @@ internal sealed class ProductListingMigrations : DataMigration
         );
 
         return 1;
-    }
-
-    // Mirrors the Autoroute module's settings by name, so the type can be defined without a reference to it.
-    private sealed class AutoroutePartSettings
-    {
-        public bool AllowCustomPath { get; set; }
-
-        public string Pattern { get; set; }
     }
 }
