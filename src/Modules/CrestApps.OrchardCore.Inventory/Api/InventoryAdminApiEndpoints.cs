@@ -163,9 +163,7 @@ internal static class InventoryAdminApiEndpoints
             return ApiProblems.Validation(problem.Field, problem.Error);
         }
 
-        var known = (await services.GetRequiredService<IInventoryLocationService>().GetLocationsAsync())
-            .Select(location => location.LocationId)
-            .ToHashSet(StringComparer.Ordinal);
+        var known = await services.GetRequiredService<IInventoryLocationService>().GetLocationIdsAsync();
 
         foreach (var (field, locationId) in locations)
         {
@@ -174,13 +172,12 @@ internal static class InventoryAdminApiEndpoints
                 return ApiProblems.Validation(field, "There's no location with that id.");
             }
         }
-        var actor = new StockActor(
-            httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier),
-            httpContext.User.Identity?.Name ?? httpContext.User.FindFirstValue("client_id") ?? "API");
+
+        var actor = StockActor.ForUser(httpContext.User, httpContext.User.FindFirstValue("client_id") ?? "API");
 
         var result = await change(
             services.GetRequiredService<IInventoryService>(),
-            locationId => !string.IsNullOrEmpty(locationId) && known.Contains(locationId) ? locationId : InventoryConstants.DefaultLocationId,
+            locationId => InventoryLocationServiceExtensions.KnownOrDefault(known, locationId),
             actor);
 
         if (!result.Succeeded)

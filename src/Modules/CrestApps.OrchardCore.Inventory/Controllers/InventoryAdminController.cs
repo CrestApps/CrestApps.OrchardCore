@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
@@ -245,7 +244,7 @@ public sealed class InventoryAdminController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var result = await _importer.ImportAsync(rows, S["Imported from {0}.", Path.GetFileName(file.FileName)], CurrentActor(), HttpContext.RequestAborted);
+        var result = await _importer.ImportAsync(rows, S["Imported from {0}.", Path.GetFileName(file.FileName)], StockActor.ForUser(User), HttpContext.RequestAborted);
 
         if (result.Problems.Count > 0)
         {
@@ -322,7 +321,7 @@ public sealed class InventoryAdminController : Controller
             return BadRequest();
         }
 
-        var result = await CommitAsync(await _inventory.AdjustAsync(stockItemId, await KnownLocationAsync(model.LocationId), model.Kind, model.Quantity, model.Reason, CurrentActor(), HttpContext.RequestAborted));
+        var result = await CommitAsync(await _inventory.AdjustAsync(stockItemId, await _locations.GetKnownLocationIdAsync(model.LocationId), model.Kind, model.Quantity, model.Reason, StockActor.ForUser(User), HttpContext.RequestAborted));
 
         await NotifyAsync(result, model.Kind == StockMovementKind.Received
             ? H["{0} received. {1} on hand.", model.Quantity, result.Item?.OnHand]
@@ -347,7 +346,7 @@ public sealed class InventoryAdminController : Controller
             return RedirectToAction(nameof(Item), new { stockItemId });
         }
 
-        var result = await CommitAsync(await _inventory.SetCountAsync(stockItemId, await KnownLocationAsync(model.LocationId), count, model.Reason, CurrentActor(), HttpContext.RequestAborted));
+        var result = await CommitAsync(await _inventory.SetCountAsync(stockItemId, await _locations.GetKnownLocationIdAsync(model.LocationId), count, model.Reason, StockActor.ForUser(User), HttpContext.RequestAborted));
 
         await NotifyAsync(result, H["Counted {0}. The difference was {1}.", count, result.Movement?.Quantity]);
 
@@ -381,7 +380,7 @@ public sealed class InventoryAdminController : Controller
         var from = locations.FirstOrDefault(location => location.LocationId == model.FromLocationId)?.Name ?? model.FromLocationId;
         var to = locations.First(location => location.LocationId == model.ToLocationId).Name;
         var reason = string.IsNullOrWhiteSpace(model.Reason) ? S["From {0} to {1}", from, to].Value : model.Reason;
-        var result = await _inventory.TransferAsync(stockItemId, model.FromLocationId, model.ToLocationId, model.Quantity.Value, reason, CurrentActor(), HttpContext.RequestAborted);
+        var result = await _inventory.TransferAsync(stockItemId, model.FromLocationId, model.ToLocationId, model.Quantity.Value, reason, StockActor.ForUser(User), HttpContext.RequestAborted);
 
         if (result.Error == StockChangeError.NotEnoughAtLocation)
         {
@@ -455,12 +454,6 @@ public sealed class InventoryAdminController : Controller
         };
     }
 
-    // A location that's listed, or the default one: a removed location only gives units away, by a transfer.
-    private async Task<string> KnownLocationAsync(string locationId)
-        => !string.IsNullOrEmpty(locationId) && (await _locations.GetLocationsAsync()).Any(location => location.LocationId == locationId)
-            ? locationId
-            : InventoryConstants.DefaultLocationId;
-
     // The change is committed here, so a checkout that changed the same stock at the same moment can't be overwritten:
     // the later of the two fails and is asked to try again.
     private async Task<StockChangeResult> CommitAsync(StockChangeResult result)
@@ -502,9 +495,6 @@ public sealed class InventoryAdminController : Controller
                 break;
         }
     }
-
-    private StockActor CurrentActor()
-        => new(User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity?.Name);
 
     private static RouteValueDictionary FilterRouteValues(InventoryIndexOptions options, PagerParameters pagerParameters)
     {

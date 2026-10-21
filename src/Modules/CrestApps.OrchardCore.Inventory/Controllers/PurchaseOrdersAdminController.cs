@@ -331,7 +331,7 @@ public sealed class PurchaseOrdersAdminController : Controller
                 .GroupBy(line => line.LineId)
                 .ToDictionary(group => group.Key, group => Math.Min(MaxQuantity, group.Sum(line => line.Receive.Value)));
 
-        var received = await _receiver.ReceiveAsync(order, quantities, CurrentActor(), HttpContext.RequestAborted);
+        var received = await _receiver.ReceiveAsync(order, quantities, StockActor.ForUser(User), HttpContext.RequestAborted);
 
         if (received == 0)
         {
@@ -604,9 +604,6 @@ public sealed class PurchaseOrdersAdminController : Controller
             }
         }
     }
-
-    private StockActor CurrentActor()
-        => new(User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity?.Name);
 
     private static RouteValueDictionary FilterRouteValues(PurchaseOrderIndexOptions options, PagerParameters pagerParameters)
     {
