@@ -54,7 +54,6 @@ internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptio
         var storedWebhookSecret = isLive ? settings.LiveWebhookSecret : settings.TestWebhookSecret;
 
         options.IsLive = isLive;
-        options.CheckoutMode = settings.CheckoutMode;
 
         options.PublishableKey = configured.HasPublishableKey
             ? configured.PublishableKey.Trim()

@@ -150,6 +150,8 @@ public sealed class PayLaterRenewalBackgroundTaskTests
                 PeriodEndUtc = periodEndUtc,
                 CycleNumber = 1,
                 CycleLimit = 12,
+                CycleAmount = 50m,
+                CycleTaxAmount = 4m,
             },
         };
 

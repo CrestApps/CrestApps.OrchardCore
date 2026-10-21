@@ -5,7 +5,7 @@ using OrchardCore.Data.Migration;
 namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 
 /// <summary>
-/// Defines and updates the subscription content part metadata.
+/// Defines the subscription content part metadata.
 /// </summary>
 public sealed class SubscriptionPartMigrations : DataMigration
 {
@@ -14,7 +14,7 @@ public sealed class SubscriptionPartMigrations : DataMigration
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionPartMigrations"/> class.
     /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager used to update subscription part definitions.</param>
+    /// <param name="contentDefinitionManager">The content definition manager used to define the subscription part.</param>
     public SubscriptionPartMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
@@ -34,22 +34,6 @@ public sealed class SubscriptionPartMigrations : DataMigration
             .WithDescription("Provides the key properties for any subscription.")
         );
 
-        return 2;
-    }
-
-    /// <summary>
-    /// Updates the subscription part definition after it changed from attachable to system-defined.
-    /// </summary>
-    /// <returns>The next migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        // Previously the part was attachable and had to be added manually. It is now system-defined and
-        // injected automatically, so remove it from the attachable parts list.
-        await _contentDefinitionManager.AlterPartDefinitionAsync("SubscriptionPart", part => part
-            .WithDisplayName("Subscription")
-            .WithDescription("Provides the key properties for any subscription.")
-        );
-
-        return 2;
+        return 1;
     }
 }

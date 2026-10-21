@@ -76,7 +76,6 @@ If the site is not publicly reachable (for example on `localhost`), Stripe canno
 | Setting | Description |
 | --- | --- |
 | `IsLive` | Switches between the live and test key sets. |
-| `CheckoutMode` | Kept for compatibility. The settings page no longer edits it, and the payment step always collects the card on the site (see below). |
 | `LivePublishableKey` / `LivePrivateSecret` / `LiveWebhookSecret` | Live-mode credentials. |
 | `LiveAccountId` / `LiveWebhookId` | The resolved live account id and the id of the auto-provisioned live webhook endpoint. |
 | `TestPublishableKey` / `TestPrivateSecret` / `TestWebhookSecret` | Test-mode credentials. |
@@ -159,8 +158,6 @@ Keep a recipe that holds clear-text secrets out of source control, or leave the 
 ### Checkout modes
 
 The checkout's payment step collects card details on your own page using Stripe Elements, with Payment and Setup Intents confirmed in the browser. The amount collected always comes from the server-side checkout session, never from values the browser supplies.
-
-`StripeOptions.CheckoutMode` and its **Hosted Checkout (redirect)** value remain for compatibility, but nothing in the checkout reads them, so the settings page no longer shows the choice.
 
 ### Webhooks
 

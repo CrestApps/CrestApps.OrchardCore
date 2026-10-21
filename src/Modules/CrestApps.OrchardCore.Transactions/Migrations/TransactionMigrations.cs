@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Transactions.Models;
 using OrchardCore.Data.Migration;
@@ -25,6 +24,8 @@ public sealed class TransactionMigrations : DataMigration
             .Column<int>("OwnerKind")
             .Column<string>("ReferenceType")
             .Column<string>("ReferenceId", column => column.WithLength(26))
+            .Column<string>("ParentReferenceType", column => column.Nullable().WithLength(TransactionIndexProvider.MaxParentReferenceLength))
+            .Column<string>("ParentReferenceId", column => column.Nullable().WithLength(TransactionIndexProvider.MaxParentReferenceLength))
             .Column<string>("CheckoutSessionId", column => column.WithLength(26))
             .Column<string>("ObligationId")
             .Column<string>("Currency", column => column.WithLength(8))
@@ -39,98 +40,18 @@ public sealed class TransactionMigrations : DataMigration
             collection: TransactionsConstants.CollectionName
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_ItemId", "ItemId"),
-            collection: TransactionsConstants.CollectionName
-        );
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table =>
+        {
+            table.CreateIndex("IDX_TransactionIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_TransactionIndex_Owner", "OwnerId", "Status");
+            table.CreateIndex("IDX_TransactionIndex_Status", "Status", "DueUtc");
+            table.CreateIndex("IDX_TransactionIndex_Obligation", "CheckoutSessionId", "ObligationId");
+            table.CreateIndex("IDX_TransactionIndex_Reference", "ReferenceType", "ReferenceId");
+            table.CreateIndex("IDX_TransactionIndex_ParentReference", "ParentReferenceType", "ParentReferenceId");
+            table.CreateIndex("IDX_TransactionIndex_Outstanding", "Status", "OutstandingAmount");
+            table.CreateIndex("IDX_TransactionIndex_NextCycle", "NextCycleUtc");
+        }, collection: TransactionsConstants.CollectionName);
 
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_Owner", "OwnerId", "Status"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_Status", "Status", "DueUtc"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_Obligation", "CheckoutSessionId", "ObligationId"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_Reference", "ReferenceType", "ReferenceId"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_Outstanding", "Status", "OutstandingAmount"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_NextCycle", "NextCycleUtc"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        return 4;
-    }
-
-    /// <summary>
-    /// Adds the owner-kind column so a guest obligation can be distinguished from an authenticated one.
-    /// Existing rows keep the default value, which maps to <see cref="CustomerOwnerKind.Authenticated"/>.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .AddColumn<int>("OwnerKind", column => column.WithDefault(0)),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        return 2;
-    }
-
-    /// <summary>
-    /// Adds the outstanding-amount column so a report can query and sort by what is still owed without
-    /// loading every transaction document. Existing rows default to zero and are backfilled the next time
-    /// each transaction is written.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom2Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .AddColumn<decimal>("OutstandingAmount", column => column.WithDefault(0)),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_Outstanding", "Status", "OutstandingAmount"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        return 3;
-    }
-
-    /// <summary>
-    /// Adds the next-cycle column that lets the renewal sweep find recurring agreements whose period has
-    /// ended, without loading every transaction. Existing rows stay null, which is correct: a transaction
-    /// written before this column existed carries no recurrence.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom3Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .AddColumn<DateTime>("NextCycleUtc", column => column.Nullable()),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
-            .CreateIndex("IDX_TransactionIndex_NextCycle", "NextCycleUtc"),
-            collection: TransactionsConstants.CollectionName
-        );
-
-        return 4;
+        return 1;
     }
 }

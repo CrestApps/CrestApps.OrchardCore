@@ -51,12 +51,6 @@ public sealed class Startup : StartupBase
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
 
-        // A transaction can name the record it ultimately belongs to, such as the registration an installment plan
-        // pays for, so the module that owns the record finds every payment of it.
-        services
-            .AddDataMigration<TransactionParentReferenceMigrations>()
-            .AddIndexProvider<TransactionParentReferenceIndexProvider>();
-
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddNavigationProvider<TransactionsAccountMenu>()

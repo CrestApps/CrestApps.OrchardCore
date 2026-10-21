@@ -89,11 +89,7 @@ public class Startup : StartupBase
         services.AddScoped<IStripeSubscriptionService, StripeSubscriptionService>();
         services.AddScoped<IStripePaymentIntentService, StripePaymentIntentService>();
         services.AddScoped<IStripePaymentMethodService, StripePaymentMethodService>();
-        services.AddScoped<IStripeProductService, StripeProductService>();
-        services.AddScoped<IStripePriceService, StripePriceService>();
-        services.AddScoped<IStripeSetupIntentService, StripeSetupIntentService>();
         services.AddScoped<IStripeCustomerService, StripeCustomerService>();
-        services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
         services.AddScoped<IStripeRefundService, StripeRefundService>();
 
         // Exports and redacts the Stripe customers that hold a person's contact, for access and erasure requests.

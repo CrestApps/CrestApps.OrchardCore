@@ -32,7 +32,6 @@ public sealed class CommerceModuleBoundaryTests
         "CrestApps.OrchardCore.Products",
         "CrestApps.OrchardCore.Products.Core",
         "CrestApps.OrchardCore.Payments",
-        "CrestApps.OrchardCore.Payments.Core",
         "CrestApps.OrchardCore.Receipts",
         "CrestApps.OrchardCore.Receipts.Core",
         "CrestApps.OrchardCore.Reports",

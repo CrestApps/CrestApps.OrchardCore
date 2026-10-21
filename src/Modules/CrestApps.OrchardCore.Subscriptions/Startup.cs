@@ -23,7 +23,6 @@ using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
-using CrestApps.OrchardCore.Subscriptions.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Navigation;
@@ -77,7 +76,6 @@ public sealed class Startup : StartupBase
             .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
-        services.AddScoped<IContentDefinitionHandler, SubscriptionContentTypeDefinitionHandler>();
 
         services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
 
@@ -168,20 +166,6 @@ public sealed class CheckoutStartup : StartupBase
 
         services.AddScoped<IDisplayDriver<CheckoutFlow>, UserRegistrationCheckoutFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, ContentStepCheckoutFlowDisplayDriver>();
-    }
-}
-
-/// <summary>
-/// Registers the Stripe currency setting used when a plan does not carry its own currency.
-/// </summary>
-[RequireFeatures(SubscriptionConstants.Features.Area, "CrestApps.OrchardCore.Stripe")]
-public sealed class StripeStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
     }
 }
 
