@@ -30,7 +30,7 @@ The **Memberships** feature sells access. The attachable **Membership** part (`M
 - **`EndAsync`** takes the member out of the roles the membership added that no other active membership of theirs gives. It then updates their security stamp, so a sign-in that still carries the roles is checked again.
 - **`ExpireAsync`** ends memberships past their end date. `MembershipsBackgroundTask` calls it hourly.
 
-`MembershipOrderEventHandler` does the following on each order event:
+`MembershipOrderEventHandler` derives from `OrderGrantHandlerBase` (Orders.Core) and does the following on each order event:
 
 - **Paid:** grants the memberships. When the buyer is the one signed in on the request, it refreshes their sign-in, so the roles apply at once.
 - **Canceled:** ends the memberships the order bought.

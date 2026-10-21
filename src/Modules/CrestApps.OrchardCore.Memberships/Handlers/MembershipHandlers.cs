@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Memberships.Handlers;
 /// <summary>
 /// Makes or extends a membership when its order is paid, and ends it when the order is canceled or refunded in full.
 /// </summary>
-internal sealed class MembershipOrderEventHandler : OrderEventHandlerBase
+internal sealed class MembershipOrderEventHandler : OrderGrantHandlerBase
 {
     private readonly MembershipService _memberships;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -39,9 +39,9 @@ internal sealed class MembershipOrderEventHandler : OrderEventHandlerBase
         S = stringLocalizer;
     }
 
-    public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+    protected override async Task GrantAsync(Order order, CancellationToken cancellationToken)
     {
-        if (await _memberships.GrantAsync(context.Order, cancellationToken) == 0)
+        if (await _memberships.GrantAsync(order, cancellationToken) == 0)
         {
             return;
         }
@@ -49,20 +49,20 @@ internal sealed class MembershipOrderEventHandler : OrderEventHandlerBase
         // Roles are read from the sign-in, so a buyer paying now is signed in again to open what they bought at once.
         // Paid any other way, such as by a payment provider's webhook, the sign-in catches up when it's next checked.
         if (_httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId &&
-            userId == context.Order.UserId &&
+            userId == order.UserId &&
             await _userService.GetUserByUniqueIdAsync(userId) is { } user)
         {
             await _signInManager.RefreshSignInAsync(user);
         }
     }
 
-    public override Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
-        => _memberships.RevokeOrderAsync(context.Order, S["Its order was canceled."], cancellationToken);
-
-    public override Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
-        => context.Order.RefundStatus == OrderRefundStatus.Refunded
-            ? _memberships.RevokeOrderAsync(context.Order, S["Its order was refunded."], cancellationToken)
-            : Task.CompletedTask;
+    protected override Task RevokeAsync(Order order, OrderRevokeReason reason, CancellationToken cancellationToken)
+        => _memberships.RevokeOrderAsync(
+            order,
+            reason == OrderRevokeReason.Canceled
+                ? S["Its order was canceled."]
+                : S["Its order was refunded."],
+            cancellationToken);
 }
 
 /// <summary>

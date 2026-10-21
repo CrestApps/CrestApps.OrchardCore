@@ -29,7 +29,7 @@ The part's editor uploads each file straight to the store through `POST /Admin/d
 
 ## Granting and revoking
 
-`DownloadOrderEventHandler` is an order event handler:
+`DownloadOrderEventHandler` derives from `OrderGrantHandlerBase` (Orders.Core), which grants on paid and revokes on cancel or full refund:
 
 - **Paid:** `DownloadService.GrantAsync(order)` creates an entitlement per file of each line's product, read from the product version the order bought, in the checkout's unit of work, so the confirmation email sent after it can carry the links. Granting again adds only what is missing.
 - **Canceled:** revokes the order's entitlements.

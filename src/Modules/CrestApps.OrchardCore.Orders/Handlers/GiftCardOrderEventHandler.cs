@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Orders.Handlers;
 /// Issues a gift card for each gift card product an order paid for, worth what was paid for it, and emails it to the
 /// buyer; and turns off the unused cards of an order that is canceled.
 /// </summary>
-internal sealed class GiftCardOrderEventHandler : OrderEventHandlerBase
+internal sealed class GiftCardOrderEventHandler : OrderGrantHandlerBase
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IGiftCardStore _store;
@@ -33,9 +33,8 @@ internal sealed class GiftCardOrderEventHandler : OrderEventHandlerBase
         S = stringLocalizer;
     }
 
-    public override async Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+    protected override async Task GrantAsync(Order order, CancellationToken cancellationToken)
     {
-        var order = context.Order;
         var lines = new List<OrderLine>();
 
         foreach (var line in order.Lines ?? [])
@@ -95,13 +94,13 @@ internal sealed class GiftCardOrderEventHandler : OrderEventHandlerBase
         }
     }
 
-    public override Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
-        => TurnOffUnusedAsync(context.Order, S["Turned off because order {0} was canceled.", context.Order.OrderNumber], cancellationToken);
-
-    public override Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
-        => context.Order.RefundStatus == OrderRefundStatus.Refunded
-            ? TurnOffUnusedAsync(context.Order, S["Turned off because order {0} was refunded.", context.Order.OrderNumber], cancellationToken)
-            : Task.CompletedTask;
+    protected override Task RevokeAsync(Order order, OrderRevokeReason reason, CancellationToken cancellationToken)
+        => TurnOffUnusedAsync(
+            order,
+            reason == OrderRevokeReason.Canceled
+                ? S["Turned off because order {0} was canceled.", order.OrderNumber]
+                : S["Turned off because order {0} was refunded.", order.OrderNumber],
+            cancellationToken);
 
     // A card nobody has spent from is turned off with its order; one that was spent is left for staff to decide.
     private async Task TurnOffUnusedAsync(Order order, string note, CancellationToken cancellationToken)

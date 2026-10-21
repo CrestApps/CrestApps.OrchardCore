@@ -40,6 +40,7 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | To | Implement | Lives in | See |
 | --- | --- | --- | --- |
 | React when an order is created, paid, canceled, refunded, returned or its lines change | `IOrderEventHandler` (derive from `OrderEventHandlerBase`) | Orders.Core | [Carts and orders](carts-and-orders.md) |
+| Give the buyer what a paid order bought (files, a membership, a gift card) and take it back when the order is canceled or refunded in full | `OrderGrantHandlerBase`: implement `GrantAsync` and `RevokeAsync`, and register it as an `IOrderEventHandler`. After a partial refund the buyer keeps what they bought. | Orders.Core | [Downloads](downloads.md), [Memberships](memberships.md) |
 | Add a shipping rate, such as a carrier's | `IShippingRateProvider` | Shipping.Core | [Shipping](shipping.md) |
 | Buy labels and track parcels with a carrier | `ICarrierProvider` | Shipping.Core | [Shipping](shipping.md) |
 | React when a shipment ships or is delivered | `IShipmentEventHandler` | Shipping.Core | [Shipping](shipping.md) |
