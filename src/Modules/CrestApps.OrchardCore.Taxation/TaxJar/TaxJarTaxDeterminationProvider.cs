@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Taxation.TaxJar;
@@ -30,16 +29,13 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
 
     private readonly IOptionsMonitor<TaxJarOptions> _options;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger _logger;
 
     public TaxJarTaxDeterminationProvider(
         IOptionsMonitor<TaxJarOptions> options,
-        IHttpClientFactory httpClientFactory,
-        ILogger<TaxJarTaxDeterminationProvider> logger)
+        IHttpClientFactory httpClientFactory)
     {
         _options = options;
         _httpClientFactory = httpClientFactory;
-        _logger = logger;
     }
 
     // Its place among other tax providers; the first that can handle an order works out its tax.
@@ -87,9 +83,7 @@ public sealed class TaxJarTaxDeterminationProvider : ITaxDeterminationProvider
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
-            // The tax service then works the tax out by the store's own rules.
-            _logger.LogWarning(exception, "TaxJar couldn't be reached.");
-
+            // The tax service logs the failure and works the tax out by the store's own rules.
             throw new InvalidOperationException("TaxJar couldn't be reached to work out the tax.", exception);
         }
 
