@@ -74,7 +74,7 @@ Send the commerce API's shapes in `data` where there is one, so a receiver reads
 | `customer.created` | Customers, `WebhookCustomerService` (decorating `ICustomerService`: `CreateGuestAsync` and a new `GetOrCreateForUserAsync`) and **Add customer** in the admin, with the id `evt_customer-created_` and the customer's id | `customer` (`ApiCustomer`) |
 | `shipment.shipped` | Shipping, `ShipmentWebhookHandler.ShippedAsync` | `shipment` (`ApiShipment`), `orderNumber`, `customerEmail` |
 | `shipment.delivered` | Shipping, `ShipmentWebhookHandler.DeliveredAsync` | the same |
-| `stock.changed` | Inventory, `StockWebhookObserver` (an `IStockLevelObserver`): after the unit of work commits, one event per stock item whose total `Available` differs from before its first change | `stock` (`ApiStockItem`), `previousAvailable` |
+| `stock.changed` | Inventory, `StockWebhookHandler.AvailableChangedAsync` (an `IStockLevelHandler`): after the unit of work commits, one event per stock item whose total `Available` differs from before its first change | `stock` (`ApiStockItem`), `previousAvailable` |
 | `stock.low` | Inventory, `StockWebhookHandler` (an `IStockLevelHandler`), when `RanLow` and not `SoldOut` | `stock`, `previousAvailable` |
 | `stock.sold-out` | Inventory, `StockWebhookHandler`, when `SoldOut` | `stock`, `previousAvailable` |
 | `webhook.ping` | The admin's **Send a test event**, to one subscription only | `webhookId`, `name` |

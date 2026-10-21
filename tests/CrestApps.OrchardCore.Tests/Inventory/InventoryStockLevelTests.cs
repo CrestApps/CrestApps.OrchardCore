@@ -137,6 +137,20 @@ public sealed class InventoryStockLevelTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AChangeToWhatIsAvailable_IsTold_EvenWhenTheLevelStaysTheSame()
+    {
+        var itemId = await AddItemAsync(onHand: 20);
+        var handler = new RecordingHandler();
+
+        await DispatchAsync(new Dictionary<string, int> { [itemId] = 30 }, handler);
+
+        var change = Assert.Single(handler.AvailableChanges);
+        Assert.Equal(30, change.PreviousAvailable);
+        Assert.Equal(20, change.Item.Available);
+        Assert.Empty(handler.Contexts);
+    }
+
+    [Fact]
     public void Csv_RoundTripsCounts_FindingColumnsByName_AndQuotedValues()
     {
         var writer = new StringWriter();
@@ -295,9 +309,18 @@ public sealed class InventoryStockLevelTests : IAsyncLifetime
     {
         public List<StockLevelChangedContext> Contexts { get; } = [];
 
+        public List<StockLevelChangedContext> AvailableChanges { get; } = [];
+
         public Task ChangedAsync(StockLevelChangedContext context, CancellationToken cancellationToken = default)
         {
             Contexts.Add(context);
+
+            return Task.CompletedTask;
+        }
+
+        public Task AvailableChangedAsync(StockLevelChangedContext context, CancellationToken cancellationToken = default)
+        {
+            AvailableChanges.Add(context);
 
             return Task.CompletedTask;
         }

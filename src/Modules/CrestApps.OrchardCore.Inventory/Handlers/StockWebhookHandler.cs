@@ -1,12 +1,12 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Inventory.Api;
-using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 
 namespace CrestApps.OrchardCore.Inventory.Handlers;
 
 /// <summary>
-/// Tells webhooks when stock runs low or sells out. Handlers hear only of changes of level (in stock, low, out).
+/// Tells webhooks of every change to what's available, so another system (a marketplace listing, a warehouse) keeps
+/// the same count, and of stock running low or selling out.
 /// </summary>
 internal sealed class StockWebhookHandler : IStockLevelHandler
 {
@@ -17,17 +17,21 @@ internal sealed class StockWebhookHandler : IStockLevelHandler
         _publisher = publisher;
     }
 
+    public Task AvailableChangedAsync(StockLevelChangedContext context, CancellationToken cancellationToken = default)
+        => _publisher.PublishAsync(CommerceWebhookEvents.StockChanged, ToData(context), cancellationToken);
+
     public async Task ChangedAsync(StockLevelChangedContext context, CancellationToken cancellationToken = default)
     {
-        var data = new { stock = InventoryAdminApiEndpoints.ToApi(context.Item), previousAvailable = context.PreviousAvailable };
-
         if (context.SoldOut)
         {
-            await _publisher.PublishAsync(CommerceWebhookEvents.StockSoldOut, data, cancellationToken);
+            await _publisher.PublishAsync(CommerceWebhookEvents.StockSoldOut, ToData(context), cancellationToken);
         }
         else if (context.RanLow)
         {
-            await _publisher.PublishAsync(CommerceWebhookEvents.StockLow, data, cancellationToken);
+            await _publisher.PublishAsync(CommerceWebhookEvents.StockLow, ToData(context), cancellationToken);
         }
     }
+
+    private static object ToData(StockLevelChangedContext context)
+        => new { stock = StockItemApiMapper.ToApi(context.Item), previousAvailable = context.PreviousAvailable };
 }

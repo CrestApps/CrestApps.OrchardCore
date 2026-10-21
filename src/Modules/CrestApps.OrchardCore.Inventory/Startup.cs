@@ -260,7 +260,6 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IStockLevelHandler, StockWebhookHandler>();
-        services.AddScoped<IStockLevelObserver, StockWebhookObserver>();
         services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
         services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
         services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");

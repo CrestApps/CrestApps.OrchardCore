@@ -92,7 +92,7 @@ internal static class InventoryAdminApiEndpoints
             Filter = low == true ? StockItemFilter.Low : StockItemFilter.All,
         }, pageSkip, pageTake, httpContext.RequestAborted);
 
-        return TypedResults.Ok(new ApiPage<ApiStockItem>(items.Select(ToApi).ToList(), count, pageSkip, pageTake));
+        return TypedResults.Ok(new ApiPage<ApiStockItem>(items.Select(StockItemApiMapper.ToApi).ToList(), count, pageSkip, pageTake));
     }
 
     private static async Task<Results<Ok<ApiStockItem>, ProblemHttpResult>> GetAsync(
@@ -107,7 +107,7 @@ internal static class InventoryAdminApiEndpoints
         }
 
         return await stockItems.FindByIdAsync(stockItemId, httpContext.RequestAborted) is { } item
-            ? TypedResults.Ok(ToApi(item))
+            ? TypedResults.Ok(StockItemApiMapper.ToApi(item))
             : ApiProblems.NotFound();
     }
 
@@ -200,23 +200,8 @@ internal static class InventoryAdminApiEndpoints
             return ApiProblems.Conflict(ApiProblems.Codes.Concurrency, "The stock was changed elsewhere at the same time. Read it again and retry.");
         }
 
-        return TypedResults.Ok(ToApi(result.Item));
+        return TypedResults.Ok(StockItemApiMapper.ToApi(result.Item));
     }
-
-    internal static ApiStockItem ToApi(StockItem item)
-        => new(
-            item.ItemId,
-            item.ContentItemId,
-            item.VariantId,
-            item.Sku,
-            item.Title,
-            item.OnHand,
-            item.Reserved,
-            item.Available,
-            item.LowStockThreshold,
-            item.AllowBackorder,
-            item.Archived,
-            (item.Levels ?? []).Select(level => new ApiStockLevel(level.LocationId, level.OnHand, level.Reserved, level.Available)).ToList());
 }
 
 /// <summary>
