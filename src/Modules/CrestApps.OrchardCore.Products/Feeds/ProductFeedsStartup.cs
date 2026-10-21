@@ -2,11 +2,13 @@ using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Services.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -38,6 +40,7 @@ public sealed class ProductFeedsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ProductFeedBuilder>();
+        services.TryAddScoped<TaxonomyTermLookup>();
         services.AddScoped<ProductFeedService>();
         services.AddDataMigration<Migrations.ProductFeedMigrations>();
         services.AddContentPart<ProductFeedPart>()

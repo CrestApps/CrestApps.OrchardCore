@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.Services.Attributes;
+using OrchardCore.Modules.Services;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Products;
@@ -50,11 +51,11 @@ public sealed class ProductListingFacetTests
     [InlineData("  T-Shirts & Tops ", "t-shirts-tops")]
     [InlineData("3 Series", "3-series")]
     public void Slugify_MakesReadableUrlValues(string name, string expected)
-        => Assert.Equal(expected, TaxonomyTermLookup.Slugify(name, "fallback"));
+        => Assert.Equal(expected, new TaxonomyTermLookup(null, new SlugService()).Slugify(name, "fallback"));
 
     [Theory]
     [InlineData("")]
     [InlineData("***")]
     public void Slugify_FallsBack_WhenTheNameHasNoLettersOrDigits(string name)
-        => Assert.Equal("fallback", TaxonomyTermLookup.Slugify(name, "fallback"));
+        => Assert.Equal("fallback", new TaxonomyTermLookup(null, new SlugService()).Slugify(name, "fallback"));
 }

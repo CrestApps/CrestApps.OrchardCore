@@ -115,20 +115,9 @@ public sealed class ProductSearchDocumentBuilder
             });
         }
 
-        var content = (JsonObject)contentItem.Content;
+        document.ImagePath = ProductGalleryReader.Find(definition, contentItem)?.Paths[0];
 
-        foreach (var part in definition.Parts)
-        {
-            foreach (var field in part.PartDefinition.Fields)
-            {
-                if (document.ImagePath is null &&
-                    field.FieldDefinition.Name == "MediaField" &&
-                    content[part.Name]?[field.Name] is JsonObject media)
-                {
-                    document.ImagePath = FieldValueReader.GetStrings(media, "Paths").FirstOrDefault();
-                }
-            }
-        }
+        var content = (JsonObject)contentItem.Content;
 
         foreach (var field in _attributeCatalog.GetFields(definition))
         {

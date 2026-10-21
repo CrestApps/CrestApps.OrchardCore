@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Services;
+using CrestApps.OrchardCore.Products.Services.Attributes;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
@@ -34,6 +35,7 @@ public sealed class ProductFeedBuilder
     private readonly LinkGenerator _linkGenerator;
     private readonly IClock _clock;
     private readonly IShopperCurrency _shopperCurrency;
+    private readonly TaxonomyTermLookup _termLookup;
 
     public ProductFeedBuilder(
         ISession session,
@@ -44,7 +46,8 @@ public sealed class ProductFeedBuilder
         IServiceProvider serviceProvider,
         LinkGenerator linkGenerator,
         IClock clock,
-        IShopperCurrency shopperCurrency)
+        IShopperCurrency shopperCurrency,
+        TaxonomyTermLookup termLookup)
     {
         _session = session;
         _contentManager = contentManager;
@@ -55,6 +58,7 @@ public sealed class ProductFeedBuilder
         _linkGenerator = linkGenerator;
         _clock = clock;
         _shopperCurrency = shopperCurrency;
+        _termLookup = termLookup;
     }
 
     /// <summary>
@@ -67,7 +71,6 @@ public sealed class ProductFeedBuilder
         var settings = await _siteService.GetSettingsAsync<ProductFeedSettings>();
         var baseUrl = site.BaseUrl?.TrimEnd('/');
         var types = await _productTypes.GetProductTypesAsync(_contentDefinitionManager);
-        var terms = await LoadTermsAsync(cancellationToken);
         var availabilityProviders = _serviceProvider.GetServices<IProductAvailabilityProvider>();
         var media = _serviceProvider.GetService<IMediaFileStore>();
 
@@ -117,10 +120,7 @@ public sealed class ProductFeedBuilder
                     contentItem.Content["HtmlBodyPart"]?["Html"]?.ToString() ??
                     contentItem.Content["MarkdownBodyPart"]?["Markdown"]?.ToString() ??
                     contentItem.Content["SeoMetaPart"]?["MetaDescription"]?.ToString()), ProductFeedValidator.MaxDescriptionLength);
-                var fieldTerms = TermsOf(contentItem)
-                    .Select(entry => (entry.Field, Term: terms.GetValueOrDefault(entry.TermId)))
-                    .Where(entry => entry.Term is not null)
-                    .ToList();
+                var fieldTerms = await GetFieldTermsAsync(contentItem);
 
                 // A term of a field or taxonomy named for brands is the brand; the first other term, the product type.
                 bool IsBrand((string Field, FeedTerm Term) entry)
@@ -296,10 +296,32 @@ public sealed class ProductFeedBuilder
         return url.StartsWith('/') ? host + url : baseUrl + "/" + url;
     }
 
-    // Every taxonomy term on the item, with the name of the field it's in.
-    private static IEnumerable<(string Field, string TermId)> TermsOf(ContentItem contentItem)
+    // Every taxonomy term on the item, with the name of the field it's in, its taxonomy's name and its path.
+    private async Task<List<(string Field, FeedTerm Term)>> GetFieldTermsAsync(ContentItem contentItem)
     {
-        var found = new List<(string, string)>();
+        var fieldTerms = new List<(string Field, FeedTerm Term)>();
+
+        foreach (var (field, taxonomyId, termId) in TermsOf(contentItem))
+        {
+            var path = await _termLookup.GetPathAsync(taxonomyId, termId);
+
+            if (path.Count == 0)
+            {
+                continue;
+            }
+
+            var taxonomy = await _termLookup.GetTaxonomyNameAsync(taxonomyId) ?? string.Empty;
+
+            fieldTerms.Add((field, new FeedTerm(taxonomy, path[path.Count - 1].DisplayText, string.Join(" > ", path.Select(term => term.DisplayText)))));
+        }
+
+        return fieldTerms;
+    }
+
+    // Every taxonomy term on the item, with the name of the field it's in and the taxonomy the field picks from.
+    private static IEnumerable<(string Field, string TaxonomyId, string TermId)> TermsOf(ContentItem contentItem)
+    {
+        var found = new List<(string, string, string)>();
 
         void Walk(string name, JsonNode node)
         {
@@ -308,7 +330,9 @@ public sealed class ProductFeedBuilder
                 case JsonObject obj:
                     if (obj["TermContentItemIds"] is JsonArray termIds)
                     {
-                        found.AddRange(termIds.Select(id => id?.ToString()).Where(id => !string.IsNullOrEmpty(id)).Select(id => (name, id)));
+                        var taxonomyId = obj["TaxonomyContentItemId"]?.ToString();
+
+                        found.AddRange(termIds.Select(id => id?.ToString()).Where(id => !string.IsNullOrEmpty(id)).Select(id => (name, taxonomyId, id)));
                     }
 
                     foreach (var (key, child) in obj)
@@ -355,42 +379,6 @@ public sealed class ProductFeedBuilder
         }
 
         return null;
-    }
-
-    private async Task<Dictionary<string, FeedTerm>> LoadTermsAsync(CancellationToken cancellationToken)
-    {
-        var terms = new Dictionary<string, FeedTerm>(StringComparer.Ordinal);
-        var taxonomies = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType == "Taxonomy" && index.Published).ListAsync(cancellationToken);
-
-        void Collect(JsonNode term, string taxonomy, string parentPath)
-        {
-            if (term?["ContentItemId"]?.ToString() is not { Length: > 0 } id)
-            {
-                return;
-            }
-
-            var name = term["DisplayText"]?.ToString() is { Length: > 0 } text ? text : id;
-            var path = string.IsNullOrEmpty(parentPath) ? name : parentPath + " > " + name;
-
-            terms.TryAdd(id, new FeedTerm(taxonomy, name, path));
-
-            foreach (var child in term["Terms"] as JsonArray ?? [])
-            {
-                Collect(child, taxonomy, path);
-            }
-        }
-
-        foreach (var taxonomy in taxonomies)
-        {
-            var root = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(taxonomy.Content));
-
-            foreach (var term in root?["TaxonomyPart"]?["Terms"] as JsonArray ?? [])
-            {
-                Collect(term, taxonomy.DisplayText ?? string.Empty, null);
-            }
-        }
-
-        return terms;
     }
 
     private static bool Mentions(string name, string word)

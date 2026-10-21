@@ -203,7 +203,7 @@ public sealed class ListingStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<TaxonomyTermLookup>();
+        services.TryAddScoped<TaxonomyTermLookup>();
 
         // The product search behind the merchant's product pickers: recommendations, groups and bundles.
         services.AddScoped<ProductRecommendationService>();
