@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -23,9 +22,11 @@ public sealed class PurchaseOrderMigrations : DataMigration
             .Column<DateTime>(nameof(PurchaseOrderIndex.CreatedUtc)),
             collection: InventoryConstants.CollectionName);
 
-        // Safe to run again: a server that finished the step first has already made them.
-        await IndexTableIndexCreation.CreateIfMissingAsync<PurchaseOrderIndex>(SchemaBuilder, "IDX_PurchaseOrderIndex_Status", InventoryConstants.CollectionName, nameof(PurchaseOrderIndex.Status), nameof(PurchaseOrderIndex.CreatedUtc));
-        await IndexTableIndexCreation.CreateIfMissingAsync<PurchaseOrderIndex>(SchemaBuilder, "IDX_PurchaseOrderIndex_Number", InventoryConstants.CollectionName, nameof(PurchaseOrderIndex.Number));
+        await SchemaBuilder.AlterIndexTableAsync<PurchaseOrderIndex>(table =>
+        {
+            table.CreateIndex("IDX_PurchaseOrderIndex_Status", nameof(PurchaseOrderIndex.Status), nameof(PurchaseOrderIndex.CreatedUtc));
+            table.CreateIndex("IDX_PurchaseOrderIndex_Number", nameof(PurchaseOrderIndex.Number));
+        }, collection: InventoryConstants.CollectionName);
 
         return 1;
     }

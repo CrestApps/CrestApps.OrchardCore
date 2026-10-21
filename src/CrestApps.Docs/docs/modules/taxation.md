@@ -233,7 +233,7 @@ The `TaxName` is optional; when it is left empty the tax line falls back to the 
 
 #### Import duty
 
-`TaxTypeNames.ImportDuty` (`ImportDuty`) is a well-known tax type: a duty on goods brought into a country, charged at checkout. New sites are seeded with it, and `TaxTypeMigrations.UpdateFrom1Async` adds it to sites seeded before it, unless they have no tax types at all or already have one by that name. A duty is an ordinary rule:
+`TaxTypeNames.ImportDuty` (`ImportDuty`) is a well-known tax type: a duty on goods brought into a country, charged at checkout. New sites are seeded with it. A duty is an ordinary rule:
 
 ```json
 {
