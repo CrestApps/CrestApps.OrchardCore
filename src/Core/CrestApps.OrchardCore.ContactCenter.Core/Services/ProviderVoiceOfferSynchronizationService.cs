@@ -160,6 +160,15 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
             if (!string.IsNullOrWhiteSpace(answeredAgentId))
             {
                 var presenceManager = _serviceProvider.GetRequiredService<IAgentPresenceManager>();
+
+                // A campaign call the agent was connected to: one still held Reserved for it is put on it first, as of
+                // when they joined, so the end moves them on from the call they were on.
+                await presenceManager.ConnectHeldAgentAsync(
+                    answeredAgentId,
+                    interaction,
+                    DialerCallMetadata.GetAgentJoinedUtc(interaction) ?? interaction.AnsweredUtc ?? session?.AnsweredUtc ?? endedUtc ?? _clock.UtcNow,
+                    cancellationToken);
+
                 var agent = await _agentManager.FindByIdAsync(answeredAgentId, cancellationToken);
                 var activityWasCompleted = activity?.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
 

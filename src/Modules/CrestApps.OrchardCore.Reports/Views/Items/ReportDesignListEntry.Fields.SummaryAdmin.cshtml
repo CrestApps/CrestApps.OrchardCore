@@ -1,0 +1,17 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignListEntry>
+
+@{
+    var design = Model.Value.Design;
+}
+
+@* A plain link: a published report opens to run, a report never published opens in the builder. *@
+@if (Model.Value.IsDraft)
+{
+    <a asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@(string.IsNullOrWhiteSpace(design.DisplayText) ? T["Untitled report"] : design.DisplayText)</a>
+}
+else
+{
+    <a asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@design.DisplayText</a>
+}

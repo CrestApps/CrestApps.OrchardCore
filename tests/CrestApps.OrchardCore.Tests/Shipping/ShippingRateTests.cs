@@ -198,7 +198,7 @@ public sealed class ShippingRateTests
     {
         var zone = new ShippingZone();
 
-        ShippingZoneHandler.Populate(zone, JsonNode.Parse("""
+        ShippingZoneHandler.PopulateZone(zone, JsonNode.Parse("""
             {
               "Name": " Domestic ",
               "Countries": ["us", "US", " ca "],

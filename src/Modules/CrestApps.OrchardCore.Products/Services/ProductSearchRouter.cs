@@ -40,7 +40,7 @@ public sealed class ProductSearchRouter
             var indexProfile = store is null ? null : await store.FindByNameAsync(query.IndexProfileName);
 
             if (indexProfile is not null &&
-                string.Equals(indexProfile.Type, ProductSearchIndexFields.IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
+                ProductSearchIndexFields.IsProductSearchIndex(indexProfile) &&
                 _serviceProvider.GetKeyedService<IProductIndexSearchService>(indexProfile.ProviderName) is { } indexSearch)
             {
                 try

@@ -14,6 +14,11 @@ public static class TaxationConstants
         /// The identifier of the core taxation feature.
         /// </summary>
         public const string Taxation = "CrestApps.OrchardCore.Taxation";
+
+        /// <summary>
+        /// Works out sales tax with TaxJar for the countries it's set up for.
+        /// </summary>
+        public const string TaxJar = "CrestApps.OrchardCore.Taxation.TaxJar";
     }
 
     /// <summary>

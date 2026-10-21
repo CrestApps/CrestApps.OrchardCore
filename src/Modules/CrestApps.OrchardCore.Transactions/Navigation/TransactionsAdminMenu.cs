@@ -39,18 +39,14 @@ public sealed class TransactionsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Transactions"], S["Transactions"].PrefixPosition("5"), transactions => transactions
-                    .AddClass("transactions")
                     .Id("transactions")
                     .Action("Index", "Admin", _reportRouteValues)
                     .Permission(TransactionsPermissions.ManageTransactions)
                     .LocalNav()
                 )
                 .Add(S["My Transactions"], S["My Transactions"].PrefixPosition("6"), myTransactions => myTransactions
-                    .AddClass("my-transactions")
                     .Id("myTransactions")
                     .Action("Index", "Transaction", _myTransactionsRouteValues)
                     .Permission(TransactionsPermissions.ViewOwnTransactions)

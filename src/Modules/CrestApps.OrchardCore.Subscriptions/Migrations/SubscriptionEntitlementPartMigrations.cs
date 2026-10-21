@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Defines the part that records what a subscription plan entitles a subscriber to.
 /// </summary>
-public sealed class SubscriptionEntitlementPartMigrations : DataMigration
+internal sealed class SubscriptionEntitlementPartMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

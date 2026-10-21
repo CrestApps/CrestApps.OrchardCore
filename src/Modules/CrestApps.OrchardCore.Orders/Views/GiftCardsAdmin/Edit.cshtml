@@ -1,0 +1,158 @@
+@using CrestApps.OrchardCore.Orders
+@using CrestApps.OrchardCore.Products.Core.Services
+@model GiftCardEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    string Format(decimal amount) => ProductPriceFormatter.Format(amount, Model.Currency);
+}
+
+<zone Name="Title">
+    <breadcrumb name="GiftCardsEdit" title="@T["Gift card"]">
+        <breadcrumb-item id="GiftCards" action="Index" controller="GiftCardsAdmin" area="CrestApps.OrchardCore.Orders" permission="@OrderPermissions.ManageGiftCards.Name">@T["Gift cards"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12 col-md-5">
+                <div class="text-muted small">@T["Code"]</div>
+                <div class="fs-5 font-monospace text-break">@Model.Code</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">@T["Balance"]</div>
+                <div class="fs-5">@Format(Model.Balance)</div>
+                <div class="small text-muted">@T["of {0}", Format(Model.InitialValue)]</div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="text-muted small">@T["Issued"]</div>
+                <div>@((await LocalAsync(Model.CreatedUtc)).ToString("d"))</div>
+                @if (!string.IsNullOrEmpty(Model.OrderId))
+                {
+                    <a asp-action="Detail" asp-controller="OrdersAdmin" asp-route-orderId="@Model.OrderId" class="small">@T["Bought with order {0}", Model.OrderNumber]</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<form asp-action="Edit" asp-route-itemId="@Model.ItemId" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="RecipientName">
+        <label asp-for="RecipientName" class="ocat-label">@T["Recipient's name"]</label>
+        <div class="ocat-end">
+            <input asp-for="RecipientName" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="RecipientEmail">
+        <label asp-for="RecipientEmail" class="ocat-label">@T["Recipient's email"]</label>
+        <div class="ocat-end">
+            <input asp-for="RecipientEmail" type="email" class="form-control" />
+            <span asp-validation-for="RecipientEmail"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="ExpiresUtc">
+        <label asp-for="ExpiresUtc" class="ocat-label">@T["Expires (UTC)"]</label>
+        <div class="ocat-limited">
+            <input asp-for="ExpiresUtc" type="datetime-local" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Note">
+        <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+        <div class="ocat-end">
+            <input asp-for="Note" class="form-control" />
+            <span class="hint">@T["For the store only."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="IsEnabled">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="IsEnabled" class="form-check-input" />
+                <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+            </div>
+            <span class="hint dashed">@T["Clear it to stop the card paying for anything, without changing its balance."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <form asp-action="Adjust" asp-route-itemId="@Model.ItemId" method="post" class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">@T["Change the balance"]</h5>
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-4">
+                        <label class="form-label" for="adjust-amount">@T["Amount"]</label>
+                        <input id="adjust-amount" name="amount" type="number" step="0.01" class="form-control" required />
+                    </div>
+                    <div class="col-sm-8">
+                        <label class="form-label" for="adjust-reason">@T["Reason"]</label>
+                        <input id="adjust-reason" name="reason" class="form-control" required />
+                    </div>
+                </div>
+                <span class="hint">@T["A positive amount adds to the card; a negative one takes off it. The reason is kept with the card's activity."]</span>
+                <div class="mt-2">
+                    <button type="submit" class="btn btn-outline-primary">@T["Change balance"]</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-4">
+        <form asp-action="Email" asp-route-itemId="@Model.ItemId" method="post" class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">@T["Email the card"]</h5>
+                <p class="small text-muted">@(string.IsNullOrEmpty(Model.RecipientEmail) ? T["Enter the recipient's email above and save, then send it."] : T["Sends the code to {0} again.", Model.RecipientEmail])</p>
+                <button type="submit" class="btn btn-outline-secondary" disabled="@string.IsNullOrEmpty(Model.RecipientEmail)">@T["Send"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h5 class="mt-4">@T["Activity"]</h5>
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["When"]</th>
+                <th scope="col">@T["What"]</th>
+                <th scope="col" class="text-end">@T["Change"]</th>
+                <th scope="col" class="text-end">@T["Balance"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var activity in Model.Activity)
+            {
+                <tr>
+                    <td class="text-nowrap">@((await LocalAsync(activity.CreatedUtc)).ToString("g"))</td>
+                    <td>
+                        @activity.Reason
+                        @if (!string.IsNullOrEmpty(activity.Actor))
+                        {
+                            <span class="text-muted small">&middot; @activity.Actor</span>
+                        }
+                    </td>
+                    <td class="text-end text-nowrap @(activity.Amount < 0 ? "text-danger" : "text-success")">@(activity.Amount < 0 ? "−" : "+")@Format(Math.Abs(activity.Amount))</td>
+                    <td class="text-end text-nowrap">@Format(activity.Balance)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -29,7 +29,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Migrations
 /// </remarks>
 public sealed class OmnichannelContactsMigrationsTests
 {
-    private const int FinalVersion = 13;
+    private const int FinalVersion = 14;
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
 
     private static readonly TimeSpan _runLimit = TimeSpan.FromSeconds(10);
@@ -60,10 +60,18 @@ public sealed class OmnichannelContactsMigrationsTests
             Assert.Contains("IDX_OmnichannelContactIndex_TimeZoneId ", schema);
             Assert.Contains("IDX_OCIndex_TimeZoneVersion ", schema);
             Assert.Contains("IDX_OCIndex_ContentItemLatest ", schema);
+            var phoneSchema = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, PhoneNumberTableName(store));
+            Assert.Contains("NormalizedPhoneNumber type=", phoneSchema);
+            Assert.Contains("PhoneType type=", phoneSchema);
+            Assert.Contains("IsConverted type=", phoneSchema);
+            Assert.Contains("IDX_OCPhone_Number ", phoneSchema);
+            Assert.Contains("IDX_OCPhone_ContentItem ", phoneSchema);
+            Assert.Contains("IDX_OCPhone_DocumentId ", phoneSchema);
 
             await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal(schema, await CaptureCommittedSchemaAsync(databasePath, TableName(store)));
+            Assert.Equal(phoneSchema, await CaptureCommittedSchemaAsync(databasePath, PhoneNumberTableName(store)));
             Assert.True(await CommittedContactExistsAsync(databasePath, store, "contact-1"));
         }
         finally
@@ -84,6 +92,8 @@ public sealed class OmnichannelContactsMigrationsTests
         {
             string freshSchema;
             string upgradedSchema;
+            string freshPhoneSchema;
+            string upgradedPhoneSchema;
 
             await using (var session = freshStore.CreateSession())
             {
@@ -94,6 +104,7 @@ public sealed class OmnichannelContactsMigrationsTests
 
                 Assert.Equal(FinalVersion, await migration.CreateAsync());
                 freshSchema = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, TableName(freshStore));
+                freshPhoneSchema = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, PhoneNumberTableName(freshStore));
             }
 
             await using (var session = upgradedStore.CreateSession())
@@ -106,9 +117,11 @@ public sealed class OmnichannelContactsMigrationsTests
 
                 Assert.Equal(FinalVersion, await RunWithinLimitAsync(() => MigrationChainRunner.RunUpgradeChainAsync(migration, 1)));
                 upgradedSchema = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, TableName(upgradedStore));
+                upgradedPhoneSchema = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, PhoneNumberTableName(upgradedStore));
             }
 
             Assert.Equal(freshSchema, upgradedSchema);
+            Assert.Equal(freshPhoneSchema, upgradedPhoneSchema);
         }
         finally
         {
@@ -123,6 +136,8 @@ public sealed class OmnichannelContactsMigrationsTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
+    [InlineData(12)]
+    [InlineData(13)]
     public async Task UpgradeOverACurrentSchema_SkipsEveryChangeThatAlreadyExistsWithoutPoisoningTheTransaction(int startingVersion)
     {
         var databasePath = DatabasePath("contacts-already-current");
@@ -139,6 +154,7 @@ public sealed class OmnichannelContactsMigrationsTests
             await migration.CreateAsync();
             await InsertContactAsync(schemaBuilder, store, documentId: 1, contentItemId: "contact-1");
             var schemaBefore = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, TableName(store));
+            var phoneSchemaBefore = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, PhoneNumberTableName(store));
 
             var version = await RunWithinLimitAsync(() => MigrationChainRunner.RunUpgradeChainAsync(migration, startingVersion));
 
@@ -147,6 +163,7 @@ public sealed class OmnichannelContactsMigrationsTests
             Assert.Equal(FinalVersion, version);
             Assert.Equal(0, connections.Created);
             Assert.Equal(schemaBefore, await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, TableName(store)));
+            Assert.Equal(phoneSchemaBefore, await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, PhoneNumberTableName(store)));
             await InsertContactAsync(schemaBuilder, store, documentId: 2, contentItemId: "contact-2");
             await transaction.CommitAsync(TestContext.Current.CancellationToken);
             Assert.True(await CommittedContactExistsAsync(databasePath, store, "contact-1"));
@@ -322,6 +339,10 @@ public sealed class OmnichannelContactsMigrationsTests
     private static string TableName(IStore store)
         => store.Configuration.TablePrefix +
             store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex), null);
+
+    private static string PhoneNumberTableName(IStore store)
+        => store.Configuration.TablePrefix +
+            store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactPhoneNumberIndex), null);
 
     private static string LegacyCollectionTableName(IStore store)
         => store.Configuration.TablePrefix +

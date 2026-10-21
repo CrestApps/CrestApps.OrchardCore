@@ -10,7 +10,7 @@
 
 @{
     var formId = "add-to-cart-" + Model.ContentItemId;
-    var mustChoose = !Model.IsProductPage && !string.IsNullOrEmpty(Model.ProductUrl) && Model.AddOns.Any(addOn => addOn.Required);
+    var mustChoose = !Model.IsProductPage && !string.IsNullOrEmpty(Model.ProductUrl) && (Model.ChooseOnProductPage || Model.AddOns.Any(addOn => addOn.Required));
 }
 
 @if (mustChoose)
@@ -134,7 +134,14 @@
             @foreach (var addOn in Model.AddOns)
             {
                 var inputId = formId + "-addon-" + addOn.AddOnId;
-                var extra = addOn.Price > 0 && !string.IsNullOrEmpty(Model.Currency) ? "+" + ProductPriceFormatter.Format(addOn.Price, Model.Currency) : null;
+                var extra = addOn.Price <= 0 || string.IsNullOrEmpty(Model.Currency)
+                    ? null
+                    : addOn.PriceBasis switch
+                    {
+                        CrestApps.OrchardCore.Products.Core.Models.ProductAddOnPriceBasis.PercentOfPrice => T.GetString("+{0}%", addOn.Price.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)).Value,
+                        CrestApps.OrchardCore.Products.Core.Models.ProductAddOnPriceBasis.PerPerson => T.GetString("+{0} a person", ProductPriceFormatter.Format(addOn.Price, Model.Currency)).Value,
+                        _ => "+" + ProductPriceFormatter.Format(addOn.Price, Model.Currency),
+                    };
 
                 if (addOn.Kind == CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Checkbox)
                 {

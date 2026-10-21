@@ -31,11 +31,8 @@ public sealed class ReviewsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Reviews"], S["Reviews"].PrefixPosition("9"), reviews => reviews
-                    .AddClass("reviews")
                     .Id("reviews")
                     .Action(_routeValues)
                     .Permission(ReviewsPermissions.ManageReviews)
@@ -45,7 +42,6 @@ public sealed class ReviewsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Reviews"], S["Reviews"].PrefixPosition(), reviews => reviews
-                        .AddClass("reviews-settings")
                         .Id("reviewsSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(ReviewsPermissions.ManageReviews)

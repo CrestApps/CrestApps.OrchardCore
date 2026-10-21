@@ -1,0 +1,20 @@
+@model ShapeViewModel<Campaign>
+
+@switch (Model.Value.Status)
+{
+    case CampaignStatus.Draft:
+        <span class="badge ta-badge fw-normal">@T["Draft"]</span>
+        break;
+    case CampaignStatus.Scheduled:
+        <span class="badge ta-badge fw-normal"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@T["Scheduled"]</span>
+        break;
+    case CampaignStatus.Sending:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-paper-plane text-primary me-1" aria-hidden="true"></i>@T["Sending"]</span>
+        break;
+    case CampaignStatus.Sent:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-check text-success me-1" aria-hidden="true"></i>@T["Sent"]</span>
+        break;
+    case CampaignStatus.Canceled:
+        <span class="badge ta-badge bg-secondary-subtle fw-normal">@T["Canceled"]</span>
+        break;
+}

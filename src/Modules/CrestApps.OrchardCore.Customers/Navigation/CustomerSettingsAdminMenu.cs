@@ -29,7 +29,6 @@ public sealed class CustomerSettingsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Customers"], S["Customers"].PrefixPosition(), customers => customers
-                        .AddClass("customers-settings")
                         .Id("customersSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(CustomerPermissions.ManageCustomers)

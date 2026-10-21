@@ -115,10 +115,6 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             var now = _clock.UtcNow;
             var trimmedReference = Trim(reference);
 
-            transaction.AmountPaid = CurrencyScale.Round(transaction.AmountPaid + applied, transaction.Currency);
-            transaction.UpdatedUtc = now;
-            transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
-
             var referenceSuffix = trimmedReference is null
                 ? string.Empty
                 : S[" Reference: {0}.", trimmedReference].Value;
@@ -138,21 +134,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
             transaction.Events.Add(payment);
 
-            if (transaction.OutstandingAmount <= 0m)
+            if (transaction.ApplyPayment(applied, TransactionsConstants.SettlementMethods.Offline, now, S["The transaction was fully paid and settled."].Value))
             {
-                transaction.Status = TransactionStatus.Paid;
-                transaction.SettledUtc = now;
                 transaction.SettlementReference = trimmedReference ?? transaction.SettlementReference;
-                transaction.Events.Add(new TransactionEvent
-                {
-                    CreatedUtc = now,
-                    Type = TransactionEventType.StatusChanged,
-                    Message = S["The transaction was fully paid and settled."].Value,
-                });
-            }
-            else if (transaction.AmountPaid > 0m)
-            {
-                transaction.Status = TransactionStatus.PartiallyPaid;
             }
 
             result.Event = payment;
@@ -179,12 +163,6 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             // adjusted is not owed, so it is not counted as paid.
             var settled = transaction.OutstandingAmount;
 
-            transaction.AmountPaid = CurrencyScale.Round(transaction.AmountPaid + settled, transaction.Currency);
-            transaction.Status = TransactionStatus.Paid;
-            transaction.SettledUtc = now;
-            transaction.UpdatedUtc = now;
-            transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
-
             var message = string.IsNullOrWhiteSpace(note)
                 ? S["The transaction was marked as paid."].Value
                 : S["The transaction was marked as paid. Note: {0}", note].Value;
@@ -194,6 +172,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             await SetActorAsync(payment);
 
             transaction.Events.Add(payment);
+            transaction.ApplyPayment(settled, TransactionsConstants.SettlementMethods.Offline, now, S["The transaction was fully paid and settled."].Value);
             result.Event = payment;
 
             if (settled <= 0m)
@@ -312,17 +291,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             transaction.Events.Add(adjustment);
 
             // Nothing left to pay: the transaction is settled and is never reminded again.
-            if (transaction.OutstandingAmount <= 0m)
+            if (transaction.TrySettle(now, S["Nothing is left to pay, so the transaction is settled."].Value))
             {
-                transaction.Status = TransactionStatus.Paid;
-                transaction.SettledUtc = now;
                 transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Adjusted;
-                transaction.Events.Add(new TransactionEvent
-                {
-                    CreatedUtc = now,
-                    Type = TransactionEventType.StatusChanged,
-                    Message = S["Nothing is left to pay, so the transaction is settled."].Value,
-                });
             }
 
             result.Event = adjustment;

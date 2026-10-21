@@ -5,14 +5,10 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
-using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 
@@ -36,7 +32,7 @@ public sealed class OrderViewController : Controller
     private readonly IPaymentAttemptLimiter _limiter;
     private readonly IClock _clock;
     private readonly IShapeFactory _shapeFactory;
-    private readonly ILogger _logger;
+    private readonly ICommerceEmailSender _emailSender;
 
     internal readonly IStringLocalizer S;
 
@@ -47,7 +43,7 @@ public sealed class OrderViewController : Controller
         IPaymentAttemptLimiter limiter,
         IClock clock,
         IShapeFactory shapeFactory,
-        ILogger<OrderViewController> logger,
+        ICommerceEmailSender emailSender,
         IStringLocalizer<OrderViewController> stringLocalizer)
     {
         _orderStore = orderStore;
@@ -56,7 +52,7 @@ public sealed class OrderViewController : Controller
         _limiter = limiter;
         _clock = clock;
         _shapeFactory = shapeFactory;
-        _logger = logger;
+        _emailSender = emailSender;
         S = stringLocalizer;
     }
 
@@ -64,7 +60,8 @@ public sealed class OrderViewController : Controller
     public async Task<IActionResult> Index(
         string token,
         [FromServices] IDisplayManager<Order> displayManager,
-        [FromServices] IUpdateModelAccessor updateModelAccessor)
+        [FromServices] IUpdateModelAccessor updateModelAccessor,
+        [FromServices] OrderPayLinks payLinks)
     {
         var orderId = _orderLinks.GetOrderId(token);
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
@@ -77,9 +74,7 @@ public sealed class OrderViewController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
-            ? Url.RouteUrl("GuestOrderPay", new { token })
-            : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = await payLinks.GetPayUrlAsync(order, Url.RouteUrl("GuestOrderPay", new { token }));
         var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
             ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
             : null;
@@ -183,7 +178,7 @@ public sealed class OrderViewController : Controller
 
     private async Task SendLinksAsync(string email)
     {
-        if (HttpContext.RequestServices.GetService<IEmailService>() is not { } emailService)
+        if (!_emailSender.CanSend)
         {
             return;
         }
@@ -210,19 +205,21 @@ public sealed class OrderViewController : Controller
             return;
         }
 
-        var message = _linksEmailBuilder.Build(recent);
-        var result = await emailService.SendAsync(new MailMessage
+        await _emailSender.SendAsync(new CommerceEmail
         {
             To = email,
-            Subject = message.Subject,
-            TextBody = message.Text,
-            HtmlBody = message.Html,
-        });
-
-        if (!result.Succeeded)
+            Reference = "Find my order",
+        }, _ =>
         {
-            _logger.LogWarning("The links to {Count} orders could not be emailed for Find my order.", recent.Count);
-        }
+            var message = _linksEmailBuilder.Build(recent);
+
+            return Task.FromResult(new CommerceEmailContent
+            {
+                Subject = message.Subject,
+                Text = message.Text,
+                Html = message.Html,
+            });
+        });
     }
 
     // What is still owed on an order paid later, payable from its own link.

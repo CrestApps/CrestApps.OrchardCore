@@ -83,6 +83,26 @@ public sealed class OrderQuery
     /// Gets or sets an order number, or the start of one, or a customer's email address.
     /// </summary>
     public string Search { get; set; }
+
+    /// <summary>
+    /// Gets or sets the company whose orders to match, or none for every order.
+    /// </summary>
+    public string CompanyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel to match, such as <see cref="OrderChannels.PointOfSale"/>, or none for every channel.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inventory location to match, or none for every location.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the register shift to match, or none.
+    /// </summary>
+    public string ShiftId { get; set; }
 }
 
 public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
@@ -167,6 +187,27 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
             orders = orders.Where(index => index.AnonymizedUtc == null);
         }
 
+        if (!string.IsNullOrEmpty(query.Channel))
+        {
+            var channel = query.Channel;
+
+            orders = orders.Where(index => index.Channel == channel);
+        }
+
+        if (!string.IsNullOrEmpty(query.LocationId))
+        {
+            var locationId = query.LocationId;
+
+            orders = orders.Where(index => index.LocationId == locationId);
+        }
+
+        if (!string.IsNullOrEmpty(query.ShiftId))
+        {
+            var shiftId = query.ShiftId;
+
+            orders = orders.Where(index => index.ShiftId == shiftId);
+        }
+
         if (query.Statuses is { Count: > 0 })
         {
             var statuses = query.Statuses.ToArray();
@@ -174,11 +215,18 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
             orders = orders.Where(index => index.Status.IsIn(statuses));
         }
 
+        if (!string.IsNullOrEmpty(query.CompanyId))
+        {
+            var companyId = query.CompanyId;
+
+            orders = orders.Where(index => index.CompanyId == companyId);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search = query.Search.Trim().ToUpperInvariant();
 
-            orders = orders.Where(index => index.OrderNumber.StartsWith(search) || index.CustomerEmail == search);
+            orders = orders.Where(index => index.OrderNumber.StartsWith(search) || index.CustomerEmail == search || index.PurchaseOrderNumber == search);
         }
 
         var count = await orders.CountAsync(cancellationToken);

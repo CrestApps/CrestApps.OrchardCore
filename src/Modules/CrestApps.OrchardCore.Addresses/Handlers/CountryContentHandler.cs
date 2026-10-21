@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Services;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 
 namespace CrestApps.OrchardCore.Addresses.Handlers;
@@ -26,10 +24,7 @@ public sealed class CountryContentHandler : ContentHandlerBase
             return;
         }
 
-        JsonNode content = context.ContentItem.Content;
-        var codeField = content?[AddressConstants.CountryPart]?[AddressConstants.CodeField] as JsonObject;
-        var code = codeField?["Text"]?.GetValue<string>()?.Trim();
-
+        var code = context.ContentItem.GetCountryCode();
         var error = await _validator.GetErrorAsync(code, context.ContentItem.ContentItemId);
 
         if (error is not null)
@@ -39,6 +34,6 @@ public sealed class CountryContentHandler : ContentHandlerBase
             return;
         }
 
-        codeField["Text"] = code.ToUpperInvariant();
+        context.ContentItem.SetCountryCode(CountryCodeUtility.Normalize(code));
     }
 }

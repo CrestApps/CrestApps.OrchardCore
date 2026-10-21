@@ -1,0 +1,31 @@
+@model CrestApps.OrchardCore.Bookings.Controllers.BookingRequestViewModel
+
+@* A signed-in buyer's form to send their cart as a request the store confirms. *@
+
+<h1 class="h3 mb-3">@T["Request to book"]</h1>
+<p class="text-body-secondary">@T["The store confirms these bookings before you pay. We'll hold your dates and email you when your booking is confirmed, with a link to pay. Your cart is emptied; the request shows under your orders."]</p>
+
+@if (Model.Problems.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0 ps-3">
+            @foreach (var problem in Model.Problems)
+            {
+                <li>@problem</li>
+            }
+        </ul>
+    </div>
+}
+
+<form method="post" action="@Url.RouteUrl("BookingRequest")" class="no-multisubmit">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label for="BookingMessage" class="form-label">@T["Your message"]</label>
+        <textarea id="BookingMessage" name="Message" class="form-control" rows="5" maxlength="2000">@Model.Message</textarea>
+        <span class="hint">@T["Optional. Such as who's coming, or anything the store should know."]</span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">@T["Send the request"]</button>
+    <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the cart"]</a>
+</form>

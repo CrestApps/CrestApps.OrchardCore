@@ -274,6 +274,7 @@ body .ta-content {
 // A call the dialer is placing for the agent, before they are on it. Tinted blue like a preview, never the green of a
 // connected call, so the agent does not take a ringing or screened customer for one they can talk to.
 .cc-bar__pending-dial {
+    &.is-waiting,
     &.is-dialing,
     &.is-connecting { background: rgba(52, 152, 219, 0.16); }
 

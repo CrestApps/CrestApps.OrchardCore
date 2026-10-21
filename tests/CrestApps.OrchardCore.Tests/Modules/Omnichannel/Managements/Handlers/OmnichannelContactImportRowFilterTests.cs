@@ -37,9 +37,9 @@ public sealed class OmnichannelContactImportRowFilterTests
         // whole set and answer each lookup from it.
         _duplicateLookupService.Setup(x => x.GetPhoneNumberOwnersAsync(
                 It.IsAny<IReadOnlyCollection<string>>(),
-                It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+                It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (IReadOnlyCollection<string> keys, Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> _, CancellationToken _) =>
+            .Returns(async (IReadOnlyCollection<string> keys, Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool> _, CancellationToken _) =>
             {
                 await Task.Yield();
 
@@ -72,7 +72,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.True(initialized);
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -122,7 +122,7 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.Is<IReadOnlyCollection<string>>(keys => keys.Contains("5551112222") && keys.Contains("5553334444")),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -161,13 +161,15 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         Assert.True(await filter.ShouldSkipRowAsync(rowContexts[1]));
         Assert.Contains("already appeared earlier in the import file", rowContexts[1].SkipReason);
+        Assert.Equal("Repeated in the import file", rowContexts[1].SkipCategory);
 
         Assert.True(await filter.ShouldSkipRowAsync(rowContexts[2]));
         Assert.Contains("already exists in the database", rowContexts[2].SkipReason);
+        Assert.Equal("Already in the database", rowContexts[2].SkipCategory);
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
 
@@ -294,10 +296,11 @@ public sealed class OmnichannelContactImportRowFilterTests
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
+        Assert.Equal("On a national do-not-call registry", rowContext.SkipCategory);
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -535,6 +538,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
+        Assert.Equal("On a national do-not-call registry", rowContext.SkipCategory);
         Assert.Contains(
             lookupBatches,
             batch => batch.Contains(PhoneNumber.FromE164("+12502000003")));

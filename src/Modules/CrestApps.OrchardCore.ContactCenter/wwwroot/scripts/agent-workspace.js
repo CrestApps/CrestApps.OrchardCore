@@ -139,6 +139,12 @@
 			"A person answered. Connecting you now."
 		]
 	};
+	var DIAL_WAITING_LABEL = [
+		"dialWaiting",
+		"Waiting for a connected call",
+		"dialWaitingHint",
+		"The dialer is calling for you. You will be connected when a person answers."
+	];
 	var REASONED_STATES = {
 		Break: true,
 		Away: true,
@@ -180,16 +186,21 @@
 		else if (typeof value === "string" && /^\d+$/.test(value)) value = DIAL_PHASE_NAMES[Number(value)];
 		return typeof value === "string" && DIAL_PHASE_LABELS[value] ? value : "";
 	}
+	function showsDialProgress(pendingDial) {
+		return !!pendingDial && pendingDial.showsProgress !== false;
+	}
 	function dialPhaseLabel(pendingDial, labels) {
 		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
-		return entry ? text$1(labels, entry[0], entry[1]) : "";
+		if (!entry) return "";
+		return showsDialProgress(pendingDial) ? text$1(labels, entry[0], entry[1]) : text$1(labels, DIAL_WAITING_LABEL[0], DIAL_WAITING_LABEL[1]);
 	}
 	function dialPhaseHint(pendingDial, labels) {
 		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
-		return entry ? text$1(labels, entry[2], entry[3]) : "";
+		if (!entry) return "";
+		return showsDialProgress(pendingDial) ? text$1(labels, entry[2], entry[3]) : text$1(labels, DIAL_WAITING_LABEL[2], DIAL_WAITING_LABEL[3]);
 	}
 	function agentStatusLabel(presence, pendingDial, labels) {
-		var phase = dialPhaseLabel(pendingDial, labels);
+		var phase = showsDialProgress(pendingDial) ? dialPhaseLabel(pendingDial, labels) : "";
 		var status = normalizePresenceStatus((presence || {}).status);
 		if (phase && (status === "Reserved" || status === "Busy")) return phase;
 		return presenceLabel(presence, labels);
@@ -447,9 +458,10 @@
 				if (!refs.active || !state) return;
 				var active = state.activeInteraction;
 				var pendingDial = !active && normalizeDialPhase(state.pendingDial) ? state.pendingDial : null;
+				var shownPhase = pendingDial && (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : "Waiting");
 				if (!activeChanged(activeInteractionSignature(active, pendingDial && {
 					interactionId: pendingDial.interactionId,
-					phase: normalizeDialPhase(pendingDial)
+					phase: shownPhase
 				}))) return;
 				diagnostic("active-interaction-shown", describeActive(active, pendingDial));
 				if (pendingDial) {
@@ -476,6 +488,7 @@
 			function pendingDialHtml(pendingDial) {
 				var phase = normalizeDialPhase(pendingDial);
 				var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+				if (!showsDialProgress(pendingDial)) return "<div class=\"cc-active cc-active--pending is-waiting\" data-cc-pending-dial=\"Waiting\"><div class=\"cc-active__headline\"><span class=\"cc-active__dir\"><i class=\"fa-solid fa-hourglass-half\" aria-hidden=\"true\"></i></span><div><div class=\"cc-active__customer\">" + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + "</div>" + (pendingDial.queueName ? "<div class=\"cc-active__sub\">" + escapeHtml(pendingDial.queueName) + "</div>" : "") + "</div></div>" + (hint ? "<div class=\"cc-active__pending-hint\">" + escapeHtml(hint) + "</div>" : "") + "</div>";
 				return "<div class=\"cc-active cc-active--pending is-" + escapeHtml(phase.toLowerCase()) + "\" data-cc-pending-dial=\"" + escapeHtml(phase) + "\"><div class=\"cc-active__headline\"><span class=\"cc-active__dir\"><i class=\"fa-solid fa-phone-volume\" aria-hidden=\"true\"></i></span><div><div class=\"cc-active__customer\">" + escapeHtml(pendingDial.customerLabel || pendingDial.customerAddress || label("unknownCaller", "Unknown caller")) + "</div><div class=\"cc-active__sub\">" + escapeHtml(label("outbound", "Outbound")) + (pendingDial.queueName ? " &middot; " + escapeHtml(pendingDial.queueName) : "") + (pendingDial.customerAddress ? " &middot; " + escapeHtml(pendingDial.customerAddress) : "") + "</div></div></div><div class=\"cc-active__stats\"><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("status", "Status")) + "</div><div class=\"cc-stat__value\" data-cc-dial-phase>" + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + "</div></div></div>" + (hint ? "<div class=\"cc-active__pending-hint\">" + escapeHtml(hint) + "</div>" : "") + "</div>";
 			}
 			function formatCustomer(value) {
@@ -794,7 +807,7 @@
 			window.setInterval(tick, 1e3);
 			window.setInterval(function() {
 				var status = state && state.presence && state.presence.status;
-				if (state && (state.activeInteraction || status === "Busy")) refresh();
+				if (state && (state.activeInteraction || state.pendingDial || status === "Busy" || status === "Reserved")) refresh();
 			}, 12e3);
 		}
 		function boot() {

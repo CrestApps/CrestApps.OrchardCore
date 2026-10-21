@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -43,19 +44,19 @@ public sealed class PhoneNumberVerificationReportProvider : IReport
     }
 
     /// <inheritdoc/>
-    public string Name => "phone-number-verifications";
+    public static string Name => "phone-number-verifications";
 
     /// <inheritdoc/>
-    public LocalizedString DisplayName => S["Phone Number Verifications"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<PhoneNumberVerificationReportProvider>("Phone Number Verifications");
 
     /// <inheritdoc/>
-    public LocalizedString Description => S["Current verification inventory, line-type mix, revalidation backlog, and enabled-provider usage for stored phone numbers."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<PhoneNumberVerificationReportProvider>("Current verification inventory, line-type mix, revalidation backlog, and enabled-provider usage for stored phone numbers.");
 
     /// <inheritdoc/>
-    public string Category => string.Empty;
+    public static string Category => string.Empty;
 
     /// <inheritdoc/>
-    public Permission Permission => PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport;
+    public static Permission Permission => PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport;
 
     /// <inheritdoc/>
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

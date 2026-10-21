@@ -11,7 +11,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
-using CrestApps.OrchardCore.Subscriptions.Indexes;
+using CrestApps.OrchardCore.Subscriptions.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Navigation;
@@ -21,11 +21,12 @@ using CrestApps.OrchardCore.Subscriptions.Tasks;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Services;
-using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
-using CrestApps.OrchardCore.Subscriptions.Handlers;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Localization;
 using OrchardCore.Navigation;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -73,17 +74,13 @@ public sealed class Startup : StartupBase
             .AddContentPart<SubscriptionSummaryPart>()
             .UseDisplayDriver<SubscriptionSummaryPartDisplayDriver>();
 
-        services.AddDataMigration<SubscriptionsContentItemIndexMigrations>()
-            .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
-
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
-        services.AddScoped<IContentDefinitionHandler, SubscriptionContentTypeDefinitionHandler>();
 
         services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
 
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
-        services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
+        services.AddPermissionProvider<SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
         services.AddNavigationProvider<SubscriptionsAccountMenu>();
         services.AddScoped<SubscriptionDisplayText>();
@@ -119,7 +116,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
         services.AddScoped<ICommercePersonalDataContributor, SubscriptionPersonalDataContributor>();
 
-        services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
+        services.AddDisplayDriver<SubscriptionRegisterUserForm, SubscriptionRegisterUserFormDisplayDriver>();
     }
 }
 
@@ -133,7 +130,6 @@ public sealed class RolesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
 
         // Roles already gate content, features, and permissions across Orchard Core, so granting one for as
         // long as a subscription is current is what makes member-only access enforceable without any of
@@ -166,22 +162,8 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
 
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, UserRegistrationCheckoutFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, ContentStepCheckoutFlowDisplayDriver>();
-    }
-}
-
-/// <summary>
-/// Registers the Stripe currency setting used when a plan does not carry its own currency.
-/// </summary>
-[RequireFeatures(SubscriptionConstants.Features.Area, "CrestApps.OrchardCore.Stripe")]
-public sealed class StripeStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
+        services.AddDisplayDriver<CheckoutFlow, UserRegistrationCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, ContentStepCheckoutFlowDisplayDriver>();
     }
 }
 
@@ -195,12 +177,12 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IReport, SubscriptionRevenueReport>()
-            .AddScoped<IReport, SubscriptionsDashboardReport>()
-            .AddScoped<IReport, ExpiringSubscriptionsReport>()
-            .AddScoped<IReport, NewSubscriptionsTrendReport>()
-            .AddScoped<IReport, TaxCollectedReport>()
-            .AddScoped<IReport, ProductPerformanceReport>();
+            .AddReport<SubscriptionRevenueReport>()
+            .AddReport<SubscriptionsDashboardReport>()
+            .AddReport<ExpiringSubscriptionsReport>()
+            .AddReport<NewSubscriptionsTrendReport>()
+            .AddReport<TaxCollectedReport>()
+            .AddReport<ProductPerformanceReport>();
     }
 }
 
@@ -255,7 +237,7 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<ICheckoutHandler, TenantProvisioningCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, TenantProvisioningStepDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 
         // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so
         // the site's state follows the subscription's.
@@ -296,24 +278,13 @@ public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
 [Feature(SubscriptionConstants.Features.Installments)]
 public sealed class InstallmentPlansStartup : StartupBase
 {
-    internal readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InstallmentPlansStartup"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public InstallmentPlansStartup(IStringLocalizer<InstallmentPlansStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTransactionSource(SubscriptionConstants.InstallmentPlans.TransactionSource, source =>
         {
-            source.DisplayName = S["Installment plan"];
-            source.Description = S["Down payments and scheduled payments of installment plans."];
+            source.DisplayName = LocalizationSource.Create<InstallmentPlansStartup>("Installment plan");
+            source.Description = LocalizationSource.Create<InstallmentPlansStartup>("Down payments and scheduled payments of installment plans.");
         });
 
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SubscriptionConstants.InstallmentPlanCollectionName));
@@ -331,10 +302,9 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<InstallmentOptionResolver>();
         services.AddScoped<IInstallmentOptionProvider, SiteSettingsInstallmentOptionProvider>();
         services.AddScoped<ICheckoutHandler, InstallmentOptionsCheckoutHandler>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, InstallmentOptionsCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, InstallmentOptionsCheckoutFlowDisplayDriver>();
 
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
         services.AddDisplayDriver<InstallmentPlan, InstallmentPlanDisplayDriver>();
@@ -344,4 +314,8 @@ public sealed class InstallmentPlansStartup : StartupBase
 
         services.AddSingleton<IBackgroundTask, InstallmentPlanBackgroundTask>();
     }
+
+    /// <inheritdoc/>
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddInstallmentPlanPaymentEndpoints();
 }

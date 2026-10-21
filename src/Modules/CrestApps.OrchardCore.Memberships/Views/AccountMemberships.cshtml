@@ -1,0 +1,36 @@
+@model AccountMembershipsViewModel
+
+@* The signed-in customer's memberships: what each opens, and until when. *@
+
+@if (Model.Memberships.Count == 0)
+{
+    <p class="text-body-secondary">@T["You have no memberships."]</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var membership in Model.Memberships)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <span>
+                    <span class="fw-semibold d-block">@membership.Title</span>
+                    <span class="small text-body-secondary">
+                        @switch (membership.Status)
+                        {
+                            case MembershipStatus.Active:
+                                @(membership.EndsUtc is { } ends ? T["Until {0:D}", ends] : T["No end date"])
+                                break;
+                            case MembershipStatus.Expired:
+                                @T["Ended {0:D}", membership.EndsUtc]
+                                break;
+                            default:
+                                @T["Ended early"]
+                                break;
+                        }
+                    </span>
+                </span>
+                <span class="badge @(membership.Status == MembershipStatus.Active ? "text-bg-success" : "text-bg-secondary")">@(membership.Status == MembershipStatus.Active ? T["Active"] : T["Ended"])</span>
+            </div>
+        }
+    </div>
+}

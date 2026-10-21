@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
 using CrestApps.OrchardCore.Inventory.Core;
@@ -8,7 +11,6 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
 using CrestApps.OrchardCore.Inventory.Endpoints;
-using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;
@@ -23,6 +25,9 @@ using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Transfer;
+using CrestApps.OrchardCore.Inventory.Api;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -55,6 +60,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IStockItemStore, StockItemStore>();
         services.AddScoped<IStockMovementStore, StockMovementStore>();
         services.AddScoped<IInventoryService, DefaultInventoryService>();
+
         services.AddScoped<InventoryLocationService>();
         services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
@@ -83,7 +89,7 @@ public sealed class Startup : StartupBase
 
         // Lets a role with Manage inventory, but no site-settings permission, open Settings > Commerce > Inventory.
         services.AddSiteSettingsPermission(InventoryConstants.SettingsGroupId, InventoryPermissions.ManageInventory);
-        services.AddScoped<IPermissionProvider, InventoryPermissionsProvider>();
+        services.AddPermissionProvider<InventoryPermissionsProvider>();
         services.AddNavigationProvider<InventoryAdminMenu>();
     }
 }
@@ -192,8 +198,8 @@ public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IReport, StockOnHandReport>();
-        services.AddScoped<IReport, StockMovementsReport>();
+        services.AddReport<StockOnHandReport>();
+        services.AddReport<StockMovementsReport>();
     }
 }
 
@@ -233,4 +239,29 @@ public sealed class PurchaseOrdersStartup : StartupBase
 
     public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.AddStockItemSearchEndpoint();
+}
+
+[Feature(InventoryConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapInventoryApi();
+        routes.MapInventoryAdminApi();
+    }
+}
+
+/// <summary>
+/// Tells webhooks about stock when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IStockLevelHandler, StockWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");
+    }
 }

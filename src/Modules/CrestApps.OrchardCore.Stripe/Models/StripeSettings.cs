@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Stripe.Core;
-
 namespace CrestApps.OrchardCore.Stripe.Models;
 
 /// <summary>
@@ -11,11 +9,6 @@ public sealed class StripeSettings
     /// Gets or sets a value indicating whether live Stripe credentials are active.
     /// </summary>
     public bool IsLive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Stripe checkout integration mode used for new checkout sessions.
-    /// </summary>
-    public StripeCheckoutMode CheckoutMode { get; set; } = StripeCheckoutMode.PaymentElements;
 
     /// <summary>
     /// Gets or sets the live Stripe publishable key.

@@ -1,0 +1,43 @@
+@model ReportDesignsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportDesignsIndex" title="@(Model.CanDesign ? T["Report Builder"] : T["Shared Reports"])" />
+</zone>
+
+<form method="get" asp-action="Index">
+    @if (Model.Status != ReportDesignListStatus.All)
+    {
+        <input type="hidden" name="status" value="@Model.Status" />
+    }
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input name="q" value="@Model.Search" class="form-control" placeholder="@T["Search reports"]" type="search" autofocus autocomplete="off" aria-label="@T["Search reports"]" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CanDesign)
+                {
+                    <div class="col-auto">
+                        <a class="btn btn-secondary create" asp-route="ReportDesignerCreate">@T["New Report"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="ReportDesigns" context="Model.List"
+                show-select-all="false"
+                empty-message="@(Model.CanDesign ? T["<strong>Nothing here!</strong> Design a report to see it here."] : T["No reports are shared with you."])">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Report"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Author" position="40" title="@T["Designed by"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

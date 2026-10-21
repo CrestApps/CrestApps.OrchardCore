@@ -13,6 +13,7 @@ using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Addresses;
 
@@ -26,16 +27,40 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAddressesCore();
-
-        // Sites from earlier 3.0 previews keep their managed countries.
-        services.AddDataMigration<AddressCountriesUpgradeMigrations>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         // The address editor asks for a country's layout when the country changes. A layout is public: it is the same
         // for everyone, in the visitor's language.
-        routes.MapGet("/addresses/formats/{countryCode}", AddressFormatsEndpoint.HandleAsync);
+        routes.MapGet("/addresses/formats/{countryCode}", AddressFormatsEndpoint.HandleAsync)
+            .WithName("AddressFormats");
+
+        // Address suggestions, when a provider is set up; none answers 404 and the editor offers none.
+        routes.MapGet("/" + AddressAutocompleteEndpoints.SuggestPath, AddressAutocompleteEndpoints.SuggestAsync)
+            .WithName("AddressSuggestions")
+            .WithRateLimitGroup(AddressConstants.AutocompleteRateLimitGroup);
+        routes.MapGet("/" + AddressAutocompleteEndpoints.ResolvePath, AddressAutocompleteEndpoints.ResolveAsync)
+            .WithName("AddressSuggestionResolve")
+            .WithRateLimitGroup(AddressConstants.AutocompleteRateLimitGroup);
+    }
+}
+
+/// <summary>
+/// Holds each visitor to a number of address suggestion calls a minute, across both endpoints, when Orchard Core's
+/// Rate Limits feature is on: each call is one the store pays its provider for.
+/// </summary>
+[RequireFeatures("OrchardCore.RateLimits")]
+public sealed class RateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+            AddressConstants.AutocompleteRateLimitGroup,
+            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
+                policyName: AddressConstants.AutocompleteRateLimitGroup,
+                permitLimit: AddressAutocompleteEndpoints.RequestsPerMinute,
+                window: TimeSpan.FromMinutes(1))));
     }
 }
 
@@ -48,19 +73,15 @@ public sealed class CountriesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AddressMigrations>();
-        services.AddDataMigration<GeographicAreaIndexMigrations>();
+        services.AddDataMigration<CountryIndexMigrations>();
         services.AddDataMigration<CountrySeedMigrations>();
 
-        services.AddIndexProvider<GeographicAreaIndexProvider>();
+        services.AddIndexProvider<CountryIndexProvider>();
 
         services.AddScoped<CountryCodeValidator>();
         services.AddScoped<IContentHandler, CountryContentHandler>();
         services.AddScoped<IContentDisplayDriver, CountryCodeDisplayDriver>();
 
         services.AddScoped<ICountryService, ContentCountryService>();
-
-#pragma warning disable CS0618 // Kept for sites that used AddressPart in earlier 3.0 previews.
-        services.AddScoped<IAddressResolver, DefaultAddressResolver>();
-#pragma warning restore CS0618
     }
 }

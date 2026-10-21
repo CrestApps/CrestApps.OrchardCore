@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Defines the subscription summary dashboard widget content type.
 /// </summary>
-public sealed class SubscriptionSummaryWidgetMigrations : DataMigration
+internal sealed class SubscriptionSummaryWidgetMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

@@ -1,0 +1,77 @@
+@using CrestApps.OrchardCore.Customers.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CustomerLoyaltyViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var points = Model.Account?.Points ?? 0;
+}
+
+<div class="mt-5">
+    <h2 class="h5">@Model.Settings.ProgramName</h2>
+
+    <p class="mb-2">
+        <span class="fs-5">@T["{0:N0} points", points]</span>
+        <span class="text-muted small ms-1">@T["worth {0}", ProductPriceFormatter.Format(LoyaltyService.GetValue(points, Model.Settings, Model.Currency), Model.Currency)]</span>
+    </p>
+
+    @if (!Model.HasAccount)
+    {
+        <p class="text-muted small">@T["Points are earned and spent when the customer is signed in, so only customers with an account have them."]</p>
+    }
+    else if (Model.CanManage)
+    {
+        <form asp-controller="LoyaltyAdmin" asp-action="Change" asp-route-customerId="@Model.CustomerId" method="post" class="row g-2 align-items-end mb-3">
+            <div class="col-6 col-sm-3">
+                <label class="form-label" for="loyalty-points">@T["Points"]</label>
+                <input id="loyalty-points" name="points" type="number" step="1" class="form-control" required />
+            </div>
+            <div class="col-12 col-sm-7">
+                <label class="form-label" for="loyalty-reason">@T["Reason"]</label>
+                <input id="loyalty-reason" name="reason" class="form-control" required />
+            </div>
+            <div class="col-12 col-sm-2">
+                <button type="submit" class="btn btn-outline-primary w-100">@T["Change"]</button>
+            </div>
+            <span class="hint">@T["A positive number gives points; a negative one takes them away. The reason is kept with their activity."]</span>
+        </form>
+    }
+
+    @if (Model.Account?.Activity?.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle small">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["When"]</th>
+                        <th scope="col">@T["What"]</th>
+                        <th scope="col" class="text-end">@T["Points"]</th>
+                        <th scope="col" class="text-end">@T["Balance"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var activity in Model.Account.Activity.OrderByDescending(activity => activity.CreatedUtc).Take(20))
+                    {
+                        <tr>
+                            <td class="text-nowrap">@((await LocalAsync(activity.CreatedUtc)).ToString("g"))</td>
+                            <td>
+                                @activity.Reason
+                                @if (!string.IsNullOrEmpty(activity.Actor))
+                                {
+                                    <span class="text-muted">&middot; @activity.Actor</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap @(activity.Points < 0 ? "text-danger" : "text-success")">@(activity.Points < 0 ? "−" : "+")@Math.Abs(activity.Points).ToString("N0")</td>
+                            <td class="text-end text-nowrap">@activity.Balance.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

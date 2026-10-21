@@ -157,42 +157,11 @@ internal sealed class MessagingMigrations : DataMigration
                 "DocumentId"),
             collection: MessagingStorage.CollectionName);
 
+        await CreateReportIndexAsync();
+
         await CreateOutboxIndexAsync();
 
-        return 3;
-    }
-
-    /// <summary>
-    /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
-    /// outbound message.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom2Async()
-    {
-        await CreateOutboxIndexAsync();
-
-        // A message queued before the index existed is in it only once it is saved again. Retries run out within about
-        // an hour and a half, so re-saving the queued messages of the last two days covers every one still waiting. It
-        // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
-        ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
-
-        return 3;
-    }
-
-    private async Task CreateOutboxIndexAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<MessagingOutboxIndex>(table => table
-            .Column<string>("Channel", column => column.WithLength(50))
-            .Column<string>("ServiceAddress", column => column.WithLength(255))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
-            collection: OmnichannelConstants.CollectionName);
-
-        await SchemaBuilder.AlterIndexTableAsync<MessagingOutboxIndex>(table => table
-            .CreateIndex("IDX_MessagingOutboxIndex_Due",
-                "NextAttemptUtc",
-                "Channel",
-                "DocumentId"),
-            collection: OmnichannelConstants.CollectionName);
+        return 4;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -245,5 +214,59 @@ internal sealed class MessagingMigrations : DataMigration
             "ItemId", "DocumentId");
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>LastMessageUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
+    /// outbound message.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateOutboxIndexAsync();
+
+        // A message queued before the index existed is in it only once it is saved again. Retries run out within about
+        // an hour and a half, so re-saving the queued messages of the last two days covers every one still waiting. It
+        // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
+        ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
+
+        return 4;
+    }
+
+    private async Task CreateOutboxIndexAsync()
+    {
+        // Outbound messages are stored with the rest of the omnichannel documents, not in the workspace's collection.
+        await SchemaBuilder.CreateMapIndexTableAsync<MessagingOutboxIndex>(table => table
+            .Column<string>("Channel", column => column.WithLength(50))
+            .Column<string>("ServiceAddress", column => column.WithLength(255))
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            collection: OmnichannelConstants.CollectionName);
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingOutboxIndex>(
+            SchemaBuilder,
+            "IDX_MessagingOutboxIndex_Due",
+            OmnichannelConstants.CollectionName,
+            "NextAttemptUtc", "Channel", "DocumentId");
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Report",
+            MessagingStorage.CollectionName,
+            "LastMessageUtc", "Id");
     }
 }

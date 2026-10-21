@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Settings;
 
@@ -62,12 +61,11 @@ public sealed class OrderReturnTests
     public void AnApprovalEmail_SaysHowToSendTheItemsBack_WithTheReturnNumber()
     {
         var sender = new OrderReturnEmailSender(
-            Mock.Of<IServiceProvider>(),
+            Mock.Of<ICommerceEmailSender>(),
             Mock.Of<IOrderStore>(),
             Mock.Of<IOrderLinkService>(),
             Mock.Of<ISiteService>(),
             HtmlEncoder.Default,
-            NullLogger<OrderReturnEmailSender>.Instance,
             new PassThroughStringLocalizer<OrderReturnEmailSender>());
 
         var orderReturn = Return(OrderReturnStatus.Approved, ("mug", 2));
@@ -86,7 +84,7 @@ public sealed class OrderReturnTests
     [Fact]
     public void ADraftOrdersInvoice_ListsItsLines_TheNote_AndTheLinkToPay()
     {
-        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, NullLogger<DraftOrderService>.Instance, new PassThroughStringLocalizer<DraftOrderService>());
+        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, new PassThroughStringLocalizer<DraftOrderService>(), null);
         var order = new Order
         {
             OrderNumber = "261019-DRAFT1",

@@ -1,0 +1,38 @@
+@using Microsoft.AspNetCore.Html
+
+@*
+    The frame of a storefront account page: the account menu beside the page's heading and content. A page renders it
+    with its Title, its Content (a shape or HTML) and, optionally, Actions beside the heading, and keeps its own
+    breadcrumb. A theme overrides this template to change every account page.
+*@
+
+@{
+    var title = Model.Title as IHtmlContent;
+    var actions = Model.Actions as IHtmlContent;
+}
+
+<div class="container my-4">
+    <div class="row g-4">
+        <div class="col-lg-3">
+            @await DisplayAsync(await New.CommerceAccountNavigation())
+        </div>
+        <div class="col-lg-9 commerce-account">
+            @if (actions is not null)
+            {
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h1 class="h3 mb-0">@title</h1>
+                    @actions
+                </div>
+            }
+            else if (title is not null)
+            {
+                <h1 class="h3 mb-3">@title</h1>
+            }
+
+            @if (Model.Content is not null)
+            {
+                @await DisplayAsync(Model.Content)
+            }
+        </div>
+    </div>
+</div>

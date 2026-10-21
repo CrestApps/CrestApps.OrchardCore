@@ -1,0 +1,45 @@
+@model PriceListEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PriceListEdit" title="@(Model.IsNew ? T["Add price list"] : T["Edit price list"])">
+        <breadcrumb-item id="PriceLists" action="Index" controller="PriceListsAdmin" area="@CompaniesConstants.Feature" permission="@CompaniesPermissions.ManageCompanies.Name">@T["Price lists"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" maxlength="255" required />
+            <span asp-validation-for="Name" class="text-danger"></span>
+            <span class="hint">@T["Such as Wholesale. Only staff see it."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="PercentOff">
+        <label asp-for="PercentOff" class="ocat-label">@T["Percentage off everything else (%)"]</label>
+        <div class="ocat-limited">
+            <input asp-for="PercentOff" type="number" step="0.01" min="0" max="100" class="form-control" placeholder="@T["None"]" />
+            <span asp-validation-for="PercentOff" class="text-danger"></span>
+            <span class="hint">@T["Comes off the store's price of every product that has no price below."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Prices">
+        <label asp-for="Prices" class="ocat-label">@T["Prices by SKU ({0})", Model.StoreCurrency]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Prices" class="form-control font-monospace" rows="12" placeholder="HAT-22069, 24.50"></textarea>
+            <span asp-validation-for="Prices" class="text-danger"></span>
+            <span class="hint">@T["A SKU and its price for each unit on each line, apart by a comma, such as pasted from a spreadsheet. A variant's own SKU prices that variant. Buyers in a market with another currency pay these converted at its rate. The price is used only when it's lower than the store's."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

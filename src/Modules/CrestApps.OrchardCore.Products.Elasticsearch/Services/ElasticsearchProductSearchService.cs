@@ -35,9 +35,7 @@ public sealed class ElasticsearchProductSearchService : IProductIndexSearchServi
         ArgumentNullException.ThrowIfNull(query);
 
         var indexQuery = ProductSearchIndexQuery.Create(query);
-        var facets = (query.Facets ?? [])
-            .Where(facet => !string.IsNullOrEmpty(facet?.Key) && !string.IsNullOrEmpty(facet.AttributeKey))
-            .ToArray();
+        var facets = indexQuery.Facets;
 
         var request = BuildRequest(indexProfile.IndexFullName, indexQuery, facets);
         var response = await _client.SearchAsync<JsonObject>(request, cancellationToken);
@@ -49,7 +47,7 @@ public sealed class ElasticsearchProductSearchService : IProductIndexSearchServi
 
         var results = new Dictionary<string, ProductFacetResult>(StringComparer.Ordinal);
 
-        for (var i = 0; i < facets.Length; i++)
+        for (var i = 0; i < facets.Count; i++)
         {
             var facet = facets[i];
             var aggregate = response.Aggregations?.GetFilter(AggregationName(i));

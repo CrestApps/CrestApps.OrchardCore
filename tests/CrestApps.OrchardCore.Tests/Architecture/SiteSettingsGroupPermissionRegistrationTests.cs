@@ -28,10 +28,11 @@ public sealed class SiteSettingsGroupPermissionRegistrationTests
         "CustomerPrivacySettingsDisplayDriver",
     };
 
-    private static readonly Regex _driverDeclaration = new(@"class\s+(?<name>\w+)\s*:\s*SiteDisplayDriver<", RegexOptions.Compiled);
+    private static readonly Regex _driverDeclaration = new(@"class\s+(?<name>\w+)\s*:\s*(?<base>SiteDisplayDriver|\w+SettingsDisplayDriverBase)<", RegexOptions.Compiled);
     private static readonly Regex _groupDeclaration = new(@"SettingsGroupId\s*=>\s*(?<group>[\w.]+)\s*;", RegexOptions.Compiled);
     private static readonly Regex _permissionCheck = new(@"AuthorizeAsync\(\s*[\w.?]+\s*,\s*(?<permission>[\w.]+)\s*\)", RegexOptions.Compiled);
     private static readonly Regex _registration = new(@"AddSiteSettingsPermission\(\s*(?<group>[\w.]+)\s*,\s*(?<permission>[\w.]+)\s*\)", RegexOptions.Compiled);
+    private static readonly Regex _moduleStartupDeclaration = new(@"^public\s+(sealed\s+)?class\s+Startup\s*:\s*StartupBase", RegexOptions.Compiled | RegexOptions.Multiline);
     private static readonly Regex _classDeclaration = new(@"^(public|internal)\s+(sealed\s+)?class\s+\w+", RegexOptions.Compiled | RegexOptions.Multiline);
 
     [Fact]
@@ -62,6 +63,14 @@ public sealed class SiteSettingsGroupPermissionRegistrationTests
                 var groupMatch = _groupDeclaration.Match(text);
                 var permissionMatch = _permissionCheck.Match(text);
 
+                // A driver built on a module's settings driver base checks the permission the base checks.
+                if (!permissionMatch.Success && declaration.Groups["base"].Value is var baseDriver && baseDriver != "SiteDisplayDriver")
+                {
+                    var baseText = sources.FirstOrDefault(source => source.Text.Contains($"class {baseDriver}<", StringComparison.Ordinal)).Text;
+
+                    permissionMatch = baseText is null ? permissionMatch : _permissionCheck.Match(baseText);
+                }
+
                 // A driver that checks no permission of its own relies on whatever already grants the group.
                 if (!groupMatch.Success || !permissionMatch.Success || _registeredElsewhere.Contains(driver))
                 {
@@ -87,12 +96,14 @@ public sealed class SiteSettingsGroupPermissionRegistrationTests
 
                 checkedDrivers++;
 
+                // The other features of a module depend on its base feature, so what the base startup registers for
+                // the group applies to them too.
+                var moduleStartup = FindModuleStartupBody(sources);
+
                 foreach (var (startupPath, body) in registeringStartups)
                 {
-                    var registered = _registration
-                        .Matches(body)
-                        .Any(match => SameExpression(match.Groups["group"].Value, group) &&
-                            SameExpression(match.Groups["permission"].Value, permission));
+                    var registered = IsRegistered(body, group, permission) ||
+                        (moduleStartup is not null && IsRegistered(moduleStartup, group, permission));
 
                     if (!registered)
                     {
@@ -185,6 +196,36 @@ public sealed class SiteSettingsGroupPermissionRegistrationTests
                 yield return (path, text.Substring(start, end - start));
             }
         }
+    }
+
+    private static bool IsRegistered(string startupBody, string group, string permission)
+        => _registration
+            .Matches(startupBody)
+            .Any(match => SameExpression(match.Groups["group"].Value, group) &&
+                SameExpression(match.Groups["permission"].Value, permission));
+
+    private static string FindModuleStartupBody((string Path, string Text)[] sources)
+    {
+        foreach (var (path, text) in sources)
+        {
+            if (!string.Equals(Path.GetFileName(path), "Startup.cs", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var declaration = _moduleStartupDeclaration.Match(text);
+
+            if (!declaration.Success)
+            {
+                continue;
+            }
+
+            var next = _classDeclaration.Matches(text).FirstOrDefault(match => match.Index > declaration.Index);
+
+            return text.Substring(declaration.Index, (next?.Index ?? text.Length) - declaration.Index);
+        }
+
+        return null;
     }
 
     // A constant can be named with or without its declaring type, so the shorter name only has to end the longer one.

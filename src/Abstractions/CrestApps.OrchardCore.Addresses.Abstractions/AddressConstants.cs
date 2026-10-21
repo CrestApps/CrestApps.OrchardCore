@@ -22,7 +22,18 @@ public static class AddressConstants
         /// content items that administrators can rename, add or remove.
         /// </summary>
         public const string Countries = "CrestApps.OrchardCore.Addresses.Countries";
+
+        /// <summary>
+        /// Suggests addresses from Google Places as a street is typed.
+        /// </summary>
+        public const string GooglePlaces = "CrestApps.OrchardCore.Addresses.GooglePlaces";
     }
+
+    /// <summary>
+    /// The rate-limit group of the address suggestion endpoints. With Orchard Core's Rate Limits feature on, each
+    /// visitor may make a set number of suggestion calls a minute, and a Rate Limits policy can target this group.
+    /// </summary>
+    public const string AutocompleteRateLimitGroup = "address-autocomplete";
 
     /// <summary>
     /// The technical name of the country content type.
@@ -38,63 +49,4 @@ public static class AddressConstants
     /// The technical name of the country part's ISO code field.
     /// </summary>
     public const string CodeField = "Code";
-
-    /// <summary>
-    /// The technical name of the region (state or province) content type of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string Region = "Region";
-
-    /// <summary>
-    /// The technical name of the county content type of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string County = "County";
-
-    /// <summary>
-    /// The technical name of the city content type of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string City = "City";
-
-    /// <summary>
-    /// The technical name of the district content type of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string District = "District";
-
-    /// <summary>
-    /// The technical name of the region part of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string RegionPart = "RegionPart";
-
-    /// <summary>
-    /// The technical name of the county part of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string CountyPart = "CountyPart";
-
-    /// <summary>
-    /// The technical name of the city part of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string CityPart = "CityPart";
-
-    /// <summary>
-    /// The technical name of the district part of earlier 3.0 previews.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string DistrictPart = "DistrictPart";
-
-    /// <summary>
-    /// The technical name of the address part of earlier 3.0 previews, whose places are content pickers.
-    /// </summary>
-    [Obsolete(ObsoleteGeography)]
-    public const string AddressPart = "AddressPart";
-
-    /// <summary>
-    /// Why the geography of earlier 3.0 previews is obsolete, and what replaces it.
-    /// </summary>
-    public const string ObsoleteGeography = "AddressPart and the Region, County, City and District types are replaced by the Address value and the Address field. They will be removed in the next major version.";
 }

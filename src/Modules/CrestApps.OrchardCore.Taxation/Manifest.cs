@@ -20,3 +20,14 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = TaxationConstants.Feature.TaxJar,
+    Name = "TaxJar",
+    Description = "Works out sales tax with TaxJar for orders to the countries you choose, from each address's combined rate, in place of your own tax rules.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        TaxationConstants.Feature.Taxation,
+    ]
+)]

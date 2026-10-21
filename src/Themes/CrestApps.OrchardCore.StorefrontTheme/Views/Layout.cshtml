@@ -1,0 +1,130 @@
+@using CrestApps.OrchardCore.Receipts.Core
+@using OrchardCore.Entities
+@using OrchardCore.Settings
+@inject ISiteService SiteService
+@inject OrchardCore.Modules.IClock Clock
+
+@*
+    The storefront's page: the store's header (name, search, the market, cart and account from the Navbar shape, and
+    the main menu), the Title zone a page puts its breadcrumb and heading in, the page, and a footer with how to reach
+    the store, from the receipt settings.
+*@
+
+@{
+    var site = await SiteService.GetSiteSettingsAsync();
+    site.TryGet<ReceiptSettings>(out var receipts);
+    var storeName = receipts?.BusinessName;
+    var email = receipts?.ContactEmail;
+    var phone = receipts?.ContactPhone;
+    var address = receipts?.BusinessAddress;
+    var logo = receipts?.LogoUrl;
+    var brand = string.IsNullOrWhiteSpace(storeName) ? Site.SiteName : storeName;
+    var keyword = Context.Request.Query["q"].ToString();
+}
+
+<!DOCTYPE html>
+<html lang="@Orchard.CultureName()" dir="@Orchard.CultureDir()" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@RenderTitleSegments(Site.SiteName, "before")</title>
+    <link type="image/x-icon" rel="shortcut icon" href="~/TheTheme/images/favicon.ico" />
+    <resources type="Meta" />
+    <script asp-name="theme-head" at="Head"></script>
+    @if (Orchard.IsRightToLeft())
+    {
+        <style asp-name="bootstrap-rtl"></style>
+    }
+    else
+    {
+        <style asp-name="bootstrap"></style>
+    }
+    <style asp-name="font-awesome"></style>
+    <style asp-src="~/TheTheme/styles/theme.min.css" debug-src="~/TheTheme/styles/theme.css"></style>
+    <style asp-src="~/CrestApps.OrchardCore.StorefrontTheme/styles/storefront.css"></style>
+    <script asp-name="bootstrap" at="Foot"></script>
+    <resources type="HeadLink" />
+    <resources type="Stylesheet" />
+    <resources type="HeadScript" />
+</head>
+<body dir="@Orchard.CultureDir()" class="storefront">
+    <a class="visually-hidden-focusable storefront-skip" href="#storefront-main">@T["Skip to content"]</a>
+
+    <header class="storefront-header sticky-top">
+        <nav class="navbar navbar-expand-lg" aria-label="@T["Store"]">
+            <div class="container gap-2">
+                <a class="navbar-brand d-flex align-items-center gap-2 me-lg-4" href="~/">
+                    @if (!string.IsNullOrWhiteSpace(logo))
+                    {
+                        <img src="@logo" alt="" class="storefront-logo" />
+                    }
+                    <span>@brand</span>
+                </a>
+
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#storefront-navbar" aria-expanded="false" aria-controls="storefront-navbar" aria-label="@T["Menu"]">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="storefront-navbar">
+                    <form class="storefront-search flex-grow-1 my-2 my-lg-0 me-lg-3" action="~/" method="get" role="search">
+                        <div class="input-group">
+                            <input type="search" class="form-control" name="q" value="@keyword" placeholder="@T["Search the store"]" aria-label="@T["Search the store"]" maxlength="200" />
+                            <button class="btn btn-primary" type="submit" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                        </div>
+                    </form>
+                    <div class="storefront-actions d-flex align-items-lg-center">
+                        <shape type="Navbar" />
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="storefront-menu border-top">
+            <div class="container">
+                @await DisplayAsync(await New.Menu(Alias: "alias:main-menu"))
+            </div>
+        </div>
+    </header>
+
+    @await RenderSectionAsync("Header", required: false)
+
+    <main class="container storefront-main" id="storefront-main">
+        @if (IsSectionDefined("Title"))
+        {
+            <div class="storefront-title">
+                @await RenderSectionAsync("Title", required: false)
+            </div>
+        }
+        @await RenderSectionAsync("Messages", required: false)
+        @await RenderBodyAsync()
+    </main>
+
+    <footer class="storefront-footer mt-5">
+        <div class="container py-4">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="fw-semibold mb-2">@brand</div>
+                    @if (!string.IsNullOrWhiteSpace(address))
+                    {
+                        <address class="small mb-0" style="white-space: pre-line;">@address</address>
+                    }
+                </div>
+                <div class="col-md-6 text-md-end small">
+                    @if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        <div><i class="fa-regular fa-envelope me-1" aria-hidden="true"></i><a href="mailto:@email">@email</a></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(phone))
+                    {
+                        <div><i class="fa-solid fa-phone me-1" aria-hidden="true"></i><a href="tel:@phone">@phone</a></div>
+                    }
+                </div>
+            </div>
+            @await RenderSectionAsync("Footer", required: false)
+            <p class="small text-body-secondary mt-4 mb-0">&copy; @Clock.UtcNow.Year @brand</p>
+        </div>
+    </footer>
+
+    <resources type="FootScript" />
+</body>
+</html>

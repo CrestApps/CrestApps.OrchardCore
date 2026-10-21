@@ -70,6 +70,6 @@ public sealed class TestProviderStartup : StartupBase
         services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<TestCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutSavedPaymentMethodProvider>(sp => sp.GetRequiredService<TestCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutRecurringPaymentProvider>(sp => sp.GetRequiredService<TestCheckoutPaymentProvider>());
-        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, TestCheckoutPaymentMethodDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlowPaymentMethod, TestCheckoutPaymentMethodDisplayDriver>();
     }
 }

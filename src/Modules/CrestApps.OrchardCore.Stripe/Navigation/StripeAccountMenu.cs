@@ -7,22 +7,18 @@ namespace CrestApps.OrchardCore.Stripe.Navigation;
 /// <summary>
 /// Adds the buyer's saved cards to the storefront account.
 /// </summary>
-public sealed class StripeAccountMenu : INavigationProvider
+public sealed class StripeAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public StripeAccountMenu(IStringLocalizer<StripeAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder.Add(S["Payment methods"], "60", methods => methods
             .Id("account-payment-methods")
             .AddClass("fa-regular fa-credit-card")

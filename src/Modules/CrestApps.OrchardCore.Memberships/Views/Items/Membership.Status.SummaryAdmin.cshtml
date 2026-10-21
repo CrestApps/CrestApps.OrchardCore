@@ -1,0 +1,11 @@
+@model ShapeViewModel<Membership>
+
+@{
+    var (css, label) = Model.Value.Status switch
+    {
+        MembershipStatus.Active => ("text-bg-success", T["Active"]),
+        MembershipStatus.Expired => ("text-bg-secondary", T["Expired"]),
+        _ => ("text-bg-danger", T["Ended early"]),
+    };
+}
+<span class="badge @css">@label</span>

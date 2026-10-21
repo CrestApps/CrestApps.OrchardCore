@@ -8,11 +8,10 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Downloads;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -144,21 +143,19 @@ public sealed class CommerceTenantIsolationTests
         // A link another tenant signed can't be read, so nothing is looked up.
         var session = new Mock<global::YesSql.ISession>();
 
-        return new DownloadService(session.Object, Mock.Of<IContentManager>(), siteService.Object, protection, new HttpContextAccessor(), Mock.Of<LinkGenerator>(), Mock.Of<IDistributedLock>(), clock.Object);
+        return new DownloadService(session.Object, Mock.Of<IContentManager>(), siteService.Object, protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), Mock.Of<IDistributedLock>(), clock.Object);
     }
 
     private static async Task<IStore> CouponStoreAsync(string path)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
-        store.RegisterIndexes([new CouponIndexProvider(), new CouponRedemptionIndexProvider()]);
+        store.RegisterIndexes([new CouponIndexProvider(), new CouponCodeIndexProvider(), new CouponRedemptionIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(CheckoutConstants.CouponCollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var migration = new CouponMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) };
-        await migration.CreateAsync();
-        await migration.UpdateFrom1Async();
+        await new CouponMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) }.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

@@ -1,0 +1,9 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="AccountReferrals" title="@T["Refer a friend"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Refer a friend"], Content: Model))

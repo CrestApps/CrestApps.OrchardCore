@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Products.Endpoints;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -19,22 +20,23 @@ public sealed class ProductGroupDisplayDriver : ContentPartDisplayDriver<Product
 {
     private readonly ProductRecommendationService _products;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LinkGenerator _linkGenerator;
 
     public ProductGroupDisplayDriver(
         ProductRecommendationService products,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        LinkGenerator linkGenerator)
     {
         _products = products;
         _httpContextAccessor = httpContextAccessor;
+        _linkGenerator = linkGenerator;
     }
 
     public override IDisplayResult Edit(ProductPart part, BuildPartEditorContext context)
         => Initialize<ProductGroupEditViewModel>("ProductGroup_Edit", async model =>
         {
-            var pathBase = _httpContextAccessor.HttpContext?.Request.PathBase.Value ?? string.Empty;
-
             model.ProductIds = [.. part.ContentItem.TryGet<ProductGroupPart>(out var group) ? group.ProductIds ?? [] : []];
-            model.SearchEndpoint = $"{pathBase}/{ProductSearchEndpoints.SearchPath}";
+            model.SearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, ProductSearchEndpoints.RouteName);
             model.InitialProductsJson = JsonSerializer.Serialize((await _products.NameAsync(model.ProductIds)).Select(item => new { value = item.Id, text = item.Text, selected = true }));
         }).Location("Content:19");
 

@@ -47,3 +47,14 @@ using OrchardCore.Modules.Manifest;
         "CrestApps.OrchardCore.Resources",
     ]
 )]
+
+[assembly: Feature(
+    Id = InventoryConstants.Features.Api,
+    Name = "Inventory API",
+    Description = "Gives stock at each location over the commerce JSON API, and lets staff receive, adjust and move it. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InventoryConstants.Features.Inventory,
+    ]
+)]

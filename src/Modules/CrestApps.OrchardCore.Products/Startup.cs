@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Products.ContentTransfer;
 using Microsoft.AspNetCore.Routing;
@@ -27,6 +28,8 @@ using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Services;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.OrchardCore.Products.Api;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -79,9 +82,11 @@ public sealed class Startup : StartupBase
         services.AddSingleton<ProductContentTypes>();
         services.AddSingleton<IContentDefinitionEventHandler>(serviceProvider => serviceProvider.GetRequiredService<ProductContentTypes>());
         services.AddNavigationProvider<ProductsAdminMenu>();
+        services.AddScoped<IStoreSetupStep, ProductsSetupStep>();
 
         services.AddScoped<IProductSnapshotResolver, DefaultProductSnapshotResolver>();
         services.AddScoped<IPriceResolver, DefaultPriceResolver>();
+        services.TryAddScoped<IShopperCurrency, ProductOwnShopperCurrency>();
 
         services.AddDataMigration<ProductPartMigrations>();
 
@@ -198,7 +203,7 @@ public sealed class ListingStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<TaxonomyTermLookup>();
+        services.TryAddScoped<TaxonomyTermLookup>();
 
         // The product search behind the merchant's product pickers: recommendations, groups and bundles.
         services.AddScoped<ProductRecommendationService>();
@@ -321,4 +326,16 @@ public sealed class ListingSeoStartup : StartupBase
     {
         services.AddScoped<IContentHandler, ProductListingSeoHandler>();
     }
+}
+
+[Feature(ProductConstants.Feature.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<CatalogApiProductReader>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapCatalogApi();
 }

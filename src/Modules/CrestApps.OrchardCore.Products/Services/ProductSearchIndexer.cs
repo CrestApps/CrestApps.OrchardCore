@@ -26,7 +26,7 @@ public sealed class ProductSearchIndexer
     private const int BatchSize = 100;
 
     // Bump when the record's shape or the way it is built changes, so every tenant rebuilds once.
-    private const string BuildVersion = "9";
+    private const string BuildVersion = "1";
 
     private readonly ISession _session;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
@@ -36,6 +36,7 @@ public sealed class ProductSearchIndexer
     private readonly IEnumerable<IProductSearchIndexHandler> _handlers;
     private readonly IEnumerable<IProductSearchDocumentContributor> _contributors;
     private readonly ILogger _logger;
+    private readonly IClock _clock;
 
     public ProductSearchIndexer(
         ISession session,
@@ -45,7 +46,8 @@ public sealed class ProductSearchIndexer
         ISignal signal,
         IEnumerable<IProductSearchIndexHandler> handlers,
         IEnumerable<IProductSearchDocumentContributor> contributors,
-        ILogger<ProductSearchIndexer> logger)
+        ILogger<ProductSearchIndexer> logger,
+        IClock clock)
     {
         _session = session;
         _documentBuilder = documentBuilder;
@@ -55,6 +57,7 @@ public sealed class ProductSearchIndexer
         _handlers = handlers;
         _contributors = contributors;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -299,7 +302,7 @@ public sealed class ProductSearchIndexer
         var state = await _session.Query<ProductSearchIndexState>().FirstOrDefaultAsync() ?? new ProductSearchIndexState();
 
         state.Fingerprint = fingerprint;
-        state.BuiltUtc = DateTime.UtcNow;
+        state.BuiltUtc = _clock.UtcNow;
 
         await _session.SaveAsync(state);
     }

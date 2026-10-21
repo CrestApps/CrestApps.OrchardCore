@@ -7,15 +7,17 @@ using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.FileStorage;
 using OrchardCore.FileStorage.FileSystem;
+using OrchardCore.Infrastructure;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -88,6 +90,49 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TheFileStore_RefusesAFileAFileEventHandlerRejects_AndKeepsNothing()
+    {
+        // Arrange
+        var handler = new Mock<IFileEventHandler>();
+        handler
+            .Setup(value => value.CreatingAsync(It.IsAny<FileCreatingContext>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FileCreatingContext context, Stream stream, CancellationToken cancellationToken) => FileCreatingResult.Failed(stream, new ResultError
+            {
+                Message = new Microsoft.Extensions.Localization.LocalizedString("infected", "The file is infected."),
+            }));
+
+        var store = FileStore(handler.Object);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<FileStoreException>(() => store.SaveAsync("guide.pdf", new MemoryStream([1, 2, 3]), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("The file is infected.", exception.Message);
+        Assert.False(Directory.Exists(_folder) && Directory.EnumerateFiles(_folder, "*", SearchOption.AllDirectories).Any());
+        handler.Verify(value => value.CreatedAsync(It.IsAny<IFileStoreEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TheFileStore_TellsTheFileEventHandlersAboutAFileItKept()
+    {
+        // Arrange
+        var handler = new Mock<IFileEventHandler>();
+        handler
+            .Setup(value => value.CreatingAsync(It.IsAny<FileCreatingContext>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FileCreatingContext context, Stream stream, CancellationToken cancellationToken) => FileCreatingResult.Success(stream));
+
+        var store = FileStore(handler.Object);
+
+        // Act
+        var saved = await store.SaveAsync("guide.pdf", new MemoryStream([1, 2, 3]), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(3, saved.Size);
+        handler.Verify(value => value.CreatingAsync(It.Is<FileCreatingContext>(context => context.FileName == "guide.pdf" && context.Length == 3), It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Once);
+        handler.Verify(value => value.CreatedAsync(It.Is<IFileStoreEntry>(entry => entry.Name == "guide.pdf"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ABuyer_DownloadsThroughTheirLink_UntilTheLimit()
     {
         var file = await FileStore().SaveAsync("guide.pdf", new MemoryStream([1, 2, 3]), TestContext.Current.CancellationToken);
@@ -130,11 +175,11 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         // A partial refund leaves the files; a full one takes them back.
         order.Refunds.Add(new OrderRefund { RefundId = "r1", Amount = 5m });
-        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service).RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken); return 0; });
+        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken); return 0; });
         Assert.Null(Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken))).RevokedUtc);
 
         order.Refunds.Add(new OrderRefund { RefundId = "r2", Amount = 15m });
-        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service).RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken); return 0; });
+        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken); return 0; });
 
         var revoked = Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken)));
         Assert.Equal(DownloadProblem.Revoked, DownloadService.GetProblem(revoked, _now));
@@ -152,7 +197,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         await InSessionAsync(service => service.GrantAsync(order, TestContext.Current.CancellationToken), Product(file, limit: 3, days: 30));
 
-        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>()).GetSectionAsync(order, TestContext.Current.CancellationToken));
+        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(DateTime.UtcNow)).GetSectionAsync(order, TestContext.Current.CancellationToken));
 
         var link = Assert.Single(section.Links);
         Assert.Equal("guide.pdf", link.Text);
@@ -250,7 +295,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var clock = new Mock<IClock>();
         clock.Setup(value => value.UtcNow).Returns(() => _clockNow);
 
-        var service = new DownloadService(session, contentManager.Object, siteService.Object, _protection, new HttpContextAccessor(), Mock.Of<LinkGenerator>(), _lock, clock.Object);
+        var service = new DownloadService(session, contentManager.Object, siteService.Object, _protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), _lock, clock.Object);
         var result = await work(service);
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -258,8 +303,8 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         return result;
     }
 
-    private DigitalFileStore FileStore()
-        => new(new FileSystemStore(_folder, NullLogger<FileSystemStore>.Instance));
+    private DigitalFileStore FileStore(params IFileEventHandler[] handlers)
+        => new(new FileSystemStore(_folder, NullLogger<FileSystemStore>.Instance), new FileCreationService(handlers));
 
     private static ContentItem Product(StoredDigitalFile file, int limit, int days = 30)
     {

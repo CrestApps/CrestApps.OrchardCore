@@ -1,0 +1,86 @@
+{
+  "name": "CommerceThankYouEmail",
+  "displayName": "Automation: thank-you email",
+  "description": "Adds a workflow that emails each buyer a short thank-you when their order is paid, apart from the order confirmation. Change its wording under Workflows > Thank-you email after an order is paid.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "automation",
+    "workflow",
+    "email"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "OrchardCore.Workflows",
+        "OrchardCore.Email"
+      ]
+    },
+    {
+      "name": "WorkflowType",
+      "data": [
+        {
+          "WorkflowTypeId": "4cmthankyouemailworkflow01",
+          "Name": "Thank-you email after an order is paid",
+          "IsEnabled": true,
+          "IsSingleton": false,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4cmthankyouorderpaid000001",
+              "Name": "OrderPaidEvent",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Order paid"
+                }
+              }
+            },
+            {
+              "ActivityId": "4cmthankyouemailtask000001",
+              "Name": "EmailTask",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Thank the buyer"
+                },
+                "Recipients": {
+                  "Expression": "{{ Workflow.Input.CustomerEmail }}"
+                },
+                "Subject": {
+                  "Expression": "Thank you for your order {{ Workflow.Input.OrderNumber }}"
+                },
+                "BodyFormat": "Html",
+                "HtmlBody": {
+                  "Expression": "<p>Hi {{ Workflow.Input.Order.CustomerName }},</p><p>Thank you for shopping with {{ Site.SiteName }}. We're getting order {{ Workflow.Input.OrderNumber }} ready and will let you know when it's on its way.</p><p>Questions? Just reply to this email.</p>"
+                }
+              }
+            }
+          ],
+          "Transitions": [
+            {
+              "Id": 0,
+              "SourceActivityId": "4cmthankyouorderpaid000001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4cmthankyouemailtask000001"
+            }
+          ],
+          "Properties": {}
+        }
+      ]
+    }
+  ]
+}

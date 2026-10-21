@@ -1,0 +1,7 @@
+@model ShapeViewModel<Campaign>
+
+<a asp-action="Edit" asp-controller="CampaignsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+@if (Model.Value.Status != CampaignStatus.Sending)
+{
+    <a asp-action="Delete" asp-controller="CampaignsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

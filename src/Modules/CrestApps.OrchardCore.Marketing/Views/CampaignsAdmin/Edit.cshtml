@@ -1,0 +1,116 @@
+@model CampaignEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+<zone Name="Title">
+    <breadcrumb name="CampaignEdit" title="@(Model.IsNew ? T["Add campaign"] : T["Edit campaign"])">
+        <breadcrumb-item id="Campaigns" action="Index" controller="CampaignsAdmin" area="@MarketingConstants.Feature" permission="@MarketingPermissions.ManageMarketing.Name">@T["Campaigns"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (!Model.CanEmail || !Model.HasBaseUrl)
+{
+    <div class="alert alert-warning">@T["Campaigns go out once the site's email is set up and the site has a base URL, for each email's unsubscribe link."]</div>
+}
+
+@if (Model.Campaign is { } campaign && campaign.Status is not CampaignStatus.Draft)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            @switch (campaign.Status)
+            {
+                case CampaignStatus.Scheduled:
+                    @T["Scheduled to start sending {0:g}.", await LocalAsync(campaign.ScheduledUtc ?? campaign.CreatedUtc)]
+                    break;
+                case CampaignStatus.Sending:
+                    @T["Sending since {0:g}.", await LocalAsync(campaign.StartedUtc ?? campaign.CreatedUtc)]
+                    break;
+                case CampaignStatus.Sent:
+                    @T["Sent {0:g}.", await LocalAsync(campaign.CompletedUtc ?? campaign.CreatedUtc)]
+                    break;
+                case CampaignStatus.Canceled:
+                    @T["Canceled."]
+                    break;
+            }
+            <span class="d-block small">@T["{0} sent, {1} skipped (no email, or they don't accept marketing), {2} failed.", campaign.Sent, campaign.Skipped, campaign.Failed]</span>
+        </span>
+        @if (campaign.Status is CampaignStatus.Scheduled or CampaignStatus.Sending)
+        {
+            <form method="post" class="no-multisubmit">
+                <button type="submit" name="submit" value="cancel" class="btn btn-sm btn-outline-danger">@T["Cancel the campaign"]</button>
+            </form>
+        }
+    </div>
+}
+
+<form method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <fieldset disabled="@(!Model.CanChange)">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="255" required />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["Such as October win-back. Only staff see it."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="SegmentId">
+            <label asp-for="SegmentId" class="ocat-label ocat-label-required">@T["Segment"]</label>
+            <div class="ocat-end">
+                <select asp-for="SegmentId" asp-items="Model.Segments" class="form-select"><option value="">@T["Choose a segment"]</option></select>
+                <span asp-validation-for="SegmentId" class="text-danger"></span>
+                <span class="hint">@T["It goes to the segment's customers who accept marketing, as the segment is when each batch goes out."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Subject">
+            <label asp-for="Subject" class="ocat-label ocat-label-required">@T["Subject"]</label>
+            <div class="ocat-end">
+                <input asp-for="Subject" class="form-control" maxlength="255" />
+                <span asp-validation-for="Subject" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Body">
+            <label asp-for="Body" class="ocat-label ocat-label-required">@T["Email"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Body" class="form-control font-monospace" rows="14"></textarea>
+                <span asp-validation-for="Body" class="text-danger"></span>
+                <span class="hint">@T["HTML with Liquid. Use {{{{ Customer.FirstName }}}}, {{{{ Customer.Name }}}}, {{{{ Customer.OrderCount }}}}, {{{{ Customer.TotalSpent }}}}, {{{{ StoreName }}}} and {{{{ UnsubscribeUrl }}}}. An unsubscribe link is added at the end when the email has none."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ScheduledLocal" class="ocat-label">@T["Send at"]</label>
+            <div class="ocat-end">
+                <input asp-for="ScheduledLocal" type="datetime-local" class="form-control" />
+                <span class="hint">@T["Optional, in the site's time zone. Blank sends it at once."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="TestEmail" class="ocat-label">@T["Send a test to"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="TestEmail" type="email" class="form-control" autocomplete="off" />
+                    <button type="submit" name="submit" value="test" class="btn btn-outline-secondary">@T["Send test"]</button>
+                </div>
+                <span class="hint">@T["As the segment's first customer would get it."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save draft"]</button>
+                    <button type="submit" name="submit" value="send" class="btn btn-primary">@T["Send"]</button>
+                    <a asp-action="Index" class="btn btn-link">@T["Back to campaigns"]</a>
+                </div>
+            </div>
+        </div>
+    </fieldset>
+</form>

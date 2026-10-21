@@ -29,6 +29,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = OrderConstants.Features.GiftCards,
+    Name = "Gift Cards",
+    Description = "Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift cards.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        OrderConstants.Features.Orders,
+        "OrchardCore.Title",
+    ]
+)]
+
+[assembly: Feature(
     Id = OrderConstants.Features.Returns,
     Name = "Returns",
     Description = "Lets buyers ask to return items of their orders, for a refund or an exchange, and the store approve, receive, restock and refund them under Commerce > Returns.",
@@ -36,5 +48,18 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OrderConstants.Features.Orders,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Orders API",
+    Id = OrderConstants.Features.Api,
+    Description = "Lets a headless storefront or app check out the cart, and the buyer see their orders and ask for returns, over the commerce JSON API; staff list, refund and cancel orders. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        OrderConstants.Features.Orders,
+        CartConstants.Features.Api,
+        CheckoutConstants.Features.Api,
     ]
 )]

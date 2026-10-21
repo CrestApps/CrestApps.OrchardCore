@@ -8,22 +8,18 @@ namespace CrestApps.OrchardCore.Subscriptions.Navigation;
 /// <summary>
 /// Adds the customer's subscriptions to the storefront account.
 /// </summary>
-public sealed class SubscriptionsAccountMenu : INavigationProvider
+public sealed class SubscriptionsAccountMenu : NamedNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
     public SubscriptionsAccountMenu(IStringLocalizer<SubscriptionsAccountMenu> stringLocalizer)
+        : base(CommerceConstants.Account.MenuName)
     {
         S = stringLocalizer;
     }
 
-    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!string.Equals(name, CommerceConstants.Account.MenuName, StringComparison.Ordinal))
-        {
-            return ValueTask.CompletedTask;
-        }
-
         builder.Add(S["Subscriptions"], "30", subscriptions => subscriptions
             .Id("account-subscriptions")
             .AddClass("fa-solid fa-rotate")

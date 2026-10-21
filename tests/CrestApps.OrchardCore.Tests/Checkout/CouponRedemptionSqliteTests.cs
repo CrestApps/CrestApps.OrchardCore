@@ -32,7 +32,7 @@ public sealed class CouponRedemptionSqliteTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={_path};Pooling=False"));
-        _store.RegisterIndexes([new CouponIndexProvider(), new CouponRedemptionIndexProvider()]);
+        _store.RegisterIndexes([new CouponIndexProvider(), new CouponCodeIndexProvider(), new CouponRedemptionIndexProvider()]);
         await _store.InitializeAsync(TestContext.Current.CancellationToken);
         await _store.InitializeCollectionAsync(CheckoutConstants.CouponCollectionName, TestContext.Current.CancellationToken);
 
@@ -41,7 +41,6 @@ public sealed class CouponRedemptionSqliteTests : IAsyncLifetime
         var migration = new CouponMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) };
 
         await migration.CreateAsync();
-        await migration.UpdateFrom1Async();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 
@@ -135,6 +134,50 @@ public sealed class CouponRedemptionSqliteTests : IAsyncLifetime
         await RedeemAsync("SAVE10", "session-a", "a@example.test");
 
         Assert.Equal(1, (await GetCouponAsync("SAVE10")).RedemptionCount);
+    }
+
+    [Fact]
+    public async Task AGeneratedCode_IsItsCoupon_WithItsOwnUses_AndTheCouponsOwnCodeCanBeTurnedOff()
+    {
+        await AddCouponAsync(new Coupon { Code = "SPRING", Percentage = 15m, OnlyGeneratedCodes = true, MaxRedemptions = 1 });
+
+        IReadOnlyList<CouponCode> codes;
+
+        await using (var session = _store.CreateSession())
+        {
+            var store = new CouponStore(session, new TestClock(_now));
+            codes = await store.GenerateCodesAsync(await store.FindByIdAsync("SPRING", TestContext.Current.CancellationToken), 3, "sp-", usesPerCode: 1, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(3, codes.Count);
+        Assert.All(codes, code => Assert.Matches("^SP-[A-HJ-NP-Z2-9]{8}$", code.Code));
+
+        var first = await GetCouponAsync(codes[0].Code.ToLowerInvariant());
+        Assert.Equal(15m, first.Percentage);
+        Assert.Equal(codes[0].Code, first.Code);
+        Assert.True(first.CanBeTyped);
+        Assert.False((await GetCouponAsync("SPRING")).CanBeTyped);
+
+        // A use counts against the code it was made with, never the coupon or the other codes.
+        Assert.Equal(CouponAvailability.Available, await HoldAsync(codes[0].Code, "session-a", "a@example.test"));
+        await RedeemAsync(codes[0].Code, "session-a", "a@example.test");
+
+        Assert.Equal(1, (await GetCouponAsync(codes[0].Code)).RedemptionCount);
+        Assert.Equal(0, (await GetCouponAsync("SPRING")).RedemptionCount);
+        Assert.Equal(CouponAvailability.UsedUp, await HoldAsync(codes[0].Code, "session-b", "b@example.test"));
+        Assert.Equal(CouponAvailability.Available, await HoldAsync(codes[1].Code, "session-b", "b@example.test"));
+
+        await using (var session = _store.CreateSession())
+        {
+            var store = new CouponStore(session, new TestClock(_now));
+            Assert.Equal((3, 1), await store.CountGeneratedCodesAsync("SPRING", TestContext.Current.CancellationToken));
+
+            await store.DeleteGeneratedCodesAsync("SPRING", TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        Assert.Null(await GetCouponAsync(codes[2].Code));
     }
 
     private async Task AddCouponAsync(Coupon coupon)

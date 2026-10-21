@@ -2,7 +2,7 @@
 
 @model SubscriptionOnboardingSettingsViewModel
 
-<div class="mb-3" asp-validation-class-for="DatabaseProvider">
+<div class="ocat-wrapper" asp-validation-class-for="DatabaseProvider">
     <label asp-for="DatabaseProvider" class="ocat-label">@T["Database for new sites"]</label>
     <div class="ocat-end">
         <select asp-for="DatabaseProvider" asp-items="Model.DatabaseProviders" class="form-select">
@@ -13,16 +13,16 @@
     </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="ConnectionString">
+<div class="ocat-wrapper" asp-validation-class-for="ConnectionString">
     <label asp-for="ConnectionString" class="ocat-label">@T["Connection string"]</label>
     <div class="ocat-end">
-        <input asp-for="ConnectionString" class="form-control" />
+        <input asp-for="ConnectionString" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasConnectionString ? T["A connection string is stored. Provide a new value to replace it."].Value : string.Empty)" />
         <span asp-validation-for="ConnectionString"></span>
-        <span class="hint">@T["Required for every provider except Sqlite. Each site gets its own table prefix, derived from its name."]</span>
+        <span class="hint">@T["Required for every provider except Sqlite. It is stored encrypted and never shown again; leave it blank to keep the stored one. Each site gets its own table prefix, derived from its name."]</span>
     </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="Schema">
+<div class="ocat-wrapper" asp-validation-class-for="Schema">
     <label asp-for="Schema" class="ocat-label">@T["Schema"]</label>
     <div class="ocat-end">
         <input asp-for="Schema" class="form-control" />

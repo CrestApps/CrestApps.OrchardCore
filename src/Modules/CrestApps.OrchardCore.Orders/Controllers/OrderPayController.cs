@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Orders.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,22 +21,25 @@ public sealed class OrderPayController : Controller
     private readonly ICheckoutEngine _engine;
     private readonly ICheckoutSessionStore _sessions;
     private readonly IAuthorizationService _authorizationService;
+    private readonly OrderPayLinks _payLinks;
 
     public OrderPayController(
         IOrderStore orders,
         IOrderLinkService links,
         ICheckoutEngine engine,
         ICheckoutSessionStore sessions,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        OrderPayLinks payLinks)
     {
         _orders = orders;
         _links = links;
         _engine = engine;
         _sessions = sessions;
         _authorizationService = authorizationService;
+        _payLinks = payLinks;
     }
 
-    [HttpGet("orders/view/{token}/pay", Name = "GuestOrderPay")]
+    [HttpGet("orders/view/{token}/pay", Name = OrderConstants.RouteNames.Pay)]
     public async Task<IActionResult> Guest(string token)
     {
         var orderId = string.IsNullOrEmpty(token) ? null : _links.GetOrderId(token);
@@ -62,7 +66,7 @@ public sealed class OrderPayController : Controller
     private async Task<IActionResult> PayAsync(Order order, string orderUrl)
     {
         // Paid already, canceled, or not an order to pay this way: the order's page says where it stands.
-        if (order.Invoice is null || order.Status is not (OrderStatus.Draft or OrderStatus.AwaitingPayment))
+        if (!_payLinks.CanPayByLink(order))
         {
             return Redirect(orderUrl);
         }

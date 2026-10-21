@@ -5,6 +5,7 @@ title: Reports
 description: A reusable reporting framework for OrchardCore with a shared admin Reports area, extensible filters, a uniform report renderer, and pluggable exports.
 user_manual:
   - user-manual/reports
+  - user-manual/report-builder/index
 ---
 
 | | |
@@ -22,19 +23,26 @@ The **Reports** module is a reusable reporting framework. It provides a single a
 
 The optional **Reports (OpenXml)** add-on extends the Reports area with Excel workbook (`.xlsx`) exports using the `DocumentFormat.OpenXml` library. When the add-on is enabled alongside other exporters, report pages collapse those formats into a single **Export** dropdown so operators can choose the file type they want.
 
+| | |
+| --- | --- |
+| **Add-on Feature Name** | Report Builder |
+| **Add-on Feature ID** | `CrestApps.OrchardCore.Reports.Builder` |
+
+The optional **Report Builder** add-on lets people design their own reports with drag and drop from pluggable data sources, and share them. See [Report Builder](report-builder/index.md).
+
 The implementation is split into three layers:
 
-- **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportProvider`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
+- **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportRunner`, `ReportDescriptor`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
 - **`CrestApps.OrchardCore.Reports.Core`** contains the default non-Orchard-specific implementations such as the report/export registries and the built-in CSV export formatter.
 - **`CrestApps.OrchardCore.Reports`** contains Orchard-specific wiring such as the admin menu, controller, views, and the display-driver-based filter UI.
 
 ## Concepts
 
-- **`IReport`** — a report definition. It declares a technical `Name`, a `DisplayName`, a `Description`, a `Category` (used to group reports in the menu), a `Permission`, and a `RunAsync` method that returns a `ReportDocument` for a given `ReportContext`.
+- **`IReport`** — a report. What describes it is static, like the data sources of Orchard Core's Data Pipelines: its technical `Name`, its `DisplayName` and `Description` (each a `LocalizationSource`), its `Category` (used to group reports in the menu) and its `Permission`. Its `RunAsync` method, from `IReportRunner`, returns a `ReportDocument` for a given `ReportContext`. `IReportManager` lists the reports from their descriptors, so listing, routing and authorizing a report never creates it; a report is created only to run.
 - **`ReportContext`** — what a report runs with: the `Filter`, and the `Mode` the document is for (`ReportRunMode.Display` when it is rendered in the browser, `ReportRunMode.Export` when an export format will serialize it). A report that pages its rows on screen reads the mode to give an export every matching row.
 - **`ReportFilter`** — the filter applied when a report runs. A report declares no fixed dimensions of its own: every filter is contributed with a display driver and stored in the extensible `ReportFilter.Properties` bag. The built-in tenant-local from/to date range is contributed the same way — it is just a filter — so a report that does not need a date selector can omit it. Use the `TryGet<T>`, `GetOrDefault<T>`, and `Set<T>` helpers to read and write typed values, and `GetDateRange()` / `SetDateRange()` for the resolved period.
 - **`ReportDocument`** — the uniform result. It is an ordered list of **sections**, where each section is a set of metric cards, a table (with optional emphasized totals rows for aggregated reports), horizontal bars, or a responsive Chart.js line, bar, stacked-bar, or doughnut chart. The same document is rendered in the browser and serialized by every exporter; chart exports use a label-and-dataset table so the underlying values remain portable.
-- **`IReportExportFormat`** — an export format. CSV ships in the box; the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`); and any module can add more formats by registering another implementation.
+- **`IReportExportFormat`** — an export format, which serializes a `ReportDocument`. What describes a format is static, like the file formats of Orchard Core's Data Pipelines: its `Name`, its `DisplayName` (a `LocalizationSource`), its `Extension` (with its leading dot) and its `ContentType`, so formats are listed without being created. A module registers a format with `services.AddReportExportFormat<TFormat>()`, and `IReportExportManager` lists the descriptors of the formats and resolves one to export a report. CSV ships in the box, and the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`).
 
 ## Reports area
 
@@ -101,11 +109,31 @@ The report reads the bound values when it runs. Because browser display and expo
 
 ## Contributing a report
 
-Implement `IReport` and register it as a scoped service:
+Implement `IReport` with its static members, and register it with `AddReport`, which registers it as a scoped service and adds its descriptor to `ReportOptions`:
 
 ```csharp
-services.AddScoped<IReport, MyReport>();
+public sealed class MyReport : IReport
+{
+    public static string Name => "my-report";
+
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<MyReport>("My report");
+
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<MyReport>("What my report shows.");
+
+    public static string Category => ReportsConstants.Categories.Operations;
+
+    public static Permission Permission => MyPermissions.ViewReports;
+
+    public Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    {
+        // Build the document.
+    }
+}
+
+services.AddReport<MyReport>();
 ```
+
+Localize a descriptor's `DisplayName` and `Description` with `IStringLocalizerFactory.Localize` when you show them.
 
 `RunAsync` builds a `ReportDocument` from the resolved period (`context.Filter.GetDateRange()`) and any report-specific filter values. Use `ReportSection.ForMetrics`, `ReportSection.ForTable`, `ReportSection.ForBars`, and `ReportSection.ForChart` to compose the document, and `ReportFormat` to format numbers, durations, and percentages consistently. Charts accept ordered labels plus one or more numeric datasets; `Width` places sections on the shared responsive twelve-column layout.
 
@@ -140,13 +168,31 @@ When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export app
 
 ### Contributing a family of reports
 
-When a module exposes a whole family of reports driven by data — for example a catalog of report definitions that differ only by a metric selector — registering one `IReport` service per report clutters startup code and traps the metadata in imperative registrations where another feature cannot extend it. Implement `IReportProvider` instead and register it once:
+When one class runs a whole family of reports — for example a catalog of reports that differ only by what they measure — the class can't describe each report with static members. Implement `IReportRunner` instead, and add a `ReportDescriptor` per report to `ReportOptions`, with a function that creates the report when it runs:
 
 ```csharp
-services.AddScoped<IReportProvider, MyReportProvider>();
+private static readonly ObjectFactory<MyCatalogReport> _factory =
+    ActivatorUtilities.CreateFactory<MyCatalogReport>([typeof(MyReportKind)]);
+
+services.Configure<ReportOptions>(options => options.Add(new ReportDescriptor(
+    "my-volume-report",
+    LocalizationSource.Create<MyStartup>("Volume"),
+    LocalizationSource.Create<MyStartup>("How much work came in, by day."),
+    ReportsConstants.Categories.Operations,
+    MyPermissions.ViewReports,
+    typeof(MyCatalogReport),
+    services => _factory(services, [MyReportKind.Volume]))));
 ```
 
-`GetReports()` returns the reports the provider contributes; the `IReportManager` merges them with the individually registered `IReport` services and enforces unique names across both. Because the provider is resolved from the request scope, it can construct a fresh report instance per enumeration and project its catalog from options, so other features can add or remove entries through the options pipeline without editing the provider. The Contact Center module uses this pattern to project its enterprise interaction and agent workforce report catalogs.
+`IReportManager` enforces unique report names across every descriptor. Because a family is described through options, another feature can add or remove reports of the family without editing the module that registers them. The Contact Center module describes its enterprise interaction and agent workforce report catalogs this way, and Omnichannel its enterprise activity reports.
+
+## Report subscriptions
+
+The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptions`, needs Email) emails a registered report on a schedule. `ReportSubscription` (`ReportSubscriptionIndex`) has the report's `ReportName`, a `Frequency` (`Daily`, `Weekly` on `DayOfWeek`, `Monthly` on `DayOfMonth` 1 to 28), the `Hour` in the site's time zone, the `Recipients`, an optional `AttachmentFormat` (an export format such as `csv` or `xlsx`), `IsEnabled`, and `NextRunUtc`, `LastRunUtc` and `LastError`.
+
+- `ReportSubscriptionSchedule.GetNextRunUtc` and `GetPeriod` work in the site's time zone. A run covers the day, the seven days, or the calendar month before it, from midnight to midnight.
+- `ReportSubscriptionsBackgroundTask` (every five minutes) sends the subscriptions that are due. A late run covers the period it was due for. `ReportSubscriptionService.SendAsync` runs the report with that date range, resolves its display values, and emails its metrics and tables (`ReportWorkflowService.ToHtml`), with the export attached when asked. It records `LastError` when the email or the report fails.
+- **Reports > Subscriptions** (`ReportSubscriptionsController`, `Reports/subscriptions`, the `AdminList`) needs **Manage report subscriptions**, and lists only the reports the person can see. **Save and send now** sends one at once without moving its schedule.
 
 ## Enable via recipe
 

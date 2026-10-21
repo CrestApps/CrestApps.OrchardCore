@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.FileStorage;
 
 namespace CrestApps.OrchardCore.Downloads.Controllers;
 
@@ -21,6 +23,7 @@ public sealed class DigitalFilesAdminController : Controller
     private readonly DownloadService _downloads;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
 
@@ -29,12 +32,14 @@ public sealed class DigitalFilesAdminController : Controller
         DownloadService downloads,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        ILogger<DigitalFilesAdminController> logger,
         IHtmlLocalizer<DigitalFilesAdminController> htmlLocalizer)
     {
         _fileStore = fileStore;
         _downloads = downloads;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _logger = logger;
         H = htmlLocalizer;
     }
 
@@ -54,8 +59,26 @@ public sealed class DigitalFilesAdminController : Controller
             return BadRequest(new { error = "Choose a file to upload." });
         }
 
-        await using var stream = file.OpenReadStream();
-        var stored = await _fileStore.SaveAsync(file.FileName, stream, HttpContext.RequestAborted);
+        StoredDigitalFile stored;
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            stored = await _fileStore.SaveAsync(file.FileName, stream, HttpContext.RequestAborted);
+        }
+        catch (FileStoreException ex)
+        {
+            _logger.LogWarning("The digital file '{FileName}' was refused: {Reason}", file.FileName, ex.Message);
+
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A scanner that can't be reached throws; the file is refused rather than kept unchecked.
+            _logger.LogError(ex, "The digital file '{FileName}' couldn't be checked, so it wasn't kept.", file.FileName);
+
+            return BadRequest(new { error = "The file couldn't be checked, so it wasn't kept. Try again later." });
+        }
 
         return Ok(new { fileId = stored.FileId, fileName = stored.FileName, size = stored.Size });
     }

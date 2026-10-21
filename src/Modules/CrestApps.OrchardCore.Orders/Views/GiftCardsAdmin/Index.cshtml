@@ -1,0 +1,43 @@
+@using CrestApps.OrchardCore.Orders
+@model GiftCardsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="GiftCards" title="@T["Gift cards"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="gift-cards-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by code, its last 4 characters, or email"]" type="search" autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Issue gift card"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* The cards, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="GiftCards" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no gift cards that match the current filter."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Card"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Balance" position="40" title="@T["Balance"]" width="auto" />
+            <admin-list-column name="Expires" position="50" title="@T["Expires"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

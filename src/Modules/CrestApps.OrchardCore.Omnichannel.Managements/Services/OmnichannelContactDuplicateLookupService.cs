@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using YesSql;
 using YesSql.Services;
@@ -7,7 +9,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
 /// Queries stored omnichannel contacts for existing normalized phone numbers.
-/// Phone numbers are compared in E.164 format.
+/// Phone numbers are compared in E.164 format, across every number of each record; a number saved in a form that
+/// could not be read as E.164 is compared by its national digits, which the contact index keeps for the first cell
+/// and home numbers only.
 /// </summary>
 public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelContactDuplicateLookupService
 {
@@ -20,18 +24,22 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
 
     private readonly ISession _session;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IOmnichannelContactPhoneLookup _phoneLookup;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactDuplicateLookupService"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
+    /// <param name="phoneLookup">The lookup that finds records by any of their phone numbers.</param>
     public OmnichannelContactDuplicateLookupService(
         ISession session,
-        IPhoneNumberService phoneNumberService)
+        IPhoneNumberService phoneNumberService,
+        IOmnichannelContactPhoneLookup phoneLookup)
     {
         _session = session;
         _phoneNumberService = phoneNumberService;
+        _phoneLookup = phoneLookup;
     }
 
     /// <inheritdoc />
@@ -52,45 +60,41 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         }
 
         var existingPhoneNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var cellPhoneMatches = new List<OmnichannelContactIndex>();
-        var homePhoneMatches = new List<OmnichannelContactIndex>();
 
-        // One query per column; see LookupBatchSize.
-        foreach (var chunk in ToLookupBatches(normalizedPhoneNumbers))
+        foreach (var match in await _phoneLookup.FindByNumbersAsync(normalizedPhoneNumbers, OmnichannelContactVersion.Published, cancellationToken: cancellationToken))
         {
-            cellPhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
-                    index => index.Published &&
-                        index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk))
-                .ListAsync(cancellationToken));
-            homePhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
-                    index => index.Published &&
-                        index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk))
-                .ListAsync(cancellationToken));
+            existingPhoneNumbers.Add(match.NormalizedPhoneNumber);
         }
 
-        foreach (var match in cellPhoneMatches)
-        {
-            if (!string.IsNullOrWhiteSpace(match.NormalizedPrimaryCellPhoneNumber))
-            {
-                existingPhoneNumbers.Add(match.NormalizedPrimaryCellPhoneNumber);
-            }
-        }
+        // A number not found in E.164 may still be one saved in a form that could not be read as E.164, which the
+        // contact index keeps as national digits.
+        var missingPhoneNumbers = normalizedPhoneNumbers
+            .Where(phoneNumber => !existingPhoneNumbers.Contains(phoneNumber))
+            .ToArray();
 
-        foreach (var match in homePhoneMatches)
-        {
-            if (!string.IsNullOrWhiteSpace(match.NormalizedPrimaryHomePhoneNumber))
-            {
-                existingPhoneNumbers.Add(match.NormalizedPrimaryHomePhoneNumber);
-            }
-        }
-
-        if (existingPhoneNumbers.Count == normalizedPhoneNumbers.Length)
+        if (missingPhoneNumbers.Length == 0)
         {
             return existingPhoneNumbers;
         }
 
-        AddLegacyMatches(existingPhoneNumbers, cellPhoneMatches, normalizedPhoneNumbers, static match => match.PrimaryCellPhoneNumber);
-        AddLegacyMatches(existingPhoneNumbers, homePhoneMatches, normalizedPhoneNumbers, static match => match.PrimaryHomePhoneNumber);
+        var cellPhoneMatches = new List<OmnichannelContactIndex>();
+        var homePhoneMatches = new List<OmnichannelContactIndex>();
+
+        // One query per column; see LookupBatchSize.
+        foreach (var chunk in ToLookupBatches(missingPhoneNumbers))
+        {
+            cellPhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
+                    index => index.Published &&
+                        index.PrimaryCellPhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+            homePhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
+                    index => index.Published &&
+                        index.PrimaryHomePhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+        }
+
+        AddLegacyMatches(existingPhoneNumbers, cellPhoneMatches, missingPhoneNumbers, static match => match.PrimaryCellPhoneNumber);
+        AddLegacyMatches(existingPhoneNumbers, homePhoneMatches, missingPhoneNumbers, static match => match.PrimaryHomePhoneNumber);
 
         return existingPhoneNumbers;
     }
@@ -98,7 +102,7 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
     /// <inheritdoc />
     public async Task<Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(
         IReadOnlyCollection<string> phoneNumberKeys,
-        Func<OmnichannelContactIndex, bool> include,
+        Func<IOmnichannelContactMatch, bool> include,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(phoneNumberKeys);
@@ -115,19 +119,25 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         }
 
         var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+        // Every number of every record, whatever type each is saved as.
+        foreach (var match in await _phoneLookup.FindByNumbersAsync(keys, OmnichannelContactVersion.Published, cancellationToken: cancellationToken))
+        {
+            if (include is null || include(match))
+            {
+                AddPhoneOwner(phoneOwners, match.NormalizedPhoneNumber, match.ContentItemId);
+            }
+        }
+
+        // A number saved in a form that could not be read as E.164 is kept by the contact index as national digits,
+        // for the first cell and home numbers. One query per column; see LookupBatchSize. A record found by more than
+        // one column is counted once.
         var seenDocuments = new HashSet<long>();
 
-        // One query per column; see LookupBatchSize. A record found by more than one column is counted once.
         foreach (var chunk in ToLookupBatches(keys))
         {
             var matches = new List<OmnichannelContactIndex>();
 
-            matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Published && index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk))
-                .ListAsync(cancellationToken));
-            matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Published && index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk))
-                .ListAsync(cancellationToken));
             matches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(index =>
                     index.Published && index.PrimaryCellPhoneNumber.IsIn(chunk))
                 .ListAsync(cancellationToken));

@@ -1,0 +1,11 @@
+@*
+    The register filter of the shifts list, passed to the admin list as its 'ToolbarActions'. The commerce-admin-list
+    script submits the filter form when it changes.
+*@
+@{
+    var options = (RegisterShiftsOptions)Model.Options;
+}
+
+<div class="btn-group filter">
+    <select name="Options.RegisterId" asp-items="options.Registers" form="register-shifts-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by register"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Register"]"></select>
+</div>

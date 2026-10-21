@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Products;
@@ -26,6 +27,8 @@ public static class ProductsConstants
         /// <summary>
         /// Gets the permission that allows administrators to manage currencies.
         /// </summary>
-        public static readonly Permission ManageCurrencies = new("ManageCurrencies", "Manage currencies");
+        public static readonly Permission ManageCurrencies = new(
+            "ManageCurrencies",
+            LocalizationSource.Create("Manage currencies", typeof(Permissions)));
     }
 }

@@ -10,14 +10,14 @@ namespace CrestApps.OrchardCore.Reports.ViewModels;
 public sealed class ReportDisplayViewModel
 {
     /// <summary>
-    /// Gets or sets the report being displayed.
+    /// Gets or sets the descriptor of the report being displayed.
     /// </summary>
-    public IReport Report { get; set; }
+    public ReportDescriptor Report { get; set; }
 
     /// <summary>
     /// Gets or sets the available export formats for the report.
     /// </summary>
-    public IReadOnlyList<IReportExportFormat> ExportFormats { get; set; } = [];
+    public IReadOnlyList<ReportExportFormatDescriptor> ExportFormats { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the rendered filter editor shape.

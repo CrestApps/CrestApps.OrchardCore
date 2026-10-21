@@ -11,17 +11,21 @@
     }
     else
     {
-        <div class="row g-2 mb-2">
-            @for (var i = 0; i < Model.Options.Count; i++)
-            {
-                <div class="col-md-6">
-                    <input type="hidden" asp-for="Options[i].Name" />
-                    <label asp-for="Options[i].Values" class="form-label">@Model.Options[i].Name</label>
+        @for (var i = 0; i < Model.Options.Count; i++)
+        {
+            <div class="ocat-wrapper">
+                <input type="hidden" asp-for="Options[i].Name" />
+                <label asp-for="Options[i].Values" class="ocat-label">@Model.Options[i].Name</label>
+                <div class="ocat-end">
                     <input asp-for="Options[i].Values" class="form-control" placeholder="@T["S, M, L"]" />
                 </div>
-            }
+            </div>
+        }
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <span class="hint d-block mb-3">@T["Separate values with commas, then save: every combination becomes a variant. A variant keeps its SKU and prices while its combination stays."]</span>
+            </div>
         </div>
-        <span class="hint d-block mb-3">@T["Separate values with commas, then save: every combination becomes a variant. A variant keeps its SKU and prices while its combination stays."]</span>
 
         @if (Model.Variants.Count > 0)
         {

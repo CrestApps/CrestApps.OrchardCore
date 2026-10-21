@@ -1,7 +1,7 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json.Nodes;
 using OrchardCore.ContentManagement;
+using OrchardCore.Modules.Services;
 
 namespace CrestApps.OrchardCore.Products.Services.Attributes;
 
@@ -16,11 +16,16 @@ namespace CrestApps.OrchardCore.Products.Services.Attributes;
 public sealed class TaxonomyTermLookup
 {
     private readonly IContentManager _contentManager;
+    private readonly ISlugService _slugService;
     private readonly Dictionary<string, Dictionary<string, TaxonomyTerm>> _taxonomies = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _taxonomyNames = new(StringComparer.Ordinal);
 
-    public TaxonomyTermLookup(IContentManager contentManager)
+    public TaxonomyTermLookup(
+        IContentManager contentManager,
+        ISlugService slugService)
     {
         _contentManager = contentManager;
+        _slugService = slugService;
     }
 
     /// <summary>
@@ -46,6 +51,20 @@ public sealed class TaxonomyTermLookup
         }
 
         return path;
+    }
+
+    /// <summary>
+    /// Gets the name of a taxonomy, or <see langword="null"/> when there's no such published taxonomy.
+    /// </summary>
+    /// <param name="taxonomyContentItemId">The taxonomy.</param>
+    public async Task<string> GetTaxonomyNameAsync(string taxonomyContentItemId)
+    {
+        if (await GetTermsAsync(taxonomyContentItemId) is null)
+        {
+            return null;
+        }
+
+        return _taxonomyNames.GetValueOrDefault(taxonomyContentItemId);
     }
 
     /// <summary>
@@ -76,6 +95,7 @@ public sealed class TaxonomyTermLookup
         }
 
         _taxonomies[taxonomyContentItemId] = terms;
+        _taxonomyNames[taxonomyContentItemId] = taxonomy?.DisplayText;
 
         return terms;
     }
@@ -84,7 +104,7 @@ public sealed class TaxonomyTermLookup
     /// Gives every term a readable slug for listing URLs, unique within its taxonomy: the slug of its name, or,
     /// when two terms share a name (Accessories under Men and under Women), its parent's slug and its own.
     /// </summary>
-    private static void AssignSlugs(Dictionary<string, TaxonomyTerm> terms)
+    private void AssignSlugs(Dictionary<string, TaxonomyTerm> terms)
     {
         var ordered = terms.Values.OrderBy(term => term.Order).ToArray();
         var counts = ordered
@@ -113,33 +133,16 @@ public sealed class TaxonomyTermLookup
     }
 
     /// <summary>
-    /// Turns a term name into a URL slug: <c>Pickup Trucks</c> becomes <c>pickup-trucks</c> and
-    /// <c>Mercedes-Benz</c> becomes <c>mercedes-benz</c>. Accents are dropped.
+    /// Turns a term name into a URL slug with Orchard Core's slug service: <c>Pickup Trucks</c> becomes
+    /// <c>pickup-trucks</c> and <c>Mercedes-Benz</c> becomes <c>mercedes-benz</c>. Accents are dropped.
     /// </summary>
-    public static string Slugify(string text, string fallback)
+    /// <param name="text">The term name.</param>
+    /// <param name="fallback">The slug of a name with no letters or digits.</param>
+    public string Slugify(string text, string fallback)
     {
-        var builder = new StringBuilder();
+        var slug = string.IsNullOrWhiteSpace(text) ? null : _slugService.Slugify(text);
 
-        foreach (var character in (text ?? string.Empty).Normalize(NormalizationForm.FormD))
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
-            {
-                continue;
-            }
-
-            if (char.IsLetterOrDigit(character))
-            {
-                builder.Append(char.ToLowerInvariant(character));
-            }
-            else if (builder.Length > 0 && builder[^1] != '-')
-            {
-                builder.Append('-');
-            }
-        }
-
-        var slug = builder.ToString().Trim('-');
-
-        return slug.Length == 0 ? fallback : slug;
+        return string.IsNullOrEmpty(slug) ? fallback : slug;
     }
 
     private static void Flatten(JsonArray items, string parentId, int level, Dictionary<string, TaxonomyTerm> terms, ref int order)

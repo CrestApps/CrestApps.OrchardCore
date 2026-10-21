@@ -76,13 +76,12 @@ If the site is not publicly reachable (for example on `localhost`), Stripe canno
 | Setting | Description |
 | --- | --- |
 | `IsLive` | Switches between the live and test key sets. |
-| `CheckoutMode` | Kept for compatibility. The settings page no longer edits it, and the payment step always collects the card on the site (see below). |
 | `LivePublishableKey` / `LivePrivateSecret` / `LiveWebhookSecret` | Live-mode credentials. |
 | `LiveAccountId` / `LiveWebhookId` | The resolved live account id and the id of the auto-provisioned live webhook endpoint. |
 | `TestPublishableKey` / `TestPrivateSecret` / `TestWebhookSecret` | Test-mode credentials. |
 | `TestAccountId` / `TestWebhookId` | The resolved test account id and the id of the auto-provisioned test webhook endpoint. |
 
-Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`. Clicking **Connect** verifies the secret key, stores it, records the resolved account id, and (when the site is publicly reachable) provisions the webhook and captures its signing secret. You can also fill the fields in and **Save** to store them without provisioning a webhook.
+Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`. Services read them through `IOptionsMonitor<StripeOptions>.CurrentValue`, and the `StripeClient` is built per request from the current options; saving the settings, connecting, disconnecting or importing them refreshes the options (`IOptionsUpdateNotifier.RequestUpdate<StripeOptions>()`) without restarting the tenant. Clicking **Connect** verifies the secret key, stores it, records the resolved account id, and (when the site is publicly reachable) provisions the webhook and captures its signing secret. You can also fill the fields in and **Save** to store them without provisioning a webhook.
 
 ### Configuration from the application settings
 
@@ -160,8 +159,6 @@ Keep a recipe that holds clear-text secrets out of source control, or leave the 
 
 The checkout's payment step collects card details on your own page using Stripe Elements, with Payment and Setup Intents confirmed in the browser. The amount collected always comes from the server-side checkout session, never from values the browser supplies.
 
-`StripeOptions.CheckoutMode` and its **Hosted Checkout (redirect)** value remain for compatibility, but nothing in the checkout reads them, so the settings page no longer shows the choice.
-
 ### Webhooks
 
 Stripe delivers events to `POST /stripe/webhook`. Clicking **Connect** provisions this endpoint and stores its signing secret automatically; for local development you can set it by hand in the matching *WebhookSecret* setting. The endpoint is engineered for Stripe's at-least-once delivery guarantee:
@@ -194,7 +191,7 @@ Under the **Stripe** category you can start a workflow from any of these events:
 | **Stripe Dispute Created** | A dispute or chargeback is opened. |
 | **Stripe Request Failed** | A request to Stripe fails, typically due to an authentication or connectivity problem. |
 
-The lifecycle events (everything except *Request Failed*) are raised from the provider-neutral payment events, so they carry the same normalized values — transaction id, amount, currency, and gateway mode — as workflow input. The **Stripe Request Failed** event is raised when an outgoing Stripe API call returns `401`/`403` or cannot connect, and also when key verification or webhook provisioning fails while connecting; it is throttled to avoid flooding when many calls fail together. Use it to notify an administrator that an account's credentials or connectivity need attention.
+The lifecycle events (everything except *Request Failed*) are raised from the provider-neutral payment events, so they carry the same normalized values — transaction id, amount, currency, and gateway mode — as workflow input. The **Stripe Request Failed** event is raised when an outgoing Stripe API call returns `401`/`403` or cannot connect, and also when key verification or webhook provisioning fails while connecting; it is throttled per tenant (once every five minutes) to avoid flooding when many calls fail together. Use it to notify an administrator that an account's credentials or connectivity need attention.
 
 ### Local development
 
@@ -297,6 +294,10 @@ alone.
 
 Taking a card that is tapped against the administrator's own phone (Stripe's *Tap to Pay*) needs Stripe Terminal
 inside a native iOS or Android app, and cannot be done from a web page.
+
+### Stripe Terminal readers
+
+With the [Point of Sale](point-of-sale) feature on, the Stripe module adds `StripeTerminalPaymentProvider` (key `stripe-terminal`, *Card on a Stripe reader*), which takes a register's card on a Stripe Terminal reader through Stripe's server-driven integration, and the `pos/terminal/readers` endpoints a till app lists and pairs readers with. A simulated reader (registration code `simulated-wpe`) and a test card presented on it work in test mode. See [Point of Sale](point-of-sale#stripe-terminal).
 
 ### Refunds
 

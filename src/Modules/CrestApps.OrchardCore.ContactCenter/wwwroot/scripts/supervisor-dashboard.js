@@ -22,7 +22,8 @@
 		return BUSY_STATUSES[status] ? "busy" : "notReady";
 	}
 	function isOnCall(agent) {
-		return !!(agent.activeInteractionId || agent.phoneCall || agent.activeInteractions > 0);
+		if (agent.phoneCall) return true;
+		return agent.presenceStatus !== "Reserved" && !!(agent.activeInteractionId || agent.activeInteractions > 0);
 	}
 	function fold(text) {
 		var value = String(text || "").toLowerCase();
@@ -58,6 +59,66 @@
 			status: STATUS_FILTERS.indexOf(chosen.status) >= 0 ? chosen.status : "",
 			search: typeof chosen.search === "string" ? chosen.search : ""
 		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	var STATUS_NAMES = [
+		"Offline",
+		"Available",
+		"Reserved",
+		"Busy",
+		"WrapUp",
+		"Break",
+		"RequestBreak",
+		"Away",
+		"DoNotDisturb",
+		"Meeting",
+		"Training",
+		"AfterHoursUnavailable"
+	];
+	var STATUS_LABELS = {
+		Offline: ["offline", "Offline"],
+		Available: ["available", "Available"],
+		Reserved: ["reserved", "Reserved"],
+		Busy: ["busy", "On a call"],
+		WrapUp: ["wrapUp", "Wrap-up"],
+		Break: ["break", "Break"],
+		RequestBreak: ["breakPending", "Break pending"],
+		Away: ["away", "Away"],
+		DoNotDisturb: ["doNotDisturb", "Do not disturb"],
+		Meeting: ["meeting", "Meeting"],
+		Training: ["training", "Training"],
+		AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
+	};
+	var REASONED_STATES = {
+		Break: true,
+		Away: true,
+		DoNotDisturb: true,
+		Meeting: true,
+		Training: true,
+		AfterHoursUnavailable: true
+	};
+	function normalizePresenceStatus(value) {
+		if (typeof value === "number") return STATUS_NAMES[value] || "Offline";
+		if (typeof value === "string" && value) {
+			if (/^\d+$/.test(value)) return STATUS_NAMES[Number(value)] || "Offline";
+			return value;
+		}
+		return "Offline";
+	}
+	function text$1(labels, key, fallback) {
+		var value = labels && labels[key];
+		return typeof value === "string" && value ? value : fallback;
+	}
+	function hasReason(reason) {
+		return typeof reason === "string" && reason.trim().length > 0;
+	}
+	function presenceLabel(presence, labels) {
+		presence = presence || {};
+		var status = normalizePresenceStatus(presence.status);
+		if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
+		var entry = STATUS_LABELS[status];
+		return entry ? text$1(labels, entry[0], entry[1]) : status;
 	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
@@ -822,7 +883,10 @@
 				var serverNow = Date.parse(state.serverTimeUtc || "");
 				var boardHtml = agents.map(function(agent) {
 					var status = agent.presenceStatus || "Offline";
-					var detail = phoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings) || agent.presenceReason || status;
+					var detail = phoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings) || presenceLabel({
+						status,
+						reason: agent.presenceReason
+					}, config.presenceLabels);
 					var actions = interventions ? interventions.actionsHtml(agent, state) : "";
 					var menu = interventions ? interventions.menuHtml(agent, state) : "";
 					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span>" + idleHtml(agent) + staleHtml(agent) + signedInHtml(agent, state, status) + "</span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";

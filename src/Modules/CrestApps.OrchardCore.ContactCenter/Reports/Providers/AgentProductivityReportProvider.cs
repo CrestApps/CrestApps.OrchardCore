@@ -1,16 +1,19 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 /// <summary>
 /// The Contact Center agent productivity report: per-agent handled volume, talk time, and completed work.
 /// </summary>
-public sealed class AgentProductivityReportProvider : ContactCenterReportBase
+public sealed class AgentProductivityReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentProductivityReportProvider"/> class.
@@ -27,16 +30,19 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-agent-productivity";
+    public static string Name => "contact-center-agent-productivity";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Agent productivity"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<AgentProductivityReportProvider>("Agent productivity");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per-agent handled volume, talk time, average handle time, and completed activities."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<AgentProductivityReportProvider>("Per-agent handled volume, talk time, average handle time, and completed activities.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.AgentPerformance;
+    public static string Category => ReportsConstants.Categories.AgentPerformance;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

@@ -4,6 +4,7 @@ using System.Linq;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Models;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// A first-class, versioned tax table used by table-driven calculation methods to model brackets,
 /// progressive schedules, per-unit schedules, and lookup tables.
 /// </summary>
-public sealed class TaxTable : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxTable>
+public sealed class TaxTable : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<TaxTable>
 {
     /// <inheritdoc />
     public string Name { get; set; }

@@ -1,0 +1,53 @@
+@model ReportDesignerPreviewViewModel
+
+@{
+    var run = Model.Run;
+}
+
+@if (run.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <div class="fw-semibold">@T["The design cannot run yet."]</div>
+        <ul class="mb-0">
+            @foreach (var error in run.Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (run.Warnings.Count > 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <ul class="mb-0">
+            @foreach (var warning in run.Warnings)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (run.Filters.Count > 0)
+{
+    <form data-preview-filters class="mb-3">
+        <div class="small text-muted mb-1">@T["Filters the people who run the report will see:"]</div>
+        <div class="row row-cols-1 row-cols-sm-2 align-items-end g-2">
+            <partial name="_ReportFilters" model="new ReportFiltersViewModel { Filters = run.Filters, SimpleControls = true }" />
+            <div class="col-auto p-1">
+                <button type="submit" class="btn btn-sm btn-primary">@T["Apply"]</button>
+            </div>
+        </div>
+    </form>
+}
+
+@if (run.Document is not null)
+{
+    <div class="small text-muted mb-2">@T.Plural(run.RowCount, "1 result row", "{0} result rows")</div>
+
+    @if (run.Document.HasContent)
+    {
+        <partial name="_ReportDocument" model="run.Document" />
+    }
+}

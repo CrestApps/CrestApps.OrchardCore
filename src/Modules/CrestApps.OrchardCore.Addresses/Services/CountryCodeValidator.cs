@@ -25,20 +25,19 @@ public sealed class CountryCodeValidator
     /// </summary>
     public async Task<string> GetErrorAsync(string code, string contentItemId)
     {
-        code = code?.Trim().ToUpperInvariant();
+        code = CountryCodeUtility.Normalize(code);
 
-        if (string.IsNullOrEmpty(code))
+        if (code is null)
         {
             return S["An ISO country code is required."];
         }
 
-        if (code.Length != 2 || !char.IsAsciiLetterUpper(code[0]) || !char.IsAsciiLetterUpper(code[1]))
+        if (!CountryCodeUtility.IsCountryCode(code))
         {
             return S["The ISO country code must be two letters, for example US or CA."];
         }
 
-        var duplicate = await _session.QueryIndex<GeographicAreaIndex>(index =>
-                index.ContentType == AddressConstants.Country &&
+        var duplicate = await _session.QueryIndex<CountryIndex>(index =>
                 index.Code == code &&
                 index.ContentItemId != contentItemId &&
                 index.Latest)

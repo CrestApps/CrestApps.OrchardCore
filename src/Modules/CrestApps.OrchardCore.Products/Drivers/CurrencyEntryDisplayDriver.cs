@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;

@@ -34,7 +34,6 @@ public sealed class ReceiptsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Receipts"], S["Receipts"].PrefixPosition(), receipts => receipts
-                        .AddClass("receipts")
                         .Id("receipts")
                         .Action("Index", "Admin", _routeValues)
                         .Permission(ReceiptsPermissions.ManageReceiptSettings)

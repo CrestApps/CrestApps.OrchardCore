@@ -1,0 +1,9 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="AccountCompany" title="@T["Company"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(await New.CommerceAccountPage(Content: Model))

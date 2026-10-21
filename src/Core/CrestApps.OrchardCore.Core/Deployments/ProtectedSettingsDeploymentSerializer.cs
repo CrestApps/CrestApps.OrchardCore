@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace CrestApps.OrchardCore.Core.Deployments;
@@ -93,7 +94,7 @@ public static class ProtectedSettingsDeploymentSerializer
                 throw new InvalidOperationException($"'{type.Name}.{member}' is not a writable string member and cannot hold a protected value.");
             }
 
-            property.SetValue(settings, dataProtectionProvider.CreateProtector(purpose).Protect(value));
+            property.SetValue(settings, dataProtectionProvider.ProtectSetting(purpose, value));
         }
     }
 }

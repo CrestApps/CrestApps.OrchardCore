@@ -110,4 +110,25 @@ internal sealed class CallQualityRecordIndexMigrations : DataMigration
 
         return 3;
     }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>ObservedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 4;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<CallQualityRecordIndex>(
+            SchemaBuilder,
+            "IDX_CallQualityRecordIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "ObservedUtc", "Id");
+    }
 }

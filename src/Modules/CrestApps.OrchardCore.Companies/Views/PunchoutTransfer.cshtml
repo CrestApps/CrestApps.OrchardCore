@@ -1,0 +1,34 @@
+@model PunchoutTransferViewModel
+
+@* Sends a punchout buyer's cart back to their procurement system: OCI fields posted to its HOOK_URL. *@
+
+<h1 class="h4 mb-3">@T["Transfer to your procurement system"]</h1>
+
+@if (Model.Fields.Count == 0)
+{
+    <p>@T["Your cart is empty, or nothing in it can be bought as it is."]</p>
+    <a href="@Url.RouteUrl("Cart")" class="btn btn-secondary">@T["Back to the cart"]</a>
+}
+else
+{
+    <p>@T.Plural(Model.ItemCount, "Sending 1 item back to your purchasing system…", "Sending {0} items back to your purchasing system…")</p>
+
+    <form method="post" action="@Model.HookUrl" target="@Model.Target" data-punchout-transfer>
+        @foreach (var field in Model.Fields)
+        {
+            <input type="hidden" name="@field.Key" value="@field.Value" />
+        }
+        <button type="submit" class="btn btn-primary">@T["Transfer now"]</button>
+        <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the cart"]</a>
+    </form>
+
+    <script at="Foot">
+        (function () {
+            var form = document.querySelector('[data-punchout-transfer]');
+
+            if (form) {
+                form.submit();
+            }
+        })();
+    </script>
+}

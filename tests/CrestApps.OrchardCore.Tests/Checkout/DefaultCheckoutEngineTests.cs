@@ -338,6 +338,38 @@ public sealed class DefaultCheckoutEngineTests
     }
 
     /// <summary>
+    /// A failed handler may change the session, for example to stop naming an account it deleted as the owner. The
+    /// session was committed before the handlers ran, so the engine saves it again afterwards.
+    /// </summary>
+    [Fact]
+    public async Task TryCompleteAsync_WhenProviderReportsFailure_SavesTheSessionAfterTheFailedHandlers()
+    {
+        // Arrange
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var handler = new RecordingHandler();
+
+        var provider = new RecordingProvider(ProviderKey)
+        {
+            Verification = _ => new PaymentVerificationResult { Status = PaymentStatus.Failed, TransactionId = "txn-failed" },
+        };
+
+        var (engine, sessionStore) = CreateEngine(attemptStore, provider, handler);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        var savesBeforeHandler = -1;
+        handler.OnFailed = _ => savesBeforeHandler = sessionStore.SaveCount;
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Act
+        await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(savesBeforeHandler >= 0);
+        Assert.True(sessionStore.SaveCount > savesBeforeHandler);
+    }
+
+    /// <summary>
     /// When one obligation fails the customer must not keep paying for the ones that succeeded. The refund
     /// goes through the durable refund service rather than straight to the gateway, so the gateway's own
     /// refund notification correlates to it instead of being quarantined for an operator.
@@ -789,9 +821,12 @@ public sealed class DefaultCheckoutEngineTests
             return Task.CompletedTask;
         }
 
+        public Action<CheckoutFlowFailedContext> OnFailed { get; set; }
+
         public override Task FailedAsync(CheckoutFlowFailedContext context)
         {
             FailedCalled = true;
+            OnFailed?.Invoke(context);
 
             return Task.CompletedTask;
         }

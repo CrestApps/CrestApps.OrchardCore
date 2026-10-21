@@ -37,11 +37,8 @@ internal sealed class ProductsAdminMenu : AdminNavigationProvider
         }
 
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Products"], S["Products"].PrefixPosition("0.1"), products => products
-                    .AddClass("commerce-products")
                     .Id("commerceProducts")
                     .Action("List", "Admin", ContentList(types))
                     .Permission(CommonPermissions.ListContent)
@@ -91,11 +88,8 @@ internal sealed class ProductListingsAdminMenu : AdminNavigationProvider
         }
 
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Product Listings"], S["Product Listings"].PrefixPosition("0.2"), listings => listings
-                    .AddClass("commerce-product-listings")
                     .Id("commerceProductListings")
                     .Action("List", "Admin", ProductsAdminMenu.ContentList(types))
                     .Permission(CommonPermissions.ListContent)

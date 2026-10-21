@@ -85,10 +85,19 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
     }
 
     private string NormalizeToE164(ContactPhoneNumber field)
+        => NormalizeToE164(_phoneNumberService, field);
+
+    /// <summary>
+    /// Formats a saved phone number in E.164, the form every lookup by number compares, or returns
+    /// <see langword="null"/> when it cannot be read as a number.
+    /// </summary>
+    /// <param name="phoneNumberService">The phone number service.</param>
+    /// <param name="field">The saved phone number.</param>
+    internal static string NormalizeToE164(IPhoneNumberService phoneNumberService, ContactPhoneNumber field)
     {
         var phoneNumber = field.PhoneNumber?.Trim();
 
-        if (_phoneNumberService.TryParse(phoneNumber, field.CountryCode, out var canonicalNumber))
+        if (phoneNumberService.TryParse(phoneNumber, field.CountryCode, out var canonicalNumber))
         {
             return Truncate(canonicalNumber.Value, 50);
         }

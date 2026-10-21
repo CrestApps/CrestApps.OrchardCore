@@ -1,0 +1,9 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="AccountMemberships" title="@T["Memberships"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Memberships"], Content: Model))

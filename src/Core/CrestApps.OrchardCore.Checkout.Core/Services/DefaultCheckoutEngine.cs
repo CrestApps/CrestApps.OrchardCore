@@ -355,6 +355,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
                 session.TryGet(out invoice);
                 expectedObligations = CheckoutObligations.GetExpectedObligationIds(invoice);
+
+                if (expectedObligations.Count == 0)
+                {
+                    await SupersedeUnexpectedAttemptsAsync(session, expectedObligations, cancellationToken);
+                }
             }
 
             var reconciliation = await _reconciliationService.ReconcileAsync(session, expectedObligations, cancellationToken);
@@ -589,6 +594,16 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             string.Equals(candidate.ProviderKey, provider.Key, StringComparison.OrdinalIgnoreCase) &&
             candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded);
 
+        // An attempt begun for a different total, before the buyer applied a gift card or a code, is not resumed: it
+        // would charge what the invoice no longer asks for. It's set aside, and a new one is made for the new total.
+        if (attempt?.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
+            !MatchesInvoice(attempt, invoice) &&
+            await TrySupersedeAsync(session, attempt, cancellationToken))
+        {
+            existingAttempts.Remove(attempt);
+            attempt = null;
+        }
+
         if (attempt?.State == PaymentAttemptState.Succeeded)
         {
             // Already paid. Nothing for the client to do for this obligation.
@@ -735,7 +750,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
                 // The gateway prices the agreement from the full cycle amount, never from what is due now.
                 // Pricing it from the attempt would bill a first-cycle discount, or a trial's zero, forever.
-                CycleAmount = Money.Round(lineItems.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency),
+                CycleAmount = CheckoutObligations.GetCycleAmount(lineItems, invoice.Currency),
                 FirstCycleAmount = attempt.ExpectedAmount,
                 ProviderData = options.ProviderData,
                 ReturnUrl = options.ReturnUrl,
@@ -746,21 +761,67 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
     // Maps an obligation id back to the billing interval it settles, or null when it is the one-time amount.
     private static BillingDurationKey TryGetRecurringInterval(CheckoutInvoice invoice, string obligationId)
-    {
-        if (string.Equals(obligationId, CheckoutObligations.OneTime, StringComparison.Ordinal))
-        {
-            return null;
-        }
+        => CheckoutObligations.TryGetRecurringGroup(invoice, obligationId, out var interval, out _) ? interval : null;
 
-        foreach (var key in invoice.GetRecurringGroups().Keys)
+    private static bool MatchesInvoice(PaymentAttempt attempt, CheckoutInvoice invoice)
+    {
+        var (amount, taxAmount) = GetObligationAmounts(invoice, attempt.ObligationId);
+
+        return attempt.ExpectedAmount == amount && attempt.ExpectedTaxAmount == taxAmount;
+    }
+
+    // An attempt the provider was already given is only set aside when the provider says nothing was paid, so a
+    // payment the buyer finished in another tab is never dropped.
+    private async Task<bool> TrySupersedeAsync(CheckoutSession session, PaymentAttempt attempt, CancellationToken cancellationToken)
+    {
+        if (attempt.State == PaymentAttemptState.Pending && _providerResolver.GetProvider(attempt.ProviderKey) is { } provider)
         {
-            if (string.Equals(CheckoutObligations.Recurring(key), obligationId, StringComparison.Ordinal))
+            try
             {
-                return key;
+                var verification = await provider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = attempt }, cancellationToken);
+
+                if (verification.Status == PaymentStatus.Succeeded)
+                {
+                    _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid before the total changed, so it stands.", attempt.ItemId, session.SessionId);
+
+                    return false;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Could not check attempt '{AttemptId}' of checkout '{SessionId}' before setting it aside, so it stands.", attempt.ItemId, session.SessionId);
+
+                return false;
             }
         }
 
-        return null;
+        await SupersedeAsync(attempt, cancellationToken);
+
+        return true;
+    }
+
+    private async Task SupersedeAsync(PaymentAttempt attempt, CancellationToken cancellationToken)
+    {
+        attempt.State = PaymentAttemptState.Canceled;
+        attempt.IsSuperseded = true;
+        attempt.FailureReason = "The total changed before it was paid.";
+
+        await _attemptStore.UpdateAsync(attempt, cancellationToken);
+    }
+
+    // Attempts begun for obligations the invoice no longer has, such as a card payment begun before a gift card was
+    // applied that now pays everything, are set aside, so they neither keep the checkout waiting nor get charged.
+    private async Task SupersedeUnexpectedAttemptsAsync(CheckoutSession session, IReadOnlyCollection<string> expectedObligations, CancellationToken cancellationToken)
+    {
+        foreach (var attempt in await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken))
+        {
+            if (attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
+                !attempt.IsSuperseded &&
+                !expectedObligations.Contains(attempt.ObligationId))
+            {
+                await TrySupersedeAsync(session, attempt, cancellationToken);
+            }
+        }
     }
 
     private static PaymentAttempt CreateAttempt(CheckoutSession session, CheckoutInvoice invoice, string providerKey, string obligationId)
@@ -796,7 +857,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         if (string.Equals(obligationId, CheckoutObligations.OneTime, StringComparison.Ordinal))
         {
             var gross = invoice.InitialPaymentAmount ?? 0m;
-            var tax = invoice.TaxAmount;
+
+            // Balances such as gift cards are already off the gross; the payment provider carries the tax first, and
+            // only what they couldn't leave it is theirs.
+            var tax = Math.Min(Math.Max(0m, invoice.TaxAmount - invoice.TenderTaxAmount), gross);
 
             // InitialPaymentAmount already includes the exclusive tax folded in by the tax service, so the
             // taxable base is the remainder. Charging gross + tax again would double-charge the tax.
@@ -832,7 +896,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 continue;
             }
 
-            billable.Add((obligationId, Money.Round(group.Value.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency)));
+            billable.Add((obligationId, CheckoutObligations.GetCycleAmount(group.Value, invoice.Currency)));
         }
 
         if (billable.Count == 0)
@@ -933,6 +997,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         try
         {
+            // The commit before completing detaches the session, so a handler that loads it by id (an order event
+            // reading what the checkout carried) would get a second copy, and saving this one would then fail.
+            // Tracking it again first hands that handler this same instance.
+            await _sessionStore.SaveAsync(session, cancellationToken);
+
             // Completing handlers are invoked directly rather than through the swallow-and-log helper: a
             // handler that cannot fulfill the purchase must stop the checkout from being marked complete.
             foreach (var handler in _handlers)
@@ -989,6 +1058,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         await _session.SaveChangesAsync(cancellationToken);
 
         await _handlers.InvokeAsync((handler, context) => handler.FailedAsync(context), new CheckoutFlowFailedContext(flow), _logger);
+
+        // A failed handler may change the session, for example to stop naming an account it deleted as the owner, and
+        // the commit above detached it, so it is saved again.
+        await _sessionStore.SaveAsync(session, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
         return new CheckoutCompletionResult

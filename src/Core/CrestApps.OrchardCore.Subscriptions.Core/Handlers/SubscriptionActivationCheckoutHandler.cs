@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
-using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Customers.Models;
 using OrchardCore.ContentManagement;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -164,18 +162,12 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
         // What recurs is the plan's cycle amount, read from the lines. The attempt only says what was taken
         // for the first cycle, and that is smaller whenever a first-cycle coupon applied and zero during a
         // trial; an agreement that copied it would renew at the discount forever, or at nothing.
-        subscription.Amount = Money.Round(lineItems.Sum(lineItem => lineItem.GetLineTotal(subscription.Currency)), subscription.Currency);
+        subscription.Amount = CheckoutObligations.GetCycleAmount(lineItems, subscription.Currency);
         subscription.TaxAmount = 0m;
         subscription.BillingDuration = interval.Duration <= 0 ? 1 : interval.Duration;
         subscription.DurationType = interval.Type;
 
-        // The lowest cap among the lines wins: billing past any line's limit charges for something the
-        // customer did not agree to.
-        subscription.BillingCycleLimit = lineItems
-            .Select(lineItem => lineItem.Plan?.BillingCycleLimit)
-            .Where(limit => limit > 0)
-            .DefaultIfEmpty(null)
-            .Min();
+        subscription.BillingCycleLimit = CheckoutObligations.GetCycleLimit(lineItems);
 
         var deferralDays = CheckoutObligations.GetDeferralDays(lineItems);
 

@@ -3,10 +3,7 @@ using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Orders.Services;
@@ -26,58 +23,67 @@ public enum OrderReturnEmailKind
 /// </summary>
 public sealed class OrderReturnEmailSender
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly IOrderStore _orders;
     private readonly IOrderLinkService _links;
     private readonly ISiteService _siteService;
     private readonly HtmlEncoder _encoder;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
     public OrderReturnEmailSender(
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         IOrderStore orders,
         IOrderLinkService links,
         ISiteService siteService,
         HtmlEncoder encoder,
-        ILogger<OrderReturnEmailSender> logger,
         IStringLocalizer<OrderReturnEmailSender> stringLocalizer)
     {
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _orders = orders;
         _links = links;
         _siteService = siteService;
         _encoder = encoder;
-        _logger = logger;
         S = stringLocalizer;
     }
 
     public async Task<bool> SendAsync(OrderReturn orderReturn, OrderReturnEmailKind kind, CancellationToken cancellationToken = default)
     {
-        if (_serviceProvider.GetService<IEmailService>() is not { } emailService || string.IsNullOrWhiteSpace(orderReturn.CustomerEmail))
+        ArgumentNullException.ThrowIfNull(orderReturn);
+
+        if (!_emailSender.CanSend || string.IsNullOrWhiteSpace(orderReturn.CustomerEmail))
         {
             return false;
         }
 
         var order = await _orders.FindByIdAsync(orderReturn.OrderId, cancellationToken);
-        var orderUrl = order is null ? null : await _links.CreateUrlAsync(order);
-        var email = Build(orderReturn, kind, (await _siteService.GetSettingsAsync<ReturnSettings>()).Instructions, orderUrl);
 
-        var result = await emailService.SendAsync(new MailMessage
+        // Written in the language the buyer shopped in.
+        return await _emailSender.SendAsync(new CommerceEmail
         {
+            Kind = OrderEmailKinds.Return,
             To = orderReturn.CustomerEmail,
-            Subject = email.Subject,
-            TextBody = email.Text,
-            HtmlBody = email.Html,
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded && _logger.IsEnabled(LogLevel.Warning))
+            Order = order,
+            Culture = order?.Culture,
+            Reference = orderReturn.ItemId,
+        }, async _ =>
         {
-            _logger.LogWarning("The email for return '{ReturnId}' couldn't be sent.", orderReturn.ItemId);
-        }
+            var orderUrl = order is null ? null : await _links.CreateUrlAsync(order);
+            var built = Build(orderReturn, kind, (await _siteService.GetSettingsAsync<ReturnSettings>()).Instructions, orderUrl);
 
-        return result.Succeeded;
+            return new CommerceEmailContent
+            {
+                Subject = built.Subject,
+                Text = built.Text,
+                Html = built.Html,
+                Values = new Dictionary<string, string>
+                {
+                    ["ReturnNumber"] = orderReturn.Number,
+                    ["ReturnStatus"] = kind.ToString(),
+                    ["OrderUrl"] = orderUrl,
+                },
+            };
+        }, cancellationToken);
     }
 
     internal (string Subject, string Text, string Html) Build(OrderReturn orderReturn, OrderReturnEmailKind kind, string instructions, string orderUrl)

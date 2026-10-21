@@ -805,7 +805,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         IStore store,
         string connectionString,
         string source,
-        IReadOnlyCollection<string> leadContentTypes = null)
+        IReadOnlyCollection<string> leadContentTypes = null,
+        ICatalog<OmnichannelActivityBatch> batchCatalog = null)
     {
         var sourceOptions = new ActivityBatchSourceOptions();
 
@@ -814,7 +815,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         sourceOptions.AddSource(source, entry => entry.RequiresUserAssignment = false);
 
         return new DefaultContactActivityBatchLoader(
-            CreateBatchCatalog(),
+            batchCatalog ?? CreateBatchCatalog(),
             session,
             new UtcLocalClock(),
             new StubClock(_now),
@@ -829,7 +830,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             new SqliteDbConnectionAccessor(connectionString),
             [],
             Options.Create(sourceOptions),
-            new ContactOptOutResolver(session),
+            new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session)),
+            ContactPhoneTestStore.CreateLookup(session),
             new NoNotInServiceNumbers(),
             TestContactMethods.Accessor,
             NullLogger<DefaultContactActivityBatchLoader>.Instance,
@@ -1076,6 +1078,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         [
             new ContentItemIndexProvider(),
             CreateContactIndexProvider(),
+            ContactPhoneTestStore.CreatePhoneNumberIndexProvider(),
             new OmnichannelActivityIndexProvider(),
             new LeadIndexProvider(),
             new LeadImportIndexProvider(),
@@ -1151,6 +1154,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
         await CrmMigrations.CreateLeadIndexAsync(schemaBuilder);
         await CrmMigrations.CreateLeadImportIndexAsync(schemaBuilder);
+        await OmnichannelContactsMigrations.CreatePhoneNumberIndexTableAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

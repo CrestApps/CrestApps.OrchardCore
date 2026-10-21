@@ -10,8 +10,6 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 
@@ -34,7 +32,7 @@ public sealed class DraftOrderService
     private readonly IServiceProvider _serviceProvider;
     private readonly HtmlEncoder _encoder;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
+    private readonly ICommerceEmailSender _emailSender;
 
     internal readonly IStringLocalizer S;
 
@@ -47,8 +45,8 @@ public sealed class DraftOrderService
         IServiceProvider serviceProvider,
         HtmlEncoder encoder,
         IClock clock,
-        ILogger<DraftOrderService> logger,
-        IStringLocalizer<DraftOrderService> stringLocalizer)
+        IStringLocalizer<DraftOrderService> stringLocalizer,
+        ICommerceEmailSender emailSender)
     {
         _cartService = cartService;
         _orderService = orderService;
@@ -58,21 +56,31 @@ public sealed class DraftOrderService
         _serviceProvider = serviceProvider;
         _encoder = encoder;
         _clock = clock;
-        _logger = logger;
+        _emailSender = emailSender;
         S = stringLocalizer;
     }
 
     /// <summary>
-    /// Prices the lines for the buyer, without saving anything, such as to show the store what the draft comes to.
+    /// Prices the lines for the buyer, without saving anything, such as to show the store what the draft comes to. A
+    /// saved draft keeps its currency, such as a quote the buyer asked for in theirs.
     /// </summary>
-    public async Task<CartPricing> PriceAsync(DraftOrderInput input, string cartId, CancellationToken cancellationToken = default)
+    public Task<CartPricing> PriceAsync(DraftOrderInput input, string cartId, string currency = null, CancellationToken cancellationToken = default)
+        => PriceAsync(input, cartId, currency, existing: null, cancellationToken);
+
+    /// <summary>
+    /// Prices the lines for the buyer, keeping what the existing order's lines carry besides the product, such as their
+    /// add-ons and a booking's dates, so a quote the buyer asked for is priced as they chose it.
+    /// </summary>
+    public async Task<CartPricing> PriceAsync(DraftOrderInput input, string cartId, string currency, Order existing, CancellationToken cancellationToken = default)
     {
         var user = await FindUserAsync(input.CustomerEmail);
         var now = _clock.UtcNow;
+        var kept = (existing?.Lines ?? []).Where(line => !string.IsNullOrEmpty(line.LineId)).ToDictionary(line => line.LineId, StringComparer.Ordinal);
 
         var cart = new Cart
         {
-            ItemId = cartId ?? UniqueId.GenerateId(),
+            // An order's own id when it has no cart, such as a quote, so what it holds, such as a booking's dates, counts as its own.
+            ItemId = cartId ?? existing?.ItemId ?? UniqueId.GenerateId(),
             UserId = user is null ? null : await _userManager.GetUserIdAsync(user),
             Lines = input.Lines
                 .Where(line => line.Quantity > 0 && !string.IsNullOrEmpty(line.ContentItemId))
@@ -83,8 +91,15 @@ public sealed class DraftOrderService
                     VariantId = string.IsNullOrEmpty(line.VariantId) ? null : line.VariantId,
                     Quantity = line.Quantity,
                     AddedUtc = now,
+                    AddOns = kept.TryGetValue(line.LineId ?? string.Empty, out var keptLine) && keptLine.ContentItemId == line.ContentItemId && keptLine.AddOns is { Count: > 0 } addOns
+                        ? addOns.Where(addOn => !string.IsNullOrEmpty(addOn.AddOnId)).ToDictionary(addOn => addOn.AddOnId, addOn => addOn.Value ?? "true", StringComparer.Ordinal)
+                        : null,
+                    Details = kept.TryGetValue(line.LineId ?? string.Empty, out var detailed) && detailed.ContentItemId == line.ContentItemId && detailed.Details is { Count: > 0 } details
+                        ? new Dictionary<string, string>(details, StringComparer.Ordinal)
+                        : null,
                 })
                 .ToList(),
+            Currency = currency,
             CreatedUtc = now,
             ModifiedUtc = now,
         };
@@ -113,7 +128,7 @@ public sealed class DraftOrderService
             problems.Add(S["The buyer has started paying this order, so it can't be changed now."]);
         }
 
-        var pricing = await PriceAsync(input, existing?.CartId, cancellationToken);
+        var pricing = await PriceAsync(input, existing?.CartId, existing?.Currency, existing, cancellationToken);
 
         if (pricing.Lines.Count == 0)
         {
@@ -131,7 +146,12 @@ public sealed class DraftOrderService
 
         if (order is null)
         {
-            var created = await _orderService.CreateFromCartAsync(pricing, cancellationToken);
+            // Made by staff, so the order doesn't take their language.
+            var created = await _orderService.CreateFromCartAsync(pricing, draft =>
+            {
+                draft.Channel = OrderChannels.Draft;
+                draft.Culture = null;
+            }, cancellationToken);
 
             if (!created.Succeeded)
             {
@@ -156,6 +176,8 @@ public sealed class DraftOrderService
                 return (null, refused);
             }
         }
+
+        ApplyPrices(order, input.Lines);
 
         order.CustomerEmail = email;
         order.CustomerName = string.IsNullOrWhiteSpace(input.CustomerName) ? order.CustomerName ?? email : input.CustomerName.Trim();
@@ -183,51 +205,98 @@ public sealed class DraftOrderService
     {
         ArgumentNullException.ThrowIfNull(order);
 
-        if (order.Invoice is null || order.Status is OrderStatus.Paid or OrderStatus.Canceled ||
-            _serviceProvider.GetService<IEmailService>() is not { } emailService || string.IsNullOrWhiteSpace(order.CustomerEmail))
+        if (order.Invoice is null || order.Status is OrderStatus.Paid or OrderStatus.Canceled)
         {
             return false;
         }
 
-        var viewUrl = await _links.CreateUrlAsync(order);
-
-        if (string.IsNullOrEmpty(viewUrl))
+        var sent = await _emailSender.SendAsync(new CommerceEmail
         {
-            return false;
-        }
-
-        var (subject, text, html) = BuildInvoiceEmail(order, viewUrl + "/pay");
-        var result = await emailService.SendAsync(new MailMessage
-        {
+            Kind = order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote,
             To = order.CustomerEmail,
-            Subject = subject,
-            TextBody = text,
-            HtmlBody = html,
-        }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded)
+            Order = order,
+            Reference = order.ItemId,
+        }, async _ =>
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
+            var payUrl = await _links.CreatePayUrlAsync(order);
+
+            if (string.IsNullOrEmpty(payUrl))
             {
-                _logger.LogWarning("The invoice for order '{OrderId}' couldn't be emailed.", order.ItemId);
+                return null;
             }
 
+            var (subject, text, html) = BuildInvoiceEmail(order, payUrl);
+
+            return new CommerceEmailContent
+            {
+                Subject = subject,
+                Text = text,
+                Html = html,
+                Values = new Dictionary<string, string>
+                {
+                    ["PayUrl"] = payUrl,
+                },
+            };
+        }, cancellationToken);
+
+        if (!sent)
+        {
             return false;
         }
 
         order.Invoice.SentUtc = _clock.UtcNow;
+
+        // A quote is offered once it's sent, until the date to pay by.
+        if (order.Quote is { Status: OrderQuoteStatus.Requested or OrderQuoteStatus.Sent } quote)
+        {
+            quote.Status = OrderQuoteStatus.Sent;
+            quote.SentUtc = order.Invoice.SentUtc;
+            quote.ExpiresUtc = order.Invoice.DueUtc;
+        }
+
         await _orderStore.UpdateAsync(order, cancellationToken);
-        await _orderService.AddNoteAsync(order, S["Invoice emailed to {0}.", order.CustomerEmail], OrderNoteKind.Event, actorName, cancellationToken);
+        await _orderService.AddNoteAsync(order, order.Quote is null
+            ? S["Invoice emailed to {0}.", order.CustomerEmail]
+            : S["Quote emailed to {0}.", order.CustomerEmail], OrderNoteKind.Event, actorName, cancellationToken);
 
         return true;
     }
 
+    /// <summary>
+    /// Sets the price staff entered for each unit on the lines that have one, in place of the catalog's.
+    /// </summary>
+    internal static void ApplyPrices(Order order, IReadOnlyList<DraftOrderLineInput> lines)
+    {
+        var prices = lines
+            .Where(line => line.UnitPrice is >= 0)
+            .ToDictionary(line => line.LineId, line => Math.Round(line.UnitPrice.Value, 2, MidpointRounding.AwayFromZero), StringComparer.Ordinal);
+
+        foreach (var line in order.Lines)
+        {
+            if (prices.TryGetValue(line.LineId, out var price))
+            {
+                line.QuotedUnitPrice = price;
+                line.UnitPrice = price;
+                line.LineTotal = price * line.Quantity;
+            }
+        }
+
+        order.Subtotal = order.Lines.Sum(line => line.LineTotal);
+    }
+
     internal (string Subject, string Text, string Html) BuildInvoiceEmail(Order order, string payUrl)
     {
-        var subject = S["Your order {0} is ready to pay", order.OrderNumber].Value;
-        var lead = string.IsNullOrWhiteSpace(order.CustomerName)
-            ? S["Here's the order we put together for you. Shipping and tax are added when you pay."].Value
-            : S["Hi {0}, here's the order we put together for you. Shipping and tax are added when you pay.", order.CustomerName].Value;
+        var isQuote = order.Quote is not null;
+        var subject = isQuote
+            ? S["Your quote {0} is ready", order.OrderNumber].Value
+            : S["Your order {0} is ready to pay", order.OrderNumber].Value;
+        var lead = (isQuote, string.IsNullOrWhiteSpace(order.CustomerName)) switch
+        {
+            (true, true) => S["Here's the quote you asked for. Accept it by paying; shipping and tax are added then."].Value,
+            (true, false) => S["Hi {0}, here's the quote you asked for. Accept it by paying; shipping and tax are added then.", order.CustomerName].Value,
+            (false, true) => S["Here's the order we put together for you. Shipping and tax are added when you pay."].Value,
+            _ => S["Hi {0}, here's the order we put together for you. Shipping and tax are added when you pay.", order.CustomerName].Value,
+        };
 
         var text = new StringBuilder().AppendLine(lead).AppendLine();
         var html = new StringBuilder("<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#212529;max-width:600px\">")
@@ -258,13 +327,13 @@ public sealed class DraftOrderService
 
         if (order.Invoice?.DueUtc is { } due)
         {
-            var dueText = S["Please pay by {0:D}.", due].Value;
+            var dueText = isQuote ? S["The quote is offered until {0:D}.", due].Value : S["Please pay by {0:D}.", due].Value;
 
             text.AppendLine(dueText);
             html.Append("<p>").Append(_encoder.Encode(dueText)).Append("</p>");
         }
 
-        var pay = S["Review and pay"].Value;
+        var pay = isQuote ? S["Review and accept"].Value : S["Review and pay"].Value;
 
         text.AppendLine().AppendLine($"{pay}: {payUrl}");
         html.Append("<p><a href=\"").Append(_encoder.Encode(payUrl)).Append("\" style=\"display:inline-block;padding:10px 18px;background:#0d6efd;color:#fff;text-decoration:none;border-radius:4px\">")
@@ -295,4 +364,8 @@ public sealed class DraftOrderInput
     public IReadOnlyList<DraftOrderLineInput> Lines { get; init; } = [];
 }
 
-public sealed record DraftOrderLineInput(string LineId, string ContentItemId, string VariantId, int Quantity);
+/// <summary>
+/// A line of a draft: the product and how many, and the price for each unit staff set, such as on a quote, or none
+/// for the catalog's.
+/// </summary>
+public sealed record DraftOrderLineInput(string LineId, string ContentItemId, string VariantId, int Quantity, decimal? UnitPrice = null);

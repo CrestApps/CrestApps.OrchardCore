@@ -12,6 +12,7 @@ using OrchardCore.Admin;
 using CrestApps.OrchardCore.Orders.Core;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
 using OrchardCore.Routing;
 using OrchardCore.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
@@ -29,12 +30,14 @@ public sealed class OrdersAdminController : Controller
 {
     private const string OptionsSearch = "Options.Search";
     private const string OptionsStatus = "Options.Status";
+    private const string OptionsChannel = "Options.Channel";
 
     private readonly IOrderStore _orderStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
     private readonly INotifier _notifier;
     private readonly PagerOptions _pagerOptions;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -46,13 +49,15 @@ public sealed class OrdersAdminController : Controller
         INotifier notifier,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<OrdersAdminController> stringLocalizer,
-        IHtmlLocalizer<OrdersAdminController> htmlLocalizer)
+        IHtmlLocalizer<OrdersAdminController> htmlLocalizer,
+        IClock clock)
     {
         _orderStore = orderStore;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
         _pagerOptions = pagerOptions.Value;
+        _clock = clock;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -112,7 +117,7 @@ public sealed class OrdersAdminController : Controller
         // A byte order mark, so a spreadsheet reads the names and currencies as UTF-8.
         var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray();
 
-        return File(bytes, "text/csv", $"orders-{TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone):yyyy-MM-dd}.csv");
+        return File(bytes, "text/csv", $"orders-{TimeZoneInfo.ConvertTimeFromUtc(_clock.UtcNow, zone):yyyy-MM-dd}.csv");
     }
 
     /// <summary>
@@ -221,7 +226,8 @@ public sealed class OrdersAdminController : Controller
     public async Task<IActionResult> Detail(
         string orderId,
         [FromServices] IDisplayManager<Order> displayManager,
-        [FromServices] IUpdateModelAccessor updateModelAccessor)
+        [FromServices] IUpdateModelAccessor updateModelAccessor,
+        [FromServices] OrderPayLinks payLinks)
     {
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
@@ -262,11 +268,12 @@ public sealed class OrdersAdminController : Controller
                 !string.IsNullOrWhiteSpace(order.CustomerEmail) &&
                 HttpContext.RequestServices.GetRequiredService<OrderConfirmationSender>().CanSend;
 
-            // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand.
-            if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment &&
-                await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreateUrlAsync(order) is { } viewUrl)
+            // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand; a
+            // quote, once it's sent.
+            if (payLinks.CanPayByLink(order) &&
+                await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreatePayUrlAsync(order) is { } payUrl)
             {
-                model.PayUrl = viewUrl + "/pay";
+                model.PayUrl = payUrl;
             }
         }
 
@@ -303,7 +310,7 @@ public sealed class OrdersAdminController : Controller
             return NotFound();
         }
 
-        var result = await operations.RefundAsync(order, model?.Amount, model?.Reason, model?.Restock == true, User.Identity?.Name, HttpContext.RequestAborted);
+        var result = await operations.RefundAsync(order, model?.Amount, model?.Reason, model?.Restock == true, User.Identity?.Name, model?.AsStoreCredit == true, HttpContext.RequestAborted);
 
         await NotifyAsync(result, result.Refunded > 0m ? H["Refunded {0}.", ProductPriceFormatter.Format(result.Refunded, order.Currency)] : null);
 
@@ -396,6 +403,14 @@ public sealed class OrdersAdminController : Controller
             new SelectListItem(S["Any status"], nameof(OrderStatusFilter.All), options.Status == OrderStatusFilter.All),
         ];
 
+        options.Channels =
+        [
+            new SelectListItem(S["Every channel"], string.Empty, string.IsNullOrEmpty(options.Channel)),
+            new SelectListItem(S["Online"], OrderChannels.Online, options.Channel == OrderChannels.Online),
+            new SelectListItem(S["Point of sale"], OrderChannels.PointOfSale, options.Channel == OrderChannels.PointOfSale),
+            new SelectListItem(S["Drafts sent by staff"], OrderChannels.Draft, options.Channel == OrderChannels.Draft),
+        ];
+
         var routeData = new RouteData();
 
         if (!string.IsNullOrEmpty(options.Search))
@@ -406,6 +421,11 @@ public sealed class OrdersAdminController : Controller
         if (options.Status != OrderStatusFilter.Placed)
         {
             routeData.Values.TryAdd(OptionsStatus, options.Status);
+        }
+
+        if (!string.IsNullOrEmpty(options.Channel))
+        {
+            routeData.Values.TryAdd(OptionsChannel, options.Channel);
         }
 
         var viewModel = new OrdersIndexViewModel
@@ -438,6 +458,7 @@ public sealed class OrdersAdminController : Controller
         {
             UserId = userId,
             Search = userId is null ? options.Search : null,
+            Channel = userId is null && options.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft ? options.Channel : null,
             Statuses = userId is not null
                 ? [OrderStatus.Paid, OrderStatus.AwaitingPayment]
                 : options.Status switch
@@ -463,6 +484,11 @@ public sealed class OrdersAdminController : Controller
         if (options is not null && options.Status != OrderStatusFilter.Placed)
         {
             values.Add(OptionsStatus, options.Status);
+        }
+
+        if (!string.IsNullOrEmpty(options?.Channel))
+        {
+            values.Add(OptionsChannel, options.Channel);
         }
 
         if (pagerParameters?.PageSize is int pageSize)

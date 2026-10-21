@@ -1,0 +1,137 @@
+@using CrestApps.OrchardCore.Commerce.Controllers
+@model CrestApps.OrchardCore.Commerce.ViewModels.StoreSetupViewModel
+
+@{
+    var required = Model.Steps.Where(step => !step.Description.IsOptional).ToList();
+    var done = required.Count(step => step.IsDone || step.IsSkipped);
+    var percent = required.Count == 0 ? 100 : done * 100 / required.Count;
+    var opened = Context.Request.Query["step"].ToString();
+
+    if (string.IsNullOrEmpty(opened))
+    {
+        opened = Model.Current;
+    }
+}
+
+<zone Name="Title">
+    <breadcrumb name="CommerceSetup" title="@T["Set up your store"]" />
+</zone>
+
+<p class="text-body-secondary">@T["The steps from a new site to your first sale. Do the quick ones here, or open each step's page to do it in full. Skip what you don't need."]</p>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div class="progress flex-grow-1" role="progressbar" aria-label="@T["Setup progress"]" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" style="height: .75rem; max-width: 30rem;">
+        <div class="progress-bar bg-success" style="width: @(percent)%"></div>
+    </div>
+    <span class="small">@T["{0} of {1} steps done", done, required.Count]</span>
+</div>
+
+@if (Model.Current is null)
+{
+    <div class="alert alert-success">@T["Your store is set up. Open your site to see it as shoppers do."] <a href="~/" target="_blank" class="alert-link">@T["Open your store"]</a></div>
+}
+
+<div class="accordion mb-4" id="store-setup">
+    @foreach (var step in Model.Steps)
+    {
+        var description = step.Description;
+        var id = "setup-" + step.Name;
+        var isOpen = step.Name == opened;
+
+        <div class="accordion-item" id="@id">
+            <h2 class="accordion-header">
+                <button class="accordion-button @(isOpen ? null : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@(id)-body" aria-expanded="@(isOpen ? "true" : "false")" aria-controls="@(id)-body">
+                    @if (step.IsDone)
+                    {
+                        <i class="fa-solid fa-circle-check text-success me-2" aria-hidden="true"></i>
+                        <span class="visually-hidden">@T["Done:"]</span>
+                    }
+                    else if (step.IsSkipped)
+                    {
+                        <i class="fa-solid fa-circle-minus text-body-secondary me-2" aria-hidden="true"></i>
+                        <span class="visually-hidden">@T["Skipped:"]</span>
+                    }
+                    else
+                    {
+                        <i class="fa-regular fa-circle text-body-secondary me-2" aria-hidden="true"></i>
+                    }
+                    <span class="@(step.IsSkipped ? "text-body-secondary" : null)">@description.Title</span>
+                    @if (description.IsOptional)
+                    {
+                        <span class="badge text-bg-light border ms-2">@T["Optional"]</span>
+                    }
+                </button>
+            </h2>
+            <div id="@(id)-body" class="accordion-collapse collapse @(isOpen ? "show" : null)" data-bs-parent="#store-setup">
+                <div class="accordion-body">
+                    <p>@description.Description</p>
+
+                    @if (description.Status is not null)
+                    {
+                        <p class="small text-success-emphasis"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@description.Status</p>
+                    }
+
+                    @if (description.ActionText is not null)
+                    {
+                        <form method="post" asp-action="Run" asp-route-name="@step.Name" class="mb-3">
+                            @foreach (var field in description.Fields)
+                            {
+                                var fieldId = id + "-" + field.Name;
+                                var fieldName = StoreSetupController.FieldPrefix + field.Name;
+                                var isNumber = field.Type == "number";
+
+                                <div class="@(isNumber ? "ocat-limited-wrapper" : "ocat-wrapper")">
+                                    <label class="ocat-label@(field.Required ? " ocat-label-required" : string.Empty)" for="@fieldId">@field.Label</label>
+                                    <div class="@(isNumber ? "ocat-limited" : "ocat-end")">
+                                        @switch (field.Type)
+                                        {
+                                            case "textarea":
+                                                <textarea class="form-control" id="@fieldId" name="@fieldName" rows="3" required="@field.Required">@field.Value</textarea>
+                                                break;
+                                            case "select":
+                                                <select class="form-select" id="@fieldId" name="@fieldName" required="@field.Required">
+                                                    @foreach (var option in field.Options)
+                                                    {
+                                                        <option value="@option.Key" selected="@(option.Key == field.Value)">@option.Value</option>
+                                                    }
+                                                </select>
+                                                break;
+                                            case "number":
+                                                <input type="number" class="form-control" id="@fieldId" name="@fieldName" value="@field.Value" min="0" step="0.01" required="@field.Required" />
+                                                break;
+                                            default:
+                                                <input type="@field.Type" class="form-control" id="@fieldId" name="@fieldName" value="@field.Value" required="@field.Required" />
+                                                break;
+                                        }
+                                        @if (field.Hint is not null)
+                                        {
+                                            <span class="hint">@field.Hint</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            <div class="ocat-wrapper">
+                                <div class="ocat-end-offset">
+                                    <button type="submit" class="btn btn-primary">@description.ActionText</button>
+                                </div>
+                            </div>
+                        </form>
+                    }
+
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (description.Url is not null)
+                        {
+                            <a class="btn btn-outline-secondary btn-sm" href="@Url.Content(description.Url)">@description.UrlText <i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i></a>
+                        }
+                        @if (!step.IsDone)
+                        {
+                            <form method="post" asp-action="Skip" asp-route-name="@step.Name" asp-route-undo="@step.IsSkipped">
+                                <button type="submit" class="btn btn-link btn-sm">@(step.IsSkipped ? T["Do this step after all"] : T["Skip this step"])</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

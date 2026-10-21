@@ -78,7 +78,7 @@ public sealed class OrderRecoveryController : Controller
                 ? line.AddOns.Where(addOn => !string.IsNullOrEmpty(addOn.AddOnId)).ToDictionary(addOn => addOn.AddOnId, addOn => addOn.Value ?? "true", StringComparer.Ordinal)
                 : null;
 
-            var result = await _cartService.AddAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, addOns, HttpContext.RequestAborted);
+            var result = await _cartService.AddAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, addOns, line.Details, HttpContext.RequestAborted);
 
             if (result.Succeeded)
             {

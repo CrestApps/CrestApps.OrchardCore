@@ -1,8 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Taxation.Deployments;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Handlers;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Http;
@@ -11,62 +12,39 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Taxation.Handlers;
 
-internal sealed class TaxRuleHandler : CatalogEntryHandlerBase<TaxRule>
+/// <summary>
+/// Stamps and binds a <see cref="TaxRule"/> through <see cref="AuditedCatalogEntryHandlerBase{T}"/> and validates it.
+/// </summary>
+internal sealed class TaxRuleHandler : AuditedCatalogEntryHandlerBase<TaxRule>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly INamedCatalog<TaxRule> _catalog;
     private readonly ITaxCalculationMethodProvider _methodProvider;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public TaxRuleHandler(
         IHttpContextAccessor httpContextAccessor,
+        INamedCatalog<TaxRule> catalog,
         ITaxCalculationMethodProvider methodProvider,
         IClock clock,
         IStringLocalizer<TaxRuleHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
+        _catalog = catalog;
         _methodProvider = methodProvider;
-        _clock = clock;
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<TaxRule> context, CancellationToken cancellationToken = default)
-    {
-        TaxationDeploymentSerializer.Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
-    }
-
-    public override Task UpdatingAsync(UpdatingContext<TaxRule> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        TaxationDeploymentSerializer.Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
-    }
-
-    public override Task InitializedAsync(InitializedContext<TaxRule> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user is not null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity?.Name;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public override Task ValidatingAsync(ValidatingContext<TaxRule> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public override async Task ValidatingAsync(ValidatingContext<TaxRule> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(TaxRule.Name)]));
+        }
+        else if (await _catalog.IsNameUsedByAnotherEntryAsync(context.Model, cancellationToken))
+        {
+            context.Result.Fail(new ValidationResult(S["A tax rule with the same name already exists."], [nameof(TaxRule.Name)]));
         }
 
         if (string.IsNullOrWhiteSpace(context.Model.TaxType))
@@ -97,7 +75,5 @@ internal sealed class TaxRuleHandler : CatalogEntryHandlerBase<TaxRule>
         {
             context.Result.Fail(new ValidationResult(S["The effective end date cannot be earlier than the effective start date."], [nameof(TaxRule.EffectiveToUtc)]));
         }
-
-        return Task.CompletedTask;
     }
 }

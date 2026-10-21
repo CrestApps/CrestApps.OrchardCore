@@ -1,8 +1,11 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -12,7 +15,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 /// Lead conversion by source and by list: how many leads each produced in the period, how many were converted, and
 /// how long conversion took, so the lists and sources that turn into customers can be told from those that do not.
 /// </summary>
-public sealed class LeadConversionReportProvider : OmnichannelReportBase, IReportFilterMetadata
+public sealed class LeadConversionReportProvider : OmnichannelReportBase, IReportFilterMetadata, IReport
 {
     private readonly ISession _session;
     private readonly LeadSourceProvider _sources;
@@ -38,13 +41,19 @@ public sealed class LeadConversionReportProvider : OmnichannelReportBase, IRepor
     public IReadOnlyCollection<string> FilterNames => [];
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-lead-conversion";
+    public static string Name => "omnichannel-lead-conversion";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Lead conversion by source and list"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<LeadConversionReportProvider>("Lead conversion by source and list");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Leads created in the period by source and by list, with how many were converted and how long it took."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<LeadConversionReportProvider>("Leads created in the period by source and by list, with how many were converted and how long it took.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

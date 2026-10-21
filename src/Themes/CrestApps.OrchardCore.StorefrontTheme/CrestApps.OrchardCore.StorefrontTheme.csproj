@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Storefront Theme</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      A storefront theme for the CrestApps commerce modules: a store header with search, the market picker, the cart
+      and the account menu, room for breadcrumbs, and a footer with the store's contact details. It builds on TheTheme.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Commerce Theme Storefront</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Theme.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="TheTheme" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Receipts.Core\CrestApps.OrchardCore.Receipts.Core.csproj" />
+  </ItemGroup>
+
+</Project>

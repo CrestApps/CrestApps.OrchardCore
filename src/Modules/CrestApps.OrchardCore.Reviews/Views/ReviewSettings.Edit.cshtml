@@ -1,16 +1,36 @@
 @model ReviewSettingsViewModel
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="RequireApproval" type="checkbox" class="form-check-input" />
-        <label asp-for="RequireApproval" class="form-check-label">@T["Approve reviews before they show"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RequireApproval" type="checkbox" class="form-check-input" />
+            <label asp-for="RequireApproval" class="form-check-label">@T["Approve reviews before they show"]</label>
+        </div>
         <span class="hint dashed">@T["A new or changed review waits under Commerce > Reviews until you approve it."]</span>
     </div>
 </div>
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="BuyersOnly" type="checkbox" class="form-check-input" />
-        <label asp-for="BuyersOnly" class="form-check-label">@T["Only buyers can review"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="BuyersOnly" type="checkbox" class="form-check-input" />
+            <label asp-for="BuyersOnly" class="form-check-label">@T["Only buyers can review"]</label>
+        </div>
         <span class="hint dashed">@T["Only customers who paid for a product can review it. Untick it to let any signed-in user review; their reviews aren't marked as verified purchases."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SendReviewRequests" type="checkbox" class="form-check-input" />
+            <label asp-for="SendReviewRequests" class="form-check-label">@T["Ask buyers for reviews"]</label>
+        </div>
+        <span class="hint dashed">@T["Emails buyers who accept marketing, once for each order, with a link to review each product. Needs the site's email, its base URL, and Customers."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper">
+    <label asp-for="ReviewRequestDelayDays" class="ocat-label">@T["Days after paying"]</label>
+    <div class="ocat-limited">
+        <input asp-for="ReviewRequestDelayDays" type="number" min="0" max="60" class="form-control" />
+        <span class="hint">@T["Such as 14, so what they bought has arrived and been used."]</span>
     </div>
 </div>

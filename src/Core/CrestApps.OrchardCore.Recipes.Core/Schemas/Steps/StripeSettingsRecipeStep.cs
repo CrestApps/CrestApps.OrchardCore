@@ -20,7 +20,6 @@ public sealed class StripeSettingsRecipeStep : RecipeStepSchemaBase
             .Description("Stripe settings. A member the step carries replaces the stored one.")
             .Properties(
                 ("IsLive", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the live Stripe keys are used. When false, the test keys are used.")),
-                ("CheckoutMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("PaymentElements", "HostedCheckout").Description("The Stripe checkout integration mode. Kept for compatibility; the checkout always collects card details on the site with Payment Elements.")),
                 ("LivePublishableKey", Key("The live publishable key.", "pk_live_")),
                 ("LivePrivateSecret", Secret("The live secret key.", "sk_live_")),
                 ("LiveWebhookSecret", Secret("The live webhook signing secret.", "whsec_")),

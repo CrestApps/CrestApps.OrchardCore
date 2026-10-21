@@ -1,12 +1,10 @@
 using CrestApps.OrchardCore.Products.AzureAI.Services;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Search;
-using CrestApps.OrchardCore.Products.Services;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
-using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
 
@@ -16,23 +14,15 @@ namespace CrestApps.OrchardCore.Products.AzureAI.Handlers;
 /// Declares the fields of an Azure AI Search product search index: those every product has and those of each
 /// attribute. A new attribute is declared when product types change, which rebuilds the index.
 /// </summary>
-public sealed class ProductAzureAISearchIndexProfileHandler : IndexProfileHandlerBase
+public sealed class ProductAzureAISearchIndexProfileHandler : ProductSearchIndexProfileHandlerBase
 {
     private readonly ProductAttributeCatalog _attributeCatalog;
 
     public ProductAzureAISearchIndexProfileHandler(ProductAttributeCatalog attributeCatalog)
+        : base(AzureAISearchConstants.ProviderName)
     {
         _attributeCatalog = attributeCatalog;
     }
-
-    public override Task InitializingAsync(InitializingContext<IndexProfile> context)
-        => SetMappingsAsync(context.Model);
-
-    public override Task CreatingAsync(CreatingContext<IndexProfile> context)
-        => SetMappingsAsync(context.Model);
-
-    public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
-        => SetMappingsAsync(context.Model);
 
     // Orchard Core adds the posted fields to the saved ones when the profile is edited; keep one of each.
     public override Task LoadedAsync(LoadedContext<IndexProfile> context)
@@ -63,13 +53,9 @@ public sealed class ProductAzureAISearchIndexProfileHandler : IndexProfileHandle
         return Task.CompletedTask;
     }
 
-    private async Task SetMappingsAsync(IndexProfile indexProfile)
+    /// <inheritdoc/>
+    protected override async Task ConfigureAsync(IndexProfile indexProfile)
     {
-        if (!IsProductSearch(indexProfile))
-        {
-            return;
-        }
-
         var attributeKeys = (await _attributeCatalog.GetAttributesAsync([], includeUnused: true)).Select(attribute => attribute.Key);
         var metadata = indexProfile.GetOrCreate<AzureAISearchIndexMetadata>();
 
@@ -82,10 +68,6 @@ public sealed class ProductAzureAISearchIndexProfileHandler : IndexProfileHandle
 
         indexProfile.Put(metadata);
     }
-
-    internal static bool IsProductSearch(IndexProfile indexProfile)
-        => string.Equals(indexProfile?.ProviderName, AzureAISearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-           string.Equals(indexProfile.Type, ProductSearchIndexFields.IndexingTaskType, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -97,7 +79,7 @@ public sealed class ProductAzureAISearchDocumentIndexHandler : IDocumentIndexHan
     {
         if (context.Record is not ProductSearchDocument document ||
             !context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
-            !ProductAzureAISearchIndexProfileHandler.IsProductSearch(profile as IndexProfile))
+            !ProductSearchIndexFields.IsProductSearchIndex(profile as IndexProfile, AzureAISearchConstants.ProviderName))
         {
             return Task.CompletedTask;
         }

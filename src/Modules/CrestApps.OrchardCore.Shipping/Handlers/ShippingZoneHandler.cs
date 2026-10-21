@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
-using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.Handlers;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -12,61 +13,39 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Shipping.Handlers;
 
-internal sealed class ShippingZoneHandler : CatalogEntryHandlerBase<ShippingZone>
+/// <summary>
+/// Stamps and binds a <see cref="ShippingZone"/> through <see cref="AuditedCatalogEntryHandlerBase{T}"/>, normalizes
+/// what a recipe gives it, and validates it.
+/// </summary>
+internal sealed class ShippingZoneHandler : AuditedCatalogEntryHandlerBase<ShippingZone>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
+    private readonly INamedCatalog<ShippingZone> _catalog;
 
     internal readonly IStringLocalizer S;
 
     public ShippingZoneHandler(
         IHttpContextAccessor httpContextAccessor,
+        INamedCatalog<ShippingZone> catalog,
         IClock clock,
         IStringLocalizer<ShippingZoneHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
+        _catalog = catalog;
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<ShippingZone> context, CancellationToken cancellationToken = default)
-    {
-        Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
-    }
-
-    public override Task UpdatingAsync(UpdatingContext<ShippingZone> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
-    }
-
-    public override Task InitializedAsync(InitializedContext<ShippingZone> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user is not null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity?.Name;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public override Task ValidatingAsync(ValidatingContext<ShippingZone> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public override async Task ValidatingAsync(ValidatingContext<ShippingZone> context, CancellationToken cancellationToken = default)
     {
         var zone = context.Model;
 
         if (string.IsNullOrWhiteSpace(zone.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(ShippingZone.Name)]));
+        }
+        else if (await _catalog.IsNameUsedByAnotherEntryAsync(zone, cancellationToken))
+        {
+            context.Result.Fail(new ValidationResult(S["A shipping zone with the same name already exists."], [nameof(ShippingZone.Name)]));
         }
 
         if (!zone.RestOfWorld && zone.Countries.Count == 0)
@@ -80,53 +59,41 @@ internal sealed class ShippingZoneHandler : CatalogEntryHandlerBase<ShippingZone
 
             break;
         }
-
-        return Task.CompletedTask;
     }
 
-    // Recipes and deployments give the zone as JSON; what they name is copied, and methods without an id get one.
-    internal static void Populate(ShippingZone zone, JsonNode data)
+    /// <inheritdoc/>
+    protected override void Populate(ShippingZone entry, JsonNode data)
+        => PopulateZone(entry, data);
+
+    // Recipes and deployments give the zone as JSON; what they name is copied and normalized, and methods without an id
+    // get one.
+    internal static void PopulateZone(ShippingZone zone, JsonNode data)
     {
         if (data is not JsonObject json || json.Count == 0)
         {
             return;
         }
 
-        var source = json.Deserialize<ShippingZone>();
-
-        if (source is null)
-        {
-            return;
-        }
+        CatalogDeploymentSerializer.Populate(zone, json);
 
         if (json.ContainsKey(nameof(ShippingZone.Name)))
         {
-            zone.Name = source.Name?.Trim();
-        }
-
-        if (json.ContainsKey(nameof(ShippingZone.Position)))
-        {
-            zone.Position = source.Position;
-        }
-
-        if (json.ContainsKey(nameof(ShippingZone.RestOfWorld)))
-        {
-            zone.RestOfWorld = source.RestOfWorld;
+            zone.Name = zone.Name?.Trim();
         }
 
         if (json.ContainsKey(nameof(ShippingZone.Countries)))
         {
-            zone.Countries = Normalize(source.Countries);
+            zone.Countries = Normalize(zone.Countries);
         }
 
         if (json.ContainsKey(nameof(ShippingZone.Regions)))
         {
-            zone.Regions = Normalize(source.Regions);
+            zone.Regions = Normalize(zone.Regions);
         }
 
         if (json.ContainsKey(nameof(ShippingZone.Methods)))
         {
-            zone.Methods = source.Methods ?? [];
+            zone.Methods ??= [];
 
             foreach (var method in zone.Methods.Where(method => string.IsNullOrEmpty(method.MethodId)))
             {

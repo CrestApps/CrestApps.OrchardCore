@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 using OrchardCore.Settings;
@@ -163,7 +164,10 @@ public sealed class CheckoutController : Controller
         // the customer's money the moment they asked to see a discount.
         if (Request.Form[CheckoutConstants.FormActions.FieldName] is { Count: > 0 } action &&
             (string.Equals(action, CheckoutConstants.FormActions.ApplyCoupon, StringComparison.Ordinal) ||
-             string.Equals(action, CheckoutConstants.FormActions.Update, StringComparison.Ordinal)))
+             action.ToString().StartsWith(CheckoutConstants.FormActions.ApplyTender, StringComparison.Ordinal) ||
+             string.Equals(action, CheckoutConstants.FormActions.Update, StringComparison.Ordinal) ||
+             action.ToString().StartsWith(CheckoutConstants.FormActions.RemoveCouponPrefix, StringComparison.Ordinal) ||
+             action.ToString().StartsWith(CheckoutConstants.FormActions.RemoveTenderPrefix, StringComparison.Ordinal)))
         {
             await _sessionStore.SaveAsync(session);
 
@@ -319,6 +323,7 @@ public sealed class CheckoutController : Controller
             });
 
             page.ShowsPayment = true;
+            page.NothingToPay = flow.Session.TryGet<CheckoutInvoice>(out var invoice) && CheckoutObligations.GetExpectedObligationIds(invoice).Count == 0;
         }
         else if (FirstUnsavedStep(flow) is { } unsaved)
         {

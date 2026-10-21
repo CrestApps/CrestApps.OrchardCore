@@ -93,6 +93,7 @@ internal static partial class AgentWorkspaceEndpoints
         IActivityQueueManager queueManager,
         IContentManager contentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        IDialerProfileReader dialerProfileReader,
         LinkGenerator linkGenerator,
         HttpContext httpContext,
         CancellationToken cancellationToken)
@@ -137,12 +138,21 @@ internal static partial class AgentWorkspaceEndpoints
                 return default;
             }
 
+            // Most of these dials never reach a person, so unless the profile asks for it the agent is not shown each
+            // one -- who is being dialed, and every step -- only that they are waiting for a connected call.
+            var dialerProfileId = DialerCallMetadata.GetDialerProfileId(interaction);
+            var dialerProfile = string.IsNullOrEmpty(dialerProfileId)
+                ? null
+                : await dialerProfileReader.FindByIdAsync(dialerProfileId, cancellationToken);
+            var showsProgress = dialerProfile?.ShowDialProgressToAgent == true;
+
             return (null, new WorkspacePendingDialViewModel
             {
                 InteractionId = interaction.ItemId,
                 Phase = phase,
-                CustomerLabel = await ResolveCustomerLabelAsync(activity, interaction.CustomerAddress, contentManager),
-                CustomerAddress = interaction.CustomerAddress,
+                ShowsProgress = showsProgress,
+                CustomerLabel = showsProgress ? await ResolveCustomerLabelAsync(activity, interaction.CustomerAddress, contentManager) : null,
+                CustomerAddress = showsProgress ? interaction.CustomerAddress : null,
                 QueueName = queue?.Name,
                 StartedUtc = interaction.StartedUtc,
             });

@@ -30,4 +30,10 @@ public sealed class CartOptions
     /// subscription plan is signed up for on its own: its first payment starts an agreement that bills again.
     /// </summary>
     public ISet<string> ExcludedParts { get; } = new HashSet<string>(StringComparer.Ordinal) { "SubscriptionPart" };
+
+    /// <summary>
+    /// Gets the content parts whose products need something chosen on their own page before they're added, such as a
+    /// booking's date: a product card links to the page instead of adding it.
+    /// </summary>
+    public ISet<string> ChooseOnProductPageParts { get; } = new HashSet<string>(StringComparer.Ordinal);
 }

@@ -1,11 +1,15 @@
 @*
-    The status filter of the orders list, passed to the admin list as its 'ToolbarActions' so they render at the end of the list's
+    The channel and status filters of the orders list, passed to the admin list as its 'ToolbarActions' so they render at the end of the list's
     toolbar. The selects name the filter form, so they submit it wherever the list is rendered; the
     commerce-admin-list script submits it when one changes.
 *@
 @{
     var options = (OrdersIndexOptions)Model.Options;
 }
+
+<div class="btn-group filter">
+    <select name="Options.Channel" asp-items="options.Channels" form="orders-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by channel"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Channel"]"></select>
+</div>
 
 <div class="btn-group filter">
     <select name="Options.Status" asp-items="options.Statuses" form="orders-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>

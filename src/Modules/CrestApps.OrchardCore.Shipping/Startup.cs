@@ -1,8 +1,12 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
 using CrestApps.OrchardCore.Shipping.Drivers;
+using CrestApps.OrchardCore.Shipping.Endpoints;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Handlers;
 using CrestApps.OrchardCore.Shipping.Indexes;
 using CrestApps.OrchardCore.Shipping.Workflows;
@@ -15,11 +19,16 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Shipping.Api;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -36,6 +45,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddShippingCore();
+        services.AddScoped<IStoreSetupStep, ShippingSetupStep>();
 
         // Shipments and their index live in their own YesSql collection, which has to be declared for them to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ShippingConstants.CollectionName));
@@ -66,12 +76,15 @@ public sealed class Startup : StartupBase
         // The Shipping step of an order's checkout, after Contact.
         services.AddScoped<ShippingOrderRateService>();
         services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
+        services.AddScoped<ShippingCheckoutStepService>();
         services.AddDisplayDriver<CheckoutFlow, ShippingCheckoutFlowDisplayDriver>();
 
         // Shipments on the order's admin page and on the buyer's order pages, and the email that a shipment left.
         services.AddDisplayDriver<Order, OrderShipmentsDisplayDriver>();
         services.AddScoped<ShipmentEmailBuilder>();
         services.AddScoped<IShipmentEventHandler, ShippedEmailShipmentHandler>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(OrderEmailKinds.Shipped, LocalizationSource.Create<Startup>("Shipment on its way"), LocalizationSource.Create<Startup>("{{ TrackingUrl }}, {{ Carrier }}, {{ ShipmentNumber }} and {{ OrderUrl }}."));
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
@@ -118,7 +131,7 @@ public sealed class DeploymentStartup : StartupBase
 public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IReport, ShippingPerformanceReport>();
+        => services.AddReport<ShippingPerformanceReport>();
 }
 
 /// <summary>
@@ -139,6 +152,32 @@ public sealed class EasyPostStartup : StartupBase
         services.AddScoped<ICarrierProvider>(serviceProvider => serviceProvider.GetRequiredService<EasyPostCarrierProvider>());
         services.AddScoped<EasyPostTrackingUpdater>();
         services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddEasyPostWebhookEndpoint();
+}
+
+[Feature(ShippingConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapShippingCheckoutApi();
+        routes.MapShipmentApi();
+    }
+}
+
+/// <summary>
+/// Tells webhooks about shipments when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
+        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
     }
 }

@@ -10,6 +10,66 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed partial class AgentPresenceManagerService
 {
     /// <inheritdoc/>
+    public async Task<AgentProfile> ConnectHeldAgentAsync(string agentId, AgentStateChangeContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null || !IsHeldForDial(profile, context?.ReservationId))
+        {
+            return profile;
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(profile.UserId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{profile.UserId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        // Connected once is enough: a second report of the same connect, or one arriving after the agent was released,
+        // finds nothing holding them.
+        if (profile is null || !IsHeldForDial(profile, context?.ReservationId))
+        {
+            return profile;
+        }
+
+        var previousStatus = profile.PresenceStatus;
+        var holdReservationId = profile.DialHoldReservationId;
+        var actor = context?.Actor ?? ContactCenterActor.System;
+
+        // On a call from the moment they are connected, not from the dial: the ringing, and any answer screened as a
+        // machine, were the dialer's time, not a call the agent was on.
+        var change = await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Busy, new AgentStateChangeContext
+        {
+            Actor = actor,
+            Source = context?.Source ?? AgentStateChangeSources.Connected,
+            InteractionId = context?.InteractionId,
+            ReservationId = holdReservationId,
+            AgentSessionId = context?.AgentSessionId ?? await FindAgentSessionIdAsync(profile.UserId, cancellationToken),
+            ChangedUtc = context?.ChangedUtc,
+        }, cancellationToken);
+
+        await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
+
+        return profile;
+    }
+
+    private static bool IsHeldForDial(AgentProfile profile, string reservationId)
+        => profile.PresenceStatus == AgentPresenceStatus.Reserved &&
+            !string.IsNullOrEmpty(profile.DialHoldReservationId) &&
+            (string.IsNullOrEmpty(reservationId) || string.Equals(profile.DialHoldReservationId, reservationId, StringComparison.Ordinal));
+
+    /// <inheritdoc/>
     public Task<AgentProfile> StartWrapUpAsync(string agentId, CancellationToken cancellationToken = default)
         => StartWrapUpAsync(agentId, context: null, cancellationToken);
 

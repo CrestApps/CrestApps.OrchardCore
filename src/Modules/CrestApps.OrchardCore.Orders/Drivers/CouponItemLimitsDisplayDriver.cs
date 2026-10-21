@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Orders.Endpoints;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -18,24 +19,31 @@ internal sealed class CouponItemLimitsDisplayDriver : DisplayDriver<Coupon>
 
     private readonly CouponItemLookup _lookup;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LinkGenerator _linkGenerator;
 
-    public CouponItemLimitsDisplayDriver(CouponItemLookup lookup, IHttpContextAccessor httpContextAccessor)
+    public CouponItemLimitsDisplayDriver(
+        CouponItemLookup lookup,
+        IHttpContextAccessor httpContextAccessor,
+        LinkGenerator linkGenerator)
     {
         _lookup = lookup;
         _httpContextAccessor = httpContextAccessor;
+        _linkGenerator = linkGenerator;
     }
 
     public override IDisplayResult Edit(Coupon coupon, BuildEditorContext context)
         => Initialize<CouponItemLimitsViewModel>("CouponItemLimits_Edit", async model =>
         {
-            var pathBase = _httpContextAccessor.HttpContext?.Request.PathBase.Value ?? string.Empty;
-
             model.ProductIds = [.. coupon.ProductIds ?? []];
             model.CategoryIds = [.. coupon.CategoryIds ?? []];
-            model.ProductSearchEndpoint = $"{pathBase}/{CouponItemSearchEndpoints.ProductsPath}";
-            model.CategorySearchEndpoint = $"{pathBase}/{CouponItemSearchEndpoints.CategoriesPath}";
+            model.ProductSearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, CouponItemSearchEndpoints.ProductsRouteName);
+            model.CategorySearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, CouponItemSearchEndpoints.CategoriesRouteName);
             model.InitialProductsJson = ToJson(await _lookup.GetProductsAsync(model.ProductIds));
             model.InitialCategoriesJson = ToJson(await _lookup.GetCategoriesAsync(model.CategoryIds));
+            model.BuyProductIds = [.. coupon.BuyProductIds ?? []];
+            model.BuyCategoryIds = [.. coupon.BuyCategoryIds ?? []];
+            model.InitialBuyProductsJson = ToJson(await _lookup.GetProductsAsync(model.BuyProductIds));
+            model.InitialBuyCategoriesJson = ToJson(await _lookup.GetCategoriesAsync(model.BuyCategoryIds));
         }).Location("Content:10");
 
     public override async Task<IDisplayResult> UpdateAsync(Coupon coupon, UpdateEditorContext context)
@@ -46,6 +54,8 @@ internal sealed class CouponItemLimitsDisplayDriver : DisplayDriver<Coupon>
 
         coupon.ProductIds = Clean(model.ProductIds);
         coupon.CategoryIds = Clean(model.CategoryIds);
+        coupon.BuyProductIds = Clean(model.BuyProductIds);
+        coupon.BuyCategoryIds = Clean(model.BuyCategoryIds);
 
         return Edit(coupon, context);
     }

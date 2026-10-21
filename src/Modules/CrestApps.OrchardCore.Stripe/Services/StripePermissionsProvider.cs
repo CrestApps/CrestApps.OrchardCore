@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 /// <summary>
 /// Provides Stripe module permissions and their default role stereotypes.
 /// </summary>
-public sealed class StripePermissionsProvider : IPermissionProvider
+internal sealed class StripePermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [

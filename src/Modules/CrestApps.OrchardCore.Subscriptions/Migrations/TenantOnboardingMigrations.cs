@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 /// <summary>
 /// Adds the content definition metadata for tenant onboarding subscriptions.
 /// </summary>
-public sealed class TenantOnboardingMigrations : DataMigration
+internal sealed class TenantOnboardingMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 

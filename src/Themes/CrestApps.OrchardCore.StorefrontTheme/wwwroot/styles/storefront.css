@@ -1,0 +1,136 @@
+/* The Storefront theme, on top of TheTheme's Bootstrap. */
+
+.storefront {
+    --storefront-accent: var(--bs-primary);
+    --storefront-header-bg: var(--bs-body-bg);
+    --storefront-footer-bg: var(--bs-tertiary-bg);
+    padding-top: 0;
+
+    /* The footer sits at the bottom of a short page. */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.storefront > main {
+    flex: 1 0 auto;
+}
+
+.storefront-skip {
+    position: absolute;
+    inset-inline-start: 1rem;
+    top: .5rem;
+    z-index: 1100;
+    padding: .5rem 1rem;
+    background: var(--bs-body-bg);
+}
+
+.storefront-header {
+    background: var(--storefront-header-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    z-index: 1030;
+}
+
+.storefront-header .navbar-brand {
+    font-weight: 600;
+}
+
+.storefront-logo {
+    max-height: 2.25rem;
+    width: auto;
+}
+
+.storefront-search {
+    max-width: 40rem;
+}
+
+.storefront-actions .navbar-nav {
+    flex-direction: row;
+    gap: .25rem;
+    align-items: center;
+}
+
+.storefront-menu:empty,
+.storefront-menu .container:empty {
+    display: none;
+}
+
+.storefront-menu .navbar-nav,
+.storefront-menu ul {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0;
+    padding: .4rem 0;
+    list-style: none;
+}
+
+.storefront-menu .nav-item {
+    text-align: start !important;
+}
+
+.storefront-menu a {
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
+.storefront-menu a:hover,
+.storefront-menu a:focus {
+    color: var(--storefront-accent);
+}
+
+/* TheTheme pads its page for a fixed navbar; this header is sticky. */
+.storefront main.storefront-main {
+    padding-top: 1.5rem;
+}
+
+.storefront-title .breadcrumb {
+    margin-bottom: .5rem;
+    font-size: .875rem;
+}
+
+/* Product cards: an even grid, with the price and button at the bottom. */
+.storefront .card {
+    border-radius: .5rem;
+}
+
+.storefront .product-card,
+.storefront .card.h-100 {
+    transition: box-shadow .15s ease-in-out, transform .15s ease-in-out;
+}
+
+.storefront .product-card:hover,
+.storefront .card.h-100:hover {
+    box-shadow: 0 .25rem 1rem rgba(0, 0, 0, .08);
+    transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .storefront .product-card,
+    .storefront .card.h-100 {
+        transition: none;
+    }
+
+    .storefront .product-card:hover,
+    .storefront .card.h-100:hover {
+        transform: none;
+    }
+}
+
+/* TheTheme pins a 60px footer to the bottom of the page; this one grows with what it holds. */
+html .storefront {
+    margin-bottom: 0;
+}
+
+.storefront footer.storefront-footer {
+    position: static;
+    height: auto;
+    line-height: var(--bs-body-line-height);
+    background: var(--storefront-footer-bg);
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.storefront-footer a {
+    color: inherit;
+}

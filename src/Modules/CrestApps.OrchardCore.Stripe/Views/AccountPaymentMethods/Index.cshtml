@@ -8,17 +8,8 @@
 
 <zone Name="Title">
     <breadcrumb name="AccountPaymentMethods" title="@T["Payment methods"]">
-        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
-<div class="commerce-account row g-4 my-3">
-    <div class="col-lg-3">
-        @await DisplayAsync(await New.CommerceAccountNavigation())
-    </div>
-    <div class="col-lg-9">
-        <h1 class="h3 mb-3">@T["Payment methods"]</h1>
-
-        @await DisplayAsync(Model)
-    </div>
-</div>
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Payment methods"], Content: Model))

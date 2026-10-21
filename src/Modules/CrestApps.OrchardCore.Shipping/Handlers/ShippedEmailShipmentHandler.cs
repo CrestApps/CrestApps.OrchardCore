@@ -1,9 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -17,24 +14,21 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
     private readonly ISiteService _siteService;
     private readonly ShipmentEmailBuilder _emailBuilder;
     private readonly IOrderLinkService _orderLinks;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     public ShippedEmailShipmentHandler(
         ISiteService siteService,
         ShipmentEmailBuilder emailBuilder,
         IOrderLinkService orderLinks,
-        IServiceProvider serviceProvider,
-        IClock clock,
-        ILogger<ShippedEmailShipmentHandler> logger)
+        ICommerceEmailSender emailSender,
+        IClock clock)
     {
         _siteService = siteService;
         _emailBuilder = emailBuilder;
         _orderLinks = orderLinks;
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _clock = clock;
-        _logger = logger;
     }
 
     public override async Task ShippedAsync(ShipmentContext context)
@@ -44,38 +38,43 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
 
         if (shipment.ShippedEmailSentUtc is not null || string.IsNullOrWhiteSpace(order.CustomerEmail) ||
             !(await _siteService.GetSettingsAsync<ShippingSettings>()).SendShippedEmails ||
-            _serviceProvider.GetService<IEmailService>() is not { } emailService)
+            !_emailSender.CanSend)
         {
             return;
         }
 
-        // A guest follows the order by its link; a signed-in buyer finds it under My Orders.
-        var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
-        var email = _emailBuilder.Build(order, shipment, orderUrl);
-
-        try
+        // Written in the language the buyer shopped in. A mail server that's down doesn't stop the shipment.
+        var sent = await _emailSender.SendAsync(new CommerceEmail
         {
-            var result = await emailService.SendAsync(new MailMessage
-            {
-                To = order.CustomerEmail,
-                Subject = email.Subject,
-                TextBody = email.Text,
-                HtmlBody = email.Html,
-            });
-
-            if (result.Succeeded)
-            {
-                shipment.ShippedEmailSentUtc = _clock.UtcNow;
-            }
-            else
-            {
-                _logger.LogWarning("The email that shipment {Number} of order {OrderNumber} left couldn't be sent.", shipment.Number, order.OrderNumber);
-            }
-        }
-        catch (Exception ex)
+            Kind = OrderEmailKinds.Shipped,
+            To = order.CustomerEmail,
+            Order = order,
+            Culture = order.Culture,
+            Reference = $"{order.OrderNumber}/{shipment.Number}",
+        }, async _ =>
         {
-            // A mail server that's down doesn't stop the shipment.
-            _logger.LogError(ex, "The email that shipment {Number} of order {OrderNumber} left failed.", shipment.Number, order.OrderNumber);
+            // A guest follows the order by its link; a signed-in buyer finds it under My Orders.
+            var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
+            var built = _emailBuilder.Build(order, shipment, orderUrl);
+
+            return new CommerceEmailContent
+            {
+                Subject = built.Subject,
+                Text = built.Text,
+                Html = built.Html,
+                Values = new Dictionary<string, string>
+                {
+                    ["TrackingUrl"] = shipment.TrackingUrl,
+                    ["Carrier"] = shipment.Carrier,
+                    ["ShipmentNumber"] = shipment.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["OrderUrl"] = orderUrl,
+                },
+            };
+        });
+
+        if (sent)
+        {
+            shipment.ShippedEmailSentUtc = _clock.UtcNow;
         }
     }
 }

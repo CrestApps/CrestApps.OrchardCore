@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
@@ -51,17 +52,12 @@ public sealed class Startup : StartupBase
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
 
-        // A transaction can name the record it ultimately belongs to, such as the registration an installment plan
-        // pays for, so the module that owns the record finds every payment of it.
-        services
-            .AddDataMigration<TransactionParentReferenceMigrations>()
-            .AddIndexProvider<TransactionParentReferenceIndexProvider>();
-
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddNavigationProvider<TransactionsAccountMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
 
+        services.AddSignedLinks();
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
         services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();

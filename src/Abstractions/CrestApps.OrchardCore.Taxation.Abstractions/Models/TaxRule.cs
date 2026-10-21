@@ -2,6 +2,7 @@ using System;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Models;
 
@@ -10,7 +11,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// customer criteria, and a calculation method. Rules are versioned and carry effective dates so that
 /// historical determinations remain reproducible.
 /// </summary>
-public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxRule>
+public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IAuditedModel, ICloneable<TaxRule>
 {
     /// <inheritdoc />
     public string Name { get; set; }
@@ -112,6 +113,12 @@ public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcA
     public decimal? MaximumAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets what <see cref="MinimumAmount"/> and <see cref="MaximumAmount"/> are compared with: each item, or
+    /// the whole order, as an import duty's threshold is.
+    /// </summary>
+    public TaxThresholdBasis ThresholdBasis { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC date the rule becomes effective.
     /// </summary>
     public DateTime? EffectiveFromUtc { get; set; }
@@ -165,6 +172,7 @@ public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcA
             AppliesToShipping = AppliesToShipping,
             MinimumAmount = MinimumAmount,
             MaximumAmount = MaximumAmount,
+            ThresholdBasis = ThresholdBasis,
             EffectiveFromUtc = EffectiveFromUtc,
             EffectiveToUtc = EffectiveToUtc,
             CreatedUtc = CreatedUtc,

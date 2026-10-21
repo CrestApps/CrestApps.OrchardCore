@@ -41,6 +41,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Commerce.Api.Core/CrestApps.OrchardCore.Commerce.Api.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Transactions/CrestApps.OrchardCore.Transactions.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />
@@ -79,6 +80,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Receipts.Core/CrestApps.OrchardCore.Receipts.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Receipts/CrestApps.OrchardCore.Receipts.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
@@ -116,6 +118,16 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Carts\CrestApps.OrchardCore.Carts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Commerce.Webhooks\CrestApps.OrchardCore.Commerce.Webhooks.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Companies\CrestApps.OrchardCore.Companies.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Marketing\CrestApps.OrchardCore.Marketing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Bookings\CrestApps.OrchardCore.Bookings.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Memberships\CrestApps.OrchardCore.Memberships.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Marketplace\CrestApps.OrchardCore.Marketplace.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Classifieds\CrestApps.OrchardCore.Classifieds.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Fundraising\CrestApps.OrchardCore.Fundraising.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Markets\CrestApps.OrchardCore.Markets.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.PointOfSale\CrestApps.OrchardCore.PointOfSale.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Orders\CrestApps.OrchardCore.Orders.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Checkout\CrestApps.OrchardCore.Checkout.csproj" />
   </ItemGroup>

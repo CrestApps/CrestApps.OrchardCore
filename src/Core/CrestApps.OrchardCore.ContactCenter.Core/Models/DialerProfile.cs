@@ -203,6 +203,17 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool AbandonedRetryRequiresAgent { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent's screens show each step of a call this profile's automated
+    /// pacing places for them -- who is being dialed, the answer being screened, the agent being connected -- rather than
+    /// only that they are waiting for a connected call.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, as most contact-center dialers work: most automated dials never reach a person, and the agent,
+    /// held Reserved for each one, has nothing to do until one does and they are connected.
+    /// </remarks>
+    public bool ShowDialProgressToAgent { get; set; }
+
+    /// <summary>
     /// Gets or sets the default business-hours calendar used to evaluate outbound calls.
     /// </summary>
     public string CallingCalendarId { get; set; }

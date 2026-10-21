@@ -42,14 +42,11 @@ public sealed class ProductSearchIndexProfileHandler : IndexProfileHandlerBase
 
     public override async Task SynchronizedAsync(IndexProfileSynchronizedContext context)
     {
-        if (IsProductSearch(context.IndexProfile))
+        if (ProductSearchIndexFields.IsProductSearchIndex(context.IndexProfile))
         {
             await _indexingService.SynchronizeAsync(context.IndexProfile);
         }
     }
-
-    internal static bool IsProductSearch(IndexProfile indexProfile)
-        => string.Equals(indexProfile?.Type, ProductSearchIndexFields.IndexingTaskType, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -61,7 +58,7 @@ public sealed class ProductSearchDocumentIndexHandler : IDocumentIndexHandler
     {
         if (context.Record is not ProductSearchDocument document ||
             !context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
-            !ProductSearchIndexProfileHandler.IsProductSearch(profile as IndexProfile))
+            !ProductSearchIndexFields.IsProductSearchIndex(profile as IndexProfile))
         {
             return Task.CompletedTask;
         }

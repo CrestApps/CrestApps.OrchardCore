@@ -30,7 +30,7 @@ public sealed class InstallmentPlanReferencePersistenceTests
     public async Task InstallmentPlanStore_FindsPlansByTheRecordTheyPayForAndTheTransactionTheyReplace()
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-plan-reference-{Guid.NewGuid():N}.db");
-        var store = await CreateStoreAsync(path, upgradeFromFirstVersion: false);
+        var store = await CreateStoreAsync(path);
 
         try
         {
@@ -54,33 +54,10 @@ public sealed class InstallmentPlanReferencePersistenceTests
     }
 
     [Fact]
-    public async Task InstallmentPlanMigrations_UpgradingFromTheFirstVersion_AddsTheReferenceColumns()
-    {
-        var path = Path.Combine(Path.GetTempPath(), $"crestapps-plan-upgrade-{Guid.NewGuid():N}.db");
-        var store = await CreateStoreAsync(path, upgradeFromFirstVersion: true);
-
-        try
-        {
-            await SeedPlansAsync(store);
-
-            await using var session = store.CreateSession();
-            var planStore = new InstallmentPlanStore(session, new TestClock(_now));
-
-            var byReference = await planStore.GetByReferenceAsync("Registration", "reg-1", TestContext.Current.CancellationToken);
-
-            Assert.Equal("plan-1", Assert.Single(byReference).ItemId);
-        }
-        finally
-        {
-            TemporarySqliteDatabase.DisposeAndDelete(store, path);
-        }
-    }
-
-    [Fact]
     public async Task TransactionStore_FindsEveryPaymentOfARecordByItsParentReference()
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-parent-reference-{Guid.NewGuid():N}.db");
-        var store = await CreateStoreAsync(path, upgradeFromFirstVersion: false);
+        var store = await CreateStoreAsync(path);
 
         try
         {
@@ -165,14 +142,13 @@ public sealed class InstallmentPlanReferencePersistenceTests
             DueUtc = dueUtc,
         };
 
-    private static async Task<IStore> CreateStoreAsync(string databasePath, bool upgradeFromFirstVersion)
+    private static async Task<IStore> CreateStoreAsync(string databasePath)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes(
         [
             new InstallmentPlanIndexProvider(),
             new TransactionIndexProvider(),
-            new TransactionParentReferenceIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(SubscriptionConstants.InstallmentPlanCollectionName, TestContext.Current.CancellationToken);
@@ -182,33 +158,8 @@ public sealed class InstallmentPlanReferencePersistenceTests
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-        var planMigrations = new InstallmentPlanMigrations { SchemaBuilder = schemaBuilder };
-
-        if (upgradeFromFirstVersion)
-        {
-            // The index table as the first version of the migration created it, before the reference columns.
-            await schemaBuilder.CreateMapIndexTableAsync<InstallmentPlanIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("Title", column => column.WithLength(255))
-                .Column<string>("OwnerId", column => column.WithLength(26))
-                .Column<string>("CustomerName", column => column.WithLength(255))
-                .Column<string>("CustomerEmail", column => column.WithLength(255))
-                .Column<InstallmentPlanStatus>("Status")
-                .Column<string>("Currency", column => column.WithLength(8))
-                .Column<decimal>("TotalAmount")
-                .Column<DateTime>("NextDueUtc", column => column.Nullable())
-                .Column<DateTime>("CreatedUtc"),
-                collection: SubscriptionConstants.InstallmentPlanCollectionName);
-
-            Assert.Equal(2, await planMigrations.UpdateFrom1Async());
-        }
-        else
-        {
-            Assert.Equal(2, await planMigrations.CreateAsync());
-        }
-
+        Assert.Equal(1, await new InstallmentPlanMigrations { SchemaBuilder = schemaBuilder }.CreateAsync());
         await new TransactionMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
-        await new TransactionParentReferenceMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

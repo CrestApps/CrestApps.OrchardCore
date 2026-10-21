@@ -233,6 +233,11 @@ public class DialerProfileViewModel
     public bool AbandonedRetryRequiresAgent { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent's screens show each step of an automated dial placed for them.
+    /// </summary>
+    public bool ShowDialProgressToAgent { get; set; }
+
+    /// <summary>
     /// Gets or sets what the profile's recent calls measured over its answer-rate window, or <see langword="null"/> when
     /// it is not measured (a new profile, or the Paced Dialing feature is off).
     /// </summary>

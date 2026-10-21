@@ -176,7 +176,7 @@ public sealed class ProductVariantsTests
             Attributes = [new ProductAttributeValue { Key = ProductAttributeKeys.Price, Number = 15m, Text = "15" }],
         };
 
-        await new ProductVariantsSearchDocumentContributor().ContributeAsync(shirt, document);
+        await new ProductVariantsSearchDocumentContributor(new TestClock(DateTime.UtcNow)).ContributeAsync(shirt, document);
 
         Assert.Equal(15m, document.Price);
         Assert.Equal(20m, document.MaxPrice);
@@ -195,7 +195,7 @@ public sealed class ProductVariantsTests
     {
         var document = new ProductSearchDocument { PriceDisplay = ProductPriceDisplay.Hidden };
 
-        await new ProductVariantsSearchDocumentContributor().ContributeAsync(CreateShirt(), document);
+        await new ProductVariantsSearchDocumentContributor(new TestClock(DateTime.UtcNow)).ContributeAsync(CreateShirt(), document);
 
         Assert.Null(document.Price);
         Assert.Null(document.MaxPrice);
@@ -249,6 +249,6 @@ public sealed class ProductVariantsTests
         var contentDefinitionManager = new Mock<IContentDefinitionManager>();
         contentDefinitionManager.Setup(manager => manager.GetTypeDefinitionAsync(It.IsAny<string>())).ReturnsAsync(typeDefinition);
 
-        return new DefaultProductSnapshotResolver(contentDefinitionManager.Object);
+        return new DefaultProductSnapshotResolver(contentDefinitionManager.Object, new TestClock(DateTime.UtcNow));
     }
 }

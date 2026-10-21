@@ -4,41 +4,47 @@
     var unit = Model.WeightUnit == WeightUnit.Pound ? T["lb"] : T["kg"];
 }
 
-<div class="mb-3">
-    <label asp-for="Basis" class="form-label">@T["Look the rate up by"]</label>
-    <select asp-for="Basis" class="form-select w-auto">
-        <option value="@TableRateBasis.Weight">@T["Weight ({0})", unit]</option>
-        <option value="@TableRateBasis.Subtotal">@T["Subtotal"]</option>
-        <option value="@TableRateBasis.Quantity">@T["Number of items"]</option>
-    </select>
+<div class="ocat-limited-wrapper">
+    <label asp-for="Basis" class="ocat-label">@T["Look the rate up by"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Basis" class="form-select">
+            <option value="@TableRateBasis.Weight">@T["Weight ({0})", unit]</option>
+            <option value="@TableRateBasis.Subtotal">@T["Subtotal"]</option>
+            <option value="@TableRateBasis.Quantity">@T["Number of items"]</option>
+        </select>
+    </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="Rows">
-    <label class="form-label">@T["Rates"]</label>
-    <span asp-validation-for="Rows"></span>
-    <table class="table table-sm w-auto mb-1">
-        <thead>
-            <tr>
-                <th scope="col">@T["From"]</th>
-                <th scope="col">@T["Amount"]</th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (var i = 0; i < Model.Rows.Count; i++)
-            {
+<div class="ocat-wrapper" asp-validation-class-for="Rows">
+    <span class="ocat-label">@T["Rates"]</span>
+    <div class="ocat-end">
+        <span asp-validation-for="Rows"></span>
+        <table class="table table-sm w-auto mb-1">
+            <thead>
                 <tr>
-                    <td><input asp-for="Rows[i].From" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
-                    <td><input asp-for="Rows[i].Amount" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Amount"]" /></td>
+                    <th scope="col">@T["From"]</th>
+                    <th scope="col">@T["Amount"]</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <span class="hint">@T["Each row applies from its value up to the next row's, so from 0: 5, from 2: 8 and from 5: 12 charge 8 for an order of 3. Fill a blank row to add one, empty a row to remove it, and save to get more blank rows."]</span>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Rows.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Rows[i].From" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
+                        <td><input asp-for="Rows[i].Amount" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Amount"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span class="hint">@T["Each row applies from its value up to the next row's, so from 0: 5, from 2: 8 and from 5: 12 charge 8 for an order of 3. Fill a blank row to add one, empty a row to remove it, and save to get more blank rows."]</span>
+    </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="Maximum">
-    <label asp-for="Maximum" class="form-label">@T["Up to"]</label>
-    <input asp-for="Maximum" type="number" min="0" step="any" class="form-control w-auto" />
-    <span asp-validation-for="Maximum"></span>
-    <span class="hint">@T["Orders above this aren't offered the method, such as more than a carrier takes. Leave it empty for no limit."]</span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="Maximum">
+    <label asp-for="Maximum" class="ocat-label">@T["Up to"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Maximum" type="number" min="0" step="any" class="form-control" />
+        <span asp-validation-for="Maximum"></span>
+        <span class="hint">@T["Orders above this aren't offered the method, such as more than a carrier takes. Leave it empty for no limit."]</span>
+    </div>
 </div>

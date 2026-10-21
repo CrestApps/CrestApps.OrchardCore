@@ -1,0 +1,64 @@
+@using System.Globalization
+@using OrchardCore.DisplayManagement.Html
+@model DonationReceiptViewModel
+
+@{
+    var donation = Model.Donation;
+    var organization = string.IsNullOrWhiteSpace(Model.Settings.OrganizationName) ? Model.SiteName : Model.Settings.OrganizationName;
+    var kept = donation.Amount - donation.Refunded;
+}
+
+<zone Name="Title">
+    <breadcrumb name="AccountDonationReceipt" title="@(new HtmlContentString(donation.ReceiptNumber ?? string.Empty))">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        <breadcrumb-item id="AccountDonations" url="@Url.RouteUrl("AccountDonations")">@T["Donations"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="container my-4" style="max-width: 44rem;">
+    <div class="d-flex align-items-center mb-3 d-print-none">
+        <h1 class="h3 mb-0 flex-grow-1">@T["Donation receipt"]</h1>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> @T["Print"]</button>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h2 class="h5">@organization</h2>
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.TaxId))
+            {
+                <p class="small mb-3">@T["Tax ID {0}", Model.Settings.TaxId]</p>
+            }
+
+            <dl class="row mb-0">
+                <dt class="col-sm-4">@T["Receipt"]</dt>
+                <dd class="col-sm-8">@donation.ReceiptNumber</dd>
+                <dt class="col-sm-4">@T["Received from"]</dt>
+                <dd class="col-sm-8">@(donation.DonorName ?? donation.DonorEmail)</dd>
+                <dt class="col-sm-4">@T["Date"]</dt>
+                <dd class="col-sm-8">@donation.CreatedUtc.ToString("D", CultureInfo.CurrentCulture)</dd>
+                <dt class="col-sm-4">@T["Campaign"]</dt>
+                <dd class="col-sm-8">@donation.CampaignTitle</dd>
+                @if (!string.IsNullOrEmpty(donation.Tribute))
+                {
+                    <dt class="col-sm-4">@T["In honor of"]</dt>
+                    <dd class="col-sm-8">@donation.Tribute</dd>
+                }
+                <dt class="col-sm-4">@T["Amount"]</dt>
+                <dd class="col-sm-8">
+                    <strong>@ProductPriceFormatter.Format(kept, donation.Currency)</strong>
+                    @if (donation.Refunded > 0m)
+                    {
+                        <span class="small text-body-secondary">@T["({0} given, {1} refunded)", ProductPriceFormatter.Format(donation.Amount, donation.Currency), ProductPriceFormatter.Format(donation.Refunded, donation.Currency)]</span>
+                    }
+                </dd>
+                <dt class="col-sm-4">@T["Order"]</dt>
+                <dd class="col-sm-8">@donation.OrderNumber</dd>
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.ReceiptStatement))
+            {
+                <p class="small mt-3 mb-0">@Model.Settings.ReceiptStatement</p>
+            }
+        </div>
+    </div>
+</div>

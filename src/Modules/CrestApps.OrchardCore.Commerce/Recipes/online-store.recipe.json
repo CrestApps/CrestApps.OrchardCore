@@ -1,0 +1,166 @@
+{
+  "name": "OnlineStore",
+  "displayName": "Online store",
+  "description": "A new online store: products, a cart and checkout, orders, shipping, taxes and payments, with the Storefront theme and an empty product catalog as the home page. After setup, open Commerce > Set up your store in the admin and follow its steps to your first sale.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": true,
+  "categories": [
+    "default",
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "store",
+    "shop"
+  ],
+  "variables": {
+    "now": "[js: new Date().toISOString()]",
+    "listingId": "[js:uuid()]",
+    "listingVersionId": "[js:uuid()]",
+    "menuId": "[js:uuid()]",
+    "menuVersionId": "[js:uuid()]",
+    "menuItemId": "[js:uuid()]"
+  },
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Admin",
+        "OrchardCore.Alias",
+        "OrchardCore.Autoroute",
+        "OrchardCore.ContentFields",
+        "OrchardCore.ContentTypes",
+        "OrchardCore.Contents",
+        "OrchardCore.Email",
+        "OrchardCore.Features",
+        "OrchardCore.HomeRoute",
+        "OrchardCore.Html",
+        "OrchardCore.Liquid",
+        "OrchardCore.Media",
+        "OrchardCore.Menu",
+        "OrchardCore.Navigation",
+        "OrchardCore.Recipes",
+        "OrchardCore.Resources",
+        "OrchardCore.Roles",
+        "OrchardCore.Seo",
+        "OrchardCore.Settings",
+        "OrchardCore.Themes",
+        "OrchardCore.Title",
+        "OrchardCore.Users",
+        "TheAdmin",
+        "TheTheme",
+        "CrestApps.OrchardCore.StorefrontTheme",
+        "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Products.Listing",
+        "CrestApps.OrchardCore.Carts",
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Customers",
+        "CrestApps.OrchardCore.Transactions",
+        "CrestApps.OrchardCore.Receipts",
+        "CrestApps.OrchardCore.Inventory",
+        "CrestApps.OrchardCore.Shipping",
+        "CrestApps.OrchardCore.Taxation",
+        "CrestApps.OrchardCore.Stripe",
+        "CrestApps.OrchardCore.PayLater"
+      ]
+    },
+    {
+      "name": "themes",
+      "admin": "TheAdmin",
+      "site": "CrestApps.OrchardCore.StorefrontTheme"
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "Product",
+          "DisplayName": "Product",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "products/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "2" }, "ProductPartSettings": { "Type": "Good", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Show" }, "ProductPageSettings": { "ShowDetails": true } } },
+            { "PartName": "Product", "Name": "Product", "Settings": { "ContentTypePartSettings": { "Position": "3" } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "4", "DisplayName": "Description" } } },
+            { "PartName": "ShippingPart", "Name": "ShippingPart", "Settings": { "ContentTypePartSettings": { "Position": "5", "DisplayName": "Shipping" } } },
+            { "PartName": "SeoMetaPart", "Name": "SeoMetaPart", "Settings": { "ContentTypePartSettings": { "Position": "6" } } }
+          ]
+        }
+      ],
+      "ContentParts": [
+        {
+          "Name": "Product",
+          "Settings": {},
+          "ContentPartFieldDefinitionRecords": [
+            {
+              "FieldName": "MediaField",
+              "Name": "Images",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Images", "Position": "0" },
+                "MediaFieldSettings": { "Hint": "The product's pictures. The first is shown on its card.", "Multiple": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "[js: variables('listingId')]",
+          "ContentItemVersionId": "[js: variables('listingVersionId')]",
+          "ContentType": "ProductListing",
+          "DisplayText": "Shop",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "[js: variables('now')]",
+          "PublishedUtc": "[js: variables('now')]",
+          "CreatedUtc": "[js: variables('now')]",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Shop" },
+          "AutoroutePart": { "Path": "shop", "SetHomepage": true, "Disabled": false, "RouteContainedItems": false, "Absolute": false },
+          "ProductListingPart": { "ContentTypes": [ "Product" ], "AutomaticFacets": true }
+        },
+        {
+          "ContentItemId": "[js: variables('menuId')]",
+          "ContentItemVersionId": "[js: variables('menuVersionId')]",
+          "ContentType": "Menu",
+          "DisplayText": "Main Menu",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "[js: variables('now')]",
+          "PublishedUtc": "[js: variables('now')]",
+          "CreatedUtc": "[js: variables('now')]",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Main Menu" },
+          "AliasPart": { "Alias": "main-menu" },
+          "MenuPart": {},
+          "MenuItemsListPart": {
+            "MenuItems": [
+              {
+                "ContentItemId": "[js: variables('menuItemId')]",
+                "ContentType": "LinkMenuItem",
+                "DisplayText": "Shop",
+                "LinkMenuItemPart": { "Url": "~/", "Target": "" }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

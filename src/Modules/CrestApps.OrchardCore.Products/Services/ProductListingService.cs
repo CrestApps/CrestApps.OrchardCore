@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -20,6 +21,7 @@ using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Media;
+using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
 using YesSql.Services;
@@ -53,6 +55,8 @@ public sealed class ProductListingService
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
     private readonly Dictionary<string, ProductListingViewModel> _listings = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProductDetailsViewModel> _products = new(StringComparer.Ordinal);
+    private readonly IClock _clock;
+    private readonly IShopperCurrency _shopperCurrency;
     private IReadOnlyList<ContentItem> _listingItems;
 
     // How many automatic filters start open.
@@ -77,7 +81,9 @@ public sealed class ProductListingService
         IUpdateModelAccessor updateModelAccessor,
         IOptions<ProductFacetStyleOptions> facetStyles,
         IEnumerable<IProductListingEntryProvider> entryProviders,
-        IStringLocalizer<ProductListingService> stringLocalizer)
+        IStringLocalizer<ProductListingService> stringLocalizer,
+        IClock clock,
+        IShopperCurrency shopperCurrency)
     {
         _attributeCatalog = attributeCatalog;
         _searchService = searchService;
@@ -95,6 +101,8 @@ public sealed class ProductListingService
         _updateModelAccessor = updateModelAccessor;
         _facetStyles = facetStyles.Value;
         _entryProviders = entryProviders;
+        _clock = clock;
+        _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
 
@@ -400,8 +408,6 @@ public sealed class ProductListingService
 
         var state = ProductListingState.Parse(request.Query, facets, part.ShowSorting ? sorts.Select(sort => sort.Key) : [], pageSizes, dateKeys);
 
-        await MapTermIdsToSlugsAsync(state, facets, attributes);
-
         var defaultSort = GetDefaultSort(part, sorts, part.ShowSorting ? [] : GetSorts(new ProductListingPart(), attributes));
         var sortOption = sorts.FirstOrDefault(sort => sort.Key == state.Sort) ?? defaultSort;
         var defaultPageSize = pageSizes.Contains(part.DefaultPageSize) ? part.DefaultPageSize : pageSizes.FirstOrDefault(24);
@@ -629,36 +635,6 @@ public sealed class ProductListingService
             .OrderBy(facet => facet.Level);
     }
 
-    /// <summary>
-    /// Terms are filtered by slug. A link saved before slugs, or built by hand from a term's identifier, still
-    /// works: an identifier is swapped for its term's slug.
-    /// </summary>
-    private async Task MapTermIdsToSlugsAsync(ProductListingState state, IReadOnlyList<ProductListingFacet> facets, IReadOnlyList<ProductAttributeDescriptor> attributes)
-    {
-        foreach (var facet in facets)
-        {
-            if (!state.Values.TryGetValue(facet.Key, out var values))
-            {
-                continue;
-            }
-
-            var taxonomyId = attributes.FirstOrDefault(attribute => attribute.Key == facet.AttributeKey)?.TaxonomyContentItemId;
-
-            if (string.IsNullOrEmpty(taxonomyId) || await _termLookup.GetTermsAsync(taxonomyId) is not { } terms)
-            {
-                continue;
-            }
-
-            for (var i = 0; i < values.Count; i++)
-            {
-                if (terms.TryGetValue(values[i], out var term) && !string.IsNullOrEmpty(term.Slug))
-                {
-                    values[i] = term.Slug;
-                }
-            }
-        }
-    }
-
     private async Task BuildSectionShapesAsync(ProductListingViewModel model)
     {
         var type = SafeAlternate(model.ContentItem?.ContentType ?? string.Empty);
@@ -717,7 +693,7 @@ public sealed class ProductListingService
 
         var attributes = await _attributeCatalog.GetAttributesAsync([contentItem.ContentType]);
 
-        model.Price = await BuildPriceShapeAsync(document, contentItem.ContentType);
+        model.Price = await BuildPriceShapeAsync(document, contentItem.ContentType, contentItem);
         model.IsPurchasable = document.IsPurchasable;
         model.Sku = document.Sku;
         model.Highlights = BuildSpecifications(document, attributes, attribute => attribute.ShowOnCard).Select(row => row.Value).ToList();
@@ -989,9 +965,42 @@ public sealed class ProductListingService
     /// <summary>
     /// Builds the price shape of a product.
     /// </summary>
-    public async Task<IShape> BuildPriceShapeAsync(ProductSearchDocument document, string contentType)
+    public Task<IShape> BuildPriceShapeAsync(ProductSearchDocument document, string contentType)
+        => BuildPriceShapeAsync(document, contentType, contentItem: null);
+
+    /// <summary>
+    /// Builds the price shape of a product, in the shopper's currency: the product's own price in it when it lists one,
+    /// else its price converted. A subscription is shown in its own currency, since it isn't converted.
+    /// </summary>
+    public async Task<IShape> BuildPriceShapeAsync(ProductSearchDocument document, string contentType, ContentItem contentItem)
     {
         var settings = ProductAttributeCatalog.GetProductSettings(await _contentDefinitionManager.GetTypeDefinitionAsync(contentType));
+
+        // Shown in the shopper's currency. Sorting and the price filter stay in the product's own.
+        var target = await _shopperCurrency.GetCurrencyAsync();
+        var price = document.Price ?? 0m;
+        var currency = document.Currency;
+        var compareAtPrice = document.CompareAtPrice ?? 0m;
+        var showCompareAt = true;
+
+        if (!string.IsNullOrEmpty(target) && !string.Equals(target, document.Currency, StringComparison.OrdinalIgnoreCase) && document.Price.HasValue)
+        {
+            var now = _clock.UtcNow;
+            var listed = contentItem is not null && contentItem.TryGet<ProductPricePart>(out var pricing) && pricing.GetDefault(now) is { } offered
+                ? pricing.Prices.FirstOrDefault(candidate => string.Equals(candidate.Currency, target, StringComparison.OrdinalIgnoreCase) &&
+                    candidate.Kind == offered.Kind && candidate.Interval == offered.Interval && candidate.IsAvailable(now))
+                : null;
+
+            if (listed is not null)
+            {
+                (price, currency, showCompareAt) = (listed.Amount, listed.Currency, false);
+            }
+            else if (document.BillingInterval is null)
+            {
+                (price, currency) = await _shopperCurrency.ToShopperAsync(price, document.Currency);
+                compareAtPrice = (await _shopperCurrency.ToShopperAsync(compareAtPrice, document.Currency)).Amount;
+            }
+        }
 
         return await _shapeFactory.CreateAsync<ProductPriceDisplayViewModel>("ProductPrice", model =>
         {
@@ -1003,15 +1012,15 @@ public sealed class ProductListingService
                 return;
             }
 
-            model.Price = ProductPriceFormatter.Format(document.Price.Value, document.Currency);
+            model.Price = ProductPriceFormatter.Format(price, currency);
             model.Period = FormatPeriod(document.BillingInterval, document.BillingDuration);
 
             // Variants priced differently start at the lowest.
             model.IsFrom = document.MaxPrice > document.Price;
 
-            if (document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
+            if (showCompareAt && document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
             {
-                model.CompareAtPrice = ProductPriceFormatter.Format(document.CompareAtPrice.Value, document.Currency);
+                model.CompareAtPrice = ProductPriceFormatter.Format(compareAtPrice, currency);
                 model.DiscountPercent = (int)Math.Round((1 - (document.Price.Value / document.CompareAtPrice.Value)) * 100, MidpointRounding.AwayFromZero);
             }
         });
@@ -1095,7 +1104,7 @@ public sealed class ProductListingService
                 ? null
                 : _linkGenerator.GetPathByRouteValues(_httpContextAccessor.HttpContext, routeName: null, metadata.DisplayRouteValues);
 
-            var price = await BuildPriceShapeAsync(document, contentItem.ContentType);
+            var price = await BuildPriceShapeAsync(document, contentItem.ContentType, contentItem);
             var actions = await BuildProductActionsAsync(contentItem);
             var shape = await _shapeFactory.CreateAsync<ProductCardViewModel>("ProductCard", card =>
             {

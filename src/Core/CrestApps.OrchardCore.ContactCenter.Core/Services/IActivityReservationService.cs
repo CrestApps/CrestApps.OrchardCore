@@ -26,6 +26,20 @@ public interface IActivityReservationService
     Task<ActivityReservation> AcceptAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Accepts a pending reservation for a call a dialer is about to place for the agent, converting it into an
+    /// assignment while holding the agent Reserved rather than putting them on a call.
+    /// </summary>
+    /// <remarks>
+    /// The customer is dialed first and the agent is connected only once a person answers, so until then the agent is
+    /// held for the call, not on it. <see cref="IAgentPresenceManager.ConnectHeldAgentAsync"/> puts them on it when
+    /// they are connected; a call that ends without them releases them like any reservation that never reached them.
+    /// </remarks>
+    /// <param name="reservationId">The reservation identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The accepted reservation, or <see langword="null"/> when not found or no longer pending.</returns>
+    Task<ActivityReservation> AcceptForDialAsync(string reservationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Rejects a pending reservation and returns the item to its queue.
     /// </summary>
     /// <param name="reservationId">The reservation identifier.</param>

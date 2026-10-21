@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -217,23 +218,7 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
     }
 
     internal string Unprotect(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _dataProtectionProvider.CreateProtector(ProtectionPurpose).Unprotect(value);
-        }
-        catch (System.Security.Cryptography.CryptographicException)
-        {
-            _logger.LogWarning("The EasyPost settings couldn't be read; enter the API key again.");
-
-            return null;
-        }
-    }
+        => _dataProtectionProvider.UnprotectSettingOrDefault(ProtectionPurpose, value, _logger, "EasyPost key");
 
     // EasyPost names the carrier accounts it provides itself after the carrier, such as "FedExDefault" or "UPSDAP".
     internal static string CarrierName(string carrier)

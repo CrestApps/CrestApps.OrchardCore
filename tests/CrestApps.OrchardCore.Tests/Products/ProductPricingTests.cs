@@ -145,7 +145,7 @@ public sealed class ProductPricingTests
     }
 
     private static DefaultProductSnapshotResolver CreateSnapshotResolver(string defaultCurrency)
-        => new(CreateContentDefinitionManager(defaultCurrency));
+        => new(CreateContentDefinitionManager(defaultCurrency), new TestClock(DateTime.UtcNow));
 
     private static DefaultPriceResolver CreatePriceResolver(string defaultCurrency)
         => new(CreateSnapshotResolver(defaultCurrency), new TestClock(new DateTime(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc)), NullLogger<DefaultPriceResolver>.Instance);

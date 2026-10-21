@@ -1,0 +1,9 @@
+@model ShapeViewModel<Campaign>
+
+<div class="admin-list-secondary">
+    @Model.Value.Subject
+    @if (Model.Value.Sent > 0 || Model.Value.Status is CampaignStatus.Sending or CampaignStatus.Sent)
+    {
+        <text>&middot; @T.Plural(Model.Value.Sent, "1 sent", "{0} sent")</text>
+    }
+</div>

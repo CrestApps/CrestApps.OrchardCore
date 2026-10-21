@@ -1,0 +1,76 @@
+@using System.Globalization
+@model DonateFormViewModel
+
+@*
+    The amount to give and who it honors, on a campaign's page. Its fields belong to the Add to cart form below it, so
+    they post with it. Amounts post in the invariant culture, whatever the donor's language.
+*@
+
+@{
+    var amountName = "details[" + FundraisingConstants.AmountDetail + "]";
+    var tributeName = "details[" + FundraisingConstants.TributeDetail + "]";
+    var id = Model.FormId + "-donate";
+    decimal? first = Model.Amounts.Count > 0 ? Model.Amounts[Model.Amounts.Count / 2].Amount : null;
+}
+
+@if (Model.Ended)
+{
+    <p class="small text-body-secondary mb-3">@T["This campaign has ended. Thank you to everyone who gave."]</p>
+
+    return;
+}
+
+<div class="fundraising-donate mb-3 w-100" id="@id">
+    <label class="form-label small" for="@(id)-amount">@T["Your donation"]</label>
+
+    @if (Model.Amounts.Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-2" role="group" aria-label="@T["Suggested amounts"]">
+            @foreach (var (amount, label) in Model.Amounts)
+            {
+                <button type="button" class="btn btn-sm @(amount == first ? "btn-primary" : "btn-outline-primary")" data-donation-amount="@amount.ToString(CultureInfo.InvariantCulture)">@label</button>
+            }
+        </div>
+    }
+
+    <div class="input-group input-group-sm mb-2" style="max-width: 14rem;">
+        @if (!string.IsNullOrEmpty(Model.Currency))
+        {
+            <span class="input-group-text">@Model.Currency</span>
+        }
+        <input type="number" class="form-control" id="@(id)-amount" name="@amountName" form="@Model.FormId" min="@Model.Minimum.ToString(CultureInfo.InvariantCulture)" step="0.01" value="@first?.ToString(CultureInfo.InvariantCulture)" aria-label="@T["Amount"]" required />
+    </div>
+
+    <label class="form-label small" for="@(id)-tribute">@T["In honor or memory of (optional)"]</label>
+    <input type="text" class="form-control form-control-sm" id="@(id)-tribute" name="@tributeName" form="@Model.FormId" maxlength="120" />
+
+    @if (Model.TaxDeductible)
+    {
+        <span class="hint">@T["You'll get a receipt for your taxes by email, and under Donations in your account."]</span>
+    }
+</div>
+
+<script at="Foot">
+    (() => {
+        const root = document.getElementById('@id');
+        const input = document.getElementById('@(id)-amount');
+
+        if (!root || !input) {
+            return;
+        }
+
+        const mark = () => root.querySelectorAll('[data-donation-amount]').forEach(button => {
+            const chosen = Number(button.dataset.donationAmount) === Number(input.value);
+
+            button.classList.toggle('btn-primary', chosen);
+            button.classList.toggle('btn-outline-primary', !chosen);
+        });
+
+        root.querySelectorAll('[data-donation-amount]').forEach(button => button.addEventListener('click', () => {
+            input.value = button.dataset.donationAmount;
+            mark();
+        }));
+
+        input.addEventListener('input', mark);
+    })();
+</script>

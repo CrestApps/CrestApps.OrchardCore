@@ -10,18 +10,22 @@ namespace CrestApps.OrchardCore.Reports.Services;
 public sealed class ReportsAdminMenu : AdminNavigationProvider
 {
     private readonly IReportManager _reportManager;
+    private readonly IStringLocalizerFactory _localizerFactory;
     private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsAdminMenu"/> class.
     /// </summary>
     /// <param name="reportManager">The report manager used to enumerate registered reports.</param>
+    /// <param name="localizerFactory">The factory that localizes the names of the reports.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportsAdminMenu(
         IReportManager reportManager,
+        IStringLocalizerFactory localizerFactory,
         IStringLocalizer<ReportsAdminMenu> stringLocalizer)
     {
         _reportManager = reportManager;
+        _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
 
@@ -43,7 +47,7 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
                     .Id("reports");
 
                 foreach (var group in reports
-                    .GroupBy(report => report.Category ?? string.Empty)
+                    .GroupBy(report => report.Category)
                     .OrderBy(group => ReportsConstants.Categories.GetOrder(group.Key))
                     .ThenBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase))
                 {
@@ -55,9 +59,11 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
                     {
                         categoryNode.AddClass("report-category");
 
-                        foreach (var report in group.OrderBy(report => report.DisplayName.Value, StringComparer.CurrentCultureIgnoreCase))
+                        foreach (var (report, displayName) in group
+                            .Select(descriptor => (descriptor, _localizerFactory.Localize(descriptor.DisplayName)))
+                            .OrderBy(entry => entry.Item2.Value, StringComparer.CurrentCultureIgnoreCase))
                         {
-                            categoryNode.Add(report.DisplayName, report.DisplayName.PrefixPosition(), item => item
+                            categoryNode.Add(displayName, displayName.PrefixPosition(), item => item
                                 .AddClass("report")
                                 .Action("Display", "Reports", new { area = ReportsConstants.Feature, id = report.Name })
                                 .Permission(report.Permission)
@@ -65,7 +71,7 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
                         }
                     });
                 }
-            }, priority: 1);
+            }, priority: ReportsConstants.AdminMenuPriority);
 
         return ValueTask.CompletedTask;
     }

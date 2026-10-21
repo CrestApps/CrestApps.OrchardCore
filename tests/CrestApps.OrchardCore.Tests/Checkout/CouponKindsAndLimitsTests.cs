@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Checkout.Recipes;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -175,7 +177,7 @@ public sealed class CouponKindsAndLimitsTests
 
         var context = new RecipeExecutionContext { Name = CheckoutConstants.CouponsRecipeStep, Step = step };
 
-        await new CouponsStep(store.Object).ExecuteAsync(context);
+        await CreateCouponsStep(store.Object).ExecuteAsync(context);
 
         Assert.Equal(15m, existing.Percentage);
         Assert.Equal(1, existing.MaxRedemptionsPerCustomer);
@@ -189,6 +191,103 @@ public sealed class CouponKindsAndLimitsTests
         // A fixed amount with no currency is refused, and said so.
         Assert.Single(context.Errors);
     }
+
+    [Fact]
+    public async Task TheCouponsRecipeStep_RefusesWhatTheEditorRefuses()
+    {
+        // Arrange
+        var created = new List<Coupon>();
+        var store = new Mock<ICouponStore>();
+        store.Setup(value => value.GetByCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Coupon)null);
+        store.Setup(value => value.CreateAsync(It.IsAny<Coupon>(), It.IsAny<CancellationToken>())).Callback<Coupon, CancellationToken>((coupon, _) => created.Add(coupon)).Returns(ValueTask.CompletedTask);
+
+        var step = new JsonObject
+        {
+            ["name"] = CheckoutConstants.CouponsRecipeStep,
+            ["Coupons"] = new JsonArray
+            {
+                // An automatic discount needs a description, which is what the buyer sees.
+                new JsonObject { ["Code"] = "AUTO10", ["Method"] = "Automatic", ["Kind"] = "Percentage", ["Percentage"] = 10 },
+                new JsonObject { ["Code"] = "BADEMAIL", ["Kind"] = "Percentage", ["Percentage"] = 10, ["CustomerEmail"] = "nobody" },
+                new JsonObject { ["Code"] = "RANGE", ["Kind"] = "Percentage", ["Percentage"] = 10, ["MinimumAmount"] = 50, ["MaximumAmount"] = 20 },
+                new JsonObject { ["Code"] = "NOQUANTITY", ["Kind"] = "Percentage", ["Percentage"] = 10, ["MinimumQuantity"] = 0 },
+            },
+        };
+
+        var context = new RecipeExecutionContext { Name = CheckoutConstants.CouponsRecipeStep, Step = step };
+
+        // Act
+        await CreateCouponsStep(store.Object).ExecuteAsync(context);
+
+        // Assert
+        Assert.Empty(created);
+        Assert.Equal(4, context.Errors.Count);
+    }
+
+    [Fact]
+    public async Task TheCouponsRecipeStep_MapsACouponAsTheEditorDoes()
+    {
+        // Arrange
+        var created = new List<Coupon>();
+        var store = new Mock<ICouponStore>();
+        store.Setup(value => value.GetByCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Coupon)null);
+        store.Setup(value => value.CreateAsync(It.IsAny<Coupon>(), It.IsAny<CancellationToken>())).Callback<Coupon, CancellationToken>((coupon, _) => created.Add(coupon)).Returns(ValueTask.CompletedTask);
+
+        var step = new JsonObject
+        {
+            ["name"] = CheckoutConstants.CouponsRecipeStep,
+            ["Coupons"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["Code"] = " MUGS ",
+                    ["Kind"] = "Percentage",
+                    ["Percentage"] = 20,
+                    ["BuyQuantity"] = 3,
+                    ["Description"] = " Mugs ",
+                    ["Sources"] = new JsonArray("storefront", "Storefront", "pos"),
+                    ["ProductIds"] = new JsonArray("product-mug"),
+                    ["CustomerEmail"] = " ",
+                    ["IsEnabled"] = true,
+                },
+            },
+        };
+
+        var context = new RecipeExecutionContext { Name = CheckoutConstants.CouponsRecipeStep, Step = step };
+
+        // Act
+        await CreateCouponsStep(store.Object).ExecuteAsync(context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+
+        var coupon = Assert.Single(created);
+        Assert.Equal("MUGS", coupon.Code);
+        Assert.Equal("Mugs", coupon.Description);
+        Assert.Equal(0, coupon.BuyQuantity);
+        Assert.Equal(["storefront", "pos"], coupon.Sources);
+        Assert.Equal(["product-mug"], coupon.ProductIds);
+        Assert.Null(coupon.CustomerEmail);
+    }
+
+    [Fact]
+    public void ACouponsComputedMembers_AreNotSerialized()
+    {
+        // Arrange
+        var coupon = new Coupon { Code = "SHIPFREE", Kind = CouponKind.FreeShipping, ProductIds = ["product-mug"], Sources = ["pos"] };
+
+        // Act
+        var node = JsonSerializer.SerializeToNode(coupon)!.AsObject();
+
+        // Assert
+        Assert.False(node.ContainsKey(nameof(Coupon.IsScoped)));
+        Assert.False(node.ContainsKey(nameof(Coupon.HasItemLimits)));
+        Assert.False(node.ContainsKey(nameof(Coupon.EffectiveTarget)));
+        Assert.True(node.ContainsKey(nameof(Coupon.ProductIds)));
+    }
+
+    private static CouponsStep CreateCouponsStep(ICouponStore store)
+        => new(store, new CouponEditor(store, new PassThroughStringLocalizer<CouponEditor>()));
 
     private static async Task ApplyAsync(CheckoutInvoice invoice, Coupon coupon)
     {

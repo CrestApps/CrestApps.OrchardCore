@@ -1,9 +1,12 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -131,7 +134,7 @@ public sealed class PurchaseOrdersAdminController : Controller
             {
                 Source = orders,
                 Pager = pagerShape,
-                ToolbarActions = await _shapeFactory.CreateAsync("PurchaseOrdersAdminListFilters", Arguments.From(new { Options = options })),
+                ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("PurchaseOrders", "purchase-orders-filter", new AdminListFilter("Options.Show", options.Filters, S["Show"], S["Show"])),
             },
         });
     }
@@ -328,7 +331,7 @@ public sealed class PurchaseOrdersAdminController : Controller
                 .GroupBy(line => line.LineId)
                 .ToDictionary(group => group.Key, group => Math.Min(MaxQuantity, group.Sum(line => line.Receive.Value)));
 
-        var received = await _receiver.ReceiveAsync(order, quantities, CurrentActor(), HttpContext.RequestAborted);
+        var received = await _receiver.ReceiveAsync(order, quantities, StockActor.ForUser(User), HttpContext.RequestAborted);
 
         if (received == 0)
         {
@@ -580,7 +583,7 @@ public sealed class PurchaseOrdersAdminController : Controller
         model.Currencies = currencies.Select(currency => new SelectListItem($"{currency.CurrencyCode} ({currency.DisplayName})", currency.CurrencyCode, currency.CurrencyCode == model.Currency)).ToArray();
         model.Suppliers = await _orders.ListSuppliersAsync(HttpContext.RequestAborted);
         model.CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory);
-        model.SearchEndpoint = Url.RouteUrl("CrestApps.Inventory.StockItemSearch");
+        model.SearchEndpoint = Url.RouteUrl(StockItemSearchEndpoints.RouteName);
     }
 
     // A number staff can read out: the date and four characters, such as PO-261019-K3QZ.
@@ -601,9 +604,6 @@ public sealed class PurchaseOrdersAdminController : Controller
             }
         }
     }
-
-    private StockActor CurrentActor()
-        => new(User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity?.Name);
 
     private static RouteValueDictionary FilterRouteValues(PurchaseOrderIndexOptions options, PagerParameters pagerParameters)
     {

@@ -13,9 +13,11 @@
 
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
   </ItemGroup>
 

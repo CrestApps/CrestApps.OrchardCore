@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
-using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -15,12 +14,9 @@ namespace CrestApps.OrchardCore.Customers.Drivers;
 /// <summary>
 /// Settings › Commerce › Customers: how long guests' personal data is kept.
 /// </summary>
-public sealed class CustomerPrivacySettingsDisplayDriver : SiteDisplayDriver<CustomerPrivacySettings>
+public sealed class CustomerPrivacySettingsDisplayDriver : CustomerSettingsDisplayDriverBase<CustomerPrivacySettings>
 {
     private const int MaxMonths = 1200;
-
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
 
@@ -28,9 +24,8 @@ public sealed class CustomerPrivacySettingsDisplayDriver : SiteDisplayDriver<Cus
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IStringLocalizer<CustomerPrivacySettingsDisplayDriver> stringLocalizer)
+        : base(httpContextAccessor, authorizationService)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
         S = stringLocalizer;
     }
 
@@ -43,12 +38,12 @@ public sealed class CustomerPrivacySettingsDisplayDriver : SiteDisplayDriver<Cus
             model.InactiveGuestMonths = settings.InactiveGuestMonths;
             model.GuestOrderMonths = settings.GuestOrderMonths;
         }).Location("Content:5")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, CustomerPrivacySettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CustomerPermissions.ManageCustomers))
+        if (!await CanManageCustomersAsync())
         {
             return null;
         }

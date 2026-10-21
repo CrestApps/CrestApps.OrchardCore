@@ -14,10 +14,21 @@ public static class OrderLineText
 
         var text = string.IsNullOrEmpty(line.PriceName) ? line.Title : $"{line.Title} ({line.PriceName})";
 
+        if (line.DetailLines is { Count: > 0 })
+        {
+            text += " · " + string.Join(" · ", line.DetailLines.Select(DescribeDetail));
+        }
+
         return line.AddOns is { Count: > 0 }
             ? text + " · " + string.Join(" · ", line.AddOns.Select(DescribeAddOn))
             : text;
     }
+
+    /// <summary>
+    /// How one of a line's details reads, such as "Departure: 1 December 2026".
+    /// </summary>
+    public static string DescribeDetail(OrderLineDetail detail)
+        => string.IsNullOrEmpty(detail.Label) ? detail.Value : $"{detail.Label}: {detail.Value}";
 
     /// <summary>
     /// Returns what a bundle line holds in all, such as "2 × Tee, 1 × Cap" for one bundle, or

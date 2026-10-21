@@ -1,0 +1,74 @@
+@model RegisterShiftDetailViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
+@functions {
+    private string Money(decimal amount)
+        => ProductPriceFormatter.Format(amount, Model.Shift.Currency);
+}
+@{
+    var shift = Model.Shift;
+}
+
+<zone Name="Title">
+    <breadcrumb name="PointOfSaleShift" title="@T["Shift at {0}", shift.RegisterName]">
+        <breadcrumb-item id="PointOfSaleShifts" action="Shifts" controller="RegistersAdmin" area="CrestApps.OrchardCore.PointOfSale" permission="@PosPermissions.ManageRegisters.Name">@T["Shifts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">@T["Sales"]</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-7">@T["Sales"]</dt><dd class="col-5 text-end">@Model.Summary.Sales</dd>
+                    <dt class="col-7">@T["Total"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Total)</dd>
+                    <dt class="col-7">@T["Cash kept"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Cash)</dd>
+                    <dt class="col-7">@T["Card"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Card)</dd>
+                    <dt class="col-7">@T["Gift cards and balances"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Other)</dd>
+                    <dt class="col-7">@T["Refunded"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Refunded)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">@T["Cash drawer"]</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-7">@T["Opening float"]</dt><dd class="col-5 text-end">@Money(shift.OpeningFloat)</dd>
+                    <dt class="col-7">@T["Put in, less taken out"]</dt><dd class="col-5 text-end">@Money(shift.CashMovements.Sum(movement => movement.Amount))</dd>
+                    <dt class="col-7">@T["Expected"]</dt><dd class="col-5 text-end">@Money(Model.ExpectedCash)</dd>
+                    @if (shift.CountedCash is { } counted)
+                    {
+                        <dt class="col-7">@T["Counted"]</dt><dd class="col-5 text-end">@Money(counted)</dd>
+                        <dt class="col-7">@T["Difference"]</dt><dd class="col-5 text-end @(counted - Model.ExpectedCash < 0m ? "text-danger" : null)">@Money(counted - Model.ExpectedCash)</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                @T["Opened by {0}", shift.OpenedByName] @await DisplayAsync(await New.DateTime(Utc: shift.OpenedUtc, Format: "g"))
+                @if (shift.ClosedUtc is { } closed)
+                {
+                    <text> · @T["closed by {0}", shift.ClosedByName] @await DisplayAsync(await New.DateTime(Utc: closed, Format: "g"))</text>
+                }
+            </div>
+            @if (shift.CashMovements.Count > 0)
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var movement in shift.CashMovements)
+                    {
+                        <li class="list-group-item d-flex justify-content-between"><span>@movement.Reason <span class="text-body-secondary small">@movement.ByName, @await DisplayAsync(await New.DateTime(Utc: movement.Utc, Format: "g"))</span></span><span>@Money(movement.Amount)</span></li>
+                    }
+                </ul>
+            }
+            @if (!string.IsNullOrEmpty(shift.CloseNote))
+            {
+                <div class="card-body"><p class="mb-0">@shift.CloseNote</p></div>
+            }
+        </div>
+    </div>
+</div>

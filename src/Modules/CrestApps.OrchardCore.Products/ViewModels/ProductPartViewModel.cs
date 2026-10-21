@@ -108,5 +108,7 @@ public class ProductAddOnViewModel
 
     public decimal? Price { get; set; }
 
+    public CrestApps.OrchardCore.Products.Core.Models.ProductAddOnPriceBasis PriceBasis { get; set; }
+
     public bool Required { get; set; }
 }

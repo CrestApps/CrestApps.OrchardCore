@@ -16,10 +16,12 @@ public sealed class SubscriptionOnboardingSettings
     public string DatabaseProvider { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection string provisioned sites are created with. Not needed for
-    /// <c>Sqlite</c>, which stores each site under its own tenant folder.
+    /// Gets or sets the connection string provisioned sites are created with, protected with data protection
+    /// (purpose <see cref="SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString"/>) so the database
+    /// credentials are never stored in clear text. Not needed for <c>Sqlite</c>, which stores each site under its
+    /// own tenant folder.
     /// </summary>
-    public string ConnectionString { get; set; }
+    public string ProtectedConnectionString { get; set; }
 
     /// <summary>
     /// Gets or sets the schema provisioned sites are created in, when the provider supports one.

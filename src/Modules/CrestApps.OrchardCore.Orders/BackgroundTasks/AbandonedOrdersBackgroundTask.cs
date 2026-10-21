@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Orders.BackgroundTasks;
@@ -16,16 +15,6 @@ namespace CrestApps.OrchardCore.Orders.BackgroundTasks;
     LockExpiration = 600_000)]
 public sealed class AbandonedOrdersBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await serviceProvider.GetRequiredService<AbandonedOrderSweeper>().SweepAsync(cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            serviceProvider.GetRequiredService<ILogger<AbandonedOrdersBackgroundTask>>()
-                .LogError(exception, "An error occurred while canceling abandoned orders.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<AbandonedOrderSweeper>().SweepAsync(cancellationToken);
 }

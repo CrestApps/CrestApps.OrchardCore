@@ -2,8 +2,8 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>4.0.0-preview-19193</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.326</CrestAppsCoreVersion>
+    <OrchardCoreVersion>4.0.0-preview-19195</OrchardCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.330</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -40,6 +40,7 @@
     <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Alias" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ArchiveLater" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Autoroute" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Autoroute.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.AuditTrail.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
@@ -52,6 +53,9 @@
     <PackageVersion Include="OrchardCore.Contents.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents.TagHelpers" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataPipelines.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataSources.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataSources.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment" Version="$(OrchardCoreVersion)" />
@@ -75,12 +79,14 @@
     <PackageVersion Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Theme.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Azure" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Mvc.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.PublishLater" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Queries.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ReCaptcha.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.RateLimits.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />

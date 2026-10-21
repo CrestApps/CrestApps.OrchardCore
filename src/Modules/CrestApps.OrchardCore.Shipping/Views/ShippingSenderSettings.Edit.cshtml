@@ -1,66 +1,106 @@
 @model ShippingSettingsViewModel
 
-<p class="text-body-secondary">@T["Where parcels leave from and the box most orders go in, which carriers quote rates and print labels for."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-body-secondary">@T["Where parcels leave from and the box most orders go in, which carriers quote rates and print labels for."]</p>
+    </div>
+</div>
 
-<div class="row g-2 mb-3">
-    <div class="col-md-6" asp-validation-class-for="ShipFromAddressLine1">
-        <label asp-for="ShipFromName" class="form-label">@T["Sender's name"]</label>
+<div class="ocat-wrapper">
+    <label asp-for="ShipFromName" class="ocat-label">@T["Sender's name"]</label>
+    <div class="ocat-end">
         <input asp-for="ShipFromName" class="form-control" autocomplete="off" />
     </div>
-    <div class="col-md-6">
-        <label asp-for="ShipFromCompany" class="form-label">@T["Company"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ShipFromCompany" class="ocat-label">@T["Company"]</label>
+    <div class="ocat-end">
         <input asp-for="ShipFromCompany" class="form-control" autocomplete="off" />
     </div>
-    <div class="col-md-8">
-        <label asp-for="ShipFromAddressLine1" class="form-label">@T["Street address"]</label>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ShipFromAddressLine1">
+    <label asp-for="ShipFromAddressLine1" class="ocat-label">@T["Street address"]</label>
+    <div class="ocat-end">
         <input asp-for="ShipFromAddressLine1" class="form-control" autocomplete="off" />
         <span asp-validation-for="ShipFromAddressLine1"></span>
     </div>
-    <div class="col-md-4">
-        <label asp-for="ShipFromAddressLine2" class="form-label">@T["Apartment, suite"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ShipFromAddressLine2" class="ocat-label">@T["Apartment, suite"]</label>
+    <div class="ocat-end">
         <input asp-for="ShipFromAddressLine2" class="form-control" autocomplete="off" />
     </div>
-    <div class="col-md-4">
-        <label asp-for="ShipFromCity" class="form-label">@T["City"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ShipFromCity" class="ocat-label">@T["City"]</label>
+    <div class="ocat-end">
         <input asp-for="ShipFromCity" class="form-control" autocomplete="off" />
     </div>
-    <div class="col-md-3">
-        <label asp-for="ShipFromRegion" class="form-label">@T["State or region"]</label>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="ShipFromRegion" class="ocat-label">@T["State or region"]</label>
+    <div class="ocat-limited">
         <input asp-for="ShipFromRegion" class="form-control" autocomplete="off" />
     </div>
-    <div class="col-md-3">
-        <label asp-for="ShipFromPostalCode" class="form-label">@T["Postal code"]</label>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="ShipFromPostalCode" class="ocat-label">@T["Postal code"]</label>
+    <div class="ocat-limited">
         <input asp-for="ShipFromPostalCode" class="form-control" autocomplete="off" />
     </div>
-    <div class="col-md-2">
-        <label asp-for="ShipFromCountry" class="form-label">@T["Country"]</label>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="ShipFromCountry" class="ocat-label">@T["Country"]</label>
+    <div class="ocat-limited">
         <input asp-for="ShipFromCountry" class="form-control text-uppercase" maxlength="2" placeholder="US" autocomplete="off" />
     </div>
-    <div class="col-md-4">
-        <label asp-for="ShipFromPhone" class="form-label">@T["Phone"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ShipFromPhone" class="ocat-label">@T["Phone"]</label>
+    <div class="ocat-end">
         <input asp-for="ShipFromPhone" type="tel" class="form-control" autocomplete="off" />
         <span class="hint">@T["Some carriers need one for labels."]</span>
     </div>
 </div>
 
-<div class="row g-2 mb-3">
-    <div class="col-sm-6 col-md-3">
-        <label asp-for="DefaultParcelLength" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box length (in)"] : T["Box length (cm)"])</label>
+<div class="ocat-limited-wrapper">
+    <label asp-for="DefaultParcelLength" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box length (in)"] : T["Box length (cm)"])</label>
+    <div class="ocat-limited">
         <input asp-for="DefaultParcelLength" type="number" min="0" step="any" class="form-control" />
     </div>
-    <div class="col-sm-6 col-md-3">
-        <label asp-for="DefaultParcelWidth" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Width (in)"] : T["Width (cm)"])</label>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="DefaultParcelWidth" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Width (in)"] : T["Width (cm)"])</label>
+    <div class="ocat-limited">
         <input asp-for="DefaultParcelWidth" type="number" min="0" step="any" class="form-control" />
     </div>
-    <div class="col-sm-6 col-md-3">
-        <label asp-for="DefaultParcelHeight" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Height (in)"] : T["Height (cm)"])</label>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="DefaultParcelHeight" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Height (in)"] : T["Height (cm)"])</label>
+    <div class="ocat-limited">
         <input asp-for="DefaultParcelHeight" type="number" min="0" step="any" class="form-control" />
     </div>
-    <div class="col-sm-6 col-md-3">
-        <label asp-for="PackagingWeight" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box weight (lb)"] : T["Box weight (kg)"])</label>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="PackagingWeight" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box weight (lb)"] : T["Box weight (kg)"])</label>
+    <div class="ocat-limited">
         <input asp-for="PackagingWeight" type="number" min="0" step="any" class="form-control" />
     </div>
-    <div class="col-12">
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <span class="hint">@T["The box size is optional: carriers price by weight without it. The box weight is added to the items' weight."]</span>
     </div>
 </div>

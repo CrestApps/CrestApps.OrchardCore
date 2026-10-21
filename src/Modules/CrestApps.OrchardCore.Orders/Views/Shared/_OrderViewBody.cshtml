@@ -2,6 +2,7 @@
 @model OrderViewViewModel
 @inject IServiceProvider Services
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject OrchardCore.Modules.IClock Clock
 @functions {
     // Stored times are UTC; people read them in the site's time zone.
     private async Task<DateTime> LocalAsync(DateTime utc)
@@ -18,10 +19,24 @@
 
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
     <div>
-        <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
-        <p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+        @* Until it's paid, a quote is what the buyer asked for, not an order they placed. *@
+        @if (order.Quote is not null && order.Status is not OrderStatus.Paid)
+        {
+            <h1 class="h3 mb-1">@T["Quote {0}", order.OrderNumber]</h1>
+        }
+        else
+        {
+            <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
+        }
+        <p class="text-muted">
+            @(order.Quote is not null && order.Status is not OrderStatus.Paid ? T["Asked for {0:D}", await LocalAsync(order.Quote.RequestedUtc)] : T["Placed {0:D}", await LocalAsync(order.CreatedUtc)])
+            @if (!string.IsNullOrWhiteSpace(order.PurchaseOrderNumber))
+            {
+                <span class="d-block">@T["Purchase order {0}", order.PurchaseOrderNumber]</span>
+            }
+        </p>
     </div>
-    @if (!string.IsNullOrEmpty(Model.InvoiceUrl))
+    @if (!string.IsNullOrEmpty(Model.InvoiceUrl) && order.Quote?.Status is not OrderQuoteStatus.Requested)
     {
         <a class="btn btn-outline-secondary btn-sm" href="@Model.InvoiceUrl">
             <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
@@ -29,14 +44,68 @@
     }
 </div>
 
+@if (order.Quote is { } quote && order.Status is not (OrderStatus.Paid or OrderStatus.Canceled))
+{
+    var expired = quote.Status == OrderQuoteStatus.Sent && quote.ExpiresUtc is { } ends && ends <= Clock.UtcNow;
+
+    <div class="alert @(expired ? "alert-secondary" : "alert-info") d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
+        <span>
+            @if (quote.Status == OrderQuoteStatus.Requested)
+            {
+                @T["You asked for this quote. We'll email you when it's priced."]
+            }
+            else if (expired)
+            {
+                @T["This quote has expired. Ask us if you'd still like it."]
+            }
+            else
+            {
+                @T["Here's your quote. Accept it by paying; shipping and tax are added then."]
+                @if (quote.ExpiresUtc is { } expires)
+                {
+                    <span class="d-block small">@T["Offered until {0:D}.", expires]</span>
+                }
+            }
+            @if (!string.IsNullOrWhiteSpace(quote.Message))
+            {
+                <span class="d-block small mt-1 text-body-secondary" style="white-space: pre-line">@T["You asked: {0}", quote.Message]</span>
+            }
+        </span>
+        @if (!string.IsNullOrEmpty(Model.DeclineQuoteUrl))
+        {
+            <form method="post" action="@Model.DeclineQuoteUrl" class="no-multisubmit">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@(quote.Status == OrderQuoteStatus.Requested ? T["Withdraw the request"] : T["Turn it down"])</button>
+            </form>
+        }
+    </div>
+}
+
+@if (order.Approval is { } approval && order.Status is not (OrderStatus.Paid or OrderStatus.Canceled))
+{
+    <div class="alert @(approval.Status == OrderApprovalStatus.Approved ? "alert-success" : "alert-info")" role="status">
+        @if (approval.Status == OrderApprovalStatus.Pending)
+        {
+            @T["Waiting for approval: {0}. We'll email you when it's decided.", approval.Reason]
+        }
+        else if (approval.Status == OrderApprovalStatus.Approved)
+        {
+            @T["{0} approved this order. Pay it to place it.", approval.DecidedBy]
+        }
+        @if (!string.IsNullOrWhiteSpace(approval.Note))
+        {
+            <span class="d-block small mt-1" style="white-space: pre-line">@approval.Note</span>
+        }
+    </div>
+}
+
 @if (!string.IsNullOrEmpty(Model.PayUrl))
 {
     <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
         @if (order.Invoice is not null && order.Status != OrderStatus.Paid)
         {
             <span>
-                @T["This order is waiting for your payment. Shipping and tax are added when you pay."]
-                @if (order.Invoice.DueUtc is { } due)
+                @(order.Quote is null ? T["This order is waiting for your payment. Shipping and tax are added when you pay."] : T["Pay to accept the quote."])
+                @if (order.Invoice.DueUtc is { } due && order.Quote is null)
                 {
                     <span class="d-block small">@T["Please pay by {0:D}.", due]</span>
                 }
@@ -82,6 +151,10 @@
                             {
                                 <div class="small text-muted text-break">@T["Includes {0}", contents]</div>
                             }
+                            @foreach (var detail in line.DetailLines ?? [])
+                            {
+                                <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeDetail(detail)</div>
+                            }
                             @foreach (var addOn in line.AddOns ?? [])
                             {
                                 <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)</div>
@@ -118,6 +191,13 @@
                     <th scope="row" colspan="2" class="text-end">@T["Total"]</th>
                     <td class="text-end fw-bold">@Format(order.Total ?? order.Subtotal)</td>
                 </tr>
+                @foreach (var tender in order.Tenders ?? [])
+                {
+                    <tr>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@T["Paid with {0}", tender.Description]</th>
+                        <td class="text-end">@Format(tender.Amount)</td>
+                    </tr>
+                }
                 @foreach (var refund in order.Refunds ?? [])
                 {
                     <tr>

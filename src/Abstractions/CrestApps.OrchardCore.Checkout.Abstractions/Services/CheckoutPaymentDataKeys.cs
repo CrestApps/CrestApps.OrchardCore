@@ -52,6 +52,16 @@ public static class CheckoutPaymentDataKeys
     }
 
     /// <summary>
+    /// Gets the value the provider data holds for a key, or <see langword="null"/> when it holds none or an empty one.
+    /// </summary>
+    /// <param name="providerData">The provider data, which may be <see langword="null"/>.</param>
+    /// <param name="key">The key, for example <see cref="SavedPaymentMethodReference"/>.</param>
+    public static string GetValue(IReadOnlyDictionary<string, string> providerData, string key)
+        => providerData is not null && providerData.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value)
+            ? value
+            : null;
+
+    /// <summary>
     /// Gets whether the provider data turns on the given flag.
     /// </summary>
     /// <param name="providerData">The provider data, which may be <see langword="null"/>.</param>

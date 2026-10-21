@@ -1,0 +1,9 @@
+@model ShapeViewModel<PriceList>
+
+<div class="admin-list-secondary">
+    @T.Plural(Model.Value.Entries.Count, "1 price by SKU", "{0} prices by SKU")
+    @if (Model.Value.PercentOff is { } percent)
+    {
+        <text>&middot; @T["{0}% off everything else", percent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)]</text>
+    }
+</div>

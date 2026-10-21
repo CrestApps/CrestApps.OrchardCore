@@ -1,0 +1,54 @@
+@using OrchardCore.DisplayManagement.Html
+@model VendorDashboardViewModel
+
+@{
+    var vendor = Model.Vendor;
+    var heldOrders = Model.Earnings.Where(earning => earning.Status == VendorEarningStatus.Held).Select(earning => (earning.OrderId, earning.OrderNumber)).Distinct().ToList();
+}
+
+<zone Name="Title">
+    <breadcrumb name="VendorsDetail" title="@(new HtmlContentString(vendor.Name ?? string.Empty))">
+        <breadcrumb-item id="Vendors" action="Index" controller="VendorsAdmin" area="@MarketplaceConstants.Feature" permission="@MarketplacePermissions.ManageMarketplace.Name">@T["Vendors"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a asp-action="Edit" asp-route-itemId="@vendor.ItemId" class="btn btn-secondary btn-sm">@T["Edit"]</a>
+    @if (Model.CanPayOut)
+    {
+        <form asp-action="PayOut" asp-route-itemId="@vendor.ItemId" method="post">
+            <button type="submit" class="btn btn-primary btn-sm">@T["Pay out what's ready"]</button>
+        </form>
+    }
+</div>
+
+<p class="text-body-secondary">
+    @if (vendor.PayoutsEnabled)
+    {
+        @T["Paid out to its Stripe account."]
+    }
+    else if (string.IsNullOrEmpty(vendor.StripeAccountId))
+    {
+        @T["It hasn't set up payouts yet. The people who run it do that under Vendor in their account."]
+    }
+    else
+    {
+        @T["Its Stripe setup isn't finished. The people who run it finish it under Vendor in their account."]
+    }
+</p>
+
+@await DisplayAsync((IShape)ViewData["Dashboard"])
+
+@if (heldOrders.Count > 0)
+{
+    <h5 class="mt-4">@T["Release now"]</h5>
+    <p class="small text-body-secondary">@T["Release an order's sales before their hold ends, such as a service delivered or a milestone reached."]</p>
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var (orderId, orderNumber) in heldOrders)
+        {
+            <form asp-action="Release" asp-route-itemId="@vendor.ItemId" asp-route-orderId="@orderId" method="post">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Release order {0}", orderNumber]</button>
+            </form>
+        }
+    </div>
+}

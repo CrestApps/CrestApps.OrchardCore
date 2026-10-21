@@ -43,7 +43,7 @@
         @foreach (var discount in invoice.Discounts ?? [])
         {
             <div class="d-flex justify-content-between text-success">
-                <span>@if (string.IsNullOrEmpty(discount.Code)) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
+                <span>@if (string.IsNullOrEmpty(discount.Code) || discount.IsAutomatic) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
                 <span>&minus;@Format(discount.Amount)</span>
             </div>
         }
@@ -57,18 +57,46 @@
                 <span>@Format(invoice.DueNow)</span>
             </div>
 
-            @foreach (var taxLine in invoice.TaxLines ?? [])
+            @* One row for each tax at each rate, whatever the lines it was charged on; a tax included in the prices says so. *@
+            @foreach (var tax in (invoice.TaxLines ?? []).Where(line => line.TaxAmount != 0m).GroupBy(line => (Name: string.IsNullOrEmpty(line.TaxName) ? T["Tax"].Value : line.TaxName, line.Rate, line.IncludedInPrice)))
             {
+                var rate = tax.Key.Rate > 0m ? " " + (tax.Key.Rate * 100m).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture) + "%" : string.Empty;
+
                 <div class="d-flex justify-content-between text-body-secondary small">
-                    <span>@(string.IsNullOrEmpty(taxLine.TaxName) ? T["Tax"].Value : taxLine.TaxName)</span>
-                    <span>@Format(taxLine.TaxAmount)</span>
+                    <span>@(tax.Key.IncludedInPrice ? T["{0}{1} (included)", tax.Key.Name, rate] : T["{0}{1}", tax.Key.Name, rate])</span>
+                    <span>@Format(tax.Sum(line => line.TaxAmount))</span>
                 </div>
             }
         }
 
-        <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
-            <span>@T["Due now"]</span>
-            <span>@Format(invoice.GrandTotal)</span>
-        </div>
+        @* A gift card or store credit pays after tax, like a second way to pay: the total stays what it is, and what is
+           left to pay now is shown under the balances that pay toward it. *@
+        @if (invoice.Tenders is { Count: > 0 })
+        {
+            <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
+                <span>@T["Total"]</span>
+                <span>@Format(invoice.GrandTotal)</span>
+            </div>
+
+            @foreach (var tender in invoice.Tenders)
+            {
+                <div class="d-flex justify-content-between text-success">
+                    <span>@tender.Description</span>
+                    <span>&minus;@Format(tender.Amount)</span>
+                </div>
+            }
+
+            <div class="d-flex justify-content-between fw-semibold border-top pt-2 mt-2">
+                <span>@T["Due now"]</span>
+                <span>@Format(invoice.AmountDue)</span>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
+                <span>@T["Due now"]</span>
+                <span>@Format(invoice.GrandTotal)</span>
+            </div>
+        }
     </div>
 </div>

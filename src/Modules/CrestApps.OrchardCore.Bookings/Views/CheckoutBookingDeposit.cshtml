@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Bookings
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CrestApps.OrchardCore.Bookings.Drivers.BookingDepositCheckoutViewModel
+
+@{
+    var due = Model.DueDate.ToDateTime(TimeOnly.MinValue);
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="form-label">@T["Pay a deposit"]</div>
+
+        @if (Model.IsApplied)
+        {
+            <div class="d-flex align-items-start gap-2">
+                <span class="flex-grow-1 small">
+                    <span class="text-success">@T["{0} is due on {1:D}", ProductPriceFormatter.Format(Model.Balance, Model.Currency), due]</span>
+                    <span class="text-body-secondary d-block">@T["The card you pay with now is kept and charged then. You can pay sooner from your account."]</span>
+                </span>
+                @* Taking it off is its own submit, so the step is shown again with the whole amount to pay. *@
+                <button type="submit"
+                        class="btn btn-link btn-sm p-0"
+                        name="@CheckoutConstants.FormActions.FieldName"
+                        value="@(CheckoutConstants.FormActions.RemoveTenderPrefix + BookingsConstants.BalanceTenderKey + ":" + Model.Reference)"
+                        formnovalidate>@T["Pay in full"]</button>
+            </div>
+        }
+        else
+        {
+            <p class="small mb-2">@T["Pay a {0}% deposit now, and the rest, {1}, on {2:D}, charged to the same card.", Model.DepositPercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture), ProductPriceFormatter.Format(Model.Balance, Model.Currency), due]</p>
+            <button type="submit"
+                    class="btn btn-outline-secondary btn-sm"
+                    name="@CheckoutConstants.FormActions.FieldName"
+                    value="@(CheckoutConstants.FormActions.ApplyTender + ":" + BookingsConstants.BalanceTenderKey)"
+                    formnovalidate>@T["Pay a deposit"]</button>
+        }
+    </div>
+</div>

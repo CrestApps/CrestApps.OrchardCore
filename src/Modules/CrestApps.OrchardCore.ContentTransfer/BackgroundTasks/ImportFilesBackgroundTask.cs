@@ -286,6 +286,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
         progressPart.Errors ??= [];
         progressPart.ErrorMessages ??= [];
+        progressPart.ErrorCategories ??= new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
 
         var isResuming = progressPart.CurrentRow > 0;
 
@@ -302,6 +303,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             progressPart.StalledRowAttempts = 0;
             progressPart.Errors.Clear();
             progressPart.ErrorMessages.Clear();
+            progressPart.ErrorCategories.Clear();
         }
 
         entry.Put(progressPart);
@@ -543,6 +545,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         session,
                         clock,
                         monitor,
+                        localizer,
                         token),
                     pacingOptions,
                     cancellationToken);
@@ -558,7 +561,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             // A row that stopped one run after another would otherwise hold the import at the same place forever.
             if (ShouldSkipStalledRow(progressPart, rowIndex))
             {
-                AddRowError(progressPart, rowIndex, localizer["Importing this row stopped responding {0} times, so it was skipped.", progressPart.StalledRowAttempts]);
+                AddRowError(
+                    progressPart,
+                    rowIndex,
+                    localizer["Importing this row stopped responding {0} times, so it was skipped.", progressPart.StalledRowAttempts],
+                    localizer["Stopped responding"]);
 
                 if (logger.IsEnabled(LogLevel.Warning))
                 {
@@ -638,6 +645,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         session,
                         clock,
                         monitor,
+                        localizer,
                         token),
                     pacingOptions,
                     cancellationToken);
@@ -678,6 +686,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 session,
                 clock,
                 monitor,
+                localizer,
                 cancellationToken);
 
             if (!lastBatchProcessed)
@@ -708,6 +717,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ISession session,
         IClock clock,
         ImportRunMonitor monitor,
+        IStringLocalizer localizer,
         CancellationToken cancellationToken)
     {
         if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
@@ -744,6 +754,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         contentManager,
                         contentImportManager,
                         progressPart,
+                        localizer,
                         isNew);
                 }
                 finally
@@ -769,6 +780,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     contentManager,
                     contentImportManager,
                     progressPart,
+                    localizer,
                     true);
             }
             finally
@@ -863,7 +875,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
             else if (!string.IsNullOrWhiteSpace(rowContext.SkipReason))
             {
-                AddRowError(progressPart, rowContext.RowIndex, rowContext.SkipReason);
+                AddRowError(progressPart, rowContext.RowIndex, rowContext.SkipReason, rowContext.SkipCategory);
             }
         }
 
@@ -903,6 +915,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IContentManager contentManager,
         IContentImportManager contentImportManager,
         ImportFileProcessStatsPart progressPart,
+        IStringLocalizer localizer,
         bool isNew)
     {
         try
@@ -923,7 +936,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (!validationResult.Succeeded)
             {
-                AddRowError(progressPart, rowIndex, FormatValidationErrors(validationResult));
+                AddRowError(progressPart, rowIndex, FormatValidationErrors(validationResult), localizer["Did not pass validation"]);
                 return;
             }
 
@@ -955,21 +968,40 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             progressPart.ImportedCount++;
 
-            progressPart.Errors.Remove(rowIndex);
-            progressPart.ErrorMessages.Remove(rowIndex);
+            RemoveRowError(progressPart, rowIndex);
         }
         catch (Exception ex)
         {
-            AddRowError(progressPart, rowIndex, ex.Message);
+            AddRowError(progressPart, rowIndex, ex.Message, localizer["Could not be imported"]);
         }
     }
 
-    internal static void AddRowError(ImportFileProcessStatsPart progressPart, int rowIndex, string errorMessage)
+    /// <summary>
+    /// Records a failed row. Every failed row keeps its <paramref name="category"/>, so the rows that failed for each
+    /// reason are counted however many fail, while its <paramref name="errorMessage"/> is kept for the first
+    /// <see cref="ImportFileProcessStatsPart.MaxStoredErrorMessages"/> failed rows only.
+    /// </summary>
+    internal static void AddRowError(ImportFileProcessStatsPart progressPart, int rowIndex, string errorMessage, string category = null)
     {
         progressPart.Errors ??= [];
         progressPart.ErrorMessages ??= [];
+        progressPart.ErrorCategories ??= new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
 
         progressPart.Errors.Add(rowIndex);
+
+        // A row read again after a resume may fail for another reason than the first time.
+        RemoveRowFromCategories(progressPart, rowIndex);
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            if (!progressPart.ErrorCategories.TryGetValue(category, out var rows))
+            {
+                rows = [];
+                progressPart.ErrorCategories[category] = rows;
+            }
+
+            rows.Add(rowIndex);
+        }
 
         if (progressPart.ErrorMessages.Count >= ImportFileProcessStatsPart.MaxStoredErrorMessages
             && !progressPart.ErrorMessages.ContainsKey(rowIndex))
@@ -980,6 +1012,40 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         progressPart.ErrorMessages[rowIndex] = string.IsNullOrWhiteSpace(errorMessage)
             ? "The row failed to import."
             : errorMessage;
+    }
+
+    /// <summary>
+    /// Forgets the error of a row that was imported after all.
+    /// </summary>
+    internal static void RemoveRowError(ImportFileProcessStatsPart progressPart, int rowIndex)
+    {
+        progressPart.Errors?.Remove(rowIndex);
+        progressPart.ErrorMessages?.Remove(rowIndex);
+        RemoveRowFromCategories(progressPart, rowIndex);
+    }
+
+    private static void RemoveRowFromCategories(ImportFileProcessStatsPart progressPart, int rowIndex)
+    {
+        if (progressPart.ErrorCategories == null)
+        {
+            return;
+        }
+
+        // A row is in one category at most.
+        foreach (var (category, rows) in progressPart.ErrorCategories)
+        {
+            if (!rows.Remove(rowIndex))
+            {
+                continue;
+            }
+
+            if (rows.Count == 0)
+            {
+                progressPart.ErrorCategories.Remove(category);
+            }
+
+            return;
+        }
     }
 
     private static string FormatValidationErrors(ContentValidateResult validationResult)

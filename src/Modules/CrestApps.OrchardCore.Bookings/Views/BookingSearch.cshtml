@@ -1,0 +1,52 @@
+@model BookingSearchViewModel
+
+@* The search for what has room on the dates a shopper picks: tours and events on those days, stays for those nights, and
+   times on the first day. *@
+
+<h1 class="h3 mb-3">@T["Find a date"]</h1>
+
+<form method="get" action="@Url.RouteUrl("BookingSearch")" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-4">
+                <label for="BookingFrom" class="form-label">@T["From"]</label>
+                <input id="BookingFrom" name="from" type="date" value="@Model.From" class="form-control" required />
+            </div>
+            <div class="col-6 col-md-4">
+                <label for="BookingTo" class="form-label">@T["To"]</label>
+                <input id="BookingTo" name="to" type="date" value="@Model.To" class="form-control" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="BookingPeople" class="form-label">@T["People"]</label>
+                <input id="BookingPeople" name="people" type="number" min="1" max="50" value="@Model.People" class="form-control" />
+            </div>
+            <div class="col-6 col-md-2">
+                <button type="submit" class="btn btn-primary w-100">@T["Search"]</button>
+            </div>
+        </div>
+        <span class="hint">@T["For a stay, From is check-in and To is check-out."]</span>
+    </div>
+</form>
+
+@if (Model.Searched)
+{
+    if (Model.Results.Count == 0)
+    {
+        <p class="text-body-secondary">@T["Nothing has room then. Try other dates."]</p>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var result in Model.Results)
+            {
+                <a href="@result.Url" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2">
+                    <span>
+                        <span class="fw-semibold d-block">@result.Title</span>
+                        <span class="small text-body-secondary">@result.FirstDateLabel</span>
+                    </span>
+                    <span class="badge text-bg-success">@T.Plural(result.Remaining, "1 left", "{0} left")</span>
+                </a>
+            }
+        </div>
+    }
+}

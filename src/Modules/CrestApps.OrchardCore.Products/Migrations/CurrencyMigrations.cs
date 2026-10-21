@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Products.Migrations;
 /// <summary>
 /// Seeds the managed currencies used by products and subscriptions.
 /// </summary>
-public sealed class CurrencyMigrations : DataMigration
+internal sealed class CurrencyMigrations : DataMigration
 {
     private readonly IRecipeMigrator _recipeMigrator;
 

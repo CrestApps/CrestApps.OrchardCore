@@ -4,46 +4,52 @@
     var unit = Model.WeightUnit == WeightUnit.Pound ? T["lb"] : T["kg"];
 }
 
-<div class="mb-3" asp-validation-class-for="Weight">
-    <label asp-for="Weight" class="form-label">@T["Weight ({0})", unit]</label>
-    <input asp-for="Weight" type="number" min="0" step="any" class="form-control w-auto" />
-    <span asp-validation-for="Weight"></span>
-    <span class="hint">@T["The weight of one unit, packed, for weight-based shipping rates. Leave it empty if it doesn't matter."]</span>
+<div class="ocat-limited-wrapper" asp-validation-class-for="Weight">
+    <label asp-for="Weight" class="ocat-label">@T["Weight ({0})", unit]</label>
+    <div class="ocat-limited">
+        <input asp-for="Weight" type="number" min="0" step="any" class="form-control" />
+        <span asp-validation-for="Weight"></span>
+        <span class="hint">@T["The weight of one unit, packed, for weight-based shipping rates. Leave it empty if it doesn't matter."]</span>
+    </div>
 </div>
 
 @if (Model.ShippingClasses.Count > 0 || !string.IsNullOrEmpty(Model.ShippingClass))
 {
-    <div class="mb-3">
-        <label asp-for="ShippingClass" class="form-label">@T["Shipping class"]</label>
-        <select asp-for="ShippingClass" class="form-select w-auto">
-            <option value="">@T["None"]</option>
-            @foreach (var shippingClass in Model.ShippingClasses)
-            {
-                <option value="@shippingClass" selected="@(string.Equals(shippingClass, Model.ShippingClass, StringComparison.OrdinalIgnoreCase))">@shippingClass</option>
-            }
-            @if (!string.IsNullOrEmpty(Model.ShippingClass) && !Model.ShippingClasses.Contains(Model.ShippingClass, StringComparer.OrdinalIgnoreCase))
-            {
-                <option value="@Model.ShippingClass" selected>@Model.ShippingClass</option>
-            }
-        </select>
-        <span class="hint">@T["A shipping method can charge extra for each unit in a class, such as Bulky. Classes are set under Settings > Commerce > Shipping."]</span>
+    <div class="ocat-limited-wrapper">
+        <label asp-for="ShippingClass" class="ocat-label">@T["Shipping class"]</label>
+        <div class="ocat-limited">
+            <select asp-for="ShippingClass" class="form-select">
+                <option value="">@T["None"]</option>
+                @foreach (var shippingClass in Model.ShippingClasses)
+                {
+                    <option value="@shippingClass" selected="@(string.Equals(shippingClass, Model.ShippingClass, StringComparison.OrdinalIgnoreCase))">@shippingClass</option>
+                }
+                @if (!string.IsNullOrEmpty(Model.ShippingClass) && !Model.ShippingClasses.Contains(Model.ShippingClass, StringComparer.OrdinalIgnoreCase))
+                {
+                    <option value="@Model.ShippingClass" selected>@Model.ShippingClass</option>
+                }
+            </select>
+            <span class="hint">@T["A shipping method can charge extra for each unit in a class, such as Bulky. Classes are set under Settings > Commerce > Shipping."]</span>
+        </div>
     </div>
 }
 
 @if (Model.Variants.Count > 0)
 {
-    <div class="mb-3">
-        <label class="form-label">@T["Variant weights ({0})", unit]</label>
-        <ul class="list-group">
-            @for (var i = 0; i < Model.Variants.Count; i++)
-            {
-                <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
-                    <label for="@Html.IdFor(m => m.Variants[i].Weight)" class="mb-0">@Model.Variants[i].Title</label>
-                    <input type="hidden" asp-for="Variants[i].VariantId" />
-                    <input asp-for="Variants[i].Weight" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@Model.Weight" />
-                </li>
-            }
-        </ul>
-        <span class="hint">@T["Leave a variant empty to use the product's weight. New variants appear here once the product is saved."]</span>
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Variant weights ({0})", unit]</span>
+        <div class="ocat-end">
+            <ul class="list-group">
+                @for (var i = 0; i < Model.Variants.Count; i++)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                        <label for="@Html.IdFor(m => m.Variants[i].Weight)" class="mb-0">@Model.Variants[i].Title</label>
+                        <input type="hidden" asp-for="Variants[i].VariantId" />
+                        <input asp-for="Variants[i].Weight" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@Model.Weight" />
+                    </li>
+                }
+            </ul>
+            <span class="hint">@T["Leave a variant empty to use the product's weight. New variants appear here once the product is saved."]</span>
+        </div>
     </div>
 }

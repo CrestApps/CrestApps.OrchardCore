@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Reviews.Models;
 using CrestApps.OrchardCore.Reviews.Services;
 using CrestApps.OrchardCore.Reviews.ViewModels;
@@ -95,7 +97,7 @@ public sealed class ReviewsAdminController : Controller
         {
             Source = reviews,
             Pager = (IShape)model.Pager,
-            ToolbarActions = await shapeFactory.CreateAsync("ReviewsAdminListFilters", Arguments.From(new { Options = options })),
+            ToolbarActions = await shapeFactory.CreateAdminListFiltersAsync("Reviews", "reviews-filter", new AdminListFilter("Options.Status", options.Statuses, S["Filter by status"], S["Status"])),
         };
 
         return View(model);

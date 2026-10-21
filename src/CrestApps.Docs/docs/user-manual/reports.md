@@ -6,6 +6,7 @@ description: Find a report, set its date range and filters, and export it to CSV
 technical_manual:
   - contact-center/report-catalog
   - contact-center/agents-queues-dialer
+  - modules/report-builder/index
   - modules/reports
   - omnichannel/crm
 ---
@@ -24,6 +25,8 @@ Reports show what happened in your contact center over a period you choose: call
 
 You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 
+To build your own reports with drag and drop, see [Report Builder](report-builder/index.md).
+
 ## Run a report
 
 1. Open **Reports** and pick a category, then a report.
@@ -41,6 +44,18 @@ How the filters work:
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows a notice naming that feature instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
 Reports cannot be scheduled or emailed yet; run and export them when you need them.
+
+## Email a report on a schedule
+
+With **Report Subscriptions** on, any report can be emailed every day, week or month, such as your sales every Monday morning.
+
+1. On **Reports > Subscriptions**, click **Add subscription**.
+2. Choose the **Report**, and when to **Send** it: every day for the day before, every week for the 7 days before, or every month for the month before.
+3. Choose the **Day of the week** or **Day of the month**, and the **Hour**, in your site's time zone.
+4. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** to get the report as a file too.
+5. Click **Save**, or **Save and send now** to get one straight away.
+
+The email shows the report's numbers and tables. If one doesn't go out, such as when your site's email isn't set up, the list shows why. Untick **On** to pause a subscription.
 
 ## Agent time over long periods
 

@@ -1,7 +1,7 @@
 @model InventoryIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="InventoryIndex" title="@T["Inventory"]" />
+    <breadcrumb name="Inventory" title="@T["Inventory"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="inventory-filter" class="no-multisubmit">

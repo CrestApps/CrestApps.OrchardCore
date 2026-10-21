@@ -13,9 +13,19 @@ public static class ShippingConstants
     public const string ZonesRecipeStep = "ShippingZones";
 
     /// <summary>
+    /// The member of the <see cref="ZonesRecipeStep"/> step that holds the zones.
+    /// </summary>
+    public const string ZonesRecipeStepEntries = "Zones";
+
+    /// <summary>
     /// The key of the checkout step that asks where and how an order ships.
     /// </summary>
     public const string CheckoutStepKey = "Shipping";
+
+    /// <summary>
+    /// The path, under the site's address, EasyPost posts tracking updates to.
+    /// </summary>
+    public const string EasyPostWebhookPath = "shipping/easypost/webhook";
 
     /// <summary>
     /// The YesSql collection shipments and their index live in.
@@ -27,6 +37,11 @@ public static class ShippingConstants
         public const string EasyPost = "CrestApps.OrchardCore.Shipping.EasyPost";
 
         public const string Shipping = "CrestApps.OrchardCore.Shipping";
+
+        /// <summary>
+        /// The shipping API under <c>api/commerce/v1</c>: the checkout's Shipping step and the store's shipments.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Shipping.Api";
     }
 
     public static class Parts

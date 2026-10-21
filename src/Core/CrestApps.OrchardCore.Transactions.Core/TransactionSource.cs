@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Transactions.Core;
 
@@ -24,12 +24,13 @@ public sealed class TransactionSource
     public string Name { get; }
 
     /// <summary>
-    /// Gets or sets the localized display name shown in the report and its source filter.
+    /// Gets or sets the display name shown in the report and its source filter, translated in the language of the
+    /// request that shows it.
     /// </summary>
-    public LocalizedString DisplayName { get; set; }
+    public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional localized description of the source.
+    /// Gets or sets the optional description of the source, translated in the language of the request that shows it.
     /// </summary>
-    public LocalizedString Description { get; set; }
+    public LocalizationSource Description { get; set; }
 }

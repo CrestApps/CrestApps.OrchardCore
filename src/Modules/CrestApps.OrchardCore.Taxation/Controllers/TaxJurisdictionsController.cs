@@ -26,10 +26,8 @@ namespace CrestApps.OrchardCore.Taxation.Controllers;
 public sealed class TaxJurisdictionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-    private const string _nameFieldName = "Name";
 
     private readonly INamedCatalogManager<TaxJurisdiction> _manager;
-    private readonly INamedCatalog<TaxJurisdiction> _catalog;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<TaxJurisdiction> _displayManager;
@@ -40,7 +38,6 @@ public sealed class TaxJurisdictionsController : Controller
 
     public TaxJurisdictionsController(
         INamedCatalogManager<TaxJurisdiction> manager,
-        INamedCatalog<TaxJurisdiction> catalog,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<TaxJurisdiction> displayManager,
@@ -49,7 +46,6 @@ public sealed class TaxJurisdictionsController : Controller
         IStringLocalizer<TaxJurisdictionsController> stringLocalizer)
     {
         _manager = manager;
-        _catalog = catalog;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
@@ -70,7 +66,7 @@ public sealed class TaxJurisdictionsController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -86,7 +82,6 @@ public sealed class TaxJurisdictionsController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxJurisdiction>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxJurisdiction> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
@@ -154,20 +149,10 @@ public sealed class TaxJurisdictionsController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.CreateAsync(model);
+            await _notifier.SuccessAsync(H["The tax jurisdiction has been created successfully."]);
 
-            if (existing != null)
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax jurisdiction with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _notifier.SuccessAsync(H["The tax jurisdiction has been created successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);
@@ -224,20 +209,10 @@ public sealed class TaxJurisdictionsController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.UpdateAsync(model);
+            await _notifier.SuccessAsync(H["The tax jurisdiction has been updated successfully."]);
 
-            if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax jurisdiction with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _notifier.SuccessAsync(H["The tax jurisdiction has been updated successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);

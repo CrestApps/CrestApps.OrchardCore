@@ -316,6 +316,7 @@ internal sealed class Program
         services.AddSingleton<IFeatureSchemaProvider>(new StubFeatureSchemaProvider());
         services.AddSingleton<IOptions<AIOptions>>(Options.Create(new AIOptions()));
         services.AddSingleton<IOptions<AIDataSourceSourceOptions>>(Options.Create(new AIDataSourceSourceOptions()));
+        services.AddSingleton<IOptions<AIDeploymentCapabilityOptions>>(Options.Create(new AIDeploymentCapabilityOptions()));
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
         services.AddSingleton(CreateRoleService());

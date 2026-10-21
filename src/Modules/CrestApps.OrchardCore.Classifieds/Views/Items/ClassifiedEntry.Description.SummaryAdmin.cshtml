@@ -1,0 +1,24 @@
+@model ShapeViewModel<ClassifiedEntry>
+@inject OrchardCore.Modules.IClock Clock
+
+@{
+    var part = Model.Value.Part;
+    var (css, label) = part.Status switch
+    {
+        ClassifiedStatus.Pending => ("text-bg-warning", T["Waiting for approval"]),
+        ClassifiedStatus.Approved => ("text-bg-success", T["Up until {0:d}", part.ExpiresUtc]),
+        ClassifiedStatus.Rejected => ("text-bg-danger", T["Rejected"]),
+        _ => ("text-bg-secondary", T["Expired"]),
+    };
+}
+<div class="admin-list-secondary">
+    <span class="badge @css">@label</span>
+    @if (part.FeaturedUntilUtc > Clock.UtcNow)
+    {
+        <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc]</span>
+    }
+    @if (!string.IsNullOrEmpty(part.Place))
+    {
+        <span>@part.Place</span>
+    }
+</div>

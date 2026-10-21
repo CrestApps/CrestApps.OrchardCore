@@ -22,6 +22,7 @@ import {
     normalizeDialPhase,
     normalizePresenceStatus,
     pendingPresenceLabel,
+    showsDialProgress,
 } from './shared/agent-presence.js';
 import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 
@@ -214,8 +215,8 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 return;
             }
 
-            // Read the same way on every agent screen (see shared/agent-presence.js): while the dialer is placing a call
-            // for the agent, what it is doing rather than "On a call".
+            // Read the same way on every agent screen (see shared/agent-presence.js): Reserved while the dialer is placing
+            // a call for the agent -- or what it is doing, when its profile shows that -- and "On a call" once connected.
             var current = state.presence || {};
             var status = normalizePresenceStatus(current.status) || 'Offline';
             var label = agentStatusLabel(current, state.pendingDial, config.presenceLabels);
@@ -314,7 +315,10 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
 
             // The first state always draws, so a workspace opened with nothing to do shows the empty card rather
             // than a blank one (see shared/workspace-panels.js).
-            if (!activeChanged(activeInteractionSignature(active, pendingDial && { interactionId: pendingDial.interactionId, phase: normalizeDialPhase(pendingDial) }))) {
+            // A dial whose steps are not shown reads the same at every step, so only showing them redraws it per step.
+            var shownPhase = pendingDial && (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : 'Waiting');
+
+            if (!activeChanged(activeInteractionSignature(active, pendingDial && { interactionId: pendingDial.interactionId, phase: shownPhase }))) {
                 return;
             }
 
@@ -401,12 +405,26 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 '</div>';
         }
 
-        // A call the dialer is placing for the agent, before they are on it: who is being called and what the dialer is
+        // A call the dialer is placing for the agent, before they are on it: that they are waiting for a connected call
+        // -- and, when the dialer profile shows its steps to the agent, who is being called and what the dialer is
         // doing. Nothing on it is the agent's to act on yet, so it has no actions; it becomes the call once they are
         // connected.
         function pendingDialHtml(pendingDial) {
             var phase = normalizeDialPhase(pendingDial);
             var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+
+            if (!showsDialProgress(pendingDial)) {
+                return '<div class="cc-active cc-active--pending is-waiting" data-cc-pending-dial="Waiting">' +
+                    '<div class="cc-active__headline">' +
+                        '<span class="cc-active__dir"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></span>' +
+                        '<div>' +
+                            '<div class="cc-active__customer">' + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + '</div>' +
+                            (pendingDial.queueName ? '<div class="cc-active__sub">' + escapeHtml(pendingDial.queueName) + '</div>' : '') +
+                        '</div>' +
+                    '</div>' +
+                    (hint ? '<div class="cc-active__pending-hint">' + escapeHtml(hint) + '</div>' : '') +
+                '</div>';
+            }
 
             return '<div class="cc-active cc-active--pending is-' + escapeHtml(phase.toLowerCase()) + '" data-cc-pending-dial="' + escapeHtml(phase) + '">' +
                 '<div class="cc-active__headline">' +
@@ -929,11 +947,11 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         window.setInterval(tick, 1000);
 
         // Backstop for a push that never arrived (the hub reconnecting at the wrong moment): while the agent is on a
-        // call, or the card shows one, re-read the state now and then. An idle agent costs nothing.
+        // call or held for one, or the card shows one, re-read the state now and then. An idle agent costs nothing.
         window.setInterval(function () {
             var status = state && state.presence && state.presence.status;
 
-            if (state && (state.activeInteraction || status === 'Busy')) {
+            if (state && (state.activeInteraction || state.pendingDial || status === 'Busy' || status === 'Reserved')) {
                 refresh();
             }
         }, 12000);

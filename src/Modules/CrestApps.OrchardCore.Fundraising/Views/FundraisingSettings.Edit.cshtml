@@ -1,0 +1,35 @@
+@model FundraisingSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="OrganizationName" class="ocat-label">@T["Organization"]</label>
+    <div class="ocat-end">
+        <input asp-for="OrganizationName" class="form-control" />
+        <span class="hint">@T["Who donations go to, as it reads on receipts. Leave it empty to use the site's name."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="TaxId" class="ocat-label">@T["Tax ID"]</label>
+    <div class="ocat-limited">
+        <input asp-for="TaxId" class="form-control" />
+        <span class="hint">@T["The organization's tax or charity registration number, printed on receipts."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ReceiptStatement" class="ocat-label">@T["Receipt statement"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="ReceiptStatement" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["What the receipt says about the gift, such as that nothing was given in return for it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EmailReceipts" type="checkbox" class="form-check-input" />
+            <label asp-for="EmailReceipts" class="form-check-label">@T["Email donors their receipts"]</label>
+        </div>
+        <span class="hint dashed">@T["Untick it to have donors find their receipts in their account only."]</span>
+    </div>
+</div>

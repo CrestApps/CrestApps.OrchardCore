@@ -21,6 +21,11 @@ public sealed class CouponIndex : CatalogItemIndex
     public bool IsEnabled { get; set; }
 
     /// <summary>
+    /// Whether the coupon applies by itself, without a code, so every checkout looks for it.
+    /// </summary>
+    public bool IsAutomatic { get; set; }
+
+    /// <summary>
     /// The UTC time the coupon stops being valid.
     /// </summary>
     public DateTime? EndsUtc { get; set; }
@@ -53,6 +58,7 @@ public sealed class CouponIndexProvider : IndexProvider<Coupon>
                 ItemId = coupon.ItemId,
                 NormalizedCode = coupon.Code?.ToUpperInvariant(),
                 IsEnabled = coupon.IsEnabled,
+                IsAutomatic = coupon.IsAutomatic,
                 EndsUtc = coupon.EndsUtc,
                 CreatedUtc = coupon.CreatedUtc,
             });

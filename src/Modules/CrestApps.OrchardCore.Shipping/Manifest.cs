@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Products.Core;
@@ -36,5 +37,17 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ShippingConstants.Features.Shipping,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ShippingConstants.Features.Api,
+    Name = "Shipping API",
+    Description = "Lets a headless storefront or app quote shipping and choose a rate or a pickup location at checkout, and staff ship orders, over the commerce JSON API. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        ShippingConstants.Features.Shipping,
+        CheckoutConstants.Features.Api,
     ]
 )]

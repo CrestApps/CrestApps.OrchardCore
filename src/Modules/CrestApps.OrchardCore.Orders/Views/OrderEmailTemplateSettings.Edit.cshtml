@@ -1,0 +1,53 @@
+@model CrestApps.OrchardCore.Orders.Drivers.OrderEmailTemplateSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-body-secondary">@T["Write the store's own emails about orders. In each, {{{{ Content }}}} is the email as the store would send it, {{{{ Order }}}} the order (such as {{{{ Order.OrderNumber }}}} and {{{{ Order.CustomerName }}}}), {{{{ Subject }}}} its subject and {{{{ StoreName }}}} the store's name. An email whose template can't render is sent as built."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Layout">
+    <label asp-for="Layout" class="ocat-label">@T["Layout"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Layout" class="form-control font-monospace" rows="6" placeholder="@T["<img src=&quot;...&quot; alt=&quot;Logo&quot;> {{{{ Content }}}} <p>Our address</p>"]"></textarea>
+        <span asp-validation-for="Layout" class="text-danger"></span>
+        <span class="hint">@T["Optional. HTML around every email about an order, such as your logo and address, with {{{{ Content }}}} where the email goes."]</span>
+    </div>
+</div>
+
+@for (var i = 0; i < Model.Templates.Count; i++)
+{
+    var template = Model.Templates[i];
+
+    <fieldset class="mb-4 border-top pt-3">
+        <legend class="h6">@(template.Title ?? template.Kind)</legend>
+        <input type="hidden" name="@Html.NameFor(m => m.Templates[i].Kind)" value="@template.Kind" />
+        <div class="ocat-wrapper" asp-validation-class-for="Templates[i].IsEnabled">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Templates[i].IsEnabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="Templates[i].IsEnabled" class="form-check-label">@T["Use my template"]</label>
+                </div>
+                <span class="hint dashed">@T["Off sends the email as built, with the layout around it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Templates[i].Subject">
+            <label asp-for="Templates[i].Subject" class="ocat-label">@T["Subject"]</label>
+            <div class="ocat-end">
+                <input asp-for="Templates[i].Subject" class="form-control" placeholder="@T["The email's own subject"]" />
+                <span asp-validation-for="Templates[i].Subject" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Templates[i].Body">
+            <label asp-for="Templates[i].Body" class="ocat-label">@T["Body"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Templates[i].Body" class="form-control font-monospace" rows="5"></textarea>
+                <span asp-validation-for="Templates[i].Body" class="text-danger"></span>
+                @if (!string.IsNullOrEmpty(template.Values))
+                {
+                    <span class="hint">@T["Also:"] @template.Values</span>
+                }
+            </div>
+        </div>
+    </fieldset>
+}

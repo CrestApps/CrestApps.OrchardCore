@@ -30,7 +30,8 @@ public sealed class CartService : ICartService
         "cart_owner",
         "CrestApps.OrchardCore.Carts.GuestOwnership.v1",
         TimeSpan.FromDays(90),
-        MaxSessions: 1);
+        MaxSessions: 1,
+        HeaderName: "X-Cart-Token");
 
     internal const string GuestTokenKey = "cart";
 
@@ -45,6 +46,10 @@ public sealed class CartService : ICartService
     private readonly IClock _clock;
     private readonly CartOptions _options;
     private readonly ILogger _logger;
+    private readonly IShopperCurrency _shopperCurrency;
+    private readonly IEnumerable<IProductSaleRestriction> _restrictions = [];
+    private readonly IEnumerable<ICartLineHandler> _lineHandlers = [];
+    private IReadOnlyList<ICartLineHandler> _handlers;
 
     internal readonly IStringLocalizer S;
 
@@ -76,6 +81,52 @@ public sealed class CartService : ICartService
         S = stringLocalizer;
     }
 
+    public CartService(
+        ICartStore store,
+        ISession session,
+        GuestSessionTokenManager tokens,
+        IHttpContextAccessor httpContextAccessor,
+        IContentManager contentManager,
+        IProductSnapshotResolver snapshotResolver,
+        IPriceResolver priceResolver,
+        IEnumerable<IProductAvailabilityProvider> availability,
+        IClock clock,
+        IOptions<CartOptions> options,
+        ILogger<CartService> logger,
+        IStringLocalizer<CartService> stringLocalizer,
+        IShopperCurrency shopperCurrency,
+        IEnumerable<IProductSaleRestriction> restrictions)
+        : this(store, session, tokens, httpContextAccessor, contentManager, snapshotResolver, priceResolver, availability, clock, options, logger, stringLocalizer)
+    {
+        _shopperCurrency = shopperCurrency;
+        _restrictions = restrictions ?? [];
+    }
+
+    public CartService(
+        ICartStore store,
+        ISession session,
+        GuestSessionTokenManager tokens,
+        IHttpContextAccessor httpContextAccessor,
+        IContentManager contentManager,
+        IProductSnapshotResolver snapshotResolver,
+        IPriceResolver priceResolver,
+        IEnumerable<IProductAvailabilityProvider> availability,
+        IClock clock,
+        IOptions<CartOptions> options,
+        ILogger<CartService> logger,
+        IStringLocalizer<CartService> stringLocalizer,
+        IShopperCurrency shopperCurrency,
+        IEnumerable<IProductSaleRestriction> restrictions,
+        IEnumerable<ICartLineHandler> lineHandlers)
+        : this(store, session, tokens, httpContextAccessor, contentManager, snapshotResolver, priceResolver, availability, clock, options, logger, stringLocalizer, shopperCurrency, restrictions)
+    {
+        _lineHandlers = lineHandlers ?? [];
+    }
+
+    // The registered handlers and the product's add-ons, which always run.
+    private IReadOnlyList<ICartLineHandler> Handlers
+        => _handlers ??= [.. _lineHandlers.Append(new ProductAddOnCartLineHandler(S)).OrderBy(handler => handler.Order)];
+
     public async Task<Cart> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
@@ -94,7 +145,10 @@ public sealed class CartService : ICartService
     public Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, CancellationToken cancellationToken = default)
         => AddAsync(contentItemId, priceId, variantId, quantity, addOns: null, cancellationToken);
 
-    public async Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, IReadOnlyDictionary<string, string> addOns, CancellationToken cancellationToken = default)
+    public Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, IReadOnlyDictionary<string, string> addOns, CancellationToken cancellationToken = default)
+        => AddAsync(contentItemId, priceId, variantId, quantity, addOns, details: null, cancellationToken);
+
+    public async Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, IReadOnlyDictionary<string, string> addOns, IReadOnlyDictionary<string, string> details, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(contentItemId))
         {
@@ -104,7 +158,9 @@ public sealed class CartService : ICartService
         quantity = Math.Max(1, quantity);
 
         var cart = await GetCurrentAsync(cancellationToken);
-        var currency = cart?.Lines.Count > 0 ? cart.Currency : null;
+        var currency = await GetCurrencyAsync(cart, cancellationToken);
+
+        await RebaseCurrencyAsync(cart, currency, cancellationToken);
 
         var resolved = await ResolveAsync(contentItemId, priceId, variantId, quantity, currency, cart?.ItemId, cancellationToken);
 
@@ -115,21 +171,37 @@ public sealed class CartService : ICartService
 
         variantId = resolved.Product.VariantId;
 
-        // Only the product's own add-ons are kept, and the required ones have to be there.
-        var chosen = ProductAddOns.Normalize(resolved.ProductPart, addOns);
-
-        if (ProductAddOns.FindMissing(resolved.ProductPart, chosen) is { } missing)
+        // The handlers keep what they deal with, checked: only the product's own add-ons, a date that is offered.
+        var prepare = new CartLinePrepareContext
         {
-            return CartResult.Failure(S["Fill in {0} to add {1} to your cart.", missing.Label, resolved.Title], cart);
+            ContentItem = resolved.ContentItem,
+            ProductPart = resolved.ProductPart,
+            Title = resolved.Title,
+            VariantId = variantId,
+            Quantity = quantity,
+            PostedAddOns = addOns ?? new Dictionary<string, string>(),
+            PostedDetails = details ?? new Dictionary<string, string>(),
+        };
+
+        foreach (var handler in Handlers)
+        {
+            await handler.PrepareAsync(prepare, cancellationToken);
+
+            if (prepare.Problem is not null)
+            {
+                return CartResult.Failure(prepare.Problem, cart);
+            }
         }
 
-        var surcharge = ProductAddOns.GetSurcharge(resolved.ProductPart, chosen);
+        var chosen = prepare.AddOns is { Count: > 0 } ? prepare.AddOns : null;
+        var kept = prepare.Details.Count > 0 ? new Dictionary<string, string>(prepare.Details, StringComparer.Ordinal) : null;
 
         var existing = cart?.Lines.FirstOrDefault(line =>
             line.ContentItemId == contentItemId &&
             string.Equals(line.PriceId, resolved.Price.PriceId, StringComparison.Ordinal) &&
             string.Equals(line.VariantId, variantId, StringComparison.Ordinal) &&
-            ProductAddOns.AreSame(line.AddOns, chosen));
+            ProductAddOns.AreSame(line.AddOns, chosen) &&
+            ProductAddOns.AreSame(line.Details, kept));
 
         var total = (existing?.Quantity ?? 0) + quantity;
 
@@ -164,28 +236,40 @@ public sealed class CartService : ICartService
             }
         }
 
+        var line = existing ?? new CartLine
+        {
+            LineId = UniqueId.GenerateId(),
+            ContentItemId = contentItemId,
+            PriceId = resolved.Price.PriceId,
+            VariantId = variantId,
+            Quantity = quantity,
+            AddedUtc = _clock.UtcNow,
+            AddOns = chosen,
+            Details = kept,
+        };
+
+        var evaluated = await EvaluateAsync(resolved, line, total, cart?.ItemId, cancellationToken);
+
+        if (evaluated.Problem is not null)
+        {
+            return CartResult.Failure(evaluated.Problem, cart);
+        }
+
+        if (total > evaluated.MaxQuantity)
+        {
+            return CartResult.Failure(S["Only {0} of {1} left.", evaluated.MaxQuantity, resolved.Title], cart);
+        }
+
         var isNew = cart is null;
         cart ??= CreateCart();
 
+        // The buyer just saw and accepted the price for the new quantity, such as a volume discount reached.
+        line.Quantity = total;
+        line.AddedUnitPrice = evaluated.UnitPrice;
+
         if (existing is null)
         {
-            cart.Lines.Add(new CartLine
-            {
-                LineId = UniqueId.GenerateId(),
-                ContentItemId = contentItemId,
-                PriceId = resolved.Price.PriceId,
-                VariantId = variantId,
-                Quantity = quantity,
-                AddedUnitPrice = resolved.Price.UnitPrice + surcharge,
-                AddedUtc = _clock.UtcNow,
-                AddOns = chosen,
-            });
-        }
-        else
-        {
-            // The buyer just saw and accepted the price for the new quantity, such as a volume discount reached.
-            existing.Quantity = total;
-            existing.AddedUnitPrice = resolved.Price.UnitPrice + surcharge;
+            cart.Lines.Add(line);
         }
 
         cart.Currency = resolved.Price.Currency;
@@ -213,7 +297,11 @@ public sealed class CartService : ICartService
             return CartResult.Failure(S["That item is no longer in your cart."], cart);
         }
 
-        var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, quantity, cart.Currency, cart.ItemId, cancellationToken);
+        var currency = await GetCurrencyAsync(cart, cancellationToken);
+
+        await RebaseCurrencyAsync(cart, currency, cancellationToken);
+
+        var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, quantity, currency, cart.ItemId, cancellationToken);
 
         if (resolved.Problem is not null)
         {
@@ -232,12 +320,25 @@ public sealed class CartService : ICartService
             return CartResult.Failure(rule, cart);
         }
 
+        var evaluated = await EvaluateAsync(resolved, line, quantity, cart.ItemId, cancellationToken);
+
+        if (evaluated.Problem is not null)
+        {
+            return CartResult.Failure(evaluated.Problem, cart);
+        }
+
+        if (quantity > evaluated.MaxQuantity)
+        {
+            return CartResult.Failure(S["Only {0} of {1} left.", evaluated.MaxQuantity, resolved.Title], cart);
+        }
+
         line.Quantity = quantity;
 
         // A new quantity can reach or leave a volume discount: the price it gives is the one the buyer now expects.
         line.AddedUnitPrice = resolved.Price is null
             ? line.AddedUnitPrice
-            : resolved.Price.UnitPrice + ProductAddOns.GetSurcharge(resolved.ProductPart, line.AddOns);
+            : evaluated.UnitPrice;
+        cart.Currency = resolved.Price?.Currency ?? cart.Currency;
 
         if (!await SaveAsync(cart, isNew: false, cancellationToken))
         {
@@ -329,7 +430,8 @@ public sealed class CartService : ICartService
                     candidate.ContentItemId == guestLine.ContentItemId &&
                     string.Equals(candidate.PriceId, guestLine.PriceId, StringComparison.Ordinal) &&
                     string.Equals(candidate.VariantId, guestLine.VariantId, StringComparison.Ordinal) &&
-                    ProductAddOns.AreSame(candidate.AddOns, guestLine.AddOns));
+                    ProductAddOns.AreSame(candidate.AddOns, guestLine.AddOns) &&
+                    ProductAddOns.AreSame(candidate.Details, guestLine.Details));
 
                 if (line is not null)
                 {
@@ -362,6 +464,16 @@ public sealed class CartService : ICartService
 
         var lines = new List<CartLinePricing>();
 
+        // A shopper who changes currency sees their cart in the new one; what it was added at was in the old one, so
+        // it isn't a price change.
+        var currency = await GetCurrencyAsync(cart, cancellationToken);
+        var currencyChanged = cart.Lines.Count > 0 && !string.Equals(currency, cart.Currency, StringComparison.OrdinalIgnoreCase);
+
+        if (currencyChanged)
+        {
+            cart.Currency = currency;
+        }
+
         foreach (var line in cart.Lines)
         {
             var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, cart.Currency, cart.ItemId, cancellationToken);
@@ -376,10 +488,19 @@ public sealed class CartService : ICartService
 
             problem ??= QuantityProblem(resolved, line.Quantity);
 
-            // What the line's add-ons add to each unit, at today's add-on prices.
-            var unitPrice = resolved.Price is null
-                ? line.AddedUnitPrice
-                : resolved.Price.UnitPrice + ProductAddOns.GetSurcharge(resolved.ProductPart, line.AddOns);
+            // What the line's details and add-ons make each unit cost, at today's prices.
+            var evaluated = resolved.Price is null ? null : await EvaluateAsync(resolved, line, line.Quantity, cart.ItemId, cancellationToken);
+
+            problem ??= evaluated?.Problem;
+
+            if (problem is null && evaluated is not null && line.Quantity > evaluated.MaxQuantity)
+            {
+                problem = evaluated.MaxQuantity <= 0
+                    ? S["{0} is sold out.", resolved.Title]
+                    : S["Only {0} left. Lower the quantity to check out.", evaluated.MaxQuantity];
+            }
+
+            var unitPrice = evaluated?.UnitPrice ?? line.AddedUnitPrice;
 
             lines.Add(new CartLinePricing
             {
@@ -390,10 +511,12 @@ public sealed class CartService : ICartService
                 Title = resolved.Title,
                 UnitPrice = unitPrice,
                 LineTotal = unitPrice * line.Quantity,
-                MaxQuantity = resolved.MaxQuantity,
+                MaxQuantity = evaluated?.MaxQuantity ?? resolved.MaxQuantity,
                 ShipsFromUtc = resolved.ReleaseDateUtc,
-                PriceChanged = resolved.Price is not null && unitPrice != line.AddedUnitPrice,
-                AddOns = ProductAddOns.Describe(resolved.ProductPart, line.AddOns),
+                PriceChanged = !currencyChanged && resolved.Price is not null && unitPrice != line.AddedUnitPrice,
+                AddOns = evaluated is null ? ProductAddOns.Describe(resolved.ProductPart, line.AddOns) : evaluated.AddOns,
+                Details = evaluated?.Details ?? [],
+                ExcludeFromDiscounts = evaluated?.ExcludeFromDiscounts == true,
                 Problem = problem,
             });
         }
@@ -422,6 +545,12 @@ public sealed class CartService : ICartService
             return new ResolvedLine(S["{0} is bought on its own, not through the cart.", title]) { ContentItem = contentItem, Title = title };
         }
 
+        // One the shopper can't buy, such as outside the markets it's sold in.
+        if (await _restrictions.GetRestrictionAsync(contentItem, cancellationToken) is { } restriction)
+        {
+            return new ResolvedLine(new LocalizedString(restriction, $"{title}: {restriction}")) { ContentItem = contentItem, Title = title };
+        }
+
         var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity }, cancellationToken);
 
         if (product is null)
@@ -439,7 +568,13 @@ public sealed class CartService : ICartService
 
         title = string.IsNullOrEmpty(product.Title) ? title : product.Title;
 
-        var price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity }, cancellationToken);
+        var price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity, Currency = currency }, cancellationToken);
+
+        // One that can't be priced in the cart's currency is told so, when it can be bought in its own.
+        if (price is null && !string.IsNullOrEmpty(currency))
+        {
+            price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity }, cancellationToken);
+        }
 
         if (price is null)
         {
@@ -505,6 +640,68 @@ public sealed class CartService : ICartService
         }
 
         return resolved;
+    }
+
+    // The currency the cart is priced in: the shopper's, or else the one its lines were added in.
+    private async Task<string> GetCurrencyAsync(Cart cart, CancellationToken cancellationToken)
+        => (_shopperCurrency is null ? null : await _shopperCurrency.GetCurrencyAsync(cancellationToken)) ??
+            (cart?.Lines.Count > 0 ? cart.Currency : null);
+
+    // A cart moving to another currency, because the shopper changed market, keeps what its lines now cost there as
+    // what they were added at, so none reads as a price change.
+    private async Task RebaseCurrencyAsync(Cart cart, string currency, CancellationToken cancellationToken)
+    {
+        if (cart is not { Lines.Count: > 0 } || string.IsNullOrEmpty(currency) || string.Equals(cart.Currency, currency, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var pricing = await PriceAsync(cart, cancellationToken);
+
+        foreach (var line in pricing.Lines.Where(line => line.Price is not null))
+        {
+            line.Line.AddedUnitPrice = line.UnitPrice;
+        }
+    }
+
+    // Prices a line through the handlers: its details and add-ons, from the product's price for the quantity.
+    private async Task<CartLineEvaluateContext> EvaluateAsync(ResolvedLine resolved, CartLine line, int quantity, string cartId, CancellationToken cancellationToken)
+    {
+        var context = new CartLineEvaluateContext((amount, token) => ConvertProductAmountAsync(resolved, amount, token))
+        {
+            Line = line,
+            ContentItem = resolved.ContentItem,
+            ProductPart = resolved.ProductPart,
+            Product = resolved.Product,
+            Price = resolved.Price,
+            Title = resolved.Title,
+            CartId = cartId,
+            Quantity = quantity,
+            UnitPrice = resolved.Price?.UnitPrice ?? 0m,
+            MaxQuantity = resolved.MaxQuantity,
+        };
+
+        foreach (var handler in Handlers)
+        {
+            await handler.EvaluateAsync(context, cancellationToken);
+        }
+
+        return context;
+    }
+
+    // An amount in the product's own currency, such as an add-on's price, in the currency the line is priced in.
+    private async Task<decimal> ConvertProductAmountAsync(ResolvedLine resolved, decimal amount, CancellationToken cancellationToken)
+    {
+        if (amount == 0m ||
+            _shopperCurrency is null ||
+            resolved.Price is null ||
+            string.IsNullOrEmpty(resolved.Product?.Currency) ||
+            string.Equals(resolved.Product.Currency, resolved.Price.Currency, StringComparison.OrdinalIgnoreCase))
+        {
+            return amount;
+        }
+
+        return await _shopperCurrency.ConvertAsync(amount, resolved.Product.Currency, resolved.Price.Currency, isPrice: false, cancellationToken) ?? amount;
     }
 
     private LocalizedString QuantityProblem(ResolvedLine resolved, int quantity)

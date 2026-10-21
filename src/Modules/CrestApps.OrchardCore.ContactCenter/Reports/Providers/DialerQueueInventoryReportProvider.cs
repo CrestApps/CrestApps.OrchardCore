@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
+using OrchardCore.Localization;
 using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch;
@@ -10,6 +12,7 @@ using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -21,7 +24,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// It describes the present, whatever period is chosen: a queue holds what it holds now. The records are classified by
 /// <see cref="IDialerQueueInventoryService"/>, which the campaign summary uses too, so the two reports agree.
 /// </remarks>
-public sealed class DialerQueueInventoryReportProvider : ContactCenterReportBase
+public sealed class DialerQueueInventoryReportProvider : ContactCenterReportBase, IReport
 {
     private const string FlagColor = "#B42318";
 
@@ -57,16 +60,19 @@ public sealed class DialerQueueInventoryReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-dialer-queue-inventory";
+    public static string Name => "contact-center-dialer-queue-inventory";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Dialer queue inventory"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<DialerQueueInventoryReportProvider>("Dialer queue inventory");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["What each campaign queue holds right now, by the dialer profile its items are stamped with, and why the records that are not being dialed are held back."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<DialerQueueInventoryReportProvider>("What each campaign queue holds right now, by the dialer profile its items are stamped with, and why the records that are not being dialed are held back.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.CrmCampaigns;
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

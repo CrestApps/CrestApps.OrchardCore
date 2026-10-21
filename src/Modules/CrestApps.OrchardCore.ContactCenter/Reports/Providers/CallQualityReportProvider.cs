@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -8,6 +9,8 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -22,7 +25,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// customer on a poor line says nothing about the agent, and an agent on a poor network says nothing about the
 /// customer.
 /// </remarks>
-public sealed class CallQualityReportProvider : ContactCenterReportBase
+public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// The most poor calls listed one by one.
@@ -65,13 +68,19 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-call-quality";
+    public static string Name => "contact-center-call-quality";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Call quality"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CallQualityReportProvider>("Call quality");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["How calls rated, the agents and network paths poor calls cluster on, their likely cause, and each poor call's measurements."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CallQualityReportProvider>("How calls rated, the agents and network paths poor calls cluster on, their likely cause, and each poor call's measurements.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Operations;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

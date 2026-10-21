@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Reports;
 
@@ -19,11 +20,13 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IReportManager, ReportManager>()
             .AddScoped<IReportExportManager, ReportExportManager>()
-            .AddScoped<ReportDisplayValueResolver>()
-            .AddScoped<IReportExportFormat, CsvReportExportFormat>();
+            .AddScoped<ReportDisplayValueResolver>();
+
+        services.AddReportExportFormat<CsvReportExportFormat>();
 
         services.AddDisplayDriver<ReportFilter, ReportDateRangeFilterDisplayDriver>();
 
         services.AddNavigationProvider<ReportsAdminMenu>();
+        services.AddResourceConfiguration<ReportsResourceConfiguration>();
     }
 }

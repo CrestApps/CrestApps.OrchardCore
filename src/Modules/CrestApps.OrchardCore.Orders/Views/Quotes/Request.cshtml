@@ -1,0 +1,11 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="QuoteRequest" title="@T["Request a quote"]">
+        <breadcrumb-item id="Cart" url="@Url.RouteUrl("Cart")">@T["Cart"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="container my-4" style="max-width: 40rem;">
+    @await DisplayAsync(Model)
+</div>

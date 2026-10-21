@@ -19,7 +19,7 @@ public sealed class UserPickerFieldAttributeValueProvider : IProductAttributeVal
     {
         var ids = FieldValueReader.GetStrings(context.Value, "UserIds").ToArray();
 
-        // The field keeps the user names beside the identifiers; an older value without them shows the identifier.
+        // The field keeps the user names beside the identifiers; a value saved without them, such as an imported one, shows the identifier.
         var names = FieldValueReader.GetStrings(context.Value, "UserNames").ToArray();
 
         IEnumerable<ProductAttributeValue> values = ids

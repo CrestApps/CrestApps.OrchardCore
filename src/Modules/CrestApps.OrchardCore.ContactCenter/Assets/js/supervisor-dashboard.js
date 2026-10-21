@@ -10,6 +10,7 @@ import {
     filterSupervisorAgents,
     normalizeAgentBoardFilters,
 } from './shared/agent-board-filters.js';
+import { presenceLabel } from './shared/agent-presence.js';
 import { supervisorPhoneCallSummary, supervisorStaleWorkSummary } from './shared/supervisor-actions.js';
 import { createSupervisorInterventions } from './supervisor-interventions.js';
 
@@ -349,7 +350,9 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
                 // An agent on a phone call of their own says so, whatever their presence: what they dialed, and for how long.
                 var phoneCall = supervisorPhoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings);
-                var detail = phoneCall || agent.presenceReason || status;
+                // Otherwise their state, named as the agent's own screens name it ("On a call", "Wrap-up"), or the
+                // reason they gave for a not-ready one.
+                var detail = phoneCall || presenceLabel({ status: status, reason: agent.presenceReason }, config.presenceLabels);
 
                 // Listen / Whisper / Barge, Stop and Take over under the name, and the More menu's kebab at the far right
                 // of the name row (see supervisor-interventions.js).

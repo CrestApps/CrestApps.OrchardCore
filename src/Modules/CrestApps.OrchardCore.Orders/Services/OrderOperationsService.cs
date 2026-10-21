@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Services;
 
@@ -23,10 +24,19 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// </remarks>
 public sealed class OrderOperationsService
 {
+    private const string StoreCreditRefundPrefix = "store-credit:";
+
     private readonly IOrderStore _orderStore;
     private readonly IOrderService _orderService;
     private readonly OrderOperationScope _scope;
     private readonly OrderConfirmationSender _confirmationSender;
+    private readonly ICheckoutEngine _checkoutEngine;
+    private readonly ICheckoutTenderLedger _tenderLedger;
+    private readonly ICheckoutRefundService _refundService;
+    private readonly IPaymentAttemptStore _attemptStore;
+    private readonly IPaymentRefundStore _refundStore;
+    private readonly ICheckoutPaymentProviderResolver _paymentProviders;
+    private readonly IClock _clock;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
@@ -37,6 +47,13 @@ public sealed class OrderOperationsService
         IOrderService orderService,
         OrderOperationScope scope,
         OrderConfirmationSender confirmationSender,
+        ICheckoutEngine checkoutEngine,
+        ICheckoutTenderLedger tenderLedger,
+        ICheckoutRefundService refundService,
+        IPaymentAttemptStore attemptStore,
+        IPaymentRefundStore refundStore,
+        ICheckoutPaymentProviderResolver paymentProviders,
+        IClock clock,
         IServiceProvider serviceProvider,
         ILogger<OrderOperationsService> logger,
         IStringLocalizer<OrderOperationsService> stringLocalizer)
@@ -45,6 +62,13 @@ public sealed class OrderOperationsService
         _orderService = orderService;
         _scope = scope;
         _confirmationSender = confirmationSender;
+        _checkoutEngine = checkoutEngine;
+        _tenderLedger = tenderLedger;
+        _refundService = refundService;
+        _attemptStore = attemptStore;
+        _refundStore = refundStore;
+        _paymentProviders = paymentProviders;
+        _clock = clock;
         _serviceProvider = serviceProvider;
         _logger = logger;
         S = stringLocalizer;
@@ -77,6 +101,12 @@ public sealed class OrderOperationsService
             money.Refundable += remaining;
         }
 
+        // What a gift card or store credit paid can be put back on it.
+        if (!string.IsNullOrEmpty(order.CheckoutSessionId))
+        {
+            money.Refundable += (await _tenderLedger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken)).Sum(hold => hold.Amount - hold.ReturnedAmount);
+        }
+
         foreach (var transaction in await GetTransactionsAsync(order, cancellationToken))
         {
             money.Refundable += Math.Max(0m, transaction.AmountPaid - transaction.AmountRefunded);
@@ -87,7 +117,12 @@ public sealed class OrderOperationsService
             }
         }
 
-        money.Refundable = Money.Round(money.Refundable, order.Currency);
+        // What was given back as store credit came out of what's refundable, though no payment was refunded.
+        money.Refundable -= (order.Refunds ?? []).Where(refund => refund.RefundId?.StartsWith(StoreCreditRefundPrefix, StringComparison.Ordinal) == true).Sum(refund => refund.Amount);
+        money.Refundable = Money.Round(Math.Max(0m, money.Refundable), order.Currency);
+        money.CanRefundAsStoreCredit = money.Refundable > 0m &&
+            _serviceProvider.GetService<IOrderStoreCreditRefunder>() is { } refunder &&
+            await refunder.CanRefundAsync(order, cancellationToken);
         money.Outstanding = Money.Round(money.Outstanding, order.Currency);
 
         return money;
@@ -98,7 +133,14 @@ public sealed class OrderOperationsService
     /// payment first. With <paramref name="restock"/>, what the order sold goes back into stock once everything is
     /// refunded.
     /// </summary>
-    public async Task<OrderOperationResult> RefundAsync(Order order, decimal? amount, string reason, bool restock, string actorName, CancellationToken cancellationToken = default)
+    public Task<OrderOperationResult> RefundAsync(Order order, decimal? amount, string reason, bool restock, string actorName, CancellationToken cancellationToken = default)
+        => RefundAsync(order, amount, reason, restock, actorName, asStoreCredit: false, cancellationToken);
+
+    /// <summary>
+    /// Gives back <paramref name="amount"/> of what was paid for the order, or everything still refundable: newest
+    /// payment first, or, with <paramref name="asStoreCredit"/>, as store credit for the buyer to spend later.
+    /// </summary>
+    public async Task<OrderOperationResult> RefundAsync(Order order, decimal? amount, string reason, bool restock, string actorName, bool asStoreCredit, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(order);
 
@@ -132,8 +174,44 @@ public sealed class OrderOperationsService
         _scope.Restock = restock;
         reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
+        if (asStoreCredit)
+        {
+            if (_serviceProvider.GetService<IOrderStoreCreditRefunder>() is not { } refunder || !await refunder.RefundAsync(order, left, reason, actorName, cancellationToken))
+            {
+                result.Errors.Add(S["The refund couldn't be given as store credit. The buyer needs an account, and their credit may be in use at a checkout right now."]);
+
+                return result;
+            }
+
+            // Recorded as one of the order's refunds, so what was refunded adds up to its total.
+            await _orderService.RecordRefundAsync(order, new OrderRefund
+            {
+                RefundId = StoreCreditRefundPrefix + global::OrchardCore.IdGenerator.GenerateId(),
+                Amount = left,
+                Currency = order.Currency,
+                Reason = reason,
+                CreatedUtc = _clock.UtcNow,
+            }, restock, cancellationToken);
+
+            await _orderService.AddNoteAsync(
+                order,
+                reason is null
+                    ? S["Gave {0} back as store credit.", ProductPriceFormatter.Format(left, order.Currency)]
+                    : S["Gave {0} back as store credit: {1}", ProductPriceFormatter.Format(left, order.Currency), reason],
+                OrderNoteKind.Event,
+                actorName,
+                cancellationToken);
+
+            result.Refunded = left;
+
+            return result;
+        }
+
         left = await RefundPaymentsAsync(order, left, reason, result, cancellationToken);
         left = await RefundTransactionsAsync(order, left, reason, result, cancellationToken);
+
+        // The card is refunded first, up to what it paid; what a gift card or store credit paid goes back on it last.
+        left = await RefundTendersAsync(order, left, reason, cancellationToken);
 
         result.Refunded = Money.Round((amount ?? money.Refundable) - left, order.Currency);
 
@@ -208,9 +286,9 @@ public sealed class OrderOperationsService
 
         // An unpaid order's checkout is let go too, so what it holds, such as a promotion code's use, goes back. The
         // order is canceled first, so the checkout's own cancellation finds nothing left to do to it.
-        if (!wasPaid && !string.IsNullOrEmpty(sessionId) && _serviceProvider.GetService<ICheckoutEngine>() is { } engine)
+        if (!wasPaid && !string.IsNullOrEmpty(sessionId))
         {
-            await engine.CancelAsync(sessionId, S["The store canceled the order."], cancellationToken);
+            await _checkoutEngine.CancelAsync(sessionId, S["The store canceled the order."], cancellationToken);
         }
 
         await _orderService.AddNoteAsync(
@@ -242,12 +320,10 @@ public sealed class OrderOperationsService
 
     private async Task<decimal> RefundPaymentsAsync(Order order, decimal left, string reason, OrderOperationResult result, CancellationToken cancellationToken)
     {
-        if (left <= 0m || _serviceProvider.GetService<ICheckoutRefundService>() is not { } refundService)
+        if (left <= 0m)
         {
             return left;
         }
-
-        var refundStore = _serviceProvider.GetRequiredService<IPaymentRefundStore>();
 
         foreach (var (attempt, remaining) in await GetPaymentsAsync(order, cancellationToken))
         {
@@ -256,7 +332,7 @@ public sealed class OrderOperationsService
                 break;
             }
 
-            var refunds = await refundStore.GetByOriginalTransactionAsync(attempt.TransactionId, cancellationToken);
+            var refunds = await _refundStore.GetByOriginalTransactionAsync(attempt.TransactionId, cancellationToken);
 
             if (refunds.Any(existing => existing.Status == RefundStatus.PendingManualReview))
             {
@@ -270,7 +346,7 @@ public sealed class OrderOperationsService
 
             try
             {
-                refund = await refundService.RequestRefundAsync(new RequestPaymentRefundContext
+                refund = await _refundService.RequestRefundAsync(new RequestPaymentRefundContext
                 {
                     SessionId = attempt.SessionId,
                     OriginalTransactionId = attempt.TransactionId,
@@ -312,6 +388,41 @@ public sealed class OrderOperationsService
         return left;
     }
 
+    private async Task<decimal> RefundTendersAsync(Order order, decimal left, string reason, CancellationToken cancellationToken)
+    {
+        if (left <= 0m || string.IsNullOrEmpty(order.CheckoutSessionId))
+        {
+            return left;
+        }
+
+        var balances = string.Join(", ", (await _tenderLedger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken)).Select(hold => hold.Description).Distinct());
+        var returned = await _tenderLedger.ReturnAsync(order.CheckoutSessionId, left, reason ?? S["A refund of order {0}.", order.OrderNumber].Value, cancellationToken);
+
+        if (returned <= 0m)
+        {
+            return left;
+        }
+
+        // Recorded as one of the order's refunds, like a card refund, so what was refunded adds up to its total.
+        await _orderService.RecordRefundAsync(order, new OrderRefund
+        {
+            RefundId = "tender:" + global::OrchardCore.IdGenerator.GenerateId(),
+            Amount = returned,
+            Currency = order.Currency,
+            Reason = reason,
+            CreatedUtc = _clock.UtcNow,
+        }, _scope.Restock, cancellationToken);
+
+        await _orderService.AddNoteAsync(
+            order,
+            S["Put {0} back on {1}.", ProductPriceFormatter.Format(returned, order.Currency), balances],
+            OrderNoteKind.Event,
+            _scope.ActorName,
+            cancellationToken);
+
+        return Money.Round(left - returned, order.Currency);
+    }
+
     private async Task<decimal> RefundTransactionsAsync(Order order, decimal left, string reason, OrderOperationResult result, CancellationToken cancellationToken)
     {
         if (left <= 0m || _serviceProvider.GetService<ITransactionCommandService>() is not { } commands)
@@ -350,25 +461,21 @@ public sealed class OrderOperationsService
     {
         var payments = new List<(PaymentAttempt, decimal)>();
 
-        if (string.IsNullOrEmpty(order.CheckoutSessionId) ||
-            _serviceProvider.GetService<IPaymentAttemptStore>() is not { } attemptStore ||
-            _serviceProvider.GetService<IPaymentRefundStore>() is not { } refundStore)
+        if (string.IsNullOrEmpty(order.CheckoutSessionId))
         {
             return payments;
         }
 
-        var providers = _serviceProvider.GetService<ICheckoutPaymentProviderResolver>();
-
-        foreach (var attempt in (await attemptStore.GetBySessionAsync(order.CheckoutSessionId, cancellationToken)).OrderByDescending(attempt => attempt.CreatedUtc))
+        foreach (var attempt in (await _attemptStore.GetBySessionAsync(order.CheckoutSessionId, cancellationToken)).OrderByDescending(attempt => attempt.CreatedUtc))
         {
             if (attempt.State != PaymentAttemptState.Succeeded ||
                 string.IsNullOrEmpty(attempt.TransactionId) ||
-                providers?.GetProvider(attempt.ProviderKey)?.Capabilities?.DefersPayment == true)
+                _paymentProviders.GetProvider(attempt.ProviderKey)?.Capabilities?.DefersPayment == true)
             {
                 continue;
             }
 
-            var refunded = (await refundStore.GetByOriginalTransactionAsync(attempt.TransactionId, cancellationToken))
+            var refunded = (await _refundStore.GetByOriginalTransactionAsync(attempt.TransactionId, cancellationToken))
                 .Where(refund => refund.Status is not (RefundStatus.Failed or RefundStatus.Canceled))
                 .Sum(refund => refund.RefundGrossAmount);
 
@@ -408,6 +515,11 @@ public sealed class OrderOperationsService
 /// </summary>
 public sealed class OrderMoney
 {
+    /// <summary>
+    /// Gets or sets whether the refund can be given to the buyer as store credit.
+    /// </summary>
+    public bool CanRefundAsStoreCredit { get; set; }
+
     public string Currency { get; set; }
 
     public decimal Refundable { get; set; }

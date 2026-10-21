@@ -12,7 +12,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Email;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -30,6 +29,7 @@ public sealed class OrderAccountController : Controller
     private readonly SignInManager<IUser> _signInManager;
     private readonly IPaymentAttemptLimiter _limiter;
     private readonly INotifier _notifier;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -42,6 +42,7 @@ public sealed class OrderAccountController : Controller
         SignInManager<IUser> signInManager,
         IPaymentAttemptLimiter limiter,
         INotifier notifier,
+        ICommerceEmailSender emailSender,
         ILogger<OrderAccountController> logger,
         IStringLocalizer<OrderAccountController> stringLocalizer,
         IHtmlLocalizer<OrderAccountController> htmlLocalizer)
@@ -52,6 +53,7 @@ public sealed class OrderAccountController : Controller
         _signInManager = signInManager;
         _limiter = limiter;
         _notifier = notifier;
+        _emailSender = emailSender;
         _logger = logger;
         S = stringLocalizer;
         H = htmlLocalizer;
@@ -164,7 +166,7 @@ public sealed class OrderAccountController : Controller
 
     private async Task SendConfirmationAsync(User user)
     {
-        if (HttpContext.RequestServices.GetService<IEmailService>() is not { } emailService)
+        if (!_emailSender.CanSend)
         {
             return;
         }
@@ -181,12 +183,15 @@ public sealed class OrderAccountController : Controller
 
         var link = HtmlEncoder.Default.Encode(url);
 
-        await emailService.SendAsync(new MailMessage
+        await _emailSender.SendAsync(new CommerceEmail
         {
             To = user.Email,
+            Reference = user.UserId,
+        }, _ => Task.FromResult(new CommerceEmailContent
+        {
             Subject = S["Confirm your email"],
-            TextBody = S["Open this link to confirm your email: {0}", url],
-            HtmlBody = $"<p>{HtmlEncoder.Default.Encode(S["Thanks for creating an account. Confirm your email to sign in:"].Value)}</p><p><a href=\"{link}\">{HtmlEncoder.Default.Encode(S["Confirm your email"].Value)}</a></p>",
-        });
+            Text = S["Open this link to confirm your email: {0}", url],
+            Html = $"<p>{HtmlEncoder.Default.Encode(S["Thanks for creating an account. Confirm your email to sign in:"].Value)}</p><p><a href=\"{link}\">{HtmlEncoder.Default.Encode(S["Confirm your email"].Value)}</a></p>",
+        }));
     }
 }

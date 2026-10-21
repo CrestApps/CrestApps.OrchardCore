@@ -3,12 +3,26 @@ using CrestApps.OrchardCore.Inventory.Core.Models;
 namespace CrestApps.OrchardCore.Inventory.Core.Services;
 
 /// <summary>
-/// Reacts once a change to a stock item's level is committed: it ran low, sold out or came back. Handlers run after
-/// the request or background job that made the change, in a unit of work of their own.
+/// Reacts once a change to a stock item is committed. Handlers run after the request or background job that made the
+/// change, in a unit of work of their own.
 /// </summary>
 public interface IStockLevelHandler
 {
+    /// <summary>
+    /// Reacts to a change of the item's level: it ran low, sold out or came back.
+    /// </summary>
+    /// <param name="context">The committed change.</param>
+    /// <param name="cancellationToken">A token that cancels the work.</param>
     Task ChangedAsync(StockLevelChangedContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reacts to any change of the units the item has available, whether or not its level changed. Several changes in
+    /// one unit of work are one, from the units before the first to the units after the last.
+    /// </summary>
+    /// <param name="context">The committed change.</param>
+    /// <param name="cancellationToken">A token that cancels the work.</param>
+    Task AvailableChangedAsync(StockLevelChangedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 /// <summary>
@@ -39,6 +53,12 @@ public sealed class StockLevelChangedContext
     public StockLevel PreviousLevel { get; }
 
     public StockLevel Level { get; }
+
+    /// <summary>
+    /// Gets whether the units available changed.
+    /// </summary>
+    public bool AvailableChanged
+        => Item.Available != PreviousAvailable;
 
     /// <summary>
     /// Gets whether the item dropped to low or out of stock: the moment to reorder.

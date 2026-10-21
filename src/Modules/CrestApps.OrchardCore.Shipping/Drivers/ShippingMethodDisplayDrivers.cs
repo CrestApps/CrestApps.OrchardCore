@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -105,60 +104,39 @@ internal sealed class ShippingMethodDisplayDriver : DisplayDriver<ShippingMethod
 /// <summary>
 /// The settings of a flat rate method.
 /// </summary>
-internal sealed class FlatRateMethodDisplayDriver : DisplayDriver<ShippingMethod>
+internal sealed class FlatRateMethodDisplayDriver : ShippingMethodSettingsDisplayDriver<FlatRateSettings, FlatRateSettingsViewModel>
 {
     internal readonly IStringLocalizer S;
 
     public FlatRateMethodDisplayDriver(IStringLocalizer<FlatRateMethodDisplayDriver> stringLocalizer)
+        : base(ShippingConstants.Providers.Flat, "FlatRateSettings_Edit")
     {
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    protected override ValueTask BuildViewModelAsync(FlatRateSettingsViewModel model, FlatRateSettings settings)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
+        model.Amount = settings.Amount;
+        model.PerItemAmount = settings.PerItemAmount;
 
-        return Initialize<FlatRateSettingsViewModel>("FlatRateSettings_Edit", model =>
-        {
-            var settings = method.GetOrCreate<FlatRateSettings>();
-
-            model.Amount = settings.Amount;
-            model.PerItemAmount = settings.PerItemAmount;
-        }).Location("Content:5");
+        return ValueTask.CompletedTask;
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    protected override FlatRateSettings BuildSettings(FlatRateSettingsViewModel model, UpdateEditorContext context)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
-
-        var model = new FlatRateSettingsViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         if (model.Amount < 0 || model.PerItemAmount < 0)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Amount), S["Amounts can't be negative."]);
         }
 
-        method.Put(new FlatRateSettings { Amount = model.Amount, PerItemAmount = model.PerItemAmount });
-
-        return Edit(method, context);
+        return new FlatRateSettings { Amount = model.Amount, PerItemAmount = model.PerItemAmount };
     }
-
-    private static bool IsFor(ShippingMethod method)
-        => string.Equals(method.ProviderName, ShippingConstants.Providers.Flat, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
 /// The settings of a table rate method.
 /// </summary>
-internal sealed class TableRateMethodDisplayDriver : DisplayDriver<ShippingMethod>
+internal sealed class TableRateMethodDisplayDriver : ShippingMethodSettingsDisplayDriver<TableRateSettings, TableRateSettingsViewModel>
 {
     private const int BlankRows = 3;
 
@@ -167,46 +145,28 @@ internal sealed class TableRateMethodDisplayDriver : DisplayDriver<ShippingMetho
     internal readonly IStringLocalizer S;
 
     public TableRateMethodDisplayDriver(ISiteService siteService, IStringLocalizer<TableRateMethodDisplayDriver> stringLocalizer)
+        : base(ShippingConstants.Providers.Table, "TableRateSettings_Edit")
     {
         _siteService = siteService;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    protected override async ValueTask BuildViewModelAsync(TableRateSettingsViewModel model, TableRateSettings settings)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
+        model.Basis = settings.Basis;
+        model.Maximum = settings.Maximum;
+        model.WeightUnit = (await _siteService.GetSettingsAsync<ShippingSettings>()).WeightUnit;
 
-        return Initialize<TableRateSettingsViewModel>("TableRateSettings_Edit", async model =>
-        {
-            var settings = method.GetOrCreate<TableRateSettings>();
-
-            model.Basis = settings.Basis;
-            model.Maximum = settings.Maximum;
-            model.WeightUnit = (await _siteService.GetSettingsAsync<ShippingSettings>()).WeightUnit;
-
-            // The rows there are, then a few blank ones to add more.
-            model.Rows = settings.Rows
-                .OrderBy(row => row.From)
-                .Select(row => new TableRateRowViewModel { From = row.From, Amount = row.Amount })
-                .Concat(Enumerable.Range(0, BlankRows).Select(_ => new TableRateRowViewModel()))
-                .ToList();
-        }).Location("Content:5");
+        // The rows there are, then a few blank ones to add more.
+        model.Rows = settings.Rows
+            .OrderBy(row => row.From)
+            .Select(row => new TableRateRowViewModel { From = row.From, Amount = row.Amount })
+            .Concat(Enumerable.Range(0, BlankRows).Select(_ => new TableRateRowViewModel()))
+            .ToList();
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    protected override TableRateSettings BuildSettings(TableRateSettingsViewModel model, UpdateEditorContext context)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
-
-        var model = new TableRateSettingsViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var rows = (model.Rows ?? [])
             .Where(row => row.From.HasValue && row.Amount.HasValue)
             .Select(row => new TableRateRow { From = row.From.Value, Amount = row.Amount.Value })
@@ -230,110 +190,73 @@ internal sealed class TableRateMethodDisplayDriver : DisplayDriver<ShippingMetho
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Maximum), S["The limit can't be negative."]);
         }
 
-        method.Put(new TableRateSettings
+        return new TableRateSettings
         {
             Basis = Enum.IsDefined(model.Basis) ? model.Basis : TableRateBasis.Weight,
             Maximum = model.Maximum,
             Rows = [.. rows.OrderBy(row => row.From)],
-        });
-
-        return Edit(method, context);
+        };
     }
-
-    private static bool IsFor(ShippingMethod method)
-        => string.Equals(method.ProviderName, ShippingConstants.Providers.Table, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
 /// The settings of a free shipping method.
 /// </summary>
-internal sealed class FreeShippingMethodDisplayDriver : DisplayDriver<ShippingMethod>
+internal sealed class FreeShippingMethodDisplayDriver : ShippingMethodSettingsDisplayDriver<FreeShippingSettings, FreeShippingSettingsViewModel>
 {
     internal readonly IStringLocalizer S;
 
     public FreeShippingMethodDisplayDriver(IStringLocalizer<FreeShippingMethodDisplayDriver> stringLocalizer)
+        : base(ShippingConstants.Providers.Free, "FreeShippingSettings_Edit")
     {
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    protected override ValueTask BuildViewModelAsync(FreeShippingSettingsViewModel model, FreeShippingSettings settings)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
+        model.MinimumSubtotal = settings.MinimumSubtotal;
 
-        return Initialize<FreeShippingSettingsViewModel>("FreeShippingSettings_Edit", model =>
-        {
-            model.MinimumSubtotal = method.GetOrCreate<FreeShippingSettings>().MinimumSubtotal;
-        }).Location("Content:5");
+        return ValueTask.CompletedTask;
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    protected override FreeShippingSettings BuildSettings(FreeShippingSettingsViewModel model, UpdateEditorContext context)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
-
-        var model = new FreeShippingSettingsViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         if (model.MinimumSubtotal < 0)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MinimumSubtotal), S["The subtotal can't be negative."]);
         }
 
-        method.Put(new FreeShippingSettings { MinimumSubtotal = model.MinimumSubtotal });
-
-        return Edit(method, context);
+        return new FreeShippingSettings { MinimumSubtotal = model.MinimumSubtotal };
     }
-
-    private static bool IsFor(ShippingMethod method)
-        => string.Equals(method.ProviderName, ShippingConstants.Providers.Free, StringComparison.OrdinalIgnoreCase);
 }
 
-internal sealed class LocalDeliveryMethodDisplayDriver : DisplayDriver<ShippingMethod>
+/// <summary>
+/// The settings of a local delivery method.
+/// </summary>
+internal sealed class LocalDeliveryMethodDisplayDriver : ShippingMethodSettingsDisplayDriver<LocalDeliverySettings, LocalDeliverySettingsViewModel>
 {
     private const int MaxPostalCodes = 1000;
 
     internal readonly IStringLocalizer S;
 
     public LocalDeliveryMethodDisplayDriver(IStringLocalizer<LocalDeliveryMethodDisplayDriver> stringLocalizer)
+        : base(ShippingConstants.Providers.LocalDelivery, "LocalDeliverySettings_Edit")
     {
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    protected override ValueTask BuildViewModelAsync(LocalDeliverySettingsViewModel model, LocalDeliverySettings settings)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
+        model.PostalCodes = string.Join(Environment.NewLine, settings.PostalCodes ?? []);
+        model.Amount = settings.Amount;
+        model.FreeFromSubtotal = settings.FreeFromSubtotal;
+        model.MinimumSubtotal = settings.MinimumSubtotal;
 
-        return Initialize<LocalDeliverySettingsViewModel>("LocalDeliverySettings_Edit", model =>
-        {
-            var settings = method.GetOrCreate<LocalDeliverySettings>();
-
-            model.PostalCodes = string.Join(Environment.NewLine, settings.PostalCodes ?? []);
-            model.Amount = settings.Amount;
-            model.FreeFromSubtotal = settings.FreeFromSubtotal;
-            model.MinimumSubtotal = settings.MinimumSubtotal;
-        }).Location("Content:5");
+        return ValueTask.CompletedTask;
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    protected override LocalDeliverySettings BuildSettings(LocalDeliverySettingsViewModel model, UpdateEditorContext context)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
-
-        var model = new LocalDeliverySettingsViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var postalCodes = ParsePostalCodes(model.PostalCodes);
 
         if (postalCodes.Count == 0)
@@ -346,15 +269,13 @@ internal sealed class LocalDeliveryMethodDisplayDriver : DisplayDriver<ShippingM
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Amount), S["Amounts can't be negative."]);
         }
 
-        method.Put(new LocalDeliverySettings
+        return new LocalDeliverySettings
         {
             PostalCodes = postalCodes,
             Amount = model.Amount,
             FreeFromSubtotal = model.FreeFromSubtotal,
             MinimumSubtotal = model.MinimumSubtotal,
-        });
-
-        return Edit(method, context);
+        };
     }
 
     // One or more per line, separated by commas; a trailing * covers every code starting with what's before it.
@@ -365,12 +286,12 @@ internal sealed class LocalDeliveryMethodDisplayDriver : DisplayDriver<ShippingM
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(MaxPostalCodes)
             .ToList();
-
-    private static bool IsFor(ShippingMethod method)
-        => string.Equals(method.ProviderName, ShippingConstants.Providers.LocalDelivery, StringComparison.OrdinalIgnoreCase);
 }
 
-internal sealed class CarrierRateMethodDisplayDriver : DisplayDriver<ShippingMethod>
+/// <summary>
+/// The settings of a carrier rate method.
+/// </summary>
+internal sealed class CarrierRateMethodDisplayDriver : ShippingMethodSettingsDisplayDriver<CarrierRateSettings, CarrierRateSettingsViewModel>
 {
     private const int MaxCarriers = 20;
 
@@ -379,49 +300,31 @@ internal sealed class CarrierRateMethodDisplayDriver : DisplayDriver<ShippingMet
     internal readonly IStringLocalizer S;
 
     public CarrierRateMethodDisplayDriver(ICarrierProviderResolver carriers, IStringLocalizer<CarrierRateMethodDisplayDriver> stringLocalizer)
+        : base(ShippingConstants.Providers.Carrier, "CarrierRateSettings_Edit")
     {
         _carriers = carriers;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
+    protected override async ValueTask BuildViewModelAsync(CarrierRateSettingsViewModel model, CarrierRateSettings settings)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
+        model.Carriers = string.Join(", ", settings.Carriers ?? []);
+        model.MaxRates = settings.MaxRates;
+        model.MarkupPercent = settings.MarkupPercent;
+        model.MarkupAmount = settings.MarkupAmount;
+        model.FallbackAmount = settings.FallbackAmount;
 
-        return Initialize<CarrierRateSettingsViewModel>("CarrierRateSettings_Edit", async model =>
-        {
-            var settings = method.GetOrCreate<CarrierRateSettings>();
-
-            model.Carriers = string.Join(", ", settings.Carriers ?? []);
-            model.MaxRates = settings.MaxRates;
-            model.MarkupPercent = settings.MarkupPercent;
-            model.MarkupAmount = settings.MarkupAmount;
-            model.FallbackAmount = settings.FallbackAmount;
-
-            model.HasCarrierAccount = await _carriers.GetDefaultAsync() is not null;
-        }).Location("Content:5");
+        model.HasCarrierAccount = await _carriers.GetDefaultAsync() is not null;
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
+    protected override CarrierRateSettings BuildSettings(CarrierRateSettingsViewModel model, UpdateEditorContext context)
     {
-        if (!IsFor(method))
-        {
-            return null;
-        }
-
-        var model = new CarrierRateSettingsViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         if (model.MarkupAmount < 0 || model.FallbackAmount < 0 || model.MaxRates < 0)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MarkupAmount), S["Amounts can't be negative."]);
         }
 
-        method.Put(new CarrierRateSettings
+        return new CarrierRateSettings
         {
             Carriers = (model.Carriers ?? string.Empty)
                 .Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -432,11 +335,6 @@ internal sealed class CarrierRateMethodDisplayDriver : DisplayDriver<ShippingMet
             MarkupPercent = model.MarkupPercent,
             MarkupAmount = Math.Max(0, model.MarkupAmount),
             FallbackAmount = model.FallbackAmount is >= 0 ? model.FallbackAmount : null,
-        });
-
-        return Edit(method, context);
+        };
     }
-
-    private static bool IsFor(ShippingMethod method)
-        => string.Equals(method.ProviderName, ShippingConstants.Providers.Carrier, StringComparison.OrdinalIgnoreCase);
 }

@@ -38,6 +38,13 @@ public sealed class ImportFileProcessStatsPart : ContentPart
     public Dictionary<int, string> ErrorMessages { get; set; }
 
     /// <summary>
+    /// The failed rows for each kind of error, keyed by the kind's display name, such as "On a national do-not-call
+    /// registry". Unlike <see cref="ErrorMessages"/> it is kept for every failed row, as it costs a row number per row,
+    /// so it counts the rows that failed for each reason and names the reason of a row whose message was not kept.
+    /// </summary>
+    public Dictionary<string, HashSet<int>> ErrorCategories { get; set; }
+
+    /// <summary>
     /// Total records available if the file.
     /// </summary>
     public int TotalRecords { get; set; }

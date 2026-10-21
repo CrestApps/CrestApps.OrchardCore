@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Models;
 using CrestApps.OrchardCore.Products.Services;
 using Microsoft.AspNetCore.Http;

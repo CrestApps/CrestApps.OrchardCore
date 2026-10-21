@@ -93,6 +93,18 @@ public interface IAgentPresenceManager
     Task<AgentProfile> SetPresenceAsync(string userId, AgentPresenceStatus status, string reason, AgentStateChangeContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Puts an agent a dialer holds Reserved on the call it placed for them, once a person answered and the agent was
+    /// connected: Reserved becomes on a call (Busy). An agent no dialer holds is left as they are, so a repeated or late
+    /// connect changes nothing.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="context">The call the agent was connected to and when. Its reservation, when given, must be the one
+    /// holding the agent.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> ConnectHeldAgentAsync(string agentId, AgentStateChangeContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Moves the agent into wrap-up after a handled communication session ends, while preserving any
     /// requested follow-up presence state such as break.
     /// </summary>

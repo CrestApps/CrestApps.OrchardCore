@@ -12,7 +12,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell.Configuration;
 using YesSql;
@@ -59,18 +59,19 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
         new AnalyticsStartup(new EmptyShellConfiguration()).ConfigureServices(services);
 
         // Assert
-        var reportDescriptors = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IReport) || descriptor.ServiceType == typeof(IReportProvider))
-            .ToArray();
+        using var provider = services.BuildServiceProvider();
+        var reports = provider.GetRequiredService<IOptions<ReportOptions>>().Value.Reports;
+        var reportTypes = reports.Select(report => report.Type).Distinct().ToArray();
 
-        Assert.NotEmpty(reportDescriptors);
+        Assert.Contains(reportTypes, type => type == typeof(EnterpriseInteractionReportProvider));
+        Assert.Contains(reportTypes, type => type == typeof(AgentWorkforceReportProvider));
 
-        Assert.Contains(reportDescriptors, descriptor => descriptor.ServiceType == typeof(IReportProvider));
-
-        // A scoped lifetime is what prevents two concurrent requests from ever sharing one provider instance, so the
-        // captured fields cannot cross requests. The catalog-driven reports are projected by a scoped IReportProvider
-        // that constructs a fresh report instance per enumeration; a singleton registration would reintroduce the risk.
-        Assert.All(reportDescriptors, descriptor => Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime));
+        // A scoped lifetime is what prevents two concurrent requests from ever sharing one report instance, so the
+        // captured fields cannot cross requests. A catalog report is created by its descriptor each time it is run;
+        // a singleton registration of a report class would reintroduce the risk.
+        Assert.All(
+            services.Where(descriptor => reportTypes.Contains(descriptor.ServiceType)),
+            descriptor => Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime));
     }
 
     [Fact]
@@ -148,13 +149,7 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
             .Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyCollection<ActivityQueue>)[]);
 
-        var definition = new EnterpriseInteractionReportDefinition(
-            "interaction-detail",
-            () => new LocalizedString("Interaction detail", "Interaction detail"),
-            () => new LocalizedString("Interaction detail", "Interaction detail"),
-            EnterpriseInteractionReportKind.InteractionDetail,
-            "Interactions",
-            []);
+        var kind = EnterpriseInteractionReportKind.InteractionDetail;
 
         return new EnterpriseInteractionReportProvider(
             session,
@@ -168,10 +163,10 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
                 It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<InteractionEvent>>(Array.Empty<InteractionEvent>())),
             queueManager.Object,
             agentManager,
-            definition,
+            kind,
             guard,
             new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
-            TimeSpan.FromDays(400));
+            Options.Create(new ContactCenterReportingOptions { MaximumReportRange = TimeSpan.FromDays(400) }));
     }
 
     private static void SetAgents(Mock<IAgentProfileManager> agentManager, params (string Id, string Name)[] agents)

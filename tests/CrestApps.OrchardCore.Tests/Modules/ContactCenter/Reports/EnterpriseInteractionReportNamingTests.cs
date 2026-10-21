@@ -10,7 +10,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
-using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -120,14 +120,6 @@ public sealed class EnterpriseInteractionReportNamingTests
             .Setup(value => value.GetMissingFeaturesAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var definition = new EnterpriseInteractionReportDefinition(
-            "naming",
-            () => new LocalizedString("Naming", "Naming"),
-            () => new LocalizedString("Naming", "Naming"),
-            kind,
-            "Interactions",
-            []);
-
         return new EnterpriseInteractionReportProvider(
             session,
             // These interactions have no call events, so each one's outcome is decided from the interaction alone.
@@ -140,10 +132,10 @@ public sealed class EnterpriseInteractionReportNamingTests
                 It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<InteractionEvent>>(Array.Empty<InteractionEvent>())),
             queueManager.Object,
             agentManager.Object,
-            definition,
+            kind,
             guard.Object,
             new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
-            TimeSpan.FromDays(400));
+            Options.Create(new ContactCenterReportingOptions { MaximumReportRange = TimeSpan.FromDays(400) }));
     }
 
     private static ReportContext CreateContext()

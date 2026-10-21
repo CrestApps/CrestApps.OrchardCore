@@ -59,6 +59,12 @@ public sealed class Order : CatalogItem
     public List<OrderDiscount> Discounts { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets what balances the buyer held, such as a gift card or store credit, paid toward
+    /// <see cref="Total"/>. The rest was charged by the payment provider.
+    /// </summary>
+    public List<OrderTender> Tenders { get; set; } = [];
+
+    /// <summary>
     /// Gets the total of the discounts.
     /// </summary>
     public decimal DiscountTotal
@@ -70,6 +76,79 @@ public sealed class Order : CatalogItem
     /// Gets or sets the checkout session that pays for the order.
     /// </summary>
     public string CheckoutSessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the order was made: <see cref="OrderChannels.Online"/>, at a store's register
+    /// (<see cref="OrderChannels.PointOfSale"/>), or by staff (<see cref="OrderChannels.Draft"/>).
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the company the order was placed for, when its buyer buys for one: the company sees it, and pays
+    /// it on its terms.
+    /// </summary>
+    public string CompanyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the quote the order started as, when a buyer asked the store for one: what they asked, and whether
+    /// it was sent, accepted or turned down.
+    /// </summary>
+    public OrderQuote Quote { get; set; }
+
+    /// <summary>
+    /// Gets or sets the approval the order needs before it's paid, such as from a company admin for an order over the
+    /// buyer's limit, or none.
+    /// </summary>
+    public OrderApproval Approval { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the buyer was asked to review what they bought, or none when they haven't been yet.
+    /// </summary>
+    public DateTime? ReviewRequestSentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the buyer's purchase order number: their own reference for the order, printed on its invoice.
+    /// </summary>
+    public string PurchaseOrderNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the taxes the order was charged, each for a jurisdiction, tax and rate, as its checkout worked them
+    /// out: what reports such as the VAT one-stop-shop return add up.
+    /// </summary>
+    public List<CrestApps.OrchardCore.Taxation.Models.TaxLine> TaxLines { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the culture the buyer shopped in, such as de-DE: the order's emails are written in it.
+    /// </summary>
+    public string Culture { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inventory location the order is sold from, such as the store whose register rang it up: its
+    /// stock is held and sold there.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the register a point-of-sale order was rung up on.
+    /// </summary>
+    public string RegisterId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name the register had when the order was rung up on it.
+    /// </summary>
+    public string RegisterName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the register shift a point-of-sale order was rung up in.
+    /// </summary>
+    public string ShiftId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the staff member who made the order, at a register or as a draft.
+    /// </summary>
+    public string StaffUserId { get; set; }
+
+    public string StaffName { get; set; }
 
     /// <summary>
     /// Gets or sets the customer who placed the order, when the Customers feature is enabled.
@@ -247,6 +326,11 @@ public sealed class OrderLine
     public string PriceName { get; set; }
 
     /// <summary>
+    /// Gets or sets the price staff set on a quote or draft for each unit, in place of the catalog's, or none.
+    /// </summary>
+    public decimal? QuotedUnitPrice { get; set; }
+
+    /// <summary>
     /// Gets or sets the variant bought, for a product sold in variants.
     /// </summary>
     public string VariantId { get; set; }
@@ -279,6 +363,22 @@ public sealed class OrderLine
     /// includes.
     /// </summary>
     public List<OrderLineAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the line's details beside the product, by key, as the cart's line handlers kept them, such as a
+    /// departure date, for the modules that act on them.
+    /// </summary>
+    public Dictionary<string, string> Details { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line's details as they read when the order was placed, such as "Departure: 1 December 2026".
+    /// </summary>
+    public List<OrderLineDetail> DetailLines { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether no discount takes anything off the line, such as a donation.
+    /// </summary>
+    public bool ExcludeFromDiscounts { get; set; }
 
     /// <summary>
     /// Gets or sets the products a bundle line is made of, per bundle, as the bundle was when the order was placed.
@@ -335,6 +435,7 @@ public enum OrderNoteKind
 /// </summary>
 public sealed class OrderInvoice
 {
+
     /// <summary>
     /// Gets or sets who in the store made it.
     /// </summary>
@@ -412,6 +513,28 @@ public sealed class OrderDiscount
     /// Gets or sets the key of the discount provider that gave it, such as <c>Coupons</c>.
     /// </summary>
     public string ProviderKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the discount took something off: the goods bought now, the first billing cycle, or shipping.
+    /// </summary>
+    public Checkout.Models.DiscountTarget Target { get; set; }
+}
+
+/// <summary>
+/// Part of an order's total paid from a balance the buyer held, such as a gift card or store credit.
+/// </summary>
+public sealed class OrderTender
+{
+    public string ProviderKey { get; set; }
+
+    public string Reference { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer saw, such as "Gift card ending 4F2K".
+    /// </summary>
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
 }
 
 /// <summary>
@@ -512,6 +635,27 @@ public sealed class OrderLineAddOn
 }
 
 /// <summary>
+/// One of an order line's details as it read when the order was placed.
+/// </summary>
+public sealed class OrderLineDetail
+{
+    /// <summary>
+    /// Gets or sets the detail's key, such as <c>booking.date</c>.
+    /// </summary>
+    public string Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the detail is, such as "Departure".
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets what was chosen, as it reads, such as "1 December 2026".
+    /// </summary>
+    public string Value { get; set; }
+}
+
+/// <summary>
 /// A product in a bundle line, and how many of it each bundle holds.
 /// </summary>
 public sealed class OrderLineBundleItem
@@ -521,4 +665,98 @@ public sealed class OrderLineBundleItem
     public string Title { get; set; }
 
     public int Quantity { get; set; }
+}
+
+/// <summary>
+/// A quote a buyer asked the store for: their message, and where it is. Staff set its prices and send it; the buyer
+/// accepts it by paying, or turns it down.
+/// </summary>
+public sealed class OrderQuote
+{
+    public DateTime RequestedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer asked, such as the quantities they need and when.
+    /// </summary>
+    public string Message { get; set; }
+
+    public OrderQuoteStatus Status { get; set; }
+
+    public DateTime? SentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the quote stops being offered, or none.
+    /// </summary>
+    public DateTime? ExpiresUtc { get; set; }
+
+    public DateTime? RespondedUtc { get; set; }
+
+    /// <summary>
+    /// Returns whether the buyer can accept it now: sent, and not expired.
+    /// </summary>
+    public bool CanAccept(DateTime utcNow)
+        => Status == OrderQuoteStatus.Sent && (ExpiresUtc is null || ExpiresUtc > utcNow);
+}
+
+/// <summary>
+/// Someone's approval an order needs before it's paid: why, who asked, and what they decided.
+/// </summary>
+public sealed class OrderApproval
+{
+    public OrderApprovalStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the order needs it, such as being over the buyer's limit.
+    /// </summary>
+    public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total asked about, in <see cref="Currency"/>; an order that grows past it needs approval again.
+    /// </summary>
+    public decimal Amount { get; set; }
+
+    public string Currency { get; set; }
+
+    public DateTime RequestedUtc { get; set; }
+
+    public string RequestedBy { get; set; }
+
+    public DateTime? DecidedUtc { get; set; }
+
+    public string DecidedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the approver said, such as why they rejected it.
+    /// </summary>
+    public string Note { get; set; }
+
+    /// <summary>
+    /// Returns whether it was approved for a total of at least <paramref name="total"/>.
+    /// </summary>
+    public bool Covers(decimal total, string currency)
+        => Status == OrderApprovalStatus.Approved && total <= Amount &&
+            string.Equals(currency, Currency, StringComparison.OrdinalIgnoreCase);
+}
+
+public enum OrderApprovalStatus
+{
+    Pending,
+
+    Approved,
+
+    Rejected,
+}
+
+public enum OrderQuoteStatus
+{
+    /// <summary>
+    /// Asked for; the store hasn't sent it yet.
+    /// </summary>
+    Requested,
+
+    Sent,
+
+    Accepted,
+
+    Declined,
 }

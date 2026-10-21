@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 
@@ -58,9 +60,9 @@ public sealed class CommerceDisplayTextTests
     public void SourceName_UsesTheRegisteredName()
     {
         var options = new TransactionSourceOptions();
-        options.AddSource(new TransactionSource("installment-plan") { DisplayName = new("installment-plan", "Installment plan") });
+        options.AddSource(new TransactionSource("installment-plan") { DisplayName = LocalizationSource.Create<CommerceDisplayTextTests>("Installment plan") });
 
-        var text = new TransactionDisplayText([], Options.Create(options), new PassThroughStringLocalizer<TransactionDisplayText>());
+        var text = new TransactionDisplayText([], Options.Create(options), new PassThroughStringLocalizer<TransactionDisplayText>(), new SourceTextLocalizerFactory());
 
         Assert.Equal("Installment plan", text.SourceName("installment-plan"));
         Assert.Equal("unknown", text.SourceName("unknown"));
@@ -102,7 +104,7 @@ public sealed class CommerceDisplayTextTests
     }
 
     private static TransactionDisplayText CreateTransactionText(params ICheckoutPaymentProvider[] providers)
-        => new(providers, Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>());
+        => new(providers, Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>(), new SourceTextLocalizerFactory());
 
     private static SubscriptionDisplayText CreateSubscriptionText()
         => new([], new PassThroughStringLocalizer<SubscriptionDisplayText>());

@@ -1,18 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Taxation.Models;
-using CrestApps.OrchardCore.Taxation.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Taxation.Services;
 
 /// <summary>
 /// Converts a content item that has a <see cref="TaxationPart"/> into an <see cref="ITaxableItem"/>.
-/// The amount is read generically from a well-known <c>ProductPart.Price</c> location when present so
-/// that the taxation module stays decoupled from any particular commerce module.
+/// The amount is the item's <see cref="ProductPart.Price"/> when it has one.
 /// </summary>
 /// <remarks>
 /// When the item does not classify itself (its <see cref="TaxationPart.TaxCategoryCode"/> is empty), the
@@ -86,10 +84,14 @@ public sealed class ContentItemTaxableItemProvider : ITaxableItemProvider
             }
         }
 
+        var unitPrice = contentItem.TryGet<ProductPart>(out var product)
+            ? product.Price ?? 0m
+            : 0m;
+
         var item = new TaxableItem
         {
             Id = contentItem.ContentItemId,
-            UnitPrice = ReadPrice(contentItem),
+            UnitPrice = unitPrice,
             Quantity = 1m,
             TaxCategoryCode = categoryCode,
             TaxClassificationCode = classificationCode,
@@ -99,18 +101,5 @@ public sealed class ContentItemTaxableItemProvider : ITaxableItemProvider
         item.Metadata["ContentType"] = contentItem.ContentType;
 
         return item;
-    }
-
-    private static decimal ReadPrice(ContentItem contentItem)
-    {
-        JsonNode content = contentItem.Content;
-        var priceNode = content?["ProductPart"]?["Price"];
-
-        if (priceNode is JsonValue priceValue && priceValue.TryGetValue<decimal>(out var price))
-        {
-            return price;
-        }
-
-        return 0m;
     }
 }

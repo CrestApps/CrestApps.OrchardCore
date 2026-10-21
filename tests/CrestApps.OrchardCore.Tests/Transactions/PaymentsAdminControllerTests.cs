@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Tests.Checkout;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Controllers;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -284,7 +285,7 @@ public sealed class PaymentsAdminControllerTests
             providers,
             authorizationService.Object,
             notifier ?? Mock.Of<INotifier>(),
-            new TransactionDisplayText(providers, Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>()),
+            new TransactionDisplayText(providers, Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>(), new SourceTextLocalizerFactory()),
             NullLogger<PaymentsAdminController>.Instance,
             new PassThroughHtmlLocalizer<PaymentsAdminController>(),
             new PassThroughStringLocalizer<PaymentsAdminController>());

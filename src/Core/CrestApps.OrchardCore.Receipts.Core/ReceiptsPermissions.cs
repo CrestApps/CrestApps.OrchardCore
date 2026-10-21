@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Receipts.Core;
@@ -10,5 +11,7 @@ public static class ReceiptsPermissions
     /// <summary>
     /// The permission required to configure the receipt branding settings.
     /// </summary>
-    public static readonly Permission ManageReceiptSettings = new("ManageReceiptSettings", "Manage receipt settings");
+    public static readonly Permission ManageReceiptSettings = new(
+        "ManageReceiptSettings",
+        LocalizationSource.Create("Manage receipt settings", typeof(ReceiptsPermissions)));
 }

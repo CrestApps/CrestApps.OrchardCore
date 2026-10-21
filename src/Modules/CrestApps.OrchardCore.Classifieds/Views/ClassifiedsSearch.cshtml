@@ -1,0 +1,132 @@
+@model ClassifiedSearchViewModel
+@inject OrchardCore.Modules.IClock Clock
+
+@* Finding posted listings: of a kind, with words in their title, and near a place, featured ones first. The map shows
+   those with a place. *@
+
+@{
+    var invariant = System.Globalization.CultureInfo.InvariantCulture;
+    var mapped = Model.Results
+        .Select(result => (result.Item, result.Url, Part: result.Item.TryGet<ClassifiedPart>(out var part) ? part : null))
+        .Where(result => result.Part?.Latitude is not null && result.Part.Longitude is not null)
+        .ToList();
+}
+
+<h1 class="h3 mb-3">@T["Listings"]</h1>
+
+<form method="get" action="@Url.RouteUrl("ClassifiedsSearch")" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            @if (Model.Types.Count > 1)
+            {
+                <div class="col-12 col-md-3">
+                    <label for="ClassifiedType" class="form-label">@T["Kind"]</label>
+                    <select id="ClassifiedType" name="type" class="form-select">
+                        <option value="">@T["Everything"]</option>
+                        @foreach (var (contentType, displayName) in Model.Types)
+                        {
+                            <option value="@contentType" selected="@(contentType == Model.ContentType)">@displayName</option>
+                        }
+                    </select>
+                </div>
+            }
+            <div class="col-12 col-md-3">
+                <label for="ClassifiedText" class="form-label">@T["Words"]</label>
+                <input id="ClassifiedText" name="q" value="@Model.Text" class="form-control" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="ClassifiedKilometers" class="form-label">@T["Within (km)"]</label>
+                <input id="ClassifiedKilometers" name="km" type="number" min="1" max="500" value="@Model.Kilometers" class="form-control" />
+            </div>
+            <div class="col-6 col-md-2">
+                <button type="button" class="btn btn-outline-secondary w-100" data-classified-near>@T["Near me"]</button>
+                <input type="hidden" name="lat" value="@Model.Latitude" data-classified-lat />
+                <input type="hidden" name="lng" value="@Model.Longitude" data-classified-lng />
+            </div>
+            <div class="col-12 col-md-2">
+                <button type="submit" class="btn btn-primary w-100">@T["Search"]</button>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.Latitude))
+        {
+            <span class="hint">@T["Near where you are."] <a href="@Url.RouteUrl("ClassifiedsSearch", new { type = Model.ContentType, q = Model.Text })">@T["Anywhere"]</a></span>
+        }
+    </div>
+</form>
+
+@if (mapped.Count > 0)
+{
+    <div id="classifieds-map" class="mb-4 rounded border" style="height: 18rem;"></div>
+    <style asp-src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"></style>
+    <script asp-src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" at="Foot"></script>
+    <script at="Foot">
+        (() => {
+            if (!window.L) {
+                document.getElementById('classifieds-map')?.remove();
+
+                return;
+            }
+
+            const points = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mapped.Select(result => new { title = result.Item.DisplayText, url = result.Url, lat = result.Part.Latitude, lng = result.Part.Longitude })));
+            const map = L.map('classifieds-map');
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+            const markers = points.map(point => L.marker([point.lat, point.lng]).addTo(map).bindPopup(point.url ? `<a href="${point.url}">${point.title.replace(/</g, '&lt;')}</a>` : point.title.replace(/</g, '&lt;')));
+
+            map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2), { maxZoom: 13 });
+        })();
+    </script>
+}
+
+@if (Model.Results.Count == 0)
+{
+    <p class="text-body-secondary">@T["Nothing matches. Try other words, or a wider distance."]</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var (item, kilometers, url) in Model.Results)
+        {
+            var part = item.TryGet<ClassifiedPart>(out var classified) ? classified : null;
+            var featured = part?.FeaturedUntilUtc > Clock.UtcNow;
+
+            <a href="@url" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2 @(featured ? "border-warning" : null)">
+                <span>
+                    <span class="fw-semibold d-block">@item.DisplayText</span>
+                    <span class="small text-body-secondary">@part?.Place</span>
+                </span>
+                <span class="text-nowrap">
+                    @if (featured)
+                    {
+                        <span class="badge text-bg-warning">@T["Featured"]</span>
+                    }
+                    @if (kilometers is { } distance)
+                    {
+                        <span class="badge text-bg-light">@T["{0} km", distance.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)]</span>
+                    }
+                </span>
+            </a>
+        }
+    </div>
+}
+
+<script at="Foot">
+    (() => {
+        const button = document.querySelector('[data-classified-near]');
+
+        if (!button || !navigator.geolocation) {
+            button?.remove();
+
+            return;
+        }
+
+        button.addEventListener('click', () => {
+            navigator.geolocation.getCurrentPosition(position => {
+                document.querySelector('[data-classified-lat]').value = position.coords.latitude.toFixed(6);
+                document.querySelector('[data-classified-lng]').value = position.coords.longitude.toFixed(6);
+                button.closest('form').submit();
+            });
+        });
+    })();
+</script>

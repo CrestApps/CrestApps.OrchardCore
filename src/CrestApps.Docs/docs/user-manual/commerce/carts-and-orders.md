@@ -46,9 +46,13 @@ With the [Shipping](shipping.md) feature on, an order with goods shows where it 
 
 An order you gave money back for also shows **Partially refunded** or **Refunded** next to its status.
 
+The channel filter shows where orders were made: **Every channel**, **Online** (bought on your site or in an app), **Point of sale** (rung up at one of your stores' registers, which shows as a badge with the register) or **Drafts sent by staff**. See [Point of sale](point-of-sale.md).
+
 Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
 
 Open an order to see what was bought, the quantities and prices, any discount such as a promotion code, the tax and the total paid, each refund and what's left, when it was placed and paid, who placed it, and the address it was billed to.
+
+When a [gift card](gift-cards.md), [store credit or points](store-credit-and-rewards.md) paid part of the order, a line under the total says so, such as *Paid with Gift card ending 4F2K* and the amount; the rest was charged to the card or the other payment method. The invoice and the confirmation email show the same lines.
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
 
@@ -56,7 +60,7 @@ An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **
 
 ### Export orders
 
-**Export CSV** in the list's search bar downloads the orders the list shows, with its search and status: a row per line, with its add-ons, and the order's subtotal, discounts, shipping, tax, total and refunds on its first line, so adding up a column counts each order once.
+**Export CSV** in the list's search bar downloads the orders the list shows, with its search, status and channel: a row per line, with its add-ons, and the order's subtotal, discounts, shipping, tax, total and refunds on its first line, so adding up a column counts each order once.
 
 ## Offer one more thing at checkout
 
@@ -85,7 +89,11 @@ Buyers print their own invoice too: an **Invoice** button on their order's page,
 3. Tick **Put the items back in stock** only when you refund everything: after a partial refund the customer keeps the goods.
 4. Click **Refund**.
 
-The money goes back the way it was paid: to the card or wallet for an order paid online, or through its transaction for an order paid with Pay Later. The order shows *Partially refunded* or *Refunded*, and the refund in its totals. A payment method that can't refund by itself records the refund for you to settle by hand on the [Refunds page](payments-and-refunds.md). Refunds made from the payment screens show on the order too.
+The money goes back the way it was paid: to the card or wallet for an order paid online, or through its transaction for an order paid with Pay Later. When a gift card, store credit or points paid part of the order, the card is refunded first, up to what it was charged, and what's left goes back on the gift card, the store credit or the points last; the notes say, for example, *Put $20 back on Gift card ending 4F2K.* The order shows *Partially refunded* or *Refunded*, and the refund in its totals. A payment method that can't refund by itself records the refund for you to settle by hand on the [Refunds page](payments-and-refunds.md). Refunds made from the payment screens show on the order too.
+
+With the Store Credit feature on, and a buyer who has an account, the form also has **Give it as store credit**: *Added to the buyer's store credit to spend later, instead of going back to how they paid.* Tick it to give the whole amount as store credit, in the order's currency. Nothing goes back to the card; the order counts it as refunded, and the notes say *Gave $20 back as store credit.* See [Refund as store credit](store-credit-and-rewards.md#refund-as-store-credit).
+
+Refunding an order that bought [gift cards](gift-cards.md#refunds-and-cancellations) in full turns off the cards nobody has spent from yet. A refund also takes back the [loyalty points](store-credit-and-rewards.md#how-points-are-earned-and-taken-back) the order earned, in proportion to what was refunded.
 
 ### Cancel an order
 
@@ -93,7 +101,7 @@ The money goes back the way it was paid: to the card or wallet for an order paid
 2. For a paid order, leave **Refund everything paid** ticked to give the money back, and **Put the items back in stock** ticked to return what it sold to stock.
 3. Click **Cancel order** and confirm.
 
-What a Pay Later order still owes is canceled, so the customer isn't reminded to pay it. A promotion code the order used can be used again. A canceled order can't be reopened.
+What a Pay Later order still owes is canceled, so the customer isn't reminded to pay it. A promotion code the order used can be used again. Refunding everything paid includes putting back what a gift card, store credit or points paid. Gift cards the order bought are turned off when nobody has spent from them, the points it earned are taken back, and so is a [referral reward](store-credit-and-rewards.md#when-the-customer-is-rewarded) it earned someone. A canceled order can't be reopened.
 
 ### Send the confirmation again
 
@@ -136,6 +144,28 @@ Sending the invoice needs your site's email to be set up; the draft's editor war
 
 A paid order can't be changed, but on its page **Add items** starts a new order for the same buyer, marked *These items are added to order ...*. Fill it in and send its invoice like any other; its page links back to the paid order. To take items off a paid order, refund them, or let the buyer [return them](returns.md).
 
+## Quotes
+
+Let signed-in buyers ask for a quote instead of checking out, such as for a large or trade order.
+
+1. On **Settings > Commerce > Orders**, tick **Take quote requests** and save.
+2. A signed-in buyer now sees **Request a quote** under **Checkout** on their cart. They can write a message, such as the quantities they need and by when, and give a purchase order number. Their cart is emptied, and the quote shows under their orders as *Asked for*.
+3. The quote is a draft order on **Commerce > Orders**, with the buyer's message. Click **Edit**, and under **Price each** enter the price you'll offer for a line; leave it blank for your usual price. Set **Pay by (optional)**: the quote expires then. Click **Update prices** to see the totals, then **Save draft**.
+4. Click **Send quote**. The buyer is emailed *Your quote ... is ready*, with the prices, until when it's offered, and a **Review and accept** button.
+
+The buyer accepts the quote by paying it, from the email or their orders, before it expires. Prices you set are final: automatic promotions don't come off them. They can also **Turn it down**, or **Withdraw the request** before you've sent it; either cancels it. An expired quote can't be paid: change its date to pay by and send it again to offer it again.
+
+Sending a quote needs your site's email to be set up.
+
+## Write your own emails
+
+On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.
+
+- **Layout** goes around every one of them, such as your logo at the top and your address at the bottom. Put `{{ Content }}` where the email goes.
+- Each email has its own **Subject** and **Body**: the order confirmation, the order to pay you send a buyer, the quote, the shipped email, the return emails, the gift card, the email to a buyer who left their checkout, and, with Bookings, the booking emails. Tick **Use my template** to use yours.
+
+In a template, `{{ Content }}` is the email as the store would send it, so a body of *Thanks so much!* followed by `{{ Content }}` adds a line above it. `{{ Order.OrderNumber }}` and `{{ Order.CustomerName }}` put in the order's details, and each email lists its own links, such as `{{ PayUrl }}`. A template that has a mistake can't be saved, and one that can't be filled in sends the store's own email instead.
+
 ## Store reports
 
 With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
@@ -146,9 +176,11 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Sales by product** | How many of each product and variant sold, and for how much before discounts, and the same for goods, digital products and services. |
 | **Sales by category** | What each category sold. A product in two categories counts in both. |
 | **Customers** | Who bought: first-time and returning buyers, how many have bought more than once, what buyers have spent in all on average, and your top buyers. |
+| **Cohorts and retention** | Buyers grouped by the month of their first order, and how many of each month's buyers came back in each of the six months after. |
 | **Checkouts** | The checkouts buyers started and how they ended: paid, payment failed, left or expired, or still open, with the share that were paid. |
 | **Sales by country** | Orders and totals for each country they ship to. |
 | **Tax on orders** | The tax orders charged, day by day. |
+| **VAT one-stop shop (OSS)** | The VAT charged on orders to other EU countries, by country and rate, refunds taken off: the figures of the EU one-stop-shop return. See [Taxes](taxes.md#vat-one-stop-shop-oss-report). |
 | **Discounts on orders** | How many orders used each promotion code, and what it took off. |
 | **Refunds** | Each refund given in the period, with its order and reason. |
 | **Disputes** | The payments buyers disputed with their bank in the period, open ones first: why, their status, and how many were won and lost. |
@@ -160,6 +192,14 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Product reviews** | With Product Reviews on: the reviews written, how many wait for approval, the stars given, and each product's rating. |
 
 Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
+
+### On the dashboard
+
+With the **Admin Dashboard** feature on, add the **Sales Summary** widget under **Manage Dashboard**. It shows your sales today, over the last 7 and 30 days, and the orders to ship.
+
+## Wishlists
+
+With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a product's page, and find what they saved under **Wishlist** in their account, each with its **Add to cart**. A product you stop selling drops off their wishlist.
 
 ## The buyer's account
 
@@ -174,6 +214,9 @@ A signed-in buyer opens **My account** from the user menu, or `/account` on your
 | **Addresses** | Their address book: add, edit, delete, and pick the default billing and shipping addresses. | Customers |
 | **Account details** | Whether they buy for themselves or a business, their name, phone and marketing consent, and a link to change their password. | Customers |
 | **Payment methods** | The cards they saved at checkout, to remove one. | Stripe |
+| **Store credit** | Their store credit and each change to it. See [Store credit](store-credit-and-rewards.md#store-credit). | Store Credit |
+| **Rewards** | Their loyalty points, what they're worth, and how they earn and spend them. See [Loyalty points](store-credit-and-rewards.md#loyalty-points). | Loyalty Points |
+| **Refer a friend** | Their referral link, and the friends who bought through it. See [Referrals](store-credit-and-rewards.md#referrals). | Referrals |
 
 ### An account from the confirmation
 
@@ -200,6 +243,8 @@ Link to **Track your order** and **Find my order** from your site's footer or he
 
 ## Order confirmations
 
-When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total and the billing address. It goes to the email given at checkout, once per order.
+When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total, what a gift card, store credit or points paid toward it, and the billing address. It goes to the email given at checkout, once per order.
+
+The confirmation, and the other emails about the order (shipped, returns, gift cards and the reminder of a checkout left unpaid), are written in the language the buyer shopped in. See [Markets](markets.md#languages).
 
 Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.

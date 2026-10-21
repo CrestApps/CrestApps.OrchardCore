@@ -32,11 +32,8 @@ public sealed class InventoryAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Inventory"], S["Inventory"].PrefixPosition("0.3"), inventory => inventory
-                    .AddClass("inventory")
                     .Id("inventory")
                     .Action(_routeValues)
                     .Permission(InventoryPermissions.ViewInventory)
@@ -46,7 +43,6 @@ public sealed class InventoryAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Inventory"], S["Inventory"].PrefixPosition(), inventory => inventory
-                        .AddClass("inventory-settings")
                         .Id("inventorySettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(InventoryPermissions.ManageInventory)

@@ -70,20 +70,19 @@ public sealed class AnalyticsStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentTimeSummaryBackgroundTask>());
 
         services
-            .AddScoped<IReport, CallInsightsReportProvider>()
-            .AddScoped<IReport, CallQualityReportProvider>()
-            .AddScoped<IReport, CallHandlingReportProvider>()
-            .AddScoped<IReport, AgentActivityTimelineReportProvider>()
-            .AddScoped<IReport, AgentAvailabilityReportProvider>()
-            .AddScoped<IReport, ReconciledPayrollTimecardReportProvider>()
-            .AddScoped<IReport, AgentProductivityReportProvider>()
-            .AddScoped<IReport, QueueUsageReportProvider>()
-            .AddScoped<IReport, CampaignSummaryReportProvider>()
-            .AddScoped<IReport, DialerQueueInventoryReportProvider>()
-            .AddScoped<IReport, SubjectInventoryReportProvider>()
-            .AddScoped<IReport, DialerDecisionLogReportProvider>();
+            .AddReport<CallInsightsReportProvider>()
+            .AddReport<CallQualityReportProvider>()
+            .AddReport<CallHandlingReportProvider>()
+            .AddReport<AgentActivityTimelineReportProvider>()
+            .AddReport<AgentAvailabilityReportProvider>()
+            .AddReport<ReconciledPayrollTimecardReportProvider>()
+            .AddReport<AgentProductivityReportProvider>()
+            .AddReport<QueueUsageReportProvider>()
+            .AddReport<CampaignSummaryReportProvider>()
+            .AddReport<DialerQueueInventoryReportProvider>()
+            .AddReport<SubjectInventoryReportProvider>()
+            .AddReport<DialerDecisionLogReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();
-        services.AddScoped<IReportProvider, ContactCenterReportProvider>();
     }
 }

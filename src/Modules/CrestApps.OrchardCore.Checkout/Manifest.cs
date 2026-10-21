@@ -31,3 +31,14 @@ using OrchardCore.Modules.Manifest;
         CheckoutConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Name = "Checkout API",
+    Id = CheckoutConstants.Features.Api,
+    Description = "Lets a headless storefront or app read a checkout, put codes on it, pay it with a provider's client SDK and complete it over the commerce JSON API. A guest's checkout travels in the X-Checkout-Token header. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CheckoutConstants.Features.Area,
+    ]
+)]

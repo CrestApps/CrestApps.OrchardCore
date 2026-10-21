@@ -34,6 +34,9 @@ public static class OrderLines
             TaxClassificationCode = line.Product?.TaxClassificationCode,
             CategoryIds = ProductCategories.GetIds(line.ContentItem),
             AddOns = [.. (line.AddOns ?? []).Select(addOn => new OrderLineAddOn { AddOnId = addOn.AddOnId, Label = addOn.Label, Value = addOn.Value, Price = addOn.Price })],
+            Details = line.Line.Details is { Count: > 0 } details ? new Dictionary<string, string>(details, StringComparer.Ordinal) : null,
+            DetailLines = [.. (line.Details ?? []).Select(detail => new OrderLineDetail { Key = detail.Key, Label = detail.Label, Value = detail.Value })],
+            ExcludeFromDiscounts = line.ExcludeFromDiscounts,
             ShipsFromUtc = line.ShipsFromUtc,
             BundleItems = line.ContentItem?.TryGet<ProductBundlePart>(out var bundle) == true && bundle.Items is { Count: > 0 }
                 ? [.. bundle.Items.Where(item => !string.IsNullOrEmpty(item.ContentItemId)).Select(item => new OrderLineBundleItem { ContentItemId = item.ContentItemId, Title = item.Title, Quantity = Math.Max(1, item.Quantity) })]

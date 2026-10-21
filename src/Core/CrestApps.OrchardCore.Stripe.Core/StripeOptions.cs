@@ -26,12 +26,6 @@ public sealed class StripeOptions
     public string WebhookSecret { get; set; }
 
     /// <summary>
-    /// The Stripe integration model used to collect payment. Defaults to
-    /// <see cref="StripeCheckoutMode.PaymentElements"/> for backward compatibility.
-    /// </summary>
-    public StripeCheckoutMode CheckoutMode { get; set; } = StripeCheckoutMode.PaymentElements;
-
-    /// <summary>
     /// Gets a value indicating whether the integration has resolved a usable Stripe secret key.
     /// </summary>
     public bool IsConfigured

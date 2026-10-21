@@ -38,6 +38,11 @@ public sealed class ProductSearchIndexQuery
     /// </summary>
     public IReadOnlyList<ProductIndexSortField> Sort { get; private init; } = [];
 
+    /// <summary>
+    /// The facets to count: those of the query that name both a key and an attribute.
+    /// </summary>
+    public IReadOnlyList<ProductFacetRequest> Facets { get; private init; } = [];
+
     public int Skip { get; private init; }
 
     public int Take { get; private init; }
@@ -48,6 +53,12 @@ public sealed class ProductSearchIndexQuery
     /// </summary>
     public IEnumerable<ProductIndexFilter> FiltersExcept(string facetKey)
         => Filters.Where(filter => !string.Equals(filter.FacetKey, facetKey, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Whether one of the filters came from the given facet, so the facet's counts need their own query.
+    /// </summary>
+    public bool HasFilterFor(string facetKey)
+        => Filters.Any(filter => string.Equals(filter.FacetKey, facetKey, StringComparison.Ordinal));
 
     public static ProductSearchIndexQuery Create(ProductSearchQuery query)
     {
@@ -96,6 +107,9 @@ public sealed class ProductSearchIndexQuery
             Cultures = string.IsNullOrEmpty(query.Culture) ? [] : [query.Culture, ProductSearchIndexFields.NeutralCulture],
             Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
             Filters = filters,
+            Facets = (query.Facets ?? [])
+                .Where(facet => !string.IsNullOrEmpty(facet?.Key) && !string.IsNullOrEmpty(facet.AttributeKey))
+                .ToArray(),
             Sort = GetSort(query.Sort),
             Skip = Math.Max(0, query.Skip),
             Take = Math.Clamp(query.Take, 1, 200),

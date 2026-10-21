@@ -114,10 +114,10 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
         ArgumentException.ThrowIfNullOrEmpty(parentReferenceType);
         ArgumentException.ThrowIfNullOrEmpty(parentReferenceId);
 
-        var type = TransactionParentReferenceIndexProvider.Truncate(parentReferenceType);
-        var id = TransactionParentReferenceIndexProvider.Truncate(parentReferenceId);
+        var type = TransactionIndexProvider.TruncateParentReference(parentReferenceType);
+        var id = TransactionIndexProvider.TruncateParentReference(parentReferenceId);
 
-        var records = await Session.Query<Transaction, TransactionParentReferenceIndex>(
+        var records = await Session.Query<Transaction, TransactionIndex>(
             x => x.ParentReferenceType == type && x.ParentReferenceId == id,
             collection: CollectionName)
             .ListAsync(cancellationToken);

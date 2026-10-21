@@ -1,0 +1,37 @@
+@using System.Globalization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContentTransferEntry>
+
+@{
+    Model.Value.TryGet<ImportFileProcessStatsPart>(out var statsPart);
+
+    var categories = statsPart?.ErrorCategories?
+        .Where(category => category.Value?.Count > 0)
+        .OrderByDescending(category => category.Value.Count)
+        .ThenBy(category => category.Key, StringComparer.CurrentCulture)
+        .ToList() ?? [];
+
+    var otherCount = (statsPart?.Errors?.Count ?? 0) - categories.Sum(category => category.Value.Count);
+}
+
+@if (categories.Count > 0)
+{
+    <div class="small text-muted" aria-label="@T["Records with errors, by reason"]">
+        @foreach (var category in categories)
+        {
+            <span class="me-3 text-nowrap">
+                <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i>
+                @category.Key: <span class="fw-semibold">@category.Value.Count.ToString("N0", CultureInfo.CurrentCulture)</span>
+            </span>
+        }
+
+        @if (otherCount > 0)
+        {
+            <span class="me-3 text-nowrap">
+                <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i>
+                @T["Other errors"]: <span class="fw-semibold">@otherCount.ToString("N0", CultureInfo.CurrentCulture)</span>
+            </span>
+        }
+    </div>
+}

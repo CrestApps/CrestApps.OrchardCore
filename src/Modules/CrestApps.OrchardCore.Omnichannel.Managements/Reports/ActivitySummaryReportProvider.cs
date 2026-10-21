@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
@@ -7,6 +8,8 @@ using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using ISession = YesSql.ISession;
 using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
@@ -14,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 /// The CRM activity summary report: activity volume and completion, broken down by source, channel, and
 /// status, with a daily created-activity trend.
 /// </summary>
-public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
+public sealed class ActivitySummaryReportProvider : OmnichannelReportBase, IReport
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
@@ -40,16 +43,19 @@ public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-activity-summary";
+    public static string Name => "omnichannel-activity-summary";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Activity summary"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ActivitySummaryReportProvider>("Activity summary");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["CRM activity volume and completion, broken down by source, channel, and status, with a daily trend."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ActivitySummaryReportProvider>("CRM activity volume and completion, broken down by source, channel, and status, with a daily trend.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.Operations;
+    public static string Category => ReportsConstants.Categories.Operations;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

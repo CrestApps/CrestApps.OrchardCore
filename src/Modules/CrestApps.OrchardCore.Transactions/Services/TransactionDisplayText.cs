@@ -15,6 +15,7 @@ public sealed class TransactionDisplayText
 {
     private readonly IEnumerable<ICheckoutPaymentProvider> _paymentProviders;
     private readonly TransactionSourceOptions _sourceOptions;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
 
@@ -24,13 +25,16 @@ public sealed class TransactionDisplayText
     /// <param name="paymentProviders">The registered payment providers, which name their own methods.</param>
     /// <param name="sourceOptions">The registered transaction sources, which name themselves.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="localizerFactory">The localizer factory that translates the registered transaction sources' names.</param>
     public TransactionDisplayText(
         IEnumerable<ICheckoutPaymentProvider> paymentProviders,
         IOptions<TransactionSourceOptions> sourceOptions,
-        IStringLocalizer<TransactionDisplayText> stringLocalizer)
+        IStringLocalizer<TransactionDisplayText> stringLocalizer,
+        IStringLocalizerFactory localizerFactory)
     {
         _paymentProviders = paymentProviders;
         _sourceOptions = sourceOptions.Value;
+        _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
 
@@ -135,7 +139,7 @@ public sealed class TransactionDisplayText
         }
 
         return _sourceOptions.Sources.TryGetValue(source, out var registered) && registered.DisplayName is not null
-            ? registered.DisplayName.Value
+            ? _localizerFactory.Localize(registered.DisplayName).Value
             : source;
     }
 
@@ -144,23 +148,12 @@ public sealed class TransactionDisplayText
     /// </summary>
     /// <param name="providerKey">The stored provider key.</param>
     public string PaymentMethodName(string providerKey)
-    {
-        if (string.IsNullOrEmpty(providerKey))
-        {
-            return null;
-        }
-
-        var provider = _paymentProviders.FirstOrDefault(provider => string.Equals(provider.Key, providerKey, StringComparison.OrdinalIgnoreCase));
-
-        return string.IsNullOrEmpty(provider?.DisplayName) ? providerKey : provider.DisplayName;
-    }
+        => _paymentProviders.GetPaymentMethodName(providerKey);
 
     /// <summary>
     /// Gets the provider of a payment method, or <see langword="null"/> when it is no longer enabled.
     /// </summary>
     /// <param name="providerKey">The stored provider key.</param>
     public ICheckoutPaymentProvider FindPaymentProvider(string providerKey)
-        => string.IsNullOrEmpty(providerKey)
-            ? null
-            : _paymentProviders.FirstOrDefault(provider => string.Equals(provider.Key, providerKey, StringComparison.OrdinalIgnoreCase));
+        => _paymentProviders.FindByKey(providerKey);
 }

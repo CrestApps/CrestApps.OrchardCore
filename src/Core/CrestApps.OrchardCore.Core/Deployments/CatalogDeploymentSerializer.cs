@@ -29,6 +29,8 @@ public static class CatalogDeploymentSerializer
 
     /// <summary>
     /// Gets the names of the members that belong to the environment that stores the entry rather than to its configuration.
+    /// A <c>Version</c> member is the stamp the storing environment increments on every change, so a plan can never
+    /// regress or reuse it.
     /// </summary>
     public static readonly IReadOnlySet<string> EnvironmentOwnedMembers = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -36,6 +38,7 @@ public static class CatalogDeploymentSerializer
         "ModifiedUtc",
         "OwnerId",
         "Author",
+        "Version",
     };
 
     /// <summary>

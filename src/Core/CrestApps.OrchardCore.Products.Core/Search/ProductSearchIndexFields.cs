@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Products.Core.Listing;
+using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.Products.Core.Search;
 
@@ -24,6 +25,16 @@ public static class ProductSearchIndexFields
     /// The index type of a product search index in Orchard Core Indexing.
     /// </summary>
     public const string IndexingTaskType = "ProductSearch";
+
+    /// <summary>
+    /// Whether an index profile is a product search index, of the given provider when one is named.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="providerName">The provider the index must belong to, or <see langword="null"/> for any provider.</param>
+    public static bool IsProductSearchIndex(IndexProfile indexProfile, string providerName = null)
+        => indexProfile is not null &&
+            string.Equals(indexProfile.Type, IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
+            (providerName is null || string.Equals(indexProfile.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
 
     public const string ContentItemId = "ContentItemId";
 

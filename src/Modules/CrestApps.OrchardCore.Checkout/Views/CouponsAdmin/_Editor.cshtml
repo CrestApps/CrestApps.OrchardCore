@@ -5,43 +5,86 @@
 
 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <label asp-for="Code" class="form-label">@T["Code"]</label>
+<fieldset class="mb-3">
+    <legend class="form-label fs-6">@T["How it's applied"]</legend>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="radio" asp-for="Method" value="@CouponMethod.Code" id="Method_Code" class="form-check-input" data-coupon-method />
+                <label for="Method_Code" class="form-check-label">@T["The customer enters a code"]</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" asp-for="Method" value="@CouponMethod.Automatic" id="Method_Automatic" class="form-check-input" data-coupon-method />
+                <label for="Method_Automatic" class="form-check-label">@T["Automatically, on every order that qualifies"]</label>
+            </div>
+            <span class="hint dashed">@T["No code to enter. The buyer sees the description at checkout."]</span>
+        </div>
+    </div>
+</fieldset>
+
+<div class="ocat-wrapper" asp-validation-class-for="Code">
+    <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+    <div class="ocat-end">
         <input asp-for="Code" class="form-control" autocomplete="off" />
         <span asp-validation-for="Code"></span>
-        <span class="hint">@T["What the customer types. Matched without case sensitivity."]</span>
+        <span class="hint" data-coupon-methods="@CouponMethod.Code">@T["What the customer types. Matched without case sensitivity."]</span>
+        <span class="hint" data-coupon-methods="@CouponMethod.Automatic">@T["Optional. Nobody types it; it names the discount's uses. Leave it blank to have one made up."]</span>
     </div>
-    <div class="col-md-8 mb-3">
-        <label asp-for="Description" class="form-label">@T["Description"]</label>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OnlyGeneratedCodes" data-coupon-methods="@CouponMethod.Code">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="OnlyGeneratedCodes" class="form-check-input" />
+            <label asp-for="OnlyGeneratedCodes" class="form-check-label">@T["Only the generated codes work"]</label>
+        </div>
+        <span class="hint dashed">@T["This code is then refused; use it to name the campaign, and generate unique codes for it below."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
         <input asp-for="Description" class="form-control" />
         <span asp-validation-for="Description"></span>
         <span class="hint">@T["Shown on the customer's invoice."]</span>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <label asp-for="Kind" class="form-label">@T["Discount type"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="Kind">
+    <label asp-for="Kind" class="ocat-label">@T["Discount type"]</label>
+    <div class="ocat-end">
         <select asp-for="Kind" class="form-select">
             <option value="@((int)CouponKind.Percentage)">@T["Percentage"]</option>
             <option value="@((int)CouponKind.FixedAmount)">@T["Fixed amount"]</option>
             <option value="@((int)CouponKind.FreeShipping)">@T["Free shipping"]</option>
+            <option value="@((int)CouponKind.BuyXGetY)">@T["Buy X get Y"]</option>
         </select>
-        <span class="hint">@T["Free shipping takes off the shipping charged at checkout, whatever the method."]</span>
+        <span class="hint" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount) @((int)CouponKind.FreeShipping)">@T["Free shipping takes off the shipping charged at checkout, whatever the method."]</span>
+        <span class="hint" data-coupon-kinds="@((int)CouponKind.BuyXGetY)">@T["For every so many items bought, some items are cheaper or free. The cheapest qualifying items are the ones discounted."]</span>
     </div>
-    <div class="col-md-4 mb-3" data-coupon-kinds="@((int)CouponKind.Percentage)">
-        <label asp-for="Percentage" class="form-label">@T["Percentage"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Percentage" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.BuyXGetY)">
+    <label asp-for="Percentage" class="ocat-label">@T["Percentage"]</label>
+    <div class="ocat-limited">
         <input asp-for="Percentage" type="number" step="0.01" min="0" max="100" class="form-control" />
         <span asp-validation-for="Percentage"></span>
+        <span class="hint" data-coupon-kinds="@((int)CouponKind.BuyXGetY)">@T["Taken off each item the customer gets. 100 makes them free."]</span>
     </div>
-    <div class="col-md-2 mb-3" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
-        <label asp-for="Amount" class="form-label">@T["Amount"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Amount" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
+    <label asp-for="Amount" class="ocat-label">@T["Amount"]</label>
+    <div class="ocat-limited">
         <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="Amount"></span>
     </div>
-    <div class="col-md-2 mb-3" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
-        <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Currency" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-limited">
         @if (Model.Currencies is { Count: > 0 })
         {
             <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
@@ -56,67 +99,153 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-3" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount)">
-        <label asp-for="Target" class="form-label">@T["Applies to"]</label>
+<div data-coupon-kinds="@((int)CouponKind.BuyXGetY)">
+    <div class="ocat-limited-wrapper" asp-validation-class-for="BuyQuantity">
+        <label asp-for="BuyQuantity" class="ocat-label">@T["Customer buys"]</label>
+        <div class="ocat-limited">
+            <input asp-for="BuyQuantity" type="number" min="1" class="form-control" />
+            <span asp-validation-for="BuyQuantity"></span>
+            <span class="hint">@T["How many qualifying items, chosen under What the customer buys below."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="GetQuantity">
+        <label asp-for="GetQuantity" class="ocat-label">@T["Customer gets"]</label>
+        <div class="ocat-limited">
+            <input asp-for="GetQuantity" type="number" min="1" class="form-control" />
+            <span asp-validation-for="GetQuantity"></span>
+            <span class="hint">@T["How many items at the percentage off, chosen under What the customer gets below."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="MaxApplicationsPerOrder">
+        <label asp-for="MaxApplicationsPerOrder" class="ocat-label">@T["Times per order"]</label>
+        <div class="ocat-limited">
+            <input asp-for="MaxApplicationsPerOrder" type="number" min="1" class="form-control" />
+            <span asp-validation-for="MaxApplicationsPerOrder"></span>
+            <span class="hint">@T["Leave blank to apply as often as the order allows: buy 4 get 2 on a buy 2 get 1 offer."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Target" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount)">
+    <label asp-for="Target" class="ocat-label">@T["Applies to"]</label>
+    <div class="ocat-end">
         <select asp-for="Target" class="form-select">
             <option value="@((int)DiscountTarget.OneTime)">@T["The one-time amount"]</option>
             <option value="@((int)DiscountTarget.FirstCycle)">@T["The first billing cycle"]</option>
         </select>
         <span class="hint">@T["A first-cycle discount applies once. It does not reduce later cycles."]</span>
     </div>
-    <div class="col-md-4 mb-3">
-        <label asp-for="MinimumAmount" class="form-label">@T["Minimum amount"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumAmount">
+    <label asp-for="MinimumAmount" class="ocat-label">@T["Minimum amount"]</label>
+    <div class="ocat-limited">
         <input asp-for="MinimumAmount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="MinimumAmount"></span>
         <span class="hint">@T["Optional. The coupon does nothing below this. Only the items count, not shipping."]</span>
     </div>
-    <div class="col-md-4 mb-3">
-        <label asp-for="MaxRedemptions" class="form-label">@T["Usage limit"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxRedemptions">
+    <label asp-for="MaxRedemptions" class="ocat-label">@T["Usage limit"]</label>
+    <div class="ocat-limited">
         <input asp-for="MaxRedemptions" type="number" min="1" class="form-control" />
         <span asp-validation-for="MaxRedemptions"></span>
         <span class="hint">@T["Leave blank for unlimited. A code with no limit that leaks keeps discounting."]</span>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <label asp-for="MaximumAmount" class="form-label">@T["Maximum amount"]</label>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaximumAmount">
+    <label asp-for="MaximumAmount" class="ocat-label">@T["Maximum amount"]</label>
+    <div class="ocat-limited">
         <input asp-for="MaximumAmount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="MaximumAmount"></span>
         <span class="hint">@T["Optional. The coupon does nothing above this, such as a code meant for small orders."]</span>
     </div>
-    <div class="col-md-4 mb-3">
-        <label asp-for="MaxRedemptionsPerCustomer" class="form-label">@T["Uses per customer"]</label>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxRedemptionsPerCustomer">
+    <label asp-for="MaxRedemptionsPerCustomer" class="ocat-label">@T["Uses per customer"]</label>
+    <div class="ocat-limited">
         <input asp-for="MaxRedemptionsPerCustomer" type="number" min="1" class="form-control" />
         <span asp-validation-for="MaxRedemptionsPerCustomer"></span>
         <span class="hint">@T["Leave blank for no limit. A customer is their account, or the email a guest checks out with."]</span>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-3">
-        <label asp-for="StartsUtc" class="form-label">@T["Valid from (UTC)"]</label>
-        <input asp-for="StartsUtc" type="datetime-local" class="form-control" />
-        <span asp-validation-for="StartsUtc"></span>
-    </div>
-    <div class="col-md-4 mb-3">
-        <label asp-for="EndsUtc" class="form-label">@T["Valid until (UTC)"]</label>
-        <input asp-for="EndsUtc" type="datetime-local" class="form-control" />
-        <span asp-validation-for="EndsUtc"></span>
-    </div>
-    <div class="col-md-4 mb-3 form-check mt-4">
-        <input asp-for="IsEnabled" class="form-check-input" />
-        <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumQuantity">
+    <label asp-for="MinimumQuantity" class="ocat-label">@T["Minimum quantity"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumQuantity" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MinimumQuantity"></span>
+        <span class="hint">@T["Optional. How many of the items it counts the order needs, such as 3 for buy 3 or more and save."]</span>
     </div>
 </div>
 
-<h5 class="mt-2">@T["Who and what it is for"]</h5>
-<p class="text-muted">@T["Optional. Leave these blank for a code anyone can use on any checkout. A code that is limited is refused everywhere else."]</p>
+<div class="ocat-limited-wrapper" asp-validation-class-for="StartsUtc">
+    <label asp-for="StartsUtc" class="ocat-label">@T["Valid from (UTC)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="StartsUtc" type="datetime-local" class="form-control" />
+        <span asp-validation-for="StartsUtc"></span>
+    </div>
+</div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label asp-for="Sources" class="form-label">@T["Only for transaction sources"]</label>
+<div class="ocat-limited-wrapper" asp-validation-class-for="EndsUtc">
+    <label asp-for="EndsUtc" class="ocat-label">@T["Valid until (UTC)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="EndsUtc" type="datetime-local" class="form-control" />
+        <span asp-validation-for="EndsUtc"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IsEnabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsEnabled" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-2">@T["Combines with"]</h5>
+        <p class="text-muted">@T["Which other discounts can be used on the same order. When discounts can't all be used together, the buyer gets the combination that takes off the most, and is told which code wasn't used."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="CombinesWithProductDiscounts" class="form-check-input" />
+            <label asp-for="CombinesWithProductDiscounts" class="form-check-label">@T["Product discounts"]</label>
+        </div>
+        <span class="hint dashed">@T["Discounts limited to some products or categories."]</span>
+        <div class="form-check">
+            <input asp-for="CombinesWithOrderDiscounts" class="form-check-input" />
+            <label asp-for="CombinesWithOrderDiscounts" class="form-check-label">@T["Order discounts"]</label>
+        </div>
+        <span class="hint dashed">@T["Discounts off the whole order."]</span>
+        <div class="form-check">
+            <input asp-for="CombinesWithShippingDiscounts" class="form-check-input" />
+            <label asp-for="CombinesWithShippingDiscounts" class="form-check-label">@T["Shipping discounts"]</label>
+        </div>
+        <span class="hint dashed">@T["Free or cheaper shipping."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-2">@T["Who and what it is for"]</h5>
+        <p class="text-muted">@T["Optional. Leave these blank for a code anyone can use on any checkout. A code that is limited is refused everywhere else."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Sources">
+    <label asp-for="Sources" class="ocat-label">@T["Only for transaction sources"]</label>
+    <div class="ocat-end">
         <input asp-for="Sources" class="form-control" autocomplete="off" />
         <span asp-validation-for="Sources"></span>
         <span class="hint">@T["Separate several with commas. The code then works only when paying a transaction from one of these sources."]</span>
@@ -125,23 +254,29 @@
             <span class="hint">@T["Sources on this site: {0}", string.Join(", ", Model.KnownSources)]</span>
         }
     </div>
-    <div class="col-md-6 mb-3">
-        <label asp-for="ReferenceTypes" class="form-label">@T["Only for reference types"]</label>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReferenceTypes">
+    <label asp-for="ReferenceTypes" class="ocat-label">@T["Only for reference types"]</label>
+    <div class="ocat-end">
         <input asp-for="ReferenceTypes" class="form-control" autocomplete="off" />
         <span asp-validation-for="ReferenceTypes"></span>
         <span class="hint">@T["Separate several with commas. The code then works only on a checkout for one of these, such as Transaction, or on a transaction for one of these."]</span>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label asp-for="CustomerId" class="form-label">@T["Only for the customer with ID"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="CustomerId">
+    <label asp-for="CustomerId" class="ocat-label">@T["Only for the customer with ID"]</label>
+    <div class="ocat-end">
         <input asp-for="CustomerId" class="form-control" autocomplete="off" />
         <span asp-validation-for="CustomerId"></span>
         <span class="hint">@T["The customer's user ID, or the guest customer ID on their transaction."]</span>
     </div>
-    <div class="col-md-6 mb-3">
-        <label asp-for="CustomerEmail" class="form-label">@T["Only for the customer with email"]</label>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CustomerEmail">
+    <label asp-for="CustomerEmail" class="ocat-label">@T["Only for the customer with email"]</label>
+    <div class="ocat-end">
         <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="off" />
         <span asp-validation-for="CustomerEmail"></span>
         <span class="hint">@T["Matched against the email on the checkout, on the transaction, or on the customer's account."]</span>
@@ -155,19 +290,25 @@
 
 @if (!string.IsNullOrEmpty(Model.ItemId))
 {
-    <p class="text-muted small">
-        @T.Plural(Model.RedemptionCount, "Redeemed once.", "Redeemed {0} times.")
-        @if (Model.HeldCount > 0)
-        {
-            @T.Plural(Model.HeldCount, " 1 more use is held by a checkout that is paying.", " {0} more uses are held by checkouts that are paying.")
-        }
-    </p>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <p class="text-muted small">
+                @T.Plural(Model.RedemptionCount, "Redeemed once.", "Redeemed {0} times.")
+                @if (Model.HeldCount > 0)
+                {
+                    @T.Plural(Model.HeldCount, " 1 more use is held by a checkout that is paying.", " {0} more uses are held by checkouts that are paying.")
+                }
+            </p>
+        </div>
+    </div>
 }
 
-@* Shows only what the chosen kind of coupon uses: a percentage, or an amount in a currency; free shipping uses neither. *@
+@* Shows only what the chosen kind of coupon uses: a percentage, an amount in a currency, or what's bought and got;
+   free shipping uses none of them. And only the hints for how it's applied. *@
 <script at="Foot">
     (function () {
         var kind = document.getElementById('@Html.IdFor(m => m.Kind)');
+        var methods = document.querySelectorAll('[data-coupon-method]');
 
         if (!kind) {
             return;
@@ -177,9 +318,16 @@
             document.querySelectorAll('[data-coupon-kinds]').forEach(function (field) {
                 field.hidden = field.getAttribute('data-coupon-kinds').split(' ').indexOf(kind.value) < 0;
             });
+
+            var method = Array.prototype.find.call(methods, function (radio) { return radio.checked; });
+
+            document.querySelectorAll('[data-coupon-methods]').forEach(function (field) {
+                field.hidden = !method || field.getAttribute('data-coupon-methods') !== method.value;
+            });
         };
 
         kind.addEventListener('change', sync);
+        methods.forEach(function (radio) { radio.addEventListener('change', sync); });
         sync();
     })();
 </script>

@@ -190,7 +190,7 @@ public sealed class PredictiveHardeningIntegrationTests
         // Assert: the follow-up was placed for an agent reserved for it; the fresh record without one.
         var retry = Assert.Single(harness.Router.PlacedCalls, call => call.ActivityId == "follow-up-1");
         Assert.False(string.IsNullOrEmpty(retry.AgentId));
-        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(retry.AgentId));
+        Assert.Equal(AgentPresenceStatus.Reserved, await harness.GetPresenceAsync(retry.AgentId));
 
         var fresh = Assert.Single(harness.Router.PlacedCalls, call => call.ActivityId == "activity-2");
         Assert.Null(fresh.AgentId);

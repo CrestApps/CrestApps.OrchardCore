@@ -1,18 +1,16 @@
-using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 /// <summary>
-/// Provides the shared category, permission, and dependencies for the Contact Center reports contributed
-/// to the admin Reports area.
+/// Provides the shared dependencies, capability checks and timeout handling of the Contact Center reports contributed
+/// to the admin Reports area. A report derives from it and implements <see cref="IReport"/> with its static members.
 /// </summary>
-public abstract class ContactCenterReportBase : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
+public abstract class ContactCenterReportBase : IReportRunner, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
 
@@ -41,21 +39,6 @@ public abstract class ContactCenterReportBase : IReport, IReportFilterMetadata, 
     /// Gets the string localizer used for the report labels.
     /// </summary>
     protected IStringLocalizer S { get; }
-
-    /// <inheritdoc/>
-    public abstract string Name { get; }
-
-    /// <inheritdoc/>
-    public abstract LocalizedString DisplayName { get; }
-
-    /// <inheritdoc/>
-    public abstract LocalizedString Description { get; }
-
-    /// <inheritdoc/>
-    public virtual string Category => ReportsConstants.Categories.Operations;
-
-    /// <inheritdoc/>
-    public Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public abstract IReadOnlyCollection<string> FilterNames { get; }

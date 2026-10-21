@@ -1,0 +1,85 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CustomerStoreCreditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+<div class="mt-5">
+    <h2 class="h5">@T["Store credit"]</h2>
+
+    @if (Model.Accounts.Count == 0)
+    {
+        <p class="text-muted small">@T["No store credit."]</p>
+    }
+    else
+    {
+        <ul class="list-unstyled mb-2">
+            @foreach (var account in Model.Accounts)
+            {
+                <li class="fs-5">@ProductPriceFormatter.Format(account.Balance, account.Currency)</li>
+            }
+        </ul>
+    }
+
+    @if (!Model.HasAccount)
+    {
+        <p class="text-muted small">@T["Store credit is spent when the customer is signed in, so only customers with an account can be given it."]</p>
+    }
+    else if (Model.CanManage)
+    {
+        <form asp-controller="StoreCreditAdmin" asp-action="Change" asp-route-customerId="@Model.CustomerId" method="post" class="row g-2 align-items-end mb-3">
+            <div class="col-6 col-sm-3">
+                <label class="form-label" for="store-credit-amount">@T["Amount"]</label>
+                <input id="store-credit-amount" name="amount" type="number" step="0.01" class="form-control" required />
+            </div>
+            <div class="col-6 col-sm-2">
+                <label class="form-label" for="store-credit-currency">@T["Currency"]</label>
+                <input id="store-credit-currency" name="currency" value="@Model.DefaultCurrency" maxlength="3" class="form-control" required />
+            </div>
+            <div class="col-12 col-sm-5">
+                <label class="form-label" for="store-credit-reason">@T["Reason"]</label>
+                <input id="store-credit-reason" name="reason" class="form-control" required />
+            </div>
+            <div class="col-12 col-sm-2">
+                <button type="submit" class="btn btn-outline-primary w-100">@T["Change"]</button>
+            </div>
+            <span class="hint">@T["A positive amount gives credit; a negative one takes it away. The reason is kept with the credit's activity."]</span>
+        </form>
+    }
+
+    @if (Model.Accounts.Any(account => account.Activity?.Count > 0))
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle small">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["When"]</th>
+                        <th scope="col">@T["What"]</th>
+                        <th scope="col" class="text-end">@T["Change"]</th>
+                        <th scope="col" class="text-end">@T["Balance"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (activity, currency) in Model.Accounts.SelectMany(account => (account.Activity ?? []).Select(activity => (activity, account.Currency))).OrderByDescending(entry => entry.activity.CreatedUtc).Take(20))
+                    {
+                        <tr>
+                            <td class="text-nowrap">@((await LocalAsync(activity.CreatedUtc)).ToString("g"))</td>
+                            <td>
+                                @activity.Reason
+                                @if (!string.IsNullOrEmpty(activity.Actor))
+                                {
+                                    <span class="text-muted">&middot; @activity.Actor</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap @(activity.Amount < 0 ? "text-danger" : "text-success")">@(activity.Amount < 0 ? "−" : "+")@ProductPriceFormatter.Format(Math.Abs(activity.Amount), currency)</td>
+                            <td class="text-end text-nowrap">@ProductPriceFormatter.Format(activity.Balance, currency)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

@@ -13,7 +13,6 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using CrestApps.OrchardCore.Transactions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -41,13 +40,9 @@ public sealed class InstallmentPlansController : Controller
 {
     private const string _optionsStatus = "Options.Status";
     private const string _optionsSearch = "Options.Search";
-    private const int MaxProviderDataEntries = 16;
-    private const int MaxProviderDataKeyLength = 64;
-    private const int MaxProviderDataValueLength = 512;
 
     private readonly IInstallmentPlanStore _planStore;
     private readonly IInstallmentPlanService _planService;
-    private readonly ICheckoutEngine _checkoutEngine;
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly IEnumerable<ICheckoutSavedPaymentMethodProvider> _savedPaymentMethodProviders;
@@ -66,7 +61,6 @@ public sealed class InstallmentPlansController : Controller
     public InstallmentPlansController(
         IInstallmentPlanStore planStore,
         IInstallmentPlanService planService,
-        ICheckoutEngine checkoutEngine,
         ICheckoutSessionStore sessionStore,
         ICheckoutPaymentProviderResolver providerResolver,
         IEnumerable<ICheckoutSavedPaymentMethodProvider> savedPaymentMethodProviders,
@@ -80,7 +74,6 @@ public sealed class InstallmentPlansController : Controller
     {
         _planStore = planStore;
         _planService = planService;
-        _checkoutEngine = checkoutEngine;
         _sessionStore = sessionStore;
         _providerResolver = providerResolver;
         _savedPaymentMethodProviders = savedPaymentMethodProviders;
@@ -334,103 +327,6 @@ public sealed class InstallmentPlansController : Controller
     }
 
     /// <summary>
-    /// Starts the down payment with the card the administrator entered.
-    /// </summary>
-    /// <param name="itemId">The plan identifier.</param>
-    /// <param name="request">The payment method and what its script produced.</param>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> BeginPayment(string itemId, [FromBody] BeginDownPaymentRequest request)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageInstallmentPlans))
-        {
-            return Forbid();
-        }
-
-        var plan = await FindPlanAsync(itemId);
-
-        if (plan is null || plan.Status != InstallmentPlanStatus.Draft || string.IsNullOrEmpty(plan.DownPaymentSessionId) || !string.IsNullOrEmpty(plan.SourceTransactionId))
-        {
-            return Error(S["This plan is not waiting for a down payment."], StatusCodes.Status400BadRequest);
-        }
-
-        var provider = GetEligiblePaymentMethods().FirstOrDefault(candidate =>
-            string.Equals(candidate.Key, request?.ProviderKey, StringComparison.OrdinalIgnoreCase));
-
-        if (provider is null)
-        {
-            return Error(S["Choose a payment method that can keep the card for later payments."], StatusCodes.Status400BadRequest);
-        }
-
-        var outcome = await _checkoutEngine.BeginPaymentAsync(
-            plan.DownPaymentSessionId,
-            new BeginPaymentOptions
-            {
-                ProviderKey = provider.Key,
-                ReturnUrl = request.ReturnUrl,
-                CancelUrl = request.CancelUrl,
-                ProviderData = BuildProviderData(request.ProviderData, plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge),
-            },
-            HttpContext.RequestAborted);
-
-        if (!outcome.Succeeded)
-        {
-            return Error(outcome.ProviderErrorMessage ?? outcome.ErrorMessage, StatusCodes.Status400BadRequest);
-        }
-
-        return Ok(new
-        {
-            requiresAction = outcome.RequiresAction,
-            steps = outcome.Steps.Select(step => new
-            {
-                obligationId = step.ObligationId,
-                attemptId = step.AttemptId,
-                clientSecret = step.ClientSecret,
-                redirectUrl = step.RedirectUrl,
-                requiresAction = step.RequiresAction,
-            }),
-        });
-    }
-
-    /// <summary>
-    /// Reports whether the down payment settled and, once it has, starts the plan.
-    /// </summary>
-    /// <param name="itemId">The plan identifier.</param>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PaymentStatus(string itemId)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageInstallmentPlans))
-        {
-            return Forbid();
-        }
-
-        var plan = await FindPlanAsync(itemId);
-
-        if (plan is null || string.IsNullOrEmpty(plan.DownPaymentSessionId))
-        {
-            return NotFound();
-        }
-
-        var result = await _checkoutEngine.TryCompleteAsync(plan.DownPaymentSessionId, HttpContext.RequestAborted);
-
-        if (result.IsCompleted)
-        {
-            // The payment handler usually starts the plan as the payment is recorded; this makes sure of it before
-            // the administrator is shown the plan.
-            await _planService.ActivateAsync(plan.ItemId, HttpContext.RequestAborted);
-        }
-
-        return Ok(new
-        {
-            status = result.Status.ToString(),
-            completed = result.IsCompleted,
-            blockingStepKey = result.BlockingStepKey,
-            errorMessage = result.ErrorMessage,
-        });
-    }
-
-    /// <summary>
     /// Shows a plan.
     /// </summary>
     /// <param name="itemId">The plan identifier.</param>
@@ -543,45 +439,8 @@ public sealed class InstallmentPlansController : Controller
     private async Task<InstallmentPlan> FindPlanAsync(string itemId)
         => string.IsNullOrEmpty(itemId) ? null : await _planStore.FindByIdAsync(itemId, HttpContext.RequestAborted);
 
-    // Only a provider that can keep the card, and whose card form can be shown on this page, can take a down payment
-    // that the schedule then charges.
     private IEnumerable<ICheckoutPaymentProvider> GetEligiblePaymentMethods()
-        => _providerResolver.GetProviders().Where(provider =>
-            provider.Capabilities.SupportsSavedPaymentMethods &&
-            provider.Capabilities.SupportsEmbeddedElements &&
-            _savedPaymentMethodProviders.Any(saved => string.Equals(saved.Key, provider.Key, StringComparison.OrdinalIgnoreCase)));
-
-    // What the browser sent is bounded, and the keys that decide whether a saved card is spent are stripped: only
-    // this server decides to keep a card, and nothing a browser sends may charge one without the customer.
-    private static Dictionary<string, string> BuildProviderData(Dictionary<string, string> providerData, bool savePaymentMethod)
-    {
-        var sanitized = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var pair in providerData ?? [])
-        {
-            if (string.IsNullOrEmpty(pair.Key) ||
-                pair.Key.Length > MaxProviderDataKeyLength ||
-                (pair.Value is not null && pair.Value.Length > MaxProviderDataValueLength) ||
-                pair.Key is CheckoutPaymentDataKeys.OffSession or CheckoutPaymentDataKeys.SavedCustomerReference or CheckoutPaymentDataKeys.SavedPaymentMethodReference or CheckoutPaymentDataKeys.SavePaymentMethod)
-            {
-                continue;
-            }
-
-            sanitized[pair.Key] = pair.Value;
-
-            if (sanitized.Count == MaxProviderDataEntries)
-            {
-                break;
-            }
-        }
-
-        if (savePaymentMethod)
-        {
-            sanitized[CheckoutPaymentDataKeys.SavePaymentMethod] = "true";
-        }
-
-        return sanitized;
-    }
+        => InstallmentPlanPaymentMethods.GetEligible(_providerResolver, _savedPaymentMethodProviders);
 
     // The currencies come from Products, which installment plans don't need. Without it the currency is typed.
     private async Task PopulateAsync(CreateInstallmentPlanViewModel model)
@@ -631,36 +490,4 @@ public sealed class InstallmentPlansController : Controller
             InstallmentPlanStatus.Canceled => S["Canceled"],
             _ => status.ToString(),
         };
-
-    private static JsonResult Error(string message, int statusCode)
-        => new(new { error = message, errorMessage = message })
-        {
-            StatusCode = statusCode,
-        };
-
-    /// <summary>
-    /// The body of a down payment begin request.
-    /// </summary>
-    public sealed class BeginDownPaymentRequest
-    {
-        /// <summary>
-        /// Gets or sets the chosen payment provider.
-        /// </summary>
-        public string ProviderKey { get; set; }
-
-        /// <summary>
-        /// Gets or sets where a hosted provider returns after paying.
-        /// </summary>
-        public string ReturnUrl { get; set; }
-
-        /// <summary>
-        /// Gets or sets where a hosted provider returns after canceling.
-        /// </summary>
-        public string CancelUrl { get; set; }
-
-        /// <summary>
-        /// Gets or sets what the provider's script produced, such as a tokenized card.
-        /// </summary>
-        public Dictionary<string, string> ProviderData { get; set; }
-    }
 }

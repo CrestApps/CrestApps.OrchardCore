@@ -1,16 +1,19 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 /// <summary>
 /// The Contact Center queue usage report: per-queue handled volume, outcomes, and live waiting depth.
 /// </summary>
-public sealed class QueueUsageReportProvider : ContactCenterReportBase
+public sealed class QueueUsageReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueUsageReportProvider"/> class.
@@ -27,16 +30,19 @@ public sealed class QueueUsageReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-queue-usage";
+    public static string Name => "contact-center-queue-usage";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Queue usage"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<QueueUsageReportProvider>("Queue usage");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per-queue handled, answered, and abandoned volume, handle time, and current waiting depth."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<QueueUsageReportProvider>("Per-queue handled, answered, and abandoned volume, handle time, and current waiting depth.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.QueueRouting;
+    public static string Category => ReportsConstants.Categories.QueueRouting;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

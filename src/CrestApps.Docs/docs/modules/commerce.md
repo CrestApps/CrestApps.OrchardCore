@@ -30,7 +30,10 @@ This video walks through the commerce modules, their screens, configuration and 
 | Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
 | Receipts | Receipts | The reusable printable receipt and its branding settings. | [Receipts](receipts) |
 | Subscriptions | Subscriptions, Subscriptions - Sites, Subscriptions - Installment Plans | Recurring plans and their agreements, selling sites, and administrator-made payment plans. | [Subscriptions](subscriptions), [Installment Plans](installment-plans) |
-| Taxation | Taxation | Tax categories, jurisdictions, rules and calculation. | [Taxation](taxation) |
+| Taxation | Taxation, TaxJar | Tax categories, jurisdictions, rules and calculation, and TaxJar for sales tax. | [Taxation](taxation) |
+| Marketing | Marketing | Customers' purchases, segments by them, and email campaigns to the customers who accept marketing, with an unsubscribe link. | [Marketing](marketing) |
+| Companies | Companies | Business customers with buyers, locations, payment terms on account, purchase order numbers, price lists, approvals and budgets, and OCI punchout. | [Companies](companies) |
+| Markets | Markets | Groups of countries with their own currency, exchange rate, rounding, language and tax treatment, a storefront market picker, and products not sold in a market. | [Markets](markets) |
 
 ## How a purchase flows
 
@@ -104,7 +107,7 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### Storefront account
 
-The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with an `INavigationProvider` that builds only for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
 
 ```csharp
 public sealed class MyAccountMenu : INavigationProvider
@@ -124,7 +127,23 @@ public sealed class MyAccountMenu : INavigationProvider
 }
 ```
 
-An account page renders `await DisplayAsync(await New.CommerceAccountNavigation())` in its side column. Orders, Digital Downloads, Subscriptions, Transactions and Customers add **Orders**, **Downloads**, **Subscriptions**, **Balances and invoices**, **Addresses** and **Account details**.
+An account page keeps its own breadcrumb and renders the `CommerceAccountPage` shape (`CommerceConstants.Account.PageShape`), which frames it: the `CommerceAccountNavigation` menu in the side column, then the page's heading and content. The shape takes these properties:
+
+- `Title`: the page's heading. Without one, the page shows no heading, such as an order whose content has its own.
+- `Content`: the page's content, a shape or HTML.
+- `Actions`: optional HTML beside the heading, such as an **Add address** button.
+
+```cshtml
+<zone Name="Title">
+    <breadcrumb name="AccountGiftCards" title="@T["Gift cards"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Gift cards"], Content: Model))
+```
+
+A theme overrides `CommerceAccountPage.cshtml` to change the frame of every account page. Orders, Digital Downloads, Subscriptions, Transactions and Customers add **Orders**, **Downloads**, **Subscriptions**, **Balances and invoices**, **Addresses** and **Account details**.
 
 ### The shared admin list UI
 

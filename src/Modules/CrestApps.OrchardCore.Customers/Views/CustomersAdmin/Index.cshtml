@@ -1,7 +1,7 @@
 @model CustomersIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="CustomersIndex" title="@T["Customers"]" />
+    <breadcrumb name="Customers" title="@T["Customers"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="customers-filter" class="no-multisubmit">

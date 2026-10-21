@@ -123,6 +123,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             FreeUpCreditPercent = profile.FreeUpCreditPercent,
             ConnectWaitMilliseconds = profile.ConnectWaitMilliseconds,
             AbandonedRetryRequiresAgent = profile.AbandonedRetryRequiresAgent,
+            ShowDialProgressToAgent = profile.ShowDialProgressToAgent,
             AbandonmentWindowMinutes = _complianceOptions.AbandonmentRollingWindowMinutes,
         };
 
@@ -189,6 +190,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.FreeUpCreditPercent = viewModel.FreeUpCreditPercent;
             model.ConnectWaitMilliseconds = viewModel.ConnectWaitMilliseconds;
             model.AbandonedRetryRequiresAgent = viewModel.AbandonedRetryRequiresAgent;
+            model.ShowDialProgressToAgent = viewModel.ShowDialProgressToAgent;
             model.PacingStatistics = viewModel.PacingStatistics;
             model.PacingDecisions = viewModel.PacingDecisions;
         }
@@ -249,6 +251,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.FreeUpCreditPercent = model.FreeUpCreditPercent;
         profile.ConnectWaitMilliseconds = model.ConnectWaitMilliseconds;
         profile.AbandonedRetryRequiresAgent = model.AbandonedRetryRequiresAgent;
+        profile.ShowDialProgressToAgent = model.ShowDialProgressToAgent;
 
         return await EditAsync(profile, context);
     }

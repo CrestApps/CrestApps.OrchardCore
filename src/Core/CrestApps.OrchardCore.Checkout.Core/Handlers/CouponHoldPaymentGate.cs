@@ -64,12 +64,47 @@ public sealed class CouponHoldPaymentGate : ICheckoutPaymentGate
                 return;
             }
 
-            // The code comes off and the invoice is rebuilt without it, so what the buyer pays next is the new total.
-            session.Properties?.Remove(nameof(CheckoutCoupon));
+            // The code comes off and the invoice is rebuilt without it, so what the buyer pays next is the new total. An
+            // automatic discount is taken off for good, or the rebuild would only put it back.
+            if (!session.TryGet<CheckoutCoupon>(out var applied))
+            {
+                applied = new CheckoutCoupon();
+            }
+
+            if (discount.IsAutomatic)
+            {
+                applied.Decline(discount.Code);
+            }
+            else
+            {
+                applied.Remove(discount.Code);
+            }
+
+            if (applied.IsEmpty())
+            {
+                session.Properties?.Remove(nameof(CheckoutCoupon));
+            }
+            else
+            {
+                session.Put(applied);
+            }
 
             await _invoiceBuilder.BuildAsync(context.Flow);
 
             context.InvoiceChanged = true;
+
+            if (discount.IsAutomatic)
+            {
+                context.Refuse(availability switch
+                {
+                    CouponAvailability.CustomerLimitReached => S["You have already had the {0} discount as many times as it allows, so it was taken off. Check your new total, then pay again.", discount.Description],
+                    CouponAvailability.UsedUp => S["The {0} discount ran out before you paid, so it was taken off. Check your new total, then pay again.", discount.Description],
+                    _ => S["The {0} discount is no longer available, so it was taken off. Check your new total, then pay again.", discount.Description],
+                });
+
+                return;
+            }
+
             context.Refuse(availability switch
             {
                 CouponAvailability.CustomerLimitReached => S["You have already used the code {0} as many times as it allows, so it was taken off. Check your new total, then pay again.", discount.Code],

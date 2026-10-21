@@ -112,18 +112,12 @@ public sealed class WorkforceReportRangeTests
             eventStore.Object,
             Agents(),
             Mock.Of<ICatalogManager<OmnichannelCampaign>>(),
-            new AgentWorkforceReportDefinition(
-                "contact-center-ready-not-ready",
-                () => new LocalizedString("name", "Ready versus not-ready"),
-                () => new LocalizedString("description", "Ready versus not-ready"),
-                AgentWorkforceReportKind.ReadyNotReady,
-                "Workforce",
-                []),
+            AgentWorkforceReportKind.ReadyNotReady,
             Guard(),
             new PassThroughStringLocalizer<AgentWorkforceReportProvider>(),
             Clock(),
             Mock.Of<ILocalClock>(),
-            new ContactCenterReportingOptions(),
+            Options.Create(new ContactCenterReportingOptions()),
             summaryReader: null);
 
         // Act

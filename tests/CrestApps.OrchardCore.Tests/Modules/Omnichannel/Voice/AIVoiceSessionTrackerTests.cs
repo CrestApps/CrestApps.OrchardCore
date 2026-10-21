@@ -189,23 +189,22 @@ public sealed class AIVoiceSessionTrackerTests
     public async Task SummariesOfDifferentCalls_DoNotWaitForEachOther()
     {
         // Arrange
-        var writing = 0;
-        var mostAtOnce = 0;
-        var written = new CountdownEvent(2);
+        // Each write waits for the other one to start. Writes of different calls that run side by side both arrive, so
+        // neither waits long; writes that ran one after the other would leave the first waiting until the timeout. This
+        // does not depend on how fast a busy machine starts the second write.
         var started = new CountdownEvent(2);
+        var overlapped = 0;
+        var written = new CountdownEvent(2);
         var tracker = new AIVoiceSessionTracker(
             CreateShellHost(services => services.AddScoped(_ =>
             {
-                var now = Interlocked.Increment(ref writing);
-                InterlockedMax(ref mostAtOnce, now);
-
-                // Each summary stays open until the other call's summary has started too. Summaries that run side by
-                // side meet here at once; summaries that queue behind one another never do, so the first gives up after
-                // the bound and the second starts alone. A fixed sleep instead depended on the runner starting the
-                // second one inside it, which a loaded build agent does not always do.
                 started.Signal();
-                started.Wait(TimeSpan.FromSeconds(5));
-                Interlocked.Decrement(ref writing);
+
+                if (started.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    Interlocked.Increment(ref overlapped);
+                }
+
                 written.Signal();
 
                 return CreateWriterThatWritesNothing();
@@ -219,8 +218,8 @@ public sealed class AIVoiceSessionTrackerTests
         await tracker.RecordAsync(new AIVoiceSessionDraft { ActivityId = "activity-2" });
 
         // Assert
-        Assert.True(written.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
-        Assert.Equal(2, mostAtOnce);
+        Assert.True(written.Wait(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(2, overlapped);
     }
 
     private static void InterlockedMax(ref int target, int value)

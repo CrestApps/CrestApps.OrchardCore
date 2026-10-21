@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
+using OrchardCore.Localization;
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -12,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -33,7 +36,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// counted as Available with no session) is shown, with the reason the dashboard leaves them out.
 /// </para>
 /// </remarks>
-public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase
+public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, IReport
 {
     private const string FlagColor = "#B42318";
 
@@ -117,16 +120,19 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-agent-availability";
+    public static string Name => "contact-center-agent-availability";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Agent availability and wait time"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<AgentAvailabilityReportProvider>("Agent availability and wait time");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Live, per agent: how long each has waited for a call, today's calls, session health, stale states, and why each queue or campaign is or is not giving them work."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<AgentAvailabilityReportProvider>("Live, per agent: how long each has waited for a call, today's calls, session health, stale states, and why each queue or campaign is or is not giving them work.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.QueueRouting;
+    public static string Category => ReportsConstants.Categories.QueueRouting;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

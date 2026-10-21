@@ -1,0 +1,91 @@
+@model MarketEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MarketEdit" title="@(Model.IsNew ? T["Add market"] : T["Edit market"])">
+        <breadcrumb-item id="Markets" action="Index" controller="MarketsAdmin" area="@MarketsConstants.Feature" permission="@MarketsPermissions.ManageMarkets.Name">@T["Markets"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-itemId="@Model.ItemId" method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name"></span>
+            <span class="hint">@T["What shoppers see in the market picker, such as Germany or Europe."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Countries">
+        <label asp-for="Countries" class="ocat-label ocat-label-required">@T["Countries"]</label>
+        <div class="ocat-end">
+            <input asp-for="Countries" class="form-control" placeholder="DE, AT" />
+            <span asp-validation-for="Countries"></span>
+            <span class="hint">@T["The two-letter codes of the market's countries, separated by commas. A country is in one market only."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+        <label asp-for="Currency" class="ocat-label ocat-label-required">@T["Currency"]</label>
+        <div class="ocat-limited">
+            <input asp-for="Currency" class="form-control" maxlength="3" placeholder="EUR" />
+            <span asp-validation-for="Currency"></span>
+            <span class="hint">@T["The currency the market's shoppers pay in."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="ExchangeRate">
+        <label asp-for="ExchangeRate" class="ocat-label ocat-label-required">@T["Exchange rate"]</label>
+        <div class="ocat-limited">
+            <input asp-for="ExchangeRate" class="form-control" type="number" step="0.000001" min="0" />
+            <span asp-validation-for="ExchangeRate"></span>
+            <span class="hint">@T["How much of the market's currency 1 {0} is worth. Prices in {0} are multiplied by it.", Model.StoreCurrency]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Rounding" class="ocat-label">@T["Price rounding"]</label>
+        <div class="ocat-end">
+            <select asp-for="Rounding" asp-items="Model.Roundings" class="form-select"></select>
+            <span class="hint">@T["How a converted price is rounded up. A product's own price in this currency is shown as it is."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Culture">
+        <label asp-for="Culture" class="ocat-label">@T["Language"]</label>
+        <div class="ocat-end">
+            <select asp-for="Culture" asp-items="Model.Cultures" class="form-select"></select>
+            <span asp-validation-for="Culture"></span>
+            <span class="hint">@T["Picking the market switches the storefront to this language. Add languages under Configuration › Settings › Localization."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check form-switch">
+                <input asp-for="PricesIncludeTax" type="checkbox" class="form-check-input" />
+                <label asp-for="PricesIncludeTax" class="form-check-label">@T["Prices include tax"]</label>
+            </div>
+            <span class="hint dashed">@T["Shoppers pay the price they see, and the tax, such as VAT, is taken out of it. Otherwise tax is added at checkout."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check form-switch">
+                <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+                <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+            </div>
+            <span class="hint dashed">@T["A market that's off isn't offered, and its shoppers see your store's own prices."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

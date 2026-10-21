@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Services;
@@ -19,6 +21,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -53,6 +56,8 @@ public sealed class CustomersAdminController : Controller
     private readonly INotifier _notifier;
     private readonly IClock _clock;
     private readonly PagerOptions _pagerOptions;
+    private readonly IDisplayManager<Customer> _customerDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -68,7 +73,9 @@ public sealed class CustomersAdminController : Controller
         IClock clock,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<CustomersAdminController> stringLocalizer,
-        IHtmlLocalizer<CustomersAdminController> htmlLocalizer)
+        IHtmlLocalizer<CustomersAdminController> htmlLocalizer,
+        IDisplayManager<Customer> customerDisplayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _store = store;
         _privacy = privacy;
@@ -79,6 +86,8 @@ public sealed class CustomersAdminController : Controller
         _notifier = notifier;
         _clock = clock;
         _pagerOptions = pagerOptions.Value;
+        _customerDisplayManager = customerDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -154,7 +163,7 @@ public sealed class CustomersAdminController : Controller
         };
 
         // The filters render at the end of the list's toolbar.
-        viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("CustomersAdminListFilters", Arguments.From(new { Options = options }));
+        viewModel.List.ToolbarActions = await _shapeFactory.CreateAdminListFiltersAsync("Customers", "customers-filter", new AdminListFilter("Options.Filter", options.Filters, S["Show"], S["Show"]));
 
         return View(viewModel);
     }
@@ -238,6 +247,8 @@ public sealed class CustomersAdminController : Controller
         var model = ToViewModel(customer);
         model.CanManage = await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers);
         model.Addresses = await _addressBook.SummarizeAsync(customer);
+        model.Sections = await _customerDisplayManager
+            .BuildDisplayAsync(customer, _updateModelAccessor.ModelUpdater, "DetailAdmin");
 
         await AddHistoryAsync(model, customer);
 

@@ -34,6 +34,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     private readonly IActivityReservationManager _reservationManager;
     private readonly IClock _clock;
     private readonly IDialerAbandonmentTracker _abandonmentTracker;
+    private readonly IAgentPresenceManager _presenceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AnswerProviderCommandTypeExecutor"/> class.
@@ -49,6 +50,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     /// <param name="auditRecorder">The recorder that writes the agent leg's outcome and a missed offer to the audit log.</param>
     /// <param name="reservationManager">The reservation manager used to date a missed offer from when it started ringing.</param>
     /// <param name="abandonmentTracker">The tracker that plays an automated dialer call's abandoned-call message when its agent cannot be connected, and records an agent connected too late.</param>
+    /// <param name="presenceManager">The presence manager that puts an agent a dialer held Reserved on the call once they are connected.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyService telephonyService,
@@ -60,9 +62,11 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
         IEnumerable<IAgentPreDialCoordinator> preDialCoordinators,
         IContactCenterAuditRecorder auditRecorder,
         IActivityReservationManager reservationManager,
-        IDialerAbandonmentTracker abandonmentTracker)
+        IDialerAbandonmentTracker abandonmentTracker,
+        IAgentPresenceManager presenceManager)
     {
         _abandonmentTracker = abandonmentTracker;
+        _presenceManager = presenceManager;
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
         _interactionManager = interactionManager;
@@ -328,6 +332,9 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
                         await _abandonmentTracker.RecordAgentConnectedAsync(interaction, now, cancellationToken);
                         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
                     }
+
+                    // Held Reserved while the dialer reached the customer, the agent is on the call from now.
+                    await _presenceManager.ConnectHeldAgentAsync(request.AgentId, interaction, now, cancellationToken);
 
                     await RecordAgentLegAnsweredAsync(session, interaction, result.ProviderLegId, request.AgentId, now, cancellationToken);
                 }

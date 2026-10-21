@@ -26,10 +26,8 @@ namespace CrestApps.OrchardCore.Taxation.Controllers;
 public sealed class TaxTablesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-    private const string _nameFieldName = "Name";
 
     private readonly INamedCatalogManager<TaxTable> _manager;
-    private readonly INamedCatalog<TaxTable> _catalog;
     private readonly INamedCatalog<TaxRule> _rulesCatalog;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -41,7 +39,6 @@ public sealed class TaxTablesController : Controller
 
     public TaxTablesController(
         INamedCatalogManager<TaxTable> manager,
-        INamedCatalog<TaxTable> catalog,
         INamedCatalog<TaxRule> rulesCatalog,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
@@ -51,7 +48,6 @@ public sealed class TaxTablesController : Controller
         IStringLocalizer<TaxTablesController> stringLocalizer)
     {
         _manager = manager;
-        _catalog = catalog;
         _rulesCatalog = rulesCatalog;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
@@ -73,7 +69,7 @@ public sealed class TaxTablesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -89,7 +85,6 @@ public sealed class TaxTablesController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxTable>>
         {
-            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxTable> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
@@ -157,20 +152,10 @@ public sealed class TaxTablesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.CreateAsync(model);
+            await _notifier.SuccessAsync(H["The tax table has been created successfully."]);
 
-            if (existing != null)
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax table with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _notifier.SuccessAsync(H["The tax table has been created successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);
@@ -227,20 +212,10 @@ public sealed class TaxTablesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.UpdateAsync(model);
+            await _notifier.SuccessAsync(H["The tax table has been updated successfully."]);
 
-            if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax table with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _notifier.SuccessAsync(H["The tax table has been updated successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);

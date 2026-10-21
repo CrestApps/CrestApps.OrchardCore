@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -30,6 +31,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
     private readonly IContentManager _contentManager;
     private readonly LinkGenerator _linkGenerator;
     private readonly CartOptions _options;
+    private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
 
@@ -41,7 +43,8 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         IContentManager contentManager,
         LinkGenerator linkGenerator,
         IOptions<CartOptions> options,
-        IStringLocalizer<AddToCartDisplayDriver> stringLocalizer)
+        IStringLocalizer<AddToCartDisplayDriver> stringLocalizer,
+        IShopperCurrency shopperCurrency)
     {
         _contentManager = contentManager;
         _linkGenerator = linkGenerator;
@@ -50,6 +53,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         _options = options.Value;
+        _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
 
@@ -78,6 +82,14 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             return null;
         }
 
+        // One the shopper can't buy here says why instead.
+        if (_httpContextAccessor.HttpContext is { } requestContext &&
+            await requestContext.RequestServices.GetServices<IProductSaleRestriction>().GetRestrictionAsync(contentItem) is { } restriction)
+        {
+            return Initialize<AddToCartUnavailableViewModel>("AddToCartUnavailable", model => model.Reason = restriction)
+                .Location(ProductActionDisplayType, "Actions:5");
+        }
+
         // Only what can be bought online: the resolver refuses a listed-only product and one with no price.
         var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { VariantId = variants.FirstOrDefault()?.VariantId });
 
@@ -104,6 +116,43 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             }
         }
 
+        // A shopper buying in another currency sees the product's prices there: those it lists in that currency, or else
+        // its own converted. What they pick is priced again when it's added, so these are only for showing.
+        var shownCurrency = await _shopperCurrency.GetCurrencyAsync();
+
+        if (!string.IsNullOrEmpty(shownCurrency) && prices.Count > 0)
+        {
+            var listed = prices.Where(price => string.Equals(price.Currency, shownCurrency, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (listed.Count > 0)
+            {
+                prices = listed;
+            }
+            else
+            {
+                var converted = new List<ProductPrice>();
+
+                foreach (var price in prices)
+                {
+                    var (amount, currency) = await _shopperCurrency.ToShopperAsync(price.Amount, price.Currency);
+
+                    converted.Add(new ProductPrice
+                    {
+                        PriceId = price.PriceId,
+                        Name = price.Name,
+                        Amount = amount,
+                        Currency = currency,
+                        Kind = price.Kind,
+                        IsDefault = price.IsDefault,
+                        AllowQuantity = price.AllowQuantity,
+                        MaximumQuantity = price.MaximumQuantity,
+                    });
+                }
+
+                prices = converted;
+            }
+        }
+
         var defaultPrice = prices.FirstOrDefault(price => price.IsDefault) ?? prices.FirstOrDefault();
         var request = _httpContextAccessor.HttpContext?.Request;
 
@@ -115,10 +164,49 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
 
         // Add-ons are chosen on the product's own page; a card links there when one is required.
         var addOns = part.AddOns?.Where(addOn => !string.IsNullOrEmpty(addOn.AddOnId) && !string.IsNullOrWhiteSpace(addOn.Label)).ToList() ?? [];
+        var currencyShown = product.Currency;
+
+        // What an add-on adds, in the shopper's currency.
+        if (!string.IsNullOrEmpty(shownCurrency) && !string.IsNullOrEmpty(product.Currency))
+        {
+            currencyShown = (await _shopperCurrency.ToShopperAsync(0m, product.Currency)).Currency;
+
+            var shownAddOns = new List<ProductAddOn>();
+
+            foreach (var addOn in addOns)
+            {
+                shownAddOns.Add(new ProductAddOn
+                {
+                    AddOnId = addOn.AddOnId,
+                    Label = addOn.Label,
+                    Kind = addOn.Kind,
+                    // A share of the price is a percent, not money.
+                    Price = addOn.PriceBasis == ProductAddOnPriceBasis.PercentOfPrice ? addOn.Price : (await _shopperCurrency.ToShopperAsync(addOn.Price, product.Currency, isPrice: false)).Amount,
+                    PriceBasis = addOn.PriceBasis,
+                    Required = addOn.Required,
+                });
+            }
+
+            addOns = shownAddOns;
+        }
+
+        // The variants' prices, as the shopper sees them.
+        var variantPrices = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var variant in variants)
+        {
+            if (ProductSale.GetPrice(contentItem.TryGet<ProductPart>(out var owner) ? owner : null, variant, _clock.UtcNow) is { } amount && !string.IsNullOrEmpty(product.Currency))
+            {
+                var (shownAmount, currency) = await _shopperCurrency.ToShopperAsync(amount, product.Currency);
+
+                variantPrices[variant.VariantId] = ProductPriceFormatter.Format(shownAmount, currency);
+            }
+        }
         var isProductPage = request?.RouteValues["contentItemId"] is string shown && shown == contentItem.ContentItemId;
         string productUrl = null;
+        var chooseOnProductPage = _options.ChooseOnProductPageParts.Any(contentItem.Has);
 
-        if (addOns.Count > 0 && !isProductPage && _httpContextAccessor.HttpContext is { } httpContext)
+        if ((addOns.Count > 0 || chooseOnProductPage) && !isProductPage && _httpContextAccessor.HttpContext is { } httpContext)
         {
             var metadata = await _contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
@@ -140,9 +228,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                     VariantId = variant.VariantId,
                     Title = variant.GetTitle(optionNames),
                     Sku = string.IsNullOrEmpty(variant.Sku) ? productPart?.Sku : variant.Sku,
-                    Price = ProductSale.GetPrice(productPart, variant, _clock.UtcNow) is { } amount && !string.IsNullOrEmpty(product.Currency)
-                        ? ProductPriceFormatter.Format(amount, product.Currency)
-                        : null,
+                    Price = variantPrices.GetValueOrDefault(variant.VariantId),
                     Options = new Dictionary<string, string>(variant.Options, StringComparer.OrdinalIgnoreCase),
                     ImagePath = variant.ImagePath,
                     Availability = Describe(stock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, variant.VariantId))),
@@ -170,8 +256,9 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                 : defaultPrice.AllowQuantity ? Math.Min(defaultPrice.MaximumQuantity ?? _options.MaxQuantity, _options.MaxQuantity) : 1;
             model.ReturnUrl = request is null ? null : request.PathBase + request.Path + request.QueryString;
             model.AddOns = addOns;
-            model.Currency = product.Currency;
+            model.Currency = currencyShown;
             model.IsProductPage = isProductPage;
+            model.ChooseOnProductPage = chooseOnProductPage;
             model.ProductUrl = productUrl;
 
             // The product's quantity rules and volume discounts.

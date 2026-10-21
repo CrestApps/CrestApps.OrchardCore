@@ -45,7 +45,17 @@ public sealed class CartLinePricing
     /// </summary>
     public IReadOnlyList<ProductAddOnChoice> AddOns { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the line's details as they read, such as "Departure: 1 December 2026".
+    /// </summary>
+    public IReadOnlyList<CartLineDetail> Details { get; set; } = [];
+
     public CartLine Line { get; init; }
+
+    /// <summary>
+    /// Gets or sets whether no discount takes anything off the line, as a line handler said, such as for a donation.
+    /// </summary>
+    public bool ExcludeFromDiscounts { get; set; }
 
     /// <summary>
     /// Gets the published product, or <see langword="null"/> when it is gone.
@@ -85,6 +95,11 @@ public sealed class CartLinePricing
     public bool IsAvailable
         => Problem is null;
 }
+
+/// <summary>
+/// One of a line's details as it reads: what it is, and what was chosen.
+/// </summary>
+public sealed record CartLineDetail(string Key, string Label, string Value);
 
 /// <summary>
 /// The outcome of changing a cart.

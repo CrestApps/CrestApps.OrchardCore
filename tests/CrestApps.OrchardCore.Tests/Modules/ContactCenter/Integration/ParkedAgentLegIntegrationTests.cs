@@ -194,9 +194,9 @@ public sealed class ParkedAgentLegIntegrationTests
         // Act: answered, and the provider still listening.
         await harness.RaiseHumanAnswerAsync("activity-1");
 
-        // Assert: the agent is held, not connected, and still reserved for the call.
+        // Assert: the agent is held, not connected, and still Reserved for the call -- not on a call while it is screened.
         Assert.DoesNotContain(harness.Shared.Commands.All, command => command.CommandType == ProviderCommandType.Answer);
-        Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(AgentOne));
+        Assert.Equal(AgentPresenceStatus.Reserved, await harness.GetPresenceAsync(AgentOne));
 
         // Act: a person answered.
         harness.Clock.Advance(TimeSpan.FromSeconds(2));

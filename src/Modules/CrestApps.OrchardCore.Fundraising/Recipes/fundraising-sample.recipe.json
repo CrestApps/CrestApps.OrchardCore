@@ -1,0 +1,88 @@
+{
+  "name": "FundraisingSample",
+  "displayName": "Fundraising sample",
+  "description": "Adds a Fundraising Campaign type and a campaign raising $10,000 for a community library by the end of the year, with $25, $50 and $100 suggested and any amount from $5. Donors give from its page and find their tax receipts under Donations in their account; set who receipts are from under Settings > Commerce > Fundraising.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "fundraising",
+    "donations",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Contents",
+        "OrchardCore.Title",
+        "OrchardCore.Autoroute",
+        "OrchardCore.Html",
+        "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Carts",
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Fundraising"
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "FundraisingCampaign",
+          "DisplayName": "Fundraising Campaign",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "TitlePart", "Name": "TitlePart", "Settings": { "ContentTypePartSettings": { "Position": "0" } } },
+            { "PartName": "AutoroutePart", "Name": "AutoroutePart", "Settings": { "ContentTypePartSettings": { "Position": "1" }, "AutoroutePartSettings": { "AllowCustomPath": true, "Pattern": "give/{{ ContentItem | display_text | slugify }}" } } },
+            { "PartName": "HtmlBodyPart", "Name": "HtmlBodyPart", "Settings": { "ContentTypePartSettings": { "Position": "2", "DisplayName": "Story" } } },
+            { "PartName": "ProductPart", "Name": "ProductPart", "Settings": { "ContentTypePartSettings": { "Position": "3" }, "ProductPartSettings": { "Type": "Service", "DefaultCurrency": "USD", "SalesMode": "Purchasable", "PriceDisplay": "Hidden" }, "ProductPageSettings": { "ShowDetails": true } } },
+            { "PartName": "FundraisingCampaignPart", "Name": "FundraisingCampaignPart", "Settings": { "ContentTypePartSettings": { "Position": "4" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "4fndrsng0library2026000a",
+          "ContentItemVersionId": "4fndrsng0library2026000b",
+          "ContentType": "FundraisingCampaign",
+          "DisplayText": "Books for the community library",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-20T12:00:00Z",
+          "PublishedUtc": "2026-10-20T12:00:00Z",
+          "CreatedUtc": "2026-10-20T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": { "Title": "Books for the community library" },
+          "AutoroutePart": { "Path": "give/community-library", "SetHomepage": false },
+          "HtmlBodyPart": { "Html": "<p>Help us fill the shelves of the new children's corner. Every gift buys books, and every donor gets a receipt for their taxes.</p>" },
+          "ProductPart": { "Price": 25, "Currency": "USD", "Sku": "GIVE-LIBRARY", "IsPurchasable": true },
+          "FundraisingCampaignPart": {
+            "Goal": 10000,
+            "EndsUtc": "2026-12-31T23:59:59Z",
+            "SuggestedAmounts": [ 25, 50, 100 ],
+            "MinimumAmount": 5,
+            "TaxDeductible": true
+          }
+        }
+      ]
+    }
+  ]
+}

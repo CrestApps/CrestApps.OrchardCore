@@ -33,18 +33,14 @@ public sealed class OrdersAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                .AddClass("commerce")
-                .Id("commerce")
+            .Add(S["Commerce"], commerce => commerce
                 .Add(S["Orders"], S["Orders"].PrefixPosition("3"), orders => orders
-                    .AddClass("orders")
                     .Id("orders")
                     .Action(_ordersRouteValues)
                     .Permission(OrderPermissions.ManageOrders)
                     .LocalNav()
                 )
                 .Add(S["My Orders"], S["My Orders"].PrefixPosition("4"), orders => orders
-                    .AddClass("my-orders")
                     .Id("my-orders")
                     .Action(_myOrdersRouteValues)
                     .Permission(OrderPermissions.ViewOwnOrders)

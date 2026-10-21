@@ -12,48 +12,69 @@
 <form asp-action="Create" method="post" class="no-multisubmit">
     <div asp-validation-summary="ModelOnly"></div>
 
-<div class="row g-3">
-    <div class="col-md-6" asp-validation-class-for="Supplier">
-        <label asp-for="Supplier" class="form-label">@T["Supplier"]</label>
-        <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
-        <datalist id="purchase-order-suppliers">
-            @foreach (var supplier in Model.Suppliers)
-            {
-                <option value="@supplier"></option>
-            }
-        </datalist>
-        <span asp-validation-for="Supplier"></span>
-    </div>
-    <div class="col-md-6">
-        <label asp-for="SupplierEmail" class="form-label">@T["Supplier's email"]</label>
-        <input asp-for="SupplierEmail" type="email" class="form-control" autocomplete="off" disabled="@readOnly" />
-    </div>
-    <div class="col-md-4">
-        <label asp-for="LocationId" class="form-label">@T["Receive at"]</label>
-        <select asp-for="LocationId" asp-items="Model.Locations" class="form-select" disabled="@(readOnly || Model.Order?.Received > 0)"></select>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="Currency" class="form-label">@T["Costs in"]</label>
-        <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" disabled="@readOnly"></select>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="ExpectedDate" class="form-label">@T["Expected"]</label>
-        <input asp-for="ExpectedDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" disabled="@readOnly" />
-    </div>
-    <div class="col-12">
-        <label asp-for="Note" class="form-label">@T["Note"]</label>
-        <textarea asp-for="Note" rows="2" class="form-control" maxlength="2000" disabled="@readOnly"></textarea>
-    </div>
-</div>
-
-    <div class="form-check mt-3">
-        <input asp-for="StartWithLowStock" type="checkbox" class="form-check-input" />
-        <label asp-for="StartWithLowStock" class="form-check-label">@T["Start with the items that are low on stock where it's received"]</label>
-        <span class="hint dashed">@T["Each ordered up to twice its low-stock threshold. You can change the quantities before ordering."]</span>
+    <div class="ocat-wrapper" asp-validation-class-for="Supplier">
+        <label asp-for="Supplier" class="ocat-label">@T["Supplier"]</label>
+        <div class="ocat-end">
+            <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
+            <datalist id="purchase-order-suppliers">
+                @foreach (var supplier in Model.Suppliers)
+                {
+                    <option value="@supplier"></option>
+                }
+            </datalist>
+            <span asp-validation-for="Supplier"></span>
+        </div>
     </div>
 
-    <div class="mt-4">
-        <button type="submit" class="btn btn-primary">@T["Start the order"]</button>
-        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <label asp-for="SupplierEmail" class="ocat-label">@T["Supplier's email"]</label>
+        <div class="ocat-end">
+            <input asp-for="SupplierEmail" type="email" class="form-control" autocomplete="off" disabled="@readOnly" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="LocationId" class="ocat-label">@T["Receive at"]</label>
+        <div class="ocat-end">
+            <select asp-for="LocationId" asp-items="Model.Locations" class="form-select" disabled="@(readOnly || Model.Order?.Received > 0)"></select>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="Currency" class="ocat-label">@T["Costs in"]</label>
+        <div class="ocat-limited">
+            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" disabled="@readOnly"></select>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="ExpectedDate" class="ocat-label">@T["Expected"]</label>
+        <div class="ocat-limited">
+            <input asp-for="ExpectedDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" disabled="@readOnly" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Note" rows="2" class="form-control" maxlength="2000" disabled="@readOnly"></textarea>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="StartWithLowStock" type="checkbox" class="form-check-input" />
+                <label asp-for="StartWithLowStock" class="form-check-label">@T["Start with the items that are low on stock where it's received"]</label>
+            </div>
+            <span class="hint dashed">@T["Each ordered up to twice its low-stock threshold. You can change the quantities before ordering."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Start the order"]</button>
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        </div>
     </div>
 </form>

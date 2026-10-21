@@ -26,60 +26,78 @@
     <div asp-validation-summary="ModelOnly"></div>
 
     <fieldset disabled="@readOnly">
-        <div class="row g-3">
-            <div class="col-md-6" asp-validation-class-for="Kind">
-                <label asp-for="Kind" class="form-label">@T["Kind"]</label>
+        <div class="ocat-wrapper" asp-validation-class-for="Kind">
+            <label asp-for="Kind" class="ocat-label">@T["Kind"]</label>
+            <div class="ocat-end">
                 <select asp-for="Kind" asp-items="Model.Kinds" class="form-select" data-customer-kind></select>
             </div>
-            @if (!Model.IsNew && Model.Status != CustomerStatus.Anonymized)
-            {
-                <div class="col-md-6" asp-validation-class-for="Status">
-                    <label asp-for="Status" class="form-label">@T["Status"]</label>
+        </div>
+        @if (!Model.IsNew && Model.Status != CustomerStatus.Anonymized)
+        {
+            <div class="ocat-wrapper" asp-validation-class-for="Status">
+                <label asp-for="Status" class="ocat-label">@T["Status"]</label>
+                <div class="ocat-end">
                     <select asp-for="Status" asp-items="Model.Statuses" class="form-select"></select>
                     <span class="hint">@T["A disabled customer keeps their orders and history."]</span>
                     <span asp-validation-for="Status"></span>
                 </div>
-            }
+            </div>
+        }
 
-            <div class="col-md-6" asp-validation-class-for="FirstName">
-                <label asp-for="FirstName" class="form-label">@T["First name"]</label>
+        <div class="ocat-wrapper" asp-validation-class-for="FirstName">
+            <label asp-for="FirstName" class="ocat-label">@T["First name"]</label>
+            <div class="ocat-end">
                 <input asp-for="FirstName" class="form-control" autocomplete="off" />
             </div>
-            <div class="col-md-6" asp-validation-class-for="LastName">
-                <label asp-for="LastName" class="form-label">@T["Last name"]</label>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="LastName">
+            <label asp-for="LastName" class="ocat-label">@T["Last name"]</label>
+            <div class="ocat-end">
                 <input asp-for="LastName" class="form-control" autocomplete="off" />
             </div>
-            <div class="col-md-6" asp-validation-class-for="DisplayName">
-                <label asp-for="DisplayName" class="form-label">@T["Display name"]</label>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="DisplayName">
+            <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+            <div class="ocat-end">
                 <input asp-for="DisplayName" class="form-control" autocomplete="off" />
                 <span class="hint">@T["How the store addresses the customer. Leave it empty to use their name or company."]</span>
             </div>
+        </div>
 
-            <div class="col-md-6" data-customer-business asp-validation-class-for="CompanyName">
-                <label asp-for="CompanyName" class="form-label">@T["Company"]</label>
+        <div class="ocat-wrapper" data-customer-business asp-validation-class-for="CompanyName">
+            <label asp-for="CompanyName" class="ocat-label">@T["Company"]</label>
+            <div class="ocat-end">
                 <input asp-for="CompanyName" class="form-control" autocomplete="off" />
                 <span asp-validation-for="CompanyName"></span>
             </div>
-            <div class="col-md-6" data-customer-business asp-validation-class-for="TaxId">
-                <label asp-for="TaxId" class="form-label">@T["Tax id"]</label>
+        </div>
+        <div class="ocat-wrapper" data-customer-business asp-validation-class-for="TaxId">
+            <label asp-for="TaxId" class="ocat-label">@T["Tax id"]</label>
+            <div class="ocat-end">
                 <input asp-for="TaxId" class="form-control" autocomplete="off" />
                 <span class="hint">@T["Such as a VAT number. It is shown on invoices."]</span>
             </div>
-            <div class="col-md-6" data-customer-business>
-                <div class="form-check mt-md-4">
+        </div>
+        <div class="ocat-wrapper" data-customer-business>
+            <div class="ocat-end-offset">
+                <div class="form-check">
                     <input asp-for="IsTaxExempt" type="checkbox" class="form-check-input" />
                     <label asp-for="IsTaxExempt" class="form-check-label">@T["Exempt from tax"]</label>
-                    <span class="hint dashed">@T["The customer pays no tax when they check out signed in, such as a reseller or a charity you hold a certificate for."]</span>
                 </div>
+                <span class="hint dashed">@T["The customer pays no tax when they check out signed in, such as a reseller or a charity you hold a certificate for."]</span>
             </div>
-            <div class="col-md-6" data-customer-business>
-                <label asp-for="TaxExemptionReason" class="form-label">@T["Why they are exempt"]</label>
+        </div>
+        <div class="ocat-wrapper" data-customer-business>
+            <label asp-for="TaxExemptionReason" class="ocat-label">@T["Why they are exempt"]</label>
+            <div class="ocat-end">
                 <input asp-for="TaxExemptionReason" class="form-control" autocomplete="off" />
                 <span class="hint">@T["Such as the resale certificate number, for your records."]</span>
             </div>
+        </div>
 
-            <div class="col-md-6" asp-validation-class-for="Email">
-                <label asp-for="Email" class="form-label">@T["Email"]</label>
+        <div class="ocat-wrapper" asp-validation-class-for="Email">
+            <label asp-for="Email" class="ocat-label">@T["Email"]</label>
+            <div class="ocat-end">
                 @if (hasAccount)
                 {
                     <input asp-for="Email" class="form-control" readonly />
@@ -91,17 +109,21 @@
                     <span asp-validation-for="Email"></span>
                 }
             </div>
-            <div class="col-md-6" asp-validation-class-for="Phone">
-                <label asp-for="Phone" class="form-label">@T["Phone"]</label>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Phone">
+            <label asp-for="Phone" class="ocat-label">@T["Phone"]</label>
+            <div class="ocat-end">
                 <input asp-for="Phone" type="tel" class="form-control" autocomplete="off" />
             </div>
+        </div>
 
-            <div class="col-12">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
                 <div class="form-check">
                     <input asp-for="AcceptsMarketing" type="checkbox" class="form-check-input" />
                     <label asp-for="AcceptsMarketing" class="form-check-label">@T["Accepts marketing"]</label>
-                    <span class="hint dashed">@T["The customer agreed to news and offers. Order and payment messages are always sent."]</span>
                 </div>
+                <span class="hint dashed">@T["The customer agreed to news and offers. Order and payment messages are always sent."]</span>
             </div>
         </div>
     </fieldset>
@@ -129,9 +151,11 @@
 
     @if (!readOnly)
     {
-        <div class="mt-4">
-            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
-            <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+        <div class="ocat-wrapper mt-4">
+            <div class="ocat-end-offset">
+                <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+                <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+            </div>
         </div>
     }
 </form>
@@ -194,6 +218,11 @@
             }
         </ul>
     </div>
+}
+
+@if (Model.Sections is not null)
+{
+    @await DisplayAsync(Model.Sections)
 }
 
 @if (!Model.IsNew)

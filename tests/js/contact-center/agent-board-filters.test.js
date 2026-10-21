@@ -76,6 +76,14 @@ describe('filtering the agent board', () => {
         expect(ids(filterSupervisorAgents(board, { status: 'onCall' }))).toEqual(['bob', 'eve']);
     });
 
+    // A Reserved agent's interaction is still ringing for them: an offer, or a call the dialer is placing for them.
+    it('leaves out a Reserved agent whose interaction has not reached them yet', () => {
+        const held = agent({ agentId: 'gus', presenceStatus: 'Reserved', activeInteractionId: 'int-2', activeInteractions: 1 });
+
+        expect(ids(filterSupervisorAgents([...board, held], { status: 'onCall' }))).toEqual(['bob', 'eve']);
+        expect(ids(filterSupervisorAgents([...board, held], { status: 'busy' }))).toEqual(['bob', 'fay', 'gus']);
+    });
+
     it('finds an agent by any part of their name, ignoring case and accents', () => {
         expect(ids(filterSupervisorAgents(board, { search: 'ANN' }))).toEqual(['ann']);
         expect(ids(filterSupervisorAgents(board, { search: 'catia' }))).toEqual(['cat']);

@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 to 4 built, 2026-10-19 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, and [Phase 4 as built](#phase-4-as-built)); phases 5 to 12 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 11 built, 2026-10-20 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, [Phase 4 as built](#phase-4-as-built), [Phase 5 as built](#phase-5-as-built), [Phase 6 as built](#phase-6-as-built), [Phase 7 as built](#phase-7-as-built), [Phase 8 as built](#phase-8-as-built), [Phase 9 as built](#phase-9-as-built), [Phase 10 as built](#phase-10-as-built) and [Phase 11 as built](#phase-11-as-built)); phases 12 and 13 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -80,15 +80,15 @@ column refers to the delivery plan below.
 
 | Feature | WooCommerce | Shopify | Us | Slice |
 | --- | --- | --- | --- | --- |
-| Automatic discounts without a code | Ext | Core | No | PD1 |
-| Buy X get Y, bulk and volume discounts | Ext | Core | No | PD1 |
-| Rules for combining discounts | Ext | Core | No: one coupon per checkout | PD1 |
-| Codes applied from a link | Ext | Core | No | PD1 |
-| Generated single-use codes in bulk | Ext | Core | No | PD1 |
-| Gift cards, bought and redeemed, with balances | Ext | Core | No | PD2 |
-| Store credit | Ext | Core | No | PD2 |
-| Loyalty points and rewards | Ext | App | No | PD3 |
-| Referral and affiliate programs | Ext | App | No | PD3 |
+| Automatic discounts without a code | Ext | Core | Yes (phase 5) | PD1 |
+| Buy X get Y, bulk and volume discounts | Ext | Core | Yes (phase 5): buy X get Y, minimum quantities; tier prices from phase 3 | PD1 |
+| Rules for combining discounts | Ext | Core | Yes (phase 5): up to five codes, product, order and shipping classes | PD1 |
+| Codes applied from a link | Ext | Core | Yes (phase 5) | PD1 |
+| Generated single-use codes in bulk | Ext | Core | Yes (phase 5) | PD1 |
+| Gift cards, bought and redeemed, with balances | Ext | Core | Yes (phase 5) | PD2 |
+| Store credit | Ext | Core | Yes (phase 5), including refunds as store credit | PD2 |
+| Loyalty points and rewards | Ext | App | Yes (phase 5): points earned and spent; no tiers or perks | PD3 |
+| Referral and affiliate programs | Ext | App | Partial (phase 5): customer referrals; no affiliate commissions | PD3 |
 
 ### Checkout and conversion
 
@@ -160,6 +160,8 @@ column refers to the delivery plan below.
 | Feature | WooCommerce | Shopify | Us | Slice |
 | --- | --- | --- | --- | --- |
 | Point of sale (in-person sales sharing stock and customers) | Ext | Core | No | PI2 |
+| Sales by location and channel: every order records where and how it was sold, and reports split by them | Ext | Core | No: only a pickup order records its shop | PI2 |
+| Registers, shifts and cash counts per location, staff limited to their locations | Ext | Core | No | PI2 |
 | Selling on Amazon, eBay, TikTok and social shops | Ext | Core (channels) | No | PI1 |
 | Bookings and appointments: time slots with staff or resources | Ext | App | No | PL1 |
 | Travel packages and tours: fixed departures with seats per departure, a base package with package options | Ext | App | Partial: a "Departure" variant option with stock per variant | PL1 |
@@ -214,7 +216,7 @@ overdue) become a schedule on the order when it's placed. Checkout offers Pay in
 only what's due now. The rest is an outstanding balance on the transactions ledger with pay links, reminders and,
 with the buyer's consent, charges to their saved card, through the installment engine generalized from ledger
 balances to orders. The order reads Payment due until it's paid. The same schedules are B2B's deposits and net
-terms, so F3 is built in phase 7 (PH1) and reused here.
+terms, so F3 is built in phase 8 (PH1) and reused here.
 
 **The Bookings module (PL1)** then adds:
 
@@ -266,7 +268,7 @@ How each vertical lands on them, and what stays an integration:
 | Healthcare and wellness | Contact center; appointments with F2 | F2, F3 packages, intake forms (Orchard Forms) | Clinical records. Commerce records keep no medical data, and no compliance (such as HIPAA) is claimed |
 | Restaurants and food | Products, add-ons, local pickup (PF3) | F1, F2 order-ahead slots, F7 kitchen status, delivery zones, tips | Delivery networks, kitchen printers |
 | Marketplaces, freelance, gig, creative | None multi-party | F4, F5 vendor storefronts, F7 service delivery | |
-| B2B procurement, supplier catalogs | Business customers, exemption certificates, Pay Later | Phase 7, approval workflows and budgets (PH3) | Punchout (cXML, OCI) to buyers' procurement systems (PH3) |
+| B2B procurement, supplier catalogs | Business customers, exemption certificates, Pay Later | Phase 8, approval workflows and budgets (PH3) | Punchout (cXML, OCI) to buyers' procurement systems (PH3) |
 | Travel and hospitality | Departures as variants | F1, F2, F3, PL1 | Flights and supplier hotels (PL3, P-D8) |
 | Community and activity platforms | Users, content, notifications, omnichannel messaging | Commerce joins through memberships, events and payouts | Groups, feeds and member messaging aren't commerce |
 
@@ -281,14 +283,15 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | **2. Payments** (built, but PayPal, Square, PB2) | PB1 PayPal, a second card gateway, bank transfer and cash on delivery, saved cards for one-time purchases; PB2 express buttons on product and cart pages, buy now pay later; PB3 fraud scoring, disputes on orders | One store takes PayPal, Stripe and bank transfer; a disputed Stripe payment shows on its order and in a report. |
 | **3. Merchandising** (built) | PC1 scheduled sales, upsells, cross-sells, related, recently viewed, order bumps and post-purchase offers; PC2 grouped, external, bundles, product options; PC3 quantity rules, tier and group pricing, comparison; PC4 CSV import and export, migration importers | A bundle with a personalized part sells at a tier price to a wholesale group, and a WooCommerce product export imports with its variants. |
 | **4. Fulfillment** (built, but return labels) | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
-| **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
-| **6. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
-| **7. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
-| **8. Marketing and analytics** | PJ1 editable emails, review requests with photos; PJ2 campaigns, segments; PJ3 wishlists, automation templates; PK1 cohorts, dashboards, scheduled reports, alerts | A segment of lapsed buyers gets a win-back campaign, and the owner gets a weekly sales report by email. |
-| **9. Channels and POS** | PI1 Google and Meta feeds, marketplace channels; PI2 point of sale | A product sold in person updates stock online, and the product feed passes Google Merchant Center validation. |
-| **10. Other models** | PL0 F1 line details and handlers, F2 dated capacity (add-ons move onto F1); PL1 bookings: departures, nightly stays, time slots, occupancy pricing, date search, traveler forms, cancellation policies, request to book, payment-method fees, services, rentals; PL2 memberships; PL3 supplier inventory (flights, hotel rooms) | A tour departure sells its last two seats as a double room with insurance on a 15% deposit, the balance is charged to the saved card 45 days before departure, and a cancellation refunds by the policy; a booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
-| **11. Marketplace and listings** | PM1 F4 vendors, commissions, payouts, escrow and milestones; PO1 F5 listings people post, moderation, expiry, paid upgrades, map search; PO2 fundraising campaigns, tax receipts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect; a visitor posts a listing, pays to feature it, and it expires after its term. |
-| **12. Setup and ecosystem** | PN1 setup guide, commerce theme, staff presets; PN2 extension guide | A new owner goes from a blank site to a first test sale through the guide without reading the docs. |
+| **5. Promotions and loyalty** (built) | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
+| **6. Headless API and point of sale** (pulled forward) | PA2 storefront and admin JSON APIs on Orchard Core's OpenAPI module, outgoing webhooks; PI2 sales channel and location on orders, reports by location, registers and shifts, split and cash tender, card readers, receipts | A phone app signed in as a cashier at one of several shops sells an item in person, taking part in cash and the rest on a card reader; the stock comes off that shop, the order shows the shop, register and cashier, and the day's sales report splits by shop. |
+| **7. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
+| **8. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
+| **9. Marketing and analytics** | PJ1 editable emails, review requests with photos; PJ2 campaigns, segments; PJ3 wishlists, automation templates; PK1 cohorts, dashboards, scheduled reports, alerts | A segment of lapsed buyers gets a win-back campaign, and the owner gets a weekly sales report by email. |
+| **10. Channels and POS** | PI1 Google and Meta feeds, marketplace channels; PI2 point of sale | A product sold in person updates stock online, and the product feed passes Google Merchant Center validation. |
+| **11. Other models** | PL0 F1 line details and handlers, F2 dated capacity (add-ons move onto F1); PL1 bookings: departures, nightly stays, time slots, occupancy pricing, date search, traveler forms, cancellation policies, request to book, payment-method fees, services, rentals; PL2 memberships; PL3 supplier inventory (flights, hotel rooms) | A tour departure sells its last two seats as a double room with insurance on a 15% deposit, the balance is charged to the saved card 45 days before departure, and a cancellation refunds by the policy; a booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
+| **12. Marketplace and listings** | PM1 F4 vendors, commissions, payouts, escrow and milestones; PO1 F5 listings people post, moderation, expiry, paid upgrades, map search; PO2 fundraising campaigns, tax receipts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect; a visitor posts a listing, pays to feature it, and it expires after its term. |
+| **13. Setup and ecosystem** | PN1 setup guide, commerce theme, staff presets; PN2 extension guide | A new owner goes from a blank site to a first test sale through the guide without reading the docs. |
 
 ## Phase 1 as built
 
@@ -306,7 +309,7 @@ Moved out of phase 1, as the gap table now says:
 
 - **Saved cards for one-time purchases** to phase 2 (PB1): they need the gateway work there, and the account's payment methods page comes with them.
 - **Order bumps and post-purchase offers** to phase 3 (PC1), with upsells and cross-sells, which they share their product picking with.
-- **Address autocomplete** to phase 6 (PG1): it needs a third-party places provider, chosen with the market work. Address forms already carry the browser autofill attributes.
+- **Address autocomplete** to phase 7 (PG1): it needs a third-party places provider, chosen with the market work. Address forms already carry the browser autofill attributes.
 
 ## Phase 2 as built
 
@@ -368,18 +371,282 @@ Not built yet, and why:
 - **Return labels** (PF2, PF4). A label for the buyer to send items back needs the return's parcel and the buyer's address as the sender; it fits on `ICarrierProvider`, now that a test account has verified outbound labels.
 - **Several parcels per shipment, and package presets.** A label is one parcel in the default box with the weight staff enter; carts are quoted the same way.
 
+## Phase 5 as built
+
+One branch, a commit per slice:
+
+- **PD1 several codes and combining rules.** A checkout carries up to five codes. Every discount is a product, order or shipping discount and says which kinds it combines with (`DiscountLine.Class`, `CombinesWith`); when they can't all be used, `DefaultCheckoutDiscountService.Choose` keeps the compatible set that takes off the most, and the others show what they gave way to. A coupon's editor has **Combines with**.
+- **PD1 automatic discounts, buy X get Y and minimum quantities.** A coupon can apply by itself (`CouponMethod.Automatic`, found through `CouponIndex.IsAutomatic`), with its uses held and limited like a code's. A buy X get Y offer discounts the cheapest qualifying items for every so many bought, and its discount lands on those lines (`DiscountLine.LineShares`), so tax follows. Any coupon can require a minimum quantity.
+- **PD1 discount links and generated codes.** `discount/{code}` keeps a code in a cookie for the next checkout. Unique codes are generated for a coupon as `CouponCode` documents with their own uses, behind `ICouponStore`, and downloaded as CSV; the coupon's own code can be turned off.
+- **PD2 the balance seam.** `ICheckoutTenderProvider` lets balances pay after tax toward the one-time amount, with the payment provider charging the rest (or nothing: an order a balance covers completes without one, and its button reads **Place order**). `CheckoutTenderLedger` holds each balance under its lock while the buyer pays, takes it while the checkout completes, lets it go when it doesn't, and puts it back on a refund after the card. A payment begun for an older total is set aside once the provider confirms nothing was paid.
+- **PD2 gift cards.** A Gift Cards feature in Orders: a Gift card product type that issues and emails a card per unit bought (off while a bank transfer is owed, turned off with a canceled or fully refunded order), cards issued by staff, the gift card list, each card's balance changes and activity, and the cards on orders, invoices and emails.
+- **PD2 store credit.** A Store Credit feature in Customers: credit per customer and currency, given by staff or as an order's refund (**Give it as store credit**), spent by a signed-in buyer at checkout, and shown on their account. The customer's admin page gained a display hook (`DetailAdmin`) other features add to.
+- **PD3 loyalty points.** A Loyalty Points feature: points on goods after discounts (not shipping, tax, or what points paid), taken back with cancels and refunds, spent at checkout at what a point is worth, under **Settings > Commerce > Rewards**, with a Rewards account page.
+- **PD3 referrals.** A Referrals feature: a link per customer, a single-use code of the store's chosen coupon for the friend, and store credit or points for the customer on the friend's first order, taken back if it's canceled.
+
+The exit gate holds: a gift card pays part of an order that also has an automatic buy X get Y discount and a free-shipping code under the combining rules, with Stripe charging the rest, verified on the test site with a test card, and refunded to the card first, then the gift card.
+
+Not built yet, and why:
+
+- **Loyalty tiers, perks and points expiry.** The program earns and spends; tiers and expiry wait for a store that asks.
+- **Affiliate commissions.** Referrals reward customers with credit or points; paying affiliates money belongs with the marketplace payouts in phase 12.
+- **Rewards for orders paid later.** Points and referral rewards are given when an order is placed, including one paid by bank transfer, and taken back if it's canceled; waiting for the money needs an event when an offline payment arrives.
+
+## Phase 6 as built
+
+One branch, a commit per slice:
+
+- **PA2 the API's foundation.** The commerce JSON API is minimal API endpoints under `api/commerce/v1`, which Orchard Core's OpenAPI module documents (it reads minimal APIs through `Microsoft.AspNetCore.OpenApi`; MVC controllers aren't needed). `CommerceApi.MapCommerceApi` gives each module's group the `Api` bearer scheme, no antiforgery and a tag; guests reach the endpoints marked `AllowGuests`, their cart and checkout carried in `X-Cart-Token` and `X-Checkout-Token` headers by `GuestSessionTokenManager` instead of cookies. Money, paging and RFC 9457 problems (with a `code` on conflicts and camelCase field keys from model state) are shared, and `IdempotencyEndpointFilter` replays a final answer, its guest-token headers and `Location` included, for 24 hours per caller, route and key.
+- **PA2 the step services.** What each checkout step's driver did is in a service the driver and the API both call: `CartCheckoutService`, `CustomerContactStepService`, `ShippingCheckoutStepService`, `CheckoutCouponService`, `GiftCardCheckoutService`, `CheckoutTenderChoices`.
+- **PA2a storefront API.** One API feature per module: the catalog priced for the caller with variants, add-ons, specifications and stock; per-location availability; the cart; the checkout (start from the cart, contact, pickup locations, shipping rates and the step, codes, gift cards, store credit, points, payment methods with what a client SDK needs through `ICheckoutPaymentClientConfigurationProvider`, payment, completion with the order number); the signed-in buyer's account, addresses, orders, returns and shipments. `CheckoutApi.Read` gives every module one checkout shape.
+- **PA2b admin API.** Orders (list with filters, by number, refund, cancel), fulfillment (what's left to ship, ship, deliver), customers, stock (receive, adjust, count, transfer, unknown locations refused) and coupons (held to the coupon admin's rules through `CouponEditor`).
+- **PA2c outgoing webhooks.** A Commerce Webhooks module: subscriptions to order, shipment, customer and stock events that modules publish through `ICommerceWebhookPublisher`, each payload in the API's shapes, signed with HMAC-SHA256 over the timestamp and body, sent after the request is saved and retried with backoff for about two days, with a deliveries log, a test event and resend. Redirects aren't followed and internal hosts are refused.
+- **PI2a sales channel and location.** Every order has a channel (online, point of sale, draft; orders from before channels count as online), and register sales also the store's location, the register, shift and staff (`Order.Channel`, `LocationId`, `RegisterId`, `ShiftId`, `StaffUserId`, indexed). Stock is held and sold at the order's location. The orders list, its export and the admin API filter by channel; the admin API also by location.
+- **PI2b registers and shifts.** A Point of Sale module: registers at each store with its address and the roles that may sell there, shifts opened with a float, cash put in and taken out, and closed with a count against what the drawer should hold, summed from the shift's orders rather than kept on the shift. Admin lists of registers and shifts.
+- **PI2c tender at the till.** A register sale is an order whose checkout skips contact and shipping and is taxed by the store's address. Cash is a tender whose reference is what was handed over, so the change falls out; the rest is paid on the store's own terminal (recorded) or on a Stripe Terminal reader the server tells to collect (server-driven, tested with a simulated reader); gift cards and codes go on the sale's checkout. The staff member owns the checkout, so their own store credit and points aren't spent on it (`CheckoutCounterSale`).
+- **PI2d receipts and returns.** Receipts as data for the till app, as HTML from the Receipts settings to print, and by email; returns at the till refund through the order's operations, put stock back at the store and take cash refunds out of the drawer.
+- **Tests.** A commerce integration suite starts a real host with the store sample and drives the API over HTTP: catalog, guest carts and checkouts kept apart by their tokens, a checkout paid with the test provider, idempotent retries, a signed webhook delivered to a local listener, and staff endpoints refusing guests. It runs in CI beside the tenant hierarchy suite.
+
+The exit gate holds: a headless client (a script over the API) buys as a guest with Stripe test mode and with bank transfer, a buyer reads their orders with a bearer token, staff manage orders, stock and coupons with a client-credentials token, a webhook receiver verifies every signature, and a till opens a shift, sells for cash with change, by split cash and card and on a simulated Stripe reader, returns a sale with cash back, and closes the shift with its count.
+
+Not built yet, and why:
+
+- **The store's own Checkout details fields over the API.** The Contact step's endpoint takes the contact details only; collecting a store's custom content fields needs the editor pipeline driven from JSON.
+- **Store credit and points at a register.** The register's checkout belongs to the staff member; spending a customer's balances there needs the customer's consent at the till.
+- **Offline selling (P-D10).** The API takes orders as they happen; accepting ones made earlier needs stock reconciled when they arrive.
+- **A headless storefront starter.** The API and its OpenAPI document are what a starter builds on; a sample app is its own repository.
+
+## Phase 7 as built
+
+One branch, a commit per slice:
+
+- **PG1a markets and the shopper's currency.** A Markets feature (Commerce › Markets): a market is a set of countries, each in one market only, with a currency, an exchange rate from the store's currency that the store sets (P-D7), a rounding rule that rounds converted prices up (none, whole units, .99, .95), a language, whether its prices include tax, and on or off. The shopper's market is the one they picked in the storefront's picker (a cookie), else the one of their culture's country; an app names it with the `market` query value or the `X-Market` header; the admin never has one. Products.Core has the seam, `IShopperCurrency` (the default sells each product in its own currency): the price resolver uses a product's own price in the market's currency, else converts a one-time price and rounds it; subscriptions and amounts the buyer types are never converted. The cart is priced in the shopper's currency and moves to a new one when they change market, without calling it a price change; product cards, the product page (variants and add-ons), checkout and the catalog API show converted prices; shipping uses a zone's methods in the market's currency or converts the store's. A market whose prices include tax makes the checkout's tax inclusive (`MarketCheckoutTaxProfileHandler`). Sorting and the listing's price filter stay in the store's currency.
+- **PG1b what each market sells.** "Not sold in" on a product's editor; Products.Core's `IProductSaleRestriction` seam makes the add to cart button say so, the cart refuse it and the catalog API mark it not purchasable.
+- **PG1c address suggestions.** Addresses.Core's `IAddressAutocompleteProvider`, endpoints for suggestions and the parts of the one picked (60 requests a minute for each visitor, since each call is billed), the address editor's suggestion list under the street, and an Address Suggestions (Google Places) feature whose key is kept protected on the server.
+- **PG2 languages.** An order keeps the culture its buyer shopped in, and its confirmation, shipped, return, gift card and recovery emails are written in it (`OrderCulture`); a market's language switches the storefront to it.
+- **PG3a VAT on orders.** An order keeps its tax lines, the API order shows its taxes, and the checkout summary shows each tax and rate once.
+- **PG3b the OSS report.** Reports › VAT one-stop shop: VAT on orders to other EU countries by country and rate, refunds taken off in proportion, the store's own country left out; and an EU VAT standard rates recipe for the 27 member states.
+- **PG3c duties.** An import duty tax type, and rule thresholds that can be the whole order's (`TaxRule.ThresholdBasis`), so a duty is charged only above a country's threshold and shown as its own line.
+- **PG3d tax connectors.** A TaxJar feature on `ITaxDeterminationProvider` for the countries it's set up for, with prices that exclude tax; when a provider can't answer, the tax service falls back to the store's own rules and logs it, so a connector that's down doesn't stop sales.
+
+The exit gate holds: a shopper picks Germany, sees euros and German on the listing, product page and cart, pays the price shown with 19% VAT taken out of it, and the order shows under Germany at 19% in the OSS report.
+
+Not built yet, and why:
+
+- **Hiding a product from a market's listing.** It shows there as not sold; leaving it out needs the market in the index of every search backend (SQL, Lucene, Elasticsearch, Azure AI Search).
+- **One product across its translations.** Orchard Core's content localization makes each translation its own item, with its own stock and prices; selling them as one needs the cart, stock and prices keyed by the localization set.
+- **Shipping thresholds in a market's currency.** Free-shipping and table thresholds compare the order in its own currency with the method's amounts.
+- **Live exchange rates.** Rates are the store's (P-D7); a provider is a later option.
+- **Avalara.** TaxJar is the first connector; Avalara is another provider on the same seam.
+
+## Phase 8 as built
+
+One branch, a commit per slice:
+
+- **Loyalty and referral rewards after the order is saved.** Points and referral rewards are given in a deferred task once the order is paid, so a signed-in buyer's checkout no longer stalls on two writes to the same order.
+- **PH1 companies.** A Companies feature (Commerce › Companies): buyers and admins, each with an order limit, locations offered at checkout, a tax number, and payment terms: net days, a deposit paid at checkout, a credit limit and a required purchase order number. The account's **Company** page shows the company, its terms, what it owes and its orders. A Company step after shipping takes the purchase order number, which goes on the order, its invoice and the API. What the deposit doesn't cover goes on the company's account as a tender (`company-terms`), a transaction due in its net days, up to the credit left, in the store's currency.
+- **PH2b quotes.** A signed-in buyer sends their cart as a quote request (Orders' **Take quote requests** setting, through Carts' new `ICartActionProvider`), with a message and purchase order number; it's a draft order with `Order.Quote`. Staff set a price each (`OrderLine.QuotedUnitPrice`) and send it, offered until the date to pay by; the buyer accepts it by paying, or turns it down. Promotions don't come off an agreed price (`BillingItem.ExcludeFromDiscounts`). The API asks for and declines quotes.
+- **PH2c price lists.** Commerce › Price lists: a percentage off and prices by SKU, pasted as lines, in the store's currency and converted for a market. Products.Core's `IBuyerPriceProvider` seam lets the price resolver charge a buyer's own price when it's lower; the company's list is one provider.
+- **PH3a approvals and budgets.** An order over a buyer's limit, or past the company's monthly budget, waits for a company admin's approval (`Order.Approval`). The Company step asks for it, a payment gate refuses payment without it, admins approve or reject from their account or the API, and both sides are emailed. An approved order is paid from the buyer's orders; one that grows past the approved total needs approval again.
+- **PH3b punchout.** OCI punchout: a company's procurement system opens the store with the company's key (kept as a hash, shown once) and HOOK_URL, signs in as its punchout buyer (never a site administrator), and gets the cart back as OCI fields.
+
+The exit gate holds: a company buyer asks for a quote with a PO number, the store prices and sends it, the buyer accepts it by paying, the company pays a 20% deposit at checkout and the rest goes on its net-30 account, and the PO number is on the order and its invoice.
+
+Found and fixed while testing:
+
+- A number field in an admin page in a decimal-comma language (German) posted "24.5" and bound as 245. The quote price and the price list fields read invariant text; other admin forms with decimal fields have the same issue, left for a central fix.
+- A quote's draft was re-priced in the admin's currency; a saved draft now keeps its own.
+- Automatic promotions came off a quoted price; agreed prices are excluded from discounts.
+
+Not built yet, and why:
+
+- **cXML punchout.** OCI is built; cXML (PunchOutSetupRequest and an order message back) is the other common protocol, on the same company key and session.
+- **Catalogs per company.** A price list prices products; hiding products from a company needs the company in every search backend's index, like a market's.
+- **Quotes without email.** A quote is sent by email; a store without email can't mark one sent yet.
+
+## Phase 9 as built
+
+One branch, a commit per slice:
+
+- **PJ2 segments and campaigns.** A Marketing feature keeps each customer's purchases (orders, spend less refunds in the store's currency, first and last order, country), counted once per order and refund as they're paid, and built from earlier orders in the background. Commerce › Segments groups customers by them, such as lapsed buyers. Commerce › Campaigns emails a segment's customers who accept marketing: Liquid with the customer's name and purchases, a test send, now or at a time, in batches that pick up where they stopped. Each email has a protected one-click unsubscribe link.
+- **PK1a scheduled reports.** A Report Subscriptions feature emails any registered report daily, weekly or monthly for the period before, in the site's time zone, with its numbers and tables and the report as a CSV or Excel file.
+- **PJ1a editable emails.** Orders.Core's `IOrderEmailTemplates`: the order confirmation, order to pay, quote, shipped, return, gift card and left-checkout emails pass through the store's Liquid template of each (Settings › Commerce › Emails), with the built email as `{{ Content }}`, the order, and a layout around them all. A template that fails sends the built email.
+- **PJ1b reviews with photos, review requests.** Up to three photos on a review, stored in Media and checked by their bytes. A review request goes once per paid order, some days after paying, to buyers who accept marketing.
+- **PJ3a wishlists.** Save to wishlist on the product page, and Account › Wishlist with each product's add to cart.
+- **PJ3b automation templates.** Recipes adding workflows: a thank-you email when an order is paid, and alerts to the store when an order is canceled or stock runs low.
+- **PK1b cohorts and the dashboard.** A Cohorts and retention report (buyers by first-order month, and the share back in each of the six months after), and a Sales Summary admin dashboard widget.
+
+The exit gate holds: a lapsed-buyers segment (its days since the last order set to 0 on the test store, whose orders are all from today, so the 90-day rule wasn't tried on older orders) sent its one customer who accepts marketing the win-back campaign with their name in it, skipped the 19 who don't, and the customer unsubscribed from its link. The owner got the weekly sales report by email, with the CSV attached.
+
+Not built yet, and why:
+
+- **Campaign analytics.** Opens and clicks need tracking pixels and redirected links; a campaign shows sent, skipped and failed.
+- **Segments by product or category.** Purchases keep totals and dates, not what was bought.
+- **Dashboard charts.** The widget shows figures; charts stay in the reports.
+
+## Phase 10 as built
+
+Point of sale (PI2) was built in phase 6, so this phase is the feeds, and a fix the exit gate found at the till:
+
+- **PI1a product feeds.** A Product Feeds feature publishes the products at `feeds/products.xml` (Google Merchant Center's RSS with its `g:` attributes, which Meta and TikTok catalogs read too) and `feeds/products.csv`, in any market's currency, behind an optional key. Each product sold online is an item, or each variant of one, with its price, sale price and dates, photos, availability (with pre-order dates), brand, GTIN, MPN, condition, category, color and size. A Product Feed part holds the identifiers; a brand also comes from a taxonomy named for brands. Each item is checked against Merchant Center's rules (lengths, links, a photo, a price, a sale price below it, a GTIN's check digit), and Settings › Commerce › Product feeds shows what's left out and why before Merchant Center refuses it.
+- **A company cashier at the till.** A cashier who is a company's buyer got the company checkout step on a register sale, which blocked it. The step is now kept off sales at a register.
+
+The exit gate holds: the last Contoso Baseball Cap was sold at a register for cash, with change, and the feed then listed it out of stock. The feed's 29 items pass the built-in validation, which follows Merchant Center's product data specification; the ones left out have no photo or price. Merchant Center itself wasn't asked, since that needs a merchant account. A feed in euros converts its prices.
+
+Not built yet, and why:
+
+- **Marketplace channels.** Importing orders from Amazon, eBay or TikTok Shop needs each one's seller API and account; the feed lists products there but orders don't come back.
+- **Markets in the feed.** A product a market doesn't sell is still in that market's currency feed; a feed is per currency, not per market.
+- **Live stock in the feed.** A feed is cached for 15 minutes, so a sale shows in it up to 15 minutes later.
+
+## Phase 11 as built
+
+One branch, a commit per slice:
+
+- **PL0a F1 line details and line handlers.** Cart lines carry details beside the product that `ICartLineHandler`s check, price and describe; they're copied onto the order line (raw and as they read) and shown on the cart, order, invoice and emails. Add-ons moved onto it as the first handler, and can now be priced per person or as a percent of the price.
+- **PL0b F2 dated capacity.** `BookingSlot` per product and date (a departure, a night, a time slot) with capacity, held while an order is unpaid, taken when it's paid and given back when it's canceled or expires, under a lock per product. Built inside the Bookings module, which other verticals depend on for it.
+- **PL1 bookings.** The Booking part (departures, nightly stays, time slots), occupancy pricing (per person or per unit, options with supplements), per-date and weekend prices, a date picker on the product page, deposits with the rest owed on the ledger and charged to the kept card on its date (F3 for orders: a tender that keeps the card), cancellation policies that suggest the refund, requests to book through quotes, traveler forms from a Traveler content type, booking emails, Commerce › Bookings with a calendar and each product's dates, and a date search.
+- **PL2 memberships.** The Membership part puts a buyer in roles for its length, extended by buying again and ended by a full refund, a cancellation, its end date or staff. Content Access Control now refuses restricted content even when View content is granted to everyone, which it didn't before.
+
+Found and fixed on the test site:
+
+- Bookings' order handler built `BookingService`, which needs `IOrderService`, which is built with the handlers: a circular dependency. The handler now resolves the service when an order changes, and the balance tender resolves the checkout session store the same way.
+- The balance charge read its record before the checkout committed and then saved it as a second document. It reads it again after the charge, and a cancellation reads its booking again after the refund.
+- Field editors on the storefront (checkout fields, travelers) failed on a hint: the shape `Hint_Admin` exists only in the admin theme. The Checkout module now has one for the storefront.
+- Draft orders rebuilt their cart without the lines' add-ons and details, so a quote for a booking couldn't be saved ("Choose a date"). They keep them now.
+- A percent add-on showed as money on the product page; a time slot read "Wed 21 Oct 2026, A" (the `t` of a custom format is the AM/PM letter); the search offered times beyond how far ahead they book; a cancellation counted the unpaid balance as paid.
+
+The exit gate holds:
+
+- The last two seats of a tour departure sold as a double room with travel insurance on a 15% deposit. The kept card was charged the balance, through the charger the background task runs on the due date (45 days before departure), triggered with **Charge the card now** rather than by waiting. Canceling 50 days before refunded by the policy: 50% kept, 846.16 back, split between the deposit and the balance charge, and the seats came back.
+- A booked massage was paid, confirmed by its email, and completed, and its time left the picker.
+- An Annual Membership bought by a buyer outside the Member role opened the members' article at once. A full refund closed it again.
+
+Not built yet, and why:
+
+- **PL3 supplier inventory.** Flights and supplier hotel rooms need a supplier's API and account (P-D8 isn't decided).
+- **Payment-method fees.** The invoice is built before the payment method is chosen. A fee for a method needs the Payment step to rebuild the invoice when the method changes.
+- **Add-ons per booking.** Add-ons are per unit, per person or a share of the price; one charged once per booking whatever its quantity needs a line amount besides the unit price.
+- **Buyer prices on dates.** A date's own price, the weekend price and an option's adjustment aren't lowered by company price lists or role discounts, which apply to the product's price.
+- **Rentals out and returned.** Nightly bookings cover rentals; deposits held and returned and damage charges (F7) aren't built.
+- **Tickets.** One ticket per attendee with a QR code and check-in (F6).
+- **Memberships that renew by themselves.** A membership is bought again to extend it; subscriptions already renew and grant roles.
+
+## Phase 12 as built
+
+One branch, a commit per slice:
+
+- **PM1 F4 marketplace.** Vendors with the people who run them and their own commission, the Vendor part on products, a ledger entry per vendor line of a paid order (gross after discounts, commission, net), held until the hold ends and goods are fulfilled, released early by staff for a delivered service or a milestone, refunds taken back as negative entries, and payouts per order through `IVendorPayoutProvider`. The Stripe Connect feature onboards vendors to Express accounts and transfers from each order's charge. Commerce › Vendors, Settings › Commerce › Marketplace, and the vendor's own page in the storefront account.
+- **PO1 F5 classifieds.** The Classified part makes a type visitors post from the site, moderated when its type says so, running for a term, expired and unpublished by a background task with an email, and renewed by its owner. The Classified upgrade part makes a product that features or bumps a listing, bought through the cart with the listing as a line detail. A search by words and distance with a Leaflet map, featured first. Content › Posted listings for moderators.
+- **PO2 fundraising.** The Fundraising campaign part: a goal, an end, suggested amounts and a least amount; a donate form on the campaign's page whose amount becomes the line's price, with a tribute; progress toward the goal; a donation per campaign line recorded when paid, with a receipt emailed and kept under Donations in the account. Cart line handlers can now keep a line out of every discount, which a gift needs.
+
+Found and fixed on the test site:
+
+- The marketplace's order handler built `MarketplaceService`, which needs the order store the handlers are built with: the same circular dependency as phase 11. It resolves the service when an order changes.
+- The classifieds admin editor couldn't be saved: its end-date fields carry seconds, which a `datetime-local` input refuses without `step="1"`.
+- The fundraising settings page answered 404: its editor shape was built from the sealed settings class, which renders empty. It has its own view model.
+- The fundraising sample's campaign page had no donate form: its type lacked the product page setting that shows a product's details and actions.
+- Receipt numbers repeated the year the order number already starts with.
+
+The exit gate holds, but for the payout itself:
+
+- The Handmade Ceramic Mug sold for its vendor: 24.49 gross after the order's discount, 2.45 commission, 22.04 net, held seven days. A 10.00 refund took back 9.00 of it. Releasing the order made 13.04 ready to pay out.
+- Paying it out through Stripe Connect couldn't be run: the test Stripe account doesn't have Connect turned on, and setting up a vendor's payouts says so. The payout path is covered by unit tests with a fake provider. It will run live once Connect is enabled in the Stripe dashboard.
+- A visitor posted a classified ad, a moderator approved it, and the visitor bought the 5.00 feature upgrade through the cart: it was featured for seven days, first in a search 9.8 km away with its badge on the map. Its end date set in the past, the background task unpublished it and emailed its owner, and **Renew** brought it back.
+- A 46 € donation in honor of the librarian, through Stripe, counted as $50 toward the $10,000 goal. The receipt was emailed and opened from Donations, a 20 € refund brought the progress to $28.26 and showed on the receipt, and neither the company price nor the promotion code took anything off it.
+
+Not built yet, and why:
+
+- **Disputes between parties.** A buyer's dispute against a vendor, with the vendor's side and the store deciding, needs messaging between them; staff handle it through refunds today.
+- **Vendors managing their products.** Vendors see sales and payouts; staff add and edit their products. A vendor-side product editor needs per-vendor content permissions.
+- **Payouts besides Stripe Connect.** PayPal payouts or bank files would be other `IVendorPayoutProvider`s.
+- **Geocoding.** A listing's place is text and its coordinates come from the browser or are typed; turning an address into coordinates needs a geocoding service and its key.
+- **Paid posting.** Listings are free to post and upgrades are paid; charging to post needs the post to wait for its order.
+- **Recurring gifts and Gift Aid.** Monthly giving needs a campaign sold as a subscription with a chosen amount; Gift Aid needs the donor's declaration and the claim file HMRC takes.
+- **Fundraising pages per supporter.** Peer-to-peer pages that raise toward a campaign's goal.
+
+## Phase 13 as built
+
+One branch, a commit per slice:
+
+- **PN1a the setup guide.** Commerce › Set up your store, from the `IStoreSetupStep` seam in Abstractions: each module adds the steps of what it does. The steps, with what's done and a quick action for the simple ones:
+  - the store's details (Receipts);
+  - the currency (Checkout);
+  - card payments (Stripe, read from its options, so keys from configuration count);
+  - bank transfers (PayLater, optional);
+  - one flat rate everywhere (Shipping);
+  - tax rules (Taxation);
+  - a first product, adding a Product type when there's none (Products);
+  - a paid test order (Orders).
+
+  Progress and skipped steps are kept in site settings.
+- **PN1c staff presets.** Store manager, Warehouse, Customer support and Marketing, created from the guide with their permissions as role claims (`StaffRolePresets`).
+- **PN1b the Storefront theme and the Online store setup recipe.**
+  - The theme is built on TheTheme. Its Layout has a sticky store header with search, the Navbar's cart, market and account, the main menu, the Title zone for breadcrumbs, and a footer with the store's contact details from the receipt settings.
+  - The setup recipe enables the commerce features and the theme, defines a Product type, and makes an empty catalog the home page.
+- **PN2 the extension guide.** Extending commerce, in the Technical Manual: which seam fits which job, a worked example (a cart line handler and an order handler), and the traps (order handler DI cycles, commits during a request, invariant amounts, detail keys, discounts, admin lists).
+
+Found and fixed on fresh sites:
+
+- The guide called Stripe unconfigured on a site whose keys come from configuration. It reads the resolved Stripe options now.
+- The recipe's Product type tracked stock, so a new owner's first product was out of stock and couldn't be bought. The recipe leaves stock out; owners add it when they keep stock.
+- Pay later was on by default and offered to every shopper of a new store. It's off by default now, everywhere: a store turns it on under Settings › Commerce › Offline payments, and the guide's offline payments step shows when it's on.
+- TheTheme pins a 60px footer and pads the page for a fixed navbar. The theme undoes both for its taller footer and sticky header.
+
+The exit gate holds:
+
+- A blank site was set up from the Online store recipe.
+- The owner followed the guide:
+  - saved the store's details and USD;
+  - card payments showed done from Stripe's test keys;
+  - added $5 shipping everywhere;
+  - skipped tax;
+  - added a $24 product from the guide's link.
+- Two of the product were bought on the storefront with Stripe's test card, $53 with shipping. The guide showed the order paid and 7 of 7 steps done.
+- The staff roles were added with their permissions.
+- This was done without opening the docs.
+
+Not built yet, and why:
+
+- **Importing products.** A CSV import of a first catalog in the guide; ContentTransfer imports content in general today.
+- **Picking a theme's colors and logo in the admin.** The theme reads the receipt settings' name and logo; colors change through a child theme's CSS variables.
+- **A guided Stripe connection.** Entering keys is the one step that leaves the guide; Stripe's OAuth onboarding would replace it.
+
+## Headless API and point of sale (phase 6, planned)
+
+A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.
+
+**The API is built on Orchard Core's OpenAPI module** (`OrchardCore.OpenApi`, in the app targets we use), not beside it. The module documents the site's endpoints in Swagger, ReDoc and Scalar from `Microsoft.AspNetCore.OpenApi`, which reads minimal APIs, and clients are generated from its document with NSwag. Calls authenticate with the `Api` scheme: bearer tokens from the tenant's OpenID server (authorization code with PKCE for apps and the docs explorers, client credentials for servers). So each commerce module maps minimal API endpoints:
+
+- A route group under `api/commerce/v1` with the `Api` scheme, typed request and response records, `WithName`, `WithSummary`, `ProducesProblem`, and `ProblemDetails` for errors, so the explorers and the generated clients are complete.
+- Permission checks are the same as the admin and storefront pages (`IAuthorizationService` with the existing permissions), plus new ones only where a till needs them (for example **Sell at a register**).
+- The endpoints call the same services as the pages (`ICartService`, `ICheckoutEngine`, `ICustomerService`, `IOrderStore`, `IInventoryService`), so rules such as stock holds, coupon holds and tax stay in one place.
+
+The slices:
+
+- **PA2a storefront API.** Catalog (products, variants, prices for a customer, availability per location), carts, discounts and codes, checkout (contact, shipping rates, payment with a client-side token, or a pay link), customers and their addresses, orders and returns for the signed-in buyer.
+- **PA2b admin API.** Orders (list, detail, fulfill, refund, cancel), customers, products and stock (receive, adjust, transfer), coupons, with paging and filters.
+- **PA2c outgoing webhooks.** Subscriptions to order, customer, product and stock events, signed with a per-subscription secret, retried with backoff, and a delivery log, reusing the workflow events that exist.
+- **PI2a sales channel and location.** `Order.Channel` (online, point of sale, draft, marketplace later), `Order.LocationId`, `RegisterId` and `StaffUserId`, indexed; the stock comes off the order's location; reports gain location and channel filters and groupings.
+- **PI2b registers and shifts.** Registers per location; opening and closing a shift with its float and counted cash; cash in and out; staff limited to their locations by role.
+- **PI2c tender at the till.** Several payments on one order (cash with change given, card, gift card, store credit) on the phase 5 tender seam; Stripe Terminal readers for in-person cards; tax from the shop's address.
+- **PI2d receipts.** Printed and emailed receipts from the Receipts settings, and returns at the till against the original order.
+
+Offline selling (P-D10) comes after: the API would accept orders made earlier with idempotency keys, and stock would reconcile when they arrive.
+
 ## Decisions needed
 
 Until they are answered, the work goes ahead on the default in the last column.
 
 | # | Question | Options | Default taken |
 | --- | --- | --- | --- |
-| P-D1 | CC-D5 put account pages, JSON APIs and service fulfillment out of scope. Are they in scope now? | In (phases 1, 10 and PA2) / keep deferred | In |
-| P-D2 | The original plan left marketplaces out. Is phase 11 in scope? | In / out / later | Later: phase 11 last |
+| P-D1 | CC-D5 put account pages, JSON APIs and service fulfillment out of scope. Are they in scope now? | In (phases 1, 6 and 11) / keep deferred | In |
+| P-D2 | The original plan left marketplaces out. Is phase 12 in scope? | In / out / later | Later: phase 12 last |
 | P-D3 | Carrier rates and labels: one aggregator (EasyPost or Shippo) or carriers one by one? | Aggregator first (fewer contracts, faster) / per carrier | Aggregator first |
 | P-D4 | Email campaigns: build them, or integrate with Mailchimp or Klaviyo? | Integrate first / build on the omnichannel email channel | Integrate first |
-| P-D5 | Point of sale: a web POS page, or a native app? | Web POS first / native | Web POS first |
+| P-D5 | Point of sale: a web POS page, or a native app? | Web POS first / native | Answered: a native or mobile app over the API first; a web POS, if built, is one more client of the same API |
+| P-D10 | Can the POS sell while offline? | Online only first / offline with sync | Answered: online only first; offline sales, which need the API to accept orders made earlier without overselling, come after |
 | P-D6 | Second card gateway after PayPal | Square / Adyen / Authorize.net | Square |
 | P-D7 | Shopper currency conversion: live exchange rates from a provider, or rates the store sets? | Store-set rates first / provider | Store-set rates first |
 | P-D8 | Flights and supplier hotel rooms (PL3): which supplier API, or out of scope? | Duffel (flights) / Amadeus (flights and hotels) / out of scope | Later: after PL1, supplier chosen then |
-| P-D9 | When should the bookings foundations (F1, F2) be built: in phase 10, or pulled forward because a store needs travel packages sooner? | Phase 10 / right after phase 3 | Phase 10, with F3 in phase 7 |
+| P-D9 | When should the bookings foundations (F1, F2) be built: in phase 11, or pulled forward because a store needs travel packages sooner? | Phase 11 / right after phase 3 | Phase 11, with F3 in phase 8 |

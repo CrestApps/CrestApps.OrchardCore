@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using CrestApps.OrchardCore.Checkout.Navigation;
@@ -6,7 +7,6 @@ using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
-using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Checkout.Recipes;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Checkout.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,7 @@ public sealed class Startup : StartupBase
     {
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
+        services.AddScoped<IStoreSetupStep, CurrencySetupStep>();
         services.AddScoped<ICheckoutSessionAnonymizer, CheckoutSessionAnonymizer>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
@@ -69,17 +71,31 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<CouponMigrations>()
             .AddIndexProvider<CouponIndexProvider>()
+            .AddIndexProvider<CouponCodeIndexProvider>()
             .AddIndexProvider<CouponRedemptionIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
+        services.AddScoped<CouponEditor>();
         services.AddScoped<CouponScopeEvaluator>();
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, DiscountLinkCheckoutHandler>();
         services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
         services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
-        services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
+
+        // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
+        // an ICheckoutTenderProvider. Its gate runs after the coupons', so it holds what's left after a code comes off.
+        services.AddScoped<ICheckoutTenderService, DefaultCheckoutTenderService>();
+        services.AddScoped<CheckoutTenderChoices>();
+        services.AddScoped<ICheckoutTenderLedger, CheckoutTenderLedger>();
+        services.AddScoped<ICheckoutPaymentGate, TenderHoldPaymentGate>();
+        services.AddScoped<ICheckoutHandler, TenderCheckoutHandler>();
+        services.AddDataMigration<CheckoutTenderMigrations>()
+            .AddIndexProvider<CheckoutTenderHoldIndexProvider>();
+        services.AddScoped<CheckoutCouponService>();
+        services.AddDisplayDriver<CheckoutFlow, CouponCheckoutFlowDisplayDriver>();
+        services.AddPermissionProvider<CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();
         services.AddSiteDisplayDriver<CheckoutSettingsDisplayDriver>();
         services.AddNavigationProvider<CheckoutSettingsAdminMenu>();
@@ -103,25 +119,15 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<CheckoutMigrations>()
             .AddIndexProvider<CheckoutSessionIndexProvider>()
             .AddIndexProvider<PaymentAttemptIndexProvider>()
-            .AddIndexProvider<PaymentRefundIndexProvider>();
-
-        // Finds a person's checkouts by owner and by email, for access and erasure requests.
-        services.AddDataMigration<CheckoutSessionCustomerIndexMigrations>()
+            .AddIndexProvider<PaymentRefundIndexProvider>()
             .AddIndexProvider<CheckoutSessionCustomerIndexProvider>();
 
         services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();
         services.AddScoped<ICommercePersonalDataContributor, CouponPersonalDataContributor>();
 
-        services.Configure<PaymentSessionCacheOptions>(options =>
-        {
-            options.MaxLiveSession = TimeSpan.FromHours(2);
-        });
-
-        services.Configure<PaymentRateLimitOptions>(_ => { });
-
         // The public checkout experience: the flow chrome, the payment step, and the client resources.
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, DefaultCheckoutFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<CheckoutFlow>, PaymentStepCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, DefaultCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<CheckoutFlow, PaymentStepCheckoutFlowDisplayDriver>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CheckoutResourceManagementOptionsConfiguration>();
     }
 
@@ -150,4 +156,14 @@ public sealed class CouponDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddDeployment<CouponsDeploymentSource, CouponsDeploymentStep, CouponsDeploymentStepDisplayDriver>();
+}
+
+[Feature(CheckoutConstants.Features.Api)]
+public sealed class ApiStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapCheckoutApi();
+        routes.MapCouponAdminApi();
+    }
 }

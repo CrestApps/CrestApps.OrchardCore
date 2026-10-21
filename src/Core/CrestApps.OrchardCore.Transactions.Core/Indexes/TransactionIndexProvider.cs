@@ -10,6 +10,11 @@ namespace CrestApps.OrchardCore.Transactions.Core.Indexes;
 public sealed class TransactionIndexProvider : IndexProvider<Transaction>
 {
     /// <summary>
+    /// The longest parent reference type or id the index holds.
+    /// </summary>
+    public const int MaxParentReferenceLength = 255;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="TransactionIndexProvider"/> class.
     /// </summary>
     public TransactionIndexProvider()
@@ -30,6 +35,8 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                 OwnerKind = transaction.OwnerKind,
                 ReferenceType = transaction.ReferenceType,
                 ReferenceId = transaction.ReferenceId,
+                ParentReferenceType = TruncateParentReference(transaction.ParentReferenceType),
+                ParentReferenceId = TruncateParentReference(transaction.ParentReferenceId),
                 CheckoutSessionId = transaction.CheckoutSessionId,
                 ObligationId = transaction.ObligationId,
                 Currency = transaction.Currency,
@@ -43,4 +50,11 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                 UpdatedUtc = transaction.UpdatedUtc,
             });
     }
+
+    // The parent reference columns are bounded, and a longer value must not stop the transaction from being saved. A
+    // query truncates the value it looks for the same way, so it still finds the row.
+    internal static string TruncateParentReference(string value)
+        => string.IsNullOrEmpty(value)
+            ? null
+            : value.Length <= MaxParentReferenceLength ? value : value.Substring(0, MaxParentReferenceLength);
 }

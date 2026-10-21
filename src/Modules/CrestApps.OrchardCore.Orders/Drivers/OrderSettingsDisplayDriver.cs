@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -22,6 +23,7 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly CouponItemLookup _lookup;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
@@ -29,11 +31,13 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         CouponItemLookup lookup,
-        IStringLocalizer<OrderSettingsDisplayDriver> stringLocalizer)
+        IStringLocalizer<OrderSettingsDisplayDriver> stringLocalizer,
+        LinkGenerator linkGenerator)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _lookup = lookup;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -43,12 +47,10 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
     public override IDisplayResult Edit(ISite site, OrderSettings settings, BuildEditorContext context)
         => Initialize<OrderSettingsViewModel>("OrderSettings_Edit", async model =>
         {
-            var pathBase = _httpContextAccessor.HttpContext?.Request.PathBase.Value ?? string.Empty;
-
             model.OrderBumpProductId = settings.OrderBumpProductId;
             model.OrderBumpPercentOff = settings.OrderBumpPercentOff;
             model.OrderBumpHeadline = settings.OrderBumpHeadline;
-            model.ProductSearchEndpoint = $"{pathBase}/{CouponItemSearchEndpoints.ProductsPath}";
+            model.ProductSearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, CouponItemSearchEndpoints.ProductsRouteName);
             model.InitialOrderBumpJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(settings.OrderBumpProductId)
                 ? []
                 : (await _lookup.GetProductsAsync([settings.OrderBumpProductId])).Select(product => new { value = product.Id, text = product.Text, selected = true }));
@@ -56,6 +58,7 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
             model.SendRecoveryEmails = settings.SendRecoveryEmails;
             model.RecoveryDelayHours = settings.RecoveryDelayHours;
             model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
+            model.AllowQuoteRequests = settings.AllowQuoteRequests;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
         .OnGroup(SettingsGroupId);
@@ -74,6 +77,7 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
         settings.SendConfirmations = model.SendConfirmations;
         settings.SendRecoveryEmails = model.SendRecoveryEmails;
         settings.RecoveryDelayHours = Math.Clamp(model.RecoveryDelayHours, 1, 72);
+        settings.AllowQuoteRequests = model.AllowQuoteRequests;
 
         if (model.OrderBumpPercentOff is < 0 or >= 100)
         {

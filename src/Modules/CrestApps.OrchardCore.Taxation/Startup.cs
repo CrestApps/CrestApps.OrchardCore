@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Taxation.Core;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTaxationCore();
+        services.AddScoped<IStoreSetupStep, TaxSetupStep>();
 
         // The Addresses module replaces this with a content-backed implementation when enabled.
         services.TryAddScoped<ICountryService, DefaultCountryService>();

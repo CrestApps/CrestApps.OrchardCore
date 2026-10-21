@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Orders.Endpoints;
 
@@ -12,13 +15,20 @@ namespace CrestApps.OrchardCore.Orders.Endpoints;
 /// </summary>
 internal static class CouponItemSearchEndpoints
 {
-    public const string ProductsPath = "Admin/api/crestapps/orders/coupon-products/search";
-    public const string CategoriesPath = "Admin/api/crestapps/orders/coupon-categories/search";
+    public const string ProductsRouteName = "CrestApps.Orders.CouponProductSearch";
+    public const string CategoriesRouteName = "CrestApps.Orders.CouponCategorySearch";
 
     public static IEndpointRouteBuilder AddCouponItemSearchEndpoints(this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(ProductsPath, SearchProductsAsync).RequireAuthorization();
-        builder.MapGet(CategoriesPath, SearchCategoriesAsync).RequireAuthorization();
+        var adminUrlPrefix = builder.ServiceProvider.GetRequiredService<IOptions<AdminOptions>>().Value.AdminUrlPrefix;
+
+        builder.MapGet($"{adminUrlPrefix}/api/crestapps/orders/coupon-products/search", SearchProductsAsync)
+            .RequireAuthorization()
+            .WithName(ProductsRouteName);
+
+        builder.MapGet($"{adminUrlPrefix}/api/crestapps/orders/coupon-categories/search", SearchCategoriesAsync)
+            .RequireAuthorization()
+            .WithName(CategoriesRouteName);
 
         return builder;
     }

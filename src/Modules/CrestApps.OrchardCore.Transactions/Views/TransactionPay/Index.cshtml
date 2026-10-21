@@ -1,13 +1,15 @@
+@using Microsoft.AspNetCore.Html
 @using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.Html
 @model IShape
 
 @{
     var transaction = ((TransactionPayViewModel)Model).Transaction;
-    var title = string.IsNullOrEmpty(transaction.Title) ? T["Your payment"].Value : transaction.Title;
+    var title = string.IsNullOrEmpty(transaction.Title) ? T["Your payment"] : (IHtmlContent)new HtmlContentString(transaction.Title);
 }
 
 <zone Name="Title">
-    <breadcrumb name="TransactionsPay" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(title))" />
+    <breadcrumb name="TransactionsPay" title="@title" />
 </zone>
 
 <style>

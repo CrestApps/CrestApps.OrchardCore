@@ -50,7 +50,7 @@ New sites are created on the database chosen on the **Tenant Onboarding** tab of
 | Field | What it does |
 | --- | --- |
 | **Database for new sites** | Every site sold is created on this database. **Sqlite (a file per site)**, the default, needs no database server. |
-| **Connection string** | Required for every provider except Sqlite. Each site gets its own table prefix, derived from its name. |
+| **Connection string** | Required for every provider except Sqlite. It is stored encrypted and never shown again: leave it blank to keep the one already saved, unless you change the database. Each site gets its own table prefix, derived from its name. |
 | **Schema** | Optional. Leave blank to use the provider's default. |
 
 ## My Sites (for customers)

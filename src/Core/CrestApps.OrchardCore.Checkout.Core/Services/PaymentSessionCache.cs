@@ -17,7 +17,10 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </summary>
 public sealed class PaymentSessionCache
 {
-    private const int MaxLockTries = 20;
+    // How long a caller waits for another node to finish with the same entry, and how long a lock outlives a
+    // process that died holding it. Each critical section is one cache read and write.
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
 
     private readonly IDistributedCache _distributedCache;
     private readonly IDistributedLock _distributedLock;
@@ -168,22 +171,13 @@ public sealed class PaymentSessionCache
 
     private async Task LockCacheAsync(string key, Func<Task> callback)
     {
-        var limit = TimeSpan.FromMilliseconds(2_000);
-
-        var counter = 0;
         var lockKey = $"PAYMENT_{key}_LOCK";
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, limit);
-
-        while (!locked && counter++ < MaxLockTries)
-        {
-            await Task.Delay(500);
-            (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, limit);
-        }
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
-            throw new InvalidOperationException($"Exhausted {MaxLockTries} tries and could not create a lock.");
+            throw new InvalidOperationException($"Could not acquire the payment session lock within {_lockTimeout.TotalSeconds} seconds.");
         }
 
         await using var acquiredLock = locker;

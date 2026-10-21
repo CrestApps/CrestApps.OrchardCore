@@ -42,4 +42,10 @@ public sealed class TaxRuleQuery
     /// Gets or sets the taxable base of the item, used to evaluate amount thresholds.
     /// </summary>
     public decimal TaxableAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the order's items come to before tax, shipping left out, for rules whose thresholds are the
+    /// order's.
+    /// </summary>
+    public decimal? OrderAmount { get; set; }
 }

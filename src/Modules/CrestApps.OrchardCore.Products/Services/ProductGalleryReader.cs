@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Products.Services.Attributes;
+using CrestApps.OrchardCore.Products.Core.Listing;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
 

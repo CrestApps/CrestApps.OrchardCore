@@ -5,35 +5,42 @@
     <div class="alert alert-warning">@T["No carrier provider is chosen yet. Turn on a carrier provider feature, such as EasyPost, enable it in Settings › Commerce › Shipping and choose it on the Providers tab; until then this method offers only its fallback amount."]</div>
 }
 
-<div class="mb-3">
-    <label asp-for="Carriers" class="form-label">@T["Carriers"]</label>
-    <input asp-for="Carriers" class="form-control" placeholder="USPS, UPS" />
-    <span class="hint">@T["Separated by commas, as your account names them. Leave it empty to offer every carrier quoted."]</span>
-</div>
-
-<div class="mb-3">
-    <label asp-for="MaxRates" class="form-label">@T["Services offered"]</label>
-    <input asp-for="MaxRates" type="number" min="0" class="form-control w-auto" />
-    <span class="hint">@T["The cheapest this many services, such as 3. 0 offers them all."]</span>
-</div>
-
-<div class="row g-2 mb-3">
-    <div class="col-auto">
-        <label asp-for="MarkupPercent" class="form-label">@T["Markup (%)"]</label>
-        <input asp-for="MarkupPercent" type="number" step="any" class="form-control w-auto" />
+<div class="ocat-wrapper">
+    <label asp-for="Carriers" class="ocat-label">@T["Carriers"]</label>
+    <div class="ocat-end">
+        <input asp-for="Carriers" class="form-control" placeholder="USPS, UPS" />
+        <span class="hint">@T["Separated by commas, as your account names them. Leave it empty to offer every carrier quoted."]</span>
     </div>
-    <div class="col-auto" asp-validation-class-for="MarkupAmount">
-        <label asp-for="MarkupAmount" class="form-label">@T["Plus an amount"]</label>
-        <input asp-for="MarkupAmount" type="number" min="0" step="any" class="form-control w-auto" />
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="MaxRates" class="ocat-label">@T["Services offered"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxRates" type="number" min="0" class="form-control" />
+        <span class="hint">@T["The cheapest this many services, such as 3. 0 offers them all."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="MarkupPercent" class="ocat-label">@T["Markup (%)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MarkupPercent" type="number" step="any" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MarkupAmount">
+    <label asp-for="MarkupAmount" class="ocat-label">@T["Plus an amount"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MarkupAmount" type="number" min="0" step="any" class="form-control" />
         <span asp-validation-for="MarkupAmount"></span>
-    </div>
-    <div class="col-12">
         <span class="hint">@T["Added to each carrier's rate, such as for packing. A negative percentage gives a discount."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="FallbackAmount" class="form-label">@T["When the carriers can't be reached, charge"]</label>
-    <input asp-for="FallbackAmount" type="number" min="0" step="any" class="form-control w-auto" />
-    <span class="hint">@T["Leave it empty to offer nothing then, so the buyer chooses another method."]</span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="FallbackAmount" class="ocat-label">@T["When the carriers can't be reached, charge"]</label>
+    <div class="ocat-limited">
+        <input asp-for="FallbackAmount" type="number" min="0" step="any" class="form-control" />
+        <span class="hint">@T["Leave it empty to offer nothing then, so the buyer chooses another method."]</span>
+    </div>
 </div>

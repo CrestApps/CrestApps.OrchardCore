@@ -1,0 +1,12 @@
+@*
+    The status filter of a webhook's deliveries, passed to the admin list as its 'ToolbarActions'. The select names the
+    filter form, so it submits it wherever the list is rendered; the commerce-admin-list script submits it when it
+    changes.
+*@
+@{
+    var options = (WebhookDeliveriesOptions)Model.Options;
+}
+
+<div class="btn-group filter">
+    <select name="Options.Status" asp-items="options.Statuses" form="webhook-deliveries-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+</div>

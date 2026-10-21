@@ -1,0 +1,6 @@
+@model ShapeViewModel<GiftCard>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Expires"]">
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@(Model.Value.ExpiresUtc.HasValue ? T["Until {0:d}", (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(Model.Value.ExpiresUtc.Value, DateTimeKind.Utc))).DateTime] : T["Never expires"])
+</span>

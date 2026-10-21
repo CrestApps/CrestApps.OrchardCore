@@ -5,56 +5,7 @@
 </zone>
 
 <form asp-action="Index" method="post" class="no-multisubmit mb-5">
-    <div asp-validation-summary="ModelOnly"></div>
-
-    <div class="row g-3">
-        <div class="col-md-6" asp-validation-class-for="Kind">
-            <label asp-for="Kind" class="form-label">@T["I buy for"]</label>
-            <select asp-for="Kind" asp-items="Model.Kinds" class="form-select" data-customer-kind></select>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label" for="my-account-email">@T["Email"]</label>
-            <input id="my-account-email" value="@Model.Email" class="form-control" readonly />
-            <span class="hint">@T["The email of your account, where your orders and receipts are sent."]</span>
-        </div>
-
-        <div class="col-md-6" asp-validation-class-for="FirstName">
-            <label asp-for="FirstName" class="form-label">@T["First name"]</label>
-            <input asp-for="FirstName" class="form-control" autocomplete="given-name" />
-        </div>
-        <div class="col-md-6" asp-validation-class-for="LastName">
-            <label asp-for="LastName" class="form-label">@T["Last name"]</label>
-            <input asp-for="LastName" class="form-control" autocomplete="family-name" />
-        </div>
-        <div class="col-md-6" asp-validation-class-for="DisplayName">
-            <label asp-for="DisplayName" class="form-label">@T["Name we call you by"]</label>
-            <input asp-for="DisplayName" class="form-control" autocomplete="nickname" />
-            <span class="hint">@T["Optional. Your name is used when it is empty."]</span>
-        </div>
-        <div class="col-md-6" asp-validation-class-for="Phone">
-            <label asp-for="Phone" class="form-label">@T["Phone"]</label>
-            <input asp-for="Phone" type="tel" class="form-control" autocomplete="tel" />
-        </div>
-
-        <div class="col-md-6" data-customer-business asp-validation-class-for="CompanyName">
-            <label asp-for="CompanyName" class="form-label">@T["Company"]</label>
-            <input asp-for="CompanyName" class="form-control" autocomplete="organization" />
-            <span asp-validation-for="CompanyName"></span>
-        </div>
-        <div class="col-md-6" data-customer-business asp-validation-class-for="TaxId">
-            <label asp-for="TaxId" class="form-label">@T["Tax id"]</label>
-            <input asp-for="TaxId" class="form-control" />
-            <span class="hint">@T["Such as a VAT number, shown on your invoices."]</span>
-        </div>
-
-        <div class="col-12">
-            <div class="form-check">
-                <input asp-for="AcceptsMarketing" type="checkbox" class="form-check-input" />
-                <label asp-for="AcceptsMarketing" class="form-check-label">@T["Send me news and offers"]</label>
-                <span class="hint dashed">@T["Messages about your orders and payments are always sent."]</span>
-            </div>
-        </div>
-    </div>
+    <partial name="_CustomerProfileFields" model="Model" />
 
     <div class="mt-4">
         <button type="submit" class="btn btn-primary save">@T["Save"]</button>
@@ -62,23 +13,3 @@
 </form>
 
 <partial name="_CustomerAddressList" model="new CustomerAddressListViewModel { Addresses = Model.Addresses, IsOwn = true, CanManage = true }" />
-
-<script at="Foot">
-    // Company and tax id are for businesses.
-    (function () {
-        var kind = document.querySelector('[data-customer-kind]');
-
-        if (!kind) {
-            return;
-        }
-
-        function sync() {
-            document.querySelectorAll('[data-customer-business]').forEach(function (field) {
-                field.hidden = kind.value !== 'Business';
-            });
-        }
-
-        kind.addEventListener('change', sync);
-        sync();
-    })();
-</script>

@@ -157,6 +157,18 @@ Visitors see the same filters, counts, sorts and pages as before. Keyword search
 
 With the SEO feature on, add the **SEO** part to the **Product Listing** type and to your product types, then fill it in on each listing and product. Filtered and searched pages of a listing point search engines at the listing's own address and ask not to be indexed, so search results show your listing once rather than every combination of filters.
 
+## Shopping feeds
+
+With **Product Feeds** on, your products are published as a feed for Google Merchant Center, Meta (Facebook and Instagram shops) and TikTok, so they show in shopping ads and shops.
+
+1. Set your site's base URL under **Settings > General**: the feed's links and photos need it.
+2. Open **Settings > Commerce > Product feeds**. It shows the feed's address, how many products are in it, and why any are left out, such as a product with no photo.
+3. Give Google Merchant Center, Meta Commerce Manager or TikTok the feed's address as a scheduled feed. Add a market's currency, such as *?currency=EUR*, for a feed in it.
+
+Each product you sell online is in the feed with its price, sale price, photos and whether it's in stock; a product sold in variants is in it once for each variant. To give a product a brand, a GTIN (the barcode's number) or an MPN, add the **Product Feed** part to its content type, or set the store's **Brand** under the feed's settings. Products whose brand is in a taxonomy named for brands get it from there. Tick **Leave it out of shopping feeds** on a product to keep it out.
+
+Choose **Make a key** under **Feed key** so only the channels you give the address to can read the feed. The feed is rebuilt every 15 minutes.
+
 ## Find your products and listings
 
 **Commerce > Products** lists every product of every product type, including subscription plans, with a filter by type; its **New** button offers only product types. **Commerce > Product Listings** lists your listing pages.

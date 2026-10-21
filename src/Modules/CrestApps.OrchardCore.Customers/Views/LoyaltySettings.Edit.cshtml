@@ -1,0 +1,42 @@
+@model LoyaltySettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ProgramName" class="ocat-label">@T["Program name"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProgramName" class="form-control" placeholder="@T["Rewards"]" />
+        <span class="hint">@T["What buyers see, at checkout and on their account."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="PointsPerUnit">
+    <label asp-for="PointsPerUnit" class="ocat-label">@T["Points per unit spent"]</label>
+    <div class="ocat-limited">
+        <input asp-for="PointsPerUnit" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="PointsPerUnit"></span>
+        <span class="hint">@T["Points earned for each dollar (or unit of the order's currency) spent on goods, after discounts, not counting shipping and tax. 1 gives 1 point per dollar."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="PointValue">
+    <label asp-for="PointValue" class="ocat-label">@T["What a point is worth"]</label>
+    <div class="ocat-limited">
+        <input asp-for="PointValue" type="number" step="0.0001" min="0.0001" class="form-control" />
+        <span asp-validation-for="PointValue"></span>
+        <span class="hint">@T["When spent at checkout. 0.01 makes 100 points worth 1."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumPointsToRedeem">
+    <label asp-for="MinimumPointsToRedeem" class="ocat-label">@T["Fewest points to spend"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumPointsToRedeem" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MinimumPointsToRedeem"></span>
+        <span class="hint">@T["Buyers with fewer points keep earning until they reach it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted small">@T["Points are given when an order is placed by a signed-in customer, and taken back when it's canceled or refunded. Buyers spend them at checkout, where they pay part or all of the order after tax."]</p>
+    </div>
+</div>

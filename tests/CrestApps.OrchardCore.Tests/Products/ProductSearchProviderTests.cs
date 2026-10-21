@@ -58,6 +58,25 @@ public sealed class ProductSearchProviderTests
     }
 
     [Fact]
+    public void AnIndexQuery_CountsOnlyTheFacetsThatNameAKeyAndAnAttribute()
+    {
+        var query = VehicleQuery();
+        query.Facets =
+        [
+            new() { Key = "make", AttributeKey = "Vehicle.Make" },
+            new() { Key = "color" },
+            new() { AttributeKey = "Vehicle.Year" },
+            null,
+        ];
+
+        var indexQuery = ProductSearchIndexQuery.Create(query);
+
+        Assert.Equal("make", Assert.Single(indexQuery.Facets).Key);
+        Assert.True(indexQuery.HasFilterFor("make"));
+        Assert.False(indexQuery.HasFilterFor("color"));
+    }
+
+    [Fact]
     public void Lucene_MatchesEveryFilter_AndAFacetLeavesOutItsOwn()
     {
         var indexQuery = ProductSearchIndexQuery.Create(VehicleQuery("ford foc"));
