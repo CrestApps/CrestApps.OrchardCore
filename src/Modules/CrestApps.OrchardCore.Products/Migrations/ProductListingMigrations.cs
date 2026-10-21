@@ -34,15 +34,17 @@ public sealed class ProductListingMigrations : DataMigration
             .Column<decimal?>(nameof(ProductSearchIndex.Price), column => column.Nullable())
             .Column<bool>(nameof(ProductSearchIndex.IsPurchasable))
             .Column<DateTime?>(nameof(ProductSearchIndex.PublishedUtc), column => column.Nullable())
+            .Column<string>(nameof(ProductSearchIndex.Culture), column => column.Nullable().WithLength(32))
+            .Column<bool>(nameof(ProductSearchIndex.Featured), column => column.WithDefault(false))
+            .Column<int?>(nameof(ProductSearchIndex.Position), column => column.Nullable())
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
-            .CreateIndex("IDX_ProductSearchIndex_ContentItemId", "DocumentId", nameof(ProductSearchIndex.ContentItemId))
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
-            .CreateIndex("IDX_ProductSearchIndex_ContentType", "DocumentId", nameof(ProductSearchIndex.ContentType), nameof(ProductSearchIndex.PublishedUtc))
-        );
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table =>
+        {
+            table.CreateIndex("IDX_ProductSearchIndex_ContentItemId", "DocumentId", nameof(ProductSearchIndex.ContentItemId));
+            table.CreateIndex("IDX_ProductSearchIndex_ContentType", "DocumentId", nameof(ProductSearchIndex.ContentType), nameof(ProductSearchIndex.PublishedUtc));
+            table.CreateIndex("IDX_ProductSearchIndex_Culture", "DocumentId", nameof(ProductSearchIndex.Culture));
+        });
 
         await SchemaBuilder.CreateMapIndexTableAsync<ProductAttributeIndex>(table => table
             .Column<string>(nameof(ProductAttributeIndex.ContentItemId), column => column.WithLength(26))
@@ -57,13 +59,23 @@ public sealed class ProductListingMigrations : DataMigration
             .Column<bool>(nameof(ProductAttributeIndex.Searchable))
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<ProductAttributeIndex>(table => table
-            .CreateIndex("IDX_ProductAttributeIndex_Text", nameof(ProductAttributeIndex.AttributeKey), nameof(ProductAttributeIndex.TextValue), "DocumentId")
+        await SchemaBuilder.AlterIndexTableAsync<ProductAttributeIndex>(table =>
+        {
+            table.CreateIndex("IDX_ProductAttributeIndex_Text", nameof(ProductAttributeIndex.AttributeKey), nameof(ProductAttributeIndex.TextValue), "DocumentId");
+            table.CreateIndex("IDX_ProductAttributeIndex_Number", nameof(ProductAttributeIndex.AttributeKey), nameof(ProductAttributeIndex.NumberValue), "DocumentId");
+        });
+
+        await SchemaBuilder.CreateMapIndexTableAsync<ProductSaleIndex>(table => table
+            .Column<string>(nameof(ProductSaleIndex.ContentItemId), column => column.WithLength(26))
+            .Column<DateTime?>(nameof(ProductSaleIndex.StartsUtc), column => column.Nullable())
+            .Column<DateTime?>(nameof(ProductSaleIndex.EndsUtc), column => column.Nullable())
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<ProductAttributeIndex>(table => table
-            .CreateIndex("IDX_ProductAttributeIndex_Number", nameof(ProductAttributeIndex.AttributeKey), nameof(ProductAttributeIndex.NumberValue), "DocumentId")
-        );
+        await SchemaBuilder.AlterIndexTableAsync<ProductSaleIndex>(table =>
+        {
+            table.CreateIndex("IDX_ProductSaleIndex_StartsUtc", "DocumentId", nameof(ProductSaleIndex.StartsUtc));
+            table.CreateIndex("IDX_ProductSaleIndex_EndsUtc", "DocumentId", nameof(ProductSaleIndex.EndsUtc));
+        });
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(ProductListingPart), part => part
             .Attachable()
@@ -90,60 +102,6 @@ public sealed class ProductListingMigrations : DataMigration
         );
 
         return 1;
-    }
-
-    /// <summary>
-    /// Adds the culture of localized products, so a listing shows the products of its own culture.
-    /// </summary>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
-            .AddColumn<string>(nameof(ProductSearchIndex.Culture), column => column.Nullable().WithLength(32))
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
-            .CreateIndex("IDX_ProductSearchIndex_Culture", "DocumentId", nameof(ProductSearchIndex.Culture))
-        );
-
-        return 2;
-    }
-
-    /// <summary>
-    /// Adds the merchant's featured flag and position, which the "Featured first" and "Recommended" sorts order by.
-    /// </summary>
-    public async Task<int> UpdateFrom2Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
-            .AddColumn<bool>(nameof(ProductSearchIndex.Featured), column => column.WithDefault(false))
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
-            .AddColumn<int?>(nameof(ProductSearchIndex.Position), column => column.Nullable())
-        );
-
-        return 3;
-    }
-
-    /// <summary>
-    /// Adds when products' sales start and end, so their records are built again at those moments.
-    /// </summary>
-    public async Task<int> UpdateFrom3Async()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<ProductSaleIndex>(table => table
-            .Column<string>(nameof(ProductSaleIndex.ContentItemId), column => column.WithLength(26))
-            .Column<DateTime?>(nameof(ProductSaleIndex.StartsUtc), column => column.Nullable())
-            .Column<DateTime?>(nameof(ProductSaleIndex.EndsUtc), column => column.Nullable())
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ProductSaleIndex>(table => table
-            .CreateIndex("IDX_ProductSaleIndex_StartsUtc", "DocumentId", nameof(ProductSaleIndex.StartsUtc))
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ProductSaleIndex>(table => table
-            .CreateIndex("IDX_ProductSaleIndex_EndsUtc", "DocumentId", nameof(ProductSaleIndex.EndsUtc))
-        );
-
-        return 4;
     }
 
     // Mirrors the Autoroute module's settings by name, so the type can be defined without a reference to it.

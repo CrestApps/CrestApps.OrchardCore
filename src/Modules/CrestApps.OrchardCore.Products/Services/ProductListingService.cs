@@ -401,8 +401,6 @@ public sealed class ProductListingService
 
         var state = ProductListingState.Parse(request.Query, facets, part.ShowSorting ? sorts.Select(sort => sort.Key) : [], pageSizes, dateKeys);
 
-        await MapTermIdsToSlugsAsync(state, facets, attributes);
-
         var defaultSort = GetDefaultSort(part, sorts, part.ShowSorting ? [] : GetSorts(new ProductListingPart(), attributes));
         var sortOption = sorts.FirstOrDefault(sort => sort.Key == state.Sort) ?? defaultSort;
         var defaultPageSize = pageSizes.Contains(part.DefaultPageSize) ? part.DefaultPageSize : pageSizes.FirstOrDefault(24);
@@ -628,36 +626,6 @@ public sealed class ProductListingService
         return facets
             .Where(facet => facet.AttributeKey == first.AttributeKey && facet.Level.HasValue && facet.Kind != ProductFacetKind.Range)
             .OrderBy(facet => facet.Level);
-    }
-
-    /// <summary>
-    /// Terms are filtered by slug. A link saved before slugs, or built by hand from a term's identifier, still
-    /// works: an identifier is swapped for its term's slug.
-    /// </summary>
-    private async Task MapTermIdsToSlugsAsync(ProductListingState state, IReadOnlyList<ProductListingFacet> facets, IReadOnlyList<ProductAttributeDescriptor> attributes)
-    {
-        foreach (var facet in facets)
-        {
-            if (!state.Values.TryGetValue(facet.Key, out var values))
-            {
-                continue;
-            }
-
-            var taxonomyId = attributes.FirstOrDefault(attribute => attribute.Key == facet.AttributeKey)?.TaxonomyContentItemId;
-
-            if (string.IsNullOrEmpty(taxonomyId) || await _termLookup.GetTermsAsync(taxonomyId) is not { } terms)
-            {
-                continue;
-            }
-
-            for (var i = 0; i < values.Count; i++)
-            {
-                if (terms.TryGetValue(values[i], out var term) && !string.IsNullOrEmpty(term.Slug))
-                {
-                    values[i] = term.Slug;
-                }
-            }
-        }
     }
 
     private async Task BuildSectionShapesAsync(ProductListingViewModel model)

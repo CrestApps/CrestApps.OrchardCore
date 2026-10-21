@@ -26,7 +26,7 @@ public sealed class ProductSearchIndexer
     private const int BatchSize = 100;
 
     // Bump when the record's shape or the way it is built changes, so every tenant rebuilds once.
-    private const string BuildVersion = "9";
+    private const string BuildVersion = "1";
 
     private readonly ISession _session;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
