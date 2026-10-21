@@ -33,7 +33,6 @@ namespace CrestApps.OrchardCore.Shipping.Controllers;
 public sealed class ShippingZonesController : Controller
 {
     private const string OptionsSearch = "Options.Search";
-    private const string NameFieldName = "Name";
 
     private readonly INamedCatalogManager<ShippingZone> _manager;
     private readonly INamedCatalog<ShippingZone> _catalog;
@@ -165,19 +164,11 @@ public sealed class ShippingZonesController : Controller
 
         if (await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(ShippingZone)) && ModelState.IsValid)
         {
-            if (await _catalog.FindByNameAsync(model.Name) is not null)
-            {
-                ModelState.AddModelError(NameFieldName, S["A shipping zone with the same name already exists."]);
-            }
+            await _manager.CreateAsync(model);
+            await _notifier.SuccessAsync(H["The shipping zone has been created. Add the methods buyers in it can choose from."]);
 
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _notifier.SuccessAsync(H["The shipping zone has been created. Add the methods buyers in it can choose from."]);
-
-                // On to the zone's page, where its methods are added.
-                return RedirectToAction(nameof(Edit), new { id = model.ItemId });
-            }
+            // On to the zone's page, where its methods are added.
+            return RedirectToAction(nameof(Edit), new { id = model.ItemId });
         }
 
         return View(viewModel);
@@ -230,21 +221,11 @@ public sealed class ShippingZonesController : Controller
 
         if (await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(ShippingZone)) && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.UpdateAsync(model);
+            await _notifier.SuccessAsync(H["The shipping zone has been updated."]);
 
-            if (existing is not null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(NameFieldName, S["A shipping zone with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _notifier.SuccessAsync(H["The shipping zone has been updated."]);
-
-                // Back to the zone, so regions of newly added countries can be chosen.
-                return RedirectToAction(nameof(Edit), new { id });
-            }
+            // Back to the zone, so regions of newly added countries can be chosen.
+            return RedirectToAction(nameof(Edit), new { id });
         }
 
         return View(viewModel);

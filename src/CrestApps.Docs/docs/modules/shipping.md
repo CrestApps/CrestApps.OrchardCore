@@ -102,7 +102,7 @@ Administrators have it by default.
 
 ## Recipes and deployments
 
-The **ShippingZones** step creates or updates zones, found by `ItemId` or `Name`. Methods without a `MethodId` get one. Provider settings go in the method's `Properties`, keyed by type name:
+The **ShippingZones** step creates or updates zones, found by `ItemId` or `Name`. Zone names are unique: a new zone named like another is reported as a recipe error. Methods without a `MethodId` get one. Provider settings go in the method's `Properties`, keyed by type name:
 
 ```json
 {

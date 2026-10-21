@@ -26,10 +26,8 @@ namespace CrestApps.OrchardCore.Taxation.Controllers;
 public sealed class TaxTypesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-    private const string _nameFieldName = "Name";
 
     private readonly INamedCatalogManager<TaxType> _manager;
-    private readonly INamedCatalog<TaxType> _catalog;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<TaxType> _displayManager;
@@ -40,7 +38,6 @@ public sealed class TaxTypesController : Controller
 
     public TaxTypesController(
         INamedCatalogManager<TaxType> manager,
-        INamedCatalog<TaxType> catalog,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<TaxType> displayManager,
@@ -49,7 +46,6 @@ public sealed class TaxTypesController : Controller
         IStringLocalizer<TaxTypesController> stringLocalizer)
     {
         _manager = manager;
-        _catalog = catalog;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
@@ -153,20 +149,10 @@ public sealed class TaxTypesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.CreateAsync(model);
+            await _notifier.SuccessAsync(H["The tax type has been created successfully."]);
 
-            if (existing != null)
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax type with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _notifier.SuccessAsync(H["The tax type has been created successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);
@@ -223,20 +209,10 @@ public sealed class TaxTypesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            await _manager.UpdateAsync(model);
+            await _notifier.SuccessAsync(H["The tax type has been updated successfully."]);
 
-            if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(_nameFieldName, S["A tax type with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _notifier.SuccessAsync(H["The tax type has been updated successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
+            return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);

@@ -17,10 +17,10 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<TaxCategoryDeploymentSource, TaxCategoryDeploymentStep, TaxCategoryDeploymentStepDisplayDriver>();
-        services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep, TaxTypeDeploymentStepDisplayDriver>();
-        services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, TaxJurisdictionDeploymentStepDisplayDriver>();
-        services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep, TaxRuleDeploymentStepDisplayDriver>();
-        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, TaxTableDeploymentStepDisplayDriver>();
+        services.AddDeployment<TaxCategoryDeploymentSource, TaxCategoryDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxCategoryDeploymentStep>>();
+        services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxTypeDeploymentStep>>();
+        services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxJurisdictionDeploymentStep>>();
+        services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxRuleDeploymentStep>>();
+        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxTableDeploymentStep>>();
     }
 }

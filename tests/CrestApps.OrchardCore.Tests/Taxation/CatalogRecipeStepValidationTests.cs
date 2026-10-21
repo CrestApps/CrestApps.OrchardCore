@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Shipping.Recipes;
 using CrestApps.OrchardCore.Taxation.Deployments;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Recipes;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -31,7 +30,7 @@ public sealed class CatalogRecipeStepValidationTests
         manager.Setup(value => value.ValidateAsync(It.IsAny<TaxCategory>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((TaxCategory category, CancellationToken _) => Validate(!string.IsNullOrWhiteSpace(category.Name)));
 
-        var step = new TaxCategoryStep(manager.Object, new PassThroughStringLocalizer<TaxCategoryStep>());
+        var step = new TaxCategoryStep(manager.Object);
         var context = Context(TaxationDeploymentSteps.TaxCategory, "TaxCategories", new JsonObject { ["ItemId"] = "category-1", ["Name"] = string.Empty });
 
         // Act
@@ -53,7 +52,7 @@ public sealed class CatalogRecipeStepValidationTests
         manager.Setup(value => value.ValidateAsync(It.IsAny<TaxCategory>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((TaxCategory category, CancellationToken _) => Validate(!string.IsNullOrWhiteSpace(category.Name)));
 
-        var step = new TaxCategoryStep(manager.Object, new PassThroughStringLocalizer<TaxCategoryStep>());
+        var step = new TaxCategoryStep(manager.Object);
         var context = Context(TaxationDeploymentSteps.TaxCategory, "TaxCategories", new JsonObject { ["ItemId"] = "category-1", ["Name"] = "Groceries" });
 
         // Act

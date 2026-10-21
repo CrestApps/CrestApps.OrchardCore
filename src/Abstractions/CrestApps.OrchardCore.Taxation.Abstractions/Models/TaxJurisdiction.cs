@@ -2,6 +2,7 @@ using System;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Models;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// Represents a tax jurisdiction. Jurisdictions form an open hierarchy through
 /// <see cref="ParentId"/> so that different countries can model different levels.
 /// </summary>
-public sealed class TaxJurisdiction : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxJurisdiction>
+public sealed class TaxJurisdiction : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<TaxJurisdiction>
 {
     /// <inheritdoc />
     public string Name { get; set; }

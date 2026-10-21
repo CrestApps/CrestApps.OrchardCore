@@ -2,6 +2,7 @@ using System;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Models;
 
@@ -10,7 +11,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// customer criteria, and a calculation method. Rules are versioned and carry effective dates so that
 /// historical determinations remain reproducible.
 /// </summary>
-public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxRule>
+public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IAuditedModel, ICloneable<TaxRule>
 {
     /// <inheritdoc />
     public string Name { get; set; }

@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.Taxation.Deployments;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Taxation.Models;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Taxation;
 
-public sealed class TaxationDeploymentSerializerTests
+public sealed class CatalogDeploymentSerializerTests
 {
     [Fact]
     public void Export_OmitsEnvironmentOwnedMembers_ButKeepsIdentityAndConfiguration()
@@ -22,7 +22,7 @@ public sealed class TaxationDeploymentSerializerTests
             OwnerId = "owner-1",
         };
 
-        var node = TaxationDeploymentSerializer.Export(category);
+        var node = CatalogDeploymentSerializer.Export(category);
 
         Assert.Equal("cat-1", (string)node["ItemId"]);
         Assert.Equal("Electronics", (string)node["Name"]);
@@ -49,7 +49,7 @@ public sealed class TaxationDeploymentSerializerTests
             OwnerId = "owner-1",
         };
 
-        var data = TaxationDeploymentSerializer.Export(source);
+        var data = CatalogDeploymentSerializer.Export(source);
 
         // Simulate an existing target entry that keeps its own identity and audit stamps.
         var target = new TaxCategory
@@ -60,7 +60,7 @@ public sealed class TaxationDeploymentSerializerTests
             CreatedUtc = new DateTime(2019, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         };
 
-        TaxationDeploymentSerializer.Populate(target, data);
+        CatalogDeploymentSerializer.Populate(target, data);
 
         Assert.Equal("Electronics", target.Name);
         Assert.Equal("ELEC", target.Code);
@@ -82,7 +82,7 @@ public sealed class TaxationDeploymentSerializerTests
             ParentCode = null,
         };
 
-        var data = TaxationDeploymentSerializer.Export(source);
+        var data = CatalogDeploymentSerializer.Export(source);
 
         var target = new TaxCategory
         {
@@ -91,7 +91,7 @@ public sealed class TaxationDeploymentSerializerTests
             ParentCode = "STALE",
         };
 
-        TaxationDeploymentSerializer.Populate(target, data);
+        CatalogDeploymentSerializer.Populate(target, data);
 
         Assert.Equal("Electronics", target.Name);
         Assert.Null(target.ParentCode);
@@ -113,10 +113,10 @@ public sealed class TaxationDeploymentSerializerTests
             ],
         };
 
-        var data = TaxationDeploymentSerializer.Export(source);
+        var data = CatalogDeploymentSerializer.Export(source);
 
         var target = new TaxTable { ItemId = "existing-id" };
-        TaxationDeploymentSerializer.Populate(target, data);
+        CatalogDeploymentSerializer.Populate(target, data);
 
         Assert.Equal("Luxury brackets", target.Name);
         Assert.Equal(source.EffectiveFromUtc, target.EffectiveFromUtc);
@@ -140,12 +140,12 @@ public sealed class TaxationDeploymentSerializerTests
             Version = 9,
         };
 
-        var data = TaxationDeploymentSerializer.Export(source);
+        var data = CatalogDeploymentSerializer.Export(source);
 
         Assert.False(data.ContainsKey("Version"));
 
         var target = new TaxTable { ItemId = "existing-id", Version = 3 };
-        TaxationDeploymentSerializer.Populate(target, data);
+        CatalogDeploymentSerializer.Populate(target, data);
 
         // A recipe can never regress or reuse the authoritative version stamp.
         Assert.Equal(3, target.Version);

@@ -533,7 +533,7 @@ The whole setup is reproducible as a recipe — the taxonomy term simply carries
 
 The five catalog entities — **Tax categories**, **Tax types**, **Tax jurisdictions**, **Tax tables**, and **Tax rules** — can be imported and exported as code.
 
-**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxTable`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`, and `Version`) are never imported; `Version` is stamped by the environment and incremented on each save, so it stays an authoritative audit identity and a recipe can never regress or reuse it. An entry is matched by its `ItemId` and updated in place, or created when new:
+**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxTable`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`, and `Version`) are never imported; `Version` is stamped by the environment and incremented on each save, so it stays an authoritative audit identity and a recipe can never regress or reuse it. An entry is matched by its `ItemId` and updated in place, or created when new. Names are unique within each entity: an entry whose name another entry already uses is reported as a recipe error and not saved, the same as in the admin:
 
 ```json
 {

@@ -36,6 +36,7 @@ public sealed class TaxRuleDisplayDriverTests
     private static TaxRuleHandler CreateHandler()
         => new(
             new HttpContextAccessor(),
+            new InMemoryNamedCatalog<TaxRule>(),
             CreateProvider(),
             new TestClock(DateTime.UtcNow),
             new PassThroughStringLocalizer<TaxRuleHandler>());

@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Shipping.Models;
 
@@ -10,7 +11,7 @@ namespace CrestApps.OrchardCore.Shipping.Models;
 /// order of <see cref="Position"/>, and the first that matches an address wins; a zone for the rest of the world
 /// catches any address no other zone matches.
 /// </summary>
-public sealed class ShippingZone : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<ShippingZone>
+public sealed class ShippingZone : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<ShippingZone>
 {
     public string Name { get; set; }
 

@@ -1,98 +1,17 @@
-using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using CrestApps.OrchardCore.Taxation.Deployments;
 using CrestApps.OrchardCore.Taxation.Models;
-using Microsoft.Extensions.Localization;
-using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Taxation.Recipes;
 
 /// <summary>
-/// Imports tax categories carried by a recipe step, creating entries that do not exist and updating those that do.
+/// Imports the tax categories carried by the <c>TaxCategory</c> recipe step, creating entries that do not exist and updating those that do.
 /// </summary>
-internal sealed class TaxCategoryStep : NamedRecipeStepHandler
+internal sealed class TaxCategoryStep : NamedCatalogRecipeStep<TaxCategory>
 {
-    private readonly INamedCatalogManager<TaxCategory> _manager;
-
-    internal readonly IStringLocalizer S;
-
-    public TaxCategoryStep(
-        INamedCatalogManager<TaxCategory> manager,
-        IStringLocalizer<TaxCategoryStep> stringLocalizer)
-        : base(TaxationDeploymentSteps.TaxCategory)
+    public TaxCategoryStep(INamedCatalogManager<TaxCategory> manager)
+        : base(TaxationDeploymentSteps.TaxCategory, TaxationDeploymentSteps.TaxCategoryEntries, manager)
     {
-        _manager = manager;
-        S = stringLocalizer;
-    }
-
-    protected override async Task HandleAsync(RecipeExecutionContext context)
-    {
-        var model = context.Step.ToObject<TaxCategoryStepModel>();
-        var tokens = model.TaxCategories?.OfType<JsonObject>() ?? [];
-
-        foreach (var token in tokens)
-        {
-            TaxCategory entry = null;
-
-            var id = token[nameof(TaxCategory.ItemId)]?.GetValue<string>();
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (hasId)
-            {
-                entry = await _manager.FindByIdAsync(id);
-            }
-
-            if (entry is not null)
-            {
-                // Validate the resulting state on a detached copy before persisting, so an invalid imported
-                // entry is reported as a recipe error instead of being written to the store.
-                var candidate = entry.Clone();
-                TaxationDeploymentSerializer.Populate(candidate, token);
-
-                var updateValidation = await _manager.ValidateAsync(candidate);
-
-                if (!updateValidation.Succeeded)
-                {
-                    foreach (var error in updateValidation.Errors)
-                    {
-                        context.Errors.Add(error.ErrorMessage);
-                    }
-
-                    continue;
-                }
-
-                await _manager.UpdateAsync(entry, token);
-
-                continue;
-            }
-
-            entry = await _manager.NewAsync(token);
-
-            if (hasId && UniqueId.IsValid(id))
-            {
-                entry.ItemId = id;
-            }
-
-            var validationResult = await _manager.ValidateAsync(entry);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            await _manager.CreateAsync(entry);
-        }
-    }
-
-    private sealed class TaxCategoryStepModel
-    {
-        public JsonArray TaxCategories { get; set; }
     }
 }

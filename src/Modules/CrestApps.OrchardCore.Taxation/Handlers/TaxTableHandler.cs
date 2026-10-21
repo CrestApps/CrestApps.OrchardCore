@@ -1,8 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Taxation.Deployments;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Handlers;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -10,65 +11,55 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Taxation.Handlers;
 
-internal sealed class TaxTableHandler : CatalogEntryHandlerBase<TaxTable>
+/// <summary>
+/// Stamps and binds a <see cref="TaxTable"/> through <see cref="AuditedCatalogEntryHandlerBase{T}"/> and validates it.
+/// </summary>
+internal sealed class TaxTableHandler : AuditedCatalogEntryHandlerBase<TaxTable>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
+    private readonly INamedCatalog<TaxTable> _catalog;
 
     internal readonly IStringLocalizer S;
 
     public TaxTableHandler(
         IHttpContextAccessor httpContextAccessor,
+        INamedCatalog<TaxTable> catalog,
         IClock clock,
         IStringLocalizer<TaxTableHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
+        _catalog = catalog;
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<TaxTable> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public override async Task InitializedAsync(InitializedContext<TaxTable> context, CancellationToken cancellationToken = default)
     {
-        TaxationDeploymentSerializer.Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
-    }
-
-    public override Task UpdatingAsync(UpdatingContext<TaxTable> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-        context.Model.Version++;
-
-        TaxationDeploymentSerializer.Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
-    }
-
-    public override Task InitializedAsync(InitializedContext<TaxTable> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        await base.InitializedAsync(context, cancellationToken);
 
         if (context.Model.Version < 1)
         {
             context.Model.Version = 1;
         }
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user is not null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity?.Name;
-        }
-
-        return Task.CompletedTask;
     }
 
-    public override Task ValidatingAsync(ValidatingContext<TaxTable> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public override async Task UpdatingAsync(UpdatingContext<TaxTable> context, CancellationToken cancellationToken = default)
+    {
+        await base.UpdatingAsync(context, cancellationToken);
+
+        context.Model.Version++;
+    }
+
+    /// <inheritdoc/>
+    public override async Task ValidatingAsync(ValidatingContext<TaxTable> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(TaxTable.Name)]));
+        }
+        else if (await _catalog.IsNameUsedByAnotherEntryAsync(context.Model, cancellationToken))
+        {
+            context.Result.Fail(new ValidationResult(S["A tax table with the same name already exists."], [nameof(TaxTable.Name)]));
         }
 
         if (context.Model.EffectiveFromUtc.HasValue &&
@@ -97,8 +88,6 @@ internal sealed class TaxTableHandler : CatalogEntryHandlerBase<TaxTable>
 
             ValidateRowRanges(context, rows);
         }
-
-        return Task.CompletedTask;
     }
 
     // Table-driven methods progressively tax each bracket, so overlapping or multiple open-ended rows would
