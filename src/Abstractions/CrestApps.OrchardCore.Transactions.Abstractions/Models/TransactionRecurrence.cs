@@ -91,12 +91,5 @@ public sealed class TransactionRecurrence
     /// </summary>
     /// <param name="from">The date to advance from.</param>
     public DateTime Advance(DateTime from)
-        => DurationType switch
-        {
-            DurationType.Day => from.AddDays(BillingDuration),
-            DurationType.Week => from.AddDays(BillingDuration * 7),
-            DurationType.Month => from.AddMonths(BillingDuration),
-            DurationType.Year => from.AddYears(BillingDuration),
-            _ => from.AddMonths(BillingDuration),
-        };
+        => DurationType.AddTo(from, BillingDuration);
 }

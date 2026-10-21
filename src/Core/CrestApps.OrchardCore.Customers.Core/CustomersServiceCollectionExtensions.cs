@@ -11,13 +11,14 @@ namespace CrestApps.OrchardCore.Customers.Core;
 public static class CustomersServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the default buyer-identity services (the contact resolver) used by commerce consumers to
-    /// address authenticated and guest buyers uniformly.
+    /// Registers the default buyer-identity services (the contact resolver and the owner notifier) used by commerce consumers to
+    /// address and reach authenticated and guest buyers uniformly.
     /// </summary>
     /// <param name="services">The service collection.</param>
     public static IServiceCollection AddCustomersCore(this IServiceCollection services)
     {
         services.TryAddScoped<ICustomerContactResolver, DefaultCustomerContactResolver>();
+        services.TryAddScoped<ICustomerOwnerNotifier, DefaultCustomerOwnerNotifier>();
 
         return services;
     }

@@ -1,10 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
-using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Customers.Models;
-using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -13,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.PayLater.Handlers;
 
@@ -200,44 +196,26 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
     // can say which period is owed. A one-time obligation gets no recurrence at all.
     private static TransactionRecurrence BuildRecurrence(CheckoutInvoice invoice, string obligationId, DateTime now)
     {
-        if (invoice is null || string.IsNullOrEmpty(obligationId))
+        if (!CheckoutObligations.TryGetRecurringGroup(invoice, obligationId, out var interval, out var lineItems))
         {
             return null;
         }
 
-        foreach (var group in invoice.GetRecurringGroups())
+        var periodStart = now.AddDays(CheckoutObligations.GetDeferralDays(lineItems));
+        var recurrence = new TransactionRecurrence
         {
-            if (!string.Equals(CheckoutObligations.Recurring(group.Key), obligationId, StringComparison.Ordinal))
-            {
-                continue;
-            }
+            BillingDuration = interval.Duration <= 0 ? 1 : interval.Duration,
+            DurationType = interval.Type,
+            PeriodStartUtc = periodStart,
+            CycleNumber = 1,
+            CycleAmount = CheckoutObligations.GetCycleAmount(lineItems, invoice.Currency),
+            CycleTaxAmount = 0m,
+            CycleLimit = CheckoutObligations.GetCycleLimit(lineItems),
+        };
 
-            var periodStart = now.AddDays(CheckoutObligations.GetDeferralDays(group.Value));
+        recurrence.PeriodEndUtc = recurrence.Advance(periodStart);
 
-            var recurrence = new TransactionRecurrence
-            {
-                BillingDuration = group.Key.Duration <= 0 ? 1 : group.Key.Duration,
-                DurationType = group.Key.Type,
-                PeriodStartUtc = periodStart,
-                CycleNumber = 1,
-                CycleAmount = Money.Round(group.Value.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency),
-                CycleTaxAmount = 0m,
-
-                // The lowest cap among the lines in the group wins: billing past any line's limit would
-                // charge for something the customer did not agree to.
-                CycleLimit = group.Value
-                    .Select(lineItem => lineItem.Plan?.BillingCycleLimit)
-                    .Where(limit => limit > 0)
-                    .DefaultIfEmpty(null)
-                    .Min(),
-            };
-
-            recurrence.PeriodEndUtc = recurrence.Advance(periodStart);
-
-            return recurrence;
-        }
-
-        return null;
+        return recurrence;
     }
 
     private async Task<string> DescribeReferenceAsync(CheckoutSession session)

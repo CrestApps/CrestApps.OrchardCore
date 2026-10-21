@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using CrestApps.OrchardCore.Receipts.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Framework.Mvc;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -482,8 +483,7 @@ public sealed class TransactionCustomerPagesTests
             receipts.Object,
             new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>()),
             TransactionManagerFactory.Create(new FakeTransactionStore(transaction)),
-            notifications,
-            userService.Object,
+            TestCustomerOwnerNotifier.Create(notifications, userService.Object, services: services),
             services,
             new TestClock(_now),
             NullLogger<PaymentReceiptTransactionPaymentHandler>.Instance,
@@ -522,9 +522,7 @@ public sealed class TransactionCustomerPagesTests
         }
 
         return new DefaultTransactionReminderService(
-            notifications.Object,
-            userService.Object,
-            Mock.Of<ICustomerContactResolver>(),
+            TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,

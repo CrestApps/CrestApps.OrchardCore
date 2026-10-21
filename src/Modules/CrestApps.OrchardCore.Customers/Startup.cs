@@ -29,7 +29,6 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Handlers;
 

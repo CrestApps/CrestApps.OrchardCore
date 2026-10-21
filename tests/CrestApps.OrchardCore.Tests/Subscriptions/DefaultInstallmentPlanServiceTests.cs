@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -1331,7 +1332,7 @@ public sealed class DefaultInstallmentPlanServiceTests
                 new LocalLock(NullLogger<LocalLock>.Instance),
                 SiteServiceFactory.Create(Settings),
                 new HttpContextAccessor(),
-                new ServiceCollection().AddSingleton(Notifications.Object).BuildServiceProvider(),
+                TestCustomerOwnerNotifier.Create(Notifications.Object, userService.Object),
                 new Mock<ISession>().Object,
                 Clock,
                 NullLogger<DefaultInstallmentPlanService>.Instance,

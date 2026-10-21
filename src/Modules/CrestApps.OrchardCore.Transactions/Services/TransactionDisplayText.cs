@@ -148,23 +148,12 @@ public sealed class TransactionDisplayText
     /// </summary>
     /// <param name="providerKey">The stored provider key.</param>
     public string PaymentMethodName(string providerKey)
-    {
-        if (string.IsNullOrEmpty(providerKey))
-        {
-            return null;
-        }
-
-        var provider = _paymentProviders.FirstOrDefault(provider => string.Equals(provider.Key, providerKey, StringComparison.OrdinalIgnoreCase));
-
-        return string.IsNullOrEmpty(provider?.DisplayName) ? providerKey : provider.DisplayName;
-    }
+        => _paymentProviders.GetPaymentMethodName(providerKey);
 
     /// <summary>
     /// Gets the provider of a payment method, or <see langword="null"/> when it is no longer enabled.
     /// </summary>
     /// <param name="providerKey">The stored provider key.</param>
     public ICheckoutPaymentProvider FindPaymentProvider(string providerKey)
-        => string.IsNullOrEmpty(providerKey)
-            ? null
-            : _paymentProviders.FirstOrDefault(provider => string.Equals(provider.Key, providerKey, StringComparison.OrdinalIgnoreCase));
+        => _paymentProviders.FindByKey(providerKey);
 }

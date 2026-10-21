@@ -508,7 +508,9 @@ See [Invoices and pay links](transactions#invoices-and-pay-links).
 
 ### Notices
 
-The plan's own notices are sent through `INotificationService`. To send notices another way, or to add your own (for example to the administrator who created the plan), you can:
+The plan's own notices are sent through `ICustomerOwnerNotifier`, the same notifier that sends transaction receipts and reminders, which reaches the plan's customer through `INotificationService`. To send notices another way, or to add your own (for example to the administrator who created the plan), you can:
+
+- replace `ICustomerOwnerNotifier`, which changes how every commerce notice reaches a buyer;
 
 - react to the transaction events above;
 - add notification method providers to Orchard Core's Notifications module.

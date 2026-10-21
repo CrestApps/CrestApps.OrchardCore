@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using CrestApps.OrchardCore.Tests.Checkout;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
@@ -457,9 +458,7 @@ public sealed class TransactionCommandServiceTests
             .AddSingleton(payLinks.Object);
 
         return new DefaultTransactionReminderService(
-            notifications.Object,
-            userService.Object,
-            Mock.Of<ICustomerContactResolver>(),
+            TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             clock,
             NullLogger<DefaultTransactionReminderService>.Instance,

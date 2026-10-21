@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Subscriptions.Extensions;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.Extensions.Localization;
 
@@ -109,18 +110,19 @@ public sealed class SubscriptionDisplayText
     }
 
     /// <summary>
+    /// Gets a recurring price with how often it bills, for example "USD 20.00 every month".
+    /// </summary>
+    /// <param name="amount">The amount billed each cycle.</param>
+    /// <param name="currency">The ISO-4217 code of the currency the amount is in.</param>
+    /// <param name="count">The number of <paramref name="type"/> units in one cycle.</param>
+    /// <param name="type">The unit.</param>
+    public string RecurringPrice(decimal amount, string currency, int count, DurationType type)
+        => S["{0} {1}", PriceFormatting.Format(amount, currency), BillingInterval(count, type)];
+
+    /// <summary>
     /// Gets the name of a payment method, falling back to its stored key when its provider is no longer enabled.
     /// </summary>
     /// <param name="providerKey">The stored provider key.</param>
     public string PaymentMethodName(string providerKey)
-    {
-        if (string.IsNullOrEmpty(providerKey))
-        {
-            return null;
-        }
-
-        var provider = _paymentProviders.FirstOrDefault(provider => string.Equals(provider.Key, providerKey, StringComparison.OrdinalIgnoreCase));
-
-        return string.IsNullOrEmpty(provider?.DisplayName) ? providerKey : provider.DisplayName;
-    }
+        => _paymentProviders.GetPaymentMethodName(providerKey);
 }

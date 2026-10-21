@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Checkout;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
@@ -83,16 +82,6 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     /// </summary>
     public const string RememberCardDataKey = "rememberCard";
 
-    private static string GetProviderValue(IReadOnlyDictionary<string, string> providerData, string key)
-    {
-        if (providerData is not null && providerData.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
-        {
-            return value;
-        }
-
-        return null;
-    }
-
     /// <inheritdoc/>
     public string Key => StripeConstants.ProcessorKey;
 
@@ -135,7 +124,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
             return await ChargeSavedPaymentMethodAsync(context, grossAmount);
         }
 
-        var paymentMethodId = GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey);
+        var paymentMethodId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey);
         var savePaymentMethod = CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.SavePaymentMethod);
 
         // A signed-in buyer pays with one of their saved cards, or keeps the card they typed for next time. Both are
@@ -165,7 +154,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                 context.Session,
                 attempt.SessionId,
                 paymentMethodId,
-                GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.CustomerDataKey));
+                CheckoutPaymentDataKeys.GetValue(context.ProviderData, StripeRecurringPaymentProvider.CustomerDataKey));
 
             if (savePaymentMethod && string.IsNullOrEmpty(customerId))
             {
@@ -212,8 +201,8 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     // Returns the begun payment when the buyer chose a saved card or to keep their card; null to begin it as usual.
     private async Task<PaymentBeginResult> TryWalletAsync(BeginPaymentContext context, string paymentMethodId, decimal grossAmount, bool savePaymentMethod)
     {
-        var savedCardId = GetProviderValue(context.ProviderData, SavedCardDataKey);
-        var rememberCard = string.Equals(GetProviderValue(context.ProviderData, RememberCardDataKey), "true", StringComparison.OrdinalIgnoreCase);
+        var savedCardId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, SavedCardDataKey);
+        var rememberCard = CheckoutPaymentDataKeys.IsSet(context.ProviderData, RememberCardDataKey);
         var ownerId = context.Session?.OwnerId;
 
         if ((string.IsNullOrEmpty(savedCardId) && !rememberCard) || savePaymentMethod)
@@ -495,8 +484,8 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     private async Task<PaymentBeginResult> ChargeSavedPaymentMethodAsync(BeginPaymentContext context, decimal grossAmount)
     {
         var attempt = context.Attempt;
-        var customerId = GetProviderValue(context.ProviderData, CheckoutPaymentDataKeys.SavedCustomerReference);
-        var paymentMethodId = GetProviderValue(context.ProviderData, CheckoutPaymentDataKeys.SavedPaymentMethodReference);
+        var customerId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.SavedCustomerReference);
+        var paymentMethodId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.SavedPaymentMethodReference);
 
         if (string.IsNullOrEmpty(customerId) || string.IsNullOrEmpty(paymentMethodId))
         {

@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
@@ -65,7 +64,7 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
         ArgumentNullException.ThrowIfNull(context.Interval);
 
         var attempt = context.Attempt;
-        var paymentMethodId = GetProviderValue(context.ProviderData, PaymentMethodDataKey);
+        var paymentMethodId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, PaymentMethodDataKey);
 
         if (string.IsNullOrEmpty(paymentMethodId))
         {
@@ -90,7 +89,7 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
                 context.Session,
                 attempt.SessionId,
                 paymentMethodId,
-                GetProviderValue(context.ProviderData, CustomerDataKey));
+                CheckoutPaymentDataKeys.GetValue(context.ProviderData, CustomerDataKey));
 
             // The recurring price is the plan's cycle amount, never what is due now. What is due now is smaller
             // whenever a first-cycle coupon applied, and zero during a trial; a price taken from it would bill
@@ -322,15 +321,5 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
         var count = context.Interval.Duration <= 0 ? 1 : context.Interval.Duration;
 
         return $"price_{priceIds[0]}_{context.Attempt.Currency?.ToLowerInvariant()}_{minor}_{interval}{count}";
-    }
-
-    private static string GetProviderValue(IReadOnlyDictionary<string, string> providerData, string key)
-    {
-        if (providerData is not null && providerData.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
-        {
-            return value;
-        }
-
-        return null;
     }
 }

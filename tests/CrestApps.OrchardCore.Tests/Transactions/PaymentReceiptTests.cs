@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using CrestApps.OrchardCore.Receipts.Services;
 using CrestApps.OrchardCore.Tests.Checkout;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
@@ -347,8 +348,7 @@ public sealed class PaymentReceiptTests
             CreateBuilder(),
             new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>()),
             TransactionManagerFactory.Create(store),
-            notifications,
-            userService,
+            TestCustomerOwnerNotifier.Create(notifications, userService, services: services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             new TestClock(DateTime.UtcNow),
             NullLogger<PaymentReceiptTransactionPaymentHandler>.Instance,

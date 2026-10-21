@@ -56,6 +56,7 @@ The address pages use the Addresses module's editor (`IAddressEditorService` and
 
 - **`ICustomerStore`** finds customers by id or user id and pages them with a `CustomerQuery`. A search matches the start of the name, company or email, ignoring case. Saving checks concurrency, so two editors never overwrite each other silently.
 - **`ICustomerService.GetOrCreateForUserAsync(userId)`** returns a user's customer, making it from the account the first time. A distributed lock keyed by the user makes two requests from the same user share one customer. `TouchAsync` records activity.
+- **`ICustomerOwnerNotifier`** (`DefaultCustomerOwnerNotifier`, registered by `AddCustomersCore()`) sends a buyer a receipt, reminder or notice: a user through `INotificationService`, a guest by email at the contact `ICustomerContactResolver` resolves.
 - **`ICustomerContactResolver`** is replaced by `CustomerRecordContactResolver`. A customer with an account is addressed by the name on their customer record and the account's email, so statements, receipts and reminders read the same everywhere. A guest is still addressed from the contact kept at purchase.
 
 ## Orders

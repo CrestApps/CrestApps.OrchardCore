@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Customers.Core.Indexes;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Customers.Core.Services;
 

@@ -194,9 +194,7 @@ public sealed class InvoicesAndPayLinksTests
         }
 
         return new DefaultTransactionReminderService(
-            notifications.Object,
-            userService.Object,
-            Mock.Of<ICustomerContactResolver>(),
+            TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             new TestClock(_now),
             NullLogger<DefaultTransactionReminderService>.Instance,

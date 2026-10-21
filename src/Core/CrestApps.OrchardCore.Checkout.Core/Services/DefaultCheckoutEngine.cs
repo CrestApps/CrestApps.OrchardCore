@@ -750,7 +750,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
                 // The gateway prices the agreement from the full cycle amount, never from what is due now.
                 // Pricing it from the attempt would bill a first-cycle discount, or a trial's zero, forever.
-                CycleAmount = Money.Round(lineItems.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency),
+                CycleAmount = CheckoutObligations.GetCycleAmount(lineItems, invoice.Currency),
                 FirstCycleAmount = attempt.ExpectedAmount,
                 ProviderData = options.ProviderData,
                 ReturnUrl = options.ReturnUrl,
@@ -761,22 +761,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
     // Maps an obligation id back to the billing interval it settles, or null when it is the one-time amount.
     private static BillingDurationKey TryGetRecurringInterval(CheckoutInvoice invoice, string obligationId)
-    {
-        if (string.Equals(obligationId, CheckoutObligations.OneTime, StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        foreach (var key in invoice.GetRecurringGroups().Keys)
-        {
-            if (string.Equals(CheckoutObligations.Recurring(key), obligationId, StringComparison.Ordinal))
-            {
-                return key;
-            }
-        }
-
-        return null;
-    }
+        => CheckoutObligations.TryGetRecurringGroup(invoice, obligationId, out var interval, out _) ? interval : null;
 
     private static bool MatchesInvoice(PaymentAttempt attempt, CheckoutInvoice invoice)
     {
@@ -911,7 +896,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 continue;
             }
 
-            billable.Add((obligationId, Money.Round(group.Value.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency)));
+            billable.Add((obligationId, CheckoutObligations.GetCycleAmount(group.Value, invoice.Currency)));
         }
 
         if (billable.Count == 0)

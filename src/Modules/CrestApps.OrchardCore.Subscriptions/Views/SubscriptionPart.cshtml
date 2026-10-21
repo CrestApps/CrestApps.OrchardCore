@@ -2,9 +2,11 @@
 @using CrestApps.OrchardCore.Subscriptions.Core.Models
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
-@using CrestApps.OrchardCore.Subscriptions.Extensions;
+@using CrestApps.OrchardCore.Subscriptions.Extensions
+@using CrestApps.OrchardCore.Subscriptions.Services
 
 @model DisplaySubscriptionViewModel
+@inject SubscriptionDisplayText DisplayText
 
 <div class="row">
     @if (Model.InitialAmount.HasValue)
@@ -14,7 +16,7 @@
     }
 
     <div class="col-6">@T["Billing amount"]</div>
-    <div class="col-6">@T.GetAmount(Model.DurationType, Model.BillingDuration, Model.Price, Model.Currency)</div>
+    <div class="col-6">@DisplayText.RecurringPrice(Model.Price, Model.Currency, Model.BillingDuration, Model.DurationType)</div>
 
     @if (Model.BillingCycleLimit.HasValue)
     {

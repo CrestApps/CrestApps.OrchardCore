@@ -237,12 +237,5 @@ public sealed class Subscription : CatalogItem
     /// </summary>
     /// <param name="from">The date to advance from.</param>
     public DateTime Advance(DateTime from)
-        => DurationType switch
-        {
-            DurationType.Day => from.AddDays(Math.Max(1, BillingDuration)),
-            DurationType.Week => from.AddDays(Math.Max(1, BillingDuration) * 7),
-            DurationType.Month => from.AddMonths(Math.Max(1, BillingDuration)),
-            DurationType.Year => from.AddYears(Math.Max(1, BillingDuration)),
-            _ => from.AddMonths(Math.Max(1, BillingDuration)),
-        };
+        => DurationType.AddTo(from, BillingDuration);
 }
