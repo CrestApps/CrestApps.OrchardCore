@@ -53,6 +53,18 @@ public static class SubscriptionConstants
         public const string LockPrefix = "INSTALLMENT_PLAN_";
 
         /// <summary>
+        /// The route name of the endpoint that starts a plan's down payment, at
+        /// <c>{AdminUrlPrefix}/installment-plans/BeginPayment/{itemId}</c>.
+        /// </summary>
+        public const string BeginPaymentRouteName = "InstallmentPlansBeginPayment";
+
+        /// <summary>
+        /// The route name of the endpoint that reports whether a plan's down payment settled, at
+        /// <c>{AdminUrlPrefix}/installment-plans/PaymentStatus/{itemId}</c>.
+        /// </summary>
+        public const string PaymentStatusRouteName = "InstallmentPlansPaymentStatus";
+
+        /// <summary>
         /// The key of the "Choose how to pay" step a checkout that pays an outstanding transaction shows when the
         /// customer may pay it in installments.
         /// </summary>

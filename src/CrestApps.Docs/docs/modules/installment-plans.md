@@ -120,7 +120,7 @@ The validation rules are:
 
 ### Taking the first payment
 
-The plan's payment page shows the provider's embedded card form. With Stripe, it also shows Apple Pay or Google Pay where the device offers them. The page begins the payment on the plan's checkout session through the checkout engine.
+The plan's payment page shows the provider's embedded card form. With Stripe, it also shows Apple Pay or Google Pay where the device offers them. The page begins the payment on the plan's checkout session through the checkout engine, by posting to two JSON endpoints under the admin prefix: `installment-plans/BeginPayment/{itemId}` (route `InstallmentPlansBeginPayment`) and `installment-plans/PaymentStatus/{itemId}` (route `InstallmentPlansPaymentStatus`), both minimal APIs that need a signed-in user with *Manage installment plans and charge customers' saved cards* and the page's antiforgery token in the `RequestVerificationToken` header.
 
 - **Keeping the card.** When the plan charges the card, the server adds `CheckoutPaymentDataKeys.SavePaymentMethod`, so the provider keeps the card for later use.
 - **What the browser cannot do.** The browser cannot set that key. The controller strips every saved-card key (`savePaymentMethod`, `offSession`, `savedCustomerReference`, `savedPaymentMethodReference`) from what the browser sends, and bounds the size of the rest.

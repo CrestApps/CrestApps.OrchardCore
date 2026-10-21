@@ -132,8 +132,8 @@
     <script asp-name="checkout-payment" at="Foot"></script>
     <script at="Foot" depends-on="checkout-payment">
         checkoutPayment.initialize({
-            beginEndpoint: '@Url.Action("BeginPayment", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
-            statusEndpoint: '@Url.Action("PaymentStatus", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
+            beginEndpoint: '@Url.RouteUrl(SubscriptionConstants.InstallmentPlans.BeginPaymentRouteName, new { itemId = plan.ItemId })',
+            statusEndpoint: '@Url.RouteUrl(SubscriptionConstants.InstallmentPlans.PaymentStatusRouteName, new { itemId = plan.ItemId })',
             confirmationUrl: '@Url.Action("Detail", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
             cancelUrl: '@Url.Action("Pay", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
             requestHeaders: { 'RequestVerificationToken': '@antiforgery.RequestToken' },

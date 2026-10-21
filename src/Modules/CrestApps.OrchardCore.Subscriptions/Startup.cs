@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
+using CrestApps.OrchardCore.Subscriptions.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -22,6 +23,8 @@ using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Localization;
@@ -315,4 +318,8 @@ public sealed class InstallmentPlansStartup : StartupBase
 
         services.AddSingleton<IBackgroundTask, InstallmentPlanBackgroundTask>();
     }
+
+    /// <inheritdoc/>
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddInstallmentPlanPaymentEndpoints();
 }
