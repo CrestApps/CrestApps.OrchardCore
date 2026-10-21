@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.StaticFiles;
 using OrchardCore.FileStorage;
 
 namespace CrestApps.OrchardCore.Downloads.Services;
@@ -9,18 +10,27 @@ namespace CrestApps.OrchardCore.Downloads.Services;
 public interface IDigitalFileStore
 {
     /// <summary>
-    /// Saves a new file and returns what was kept.
+    /// Runs a new file through the tenant's file creation pipeline (such as an antivirus scanner), saves it when no
+    /// handler refuses it, and returns what was kept.
     /// </summary>
+    /// <param name="fileName">The name the file was uploaded with.</param>
+    /// <param name="content">The file's content.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <exception cref="FileStoreException">Thrown when a file event handler refuses the file; nothing is kept.</exception>
     Task<StoredDigitalFile> SaveAsync(string fileName, Stream content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds a file by its id, or returns <see langword="null"/>.
     /// </summary>
+    /// <param name="fileId">The file's id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     Task<StoredDigitalFile> FindAsync(string fileId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Opens a file to read, or returns <see langword="null"/> when it is gone.
     /// </summary>
+    /// <param name="fileId">The file's id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     Task<Stream> OpenAsync(string fileId, CancellationToken cancellationToken = default);
 }
 
@@ -29,12 +39,17 @@ public sealed record StoredDigitalFile(string FileId, string FileName, long Size
 internal sealed class DigitalFileStore : IDigitalFileStore
 {
     private static readonly char[] _invalidFileNameChars = [.. "\"<>|:*?", .. Enumerable.Range(0, 32).Select(code => (char)code)];
+    private static readonly FileExtensionContentTypeProvider _contentTypes = new();
 
     private readonly IFileStore _fileStore;
+    private readonly FileCreationService _fileCreationService;
 
-    public DigitalFileStore(IFileStore fileStore)
+    public DigitalFileStore(
+        IFileStore fileStore,
+        FileCreationService fileCreationService)
     {
         _fileStore = fileStore;
+        _fileCreationService = fileCreationService;
     }
 
     public async Task<StoredDigitalFile> SaveAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
@@ -43,10 +58,34 @@ internal sealed class DigitalFileStore : IDigitalFileStore
 
         var fileId = global::OrchardCore.IdGenerator.GenerateId();
         var name = Sanitize(fileName);
+        var path = _fileStore.Combine(fileId, name);
 
-        await _fileStore.CreateFileFromStreamAsync(_fileStore.Combine(fileId, name), content, overwrite: false);
+        if (!_contentTypes.TryGetContentType(name, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
 
-        var info = await _fileStore.GetFileInfoAsync(_fileStore.Combine(fileId, name));
+        // Every handler (an antivirus scanner, for one) sees the file before it is written, and any of them can
+        // refuse it.
+        await using var result = await _fileCreationService.CreateAsync(
+            new FileCreatingContext(path, content.CanSeek ? content.Length : null, contentType),
+            content,
+            leaveOpen: true,
+            cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            throw new FileStoreException(result.ErrorMessage ?? $"The file '{name}' was refused before it could be kept.");
+        }
+
+        await _fileStore.CreateFileFromStreamAsync(path, result.Stream, overwrite: false);
+
+        var info = await _fileStore.GetFileInfoAsync(path);
+
+        if (info is not null)
+        {
+            await _fileCreationService.CreatedAsync(info, cancellationToken);
+        }
 
         return new StoredDigitalFile(fileId, name, info?.Length ?? 0);
     }

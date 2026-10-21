@@ -16,7 +16,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.FileStorage;
 using OrchardCore.FileStorage.FileSystem;
+using OrchardCore.Infrastructure;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -86,6 +88,49 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         Assert.Null(await store.FindAsync("../secrets", TestContext.Current.CancellationToken));
         Assert.Null(await store.FindAsync("nosuchfile", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task TheFileStore_RefusesAFileAFileEventHandlerRejects_AndKeepsNothing()
+    {
+        // Arrange
+        var handler = new Mock<IFileEventHandler>();
+        handler
+            .Setup(value => value.CreatingAsync(It.IsAny<FileCreatingContext>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FileCreatingContext context, Stream stream, CancellationToken cancellationToken) => FileCreatingResult.Failed(stream, new ResultError
+            {
+                Message = new Microsoft.Extensions.Localization.LocalizedString("infected", "The file is infected."),
+            }));
+
+        var store = FileStore(handler.Object);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<FileStoreException>(() => store.SaveAsync("guide.pdf", new MemoryStream([1, 2, 3]), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("The file is infected.", exception.Message);
+        Assert.False(Directory.Exists(_folder) && Directory.EnumerateFiles(_folder, "*", SearchOption.AllDirectories).Any());
+        handler.Verify(value => value.CreatedAsync(It.IsAny<IFileStoreEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TheFileStore_TellsTheFileEventHandlersAboutAFileItKept()
+    {
+        // Arrange
+        var handler = new Mock<IFileEventHandler>();
+        handler
+            .Setup(value => value.CreatingAsync(It.IsAny<FileCreatingContext>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FileCreatingContext context, Stream stream, CancellationToken cancellationToken) => FileCreatingResult.Success(stream));
+
+        var store = FileStore(handler.Object);
+
+        // Act
+        var saved = await store.SaveAsync("guide.pdf", new MemoryStream([1, 2, 3]), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(3, saved.Size);
+        handler.Verify(value => value.CreatingAsync(It.Is<FileCreatingContext>(context => context.FileName == "guide.pdf" && context.Length == 3), It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Once);
+        handler.Verify(value => value.CreatedAsync(It.Is<IFileStoreEntry>(entry => entry.Name == "guide.pdf"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -259,8 +304,8 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         return result;
     }
 
-    private DigitalFileStore FileStore()
-        => new(new FileSystemStore(_folder, NullLogger<FileSystemStore>.Instance));
+    private DigitalFileStore FileStore(params IFileEventHandler[] handlers)
+        => new(new FileSystemStore(_folder, NullLogger<FileSystemStore>.Instance), new FileCreationService(handlers));
 
     private static ContentItem Product(StoredDigitalFile file, int limit, int days = 30)
     {

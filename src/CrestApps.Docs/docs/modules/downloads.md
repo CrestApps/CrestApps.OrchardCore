@@ -17,6 +17,8 @@ The **Digital Downloads** feature delivers digital products. A product carries i
 
 Files never go to the media library. `IDigitalFileStore` keeps them under the tenant's App_Data, in `DigitalFiles/{fileId}/{fileName}`, which no URL serves. `SaveAsync` makes the id (letters and digits only, so an id can't leave the folder) and cleans the name; `FindAsync` and `OpenAsync` find and read a file by id.
 
+Before a file is written, `SaveAsync` runs it through Orchard Core's file creation pipeline (`FileCreationService`), so every registered `IFileEventHandler`, such as the ClamAV scanner of `OrchardCore.Antivirus.ClamAV`, can check it. When a handler refuses the file, or the scanner can't be reached, nothing is kept: the upload answers `400` with the reason, and the recipe step reports an error for that file.
+
 The part's editor uploads each file straight to the store through `POST /Admin/downloads/files/upload` (permission **Manage digital files and downloads**, up to 1 GB), then saving the product keeps the ids the store knows. Removing a file from a product doesn't delete it: orders that have it keep their downloads. `GET /Admin/downloads/files/{fileId}` lets the store open a file.
 
 ## Model
