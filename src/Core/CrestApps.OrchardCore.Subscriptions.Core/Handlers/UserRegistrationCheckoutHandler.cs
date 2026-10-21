@@ -22,7 +22,8 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 /// The account is created in <see cref="CompletingAsync"/>, before any money moves, and deleted again in
 /// <see cref="FailedAsync"/> when the checkout does not complete. Creating it after payment would leave a
 /// paying customer with no account whenever account creation failed; creating it and leaving it behind on a
-/// failure would let a visitor accumulate accounts by abandoning checkouts.
+/// failure would let a visitor accumulate accounts by abandoning checkouts. Only the id of the account this
+/// checkout created is kept between those steps; the password never leaves the protected payment session cache.
 /// </remarks>
 public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
 {
@@ -38,6 +39,10 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ISiteService _siteService;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
+
+    // The accounts this scope created, by checkout session, so only the account a checkout created is signed in or
+    // deleted again.
+    private readonly Dictionary<string, string> _createdUserIds = new(StringComparer.Ordinal);
 
     internal readonly IStringLocalizer S;
 
@@ -154,13 +159,7 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
             throw new InvalidOperationException("Unable to create a user account for the subscriber.");
         }
 
-        // Only a request can sign the new account in afterwards. A completion driven by the sweep or a
-        // webhook has no request, and the account is simply there for the customer next time they visit.
-        _httpContextAccessor.HttpContext?.Features.Set(new CustomerCreatedDuringSubscriptionFlow
-        {
-            User = step.User,
-            Password = password,
-        });
+        _createdUserIds[session.SessionId] = step.User.UserId;
 
         // The account that was just created owns this checkout, so everything the completion writes is
         // attributed to the subscriber rather than left ownerless.
@@ -170,35 +169,45 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     /// <inheritdoc/>
     public override async Task CompletedAsync(CheckoutFlowCompletedContext context)
     {
-        var created = _httpContextAccessor.HttpContext?.Features.Get<CustomerCreatedDuringSubscriptionFlow>();
+        var sessionId = context.Flow.Session.SessionId;
 
-        if (created is null)
+        if (!_createdUserIds.Remove(sessionId, out var userId))
         {
             return;
         }
 
-        await _paymentSessionCache.RemoveAsync(context.Flow.Session.SessionId, PasswordPurpose);
+        await _paymentSessionCache.RemoveAsync(sessionId, PasswordPurpose);
 
-        await _signInManager.PasswordSignInAsync(created.User, created.Password, isPersistent: false, lockoutOnFailure: true);
+        // Only a request can sign the new account in afterwards. A completion driven by the sweep or a
+        // webhook has no request, and the account is simply there for the customer next time they visit.
+        if (_httpContextAccessor.HttpContext is null)
+        {
+            return;
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user is not null && await _signInManager.CanSignInAsync(user))
+        {
+            await _signInManager.SignInAsync(user, isPersistent: false);
+        }
     }
 
     /// <inheritdoc/>
     public override async Task FailedAsync(CheckoutFlowFailedContext context)
     {
-        var created = _httpContextAccessor.HttpContext?.Features.Get<CustomerCreatedDuringSubscriptionFlow>();
-
-        if (created is null)
+        // Only the account this checkout created is deleted: it is found by the id it was created with, never by
+        // a name an existing account could share.
+        if (!_createdUserIds.Remove(context.Flow.Session.SessionId, out var userId))
         {
             return;
         }
 
-        // Only delete the account this checkout created. Checking the password first is what proves it is
-        // that account and not one that already existed under the same name.
-        var result = await _signInManager.CheckPasswordSignInAsync(created.User, created.Password, lockoutOnFailure: false);
+        var user = await _userManager.FindByIdAsync(userId);
 
-        if (result.Succeeded)
+        if (user is not null)
         {
-            await _userManager.DeleteAsync(created.User);
+            await _userManager.DeleteAsync(user);
         }
     }
 
