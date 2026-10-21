@@ -19,11 +19,14 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 /// of the checkout.
 /// </summary>
 /// <remarks>
-/// The account is created in <see cref="CompletingAsync"/>, before any money moves, and deleted again in
-/// <see cref="FailedAsync"/> when the checkout does not complete. Creating it after payment would leave a
+/// The account is created in <see cref="CompletingAsync"/>, before the checkout is marked complete, and deleted again
+/// in <see cref="FailedAsync"/> when the checkout does not complete. Creating it after payment would leave a
 /// paying customer with no account whenever account creation failed; creating it and leaving it behind on a
-/// failure would let a visitor accumulate accounts by abandoning checkouts. Only the id of the account this
-/// checkout created is kept between those steps; the password never leaves the protected payment session cache.
+/// failure would let a visitor accumulate accounts by abandoning checkouts. The user store writes the account into
+/// the completion's unit of work without committing it, so a completion that fails after the account was created
+/// discards it with the rest, and the retry, which finds the checkout without an owner, creates it once. Only the id
+/// of the account this checkout created is kept between those steps; the password never leaves the protected payment
+/// session cache.
 /// </remarks>
 public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
 {
