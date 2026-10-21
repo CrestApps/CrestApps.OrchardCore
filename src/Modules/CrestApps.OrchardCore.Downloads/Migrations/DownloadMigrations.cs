@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Downloads.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -31,9 +30,11 @@ public sealed class DownloadMigrations : DataMigration
             collection: DownloadsConstants.CollectionName
         );
 
-        // Safe to run again: a server that finished the step first has already made them.
-        await IndexTableIndexCreation.CreateIfMissingAsync<DownloadEntitlementIndex>(SchemaBuilder, "IDX_DownloadEntitlementIndex_ItemId", DownloadsConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<DownloadEntitlementIndex>(SchemaBuilder, "IDX_DownloadEntitlementIndex_OrderId", DownloadsConstants.CollectionName, "OrderId", "CreatedUtc");
+        await SchemaBuilder.AlterIndexTableAsync<DownloadEntitlementIndex>(table =>
+        {
+            table.CreateIndex("IDX_DownloadEntitlementIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_DownloadEntitlementIndex_OrderId", "OrderId", "CreatedUtc");
+        }, collection: DownloadsConstants.CollectionName);
 
         return 1;
     }

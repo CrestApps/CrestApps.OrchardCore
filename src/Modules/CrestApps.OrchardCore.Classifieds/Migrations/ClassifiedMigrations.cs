@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Classifieds.Indexes;
 using CrestApps.OrchardCore.Classifieds.Models;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -37,9 +36,12 @@ internal sealed class ClassifiedMigrations : DataMigration
             .Column<bool>("Latest")
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<ClassifiedIndex>(SchemaBuilder, "IDX_ClassifiedIndex_Status", collection: null, "Status", "Latest", "ExpiresUtc");
-        await IndexTableIndexCreation.CreateIfMissingAsync<ClassifiedIndex>(SchemaBuilder, "IDX_ClassifiedIndex_Owner", collection: null, "Owner", "Latest");
-        await IndexTableIndexCreation.CreateIfMissingAsync<ClassifiedIndex>(SchemaBuilder, "IDX_ClassifiedIndex_Place", collection: null, "Published", "Latitude", "Longitude");
+        await SchemaBuilder.AlterIndexTableAsync<ClassifiedIndex>(table =>
+        {
+            table.CreateIndex("IDX_ClassifiedIndex_Status", "Status", "Latest", "ExpiresUtc");
+            table.CreateIndex("IDX_ClassifiedIndex_Owner", "Owner", "Latest");
+            table.CreateIndex("IDX_ClassifiedIndex_Place", "Published", "Latitude", "Longitude");
+        });
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(ClassifiedPart), part => part
             .Attachable()

@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Fundraising.Indexes;
 using CrestApps.OrchardCore.Fundraising.Models;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -33,9 +32,12 @@ internal sealed class FundraisingMigrations : DataMigration
             collection: FundraisingConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<DonationIndex>(SchemaBuilder, "IDX_DonationIndex_Campaign", FundraisingConstants.CollectionName, "CampaignId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<DonationIndex>(SchemaBuilder, "IDX_DonationIndex_Donor", FundraisingConstants.CollectionName, "DonorUserId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<DonationIndex>(SchemaBuilder, "IDX_DonationIndex_Order", FundraisingConstants.CollectionName, "OrderId");
+        await SchemaBuilder.AlterIndexTableAsync<DonationIndex>(table =>
+        {
+            table.CreateIndex("IDX_DonationIndex_Campaign", "CampaignId");
+            table.CreateIndex("IDX_DonationIndex_Donor", "DonorUserId");
+            table.CreateIndex("IDX_DonationIndex_Order", "OrderId");
+        }, collection: FundraisingConstants.CollectionName);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(FundraisingCampaignPart), part => part
             .Attachable()

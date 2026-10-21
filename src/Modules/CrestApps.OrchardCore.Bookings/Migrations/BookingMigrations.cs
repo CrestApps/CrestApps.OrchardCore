@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Bookings.Indexes;
 using CrestApps.OrchardCore.Bookings.Models;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -56,12 +55,23 @@ internal sealed class BookingMigrations : DataMigration
             collection: BookingsConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<BookingSlotIndex>(SchemaBuilder, "IDX_BookingSlotIndex_Slot", BookingsConstants.CollectionName, "ContentItemId", "SlotKey");
-        await IndexTableIndexCreation.CreateIfMissingAsync<BookingSlotIndex>(SchemaBuilder, "IDX_BookingSlotIndex_Starts", BookingsConstants.CollectionName, "StartsUtc");
-        await IndexTableIndexCreation.CreateIfMissingAsync<BookingIndex>(SchemaBuilder, "IDX_BookingIndex_Order", BookingsConstants.CollectionName, "OrderId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<BookingIndex>(SchemaBuilder, "IDX_BookingIndex_Starts", BookingsConstants.CollectionName, "StartsUtc", "Status");
-        await IndexTableIndexCreation.CreateIfMissingAsync<BookingIndex>(SchemaBuilder, "IDX_BookingIndex_Hold", BookingsConstants.CollectionName, "Status", "HoldExpiresUtc");
-        await IndexTableIndexCreation.CreateIfMissingAsync<BookingBalanceIndex>(SchemaBuilder, "IDX_BookingBalanceIndex_Due", BookingsConstants.CollectionName, "Status", "DueUtc");
+        await SchemaBuilder.AlterIndexTableAsync<BookingSlotIndex>(table =>
+        {
+            table.CreateIndex("IDX_BookingSlotIndex_Slot", "ContentItemId", "SlotKey");
+            table.CreateIndex("IDX_BookingSlotIndex_Starts", "StartsUtc");
+        }, collection: BookingsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<BookingIndex>(table =>
+        {
+            table.CreateIndex("IDX_BookingIndex_Order", "OrderId");
+            table.CreateIndex("IDX_BookingIndex_Starts", "StartsUtc", "Status");
+            table.CreateIndex("IDX_BookingIndex_Hold", "Status", "HoldExpiresUtc");
+        }, collection: BookingsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<BookingBalanceIndex>(table => table
+            .CreateIndex("IDX_BookingBalanceIndex_Due", "Status", "DueUtc"),
+            collection: BookingsConstants.CollectionName
+        );
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(BookingPart), part => part
             .Attachable()

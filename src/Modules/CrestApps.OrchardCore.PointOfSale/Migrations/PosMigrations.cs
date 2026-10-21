@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.PointOfSale.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -29,9 +28,16 @@ public sealed class PosMigrations : DataMigration
             collection: PosConstants.CollectionName
         );
 
-        await IndexTableIndexCreation.CreateIfMissingAsync<RegisterIndex>(SchemaBuilder, "IDX_RegisterIndex_ItemId", PosConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<RegisterShiftIndex>(SchemaBuilder, "IDX_RegisterShiftIndex_ItemId", PosConstants.CollectionName, "ItemId");
-        await IndexTableIndexCreation.CreateIfMissingAsync<RegisterShiftIndex>(SchemaBuilder, "IDX_RegisterShiftIndex_Register", PosConstants.CollectionName, "RegisterId", "Status");
+        await SchemaBuilder.AlterIndexTableAsync<RegisterIndex>(table => table
+            .CreateIndex("IDX_RegisterIndex_ItemId", "ItemId"),
+            collection: PosConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<RegisterShiftIndex>(table =>
+        {
+            table.CreateIndex("IDX_RegisterShiftIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_RegisterShiftIndex_Register", "RegisterId", "Status");
+        }, collection: PosConstants.CollectionName);
 
         return 1;
     }
