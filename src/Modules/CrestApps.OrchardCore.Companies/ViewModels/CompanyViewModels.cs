@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Companies.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Companies.ViewModels;
 
@@ -99,15 +101,16 @@ public class CompanyLocationRowViewModel
 
     public string Name { get; set; }
 
-    public string AddressLine1 { get; set; }
+    /// <summary>
+    /// Gets or sets the address as the editor posts it, under the row's <c>Address</c> prefix.
+    /// </summary>
+    public AddressEditorViewModel Address { get; set; } = new();
 
-    public string City { get; set; }
-
-    public string Region { get; set; }
-
-    public string PostalCode { get; set; }
-
-    public string Country { get; set; }
+    /// <summary>
+    /// Gets or sets the address editor, laid out for the address's country.
+    /// </summary>
+    [BindNever]
+    public IShape AddressEditor { get; set; }
 }
 
 /// <summary>

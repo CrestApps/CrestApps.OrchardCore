@@ -114,20 +114,20 @@
 
     <fieldset class="mb-3">
         <legend class="h5">@T["Locations"]</legend>
-        <span asp-validation-for="Locations" class="text-danger"></span>
         @for (var i = 0; i < Model.Locations.Count; i++)
         {
-            <input type="hidden" asp-for="Locations[i].LocationId" />
-            <div class="row g-2 mb-2">
-                <div class="col-md-2"><input asp-for="Locations[i].Name" class="form-control" placeholder="@T["Name"]" aria-label="@T["Name"]" /></div>
-                <div class="col-md-3"><input asp-for="Locations[i].AddressLine1" class="form-control" placeholder="@T["Street address"]" aria-label="@T["Street address"]" /></div>
-                <div class="col-md-2"><input asp-for="Locations[i].City" class="form-control" placeholder="@T["City"]" aria-label="@T["City"]" /></div>
-                <div class="col-md-2"><input asp-for="Locations[i].Region" class="form-control" placeholder="@T["State or province"]" aria-label="@T["State or province"]" /></div>
-                <div class="col-md-2"><input asp-for="Locations[i].PostalCode" class="form-control" placeholder="@T["Postal code"]" aria-label="@T["Postal code"]" /></div>
-                <div class="col-md-1"><input asp-for="Locations[i].Country" class="form-control" maxlength="2" placeholder="@T["Country"]" aria-label="@T["Country"]" /></div>
+            <div class="border rounded p-3 mb-3">
+                <input type="hidden" asp-for="Locations[i].LocationId" />
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="Locations[i].Name" class="form-label">@T["Name"]</label>
+                        <input asp-for="Locations[i].Name" class="form-control" placeholder="@T["Head office, Warehouse…"]" />
+                    </div>
+                </div>
+                @await DisplayAsync(Model.Locations[i].AddressEditor)
             </div>
         }
-        <span class="hint">@T["The places the company has orders shipped to; its buyers pick one at checkout. The country is its two-letter code."]</span>
+        <span class="hint">@T["The places the company has orders shipped to; its buyers pick one at checkout. Leave a location blank to remove it."]</span>
     </fieldset>
 
     <fieldset class="mb-3">

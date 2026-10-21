@@ -38,7 +38,7 @@ At checkout, a company buyer gets a **Company** step after shipping, where they 
 
 ## Locations
 
-Under **Locations**, add the places the company has orders shipped to, with a name such as *Head office*, the street, city, state, postal code and two-letter country code. Its buyers pick one at checkout.
+Under **Locations**, add the places the company has orders shipped to, with a name such as *Head office* and the address, in the same address form as the rest of the store: choose the country first and the form asks for what that country's addresses need. Its buyers pick one at checkout. To remove a location, clear its fields.
 
 ## Price lists
 
