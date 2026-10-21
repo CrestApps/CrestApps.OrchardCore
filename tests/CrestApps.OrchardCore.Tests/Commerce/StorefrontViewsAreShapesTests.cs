@@ -11,8 +11,9 @@ namespace CrestApps.OrchardCore.Tests.Commerce;
 /// <para>
 /// A controller view (<c>Views/{Controller}/{Action}.cshtml</c>) can only be replaced by a theme that ships a Razor file
 /// at the same path. The pages therefore keep only their frame there (the title, the breadcrumb, the account menu) with
-/// <c>@model IShape</c>, and render the shape the controller built with <c>DisplayAsync(Model)</c>; the page's content
-/// lives in the shape's template.
+/// <c>@model IShape</c>, and render the shape the controller built with <c>DisplayAsync(Model)</c>, or as the
+/// <c>Content</c> of the <c>CommerceAccountPage</c> shape that frames an account page; the page's content lives in the
+/// shape's template.
 /// </para>
 /// <para>
 /// The shape's model is a proxy Orchard Core derives from the view model, so a sealed view model, or one without a
@@ -254,7 +255,8 @@ public sealed partial class StorefrontViewsAreShapesTests
     [GeneratedRegex(@"^\s*@model\s+(?:OrchardCore\.DisplayManagement\.)?IShape\s*$", RegexOptions.Multiline)]
     private static partial Regex ShapeModel();
 
-    [GeneratedRegex(@"DisplayAsync\(\s*Model\s*\)")]
+    // The shape renders directly, or as the content of the CommerceAccountPage frame shape of an account page.
+    [GeneratedRegex(@"DisplayAsync\(\s*Model\s*\)|New\.CommerceAccountPage\([^;]*\bContent:\s*Model\b")]
     private static partial Regex DisplaysModel();
 
     [GeneratedRegex(@"CreateAsync<(?<type>\w+)>\(")]

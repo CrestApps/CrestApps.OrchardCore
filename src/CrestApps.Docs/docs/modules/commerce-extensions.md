@@ -55,7 +55,7 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | Add a step to the store's setup guide | `IStoreSetupStep` | Abstractions | [Store setup](store-setup.md) |
 | Send a signed, time-limited link, such as one that opens an order | `SignedTokenService` to sign and read the token for a purpose, and `SiteUrlGenerator` for the route's absolute URL from the site's base URL; register both with `services.AddSignedLinks()` | CrestApps.OrchardCore.Core | [Carts and orders](carts-and-orders.md) |
 | Export and erase your module's records of a person | `ICommercePersonalDataContributor` | Customers.Abstractions | [Customers](customers.md) |
-| Add a page to the storefront account | A `NamedNavigationProvider` created for the `CommerceConstants.Account.MenuName` menu, and a view rendering `CommerceAccountNavigation` | Abstractions | [Commerce](commerce.md) |
+| Add a page to the storefront account | A `NamedNavigationProvider` created for the `CommerceConstants.Account.MenuName` menu, and a view rendering its content in the `CommerceAccountPage` shape | Abstractions | [Commerce](commerce.md) |
 | Add a screen under Commerce | An `AdminNavigationProvider` adding under the Commerce node | | [Commerce](commerce.md) |
 | Change how a storefront page looks | Override its shape in your theme | | [Commerce](commerce.md#theming-the-storefront) |
 

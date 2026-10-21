@@ -44,6 +44,13 @@ public static class CommerceConstants
         /// The shape that renders the account menu beside an account page.
         /// </summary>
         public const string NavigationShape = "CommerceAccountNavigation";
+
+        /// <summary>
+        /// The shape that frames an account page: the account menu beside the page's heading and content. A page renders
+        /// it with its <c>Title</c>, its <c>Content</c> (a shape or HTML) and, optionally, <c>Actions</c> beside the
+        /// heading, and keeps its own breadcrumb. A theme overrides it to change every account page.
+        /// </summary>
+        public const string PageShape = "CommerceAccountPage";
     }
 
     /// <summary>

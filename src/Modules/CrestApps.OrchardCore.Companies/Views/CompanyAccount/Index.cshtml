@@ -6,13 +6,4 @@
     </breadcrumb>
 </zone>
 
-<div class="container my-4">
-    <div class="row g-4">
-        <div class="col-lg-3">
-            @await DisplayAsync(await New.CommerceAccountNavigation())
-        </div>
-        <div class="col-lg-9 commerce-account">
-            @await DisplayAsync(Model)
-        </div>
-    </div>
-</div>
+@await DisplayAsync(await New.CommerceAccountPage(Content: Model))

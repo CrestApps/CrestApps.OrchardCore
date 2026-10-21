@@ -1,4 +1,5 @@
 @using System.Globalization
+@using Microsoft.AspNetCore.Html
 @model AccountDonationsViewModel
 
 <zone Name="Title">
@@ -7,61 +8,56 @@
     </breadcrumb>
 </zone>
 
-<div class="container my-4">
-    <div class="row g-4">
-        <div class="col-lg-3">
-            @await DisplayAsync(await New.CommerceAccountNavigation())
-        </div>
-        <div class="col-lg-9">
-            <h1 class="h3 mb-3">@T["Donations"]</h1>
-
-            @if (Model.Donations.Count == 0)
-            {
-                <p class="text-body-secondary">@T["You haven't given to a campaign yet."]</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
+@{
+    Func<object, IHtmlContent> content = @<text>
+        @if (Model.Donations.Count == 0)
+        {
+            <p class="text-body-secondary">@T["You haven't given to a campaign yet."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>@T["Date"]</th>
+                            <th>@T["Campaign"]</th>
+                            <th class="text-end">@T["Amount"]</th>
+                            <th>@T["Receipt"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var donation in Model.Donations)
+                        {
                             <tr>
-                                <th>@T["Date"]</th>
-                                <th>@T["Campaign"]</th>
-                                <th class="text-end">@T["Amount"]</th>
-                                <th>@T["Receipt"]</th>
+                                <td>@donation.CreatedUtc.ToString("d", CultureInfo.CurrentCulture)</td>
+                                <td>
+                                    @donation.CampaignTitle
+                                    @if (!string.IsNullOrEmpty(donation.Tribute))
+                                    {
+                                        <div class="small text-body-secondary">@T["In honor of {0}", donation.Tribute]</div>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @ProductPriceFormatter.Format(donation.Amount, donation.Currency)
+                                    @if (donation.Refunded > 0m)
+                                    {
+                                        <div class="small text-body-secondary">@T["{0} refunded", ProductPriceFormatter.Format(donation.Refunded, donation.Currency)]</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (donation.TaxDeductible)
+                                    {
+                                        <a href="@Url.RouteUrl("AccountDonationReceipt", new { id = donation.ItemId })">@donation.ReceiptNumber</a>
+                                    }
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var donation in Model.Donations)
-                            {
-                                <tr>
-                                    <td>@donation.CreatedUtc.ToString("d", CultureInfo.CurrentCulture)</td>
-                                    <td>
-                                        @donation.CampaignTitle
-                                        @if (!string.IsNullOrEmpty(donation.Tribute))
-                                        {
-                                            <div class="small text-body-secondary">@T["In honor of {0}", donation.Tribute]</div>
-                                        }
-                                    </td>
-                                    <td class="text-end">
-                                        @ProductPriceFormatter.Format(donation.Amount, donation.Currency)
-                                        @if (donation.Refunded > 0m)
-                                        {
-                                            <div class="small text-body-secondary">@T["{0} refunded", ProductPriceFormatter.Format(donation.Refunded, donation.Currency)]</div>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (donation.TaxDeductible)
-                                        {
-                                            <a href="@Url.RouteUrl("AccountDonationReceipt", new { id = donation.ItemId })">@donation.ReceiptNumber</a>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
-    </div>
-</div>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </text>;
+}
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Donations"], Content: content(null)))
