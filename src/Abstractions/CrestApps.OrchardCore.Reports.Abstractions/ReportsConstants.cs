@@ -16,6 +16,11 @@ public static class ReportsConstants
     public const string OpenXmlFeature = "CrestApps.OrchardCore.Reports.OpenXml";
 
     /// <summary>
+    /// The identifier of the optional PDF export feature for reports.
+    /// </summary>
+    public const string PdfFeature = "CrestApps.OrchardCore.Reports.Pdf";
+
+    /// <summary>
     /// The identifier of the report builder feature, which lets people build reports from data sources with drag and
     /// drop, save reusable views, and share reports.
     /// </summary>
@@ -69,6 +74,11 @@ public static class ReportsConstants
     /// The technical name of the Open XML Excel workbook export format.
     /// </summary>
     public const string XlsxExportFormat = "xlsx";
+
+    /// <summary>
+    /// The technical name of the PDF export format.
+    /// </summary>
+    public const string PdfExportFormat = "pdf";
 
     /// <summary>
     /// Contains the well-known report category names used to group reports in the admin navigation.
