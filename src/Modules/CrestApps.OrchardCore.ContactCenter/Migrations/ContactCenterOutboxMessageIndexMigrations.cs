@@ -112,4 +112,22 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
 
         return 3;
     }
+
+    /// <summary>
+    /// Adds the index a message is found by from the event it carries. Every event raised on the call path is
+    /// checked against the outbox by its event identifier, and no index leads with <c>EventId</c>, so each such
+    /// read scanned the table. The index is not unique: rows written before it existed were never checked against
+    /// one another, and a constraint they violate would fail the tenant's activation.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContactCenterOutboxMessageIndex>(
+            SchemaBuilder,
+            "IDX_ContactCenterOutboxMessageIndex_EventId",
+            ContactCenterStorage.CollectionName,
+            "EventId", "DocumentId");
+
+        return 4;
+    }
 }

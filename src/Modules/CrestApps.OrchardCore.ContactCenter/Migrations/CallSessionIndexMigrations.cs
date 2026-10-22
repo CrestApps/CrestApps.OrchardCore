@@ -526,6 +526,29 @@ internal sealed class CallSessionIndexMigrations : DataMigration
         return 7;
     }
 
+    /// <summary>
+    /// Adds the indexes a call session is found by on the call path. Every provider webhook resolves the newest
+    /// session for a provider call identifier, and every interaction resolves its session by interaction, yet the only
+    /// index that names either column leads with <c>DocumentId</c>, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
+            SchemaBuilder,
+            "IDX_CallSessionIndex_ProviderCallId",
+            ContactCenterStorage.CollectionName,
+            "ProviderCallId", "ProviderName", "CreatedUtc");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
+            SchemaBuilder,
+            "IDX_CallSessionIndex_InteractionId",
+            ContactCenterStorage.CollectionName,
+            "InteractionId", "CreatedUtc");
+
+        return 8;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
