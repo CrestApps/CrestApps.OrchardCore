@@ -112,7 +112,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers
                     Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.AdminController> htmlLocalizer,
                     Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.AdminController> stringLocalizer) { }
         [OrchardCore.Admin.Admin("messaging/attention", "MessagingAttention")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Attention() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Attention(bool refresh = false) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("messaging/conversation/{id}/claim", "MessagingClaim")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Claim(string id) { }
@@ -381,6 +381,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
                 "Refusal"})]
         public System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingAttachment>, string>> StoreAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannel channel, Microsoft.AspNetCore.Http.IFormFileCollection files, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class MessagingAttentionCountCache
+    {
+        public static readonly System.TimeSpan Lifetime;
+        public MessagingAttentionCountCache(OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<int> GetOrReadAsync(string userId, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<int>> factory, bool refresh, System.Threading.CancellationToken cancellationToken) { }
+        public void Remove(string userId) { }
+    }
     public sealed class MessagingContactSearch
     {
         public MessagingContactSearch(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, OrchardCore.ContentManagement.IContentManager contentManager, YesSql.ISession session) { }
@@ -443,6 +450,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
                     OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor,
                     YesSql.ISession session,
                     OrchardCore.Modules.IClock clock,
+                    CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingAttentionCountCache attentionCountCache,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options,
                     Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingWorkspaceBuilder> stringLocalizer) { }
         public System.Threading.Tasks.Task<bool> AuthorizeAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.ConversationOperation operation) { }
@@ -454,9 +462,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxViewModel> BuildInboxAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile currentAgent, string show, string channel, int page, string selectedCustomerKey, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.ThreadViewModel> BuildThreadAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.DateTime? beforeUtc, System.Func<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation, string> conversationUrl, System.Func<string, string, string> startUrl, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<int> CountNeedingAttentionAsync(System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<int> CountNeedingAttentionAsync(System.Security.Claims.ClaimsPrincipal user, bool refresh, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> FindUnreachableRecipientsAsync(System.Security.Claims.ClaimsPrincipal user, string channel, System.Collections.Generic.IEnumerable<string> contactAddresses, System.Threading.CancellationToken cancellationToken) { }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.ChannelViewModel> GetChannels() { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> GetCurrentAgentAsync(System.Security.Claims.ClaimsPrincipal user) { }
+        public System.Threading.Tasks.Task SaveReadAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation) { }
     }
     public static class ThreadTimeline
     {

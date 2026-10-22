@@ -877,7 +877,7 @@ import {
                 startHeartbeat();
                 pullThread();
                 refreshInbox();
-                attentionBadge.refresh();
+                attentionBadge.refresh(true);
             });
 
             connection.onclose(function () {
