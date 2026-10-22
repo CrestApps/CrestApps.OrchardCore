@@ -18,6 +18,20 @@ public static class MessagingSubjects
     public const int MaxLength = 255;
 
     /// <summary>
+    /// Gets the technical names of the enabled channels whose messages carry a subject line.
+    /// </summary>
+    /// <param name="channelResolver">The resolver of the enabled channels.</param>
+    public static IReadOnlyCollection<string> GetChannelNames(IMessagingChannelResolver channelResolver)
+    {
+        ArgumentNullException.ThrowIfNull(channelResolver);
+
+        return channelResolver.GetAll()
+            .Where(channel => channel.Capabilities.SupportsSubject)
+            .Select(channel => channel.Name)
+            .ToArray();
+    }
+
+    /// <summary>
     /// Builds the subject of a reply to a message with the given subject: the subject with one <c>Re:</c> in front.
     /// </summary>
     /// <param name="subject">The subject of the message being answered.</param>

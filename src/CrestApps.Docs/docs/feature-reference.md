@@ -137,6 +137,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Telephony.SoftPhone.Core` | Telephony Soft Phone Core (dependency only) | [Telephony](./telephony/) |
 | `CrestApps.OrchardCore.Telephony.SoftPhone.Extension` | Telephony Soft Phone Extension | [Telephony](./telephony/#standalone-soft-phone-page-and-browser-extension) |
 | `CrestApps.OrchardCore.Telephony.Azure` | Telephony - Azure Blob Storage | [Recording — Azure Blob Storage](./telephony/recording-azure-blob-storage) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging.Azure` | Omnichannel Messaging - Azure Blob Storage | [Messaging — Azure Blob Storage](./omnichannel/messaging-azure-blob-storage) |
 | `CrestApps.OrchardCore.Telnyx` | Telnyx | [Telnyx](./telephony/telnyx) |
 | `CrestApps.OrchardCore.Asterisk` | Asterisk | [Asterisk](./telephony/asterisk) |
 
@@ -185,6 +186,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Reports` | Reports | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.OpenXml` | Reports (OpenXml) | [Reports](./modules/reports) |
+| `CrestApps.OrchardCore.Reports.Pdf` | Reports (PDF) | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.Builder` | Report Builder | [Report Builder](./modules/report-builder/) |
 
 ## Commerce

@@ -81,10 +81,16 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         }
 
         var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+        var onLiveCall = false;
 
         if (profile is not null)
         {
             await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
+
+            // Healing keeps a call the provider still has, so an agent signing in again while on one -- their page
+            // dropped across a restart and they pressed Sign in -- is still on it. Made Available here, the dialer
+            // handed them a second call on top of the first.
+            onLiveCall = await _agentWorkStateHealingService.HasLiveCallAsync(profile.ItemId, cancellationToken);
         }
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
@@ -119,12 +125,31 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         profile.QueueIds = ApplyCampaignRouting(profile, entitledQueueIds, entitledCampaignIds);
         profile.CampaignIds = entitledCampaignIds;
-        profile.RequestedPresenceStatus = null;
-        profile.ActiveReservationId = null;
+
+        var targetStatus = AgentPresenceStatus.Available;
+
+        if (onLiveCall)
+        {
+            // The memberships take effect now; Available waits for the call to end, as any request made on a call
+            // does, so routing cannot offer the agent more work while they are still talking.
+            targetStatus = IsOnCallState(profile.PresenceStatus) ? profile.PresenceStatus : AgentPresenceStatus.Busy;
+            profile.RequestedPresenceStatus = AgentPresenceStatus.Available;
+            profile.PresenceRequestedUtc = _clock.UtcNow;
+
+            _logger.LogWarning(
+                "Agent '{AgentId}' signed in while still on a call; keeping them {PresenceStatus} until the call ends.",
+                profile.ItemId.SanitizeLogValue(),
+                targetStatus);
+        }
+        else
+        {
+            profile.RequestedPresenceStatus = null;
+            profile.ActiveReservationId = null;
+        }
 
         var actor = ContactCenterActor.Agent(userId);
 
-        var change = await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Available, new AgentStateChangeContext
+        var change = await _stateTransitions.TransitionAsync(profile, targetStatus, new AgentStateChangeContext
         {
             Actor = actor,
             Source = AgentStateChangeSources.SignIn,
@@ -426,6 +451,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
         }
 
+        // Only Available puts the agent back in front of routing, so only Available waits for a live call to end.
+        var onLiveCall = status == AgentPresenceStatus.Available &&
+            !string.IsNullOrEmpty(profile.ItemId) &&
+            await _agentWorkStateHealingService.HasLiveCallAsync(profile.ItemId, cancellationToken);
+
         var resolvedReason = await ResolveReasonAsync(reason, context, cancellationToken);
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
@@ -453,7 +483,22 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         var previousReasonCodeId = profile.PresenceReasonCodeId;
         var previousReason = profile.PresenceReason;
         var targetStatus = previousStatus;
-        var canApplyNow = CanApplyPresenceNow(profile) || await IsStrandedInReservedAsync(profile, cancellationToken);
+        var canApplyNow = !onLiveCall &&
+            (CanApplyPresenceNow(profile) || await IsStrandedInReservedAsync(profile, cancellationToken));
+
+        if (onLiveCall)
+        {
+            // The agent's state says they are free while a call still names them -- the state was lost across a
+            // restart, or a release raced the call -- so they are put back on the call and Available waits for it.
+            if (!IsOnCallState(targetStatus))
+            {
+                targetStatus = AgentPresenceStatus.Busy;
+            }
+
+            _logger.LogWarning(
+                "Agent '{AgentId}' asked to be Available while still on a call; deferring it until the call ends.",
+                profile.ItemId.SanitizeLogValue());
+        }
 
         if (status == AgentPresenceStatus.RequestBreak)
         {
@@ -548,6 +593,9 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         return true;
     }
+
+    private static bool IsOnCallState(AgentPresenceStatus status)
+        => status is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp;
 
     private static bool CanApplyPresenceNow(AgentProfile profile)
     {

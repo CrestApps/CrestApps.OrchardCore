@@ -25,6 +25,9 @@ updates:
       - dependency-name: "TheBlogTheme"
       - dependency-name: "TheComingSoonTheme"
       - dependency-name: "TheTheme"
+      # 6.5.0 and later are AGPL-3.0-only and enforce it at runtime; stay on the MIT-licensed 6.2.4.
+      - dependency-name: "PDFsharp-MigraDoc"
+      - dependency-name: "PDFsharp"
 
   - package-ecosystem: "npm"
     directory: "/"

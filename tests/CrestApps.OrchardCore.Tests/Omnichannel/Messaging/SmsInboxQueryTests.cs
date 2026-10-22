@@ -500,6 +500,7 @@ public sealed class SmsInboxQueryTests
             Mock.Of<IUpdateModelAccessor>(),
             Mock.Of<ISession>(),
             clock.Object,
+            new MessagingAttentionCountCache(clock.Object),
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             Mock.Of<IStringLocalizer<MessagingWorkspaceBuilder>>());
 

@@ -16,6 +16,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 /// </summary>
 internal sealed class MessagingMigrations : DataMigration
 {
+    internal const string AgentAttentionIndexName = "IDX_MessagingConversationIndex_AgentAttention";
+    internal const string OwnerAttentionIndexName = "IDX_MessagingConversationIndex_OwnerAttention";
+
     private readonly IStore _store;
     private readonly ILogger _logger;
 
@@ -158,10 +161,10 @@ internal sealed class MessagingMigrations : DataMigration
             collection: MessagingStorage.CollectionName);
 
         await CreateReportIndexAsync();
-
+        await CreateAttentionIndexesAsync();
         await CreateOutboxIndexAsync();
 
-        return 4;
+        return 5;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -229,11 +232,24 @@ internal sealed class MessagingMigrations : DataMigration
     }
 
     /// <summary>
+    /// Adds the indexes the inbox counts and the admin menu badge are answered from. Both filter on the agent a thread
+    /// is assigned to, or on the queue or person that owns it, then on its status and whether it was read; every other
+    /// index leads with <c>DocumentId</c>, so each count scanned the table on every admin page and inbox refresh.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateAttentionIndexesAsync();
+
+        return 4;
+    }
+
+    /// <summary>
     /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
     /// outbound message.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom3Async()
+    public async Task<int> UpdateFrom4Async()
     {
         await CreateOutboxIndexAsync();
 
@@ -242,7 +258,7 @@ internal sealed class MessagingMigrations : DataMigration
         // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
         ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
 
-        return 4;
+        return 5;
     }
 
     private async Task CreateOutboxIndexAsync()
@@ -259,6 +275,24 @@ internal sealed class MessagingMigrations : DataMigration
             "IDX_MessagingOutboxIndex_Due",
             OmnichannelConstants.CollectionName,
             "NextAttemptUtc", "Channel", "DocumentId");
+    }
+
+    private async Task CreateAttentionIndexesAsync()
+    {
+        // The threads an agent holds: the "Mine" tab, and the first term of every visibility rule.
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            AgentAttentionIndexName,
+            MessagingStorage.CollectionName,
+            "AssignedAgentId", "Status", "IsRead", "LastMessageUtc", "DocumentId");
+
+        // The threads sent to a person or a queue and not yet claimed: the equality columns first, then the two the
+        // rule tests for "not assigned", so the count is read from the index alone.
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            OwnerAttentionIndexName,
+            MessagingStorage.CollectionName,
+            "OwnerType", "OwnerId", "Status", "IsRead", "AssignmentStatus", "AssignedAgentId", "DocumentId");
     }
 
     private Task<bool> CreateReportIndexAsync()

@@ -179,6 +179,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
         public static string Clean(string subject) { }
         public static string ForReply(string subject) { }
         public static string ForReplyTo(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage> messages) { }
+        public static System.Collections.Generic.IReadOnlyCollection<string> GetChannelNames(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver) { }
         public static bool IsReply(string subject) { }
     }
 }

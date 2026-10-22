@@ -114,6 +114,41 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         return await _reservationManager.FindPendingByAgentAsync(agentId, cancellationToken) is not null;
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> HasLiveCallAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var interactions = await _interactionManager.GetActiveByAgentIdsAsync([agentId], cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            if (interaction.Channel != InteractionChannel.Voice ||
+                !string.Equals(interaction.AgentId, agentId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var current = interaction;
+
+            // A provider-backed call is asked about first, so a call that ended while nobody was listening -- across
+            // a restart, say -- cannot keep the agent out of Available. Without the Voice feature the default
+            // synchronization returns the interaction untouched and it is taken at its word.
+            if (!string.IsNullOrWhiteSpace(current.ProviderName) &&
+                !string.IsNullOrWhiteSpace(current.ProviderInteractionId))
+            {
+                current = await _synchronizationService.Value.RefreshInteractionAsync(current, cancellationToken);
+            }
+
+            if (InteractionStatuses.OccupyingAgent.Contains(current.Status))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task<int> HealAsync(
         AgentProfile agent,
         bool forceCancelReservation,

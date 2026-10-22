@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Omnichannel Messaging - Azure Blob Storage</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure Blob Storage backend for the pictures exchanged in messaging conversations, preserving the
+      encryption-at-rest of the default local attachment store.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Omnichannel Messaging Attachments Azure Blob</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
+    <PackageReference Include="OrchardCore.Media.Azure" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Depend directly on the Messaging module so installing this package resolves the Messaging workspace feature
+      dependency and gives access to the encrypted attachment store it reuses over an Azure Blob backend.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

@@ -43,6 +43,16 @@ export function flagMenuGroups(root) {
     });
 }
 
+// The address the count is read from. The server answers page loads and the periodic read from the count it kept for
+// the user a few seconds ago; a read a notification asked for passes refresh, so what was announced shows at once.
+export function attentionUrl(url, fresh) {
+    if (!fresh) {
+        return url;
+    }
+
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + 'refresh=true';
+}
+
 function show(count) {
     var value = Math.floor(Number(count) || 0);
 
@@ -56,27 +66,29 @@ function show(count) {
 
 // Creates the badge updater for a page.
 //   start()    - reads the count now, then again on a slow timer and whenever the page comes back into view.
-//   refresh()  - reads the count now.
-//   schedule() - reads the count a moment from now; what a notification asks for.
+//   refresh()  - reads the count now; refresh(true) skips the count the server kept.
+//   schedule() - reads the fresh count a moment from now; what a notification asks for.
 export function createAttentionBadge(url) {
     var timer = null;
     var inFlight = false;
     var queued = false;
+    var queuedFresh = false;
 
-    function refresh() {
+    function refresh(fresh) {
         if (!url || !document.querySelector('[data-messaging-attention-badge]')) {
             return;
         }
 
         if (inFlight) {
             queued = true;
+            queuedFresh = queuedFresh || !!fresh;
 
             return;
         }
 
         inFlight = true;
 
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' })
+        fetch(attentionUrl(url, fresh), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' })
             .then(function (response) { return response.ok ? response.json() : null; })
             .then(function (data) {
                 if (data && typeof data.count === 'number') {
@@ -88,8 +100,11 @@ export function createAttentionBadge(url) {
                 inFlight = false;
 
                 if (queued) {
+                    var again = queuedFresh;
+
                     queued = false;
-                    refresh();
+                    queuedFresh = false;
+                    refresh(again);
                 }
             });
     }
@@ -101,7 +116,7 @@ export function createAttentionBadge(url) {
 
         timer = setTimeout(function () {
             timer = null;
-            refresh();
+            refresh(true);
         }, settleDelayMs);
     }
 

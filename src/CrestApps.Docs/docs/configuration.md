@@ -999,6 +999,22 @@ OrchardCore__CrestApps__Telephony__AzureRecordings__ContainerName=telephony-reco
 
 See [Recording storage in Azure Blob Storage](telephony/recording-azure-blob-storage.md).
 
+### Messaging picture storage in Azure Blob Storage
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Omnichannel:Messaging:AzureAttachments` |
+| **Controls** | Where messaging pictures are stored. Pictures stay encrypted before they reach Azure. |
+
+Keys: `ConnectionString`, `ContainerName`, `BasePath`, `CreateContainer`.
+
+```text
+OrchardCore__CrestApps__Omnichannel__Messaging__AzureAttachments__ConnectionString=<storage-connection-string>
+OrchardCore__CrestApps__Omnichannel__Messaging__AzureAttachments__ContainerName=messaging-attachments
+```
+
+See [Messaging pictures in Azure Blob Storage](omnichannel/messaging-azure-blob-storage.md).
+
 ### Default Asterisk provider
 
 | | |

@@ -124,7 +124,7 @@ The provider downloads each picture from the site, so the site must be reachable
 
 **Receiving.** When a customer sends a picture, the workspace copies it from the provider as the message arrives, because providers only keep it for a while. A picture over `MaxInboundAttachmentBytes` (10 MB by default), a file that is not a supported picture, or one the provider refuses to hand over is not kept; the thread then says an attachment could not be shown, and the text of the message is kept either way. Pictures sent to a Twilio number are downloaded with the tenant's Twilio credentials, so an account that requires authentication for media works as well. Each copied or skipped item is logged at the `Information` or `Warning` level with the provider's message id.
 
-**Storage.** Pictures are kept in the tenant's own `App_Data` folder (`MessagingAttachments`), encrypted with the tenant's data protection keys, never in the public media library. In the workspace they are only shown to someone who may open the conversation they belong to.
+**Storage.** Pictures are kept in the tenant's own `App_Data` folder (`MessagingAttachments`), encrypted with the tenant's data protection keys, never in the public media library. To keep them across redeployments, enable [Azure Blob Storage](./messaging-azure-blob-storage.md). In the workspace they are only shown to someone who may open the conversation they belong to.
 
 ## Hand-off from an automated conversation
 

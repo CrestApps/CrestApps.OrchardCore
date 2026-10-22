@@ -330,6 +330,7 @@ const sidebars = {
                 'omnichannel/sms',
                 'omnichannel/email',
                 'omnichannel/messaging-workspace',
+                'omnichannel/messaging-azure-blob-storage',
                 'omnichannel/azure-communication-services',
                 'omnichannel/event-grid',
             ],

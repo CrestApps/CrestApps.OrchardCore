@@ -364,6 +364,23 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         return 8;
     }
 
+    /// <summary>
+    /// Adds the index a queue item is found by from the activity it carries. Every call and every routing pass reads
+    /// the newest item for an activity, and the only index that names <c>ActivityItemId</c> leads with
+    /// <c>DocumentId</c>, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(
+            SchemaBuilder,
+            "IDX_QueueItemIndex_ActivityItemId",
+            ContactCenterStorage.CollectionName,
+            "ActivityItemId", "EnqueuedUtc", "DocumentId");
+
+        return 9;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(

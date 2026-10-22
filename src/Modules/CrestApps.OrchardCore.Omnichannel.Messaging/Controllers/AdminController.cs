@@ -119,16 +119,16 @@ public sealed class AdminController : Controller
     }
 
     // The count on the Messaging admin menu item. The menu is on every admin page, so the pages ask for the number
-    // after they load rather than holding up every page render to count conversations.
+    // after they load rather than holding up every page render; a notification asks with refresh, past the kept count.
     [Admin("messaging/attention", "MessagingAttention")]
-    public async Task<IActionResult> Attention()
+    public async Task<IActionResult> Attention(bool refresh = false)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
         {
             return Forbid();
         }
 
-        return Json(new { count = await _workspaceBuilder.CountNeedingAttentionAsync(User, HttpContext.RequestAborted) });
+        return Json(new { count = await _workspaceBuilder.CountNeedingAttentionAsync(User, refresh, HttpContext.RequestAborted) });
     }
 
     [Admin("messaging/conversation/{id}", "MessagingConversation")]
@@ -158,7 +158,7 @@ public sealed class AdminController : Controller
             conversation.UnreadCount = 0;
             conversation.AssignedUtc = null;
             conversation.ReassignmentAttempts = 0;
-            await _conversationStore.UpdateAsync(conversation);
+            await _workspaceBuilder.SaveReadAsync(User, conversation);
         }
 
         var beforeUtc = beforeTicks > 0 && beforeTicks <= DateTime.MaxValue.Ticks
@@ -437,7 +437,7 @@ public sealed class AdminController : Controller
         // A message arriving in the open thread, in front of the agent, should not leave it flagged unread.
         if (MessagingConversationReadState.PollReads(seen, bubbles.Count) && MessagingConversationReadState.MarkRead(conversation))
         {
-            await _conversationStore.UpdateAsync(conversation);
+            await _workspaceBuilder.SaveReadAsync(User, conversation);
         }
 
         return PartialView("_MessageBubbles", bubbles);
@@ -468,7 +468,7 @@ public sealed class AdminController : Controller
 
         if (MessagingConversationReadState.MarkRead(conversation))
         {
-            await _conversationStore.UpdateAsync(conversation);
+            await _workspaceBuilder.SaveReadAsync(User, conversation);
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -795,6 +795,6 @@ public sealed class AdminController : Controller
 
         model.Endpoints = options.Items;
         model.EndpointChannels = options.EndpointChannels;
-        model.SubjectChannels = _workspaceBuilder.GetSubjectChannels();
+        model.SubjectChannels = MessagingSubjects.GetChannelNames(_channelResolver);
     }
 }

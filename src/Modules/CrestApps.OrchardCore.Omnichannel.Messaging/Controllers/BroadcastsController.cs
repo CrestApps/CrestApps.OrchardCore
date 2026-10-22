@@ -223,6 +223,6 @@ public sealed class BroadcastsController : Controller
 
         model.Endpoints = options.Items;
         model.EndpointChannels = options.EndpointChannels;
-        model.SubjectChannels = _workspaceBuilder.GetSubjectChannels();
+        model.SubjectChannels = MessagingSubjects.GetChannelNames(_channelResolver);
     }
 }

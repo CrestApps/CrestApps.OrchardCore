@@ -52,6 +52,7 @@ public sealed class MessagingWorkspaceBuilder
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly MessagingAttentionCountCache _attentionCountCache;
     private readonly MessagingWorkspaceOptions _options;
     private readonly IStringLocalizer S;
 
@@ -73,6 +74,7 @@ public sealed class MessagingWorkspaceBuilder
         IUpdateModelAccessor updateModelAccessor,
         ISession session,
         IClock clock,
+        MessagingAttentionCountCache attentionCountCache,
         IOptions<MessagingWorkspaceOptions> options,
         IStringLocalizer<MessagingWorkspaceBuilder> stringLocalizer)
     {
@@ -94,6 +96,7 @@ public sealed class MessagingWorkspaceBuilder
         _updateModelAccessor = updateModelAccessor;
         _session = session;
         _clock = clock;
+        _attentionCountCache = attentionCountCache;
         _options = options.Value;
         S = stringLocalizer;
     }
@@ -103,15 +106,6 @@ public sealed class MessagingWorkspaceBuilder
     /// </summary>
     public IReadOnlyList<ChannelViewModel> GetChannels()
         => _channelResolver.GetAll().Select(ToViewModel).ToArray();
-
-    /// <summary>
-    /// Gets the technical names of the enabled channels whose messages carry a subject line.
-    /// </summary>
-    public IReadOnlyCollection<string> GetSubjectChannels()
-        => _channelResolver.GetAll()
-            .Where(channel => channel.Capabilities.SupportsSubject)
-            .Select(channel => channel.Name)
-            .ToArray();
 
     /// <summary>
     /// Resolves the current user's operator identity, reusing the shared Contact Center agent-profile directory.
@@ -341,6 +335,43 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Returns the count on the Messaging admin menu item, answered from the user's count of the last few seconds
+    /// unless <paramref name="refresh"/> asks for a new one. Every admin page load asks for it, and each count is two
+    /// queries over the conversation table, so a user moving from page to page no longer counts on every click.
+    /// </summary>
+    /// <param name="user">The current user.</param>
+    /// <param name="refresh">Whether to count even when a kept count could be used, as after a notification said
+    /// the count changed.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of conversations waiting on the user.</returns>
+    public Task<int> CountNeedingAttentionAsync(ClaimsPrincipal user, bool refresh, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        return _attentionCountCache.GetOrReadAsync(
+            user.FindFirstValue(ClaimTypes.NameIdentifier),
+            token => CountNeedingAttentionAsync(user, token),
+            refresh,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Saves a conversation the user has just read, and forgets the user's kept menu count, so the page that shows it
+    /// next does not still count the thread.
+    /// </summary>
+    /// <param name="user">The user who read the conversation.</param>
+    /// <param name="conversation">The conversation, already marked read.</param>
+    /// <returns>A task that completes once the conversation is saved.</returns>
+    public async Task SaveReadAsync(ClaimsPrincipal user, MessagingConversation conversation)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        await _conversationStore.UpdateAsync(conversation);
+
+        _attentionCountCache.Remove(user.FindFirstValue(ClaimTypes.NameIdentifier));
     }
 
     /// <summary>

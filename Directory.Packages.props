@@ -25,6 +25,12 @@
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Versioning" Version="7.9.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.0" />
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
+    <!-- DO NOT UPDATE. Pinned to 6.2.4, the last MIT-licensed release. 6.5.0 and later are AGPL-3.0-only
+         and enforce it at runtime (PdfSharpLicenseException on every document write without a purchased
+         license). CrestApps.Core.AI.Documents.Pdf pins the same version. Dependabot ignores it
+         (.github/dependabot.yml). -->
+    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
     <PackageVersion Include="Stripe.net" Version="52.4.2" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="6.0.0" />

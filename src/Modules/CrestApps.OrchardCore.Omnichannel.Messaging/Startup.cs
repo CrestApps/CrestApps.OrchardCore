@@ -234,9 +234,10 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<MessagingBroadcast, MessagingBroadcastDisplayDriver>();
         services.AddNavigationProvider<MessagingAdminMenu>();
 
-        // The workspace page's view assembly and the composer's contact search.
+        // The workspace page's view assembly, the menu count each user's pages share, and the composer's contact search.
         services
             .AddScoped<MessagingWorkspaceBuilder>()
+            .AddSingleton<MessagingAttentionCountCache>()
             .AddScoped<MessagingContactSearch>()
             .AddScoped<MessagingTransferTargets>()
             .AddScoped<MessagingSenderLines>();
