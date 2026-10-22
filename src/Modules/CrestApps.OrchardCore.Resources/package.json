@@ -6,11 +6,11 @@
     "easymde": "2.21.0",
     "flatpickr": "4.6.13",
     "highlight.js": "^11.12.0",
-    "marked": "^18.0.14"
+    "marked": "^18.1.0"
   },
   "dependencies": {
     "@crestapps/ai-chat-ui": "2.0.0-preview.226",
-    "@crestapps/bootstrap-select": "^1.2.4",
+    "@crestapps/bootstrap-select": "^1.2.6",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
     "@telnyx/webrtc": "2.27.10",
     "chart.js": "^4.5.1",
