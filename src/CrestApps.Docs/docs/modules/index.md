@@ -56,7 +56,7 @@ The administrators who use these features in the browser have their own guides i
 | [Subscriptions](subscriptions.md) | `CrestApps.OrchardCore.Subscriptions` | Sell recurring subscriptions and onboard tenants with a pluggable, hardened checkout | |
 | [Taxation](taxation.md) | `CrestApps.OrchardCore.Taxation` | Provider-agnostic, extensible taxation framework with the TaxationPart | |
 | [Recipes](recipes.md) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes | |
-| [Reports](reports.md) | `CrestApps.OrchardCore.Reports`, `CrestApps.OrchardCore.Reports.OpenXml` | Shared Reports area, extensible filters, uniform renderer and CSV / Excel exports | [Reports](../user-manual/reports.md) |
+| [Reports](reports.md) | `CrestApps.OrchardCore.Reports`, `CrestApps.OrchardCore.Reports.OpenXml`, `CrestApps.OrchardCore.Reports.Pdf` | Shared Reports area, extensible filters, uniform renderer and CSV / Excel / PDF exports | [Reports](../user-manual/reports.md) |
 | [Report Builder](report-builder/index.md) | `CrestApps.OrchardCore.Reports.Builder` | Drag-and-drop report designer with pluggable data sources, joins, formulas, charts, pivots, reusable views and sharing | [Report Builder](../user-manual/report-builder/index.md) |
 | [Resources](resources.md) | `CrestApps.OrchardCore.Resources` | Shared scripts, stylesheets and view components | |
 | [SignalR compatibility](signalr.md) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module | |

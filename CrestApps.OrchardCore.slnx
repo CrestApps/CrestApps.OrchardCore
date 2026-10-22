@@ -85,6 +85,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Inventory/CrestApps.OrchardCore.Inventory.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Reports.Pdf/CrestApps.OrchardCore.Reports.Pdf.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Reviews/CrestApps.OrchardCore.Reviews.csproj" />

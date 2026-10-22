@@ -2,7 +2,7 @@
 sidebar_label: Reports
 sidebar_position: 35
 title: Reports
-description: Find a report, set its date range and filters, and export it to CSV or Excel.
+description: Find a report, set its date range and filters, and export it to CSV, Excel or PDF.
 technical_manual:
   - contact-center/report-catalog
   - contact-center/agents-queues-dialer
@@ -17,7 +17,7 @@ Reports show what happened in your contact center over a period you choose: call
 | --- | --- |
 | **Menu** | Reports > *category* > *report* |
 | **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators have it by default) |
-| **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
+| **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export, and Reports (PDF) adds PDF export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
 
 <AskYourAdmin />
 
@@ -33,7 +33,7 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
 3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status**, **Interaction type**, **Dialer profile**, **Queue state**, **Disposition**, **Activity ID** or **Reason**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
 4. Click **Show**.
-5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) feature is on, the button becomes an **Export** menu with **Export CSV** and **Export Excel (.xlsx)**. Excel puts each section of the report on its own worksheet.
+5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
 
 How the filters work:
 

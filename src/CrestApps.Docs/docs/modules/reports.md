@@ -25,6 +25,15 @@ The optional **Reports (OpenXml)** add-on extends the Reports area with Excel wo
 
 | | |
 | --- | --- |
+| **Add-on Feature Name** | Reports (PDF) |
+| **Add-on Feature ID** | `CrestApps.OrchardCore.Reports.Pdf` |
+
+The optional **Reports (PDF)** add-on adds PDF (`.pdf`) exports, laid out like the report on screen: the report title, metric cards, tables with their headers repeated on every page and their cell colors, progress bars, and charts drawn as charts, with page numbers in the footer. Pages are US Letter, and turn to landscape when a table is too wide for a portrait page. Column widths follow the values: each column gets room for its longest word, and a word too long for its column, such as a URL, is broken to fit. It uses the MIT-licensed PDFsharp-MigraDoc 6.2.4.
+
+PDFsharp reads the host's fonts. On Windows it uses the Windows fonts; on Linux and macOS the add-on serves the TrueType fonts in the system font folders, preferring Liberation Sans (`fonts-liberation`), which has the widths of Arial. A container image without fonts needs a font package installed. The PDF has no right-to-left shaping, so Arabic or Hebrew text is written left to right; export those reports to Excel instead.
+
+| | |
+| --- | --- |
 | **Add-on Feature Name** | Report Builder |
 | **Add-on Feature ID** | `CrestApps.OrchardCore.Reports.Builder` |
 
@@ -42,7 +51,7 @@ The implementation is split into three layers:
 - **`ReportContext`** — what a report runs with: the `Filter`, and the `Mode` the document is for (`ReportRunMode.Display` when it is rendered in the browser, `ReportRunMode.Export` when an export format will serialize it). A report that pages its rows on screen reads the mode to give an export every matching row.
 - **`ReportFilter`** — the filter applied when a report runs. A report declares no fixed dimensions of its own: every filter is contributed with a display driver and stored in the extensible `ReportFilter.Properties` bag. The built-in tenant-local from/to date range is contributed the same way — it is just a filter — so a report that does not need a date selector can omit it. Use the `TryGet<T>`, `GetOrDefault<T>`, and `Set<T>` helpers to read and write typed values, and `GetDateRange()` / `SetDateRange()` for the resolved period.
 - **`ReportDocument`** — the uniform result. It is an ordered list of **sections**, where each section is a set of metric cards, a table (with optional emphasized totals rows for aggregated reports), horizontal bars, or a responsive Chart.js line, bar, stacked-bar, or doughnut chart. The same document is rendered in the browser and serialized by every exporter; chart exports use a label-and-dataset table so the underlying values remain portable.
-- **`IReportExportFormat`** — an export format, which serializes a `ReportDocument`. What describes a format is static, like the file formats of Orchard Core's Data Pipelines: its `Name`, its `DisplayName` (a `LocalizationSource`), its `Extension` (with its leading dot) and its `ContentType`, so formats are listed without being created. A module registers a format with `services.AddReportExportFormat<TFormat>()`, and `IReportExportManager` lists the descriptors of the formats and resolves one to export a report. CSV ships in the box, and the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`).
+- **`IReportExportFormat`** — an export format, which serializes a `ReportDocument`. What describes a format is static, like the file formats of Orchard Core's Data Pipelines: its `Name`, its `DisplayName` (a `LocalizationSource`), its `Extension` (with its leading dot) and its `ContentType`, so formats are listed without being created. A module registers a format with `services.AddReportExportFormat<TFormat>()`, and `IReportExportManager` lists the descriptors of the formats and resolves one to export a report. CSV ships in the box, the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`), and the optional **Reports (PDF)** add-on adds PDF (`.pdf`).
 
 ## Reports area
 
@@ -145,7 +154,7 @@ Report table sections can color-code their headers and cells with `ReportStyle`,
 - **Whole rows** — call `ReportRow.WithStyle(...)`, useful for subtotal and grand-total rows.
 - **Individual cells** — call `ReportRow.WithCellStyle(index, ...)`, which overrides the row style for that one cell.
 
-Supply colors as hexadecimal values (for example `#2563EB`) so the same style renders in the browser **and** exports to Excel. The HTML renderer also accepts simple named colors, but only hexadecimal colors are carried into the Excel workbook.
+Supply colors as hexadecimal values (for example `#2563EB`) so the same style renders in the browser **and** exports to Excel and PDF. The HTML renderer also accepts simple named colors, but only hexadecimal colors are carried into the Excel workbook and the PDF.
 
 ```csharp
 var columns = new[]
@@ -164,7 +173,7 @@ return new ReportDocument()
     .Add(ReportSection.ForTable(S["Queues"].Value, columns, rows));
 ```
 
-When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export applies the font color, background fill, and bold weight to the matching cells. Header rows, subtotal rows, and grand-total rows are exported bold automatically. CSV has no native styling, so it always exports values only.
+When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export applies the font color, background fill, and bold weight to the matching cells. Header rows, subtotal rows, and grand-total rows are exported bold automatically. The **Reports (PDF)** add-on applies the same styles, and shades subtotal and grand-total rows as the report on screen does. CSV has no native styling, so it always exports values only.
 
 ### Contributing a family of reports
 
@@ -203,11 +212,12 @@ The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptio
       "name": "Feature",
       "enable": [
       "CrestApps.OrchardCore.Reports",
-      "CrestApps.OrchardCore.Reports.OpenXml"
+      "CrestApps.OrchardCore.Reports.OpenXml",
+      "CrestApps.OrchardCore.Reports.Pdf"
       ]
     }
   ]
 }
 ```
 
-Enable `CrestApps.OrchardCore.Reports.OpenXml` only when you want Excel workbook exports. Enabled modules such as **Omnichannel Management** and **Phone Number Verifications** contribute their reports automatically once `CrestApps.OrchardCore.Reports` is enabled.
+Enable `CrestApps.OrchardCore.Reports.OpenXml` only when you want Excel workbook exports, and `CrestApps.OrchardCore.Reports.Pdf` only when you want PDF exports. Enabled modules such as **Omnichannel Management** and **Phone Number Verifications** contribute their reports automatically once `CrestApps.OrchardCore.Reports` is enabled.
