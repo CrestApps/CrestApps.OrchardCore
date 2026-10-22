@@ -29,7 +29,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 {
     private const int _batchSize = 100;
-    private const int _countPageSize = 1000;
+
+    // How many record ids one lookup names, well inside every engine's parameter limit.
+    private const int _idLookupChunkSize = 500;
 
     private readonly ICatalog<OmnichannelActivityBatch> _catalog;
     private readonly ISession _session;
@@ -229,6 +231,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         // Pre-compute contact-level filter sets (phone, timezone, last activity).
         HashSet<string> eligibleContactIds = null;
 
+        // The converted leads the lead filter picked, read from the lead index so they are reported without reading
+        // their documents.
+        HashSet<string> convertedLeadIds = null;
+
         var hasPhoneFilter = !string.IsNullOrEmpty(batch.PhoneNumber);
         var hasTimeZoneFilter = batch.TimeZoneIds is { Length: > 0 };
         var hasLastActivityAttempts = ActivityAttemptRange.TryParse(batch.LastActivityAttempts, out var lastActivityAttempts);
@@ -253,7 +259,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (hasLeadFilter)
             {
-                leadIds = await FindLeadIdsAsync(readonlySession, batch, leadFilter, cancellationToken);
+                convertedLeadIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                leadIds = await FindLeadIdsAsync(readonlySession, batch, leadFilter, convertedLeadIds, cancellationToken);
             }
 
             if (hasPhoneFilter)
@@ -412,6 +419,44 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             }
         }
 
+        // When a filter has already picked the records, they are turned into their document ids before anything is read,
+        // and the load reads those records and nothing else. It used to read every record of the type, a hundred whole
+        // documents, a round of lookups and a commit at a time, only to pass over the ones the filter had not picked: a
+        // load of twenty leads out of a large lead list sat on "Loading" with nothing loaded for as long as that took.
+        var candidateDocumentIds = eligibleContactIds is null
+            ? null
+            : await FindCandidateDocumentIdsAsync(
+                readonlySession,
+                batch,
+                eligibleContactIds,
+                documentId,
+                leadCreatedFrom,
+                leadCreatedTo,
+                cancellationToken);
+        var candidatePosition = 0;
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            if (candidateDocumentIds is null)
+            {
+                _logger.LogInformation(
+                    "The activity batch '{BatchId}' has no filter that picks records ahead of loading, so it reads every '{ContactContentType}' record after document {LoadCursor}.",
+                    batch.ItemId.SanitizeLogValue(),
+                    batch.ContactContentType.SanitizeLogValue(),
+                    documentId);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "The filters of the activity batch '{BatchId}' picked {EligibleCount} records, {CandidateCount} of them '{ContactContentType}' records left to read after document {LoadCursor}.",
+                    batch.ItemId.SanitizeLogValue(),
+                    eligibleContactIds.Count,
+                    candidateDocumentIds.Count,
+                    batch.ContactContentType.SanitizeLogValue(),
+                    documentId);
+            }
+        }
+
         var activityCounter = 0;
         var limitReached = false;
 
@@ -419,43 +464,66 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var contactQuery = readonlySession.Query<ContentItem, ContentItemIndex>(index =>
-                    index.ContentType == batch.ContactContentType &&
-                    index.DocumentId > documentId);
+            // A page is read from the index first. Whole documents are read only for the records that can still become
+            // activities: a converted lead, a lead that is already a contact and a contact with an open activity are all
+            // told from the indexes. Paging over whole documents read every record of a large lead list, a hundred at a
+            // time, and saturated a small database's reads for as long as a load ran.
+            List<ContentItemIndex> rows;
 
-            if (leadCreatedFrom.HasValue)
+            if (candidateDocumentIds is null)
             {
-                contactQuery = contactQuery.Where(index => index.CreatedUtc >= leadCreatedFrom);
-            }
+                rows = (await BuildContactIndexQuery(readonlySession, batch, documentId, leadCreatedFrom, leadCreatedTo)
+                    .OrderBy(x => x.DocumentId)
+                    .Take(_batchSize)
+                    .ListAsync(cancellationToken))
+                    .ToList();
 
-            if (leadCreatedTo.HasValue)
-            {
-                contactQuery = contactQuery.Where(index => index.CreatedUtc <= leadCreatedTo);
-            }
-
-            if (batch.OnlyPublishedLeads)
-            {
-                contactQuery = contactQuery.Where(contact => contact.Published);
+                if (rows.Count == 0)
+                {
+                    break;
+                }
             }
             else
             {
-                contactQuery = contactQuery.Where(contact => contact.Latest);
+                if (candidatePosition >= candidateDocumentIds.Count)
+                {
+                    break;
+                }
+
+                var pageDocumentIds = candidateDocumentIds
+                    .GetRange(candidatePosition, Math.Min(_batchSize, candidateDocumentIds.Count - candidatePosition))
+                    .ToArray();
+
+                candidatePosition += pageDocumentIds.Length;
+
+                // The version rule is asked again: a record whose version changed since its id was read is passed over.
+                rows = (await ApplyVersionFilter(
+                        readonlySession.QueryIndex<ContentItemIndex>(index => index.DocumentId.IsIn(pageDocumentIds)),
+                        batch)
+                    .OrderBy(x => x.DocumentId)
+                    .ListAsync(cancellationToken))
+                    .ToList();
+
+                // The cursor moves past the whole page, including a record that was passed over.
+                documentId = Math.Max(documentId, pageDocumentIds[^1]);
+
+                if (rows.Count == 0)
+                {
+                    continue;
+                }
             }
 
-            var contacts = await contactQuery
-                .OrderBy(x => x.DocumentId)
-                .Take(_batchSize)
-                .ListAsync(cancellationToken);
+            var convertedOnPage = convertedLeadIds is null
+                ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                : rows.Where(row => convertedLeadIds.Contains(row.ContentItemId)).Select(row => row.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            if (!contacts.Any())
-            {
-                break;
-            }
-
-            // The numbers already found dead, for every contact on this page, in one query rather than one per contact.
-            var notInServiceNumbers = await _notInServiceNumbers.GetNotInServiceAsync(
-                contacts.SelectMany(contact => OmnichannelHelper.GetPhoneNumbers(_contactMethods.Get(contact))),
-                cancellationToken);
+            var leadsThatAreContacts = leadFilter?.SkipLeadsThatAreContacts == true
+                ? await FindLeadsThatAreContactsAsync(
+                    rows.Select(row => row.ContentItemId).Where(id => !convertedOnPage.Contains(id)).ToArray(),
+                    batch.OnlyPublishedLeads,
+                    leadTypes,
+                    cancellationToken)
+                : null;
 
             var preventDuplicates = batch.PreventDuplicates;
 
@@ -463,7 +531,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (preventDuplicates)
             {
-                var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
+                var contentItemsIds = rows
+                    .Select(row => row.ContentItemId)
+                    .Where(id => !convertedOnPage.Contains(id) && leadsThatAreContacts?.Contains(id) != true)
+                    .ToArray();
 
                 // A contact counts as a duplicate only while it still has an OPEN activity. Every terminal state
                 // is excluded so a finished contact can be re-loaded: a completed or purged activity was already
@@ -491,23 +562,42 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 .ToHashSet();
             }
 
+            bool IsSkippedByIndex(ContentItemIndex row)
+                => convertedOnPage.Contains(row.ContentItemId) ||
+                    leadsThatAreContacts?.Contains(row.ContentItemId) == true ||
+                    inQueueActivities?.Contains(row.ContentItemId) == true;
+
+            var documentIdsToRead = rows
+                .Where(row => !IsSkippedByIndex(row))
+                .Select(row => row.DocumentId)
+                .ToArray();
+
+            var documents = documentIdsToRead.Length == 0
+                ? new Dictionary<long, ContentItem>()
+                : (await ApplyVersionFilter(
+                        readonlySession.Query<ContentItem, ContentItemIndex>(index => index.DocumentId.IsIn(documentIdsToRead)),
+                        batch)
+                    .ListAsync(cancellationToken))
+                    .ToDictionary(item => item.Id);
+
+            // A record whose version changed between reading its row and its document is passed over, as before, and
+            // the cursor still moves past it so the next page does not read it again.
+            var lastRowDocumentId = rows[^1].DocumentId;
+
+            rows.RemoveAll(row => !IsSkippedByIndex(row) && !documents.ContainsKey(row.DocumentId));
+
+            // The numbers already found dead, for every contact on this page, in one query rather than one per contact.
+            var notInServiceNumbers = await _notInServiceNumbers.GetNotInServiceAsync(
+                documents.Values.SelectMany(contact => OmnichannelHelper.GetPhoneNumbers(_contactMethods.Get(contact))),
+                cancellationToken);
+
             var now = _clock.UtcNow;
 
             var scheduledUtc = await _localClock.ConvertToUtcAsync(batch.ScheduleAt);
 
-            var leadsThatAreContacts = leadFilter?.SkipLeadsThatAreContacts == true
-                ? await FindLeadsThatAreContactsAsync(contacts, batch.OnlyPublishedLeads, leadTypes, cancellationToken)
-                : null;
-
-            foreach (var contact in contacts)
+            foreach (var row in rows)
             {
-                documentId = Math.Max(documentId, contact.Id);
-
-                // Skip contacts not in the pre-computed eligible set.
-                if (eligibleContactIds is not null && !eligibleContactIds.Contains(contact.ContentItemId))
-                {
-                    continue;
-                }
+                documentId = Math.Max(documentId, row.DocumentId);
 
                 // Respect the limit if specified. The contacts it cuts are counted rather than examined, so a
                 // small trial load over a large list does not have to read the rest of the list to report on it.
@@ -516,10 +606,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     var remaining = await CountRemainingMatchesAsync(
                         readonlySession,
                         batch,
-                        contact.Id,
+                        row.DocumentId,
                         leadCreatedFrom,
                         leadCreatedTo,
-                        eligibleContactIds,
+                        candidateDocumentIds,
                         cancellationToken);
 
                     batch.TotalMatched += remaining;
@@ -533,23 +623,33 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 // A converted lead is the record of what happened before it became a contact; its work continues on
                 // the contact, so it is never loaded again.
-                if (contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted)
+                if (convertedOnPage.Contains(row.ContentItemId))
                 {
                     batch.TotalSkippedAsConverted++;
 
                     continue;
                 }
 
-                if (leadsThatAreContacts?.Contains(contact.ContentItemId) == true)
+                if (leadsThatAreContacts?.Contains(row.ContentItemId) == true)
                 {
                     batch.TotalSkippedAsExistingContact++;
 
                     continue;
                 }
 
-                if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
+                if (preventDuplicates && inQueueActivities.Contains(row.ContentItemId))
                 {
                     batch.TotalSkippedAsDuplicate++;
+
+                    continue;
+                }
+
+                var contact = documents[row.DocumentId];
+
+                // The lead index can lag the document it was written from, so the document has the last word.
+                if (contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted)
+                {
+                    batch.TotalSkippedAsConverted++;
 
                     continue;
                 }
@@ -743,6 +843,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 }
             }
 
+            if (!limitReached)
+            {
+                documentId = Math.Max(documentId, lastRowDocumentId);
+            }
+
             if (preview)
             {
                 continue;
@@ -824,10 +929,16 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// Returns the leads that pass the lead filters of the load. Converted leads are kept in the set so the load can
     /// report them as converted rather than lose them silently.
     /// </summary>
+    /// <param name="session">The session to read the lead index from.</param>
+    /// <param name="batch">The load.</param>
+    /// <param name="filter">The lead filters of the load.</param>
+    /// <param name="convertedIds">Receives the converted leads among those returned.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     private static async Task<HashSet<string>> FindLeadIdsAsync(
         ISession session,
         OmnichannelActivityBatch batch,
         LeadBatchFilter filter,
+        HashSet<string> convertedIds,
         CancellationToken cancellationToken)
     {
         var query = batch.OnlyPublishedLeads
@@ -867,9 +978,18 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => index.Rating.IsIn(ratings));
         }
 
-        var leadIds = (await query.ListAsync(cancellationToken))
-            .Select(index => index.ContentItemId)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var leads = await query.ListAsync(cancellationToken);
+        var leadIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var lead in leads)
+        {
+            leadIds.Add(lead.ContentItemId);
+
+            if (lead.IsConverted)
+            {
+                convertedIds.Add(lead.ContentItemId);
+            }
+        }
 
         // A file can hold more leads than a database accepts as query parameters, so the leads of the import are read
         // on their own and the two sets are intersected here.
@@ -897,12 +1017,15 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// another lead at the number is a duplicate lead, which the lead import and duplicate prevention handle.
     /// </summary>
     private async Task<HashSet<string>> FindLeadsThatAreContactsAsync(
-        IEnumerable<ContentItem> page,
+        string[] pageIds,
         bool onlyPublished,
         HashSet<string> leadTypes,
         CancellationToken cancellationToken)
     {
-        var pageIds = page.Select(item => item.ContentItemId).ToArray();
+        if (pageIds.Length == 0)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
 
         var leadRows = await _phoneLookup.GetNumbersAsync(
             pageIds,
@@ -957,8 +1080,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// leaves unexamined.
     /// </summary>
     /// <remarks>
-    /// Only the index is read. Without a pre-computed filter set the database counts the rows itself; with one, the
-    /// index rows are paged so that neither the contacts nor an unbounded id list are held in memory at once.
+    /// Without records picked ahead of loading the database counts the index rows itself; with them, the ids already
+    /// read are counted.
     /// </remarks>
     private static async Task<long> CountRemainingMatchesAsync(
         ISession readonlySession,
@@ -966,44 +1089,64 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         long fromDocumentId,
         DateTime? leadCreatedFrom,
         DateTime? leadCreatedTo,
-        HashSet<string> eligibleContactIds,
+        List<long> candidateDocumentIds,
         CancellationToken cancellationToken)
     {
-        if (eligibleContactIds is null)
+        if (candidateDocumentIds is not null)
         {
-            return await BuildContactIndexQuery(readonlySession, batch, fromDocumentId - 1, leadCreatedFrom, leadCreatedTo)
-                .CountAsync(cancellationToken);
+            var position = candidateDocumentIds.BinarySearch(fromDocumentId);
+
+            return candidateDocumentIds.Count - (position < 0 ? ~position : position);
         }
 
-        long count = 0;
-        var cursor = fromDocumentId - 1;
+        return await BuildContactIndexQuery(readonlySession, batch, fromDocumentId - 1, leadCreatedFrom, leadCreatedTo)
+            .CountAsync(cancellationToken);
+    }
 
-        while (true)
+    /// <summary>
+    /// Returns, in order, the document ids of the records a filter picked that also have the load's type, creation window
+    /// and version, after <paramref name="afterDocumentId"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only the index is read, each record found through the index on its id, a chunk of ids at a time so that a query
+    /// never names more parameters than a database accepts.
+    /// </remarks>
+    private static async Task<List<long>> FindCandidateDocumentIdsAsync(
+        ISession readonlySession,
+        OmnichannelActivityBatch batch,
+        HashSet<string> eligibleContactIds,
+        long afterDocumentId,
+        DateTime? leadCreatedFrom,
+        DateTime? leadCreatedTo,
+        CancellationToken cancellationToken)
+    {
+        var documentIds = new List<long>();
+
+        foreach (var chunk in eligibleContactIds.Chunk(_idLookupChunkSize))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rows = (await BuildContactIndexQuery(readonlySession, batch, cursor, leadCreatedFrom, leadCreatedTo)
-                .OrderBy(index => index.DocumentId)
-                .Take(_countPageSize)
-                .ListAsync(cancellationToken))
-                .ToArray();
+            var rows = await BuildContactIndexQuery(readonlySession, batch, afterDocumentId, leadCreatedFrom, leadCreatedTo)
+                .Where(index => index.ContentItemId.IsIn(chunk))
+                .ListAsync(cancellationToken);
 
-            foreach (var row in rows)
-            {
-                cursor = Math.Max(cursor, row.DocumentId);
-
-                if (eligibleContactIds.Contains(row.ContentItemId))
-                {
-                    count++;
-                }
-            }
-
-            if (rows.Length < _countPageSize)
-            {
-                return count;
-            }
+            documentIds.AddRange(rows.Select(row => row.DocumentId));
         }
+
+        documentIds.Sort();
+
+        return documentIds;
     }
+
+    private static IQuery<ContentItem, ContentItemIndex> ApplyVersionFilter(IQuery<ContentItem, ContentItemIndex> query, OmnichannelActivityBatch batch)
+        => batch.OnlyPublishedLeads
+            ? query.Where(index => index.Published)
+            : query.Where(index => index.Latest);
+
+    private static IQueryIndex<ContentItemIndex> ApplyVersionFilter(IQueryIndex<ContentItemIndex> query, OmnichannelActivityBatch batch)
+        => batch.OnlyPublishedLeads
+            ? query.Where(index => index.Published)
+            : query.Where(index => index.Latest);
 
     /// <summary>
     /// The index-only twin of the contact page query, with the same content type, creation window and version rules.

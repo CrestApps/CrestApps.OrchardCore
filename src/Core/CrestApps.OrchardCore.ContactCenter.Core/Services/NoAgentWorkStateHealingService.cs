@@ -17,4 +17,8 @@ public sealed class NoAgentWorkStateHealingService : IAgentWorkStateHealingServi
     /// <inheritdoc/>
     public Task<bool> HasPendingOfferAsync(string agentId, CancellationToken cancellationToken = default)
         => Task.FromResult(false);
+
+    /// <inheritdoc/>
+    public Task<bool> HasLiveCallAsync(string agentId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }

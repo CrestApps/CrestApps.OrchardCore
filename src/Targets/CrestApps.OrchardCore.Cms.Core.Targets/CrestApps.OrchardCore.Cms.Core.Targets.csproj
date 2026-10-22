@@ -124,6 +124,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Wizard/CrestApps.OrchardCore.Wizard.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Telephony.Azure/CrestApps.OrchardCore.Telephony.Azure.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Azure/CrestApps.OrchardCore.Omnichannel.Messaging.Azure.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.TenantHierarchy/CrestApps.OrchardCore.TenantHierarchy.csproj" PrivateAssets="none" />
