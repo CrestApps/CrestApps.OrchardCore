@@ -87,6 +87,54 @@ public sealed class OmnichannelActivitySchemaConvergenceTests
         }
     }
 
+    /// <summary>
+    /// Live, the activity sweeps, the supervisor dashboard's campaign counts and the inbound lookups each filtered on a
+    /// column no index led with, so every run read the whole activity table. These pin the indexes they seek through,
+    /// on a fresh tenant and on one upgraded to them, and that adding them again changes nothing.
+    /// </summary>
+    [Fact]
+    public async Task ActivityIndex_HasTheLookupIndexes_OnAFreshTenantAndAfterTheUpgrade()
+    {
+        string[] expected =
+        [
+            "IDX_OmnichannelActivityIndex_StatusSweep unique=False columns=(Status, InteractionType, Channel, DocumentId)",
+            "IDX_OmnichannelActivityIndex_Campaign unique=False columns=(CampaignId, Status, ScheduledUtc, DocumentId)",
+            "IDX_OmnichannelActivityIndex_Destination unique=False columns=(PreferredDestination, Channel, CreatedUtc, DocumentId)",
+            "IDX_OmnichannelActivityIndex_Contact unique=False columns=(ContactContentItemId, Status, InteractionType, DocumentId)",
+            "IDX_OmnichannelActivityIndex_AssignedTo unique=False columns=(AssignedToId, Status, InteractionType, ScheduledUtc)",
+        ];
+
+        var databasePath = DatabasePath("omnichannel-activity-lookups");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+            await CreateHistoricalActivityIndexAsync(schemaBuilder, 4);
+            var migration = new OmnichannelActivityIndexMigrations(store)
+            {
+                SchemaBuilder = schemaBuilder,
+            };
+
+            var version = await MigrationChainRunner.RunUpgradeChainAsync(migration, 4);
+            var upgraded = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, GetIndexTableName(store));
+
+            // A tenant that already has them, from a fresh install or an earlier attempt, is left as it is.
+            Assert.Equal(11, await migration.UpdateFrom10Async());
+            var again = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, GetIndexTableName(store));
+
+            Assert.Equal(11, version);
+            Assert.All(expected, line => Assert.Contains(line, upgraded, StringComparison.Ordinal));
+            Assert.Equal(upgraded, again);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     [Fact]
     public async Task ActivityIndex_UpgradingATenantWithHistory_KeepsEveryEnumValueItAlreadyHeld()
     {

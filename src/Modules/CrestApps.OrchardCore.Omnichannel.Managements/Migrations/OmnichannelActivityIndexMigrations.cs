@@ -119,8 +119,9 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         );
 
         await CreateReportIndexAsync();
+        await CreateLookupIndexesAsync();
 
-        return 10;
+        return 11;
     }
 
     /// <summary>
@@ -369,6 +370,62 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 10;
+    }
+
+    /// <summary>
+    /// Adds the indexes the frequent activity lookups seek through. Each of them filtered on a column no index led
+    /// with, so on a small database every run read the whole activity table: the background sweeps by status, which
+    /// run every minute or few even when nothing is due; the supervisor dashboard's counts per campaign, polled every
+    /// thirty seconds; the inbound lookups by the caller's number; and the activity lists of a contact and of a user.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom10Async()
+    {
+        await CreateLookupIndexesAsync();
+
+        return 11;
+    }
+
+    private async Task CreateLookupIndexesAsync()
+    {
+        // The status sweeps: orphan recovery, the automated, expiry, SMS and stranded call sweeps, and the status
+        // filter of Manage Activities. Each asks for a few open statuses of one interaction type, often on one
+        // channel, a page at a time by document id.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_StatusSweep",
+            OmnichannelConstants.CollectionName,
+            "Status", "InteractionType", "Channel", "DocumentId");
+
+        // The waiting records of a campaign, counted and read earliest first by the dispatch diagnostics and the
+        // queue inventory.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_Campaign",
+            OmnichannelConstants.CollectionName,
+            "CampaignId", "Status", "ScheduledUtc", "DocumentId");
+
+        // The activities at a number: a returning caller, a promised callback, an inbound message's conversation.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_Destination",
+            OmnichannelConstants.CollectionName,
+            "PreferredDestination", "Channel", "CreatedUtc", "DocumentId");
+
+        // The activities of a contact, on its page, its account's page, lead conversion and export. The batch loading
+        // index leads with the contact type, which these lookups do not know.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_Contact",
+            OmnichannelConstants.CollectionName,
+            "ContactContentItemId", "Status", "InteractionType", "DocumentId");
+
+        // My Activities: a user's open manual activities, latest scheduled first.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_AssignedTo",
+            OmnichannelConstants.CollectionName,
+            "AssignedToId", "Status", "InteractionType", "ScheduledUtc");
     }
 
     private Task<bool> CreateReportIndexAsync()
