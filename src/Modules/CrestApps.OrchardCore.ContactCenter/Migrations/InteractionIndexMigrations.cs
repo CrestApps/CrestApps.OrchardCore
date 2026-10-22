@@ -281,6 +281,29 @@ internal sealed class InteractionIndexMigrations : DataMigration
         return 9;
     }
 
+    /// <summary>
+    /// Adds the indexes an interaction is found by from a provider webhook. Every provider event resolves the newest
+    /// interaction for a provider identifier or a correlation identifier, and the lookup index leads with
+    /// <c>ActivityItemId</c>, so neither read could seek and each scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom9Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(
+            SchemaBuilder,
+            "IDX_InteractionIndex_ProviderId",
+            ContactCenterStorage.CollectionName,
+            "ProviderInteractionId", "ProviderName", "CreatedUtc");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(
+            SchemaBuilder,
+            "IDX_InteractionIndex_CorrelationId",
+            ContactCenterStorage.CollectionName,
+            "CorrelationId", "CreatedUtc");
+
+        return 10;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(
