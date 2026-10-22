@@ -198,7 +198,7 @@ import { createAttentionBadge } from './shared/messaging-attention-badge.js';
         connection.on('FirstResponseBreached', function () { });
 
         connection.onreconnected(function () {
-            badge.refresh();
+            badge.refresh(true);
         });
 
         var start = function () {

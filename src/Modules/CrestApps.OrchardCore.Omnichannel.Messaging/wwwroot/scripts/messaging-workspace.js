@@ -134,6 +134,10 @@
 			}
 		});
 	}
+	function attentionUrl(url, fresh) {
+		if (!fresh) return url;
+		return url + (url.indexOf("?") === -1 ? "?" : "&") + "refresh=true";
+	}
 	function show(count) {
 		var value = Math.floor(Number(count) || 0);
 		document.querySelectorAll("[data-messaging-attention-badge]").forEach(function(badge) {
@@ -146,14 +150,16 @@
 		var timer = null;
 		var inFlight = false;
 		var queued = false;
-		function refresh() {
+		var queuedFresh = false;
+		function refresh(fresh) {
 			if (!url || !document.querySelector("[data-messaging-attention-badge]")) return;
 			if (inFlight) {
 				queued = true;
+				queuedFresh = queuedFresh || !!fresh;
 				return;
 			}
 			inFlight = true;
-			fetch(url, {
+			fetch(attentionUrl(url, fresh), {
 				headers: { "X-Requested-With": "XMLHttpRequest" },
 				credentials: "same-origin",
 				cache: "no-store"
@@ -164,8 +170,10 @@
 			}).catch(function() {}).finally(function() {
 				inFlight = false;
 				if (queued) {
+					var again = queuedFresh;
 					queued = false;
-					refresh();
+					queuedFresh = false;
+					refresh(again);
 				}
 			});
 		}
@@ -173,7 +181,7 @@
 			if (timer !== null) clearTimeout(timer);
 			timer = setTimeout(function() {
 				timer = null;
-				refresh();
+				refresh(true);
 			}, settleDelayMs);
 		}
 		function start() {
@@ -848,7 +856,7 @@
 				startHeartbeat();
 				pullThread();
 				refreshInbox();
-				attentionBadge.refresh();
+				attentionBadge.refresh(true);
 			});
 			connection.onclose(function() {
 				if (heartbeatTimer !== null) {

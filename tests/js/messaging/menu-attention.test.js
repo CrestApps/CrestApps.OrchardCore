@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { isThreadInView } from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
-import { flagMenuGroups } from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js';
+import { attentionUrl, flagMenuGroups } from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js';
 
 // Live, an open workspace in a background tab read every new message before anyone saw it, so the menu count stayed
 // at zero. The poll now reads the thread only when it is in front of the agent.
@@ -221,5 +221,21 @@ describe('the admin menu items that show a count', () => {
 
         expect(group).not.toContain('data-messaging-attention-badge');
         expect(inbox).toContain('data-messaging-attention-badge');
+    });
+});
+
+// The server keeps each user's count for a few seconds, since every admin page load asks for it. A read a notification
+// asked for skips the kept count, so what was announced shows at once.
+describe('attentionUrl', () => {
+    it('leaves the address alone for a page load or the periodic read', () => {
+        expect(attentionUrl('/Admin/messaging/attention', false)).toBe('/Admin/messaging/attention');
+    });
+
+    it('asks for a fresh count after a notification', () => {
+        expect(attentionUrl('/Admin/messaging/attention', true)).toBe('/Admin/messaging/attention?refresh=true');
+    });
+
+    it('adds to a query string the address already has', () => {
+        expect(attentionUrl('/t1/Admin/messaging/attention?x=1', true)).toBe('/t1/Admin/messaging/attention?x=1&refresh=true');
     });
 });

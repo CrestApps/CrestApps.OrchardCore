@@ -434,6 +434,72 @@ public sealed class SmsPortalAdminControllerTests
         Assert.Equal(5, (int)result.Value.GetType().GetProperty("count").GetValue(result.Value));
     }
 
+    // Every admin page load asks for the badge; on a small database tier the two counts behind it, run for every
+    // click, saturated data IO. A page load within the cache lifetime is answered without counting again.
+    [Fact]
+    public async Task Attention_OnTheNextPageLoad_AnswersFromTheKeptCount()
+    {
+        var store = AttentionStore(mine: 2, unassigned: 3);
+        var cache = new MessagingAttentionCountCache(FixedClock());
+        var controller = CreateController(CreateForeignConversation(), allowConversation: true, store: store, attentionCountCache: cache);
+
+        await controller.Attention();
+        var result = Assert.IsType<JsonResult>(await controller.Attention());
+
+        Assert.Equal(5, (int)result.Value.GetType().GetProperty("count").GetValue(result.Value));
+        store.Verify(value => value.CountAsync(It.IsAny<MessagingInboxQuery>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    // A notification says the count changed, so the read it asks for must not be answered from the kept count.
+    [Fact]
+    public async Task Attention_WithRefresh_CountsAgain()
+    {
+        var store = AttentionStore(mine: 2, unassigned: 3);
+        var cache = new MessagingAttentionCountCache(FixedClock());
+        var controller = CreateController(CreateForeignConversation(), allowConversation: true, store: store, attentionCountCache: cache);
+
+        await controller.Attention();
+        await controller.Attention(refresh: true);
+
+        store.Verify(value => value.CountAsync(It.IsAny<MessagingInboxQuery>(), It.IsAny<CancellationToken>()), Times.Exactly(4));
+    }
+
+    // Opening an unread conversation reloads the page; the badge it shows must not still count the thread just read.
+    [Fact]
+    public async Task Conversation_WhenItReadsTheThread_ForgetsTheKeptCount()
+    {
+        var conversation = CreateForeignConversation();
+        conversation.IsRead = false;
+        var store = AttentionStore(mine: 2, unassigned: 3);
+        var cache = new MessagingAttentionCountCache(FixedClock());
+        var controller = CreateController(conversation, allowConversation: true, store: store, attentionCountCache: cache);
+
+        await controller.Attention();
+        await controller.Conversation(ConversationId, show: null, channel: null);
+        store.Invocations.Clear();
+
+        await controller.Attention();
+
+        store.Verify(value => value.CountAsync(
+            It.Is<MessagingInboxQuery>(query => query.UnreadOnly), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    private static Mock<IMessagingConversationStore> AttentionStore(int mine, int unassigned)
+    {
+        var store = new Mock<IMessagingConversationStore>();
+        store
+            .Setup(value => value.CountAsync(It.Is<MessagingInboxQuery>(query => query.Filter == MessagingInboxFilter.Mine), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mine);
+        store
+            .Setup(value => value.CountAsync(It.Is<MessagingInboxQuery>(query => query.Filter == MessagingInboxFilter.Unassigned), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(unassigned);
+
+        return store;
+    }
+
+    private static IClock FixedClock()
+        => Mock.Of<IClock>(clock => clock.UtcNow == new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc));
+
     // The sender, agent-1, holds the conversation and sends it to q-9; they may open it while they hold it, or while it
     // waits in a queue they serve.
     private static Task<IActionResult> TransferToQueueNineAsync(string[] senderQueueIds)
@@ -495,7 +561,8 @@ public sealed class SmsPortalAdminControllerTests
         Func<MessagingConversation, ConversationOperation, bool> conversationRule = null,
         IEnumerable<AgentProfile> agents = null,
         IActivityQueueManager queueManager = null,
-        bool grantWorkspace = true)
+        bool grantWorkspace = true,
+        MessagingAttentionCountCache attentionCountCache = null)
     {
         var conversationStore = store ?? new Mock<IMessagingConversationStore>();
 
@@ -576,6 +643,7 @@ public sealed class SmsPortalAdminControllerTests
             Mock.Of<IUpdateModelAccessor>(),
             session.Object,
             clock.Object,
+            attentionCountCache ?? new MessagingAttentionCountCache(clock.Object),
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             new NullStringLocalizer<MessagingWorkspaceBuilder>());
 
