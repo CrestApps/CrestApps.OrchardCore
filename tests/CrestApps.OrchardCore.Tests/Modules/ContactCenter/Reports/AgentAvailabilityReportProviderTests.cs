@@ -420,6 +420,9 @@ public sealed class AgentAvailabilityReportProviderTests
         interactionManager
             .Setup(manager => manager.CountActiveByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(activeCounts);
+        interactionManager
+            .Setup(manager => manager.GetActiveByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore
