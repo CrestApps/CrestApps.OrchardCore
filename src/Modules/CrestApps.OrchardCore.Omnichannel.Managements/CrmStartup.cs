@@ -16,7 +16,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Recipes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -94,15 +93,16 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped<CrmCatalogSeeder>();
         services.AddScoped<LeadStatusFlagService>();
         services.AddScoped<LeadRatingProvider>();
+        services.AddSingleton<LeadImportListCache>();
 
         // Without the content import feature no past import waits to be recorded on its leads, and the import history
         // tables do not exist, so the imports still being indexed are not looked up. CrmContentTransferStartup
-        // registers the provider that looks them up.
+        // registers the provider that looks them up. Both keep the imports in the tenant's own cache between requests.
         services.AddScoped(serviceProvider => new LeadImportProvider(
             serviceProvider.GetRequiredService<ISession>(),
             serviceProvider.GetRequiredService<ILocalClock>(),
             serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>(),
-            memoryCache: serviceProvider.GetService<IMemoryCache>()));
+            importsCache: serviceProvider.GetRequiredService<LeadImportListCache>()));
         services.AddScoped<CrmAccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 

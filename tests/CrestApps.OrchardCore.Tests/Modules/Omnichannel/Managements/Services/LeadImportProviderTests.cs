@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Builders;
@@ -220,7 +219,7 @@ public sealed class LeadImportProviderTests
         // editor, which saturated a small production database's reads and timed out the queries around it.
         var databasePath = LeadTestStore.DatabasePath("import-cache");
         var store = await LeadTestStore.CreateAsync($"Data Source={databasePath};Pooling=False");
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var importsCache = new LeadImportListCache(CreateClock(DateTime.UtcNow).Object);
 
         try
         {
@@ -239,7 +238,7 @@ public sealed class LeadImportProviderTests
 
             await using (var session = store.CreateSession())
             {
-                await CreateProvider(session, backfillState, memoryCache).GetImportsAsync();
+                await CreateProvider(session, backfillState, importsCache).GetImportsAsync();
             }
 
             // A lead written while the history is unchanged, as by an import still running, is not counted yet.
@@ -255,7 +254,7 @@ public sealed class LeadImportProviderTests
 
             await using (var session = store.CreateSession())
             {
-                kept = await CreateProvider(session, backfillState, memoryCache).GetImportsAsync();
+                kept = await CreateProvider(session, backfillState, importsCache).GetImportsAsync();
             }
 
             await using (var seedSession = store.CreateSession())
@@ -268,7 +267,7 @@ public sealed class LeadImportProviderTests
 
             await using (var session = store.CreateSession())
             {
-                refreshed = await CreateProvider(session, backfillState, memoryCache).GetImportsAsync();
+                refreshed = await CreateProvider(session, backfillState, importsCache).GetImportsAsync();
             }
 
             // Assert
@@ -280,6 +279,80 @@ public sealed class LeadImportProviderTests
         {
             TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
+    }
+
+    [Fact]
+    public async Task GetImportsAsync_ReadsTheImportsAgainOnceTheirLifetimeIsOver()
+    {
+        // Arrange
+        // With the import history unchanged, a lead deleted or re-imported since is reflected once the kept imports
+        // have outlived their lifetime.
+        var databasePath = LeadTestStore.DatabasePath("import-cache-lifetime");
+        var store = await LeadTestStore.CreateAsync($"Data Source={databasePath};Pooling=False");
+        var now = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
+        var clock = CreateClock(now);
+        var importsCache = new LeadImportListCache(clock.Object);
+
+        try
+        {
+            await CreateImportHistoryTableAsync(store);
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("july", "July2020.csv", _july));
+                await seedSession.SaveAsync(Entry("july", "July2020.csv", _july, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var backfillState = new OmnichannelBackfillState();
+            backfillState.Completed.Add(LeadImportBackfillBackgroundTask.BackfillName);
+
+            await using (var session = store.CreateSession())
+            {
+                await CreateProvider(session, backfillState, importsCache).GetImportsAsync();
+            }
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("july", "July2020.csv", _july));
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            IReadOnlyList<LeadImportSummary> withinLifetime, afterLifetime;
+
+            clock.Setup(c => c.UtcNow).Returns(now.Add(LeadImportListCache.Lifetime).AddSeconds(-1));
+
+            await using (var session = store.CreateSession())
+            {
+                withinLifetime = await CreateProvider(session, backfillState, importsCache).GetImportsAsync();
+            }
+
+            clock.Setup(c => c.UtcNow).Returns(now.Add(LeadImportListCache.Lifetime));
+
+            await using (var session = store.CreateSession())
+            {
+                afterLifetime = await CreateProvider(session, backfillState, importsCache).GetImportsAsync();
+            }
+
+            // Assert
+            Assert.Equal(1L, Assert.Single(withinLifetime).LeadCount);
+            Assert.Equal(2L, Assert.Single(afterLifetime).LeadCount);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static Mock<IClock> CreateClock(DateTime utcNow)
+    {
+        var clock = new Mock<IClock>();
+        clock.Setup(c => c.UtcNow).Returns(utcNow);
+
+        return clock;
     }
 
     private static async Task CreateImportHistoryTableAsync(IStore store)
@@ -312,7 +385,7 @@ public sealed class LeadImportProviderTests
             Direction = direction,
         };
 
-    private static LeadImportProvider CreateProvider(ISession session, OmnichannelBackfillState backfillState, IMemoryCache memoryCache = null)
+    private static LeadImportProvider CreateProvider(ISession session, OmnichannelBackfillState backfillState, LeadImportListCache importsCache = null)
     {
         var localClock = new Mock<ILocalClock>();
         localClock
@@ -330,7 +403,7 @@ public sealed class LeadImportProviderTests
                 .WithPart(OmnichannelConstants.ContentParts.Lead)
                 .Build()]);
 
-        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object, memoryCache);
+        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object, importsCache);
     }
 
     private static LeadImport Import(string entryId, string fileName, DateTime importedUtc)

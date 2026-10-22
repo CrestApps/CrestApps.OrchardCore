@@ -139,6 +139,7 @@ public sealed class LeadImportProviderRegistrationTests
             .Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>()))
             .ReturnsAsync((DateTimeOffset value) => value);
         services.AddSingleton(localClock.Object);
+        services.AddSingleton(Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow));
 
         // A tenant always has both, whether or not the import feature is on.
         var state = new Mock<IDocumentManager<OmnichannelBackfillState>>();
