@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Dapper;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Documents;
@@ -23,12 +24,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// import history. While the leads imported before leads recorded their imports are still being read, the imports no
 /// lead read so far records are listed too, marked as still being indexed.
 /// </summary>
+/// <remarks>
+/// Counting the leads of every import reads the whole lead import index, which on a large tenant saturated the
+/// database's reads for a minute on every render of the inventory load editor and timed out the queries around it.
+/// The imports are therefore kept per tenant and read again only when the import history changes, or after ten
+/// minutes, so leads deleted since are reflected.
+/// </remarks>
 public sealed class LeadImportProvider
 {
+    private const string CacheKey = "CrestApps.Omnichannel.LeadImports";
+
+    private static readonly TimeSpan _cacheLifetime = TimeSpan.FromMinutes(10);
+
     private readonly ISession _session;
     private readonly ILocalClock _localClock;
     private readonly IDocumentManager<OmnichannelBackfillState> _backfillState;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IMemoryCache _memoryCache;
 
     private IReadOnlyList<LeadImportSummary> _imports;
 
@@ -42,65 +54,45 @@ public sealed class LeadImportProvider
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="backfillState">Tells whether the past imports have been recorded on their leads.</param>
     /// <param name="contentDefinitionManager">Names the lead content types.</param>
+    /// <param name="memoryCache">Keeps the imports between requests, so they are not counted on every render.</param>
     public LeadImportProvider(
         ISession session,
         ILocalClock localClock,
         IStringLocalizer<LeadImportProvider> stringLocalizer,
         IDocumentManager<OmnichannelBackfillState> backfillState = null,
-        IContentDefinitionManager contentDefinitionManager = null)
+        IContentDefinitionManager contentDefinitionManager = null,
+        IMemoryCache memoryCache = null)
     {
         _session = session;
         _localClock = localClock;
         _backfillState = backfillState;
         _contentDefinitionManager = contentDefinitionManager;
+        _memoryCache = memoryCache;
         S = stringLocalizer;
     }
 
     /// <summary>
     /// Returns the imports at least one lead records, newest first, with the number of leads each holds. The imports
-    /// are read once per request.
+    /// are read once per request, and are kept between requests until the import history changes.
     /// </summary>
     public async Task<IReadOnlyList<LeadImportSummary>> GetImportsAsync()
     {
         if (_imports is null)
         {
-            var configuration = _session.Store.Configuration;
-            var dialect = configuration.SqlDialect;
-            var table = dialect.QuoteForTableName(
-                $"{configuration.TablePrefix}{configuration.TableNameConvention.GetIndexTable(typeof(LeadImportIndex), null)}",
-                configuration.Schema);
-            var entryId = dialect.QuoteForColumnName(nameof(LeadImportIndex.EntryId));
-            var fileName = dialect.QuoteForColumnName(nameof(LeadImportIndex.FileName));
-            var importedUtc = dialect.QuoteForColumnName(nameof(LeadImportIndex.ImportedUtc));
-            var contentItemId = dialect.QuoteForColumnName(nameof(LeadImportIndex.ContentItemId));
-            var latest = dialect.QuoteForColumnName(nameof(LeadImportIndex.Latest));
+            var version = await GetHistoryVersionAsync();
 
-            // Every row of an import carries the same file name and time, so grouping by them keeps one row per
-            // import while the columns keep their own types.
-            var sql =
-                $"SELECT {entryId} AS EntryId, {fileName} AS FileName, {importedUtc} AS ImportedUtc, COUNT(DISTINCT {contentItemId}) AS LeadCount " +
-                $"FROM {table} WHERE {latest} = @Latest AND {entryId} IS NOT NULL " +
-                $"GROUP BY {entryId}, {fileName}, {importedUtc}";
+            if (_memoryCache is not null &&
+                _memoryCache.TryGetValue(CacheKey, out CachedImports cached) &&
+                cached.Version == version)
+            {
+                _imports = cached.Imports;
+            }
+            else
+            {
+                _imports = await ReadImportsAsync();
 
-            // The session's own transaction is used, so the read never opens a second connection beside it.
-            var transaction = await _session.BeginTransactionAsync();
-            var rows = await transaction.Connection.QueryAsync<LeadImportRow>(sql, new { Latest = true }, transaction);
-
-            var imports = rows
-                .GroupBy(row => row.EntryId, StringComparer.Ordinal)
-                .Select(group => new LeadImportSummary(
-                    group.Key,
-                    group.Select(row => row.FileName).FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)),
-                    DateTime.SpecifyKind(group.Min(row => row.ImportedUtc), DateTimeKind.Utc),
-                    group.Sum(row => row.LeadCount)))
-                .ToList();
-
-            imports.AddRange(await GetImportsStillBeingIndexedAsync(imports.Select(import => import.EntryId)));
-
-            _imports = imports
-                .OrderByDescending(import => import.ImportedUtc)
-                .ThenBy(import => import.FileName, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+                _memoryCache?.Set(CacheKey, new CachedImports(version, _imports), _cacheLifetime);
+            }
         }
 
         return _imports;
@@ -137,6 +129,77 @@ public sealed class LeadImportProvider
         }
 
         return options;
+    }
+
+    private async Task<IReadOnlyList<LeadImportSummary>> ReadImportsAsync()
+    {
+        var configuration = _session.Store.Configuration;
+        var dialect = configuration.SqlDialect;
+        var table = dialect.QuoteForTableName(
+            $"{configuration.TablePrefix}{configuration.TableNameConvention.GetIndexTable(typeof(LeadImportIndex), null)}",
+            configuration.Schema);
+        var entryId = dialect.QuoteForColumnName(nameof(LeadImportIndex.EntryId));
+        var fileName = dialect.QuoteForColumnName(nameof(LeadImportIndex.FileName));
+        var importedUtc = dialect.QuoteForColumnName(nameof(LeadImportIndex.ImportedUtc));
+        var latest = dialect.QuoteForColumnName(nameof(LeadImportIndex.Latest));
+
+        // Every row of an import carries the same file name and time, so grouping by them keeps one row per
+        // import while the columns keep their own types. A lead has one latest version and records an import once,
+        // so each row is a distinct lead and the rows are counted without the sort a distinct count needs.
+        var sql =
+            $"SELECT {entryId} AS EntryId, {fileName} AS FileName, {importedUtc} AS ImportedUtc, COUNT(*) AS LeadCount " +
+            $"FROM {table} WHERE {latest} = @Latest AND {entryId} IS NOT NULL " +
+            $"GROUP BY {entryId}, {fileName}, {importedUtc}";
+
+        // The session's own transaction is used, so the read never opens a second connection beside it.
+        var transaction = await _session.BeginTransactionAsync();
+        var rows = await transaction.Connection.QueryAsync<LeadImportRow>(sql, new { Latest = true }, transaction);
+
+        var imports = rows
+            .GroupBy(row => row.EntryId, StringComparer.Ordinal)
+            .Select(group => new LeadImportSummary(
+                group.Key,
+                group.Select(row => row.FileName).FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)),
+                DateTime.SpecifyKind(group.Min(row => row.ImportedUtc), DateTimeKind.Utc),
+                group.Sum(row => row.LeadCount)))
+            .ToList();
+
+        imports.AddRange(await GetImportsStillBeingIndexedAsync(imports.Select(import => import.EntryId)));
+
+        return imports
+            .OrderByDescending(import => import.ImportedUtc)
+            .ThenBy(import => import.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    // Tells kept imports apart from current ones by the import history alone, which holds one row per import: an
+    // import that starts, finishes or is removed changes it, while the leads an import is still writing do not.
+    // Without the import feature there is no history to read, so kept imports last their lifetime.
+    private async Task<string> GetHistoryVersionAsync()
+    {
+        if (_memoryCache is null || _backfillState is null)
+        {
+            return string.Empty;
+        }
+
+        var state = await _backfillState.GetOrCreateImmutableAsync();
+        var entries = await _session.QueryIndex<ContentTransferEntryIndex>(index =>
+                index.Direction == ContentTransferDirection.Import)
+            .ListAsync();
+
+        var hash = new HashCode();
+        var count = 0;
+
+        foreach (var entry in entries.OrderBy(entry => entry.EntryId, StringComparer.Ordinal))
+        {
+            hash.Add(entry.EntryId, StringComparer.Ordinal);
+            hash.Add(entry.Status);
+            count++;
+        }
+
+        var backfilled = state.Completed.Contains(LeadImportBackfillBackgroundTask.BackfillName);
+
+        return string.Create(CultureInfo.InvariantCulture, $"{backfilled}:{count}:{hash.ToHashCode()}");
     }
 
     // After an upgrade the leads imported before leads recorded their imports are read a few thousand a minute. Until
@@ -199,6 +262,8 @@ public sealed class LeadImportProvider
             })
             .ToArray();
     }
+
+    private sealed record CachedImports(string Version, IReadOnlyList<LeadImportSummary> Imports);
 
     private sealed class LeadImportRow
     {

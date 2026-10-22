@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Builders;
@@ -211,6 +212,94 @@ public sealed class LeadImportProviderTests
         }
     }
 
+    [Fact]
+    public async Task GetImportsAsync_KeepsTheImportsBetweenRequestsUntilTheImportHistoryChanges()
+    {
+        // Arrange
+        // Counting the leads of every import read the whole lead import index on each render of the inventory load
+        // editor, which saturated a small production database's reads and timed out the queries around it.
+        var databasePath = LeadTestStore.DatabasePath("import-cache");
+        var store = await LeadTestStore.CreateAsync($"Data Source={databasePath};Pooling=False");
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+
+        try
+        {
+            await CreateImportHistoryTableAsync(store);
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("july", "July2020.csv", _july));
+                await seedSession.SaveAsync(Entry("july", "July2020.csv", _july, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var backfillState = new OmnichannelBackfillState();
+            backfillState.Completed.Add(LeadImportBackfillBackgroundTask.BackfillName);
+
+            await using (var session = store.CreateSession())
+            {
+                await CreateProvider(session, backfillState, memoryCache).GetImportsAsync();
+            }
+
+            // A lead written while the history is unchanged, as by an import still running, is not counted yet.
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("july", "July2020.csv", _july));
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            IReadOnlyList<LeadImportSummary> kept, refreshed;
+
+            await using (var session = store.CreateSession())
+            {
+                kept = await CreateProvider(session, backfillState, memoryCache).GetImportsAsync();
+            }
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("august", "August2020.csv", _august));
+                await seedSession.SaveAsync(Entry("august", "August2020.csv", _august, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using (var session = store.CreateSession())
+            {
+                refreshed = await CreateProvider(session, backfillState, memoryCache).GetImportsAsync();
+            }
+
+            // Assert
+            Assert.Equal(1L, Assert.Single(kept).LeadCount);
+            Assert.Equal(["august", "july"], refreshed.Select(import => import.EntryId));
+            Assert.Equal(2L, refreshed[1].LeadCount);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static async Task CreateImportHistoryTableAsync(IStore store)
+    {
+        store.RegisterIndexes([new ContentTransferEntryIndexProvider()]);
+
+        await using var schemaSession = store.CreateSession();
+        var transaction = await schemaSession.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+        await new SchemaBuilder(store.Configuration, transaction).CreateMapIndexTableAsync<ContentTransferEntryIndex>(table => table
+            .Column<string>("EntryId", column => column.WithLength(26))
+            .Column<string>("Status", column => column.NotNull().WithLength(25))
+            .Column<ContentTransferDirection>("Direction")
+            .Column<DateTime>("CreatedUtc", column => column.NotNull())
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<string>("Owner", column => column.WithLength(26)));
+
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+    }
+
     private static ContentTransferEntry Entry(string entryId, string fileName, DateTime createdUtc, ContentTransferDirection direction)
         => new()
         {
@@ -223,7 +312,7 @@ public sealed class LeadImportProviderTests
             Direction = direction,
         };
 
-    private static LeadImportProvider CreateProvider(ISession session, OmnichannelBackfillState backfillState)
+    private static LeadImportProvider CreateProvider(ISession session, OmnichannelBackfillState backfillState, IMemoryCache memoryCache = null)
     {
         var localClock = new Mock<ILocalClock>();
         localClock
@@ -241,7 +330,7 @@ public sealed class LeadImportProviderTests
                 .WithPart(OmnichannelConstants.ContentParts.Lead)
                 .Build()]);
 
-        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object);
+        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object, memoryCache);
     }
 
     private static LeadImport Import(string entryId, string fileName, DateTime importedUtc)

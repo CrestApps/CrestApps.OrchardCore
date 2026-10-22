@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Recipes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -100,7 +101,8 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped(serviceProvider => new LeadImportProvider(
             serviceProvider.GetRequiredService<ISession>(),
             serviceProvider.GetRequiredService<ILocalClock>(),
-            serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>()));
+            serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>(),
+            memoryCache: serviceProvider.GetService<IMemoryCache>()));
         services.AddScoped<CrmAccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 

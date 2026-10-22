@@ -1126,7 +1126,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class LeadImportProvider
     {
-        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Managements.Models.OmnichannelBackfillState> backfillState = null, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager = null) { }
+        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Managements.Models.OmnichannelBackfillState> backfillState = null, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager = null, Microsoft.Extensions.Caching.Memory.IMemoryCache memoryCache = null) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>> GetImportsAsync() { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedEntryId) { }
     }
