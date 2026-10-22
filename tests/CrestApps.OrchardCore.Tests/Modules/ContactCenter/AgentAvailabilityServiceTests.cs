@@ -211,10 +211,108 @@ public sealed class AgentAvailabilityServiceTests
         Assert.Empty(availability);
     }
 
+    [Fact]
+    public async Task ListForQueueAsync_WhenAgentWithSpareCapacityIsOnAVoiceCall_ReturnsNoAvailability()
+    {
+        // Arrange
+        var agent = CreateAgent();
+        agent.MaxConcurrentInteractions = 3;
+        var session = CreateSession(isOnline: true, connectionCount: 1, _now);
+        var service = CreateService(
+            [agent],
+            [session],
+            new Dictionary<string, int> { ["a1"] = 1 },
+            [CreateInteraction(InteractionChannel.Voice, InteractionStatus.Connected)]);
+
+        // Act
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(availability);
+    }
+
+    [Fact]
+    public async Task ListForQueueAsync_WhenAgentWithSpareCapacityIsOnAChat_ReturnsAvailability()
+    {
+        // Arrange
+        var agent = CreateAgent();
+        agent.MaxConcurrentInteractions = 3;
+        var session = CreateSession(isOnline: true, connectionCount: 1, _now);
+        var service = CreateService(
+            [agent],
+            [session],
+            new Dictionary<string, int> { ["a1"] = 1 },
+            [CreateInteraction(InteractionChannel.Chat, InteractionStatus.Connected)]);
+
+        // Act
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var result = Assert.Single(availability);
+        Assert.Equal(2, result.RemainingCapacity);
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenAgentWithSpareCapacityIsOnAVoiceCall_ReturnsNoAvailability()
+    {
+        // Arrange
+        var agent = CreateAgent();
+        agent.AllowedQueueIds = ["q1"];
+        agent.QueueIds = ["q1"];
+        agent.MaxConcurrentInteractions = 3;
+        var session = CreateSession(isOnline: true, connectionCount: 1, _now);
+        var service = CreateService(
+            [agent],
+            [session],
+            new Dictionary<string, int> { ["a1"] = 1 },
+            [CreateInteraction(InteractionChannel.Voice, InteractionStatus.Held)]);
+
+        // Act
+        var availability = await service.GetAsync("a1", "q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(availability);
+    }
+
+    [Fact]
+    public async Task GetForDirectAsync_WhenAgentWithSpareCapacityIsOnAVoiceCall_ReturnsNoAvailability()
+    {
+        // Arrange
+        var agent = CreateAgent();
+        agent.MaxConcurrentInteractions = 3;
+        var session = CreateSession(isOnline: true, connectionCount: 1, _now);
+        var service = CreateService(
+            [agent],
+            [session],
+            new Dictionary<string, int> { ["a1"] = 1 },
+            [CreateInteraction(InteractionChannel.Voice, InteractionStatus.Ringing)]);
+
+        // Act
+        var availability = await service.GetForDirectAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(availability);
+    }
+
+    private static Interaction CreateInteraction(InteractionChannel channel, InteractionStatus status)
+    {
+        var interaction = new Interaction
+        {
+            ItemId = "i1",
+            Channel = channel,
+            AgentId = "a1",
+        };
+
+        interaction.RestorePersistedStatus(status);
+
+        return interaction;
+    }
+
     private static AgentAvailabilityService CreateService(
         IReadOnlyCollection<AgentProfile> agents,
         IReadOnlyCollection<AgentSession> sessions,
-        Dictionary<string, int> activeCounts = null)
+        Dictionary<string, int> activeCounts = null,
+        IReadOnlyCollection<Interaction> activeInteractions = null)
     {
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
@@ -242,6 +340,10 @@ public sealed class AgentAvailabilityServiceTests
             .Setup(manager => manager.CountActiveByAgentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string agentId, CancellationToken _) =>
                 activeCounts is not null && activeCounts.TryGetValue(agentId, out var count) ? count : 0);
+        interactionManager
+            .Setup(manager => manager.GetActiveByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<string> agentIds, CancellationToken _) =>
+                (activeInteractions ?? []).Where(interaction => agentIds.Contains(interaction.AgentId)).ToArray());
 
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);

@@ -67,7 +67,8 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
 
         var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(agentId, cancellationToken);
 
-        if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount))
+        if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount) ||
+            (activeInteractionCount > 0 && (await GetAgentsOnCallAsync([agentId], cancellationToken)).Count > 0))
         {
             return null;
         }
@@ -108,7 +109,8 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
 
         var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(agentId, cancellationToken);
 
-        if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount))
+        if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount) ||
+            (activeInteractionCount > 0 && (await GetAgentsOnCallAsync([agentId], cancellationToken)).Count > 0))
         {
             return null;
         }
@@ -145,6 +147,12 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
         var available = new List<AgentAvailability>(agents.Count);
 
+        // Only an agent already handling something can be on a call, and below capacity that is only an agent allowed
+        // more than one interaction, so the interactions are read for those few alone.
+        var agentsOnCall = await GetAgentsOnCallAsync(
+            activeCounts.Where(entry => entry.Value > 0).Select(entry => entry.Key).ToArray(),
+            cancellationToken);
+
         foreach (var session in sessions)
         {
             if (AgentRoutingEligibility.GetSessionIneligibility(session, queueId, liveAfter) != AgentRoutingIneligibility.None ||
@@ -155,7 +163,8 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
 
             activeCounts.TryGetValue(agent.ItemId, out var activeInteractionCount);
 
-            if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount))
+            if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount) ||
+                agentsOnCall.Contains(agent.ItemId))
             {
                 continue;
             }
@@ -169,5 +178,29 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         }
 
         return available;
+    }
+
+    // A person takes one phone call at a time. Capacity above one is for work that can be juggled -- chats, texts --
+    // so an agent allowed several interactions who is already on a voice call is full for routing all the same.
+    private async Task<HashSet<string>> GetAgentsOnCallAsync(string[] agentIds, CancellationToken cancellationToken)
+    {
+        var agentsOnCall = new HashSet<string>(StringComparer.Ordinal);
+
+        if (agentIds.Length == 0)
+        {
+            return agentsOnCall;
+        }
+
+        var interactions = await _interactionManager.GetActiveByAgentIdsAsync(agentIds, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            if (interaction.Channel == InteractionChannel.Voice && !string.IsNullOrEmpty(interaction.AgentId))
+            {
+                agentsOnCall.Add(interaction.AgentId);
+            }
+        }
+
+        return agentsOnCall;
     }
 }

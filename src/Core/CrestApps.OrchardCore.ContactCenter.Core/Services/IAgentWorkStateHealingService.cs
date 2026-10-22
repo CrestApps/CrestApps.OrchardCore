@@ -29,4 +29,13 @@ public interface IAgentWorkStateHealingService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when a pending reservation names the agent.</returns>
     Task<bool> HasPendingOfferAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Whether the agent is still on a voice call: a ringing, connected, held, transferring or conferenced voice
+    /// interaction names them, and, when the call is provider-backed, the provider has not confirmed it ended.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the agent is on a live voice call.</returns>
+    Task<bool> HasLiveCallAsync(string agentId, CancellationToken cancellationToken = default);
 }
