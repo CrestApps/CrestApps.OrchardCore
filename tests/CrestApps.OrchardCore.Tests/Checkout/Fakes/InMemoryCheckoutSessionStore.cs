@@ -97,9 +97,16 @@ internal sealed class InMemoryCheckoutSessionStore : ICheckoutSessionStore
         // handlers build the flow from it.
         configure?.Invoke(session);
 
+        var activating = new CheckoutFlowActivatingContext(session);
+
         foreach (var handler in _handlers)
         {
-            await handler.ActivatingAsync(new CheckoutFlowActivatingContext(session));
+            await handler.ActivatingAsync(activating);
+        }
+
+        if (activating.Errors.Count > 0)
+        {
+            throw new CheckoutRejectedException(activating.Errors);
         }
 
         var flow = new CheckoutFlow(session);

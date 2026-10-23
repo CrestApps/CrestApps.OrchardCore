@@ -89,6 +89,13 @@ internal sealed class OrderRefundRecorder : IPaymentRefundHandler
             return null;
         }
 
+        // A payment that settled several transactions at once: the refund names the one it gives money back for.
+        if (string.Equals(refund.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrEmpty(refund.ReferenceId))
+        {
+            return await FindOrderOfTransactionAsync(refund.ReferenceId, cancellationToken);
+        }
+
         var found = await _sessionStore.GetManyAsync([refund.SessionId], cancellationToken);
         var session = found.Count > 0 ? found[0] : null;
 
@@ -102,9 +109,18 @@ internal sealed class OrderRefundRecorder : IPaymentRefundHandler
             return await _orderStore.FindByIdAsync(session.ReferenceId, cancellationToken);
         }
 
-        if (string.Equals(session.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) &&
-            _serviceProvider.GetService<ITransactionStore>() is { } transactions &&
-            await transactions.FindByIdAsync(session.ReferenceId, cancellationToken) is { } transaction &&
+        if (string.Equals(session.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase))
+        {
+            return await FindOrderOfTransactionAsync(session.ReferenceId, cancellationToken);
+        }
+
+        return null;
+    }
+
+    private async Task<Order> FindOrderOfTransactionAsync(string transactionId, CancellationToken cancellationToken)
+    {
+        if (_serviceProvider.GetService<ITransactionStore>() is { } transactions &&
+            await transactions.FindByIdAsync(transactionId, cancellationToken) is { } transaction &&
             string.Equals(transaction.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) &&
             !string.IsNullOrEmpty(transaction.ReferenceId))
         {

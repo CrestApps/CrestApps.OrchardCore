@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Customers.PersonalData;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
 
@@ -37,6 +38,21 @@ public sealed class TransactionSettlementPersonalDataContributor : ICommercePers
             foreach (var attempt in attempts)
             {
                 subject.AddCheckoutSession(attempt.SessionId);
+            }
+
+            // A payment that settled several transactions at once names none of them, so its checkout is found through
+            // the payments recorded on the transaction.
+            foreach (var attemptId in transaction.Events
+                .Where(evt => evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.PaymentAttemptId))
+                .Select(evt => evt.PaymentAttemptId)
+                .Distinct(StringComparer.Ordinal))
+            {
+                var attempt = await _paymentAttemptStore.FindByIdAsync(attemptId, cancellationToken);
+
+                if (attempt is not null)
+                {
+                    subject.AddCheckoutSession(attempt.SessionId);
+                }
             }
         }
     }

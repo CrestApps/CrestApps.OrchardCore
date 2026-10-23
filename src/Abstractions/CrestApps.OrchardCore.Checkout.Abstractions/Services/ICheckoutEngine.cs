@@ -29,6 +29,12 @@ public interface ICheckoutEngine
     /// <param name="request">The description of what is being purchased.</param>
     /// <param name="cancellationToken">A token used to cancel the operation.</param>
     /// <returns>The persisted, pending session.</returns>
+    /// <remarks>
+    /// A checkout can pay for several things of one reference type at once (<see cref="StartCheckoutRequest.References"/>),
+    /// such as several outstanding transactions of one customer settled with one payment.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The request names no reference, or names its references inconsistently.</exception>
+    /// <exception cref="CheckoutRejectedException">A handler refused what the checkout pays for, for example transactions that can't be paid together.</exception>
     Task<CheckoutSession> StartAsync(StartCheckoutRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -18,6 +19,9 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 /// the amount the payment provider actually confirmed rather than the amount the checkout requested.
 /// A promotion code used on the checkout is recorded on the transaction as a discount adjustment of exactly
 /// what the invoice took off, and the code is redeemed only once the transaction is settled.
+/// A checkout can also settle several transactions of one customer, in one currency, with one payment
+/// (<see cref="CheckoutSession.References"/>): each is a line of its own, no promotion code is offered, and the confirmed
+/// payment is split across them, each recording its share as a payment of its own.
 /// </summary>
 public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 {
@@ -83,7 +87,19 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
     {
         var session = context.Session;
 
-        if (!IsTransactionReference(session.ReferenceType) || string.IsNullOrEmpty(session.ReferenceId))
+        if (!IsTransactionReference(session.ReferenceType))
+        {
+            return;
+        }
+
+        if (session.References.Count > 0)
+        {
+            await ActivateSeveralAsync(context);
+
+            return;
+        }
+
+        if (string.IsNullOrEmpty(session.ReferenceId))
         {
             return;
         }
@@ -155,7 +171,19 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
-        if (!IsTransactionReference(session.ReferenceType) || string.IsNullOrEmpty(session.ReferenceId))
+        if (!IsTransactionReference(session.ReferenceType))
+        {
+            return;
+        }
+
+        if (session.References.Count > 0)
+        {
+            await CompleteSeveralAsync(session);
+
+            return;
+        }
+
+        if (string.IsNullOrEmpty(session.ReferenceId))
         {
             return;
         }
@@ -169,9 +197,7 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 
         // A promise to pay later collects nothing. Counting it would mark the balance paid with no money received,
         // so only attempts from providers that collect money settle the transaction.
-        var attempts = (await _paymentAttemptStore.GetBySessionAsync(session.SessionId))
-            .Where(attempt => string.IsNullOrEmpty(attempt.ProviderKey) || _providerResolver.GetProvider(attempt.ProviderKey)?.Capabilities.DefersPayment != true)
-            .ToArray();
+        var attempts = await GetCollectingAttemptsAsync(session);
 
         var paid = attempts.Any(attempt => attempt.State == PaymentAttemptState.Succeeded);
         var discounts = GetDiscounts(session);
@@ -203,6 +229,211 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             await RedeemAsync(context.Flow, discounts);
         }
     }
+
+    // A checkout that settles several transactions with one payment: each is a line of its own, at what is still owed on
+    // it. They are paid together only when one customer owes them all in one currency and each still has a balance.
+    private async Task ActivateSeveralAsync(CheckoutFlowActivatingContext context)
+    {
+        var session = context.Session;
+        var transactions = new List<Transaction>();
+
+        foreach (var reference in session.References)
+        {
+            var transaction = await _transactionManager.FindByIdAsync(reference.ReferenceId);
+
+            if (transaction is null)
+            {
+                context.Reject(S["A transaction to pay could not be found."]);
+
+                continue;
+            }
+
+            if (transaction.OutstandingAmount <= 0m)
+            {
+                context.Reject(S["Nothing is left to pay on {0}.", GetTitle(transaction)]);
+
+                continue;
+            }
+
+            if (!TransactionStateMachine.CanRecordPayment(transaction))
+            {
+                context.Reject(S["{0} can no longer be paid.", GetTitle(transaction)]);
+
+                continue;
+            }
+
+            transactions.Add(transaction);
+        }
+
+        if (context.Errors.Count > 0)
+        {
+            return;
+        }
+
+        var first = transactions[0];
+
+        if (transactions.Any(transaction => !string.Equals(GetOwnerKey(transaction), GetOwnerKey(first), StringComparison.Ordinal)))
+        {
+            context.Reject(S["Transactions of different customers can't be paid together."]);
+        }
+
+        var currency = string.IsNullOrEmpty(session.Currency) ? first.Currency : session.Currency;
+
+        if (transactions.Any(transaction => !string.Equals(transaction.Currency, currency, StringComparison.OrdinalIgnoreCase)))
+        {
+            context.Reject(S["Transactions in different currencies can't be paid together."]);
+        }
+
+        if (context.Errors.Count > 0)
+        {
+            return;
+        }
+
+        session.Currency = currency;
+
+        // The balances already exist, so they must be paid now: a provider that only records a promise to pay later
+        // can't settle them, and is neither offered nor accepted.
+        session.SettlesExistingBalance = true;
+
+        // No promotion code is offered: a code would have to be split across the transactions, so, as for any balance
+        // whose module doesn't take discounts, the checkout offers and applies none.
+        session.AcceptsDiscountsOnBalance = false;
+
+        session.Steps.Add(new CheckoutFlowStep
+        {
+            Key = StepKey,
+            Title = S["Outstanding payments"],
+            Description = S["{0} payments", transactions.Count],
+            Order = 0,
+            CollectData = false,
+            Conceal = true,
+            BillingItems = [.. transactions.Select(transaction => new BillingItem
+            {
+                ItemId = transaction.ItemId,
+                Description = GetTitle(transaction),
+                Amount = transaction.OutstandingAmount,
+                Plan = null,
+
+                // Each transaction already carries its own tax, decided when it was raised.
+                ExcludeFromTax = true,
+            })],
+        });
+    }
+
+    // Splits what the gateway confirmed across the transactions, in the order the checkout listed them, each up to what
+    // the checkout asked for it and what it still owes. Each share is recorded on its transaction as a payment naming the
+    // one attempt, so its status, receipt, refunds and lifecycle events work as for a transaction paid on its own.
+    private async Task CompleteSeveralAsync(CheckoutSession session)
+    {
+        var attempts = (await GetCollectingAttemptsAsync(session))
+            .Where(attempt => attempt.State == PaymentAttemptState.Succeeded)
+            .OrderBy(attempt => attempt.CreatedUtc)
+            .ToArray();
+
+        if (attempts.Length == 0)
+        {
+            _logger.LogWarning("Checkout session '{SessionId}' completed for {Count} transactions but no confirmed payment attempt was found; they are left unsettled.", session.SessionId, session.References.Count);
+
+            return;
+        }
+
+        var transactions = new List<Transaction>();
+
+        foreach (var reference in session.References)
+        {
+            var transaction = await _transactionManager.FindByIdAsync(reference.ReferenceId);
+
+            if (transaction is null)
+            {
+                _logger.LogWarning("Transaction '{TransactionId}' settled by checkout session '{SessionId}' could not be found; its share of the payment is not applied.", reference.ReferenceId, session.SessionId);
+
+                continue;
+            }
+
+            transactions.Add(transaction);
+        }
+
+        // What is left of each attempt to share out. A share already applied by an earlier run of the completion stays
+        // where it is, so running it again never applies the same money twice.
+        var left = attempts.ToDictionary(attempt => attempt.ItemId, attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount, StringComparer.Ordinal);
+
+        foreach (var payment in transactions.SelectMany(transaction => transaction.Events)
+            .Where(evt => evt.Type == TransactionEventType.PaymentRecorded && evt.PaymentAttemptId is not null && left.ContainsKey(evt.PaymentAttemptId)))
+        {
+            left[payment.PaymentAttemptId] -= payment.Amount ?? 0m;
+        }
+
+        var asked = GetAskedAmounts(session);
+
+        foreach (var transaction in transactions)
+        {
+            if (transaction.Events.Any(evt => evt.Type == TransactionEventType.PaymentRecorded && evt.PaymentAttemptId is not null && left.ContainsKey(evt.PaymentAttemptId)))
+            {
+                continue;
+            }
+
+            var due = asked.TryGetValue(transaction.ItemId, out var amount)
+                ? Math.Min(amount, transaction.OutstandingAmount)
+                : transaction.OutstandingAmount;
+
+            foreach (var attempt in attempts)
+            {
+                var share = Money.Round(Math.Min(due, left[attempt.ItemId]), transaction.Currency);
+
+                if (due <= 0m || share <= 0m)
+                {
+                    continue;
+                }
+
+                if (await _settlementService.ApplyShareAsync(transaction, attempt, share, session.SessionId))
+                {
+                    left[attempt.ItemId] -= share;
+                    due -= share;
+                }
+            }
+        }
+
+        var unapplied = left.Values.Where(amount => amount > 0m).Sum();
+
+        if (unapplied > 0m)
+        {
+            _logger.LogWarning("Checkout session '{SessionId}' collected {Amount} more than its transactions still owed; it is not applied to any transaction and may need to be refunded.", session.SessionId, unapplied);
+        }
+    }
+
+    // The attempts that may settle a transaction: a promise to pay later collects nothing, so counting it would mark the
+    // balance paid with no money received.
+    private async Task<PaymentAttempt[]> GetCollectingAttemptsAsync(CheckoutSession session)
+        => (await _paymentAttemptStore.GetBySessionAsync(session.SessionId))
+            .Where(attempt => string.IsNullOrEmpty(attempt.ProviderKey) || _providerResolver.GetProvider(attempt.ProviderKey)?.Capabilities.DefersPayment != true)
+            .ToArray();
+
+    // What the checkout asked for each transaction, from its line on the balance step.
+    private static Dictionary<string, decimal> GetAskedAmounts(CheckoutSession session)
+    {
+        var amounts = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+        foreach (var item in session.Steps
+            .Where(step => string.Equals(step.Key, StepKey, StringComparison.Ordinal))
+            .SelectMany(step => step.BillingItems ?? [])
+            .Where(item => !string.IsNullOrEmpty(item.ItemId)))
+        {
+            amounts[item.ItemId] = item.Amount;
+        }
+
+        return amounts;
+    }
+
+    // Who owes the transaction: an account, or a guest known by their email when they have no id.
+    private static string GetOwnerKey(Transaction transaction)
+        => string.IsNullOrEmpty(transaction.OwnerId)
+            ? $"{transaction.OwnerKind}|email|{transaction.GuestContactEmail?.Trim().ToUpperInvariant()}"
+            : $"{transaction.OwnerKind}|{transaction.OwnerId}";
+
+    private string GetTitle(Transaction transaction)
+        => string.IsNullOrEmpty(transaction.Title)
+            ? S["Outstanding payment"].Value
+            : transaction.Title;
 
     // The discounts the invoice applied to the balance: what each one actually took off, after the checkout clamped them
     // to the amount due.

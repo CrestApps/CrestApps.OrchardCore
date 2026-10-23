@@ -97,7 +97,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     public async Task<CheckoutSession> StartAsync(StartCheckoutRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentException.ThrowIfNullOrEmpty(request.ReferenceType);
+
+        var (referenceType, referenceId, references) = GetReferences(request);
+
+        ArgumentException.ThrowIfNullOrEmpty(referenceType, nameof(request));
 
         // A return URL is rendered as a link on pages a guest can reach, so one that leads off the site would turn
         // the checkout into an open redirect. It is refused before anything is created.
@@ -109,11 +112,17 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         var returnInfo = CreateReturnInfo(request);
 
         var session = await _sessionStore.NewAsync(
-            request.ReferenceType,
-            request.ReferenceId,
-            request.ReferenceVersionId,
+            referenceType,
+            referenceId,
+            references.Count > 0 ? null : request.ReferenceVersionId,
             newSession =>
             {
+                // Before activation, because the handler of the reference type reads them to build what is paid for.
+                foreach (var reference in references)
+                {
+                    newSession.References.Add(reference);
+                }
+
                 // Both are seeded before the flow is built, because both change what the checkout contains.
                 // The chosen price decides what is charged and how often; a guest's contact details are the
                 // only way a completed guest purchase can be receipted or chased.
@@ -556,6 +565,57 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
+    }
+
+    // What the checkout pays for: one reference, or several of one type. A list of one is the single reference, so that
+    // checkout is exactly the one a caller naming the reference directly gets.
+    private static (string ReferenceType, string ReferenceId, List<CheckoutReference> References) GetReferences(StartCheckoutRequest request)
+    {
+        if (request.References is not { Count: > 0 })
+        {
+            return (request.ReferenceType, request.ReferenceId, []);
+        }
+
+        if (!string.IsNullOrEmpty(request.ReferenceId))
+        {
+            throw new ArgumentException("A checkout names what it pays for either by its reference id or by its references, not both.", nameof(request));
+        }
+
+        var references = new List<CheckoutReference>();
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var referenceType = request.ReferenceType;
+
+        foreach (var reference in request.References)
+        {
+            if (reference is null || string.IsNullOrEmpty(reference.ReferenceType) || string.IsNullOrEmpty(reference.ReferenceId))
+            {
+                throw new ArgumentException("Every reference of a checkout needs a reference type and a reference id.", nameof(request));
+            }
+
+            if (string.IsNullOrEmpty(referenceType))
+            {
+                referenceType = reference.ReferenceType;
+            }
+            else if (!string.Equals(referenceType, reference.ReferenceType, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Every reference of a checkout must be of the same reference type.", nameof(request));
+            }
+
+            if (!ids.Add(reference.ReferenceId))
+            {
+                throw new ArgumentException($"The reference '{reference.ReferenceId}' appears more than once. A checkout pays for each thing once.", nameof(request));
+            }
+
+            references.Add(new CheckoutReference
+            {
+                ReferenceType = referenceType,
+                ReferenceId = reference.ReferenceId,
+            });
+        }
+
+        return references.Count == 1
+            ? (referenceType, references[0].ReferenceId, [])
+            : (referenceType, null, references);
     }
 
     // Captures where the customer returns to and what the confirmation is headed, or null when the caller set none.

@@ -50,8 +50,33 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
     {
         ArgumentNullException.ThrowIfNull(transaction);
 
-        var confirmed = (attempts ?? []).Where(attempt => attempt.State == PaymentAttemptState.Succeeded).ToArray();
+        var confirmed = (attempts ?? [])
+            .Where(attempt => attempt.State == PaymentAttemptState.Succeeded)
+            .Select(attempt => (Attempt: attempt, Amount: attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount))
+            .ToArray();
 
+        return await ApplyCoreAsync(transaction, confirmed, settlementReference, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ApplyShareAsync(Transaction transaction, PaymentAttempt attempt, decimal amount, string settlementReference, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+        ArgumentNullException.ThrowIfNull(attempt);
+
+        if (attempt.State != PaymentAttemptState.Succeeded)
+        {
+            return false;
+        }
+
+        // A share is never more than the payment it is taken from.
+        var share = CurrencyScale.Round(Math.Min(amount, attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount), transaction.Currency);
+
+        return await ApplyCoreAsync(transaction, [(attempt, share)], settlementReference, cancellationToken);
+    }
+
+    private async Task<bool> ApplyCoreAsync(Transaction transaction, (PaymentAttempt Attempt, decimal Amount)[] confirmed, string settlementReference, CancellationToken cancellationToken)
+    {
         if (confirmed.Length == 0)
         {
             return false;
@@ -59,7 +84,7 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
 
         // Every confirmed attempt must be in the transaction currency. An empty attempt currency does not match a
         // typed transaction currency, so the check fails closed and no implicit conversion is ever applied.
-        foreach (var attempt in confirmed)
+        foreach (var (attempt, _) in confirmed)
         {
             if (!string.Equals(attempt.Currency, transaction.Currency, StringComparison.OrdinalIgnoreCase))
             {
@@ -77,14 +102,14 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
             .Select(payment => payment.PaymentAttemptId)
             .ToHashSet(StringComparer.Ordinal);
 
-        var newAttempts = confirmed.Where(attempt => !appliedAttemptIds.Contains(attempt.ItemId)).ToArray();
+        var newAttempts = confirmed.Where(entry => !appliedAttemptIds.Contains(entry.Attempt.ItemId)).ToArray();
 
         if (newAttempts.Length == 0)
         {
             return false;
         }
 
-        var confirmedTotal = newAttempts.Sum(attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount);
+        var confirmedTotal = newAttempts.Sum(entry => entry.Amount);
 
         if (confirmedTotal <= 0m)
         {
@@ -96,9 +121,8 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
         var now = _clock.UtcNow;
         var payments = new List<TransactionEvent>();
 
-        foreach (var attempt in newAttempts)
+        foreach (var (attempt, paid) in newAttempts)
         {
-            var paid = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
             var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
                 now,
                 paid,
@@ -111,7 +135,7 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
             payments.Add(payment);
         }
 
-        transaction.PaymentAttemptId = newAttempts.Last().ItemId;
+        transaction.PaymentAttemptId = newAttempts.Last().Attempt.ItemId;
         transaction.SettlementReference = settlementReference;
 
         // What was adjusted (a discount or a waiver) is owed no more, so paying the rest settles the transaction.
