@@ -59,4 +59,15 @@ public sealed class ImportFileProcessStatsPart : ContentPart
     /// and recorded as an error.
     /// </summary>
     public int StalledRowAttempts { get; set; }
+
+    /// <summary>
+    /// The saved row the last failed run stopped at; 0 when no run has failed.
+    /// </summary>
+    public int FailedRunRow { get; set; }
+
+    /// <summary>
+    /// How many runs in a row failed at <see cref="FailedRunRow"/> without saving any progress. The import keeps
+    /// resuming on its own until it reaches the limit, then it is marked as failed.
+    /// </summary>
+    public int FailedRunAttempts { get; set; }
 }
