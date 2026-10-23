@@ -265,6 +265,17 @@ public sealed class ImportFilesBackgroundTaskTests
         Assert.Equal(1, progressPart.FailedRunAttempts);
     }
 
+    [Theory]
+    [InlineData(1, 15)]
+    [InlineData(2, 30)]
+    [InlineData(3, 60)]
+    [InlineData(4, 120)]
+    [InlineData(5, 120)]
+    public void RetryBackoff_GrowsWithEachFailedRun_UpToTwoMinutes(int failedRuns, int expectedSeconds)
+    {
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), ImportFilesBackgroundTask.RetryBackoff.GetDelay(failedRuns));
+    }
+
     [Fact]
     public void RunLimits_StopARunBeforeItsLockExpires_AndLeaveRoomForTheLastBatch()
     {
