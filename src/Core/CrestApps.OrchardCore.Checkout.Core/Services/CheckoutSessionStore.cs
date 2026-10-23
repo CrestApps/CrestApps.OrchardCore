@@ -216,6 +216,12 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
 
         await _checkoutHandlers.InvokeAsync((handler, context) => handler.ActivatingAsync(context), activatingContext, _logger);
 
+        // A handler that refused what the checkout pays for stops it here, before anything is saved.
+        if (activatingContext.Errors.Count > 0)
+        {
+            throw new CheckoutRejectedException(activatingContext.Errors);
+        }
+
         var flow = new CheckoutFlow(checkoutSession);
 
         var activatedContext = new CheckoutFlowActivatedContext(flow);

@@ -28,7 +28,9 @@ public interface ICheckoutSessionStore
     /// <param name="referenceType">The kind of thing being purchased.</param>
     /// <param name="referenceId">The identifier of the thing being purchased.</param>
     /// <param name="referenceVersionId">An optional secondary identifier of the thing being purchased.</param>
+    /// <param name="configure">Sets what decides what is being bought, such as <see cref="CheckoutSession.References"/>, before the handlers run.</param>
     /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <exception cref="CheckoutRejectedException">A handler refused what the checkout pays for (<see cref="CheckoutFlowActivatingContext.Reject(string)"/>).</exception>
     Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default);
 
     /// <summary>

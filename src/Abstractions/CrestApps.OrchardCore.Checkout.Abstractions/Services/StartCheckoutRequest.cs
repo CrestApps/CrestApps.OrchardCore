@@ -23,6 +23,19 @@ public sealed class StartCheckoutRequest
     public string ReferenceVersionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the things to pay for in one checkout, when there are several, for example several outstanding
+    /// transactions of one customer settled with one payment. Use it instead of <see cref="ReferenceId"/>: every entry
+    /// must have the same reference type, which <see cref="ReferenceType"/> may also name, and no id may appear twice.
+    /// </summary>
+    /// <remarks>
+    /// A list of one entry starts the same checkout as <see cref="ReferenceType"/> and <see cref="ReferenceId"/> would.
+    /// With more, the session keeps them in <see cref="CheckoutSession.References"/> and its
+    /// <see cref="CheckoutSession.ReferenceId"/> is empty. The handler of the reference type decides whether they can be
+    /// paid together, and refuses the checkout otherwise (<see cref="CheckoutRejectedException"/>).
+    /// </remarks>
+    public IList<CheckoutReference> References { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the contact captured for a guest buyer. A guest has no account to resolve an address or an
     /// email from, so without this a completed guest purchase cannot be receipted or chased for an outstanding
     /// balance.

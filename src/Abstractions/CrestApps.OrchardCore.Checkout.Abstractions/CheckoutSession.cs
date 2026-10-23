@@ -69,6 +69,13 @@ public sealed class CheckoutSession : Entity, ICheckoutFlowSession
     public string ReferenceVersionId { get; set; }
 
     /// <summary>
+    /// The things the checkout pays for when it pays for several at once, such as several outstanding transactions
+    /// settled with one payment. They all share <see cref="ReferenceType"/>, and <see cref="ReferenceId"/> is then
+    /// empty. Empty for a checkout that pays for one thing, which <see cref="ReferenceId"/> names.
+    /// </summary>
+    public IList<CheckoutReference> References { get; init; } = [];
+
+    /// <summary>
     /// The ISO-4217 currency code for the checkout.
     /// </summary>
     public string Currency { get; set; }

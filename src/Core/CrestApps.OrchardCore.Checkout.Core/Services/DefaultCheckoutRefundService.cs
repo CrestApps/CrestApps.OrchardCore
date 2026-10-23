@@ -265,6 +265,8 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
             OriginalAttemptId = attempt.ItemId,
             OriginalTransactionId = context.OriginalTransactionId,
             ObligationId = attempt.ObligationId,
+            ReferenceType = string.IsNullOrEmpty(context.ReferenceId) ? null : context.ReferenceType,
+            ReferenceId = string.IsNullOrEmpty(context.ReferenceId) ? null : context.ReferenceId,
             Currency = attempt.Currency,
             RefundGrossAmount = requestedGross,
             RefundTaxAmount = refundTax,

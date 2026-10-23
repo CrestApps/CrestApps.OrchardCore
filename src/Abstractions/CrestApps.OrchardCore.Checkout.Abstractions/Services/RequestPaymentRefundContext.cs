@@ -28,4 +28,17 @@ public sealed class RequestPaymentRefundContext
     /// The operator- or customer-supplied reason for the refund.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of thing the refund gives money back for, when the original payment paid for several
+    /// (see <see cref="CheckoutSession.References"/>). Leave it empty when the payment paid for one thing.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the thing the refund gives money back for, when the original payment paid for
+    /// several, for example the one transaction of a checkout that settled several. It is copied onto the refund, so
+    /// the refund is recorded against that thing only.
+    /// </summary>
+    public string ReferenceId { get; set; }
 }
