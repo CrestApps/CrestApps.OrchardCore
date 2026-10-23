@@ -40,7 +40,7 @@ The agent is signed in to the campaign in the soft phone (right). The record is 
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed" start={225} end={263} />
 
-With a Power profile the agent only signs in and stays **Available**. Within about a second the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
+With a Power profile the agent only signs in and stays **Available**. Within about a second the dialer places the call. Nothing appears on the agent's screen while the call rings: once the customer answers and the agent is connected, the docked agent bar opens and the activity's **Complete activity** page opens on its own (unless the page the agent is on has unsaved changes; **Open activity** on the bar then opens it). A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
 
 ### When calls are placed
 

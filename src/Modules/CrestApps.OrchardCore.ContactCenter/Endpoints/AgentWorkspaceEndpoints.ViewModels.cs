@@ -174,6 +174,9 @@ internal static partial class AgentWorkspaceEndpoints
             QueueName = queue?.Name,
             ContactUrl = BuildContactUrl(activity, linkGenerator, httpContext),
             CompleteUrl = await BuildCompleteActivityUrlAsync(activity, authorizationService, linkGenerator, httpContext),
+            AutoOpenActivity = !string.IsNullOrEmpty(interaction.ActivityItemId) &&
+                DialerCallMetadata.HasAgentJoined(interaction) &&
+                AgentOfferKindHelper.FromActivitySource(activity?.Source) == AgentOfferKind.AutoDial,
             StartedUtc = interaction.StartedUtc,
             AnsweredUtc = interaction.AnsweredUtc,
             RecordingState = interaction.RecordingState.ToString(),

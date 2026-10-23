@@ -13,6 +13,7 @@
 import { coalesceRefresh } from './shared/coalesced-refresh.js';
 import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase, showsDialProgress } from './shared/agent-presence.js';
 import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
+import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPoppedActivity } from './shared/agent-bar-work.js';
 
 (function (window, document) {
     'use strict';
@@ -175,6 +176,15 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         }
     }
 
+    // The tab's session storage, or null where the browser refuses it.
+    function readSessionStorage() {
+        try {
+            return window.sessionStorage || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
     function init(root) {
         var config = parseConfig(root);
         var strings = config.strings;
@@ -184,17 +194,21 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         // The real-time connection's last status, drawn again by every render: each one replaces the bar's markup, and
         // the label used to come back empty after the first.
         var connectionStatus = null;
-        var lastPoppedActivityId = null;
         var lastOfferReservationId = null;
+
+        // The records this tab already opened, kept across the page load each pop causes (shared/agent-bar-work.js).
+        var poppedStorage = readSessionStorage();
+        var poppedActivityIds = readPoppedActivities(poppedStorage);
 
         var inner = root.querySelector('[data-cc-agent-bar-inner]');
         var handle = root.querySelector('[data-cc-agent-bar-handle]');
         root.hidden = false;
 
         // The bar stays out of the way by default: it is collapsed to a small tab the agent clicks to open. A new
-        // phone offer opens it on its own; when that work is finished it tucks itself away again, and tapping off
-        // the bar closes it too, so an open bar never stands between the agent and the page. A post-call wrap-up
-        // waits behind the tab (a small cue marks it) until the agent opens it, so nothing lingers in their way.
+        // offer opens it on its own, and so does each call the agent is given that has a record -- a call the dialer
+        // connected them to included -- when it connects and again when it ends, so "Complete activity" is in front of
+        // them. Tapping off the bar closes it, so an open bar never stands between the agent and the page, and once
+        // the work is finished it tucks itself away again.
         var collapsed = true;
         var autoOpenedWorkId = null;
 
@@ -280,29 +294,34 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             return !!(state && (state.offer || state.activeInteraction));
         }
 
-        // Drive the bar open or closed from the work state. A new offer opens it (tracked by reservation id so any
-        // one offer only opens it once). When the bar is fully idle it always returns to the tucked-away default,
-        // since there is nothing to show. When an auto-opened call drops into wrap-up it tucks away once too — but a
-        // wrap-up the agent then opens by hand is left alone until the work finally clears.
+        // Drive the bar open or closed from the work state. A new offer, and each call with a record -- connected, then
+        // ended -- opens it once (see shared/agent-bar-work.js), so the agent can still close it. When the bar is fully
+        // idle it always returns to the tucked-away default, since there is nothing to show.
         function syncBarState() {
-            var offer = state && state.offer;
-            var active = state && state.activeInteraction;
-            var liveCall = !!(active && !isEnded(active));
+            var workKey = autoOpenWorkKey(state);
 
-            if (offer && offer.reservationId) {
-                if (offer.reservationId !== autoOpenedWorkId) {
-                    autoOpenedWorkId = offer.reservationId;
+            if (workKey) {
+                if (workKey !== autoOpenedWorkId) {
+                    autoOpenedWorkId = workKey;
                     collapsed = false;
                 }
-            } else if (!offer && !active && !(state && state.pendingDial)) {
-                autoOpenedWorkId = null;
-                collapsed = true;
-            } else if (!liveCall && autoOpenedWorkId !== null) {
+            } else if (!(state && (state.offer || state.activeInteraction || state.pendingDial))) {
                 autoOpenedWorkId = null;
                 collapsed = true;
             }
 
             applyCollapsed();
+        }
+
+        // The agent is on an automatic dial whose record has not been opened in this tab: open it now. The push saying
+        // the agent joined the call does the same at once; this is for a page that missed it. A form with unsaved
+        // changes is never navigated away from.
+        function openConnectedDialActivity() {
+            var activityId = activityToAutoOpen(state, poppedActivityIds);
+
+            if (activityId) {
+                popActivity(activityId, false);
+            }
         }
 
         // The bar is fixed and horizontally centered entirely in CSS (see contact-center-agent-bar.scss).
@@ -357,7 +376,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 return false;
             }
 
-            lastPoppedActivityId = activityId;
+            rememberPoppedActivity(poppedStorage, poppedActivityIds, activityId);
 
             // Already on the record (a second push for the same call): reloading it would throw away what the agent
             // has typed so far.
@@ -385,6 +404,11 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             renderBar();
             updateHandleDot();
             tick();
+            openConnectedDialActivity();
+        }
+
+        function wasPopped(activityId) {
+            return Object.prototype.hasOwnProperty.call(poppedActivityIds, String(activityId));
         }
 
         function presenceStatus() {
@@ -834,7 +858,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
 
             var shouldPop = notification.autoOpenActivity &&
                 notification.activityItemId &&
-                notification.activityItemId !== lastPoppedActivityId;
+                !wasPopped(notification.activityItemId);
 
             if (shouldPop) {
                 // A preview pop yields to a dirty form so the agent does not lose work while reviewing.
@@ -888,7 +912,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                     // The agent was just connected to a call the dialer placed: that, not the dial, is when its record
                     // opens.
                     if (notification && notification.autoOpenActivity && notification.activityItemId &&
-                        notification.activityItemId !== lastPoppedActivityId) {
+                        !wasPopped(notification.activityItemId)) {
                         popActivity(notification.activityItemId, true);
                     }
 

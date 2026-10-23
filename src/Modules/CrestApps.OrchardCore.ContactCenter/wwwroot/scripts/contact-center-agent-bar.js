@@ -205,6 +205,50 @@
 		});
 	}
 	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-bar-work.js
+	function autoOpenWorkKey(state) {
+		var offer = state && state.offer;
+		if (offer && offer.reservationId) return "offer:" + offer.reservationId;
+		var active = state && state.activeInteraction;
+		if (!active || !active.interactionId || !active.activityItemId) return "";
+		return "call:" + active.interactionId + (isEndedInteraction(active) ? ":ended" : "");
+	}
+	function isEndedInteraction(active) {
+		return !!active && (active.status === "Ended" || active.status === "Failed");
+	}
+	function activityToAutoOpen(state, poppedActivityIds) {
+		var active = state && state.activeInteraction;
+		if (!active || active.autoOpenActivity !== true || !active.activityItemId) return "";
+		var id = String(active.activityItemId);
+		return poppedActivityIds && Object.prototype.hasOwnProperty.call(poppedActivityIds, id) ? "" : id;
+	}
+	var POPPED_STORAGE_KEY = "cc-agent-bar:popped-activities";
+	var POPPED_LIMIT = 50;
+	function readPoppedActivities(storage) {
+		try {
+			var raw = storage ? storage.getItem(POPPED_STORAGE_KEY) : null;
+			var ids = raw ? JSON.parse(raw) : [];
+			var set = {};
+			if (Array.isArray(ids)) ids.forEach(function(id) {
+				if (id) set[String(id)] = true;
+			});
+			return set;
+		} catch (error) {
+			return {};
+		}
+	}
+	function rememberPoppedActivity(storage, poppedActivityIds, activityId) {
+		if (!activityId) return;
+		var id = String(activityId);
+		delete poppedActivityIds[id];
+		poppedActivityIds[id] = true;
+		var ids = Object.keys(poppedActivityIds);
+		while (ids.length > POPPED_LIMIT) delete poppedActivityIds[ids.shift()];
+		try {
+			if (storage) storage.setItem(POPPED_STORAGE_KEY, JSON.stringify(Object.keys(poppedActivityIds)));
+		} catch (error) {}
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-agent-bar.js
 	(function(window, document) {
 		"use strict";
@@ -302,6 +346,13 @@
 				};
 			} catch (error) {}
 		}
+		function readSessionStorage() {
+			try {
+				return window.sessionStorage || null;
+			} catch (error) {
+				return null;
+			}
+		}
 		function init(root) {
 			var config = parseConfig(root);
 			var strings = config.strings;
@@ -309,8 +360,9 @@
 			var serverOffsetMs = 0;
 			var activeSignature = null;
 			var connectionStatus = null;
-			var lastPoppedActivityId = null;
 			var lastOfferReservationId = null;
+			var poppedStorage = readSessionStorage();
+			var poppedActivityIds = readPoppedActivities(poppedStorage);
 			var inner = root.querySelector("[data-cc-agent-bar-inner]");
 			var handle = root.querySelector("[data-cc-agent-bar-handle]");
 			root.hidden = false;
@@ -357,22 +409,21 @@
 				return !!(state && (state.offer || state.activeInteraction));
 			}
 			function syncBarState() {
-				var offer = state && state.offer;
-				var active = state && state.activeInteraction;
-				var liveCall = !!(active && !isEnded(active));
-				if (offer && offer.reservationId) {
-					if (offer.reservationId !== autoOpenedWorkId) {
-						autoOpenedWorkId = offer.reservationId;
+				var workKey = autoOpenWorkKey(state);
+				if (workKey) {
+					if (workKey !== autoOpenedWorkId) {
+						autoOpenedWorkId = workKey;
 						collapsed = false;
 					}
-				} else if (!offer && !active && !(state && state.pendingDial)) {
-					autoOpenedWorkId = null;
-					collapsed = true;
-				} else if (!liveCall && autoOpenedWorkId !== null) {
+				} else if (!(state && (state.offer || state.activeInteraction || state.pendingDial))) {
 					autoOpenedWorkId = null;
 					collapsed = true;
 				}
 				applyCollapsed();
+			}
+			function openConnectedDialActivity() {
+				var activityId = activityToAutoOpen(state, poppedActivityIds);
+				if (activityId) popActivity(activityId, false);
 			}
 			function computeOffset(serverTimeUtc) {
 				var serverMs = parseUtc(serverTimeUtc);
@@ -400,7 +451,7 @@
 				var target = completeActivityUrl(activityId);
 				if (!target) return false;
 				if (!force && isPageDirty()) return false;
-				lastPoppedActivityId = activityId;
+				rememberPoppedActivity(poppedStorage, poppedActivityIds, activityId);
 				if (isCurrentPage(target)) return false;
 				window.location.assign(target);
 				return true;
@@ -420,6 +471,10 @@
 				renderBar();
 				updateHandleDot();
 				tick();
+				openConnectedDialActivity();
+			}
+			function wasPopped(activityId) {
+				return Object.prototype.hasOwnProperty.call(poppedActivityIds, String(activityId));
 			}
 			function presenceStatus() {
 				return state && state.presence && state.presence.status || "Offline";
@@ -659,7 +714,7 @@
 				var isNew = notification.reservationId && notification.reservationId !== lastOfferReservationId;
 				lastOfferReservationId = notification.reservationId;
 				var beepFor = notification.kind === "InboundCall" && isNew ? notification.reservationId : null;
-				if (notification.autoOpenActivity && notification.activityItemId && notification.activityItemId !== lastPoppedActivityId) popActivity(notification.activityItemId, false);
+				if (notification.autoOpenActivity && notification.activityItemId && !wasPopped(notification.activityItemId)) popActivity(notification.activityItemId, false);
 				refresh().then(function() {
 					if (beepFor && state && state.offer && state.offer.reservationId === beepFor) beep();
 				});
@@ -697,7 +752,7 @@
 						status: notification.status,
 						dialPhase: notification.dialPhase
 					} : {});
-					if (notification && notification.autoOpenActivity && notification.activityItemId && notification.activityItemId !== lastPoppedActivityId) popActivity(notification.activityItemId, true);
+					if (notification && notification.autoOpenActivity && notification.activityItemId && !wasPopped(notification.activityItemId)) popActivity(notification.activityItemId, true);
 					refresh();
 				}
 			});
