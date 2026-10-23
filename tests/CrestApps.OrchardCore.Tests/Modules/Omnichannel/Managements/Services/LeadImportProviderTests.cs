@@ -347,6 +347,70 @@ public sealed class LeadImportProviderTests
         }
     }
 
+    [Fact]
+    public async Task GetSelectedOptionsAsync_OffersOnlyTheSavedImportNamedByItsFile()
+    {
+        // Arrange
+        // The editor renders just the saved import, so opening it never counts the leads of every import.
+        var databasePath = LeadTestStore.DatabasePath("import-selected");
+        var store = await LeadTestStore.CreateAsync($"Data Source={databasePath};Pooling=False");
+
+        try
+        {
+            await CreateImportHistoryTableAsync(store);
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("july", "July2020.csv", _july));
+                await seedSession.SaveAsync(Entry("july", "July2020.csv", _july, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+                await seedSession.SaveAsync(Entry("august", "August2020.csv", _august, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            await using var session = store.CreateSession();
+            var provider = CreateProvider(session, new OmnichannelBackfillState());
+            var options = await provider.GetSelectedOptionsAsync("august");
+            var none = await provider.GetSelectedOptionsAsync(" ");
+
+            // Assert
+            var option = Assert.Single(options);
+            Assert.Equal("august", option.Value);
+            Assert.True(option.Selected);
+            Assert.Contains("August2020.csv", option.Text);
+            Assert.Empty(none);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task GetSelectedOptionsAsync_KeepsTheSavedImportWhenThereIsNoImportHistoryToNameItFrom()
+    {
+        // Arrange
+        var databasePath = LeadTestStore.DatabasePath("import-selected-no-history");
+        var store = await LeadTestStore.CreateAsync($"Data Source={databasePath};Pooling=False");
+
+        try
+        {
+            // Act
+            await using var session = store.CreateSession();
+            var options = await CreateProvider(session).GetSelectedOptionsAsync("gone");
+
+            // Assert
+            var option = Assert.Single(options);
+            Assert.Equal("gone", option.Value);
+            Assert.True(option.Selected);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static Mock<IClock> CreateClock(DateTime utcNow)
     {
         var clock = new Mock<IClock>();

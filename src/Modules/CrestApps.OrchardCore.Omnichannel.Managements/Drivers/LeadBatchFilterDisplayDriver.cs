@@ -67,7 +67,11 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
 
             model.LeadContentTypes = (await _contentTypeProvider.GetLeadContentTypesAsync()).ToArray();
             model.ImportEntryId = filter.ImportEntryId;
-            model.Imports = await _imports.GetOptionsAsync(filter.ImportEntryId);
+
+            // Only the saved import is rendered. Counting the leads of every import reads the whole lead import index,
+            // which is too slow to pay for each time the editor opens or posts, so the editor asks for the full list
+            // when the lead filters are shown.
+            model.Imports = await _imports.GetSelectedOptionsAsync(filter.ImportEntryId);
             model.SourceId = filter.SourceId;
             model.Sources = await _sources.GetOptionsAsync(filter.SourceId);
             model.OwnerId = filter.OwnerId;
