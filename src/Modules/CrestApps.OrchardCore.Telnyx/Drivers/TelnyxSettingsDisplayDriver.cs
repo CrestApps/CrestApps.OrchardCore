@@ -79,7 +79,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.CallerIdOptions = _addressManager is null
                 ? string.IsNullOrWhiteSpace(settings.DefaultOutboundCallerId) ? [] : [new SelectListItem(settings.DefaultOutboundCallerId, settings.DefaultOutboundCallerId, true)]
                 : await _addressManager.GetCallerIdOptionsAsync(settings.DefaultOutboundCallerId);
-            model.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 180;
+            model.CredentialLifetimeMinutes = TelnyxCredentialLifetime.Normalize(settings.CredentialLifetimeMinutes);
             model.SipWebSocketUrl = settings.SipWebSocketUrl;
             model.SipDomain = settings.SipDomain;
             model.WebRtcCodecs = settings.WebRtcCodecs;
@@ -214,6 +214,14 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
 
     private void ValidateActiveSettings(TelnyxSettings settings, TelnyxSettingsViewModel model, UpdateEditorContext context)
     {
+        // A lifetime inside the soft phone's renewal window renews the credential every few minutes, and a call rung
+        // while it is being replaced is refused. An empty value takes the default, as before.
+        if (model.CredentialLifetimeMinutes > 0 && model.CredentialLifetimeMinutes < TelnyxCredentialLifetime.MinimumMinutes)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CredentialLifetimeMinutes),
+                S["The credential lifetime must be at least {0} minutes.", TelnyxCredentialLifetime.MinimumMinutes]);
+        }
+
         // Saving requires only the API key. The connection ids are provisioned by the Connect action, and
         // the webhook public key is pasted after connecting, so neither blocks the initial save.
         if (string.IsNullOrEmpty(settings.ApiKey))
@@ -239,5 +247,5 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static int NormalizeLifetime(int minutes)
-        => minutes > 0 ? minutes : 180;
+        => TelnyxCredentialLifetime.Normalize(minutes);
 }

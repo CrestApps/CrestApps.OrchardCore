@@ -43,7 +43,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
             ? settings.ConnectionId?.Trim()
             : settings.SipConnectionId.Trim();
         options.OutboundVoiceProfileId = settings.OutboundVoiceProfileId?.Trim();
-        options.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 180;
+        options.CredentialLifetimeMinutes = TelnyxCredentialLifetime.Normalize(settings.CredentialLifetimeMinutes);
         options.DefaultOutboundCallerId = settings.DefaultOutboundCallerId?.Trim();
         options.ApiKey = string.IsNullOrEmpty(settings.ApiKey) ? null : Unprotect(apiKeyProtector, settings.ApiKey);
         options.TurnCredential = string.IsNullOrEmpty(settings.TurnCredential) ? null : Unprotect(apiKeyProtector, settings.TurnCredential);

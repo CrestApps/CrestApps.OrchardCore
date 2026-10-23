@@ -64,7 +64,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         }
 
         var now = _clock.UtcNow;
-        var expiresAt = now.AddMinutes(_options.CredentialLifetimeMinutes);
+        var expiresAt = now.AddMinutes(TelnyxCredentialLifetime.Normalize(_options.CredentialLifetimeMinutes));
 
         try
         {
