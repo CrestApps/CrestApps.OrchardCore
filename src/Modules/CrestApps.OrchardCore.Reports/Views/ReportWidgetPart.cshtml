@@ -1,0 +1,168 @@
+@using System.Globalization
+@using System.Text.Json
+@model ReportWidgetViewModel
+
+@* A report on the admin dashboard: compact figures, bars and tables, with the period and when the result was made. *@
+
+@switch (Model.Outcome)
+{
+    case ReportWidgetOutcome.NotConfigured:
+        <p class="text-muted mb-0">@T["Choose the report this widget shows by editing it."]</p>
+
+        break;
+
+    case ReportWidgetOutcome.Denied:
+        <p class="text-muted mb-0">@T["You can't view the {0} report.", Model.ReportDisplayName]</p>
+
+        break;
+
+    case ReportWidgetOutcome.Failed:
+        <p class="text-danger mb-0">@T["The {0} report couldn't be run. The details are in the log.", Model.ReportDisplayName]</p>
+
+        break;
+
+    default:
+        {
+            var document = Model.Result.Document;
+
+            <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                <span class="fw-semibold">@Model.ReportDisplayName</span>
+                <span class="text-muted small">@Model.PeriodText</span>
+            </div>
+
+            if (!document.HasContent)
+            {
+                <p class="text-muted mb-0">@T["Nothing to show for this period."]</p>
+            }
+
+            foreach (var block in document.Sections)
+            {
+                <section class="mb-3">
+                    @if (!string.IsNullOrEmpty(block.Title) && block != document.Sections[0])
+                    {
+                        <h3 class="h6 mb-2">@block.Title</h3>
+                    }
+
+                    @switch (block.Kind)
+                    {
+                        case ReportSectionKind.Metrics:
+                            <div class="row row-cols-2 g-2">
+                                @foreach (var metric in block.Metrics)
+                                {
+                                    <div class="col">
+                                        <div class="border rounded p-2 h-100">
+                                            <div class="text-muted small">@metric.Label</div>
+                                            <div class="fs-5 fw-bold text-break">@metric.Value</div>
+                                            @if (!string.IsNullOrEmpty(metric.Hint))
+                                            {
+                                                <div class="text-muted small">@metric.Hint</div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            break;
+
+                        case ReportSectionKind.Bars:
+                            <div class="d-flex flex-column gap-2">
+                                @foreach (var bar in block.Bars)
+                                {
+                                    var width = (Math.Clamp(bar.Ratio, 0d, 1d) * 100d).ToString("0.###", CultureInfo.InvariantCulture);
+
+                                    <div>
+                                        <div class="d-flex justify-content-between small">
+                                            <span>@bar.Label</span>
+                                            <span class="fw-semibold">@bar.Value</span>
+                                        </div>
+                                        <div class="progress" role="progressbar" style="height: 0.5rem;">
+                                            <div class="progress-bar" style="width: @width%"></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            break;
+
+                        case ReportSectionKind.Table:
+                            {
+                                var alignClasses = block.Columns
+                                    .Select(column => column.Align == ReportColumnAlign.End ? "text-end" : column.Align == ReportColumnAlign.Center ? "text-center" : "text-start")
+                                    .ToList();
+
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                @for (var i = 0; i < block.Columns.Count; i++)
+                                                {
+                                                    <th class="@alignClasses[i] small">@block.Columns[i].Label</th>
+                                                }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in block.Rows)
+                                            {
+                                                <tr class="@(row.Kind == ReportRowKind.Detail ? null : "fw-semibold")">
+                                                    @for (var i = 0; i < row.Cells.Count; i++)
+                                                    {
+                                                        var cell = row.Cells[i];
+
+                                                        <td class="@(i < alignClasses.Count ? alignClasses[i] : "text-start")">
+                                                            @if (ReportValue.TryGetUserName(cell, out var userName))
+                                                            {
+                                                                <user-display-name user-name="@userName" display-type="Report" cache-id="report-user-display-name" />
+                                                            }
+                                                            else
+                                                            {
+                                                                @cell
+                                                            }
+                                                        </td>
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            break;
+
+                        case ReportSectionKind.Chart:
+                            {
+                                var chartData = JsonSerializer.Serialize(new
+                                {
+                                    type = block.Chart.Type.ToString().ToLowerInvariant(),
+                                    labels = block.Chart.Labels,
+                                    datasets = block.Chart.Datasets.Select(dataset => new { label = dataset.Label, data = dataset.Values }),
+                                    stacked = block.Chart.Stacked,
+                                    showLegend = block.Chart.ShowLegend,
+                                    percentageScale = block.Chart.PercentageScale,
+                                });
+
+                                <div style="position: relative; min-height: 14rem;">
+                                    <canvas data-report-chart="@chartData" role="img" aria-label="@block.Title"></canvas>
+                                </div>
+                            }
+
+                            break;
+                    }
+                </section>
+            }
+
+            if (document.Sections.Any(block => block.Kind == ReportSectionKind.Chart))
+            {
+                <script asp-name="CrestApps.OrchardCore.Reports.Charts" at="Foot"></script>
+            }
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 text-muted small">
+                <span>@Model.UpdatedText</span>
+                @if (Model.CanOpenReport)
+                {
+                    <a asp-action="Display" asp-controller="Reports" asp-area="CrestApps.OrchardCore.Reports" asp-route-id="@Model.ReportName">@T["Open the full report"]</a>
+                }
+            </div>
+        }
+
+        break;
+}

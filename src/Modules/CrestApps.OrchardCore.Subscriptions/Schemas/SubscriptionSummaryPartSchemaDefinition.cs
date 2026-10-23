@@ -5,8 +5,8 @@ using Json.Schema;
 namespace CrestApps.OrchardCore.Subscriptions.Schemas;
 
 /// <summary>
-/// Provides recipe schema support for the <see cref="SubscriptionSummaryPart"/> marker part.
-/// The part carries no persisted data; its display driver computes live statistics at render time.
+/// Provides recipe schema support for the <see cref="SubscriptionSummaryPart"/> part.
+/// The part persists only how long the widget keeps its figures; its display driver computes the statistics at render time.
 /// </summary>
 public sealed class SubscriptionSummaryPartSchemaDefinition : PartSchemaDefinitionBase
 {
@@ -23,6 +23,9 @@ public sealed class SubscriptionSummaryPartSchemaDefinition : PartSchemaDefiniti
     protected override JsonSchemaBuilder BuildPartSchemaCore()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Description("A marker part that carries no persisted data.")
+            .Properties(
+                ("CacheMinutes", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Integer)
+                    .Description("How many minutes the widget keeps its figures before it counts the subscriptions again; 0 counts them on every visit. Defaults to 30.")))
             .AdditionalProperties(true);
 }

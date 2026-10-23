@@ -30,6 +30,7 @@
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" />
     <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.DataPipelines.Abstractions" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />

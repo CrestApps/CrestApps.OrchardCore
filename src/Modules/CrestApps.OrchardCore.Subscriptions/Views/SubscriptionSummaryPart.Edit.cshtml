@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionSummaryEditViewModel
+
+<div class="mb-3">
+    <label asp-for="CacheMinutes" class="form-label">@T["Keep for (minutes)"]</label>
+    <input asp-for="CacheMinutes" type="number" min="0" max="1440" class="form-control" />
+    <span asp-validation-for="CacheMinutes" class="text-danger"></span>
+    <span class="hint">@T["The widget keeps its figures for these minutes instead of counting the subscriptions on every visit to the dashboard. 0 counts them every time. Saving the widget starts over."]</span>
+</div>

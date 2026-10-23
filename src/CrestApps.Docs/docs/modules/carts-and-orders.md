@@ -318,7 +318,9 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 
 ### Sales Summary widget
 
-With Orchard Core's Admin Dashboard on, the **Sales Summary** dashboard widget (`SalesSummaryWidget`, `SalesSummaryPart`) shows the sales net of refunds in the store's currency today, and over the last 7 and 30 days, with the number of orders, and the orders to ship (`OrderReportReader.ReadUnfulfilledAsync`). Orders in other currencies count in the number of orders only.
+With Orchard Core's Admin Dashboard on, the **Sales Summary** dashboard widget (`SalesSummaryWidget`, `SalesSummaryPart`) shows the sales net of refunds in the store's currency today and over two windows of days, with the number of orders, and the orders to ship (`OrderReportReader.ReadUnfulfilledAsync`). Orders in other currencies count in the number of orders only.
+
+The widget has these options: the **first window** (7 days) and **second window** (30 days) in days, the **orders counted** (all channels, online orders, point of sale, or orders made by staff; an order with no channel counts as online), and **Keep for (minutes)**, how long it keeps its figures before it counts the orders again (30 by default, 0 for every visit). For more insight, the [report widgets](reports#dashboard-widgets) put the sales, top products, orders to ship, refunds, disputes and more on the dashboard, each with its own period.
 
 ### Automation recipes
 
