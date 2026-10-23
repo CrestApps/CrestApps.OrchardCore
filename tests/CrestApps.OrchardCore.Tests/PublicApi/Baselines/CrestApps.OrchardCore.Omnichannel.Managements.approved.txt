@@ -328,6 +328,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [OrchardCore.Admin.Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.BulkAction")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexPost(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, System.Collections.Generic.IEnumerable<string> itemIds) { }
+        [OrchardCore.Admin.Admin("omnichannel/activity/batches/lead-imports", "OmnichannelActivityBatchesLeadImports")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> LeadImports(string selected) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/load/{id}", "OmnichannelActivityBatchesLoad")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Load(string id) { }
@@ -1158,6 +1160,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Managements.Models.OmnichannelBackfillState> backfillState = null, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager = null, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportListCache importsCache = null) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>> GetImportsAsync() { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedEntryId) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetSelectedOptionsAsync(string selectedEntryId) { }
     }
     public sealed class LeadImportSummary : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>
     {
