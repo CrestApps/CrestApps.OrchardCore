@@ -8014,6 +8014,10 @@
 				if (!predictiveStandby || typeof setPredictiveStandbyFor !== "function") return false;
 				return setPredictiveStandbyFor(predictiveStandby, !!armed, userId || "", Date.now());
 			}
+			function noteAcceptedDialHold(reservationId, userId) {
+				if (!reservationId || !userId || typeof noteAcceptedReservation !== "function") return;
+				noteAcceptedReservation(predictiveStandby, reservationId, userId, Date.now());
+			}
 			function armMonitorLeg(token, info) {
 				return armMonitorLegFor(monitorLegArms, token, Date.now(), info);
 			}
@@ -10872,6 +10876,7 @@
 				},
 				armInboundAutoAnswer,
 				setPredictiveStandby,
+				noteAcceptedDialHold,
 				armMonitorLeg,
 				disarmMonitorLeg,
 				hangupMonitorLeg,

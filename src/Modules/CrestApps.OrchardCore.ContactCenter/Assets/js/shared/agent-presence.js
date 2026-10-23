@@ -235,3 +235,14 @@ export function isOwnPresence(notification, ownUserId) {
 export function isOwnOfferNotification(notification, ownUserId) {
     return isOwnPresence(notification, ownUserId);
 }
+
+// The reservation of the automated dial this agent is held for, named by a snapshot or a presence notification
+// ({ userId, dialHoldReservationId }), or '' when there is none or it is not this agent's own. Unlike a presence change,
+// an unknown owner is never taken as this agent's: the phone answers the leg of that dial by itself.
+export function ownDialHoldReservationId(source, ownUserId) {
+    if (!source || !source.dialHoldReservationId || !source.userId || !ownUserId) {
+        return '';
+    }
+
+    return String(source.userId) === String(ownUserId) ? String(source.dialHoldReservationId) : '';
+}

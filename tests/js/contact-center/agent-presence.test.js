@@ -9,6 +9,7 @@ import {
     isOwnOfferNotification,
     isOwnPresence,
     normalizePresenceStatus,
+    ownDialHoldReservationId,
     pendingPresenceLabel,
     presenceLabel,
     showsDialProgress,
@@ -212,5 +213,29 @@ describe('showsDialProgress', () => {
         expect(showsDialProgress({ phase: 'Dialing', showsProgress: true })).toBe(true);
         expect(showsDialProgress({ phase: 'Dialing', showsProgress: false })).toBe(false);
         expect(showsDialProgress(null)).toBe(false);
+    });
+});
+
+// Live: an agent on a Power campaign had to click Answer on every connected call. The phone answers the leg of the dial
+// it is held for by itself only once it knows the reservation, and the accept's push was the only thing that told it; a
+// phone that missed it (reloaded, reconnected) rang the leg with Answer/Decline. The snapshot and presence carry the hold.
+describe('ownDialHoldReservationId', () => {
+    it('names the hold of this agent', () => {
+        expect(ownDialHoldReservationId({ userId: 'u1', dialHoldReservationId: 'r1' }, 'u1')).toBe('r1');
+    });
+
+    it('never names another agent\'s hold, which a supervisor\'s connection also hears', () => {
+        expect(ownDialHoldReservationId({ userId: 'u2', dialHoldReservationId: 'r1' }, 'u1')).toBe('');
+    });
+
+    it('never takes an unknown owner on either side as this agent', () => {
+        expect(ownDialHoldReservationId({ dialHoldReservationId: 'r1' }, 'u1')).toBe('');
+        expect(ownDialHoldReservationId({ userId: 'u1', dialHoldReservationId: 'r1' }, null)).toBe('');
+    });
+
+    it('is nothing without a hold', () => {
+        expect(ownDialHoldReservationId({ userId: 'u1' }, 'u1')).toBe('');
+        expect(ownDialHoldReservationId({ userId: 'u1', dialHoldReservationId: null }, 'u1')).toBe('');
+        expect(ownDialHoldReservationId(null, 'u1')).toBe('');
     });
 });

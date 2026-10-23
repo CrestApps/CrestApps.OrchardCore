@@ -6670,6 +6670,18 @@ import {
             return setPredictiveStandbyFor(predictiveStandby, !!armed, userId || '', Date.now());
         }
 
+        // The Contact Center layer says the agent is held for a dial accepted under `reservationId` for `userId`, this
+        // phone's user: the leg of that call, rung once the customer answers, is answered at once. The accept's own push
+        // is what told the phone before, and a phone that missed it (reloaded, reconnected, opened during the dial) rang
+        // the leg with Answer/Decline. The presence push and the snapshot read at every connect both carry the hold.
+        function noteAcceptedDialHold(reservationId, userId) {
+            if (!reservationId || !userId || typeof noteAcceptedReservation !== 'function') {
+                return;
+            }
+
+            noteAcceptedReservation(predictiveStandby, reservationId, userId, Date.now());
+        }
+
         // A supervisor's engagement: the platform is about to ring this phone with a leg carrying `token`. `info` is
         // handed back with the leg's events ({ interactionId, agentName, mode }).
         function armMonitorLeg(token, info) {
@@ -11670,6 +11682,7 @@ import {
             // Lets the Contact Center layer stand the phone by for an over-dialing campaign, so the leg of a call the
             // agent is claimed for is answered at once (see soft-phone/predictive-standby.js).
             setPredictiveStandby: setPredictiveStandby,
+            noteAcceptedDialHold: noteAcceptedDialHold,
             // A supervisor's engagement (the Contact Center supervision layer): expect the monitor leg carrying a token,
             // hear about it as it is answered, connects and ends, and let it go.
             armMonitorLeg: armMonitorLeg,
