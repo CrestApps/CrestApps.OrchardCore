@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Support;
@@ -133,7 +132,7 @@ public sealed class AdminController : Controller
         return Json(new { count = await _workspaceBuilder.CountNeedingAttentionAsync(User, refresh, HttpContext.RequestAborted) });
     }
 
-    [Admin("messaging/conversation/{id}", "MessagingConversation")]
+    [Admin("messaging/conversation/{id}", "MessagingConversation"), Filters.EndAbortedRequest]
     public async Task<IActionResult> Conversation(string id, string show, string channel, int page = 1, long beforeTicks = 0)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
@@ -169,27 +168,17 @@ public sealed class AdminController : Controller
 
         var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
 
-        try
+        return View("Workspace", new WorkspaceViewModel
         {
-            return View("Workspace", new WorkspaceViewModel
-            {
-                Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, page, conversation.GetCustomerKey(), HttpContext.RequestAborted),
-                Thread = await _workspaceBuilder.BuildThreadAsync(
-                    User,
-                    conversation,
-                    beforeUtc,
-                    target => Url.Action(nameof(Conversation), new { id = target.ItemId, show, channel }),
-                    (tabChannel, address) => Url.Action(nameof(Start), new { channel = tabChannel, address }),
-                    HttpContext.RequestAborted),
-            });
-        }
-        catch (DbException) when (HttpContext.RequestAborted.IsCancellationRequested)
-        {
-            // The agent moved on to another conversation or closed the tab before the page was built. SQL Server
-            // reports a query cancelled that way as a "severe error" exception rather than a cancellation, which the
-            // exception handler logged as an unhandled error. Nobody is waiting for the response.
-            return new EmptyResult();
-        }
+            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, page, conversation.GetCustomerKey(), HttpContext.RequestAborted),
+            Thread = await _workspaceBuilder.BuildThreadAsync(
+                User,
+                conversation,
+                beforeUtc,
+                target => Url.Action(nameof(Conversation), new { id = target.ItemId, show, channel }),
+                (tabChannel, address) => Url.Action(nameof(Start), new { channel = tabChannel, address }),
+                HttpContext.RequestAborted),
+        });
     }
 
     // Entry point for "message this customer on this channel": open the single existing conversation for that address

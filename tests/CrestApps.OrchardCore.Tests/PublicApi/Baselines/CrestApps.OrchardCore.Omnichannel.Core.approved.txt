@@ -175,6 +175,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string ConvertedContactItemId { get; set; }
         public System.DateTime? ConvertedUtc { get; set; }
         public System.DateTime? CreatedUtc { get; set; }
+        public long DocumentId { get; set; }
         public bool IsClosed { get; set; }
         public bool IsConverted { get; set; }
         public bool Latest { get; set; }
