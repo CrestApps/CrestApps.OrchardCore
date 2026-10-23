@@ -135,6 +135,12 @@ html[data-manual='technical'] {
     backdrop-filter: saturate(180%) blur(10px);
 }
 
+/* A backdrop filter makes the navbar the containing block of the fixed mobile sidebar, which then shrinks to the
+   navbar's height and hides the menu. The filter is turned off while the sidebar is open. */
+.navbar.navbar-sidebar--show {
+    backdrop-filter: none;
+}
+
 [data-theme='dark'] .navbar {
     border-bottom-color: rgba(208, 219, 227, 0.1);
 }
