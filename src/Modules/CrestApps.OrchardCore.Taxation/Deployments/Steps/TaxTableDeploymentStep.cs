@@ -11,13 +11,12 @@ public sealed class TaxTableDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<TaxTableDeploymentStep>("Taxation");
     private static readonly LocalizationSource _title = LocalizationSource.Create<TaxTableDeploymentStep>("Tax Tables");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TaxTableDeploymentStep"/> class.
-    /// </summary>
-    public TaxTableDeploymentStep()
-    {
-        Name = TaxationDeploymentSteps.TaxTable;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => TaxationDeploymentSteps.TaxTable;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

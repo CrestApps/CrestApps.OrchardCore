@@ -11,13 +11,12 @@ public sealed class OmnichannelCampaignDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelCampaignDeploymentStep>("Omnichannel");
     private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelCampaignDeploymentStep>("Omnichannel Campaigns");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OmnichannelCampaignDeploymentStep"/> class.
-    /// </summary>
-    public OmnichannelCampaignDeploymentStep()
-    {
-        Name = OmnichannelDeploymentSteps.Campaign;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => OmnichannelDeploymentSteps.Campaign;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

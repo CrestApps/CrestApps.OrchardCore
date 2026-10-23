@@ -11,13 +11,12 @@ public sealed class OmnichannelChannelEndpointDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelChannelEndpointDeploymentStep>("Omnichannel");
     private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelChannelEndpointDeploymentStep>("Omnichannel Addresses");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointDeploymentStep"/> class.
-    /// </summary>
-    public OmnichannelChannelEndpointDeploymentStep()
-    {
-        Name = OmnichannelDeploymentSteps.ChannelEndpoint;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => OmnichannelDeploymentSteps.ChannelEndpoint;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

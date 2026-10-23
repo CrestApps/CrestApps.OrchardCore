@@ -11,13 +11,12 @@ public sealed class ContactCenterQueueDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterQueueDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterQueueDeploymentStep>("Contact Center Queues");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterQueueDeploymentStep"/> class.
-    /// </summary>
-    public ContactCenterQueueDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.Queue;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.Queue;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

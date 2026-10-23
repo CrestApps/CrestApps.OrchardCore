@@ -586,34 +586,58 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps
     public sealed class CadenceDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public CadenceDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class LeadStatusDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public LeadStatusDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelCampaignDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelCampaignGroupDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignGroupDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelChannelEndpointDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelChannelEndpointDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelDispositionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelDispositionDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelSubjectActionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelSubjectActionDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OpportunityStageDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OpportunityStageDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers

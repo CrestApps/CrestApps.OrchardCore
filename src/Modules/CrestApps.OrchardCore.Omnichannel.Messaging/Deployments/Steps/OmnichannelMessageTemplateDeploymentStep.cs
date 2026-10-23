@@ -11,13 +11,12 @@ public sealed class OmnichannelMessageTemplateDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelMessageTemplateDeploymentStep>("Omnichannel");
     private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelMessageTemplateDeploymentStep>("Messaging Templates");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OmnichannelMessageTemplateDeploymentStep"/> class.
-    /// </summary>
-    public OmnichannelMessageTemplateDeploymentStep()
-    {
-        Name = MessagingDeploymentSteps.MessageTemplate;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => MessagingDeploymentSteps.MessageTemplate;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

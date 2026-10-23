@@ -26,15 +26,14 @@ public sealed class ReportDesignsDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ReportDesignsDeploymentStep>("Reporting");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ReportDesignsDeploymentStep>("Designed Reports and Views");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReportDesignsDeploymentStep"/> class.
-    /// </summary>
-    public ReportDesignsDeploymentStep()
-    {
-        Name = ReportDesignsRecipeStep.Name;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ReportDesignsRecipeStep.Name;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets a value indicating whether every report and view is exported. It is on by default, so a plan saved

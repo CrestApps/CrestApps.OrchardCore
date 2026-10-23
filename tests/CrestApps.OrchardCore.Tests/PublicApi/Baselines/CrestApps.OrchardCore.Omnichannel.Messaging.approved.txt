@@ -225,6 +225,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps
     public sealed class OmnichannelMessageTemplateDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelMessageTemplateDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Drivers

@@ -12,15 +12,14 @@ public sealed class AIToolInstanceDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<AIToolInstanceDeploymentStep>("Artificial Intelligence");
     private static readonly LocalizationSource _title = LocalizationSource.Create<AIToolInstanceDeploymentStep>("AI Tool Instances");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AIToolInstanceDeploymentStep"/> class.
-    /// </summary>
-    public AIToolInstanceDeploymentStep()
-    {
-        Name = AIToolInstanceStep.StepKey;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => AIToolInstanceStep.StepKey;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets a value indicating whether all tool instances are exported.
