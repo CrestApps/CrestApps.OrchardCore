@@ -115,10 +115,10 @@ public sealed class StripeCheckoutCustomerTests
 
     /// <summary>
     /// A retry runs in a new scope, so the in-scope cache is empty. The key Stripe is asked to deduplicate on
-    /// must therefore come from the checkout, not from the attempt that happens to be retrying.
+    /// must therefore come from the checkout and its payment method, not from the attempt that happens to be retrying.
     /// </summary>
     [Fact]
-    public async Task ResolveAsync_KeysTheCustomerByTheCheckout()
+    public async Task ResolveAsync_KeysTheCustomerByTheCheckoutAndItsPaymentMethod()
     {
         var customerService = CreateCustomerService();
         var resolver = new StripeCheckoutCustomerResolver(customerService.Object);
@@ -135,7 +135,36 @@ public sealed class StripeCheckoutCustomerTests
 
         await resolver.ResolveAsync(new CheckoutSession { SessionId = "session-1" }, "session-1", "pm_1");
 
-        Assert.Equal("checkout_session-1_customer", captured.IdempotencyKey);
+        Assert.Equal("checkout_session-1_pm_1_customer", captured.IdempotencyKey);
+    }
+
+    /// <summary>
+    /// A customer whose first card failed retries the same checkout with another card, which is another payment
+    /// method. Stripe rejects a reused idempotency key whose request differs, so reusing one key per checkout made
+    /// the retry fail with "The card could not be saved for later payments" even though the new card was fine.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_ForAnotherPaymentMethodOfTheSameCheckout_UsesAnotherKey()
+    {
+        var customerService = CreateCustomerService();
+        var resolver = new StripeCheckoutCustomerResolver(customerService.Object);
+        var keys = new List<string>();
+
+        customerService
+            .Setup(service => service.CreateAsync(It.IsAny<CreateCustomerRequest>()))
+            .ReturnsAsync((CreateCustomerRequest request) =>
+            {
+                keys.Add(request.IdempotencyKey);
+
+                return new CreateCustomerResponse { CustomerId = "cus_" + keys.Count };
+            });
+
+        var first = await resolver.ResolveAsync(new CheckoutSession { SessionId = "session-1" }, "session-1", "pm_1");
+        var second = await resolver.ResolveAsync(new CheckoutSession { SessionId = "session-1" }, "session-1", "pm_2");
+
+        Assert.Equal(2, keys.Count);
+        Assert.NotEqual(keys[0], keys[1]);
+        Assert.NotEqual(first, second);
     }
 
     /// <summary>
