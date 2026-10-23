@@ -126,33 +126,41 @@ public sealed class LeadImportProvider
         var configuration = _session.Store.Configuration;
         var dialect = configuration.SqlDialect;
         var entryId = dialect.QuoteForColumnName(nameof(LeadImportIndex.EntryId));
-        var fileName = dialect.QuoteForColumnName(nameof(LeadImportIndex.FileName));
-        var importedUtc = dialect.QuoteForColumnName(nameof(LeadImportIndex.ImportedUtc));
         var latest = dialect.QuoteForColumnName(nameof(LeadImportIndex.Latest));
 
-        // Every row of an import carries the same file name and time, so grouping by them keeps one row per
-        // import while the columns keep their own types. A lead has one latest version and records an import once,
-        // so each row is a distinct lead and the rows are counted without the sort a distinct count needs.
+        // Only the lead count is grouped. EntryId and Latest are both columns of IDX_LeadImportIndex_EntryId, so the
+        // counts are read from that index alone. The count used to group by the file name and the time as well, which
+        // are not in the index, so the database read the table row of every lead to count them; on a large tenant that
+        // random read outlasted the command timeout of a busy database on every render of the inventory load editor.
+        // A lead has one latest version and records an import once, so each row is a distinct lead.
         var builder = new SqlBuilder(configuration.TablePrefix, dialect);
         builder.Select();
-        builder.Selector($"{entryId} AS EntryId, {fileName} AS FileName, {importedUtc} AS ImportedUtc, COUNT(*) AS LeadCount");
+        builder.Selector($"{entryId} AS EntryId, COUNT(*) AS LeadCount");
         builder.Table(configuration.TableNameConvention.GetIndexTable(typeof(LeadImportIndex), null), alias: null, configuration.Schema);
         builder.WhereAnd($"{latest} = @Latest");
         builder.WhereAnd($"{entryId} IS NOT NULL");
-        builder.GroupBy($"{entryId}, {fileName}, {importedUtc}");
+        builder.GroupBy($"{entryId}");
 
         // The session's own transaction is used, so the read never opens a second connection beside it.
         var transaction = await _session.BeginTransactionAsync();
-        var rows = await transaction.Connection.QueryAsync<LeadImportRow>(builder.ToSqlString(), new { Latest = true }, transaction);
+        var rows = (await transaction.Connection.QueryAsync<LeadImportRow>(builder.ToSqlString(), new { Latest = true }, transaction)).ToList();
 
-        var imports = rows
-            .GroupBy(row => row.EntryId, StringComparer.Ordinal)
-            .Select(group => new LeadImportSummary(
-                group.Key,
-                group.Select(row => row.FileName).FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)),
-                DateTime.SpecifyKind(group.Min(row => row.ImportedUtc), DateTimeKind.Utc),
-                group.Sum(row => row.LeadCount)))
-            .ToList();
+        var imports = new List<LeadImportSummary>(rows.Count);
+
+        // Every row of an import carries the same file name and time, so one row per import names it. Reading it by
+        // the entry id seeks to the import in the index and reads a single table row.
+        foreach (var row in rows)
+        {
+            var named = await _session
+                .QueryIndex<LeadImportIndex>(index => index.EntryId == row.EntryId && index.Latest)
+                .FirstOrDefaultAsync();
+
+            imports.Add(new LeadImportSummary(
+                row.EntryId,
+                string.IsNullOrWhiteSpace(named?.FileName) ? null : named.FileName,
+                DateTime.SpecifyKind(named?.ImportedUtc ?? DateTime.UtcNow, DateTimeKind.Utc),
+                row.LeadCount));
+        }
 
         imports.AddRange(await GetImportsStillBeingIndexedAsync(imports.Select(import => import.EntryId)));
 
@@ -256,10 +264,6 @@ public sealed class LeadImportProvider
     private sealed class LeadImportRow
     {
         public string EntryId { get; set; }
-
-        public string FileName { get; set; }
-
-        public DateTime ImportedUtc { get; set; }
 
         public long LeadCount { get; set; }
     }
