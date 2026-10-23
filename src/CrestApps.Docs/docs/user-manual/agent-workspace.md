@@ -139,13 +139,13 @@ These need the *Pause recording on own live interactions* and *Initiate secure c
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the docked agent bar collapsed on an admin page and expanded to show the agent's status" start={65} end={78} />
 
-The bar sits as a small tab at the bottom of every admin page while you are signed in. Click it to expand; it also opens by itself when an offer arrives, and collapses when you click elsewhere (except while an offer is ringing). It keeps working when the soft phone runs in its own window, so an offer reaches you on any page of the CRM.
+The bar sits as a small tab at the bottom of every admin page while you are signed in. Click it to expand; it also opens by itself when an offer arrives, when you are connected to a call that has an activity (a power or progressive call included), and again when that call ends so **Complete activity** is in front of you. It collapses when you click elsewhere (except while an offer is ringing). It keeps working when the soft phone runs in its own window, so an offer reaches you on any page of the CRM.
 
 | Offer | Buttons | What happens |
 | --- | --- | --- |
 | **Incoming call** | **Accept** / **Decline** | The bar beeps once. When you accept, the activity's **Complete activity** page opens. |
 | **Preview** (*Preview — review then dial*) | **Dial** / **Skip** | The activity opens so you can read it first, unless the page you are on has unsaved changes. **Dial** places the call. |
-| **Power or progressive call** | none | The system dials for you. The bar shows *Waiting for a connected call* (or each dial, when the dialer profile shows it), and the activity opens once you are connected. |
+| **Power or progressive call** | none | The system dials for you. The bar shows *Waiting for a connected call* (or each dial, when the dialer profile shows it), and once you are connected the bar opens and the activity's **Complete activity** page opens, unless the page you are on has unsaved changes. |
 
 During the call the bar shows the direction, contact, number, queue, status and a talk timer, plus **Open activity** or **Complete activity** and **Open customer record**. The headset icon opens **My workspace**. Your presence shows on the bar but is changed from the soft phone. The bar has no disposition controls; you pick the disposition on the activity's **Complete activity** page.
 

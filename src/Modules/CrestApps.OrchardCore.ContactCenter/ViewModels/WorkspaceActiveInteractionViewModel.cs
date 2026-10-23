@@ -53,6 +53,13 @@ public sealed class WorkspaceActiveInteractionViewModel
     public string CompleteUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent's screens open the linked activity on their own: the call is an
+    /// automatic dial (Power, Progressive, Predictive) the agent has been connected to, so the record was never shown
+    /// before. Read on every state refresh, so a screen that missed the push saying the agent joined still opens it.
+    /// </summary>
+    public bool AutoOpenActivity { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time work on the interaction started.
     /// </summary>
     public DateTime? StartedUtc { get; set; }
