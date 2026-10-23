@@ -220,6 +220,84 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             section.Rows.Select(row => row.Cells[1].Length > 0 ? row.Cells[1] : row.Cells[0]));
     }
 
+    [Fact]
+    public async Task Table_ListingSomeDimensions_GroupsByThemWithTotals()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ColumnIds = ["region", "revenue"], ShowTotals = true };
+
+        // Act
+        var section = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData())).Sections.Single();
+
+        // Assert: one row per region, not one per region and customer.
+        Assert.Equal(["Region", "Revenue"], section.Columns.Select(column => column.Label));
+        Assert.Equal(
+            [
+                ["East", "300"],
+                ["West", "170"],
+                ["Total", "470"],
+            ],
+            section.Rows.Select(row => row.Cells.ToArray()));
+    }
+
+    [Fact]
+    public async Task Table_ListingSomeDimensions_ComputesAveragesOverTheUnderlyingRows()
+    {
+        // Arrange
+        var query = CustomersWithOrders();
+        query.Columns =
+        [
+            new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
+            new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
+            new ReportColumnDefinition { Id = "average", Field = "o.Total", Label = "Average", Aggregate = DataAggregate.Average, Format = "0.00" },
+        ];
+        var regions = new ReportVisualDefinition { Id = "regions", Type = ReportVisualType.Table, ColumnIds = ["region", "average"] };
+        var customers = new ReportVisualDefinition { Id = "customers", Type = ReportVisualType.Table };
+        var visuals = new[] { regions, customers };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", visuals, await RunAsync(query, visuals, SalesData()));
+
+        // Assert: West averages its three orders (170 / 3), not its two customers' averages; the other table is unchanged.
+        Assert.Equal(
+            [
+                ["East", "300.00"],
+                ["West", "56.67"],
+            ],
+            document.Sections[0].Rows.Select(row => row.Cells.ToArray()));
+        Assert.Equal(3, document.Sections[1].Rows.Count);
+    }
+
+    [Fact]
+    public async Task Table_ListingSomeDimensions_StillSupportsSubtotals()
+    {
+        // Arrange
+        var query = CustomersWithOrders();
+        query.Columns =
+        [
+            new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
+            new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
+            new ReportColumnDefinition { Id = "order", Field = "o.Id", Label = "Order" },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
+        ];
+        var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ColumnIds = ["region", "customer", "revenue"], ShowSubtotals = true };
+
+        // Act
+        var section = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData())).Sections.Single();
+
+        // Assert
+        Assert.Equal(
+            [
+                ["East", "Globex", "300"],
+                ["East total", string.Empty, "300"],
+                ["West", "Acme", "150"],
+                ["West", "Initech", "20"],
+                ["West total", string.Empty, "170"],
+            ],
+            section.Rows.Select(row => row.Cells.ToArray()));
+    }
+
     private static ReportQueryDefinition RevenueByRegionAndCustomer()
     {
         var query = CustomersWithOrders();
