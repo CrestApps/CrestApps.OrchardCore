@@ -7,9 +7,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Inventory;
 
 /// <summary>
-/// Adds the ready-made stock widgets to the admin dashboard when reports can be shown there.
+/// Adds the ready-made stock widgets to the admin dashboard when the admin dashboard and reports are on.
 /// </summary>
-[RequireFeatures(ReportWidgetConstants.Feature)]
+[RequireFeatures(ReportsConstants.Feature, ReportWidgetConstants.AdminDashboardFeature)]
 public sealed class InventoryReportWidgetsStartup : StartupBase
 {
     /// <inheritdoc/>

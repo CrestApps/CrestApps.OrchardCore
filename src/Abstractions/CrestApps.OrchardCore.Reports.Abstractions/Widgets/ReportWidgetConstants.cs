@@ -6,9 +6,10 @@ namespace CrestApps.OrchardCore.Reports;
 public static class ReportWidgetConstants
 {
     /// <summary>
-    /// The feature that shows reports as admin dashboard widgets.
+    /// The Orchard Core feature whose dashboard shows the report widgets. Reports show there when it is enabled with
+    /// Reports; there is no feature of its own to turn on.
     /// </summary>
-    public const string Feature = "CrestApps.OrchardCore.Reports.DashboardWidgets";
+    public const string AdminDashboardFeature = "OrchardCore.AdminDashboard";
 
     /// <summary>
     /// The name of the content part that makes a dashboard widget show a report.

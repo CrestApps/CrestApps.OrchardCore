@@ -7,9 +7,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Shipping;
 
 /// <summary>
-/// Adds the ready-made shipping widget to the admin dashboard when reports can be shown there.
+/// Adds the ready-made shipping widget to the admin dashboard when the admin dashboard and reports are on.
 /// </summary>
-[RequireFeatures(ReportWidgetConstants.Feature)]
+[RequireFeatures(ReportsConstants.Feature, ReportWidgetConstants.AdminDashboardFeature)]
 public sealed class ShippingReportWidgetsStartup : StartupBase
 {
     /// <inheritdoc/>

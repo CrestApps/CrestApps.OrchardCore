@@ -205,7 +205,7 @@ The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptio
 
 ## Dashboard widgets
 
-The **Report Dashboard Widgets** feature (`CrestApps.OrchardCore.Reports.DashboardWidgets`, needs Orchard Core's **Admin Dashboard**) shows any report on the admin dashboard. Add a widget from **Manage Dashboard > Add Widget** and set:
+With Orchard Core's **Admin Dashboard** enabled next to **Reports**, any report can be shown on the admin dashboard. There is no feature of its own to turn on: the widgets appear when both are enabled. Add a widget from **Manage Dashboard > Add Widget** and set:
 
 - **Report**: any report the person adding it may view. A ready-made widget fixes the report, so only the options below are set.
 - **Period**: today, yesterday, the last 7, 30 or 90 days, this month, last month, this year, the last 12 months, all time, or custom dates. Every period except custom dates moves with the clock, so "last 30 days" is always the 30 days up to now, in the site's time zone. This is the date range filter of the report.
@@ -215,7 +215,7 @@ The **Report Dashboard Widgets** feature (`CrestApps.OrchardCore.Reports.Dashboa
 
 Each widget keeps its result in the tenant's memory cache, per widget and language. A person sees a widget only when they may view its report: the kept result is checked against the report's permission on every visit. A report that fails shows a message in its own tile and is not kept, so one broken report does not stop the dashboard.
 
-The same part, `ReportWidgetPart`, is on every widget below. A module ships a ready-made widget with `IContentDefinitionManager.DefineReportWidgetAsync`, which creates a `DashboardWidget` type fixed to a report with defaults for the period, what to show and the rows. A module enables its widgets only when this feature is on, in a startup class marked `[RequireFeatures(ReportWidgetConstants.Feature)]`.
+The same part, `ReportWidgetPart`, is on every widget below. A module ships a ready-made widget with `IContentDefinitionManager.DefineReportWidgetAsync`, which creates a `DashboardWidget` type fixed to a report with defaults for the period, what to show and the rows. A module adds its widgets in a startup class marked `[RequireFeatures(ReportsConstants.Feature, ReportWidgetConstants.AdminDashboardFeature)]`, so they exist only when both features are on.
 
 | Widget | Report | Default |
 | --- | --- | --- |
@@ -255,8 +255,7 @@ The **Sales Summary** and **Subscription Summary** widgets are not report widget
       "enable": [
       "CrestApps.OrchardCore.Reports",
       "CrestApps.OrchardCore.Reports.OpenXml",
-      "CrestApps.OrchardCore.Reports.Pdf",
-      "CrestApps.OrchardCore.Reports.DashboardWidgets"
+      "CrestApps.OrchardCore.Reports.Pdf"
       ]
     }
   ]

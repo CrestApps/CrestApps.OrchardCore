@@ -7,10 +7,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Orders.Dashboard;
 
 /// <summary>
-/// Adds the ready-made order widgets to the admin dashboard when reports can be shown there. Each is the report of the
+/// Adds the ready-made order widgets to the admin dashboard when the admin dashboard and reports are on. Each is the report of the
 /// same name, so its period, what it shows and how long it is kept are set on the widget.
 /// </summary>
-[RequireFeatures(ReportWidgetConstants.Feature)]
+[RequireFeatures(ReportsConstants.Feature, ReportWidgetConstants.AdminDashboardFeature)]
 public sealed class OrderReportWidgetsStartup : StartupBase
 {
     /// <inheritdoc/>

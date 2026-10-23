@@ -11,10 +11,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Reports.Widgets;
 
 /// <summary>
-/// Registers the report dashboard widget: the part that shows a report, the service that runs and keeps its result, and
-/// the widget type that shows any report.
+/// Registers the report dashboard widget when the admin dashboard is on: the part that shows a report, the service that
+/// runs and keeps its result, and the widget type that shows any report.
 /// </summary>
-[Feature(ReportWidgetConstants.Feature)]
+[RequireFeatures(ReportWidgetConstants.AdminDashboardFeature)]
 public sealed class WidgetsStartup : StartupBase
 {
     /// <inheritdoc/>
