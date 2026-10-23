@@ -147,10 +147,67 @@ public sealed class AgentPreDialCoordinatorTests
         Assert.True(bridged);
         harness.PreDialProvider.Verify(provider => provider.BridgePreDialedAgentAsync("call-1", "leg-1", It.IsAny<CancellationToken>()), Times.Once);
 
-        // The answer command records the topology from this result, so the webhook half does not also.
+        // The join is recorded the moment the bridge succeeds, never left to the answer command's own projection, which
+        // a command that ran past its timeout never reached: the agent talked to the customer while still Reserved.
         harness.AgentLegFailureService.Verify(
-            service => service.RecordAnsweredAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task OnCallerReadyAsync_WhenTheAnswerCommandIsCancelled_StillJoinsTheLegAndRecordsTheJoin()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+        await harness.Coordinator.OnAgentLegAnsweredAsync("Telnyx", "r1", "leg-1", TestContext.Current.CancellationToken);
+        harness.Reservation.RestorePersistedStatus(ReservationStatus.Accepted);
+
+        // The answer command's timeout fires while the provider is joining the two.
+        using var commandTimeout = new CancellationTokenSource();
+        harness.PreDialProvider
+            .Setup(provider => provider.BridgePreDialedAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(commandTimeout.Cancel)
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderName = "Telnyx" });
+
+        // Act
+        var bridged = await harness.Coordinator.OnCallerReadyAsync("r1", commandTimeout.Token);
+
+        // Assert: the bridge is never handed the command's token, and its join is recorded however the command ends.
+        Assert.True(bridged);
+        harness.PreDialProvider.Verify(
+            provider => provider.BridgePreDialedAgentAsync("call-1", "leg-1", It.Is<CancellationToken>(token => !token.CanBeCanceled)),
+            Times.Once);
+        harness.AgentLegFailureService.Verify(
+            service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task OnAgentLegAnsweredAsync_WhenRetriedAfterTheBridge_RecordsTheJoinAgainWithoutBridgingTwice()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+        harness.Reservation.RestorePersistedStatus(ReservationStatus.Accepted);
+        await harness.Coordinator.OnCallerReadyAsync("r1", TestContext.Current.CancellationToken);
+
+        // The first delivery bridged the two, then its own save was refused (the call was updated concurrently), so
+        // nothing it recorded was kept and the inbox worker retries it.
+        harness.AgentLegFailureService
+            .SetupSequence(service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The call was changed by another process."))
+            .ReturnsAsync(true);
+
+        // Act
+        await harness.Coordinator.OnAgentLegAnsweredAsync("Telnyx", "r1", "leg-1", TestContext.Current.CancellationToken);
+        await harness.Coordinator.OnAgentLegAnsweredAsync("Telnyx", "r1", "leg-1", TestContext.Current.CancellationToken);
+
+        // Assert: one bridge, and the retry records the join the first delivery lost.
+        harness.PreDialProvider.Verify(
+            provider => provider.BridgePreDialedAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.AgentLegFailureService.Verify(
+            service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]
@@ -554,7 +611,7 @@ public sealed class AgentPreDialCoordinatorTests
                 InteractionManager.Object,
                 AgentManager.Object,
                 AgentLegFailureService.Object,
-                new StubScopeExecutor(ReservationManager.Object),
+                new StubScopeExecutor(ReservationManager.Object, AgentLegFailureService.Object),
                 distributedLock.Object,
                 clock.Object,
                 Options.Create(options),
@@ -603,16 +660,16 @@ public sealed class AgentPreDialCoordinatorTests
 
     private sealed class StubScopeExecutor : IContactCenterScopeExecutor
     {
-        private readonly object _context;
+        private readonly object[] _contexts;
 
-        public StubScopeExecutor(object context)
+        public StubScopeExecutor(params object[] contexts)
         {
-            _context = context;
+            _contexts = contexts;
         }
 
         public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
-            => operation((TContext)_context);
+            => operation(_contexts.OfType<TContext>().First());
 
         public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
             => throw new NotSupportedException();

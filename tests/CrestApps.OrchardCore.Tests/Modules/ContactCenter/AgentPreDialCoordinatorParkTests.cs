@@ -78,6 +78,12 @@ public sealed class AgentPreDialCoordinatorParkTests
         Assert.True(bridged);
         harness.PreDialProvider.Verify(provider => provider.BridgePreDialedAgentAsync("call-1", "leg-1", It.IsAny<CancellationToken>()), Times.Once);
         harness.PreDialProvider.Verify(provider => provider.HangupPreDialedAgentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        // Live: the agent talked to the customer while shown "Waiting for a connected call", because this join was
+        // recorded only by the answer command's projection, which a command past its timeout never reached.
+        harness.AgentLegFailureService.Verify(
+            service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", CancellationToken.None),
+            Times.Once);
     }
 
     [Fact]
@@ -352,7 +358,7 @@ public sealed class AgentPreDialCoordinatorParkTests
                 InteractionManager.Object,
                 AgentManager.Object,
                 AgentLegFailureService.Object,
-                new StubScopeExecutor(ReservationManager.Object, InteractionManager.Object),
+                new StubScopeExecutor(ReservationManager.Object, InteractionManager.Object, AgentLegFailureService.Object),
                 distributedLock.Object,
                 clock.Object,
                 Options.Create(options),
