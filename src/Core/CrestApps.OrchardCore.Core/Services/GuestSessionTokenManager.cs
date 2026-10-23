@@ -106,12 +106,6 @@ public sealed class GuestSessionTokenManager
     }
 
     /// <summary>
-    /// Removes the token for a session, so a completed or abandoned session can no longer be resumed from
-    /// this browser.
-    /// </summary>
-    /// <param name="scope">The cookie scope.</param>
-    /// <param name="sessionId">The session to forget.</param>
-    /// <summary>
     /// Gets the hash of the token this browser holds for a session, or <see langword="null"/> when it holds
     /// none. It finds a record that belongs to the browser without knowing the record's identifier first, such
     /// as a visitor's cart.
@@ -134,6 +128,12 @@ public sealed class GuestSessionTokenManager
             : null;
     }
 
+    /// <summary>
+    /// Removes the token for a session, so a completed or abandoned session can no longer be resumed from
+    /// this browser.
+    /// </summary>
+    /// <param name="scope">The cookie scope.</param>
+    /// <param name="sessionId">The session to forget.</param>
     public void Revoke(GuestSessionTokenScope scope, string sessionId)
     {
         ArgumentNullException.ThrowIfNull(scope);
@@ -170,8 +170,19 @@ public sealed class GuestSessionTokenManager
         => !string.IsNullOrEmpty(scope.HeaderName) &&
             httpContext.GetEndpoint()?.Metadata.GetMetadata<GuestSessionTokenHeaderTransport>() is not null;
 
+    // A token written earlier in this request only reaches the response, so the request cookie (or header) still
+    // holds the old set. Without remembering what was written, a second call in the same request would not see the
+    // first token: a visitor adding two products at once would get two guest carts and keep only the last.
+    private static string GetWrittenTokensKey(GuestSessionTokenScope scope)
+        => "GuestSessionTokens:" + scope.ProtectorPurpose;
+
     private Dictionary<string, string> ReadTokens(GuestSessionTokenScope scope, HttpContext httpContext)
     {
+        if (httpContext.Items.TryGetValue(GetWrittenTokensKey(scope), out var written) && written is Dictionary<string, string> writtenTokens)
+        {
+            return new Dictionary<string, string>(writtenTokens, StringComparer.Ordinal);
+        }
+
         var value = UsesHeader(scope, httpContext)
             ? httpContext.Request.Headers[scope.HeaderName].ToString()
             : httpContext.Request.Cookies.TryGetValue(scope.CookieName, out var cookie) ? cookie : null;
@@ -206,6 +217,8 @@ public sealed class GuestSessionTokenManager
                 tokens.Remove(key);
             }
         }
+
+        httpContext.Items[GetWrittenTokensKey(scope)] = new Dictionary<string, string>(tokens, StringComparer.Ordinal);
 
         var protectedValue = _dataProtectionProvider.CreateProtector(scope.ProtectorPurpose).Protect(JsonSerializer.Serialize(tokens));
 

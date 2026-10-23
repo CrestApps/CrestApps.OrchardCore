@@ -99,6 +99,34 @@ public sealed class CartServiceTests
         Assert.Null(await _harness.NewRequest().GetCurrentAsync(TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// A guest's first add issues the cart's token to the response cookie only, so the request cookie still holds
+    /// none. Each later add in the same request used to miss the new cart, start another one, and replace the token,
+    /// leaving the visitor with only the last product.
+    /// </summary>
+    [Fact]
+    public async Task AGuestAddingSeveralProductsInOneRequest_KeepsThemAllInOneCart()
+    {
+        _harness.AddProduct("mug", unitPrice: 12m);
+        _harness.AddProduct("lamp", unitPrice: 40m);
+        _harness.AddProduct("plate", unitPrice: 8m);
+
+        var service = _harness.NewRequest();
+
+        Assert.True((await service.AddAsync("mug", null, 1, TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await service.AddAsync("lamp", null, 2, TestContext.Current.CancellationToken)).Succeeded);
+        var last = await service.AddAsync("plate", null, 3, TestContext.Current.CancellationToken);
+
+        Assert.True(last.Succeeded);
+        Assert.Equal(3, last.Cart.Lines.Count);
+
+        var cart = await _harness.NextRequest().GetCurrentAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(cart);
+        Assert.Equal(last.Cart.Id, cart.Id);
+        Assert.Equal(3, cart.Lines.Count);
+    }
+
     [Fact]
     public async Task AddingTheSameProductAgain_AddsToItsLine()
     {
