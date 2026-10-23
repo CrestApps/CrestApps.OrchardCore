@@ -269,12 +269,33 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
-        return (await Session.Query<Interaction, InteractionIndex>(
+        // The newest rows are found in the index alone, then only those records are read. Ordering the records through
+        // the index grouped them by document first, so every poll of an agent's workspace read every interaction the
+        // agent ever handled before it kept the newest few.
+        var rows = (await Session.QueryIndex<InteractionIndex>(
             index => index.AgentId == agentId,
             collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .Take(take)
             .ListAsync(cancellationToken)).ToArray();
+
+        if (rows.Length == 0)
+        {
+            return [];
+        }
+
+        var documentIds = rows.Select(row => row.DocumentId).ToArray();
+
+        var interactions = (await Session.Query<Interaction, InteractionIndex>(
+            index => index.DocumentId.IsIn(documentIds),
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken))
+            .ToDictionary(interaction => interaction.ItemId);
+
+        return rows
+            .Select(row => interactions.GetValueOrDefault(row.ItemId))
+            .Where(interaction => interaction is not null)
+            .ToArray();
     }
 
     /// <inheritdoc/>

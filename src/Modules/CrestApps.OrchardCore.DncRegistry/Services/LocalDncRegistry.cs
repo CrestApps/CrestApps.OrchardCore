@@ -85,20 +85,23 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
 
         var e164Numbers = queriedNumbers.Keys.ToList();
 
-        IQuery<LocalDncEntry> query;
+        // Only the index rows are read. A lookup used to read the stored entry through a join to the document table for
+        // every number, which the dialer repeats before each call and again when it dispatches it; the list and the
+        // number the answer needs are both columns of the index.
+        IQueryIndex<LocalDncEntryIndex> query;
 
         if (!string.IsNullOrWhiteSpace(context?.CountryCode))
         {
             var upperCountry = context.CountryCode.ToUpperInvariant();
 
-            query = _session.Query<LocalDncEntry, LocalDncEntryIndex>(
+            query = _session.QueryIndex<LocalDncEntryIndex>(
                 i => i.PhoneNumber.IsIn(e164Numbers) &&
                      i.CountryCode == upperCountry,
                 collection: DncRegistryConstants.CollectionName);
         }
         else
         {
-            query = _session.Query<LocalDncEntry, LocalDncEntryIndex>(
+            query = _session.QueryIndex<LocalDncEntryIndex>(
                 i => i.PhoneNumber.IsIn(e164Numbers),
                 collection: DncRegistryConstants.CollectionName);
         }
@@ -114,7 +117,7 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
             return dncNumbers;
         }
 
-        var completedListIds = (await _session.Query<LocalDncList, LocalDncListIndex>(
+        var completedListIds = (await _session.QueryIndex<LocalDncListIndex>(
                 i => i.ListId.IsIn(listIds) && i.Status == LocalDncListStatus.Completed,
                 collection: DncRegistryConstants.CollectionName)
             .ListAsync(cancellationToken))
