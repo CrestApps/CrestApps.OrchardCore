@@ -16,12 +16,14 @@ public sealed class ShippingZonesDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ShippingZonesDeploymentStep>("Commerce");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ShippingZonesDeploymentStep>("Shipping Zones");
 
-    public ShippingZonesDeploymentStep()
-    {
-        Name = ShippingConstants.ZonesRecipeStep;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ShippingConstants.ZonesRecipeStep;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }
 
 internal sealed class ShippingZonesDeploymentSource : NamedCatalogDeploymentSource<ShippingZonesDeploymentStep, ShippingZone>

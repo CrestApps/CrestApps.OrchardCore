@@ -11,13 +11,12 @@ public sealed class ContactCenterBusinessHoursCalendarDeploymentStep : Deploymen
     private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterBusinessHoursCalendarDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterBusinessHoursCalendarDeploymentStep>("Contact Center Business Hours Calendars");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterBusinessHoursCalendarDeploymentStep"/> class.
-    /// </summary>
-    public ContactCenterBusinessHoursCalendarDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.BusinessHoursCalendar;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.BusinessHoursCalendar;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

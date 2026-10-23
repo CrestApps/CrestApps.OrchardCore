@@ -11,13 +11,12 @@ public sealed class StripeSettingsDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<StripeSettingsDeploymentStep>("Payments");
     private static readonly LocalizationSource _title = LocalizationSource.Create<StripeSettingsDeploymentStep>("Stripe Settings");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="StripeSettingsDeploymentStep"/> class.
-    /// </summary>
-    public StripeSettingsDeploymentStep()
-    {
-        Name = StripeDeploymentSteps.Settings;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => StripeDeploymentSteps.Settings;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

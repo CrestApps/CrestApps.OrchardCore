@@ -40,11 +40,11 @@ public sealed class ContentTypeAuthorizationHandler : AuthorizationHandler<Permi
 
         if (requirement.Permission.Name == ContentTransferPermissions.ImportContentFromFile.Name)
         {
-            permission = ContentTypePermissionsHelper.CreateDynamicPermission(ContentTransferPermissions.ImportContentFromFileOfType, contentType);
+            permission = ContentTransferPermissions.CreateDynamicPermission(ContentTransferPermissions.ImportContentFromFileOfType, contentType);
         }
         else if (requirement.Permission.Name == ContentTransferPermissions.ExportContentFromFile.Name)
         {
-            permission = ContentTypePermissionsHelper.CreateDynamicPermission(ContentTransferPermissions.ExportContentFromFileOfType, contentType);
+            permission = ContentTransferPermissions.CreateDynamicPermission(ContentTransferPermissions.ExportContentFromFileOfType, contentType);
         }
 
         if (permission == null)

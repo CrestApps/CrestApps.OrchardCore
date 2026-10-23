@@ -11,13 +11,12 @@ public sealed class LeadStatusDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<LeadStatusDeploymentStep>("Omnichannel");
     private static readonly LocalizationSource _title = LocalizationSource.Create<LeadStatusDeploymentStep>("Omnichannel Lead Statuses");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LeadStatusDeploymentStep"/> class.
-    /// </summary>
-    public LeadStatusDeploymentStep()
-    {
-        Name = OmnichannelDeploymentSteps.LeadStatus;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => OmnichannelDeploymentSteps.LeadStatus;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

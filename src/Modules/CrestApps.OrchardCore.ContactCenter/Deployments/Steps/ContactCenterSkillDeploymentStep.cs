@@ -11,13 +11,12 @@ public sealed class ContactCenterSkillDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterSkillDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterSkillDeploymentStep>("Contact Center Skills");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterSkillDeploymentStep"/> class.
-    /// </summary>
-    public ContactCenterSkillDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.Skill;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.Skill;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

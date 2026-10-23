@@ -11,15 +11,14 @@ public sealed class TimeZoneMapDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<TimeZoneMapDeploymentStep>("Infrastructure");
     private static readonly LocalizationSource _title = LocalizationSource.Create<TimeZoneMapDeploymentStep>("Time Zone Maps");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TimeZoneMapDeploymentStep"/> class.
-    /// </summary>
-    public TimeZoneMapDeploymentStep()
-    {
-        Name = TimeZonesConstants.Recipes.TimeZoneMaps;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => TimeZonesConstants.Recipes.TimeZoneMaps;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets a value indicating whether all maps should be exported.
