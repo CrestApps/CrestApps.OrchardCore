@@ -134,6 +134,15 @@ With Stripe connected, a signed-in buyer paying for a one-time purchase can tick
 
 The cards are kept by Stripe, not on your site. A buyer sees and removes theirs under **Payment methods** in their account. Guests, subscriptions and installment plans don't offer the box: a subscription or a plan keeps its card for its own charges.
 
+### Cards for automatic payments
+
+When a signed-in buyer pays something that keeps the card for later charges, such as the first payment of an installment plan or a booking deposit, the card is also listed under **Cards for automatic payments** on their **Payment methods** page. Your site can then charge it later without the buyer at the checkout, for example to renew something they agreed to. The first card they keep is their default, marked **Default**.
+
+- **Make default** picks the card charged when a payment doesn't name another.
+- **Remove** stops the card from being offered for new automatic payments. An installment plan already running keeps charging the card it was set up with.
+
+A charge that doesn't go through, because the card was declined or the bank asked the cardholder to approve it, shows on the transaction's timeline as **Payment failed**. Nothing was taken, and the buyer pays it another way, such as from the invoice's pay link.
+
 ## Try the checkout with test payments
 
 | | |

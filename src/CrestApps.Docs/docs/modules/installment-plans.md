@@ -127,7 +127,7 @@ The plan's payment page shows the provider's embedded card form. With Stripe, it
 
 Once the checkout settles the down-payment transaction, the Transactions feature raises `ITransactionPaymentHandler.PaymentRecordedAsync`. The feature's `InstallmentPlanTransactionPaymentHandler` reacts to transactions whose `ReferenceType` is `InstallmentPlan`. It calls `ProcessAsync`, which **activates** the plan:
 
-1. It reads the kept card back from the provider (`ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync`). It stores the card's brand, last four digits and expiry on the plan as a `SavedPaymentMethod`. Card numbers never reach the site; only the gateway's references are kept.
+1. It reads the kept card back from the provider (`ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync`). It stores the card's brand, last four digits and expiry on the plan as a `SavedPaymentMethod`. Card numbers never reach the site; only the gateway's references are kept. Because the down-payment checkout keeps the card, the card is also added to the customer's [kept payment methods](checkout.md#kept-payment-methods), where other modules can find it; the plan keeps charging its own copy even if the customer removes it there.
 2. It creates a `Pending` transaction for every scheduled payment. When the plan charges the card, each transaction gets a `TransactionAutoCollection` naming the card.
 3. It moves the plan to `Active`.
 

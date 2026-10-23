@@ -233,6 +233,64 @@ public sealed class TestCheckoutPaymentProviderTests
     }
 
     [Fact]
+    public async Task BeginAsync_AnOffSessionChargeEndingIn03_RequiresTheCardholdersApproval()
+    {
+        // Arrange
+        var provider = CreateProvider();
+        var saved = await KeepPaymentMethodAsync(provider);
+
+        // Act
+        var result = await provider.BeginAsync(
+            new BeginPaymentContext
+            {
+                Attempt = CreateAttempt(25.03m),
+                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(saved),
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.Declined);
+        Assert.True(result.RequiresAuthentication);
+        Assert.False(string.IsNullOrEmpty(result.ProviderReference));
+    }
+
+    [Fact]
+    public async Task BeginAsync_AnOffSessionChargeEndingIn02_IsDeclinedWithoutAskingForApproval()
+    {
+        // Arrange
+        var provider = CreateProvider();
+        var saved = await KeepPaymentMethodAsync(provider);
+
+        // Act
+        var result = await provider.BeginAsync(
+            new BeginPaymentContext
+            {
+                Attempt = CreateAttempt(25.02m),
+                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(saved),
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Declined);
+        Assert.False(result.RequiresAuthentication);
+    }
+
+    [Fact]
+    public async Task BeginAsync_APaymentEndingIn03MadeByThePayer_Succeeds()
+    {
+        // Arrange
+        var provider = CreateProvider();
+
+        // Act
+        var result = await provider.BeginAsync(new BeginPaymentContext { Attempt = CreateAttempt(25.03m) }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresAuthentication);
+    }
+
+    [Fact]
     public async Task BeginRecurringAsync_EstablishesAnAgreementAndHonorsTheDeclineAmount()
     {
         // Arrange
@@ -273,6 +331,24 @@ public sealed class TestCheckoutPaymentProviderTests
         Assert.True(capabilities.SupportsSavedPaymentMethods);
         Assert.False(capabilities.DefersPayment);
         Assert.Equal(TestCheckoutPaymentProvider.ProviderKey, provider.Key);
+    }
+
+    // Takes a payment that keeps its payment method and reads back what was kept, as a checkout that keeps the card does.
+    private static async Task<SavedPaymentMethod> KeepPaymentMethodAsync(TestCheckoutPaymentProvider provider)
+    {
+        var attempt = CreateAttempt(30m);
+        var begun = await provider.BeginAsync(
+            new BeginPaymentContext
+            {
+                Attempt = attempt,
+                ProviderData = new Dictionary<string, string> { [CheckoutPaymentDataKeys.SavePaymentMethod] = "true" },
+            },
+            TestContext.Current.CancellationToken);
+
+        attempt.ProviderReference = begun.ProviderReference;
+        attempt.State = PaymentAttemptState.Succeeded;
+
+        return await provider.GetSavedPaymentMethodAsync(attempt, TestContext.Current.CancellationToken);
     }
 
     internal static TestCheckoutPaymentProvider CreateProvider(TestClock clock = null)

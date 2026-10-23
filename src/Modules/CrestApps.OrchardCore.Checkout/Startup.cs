@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Drivers;
 using CrestApps.OrchardCore.Checkout.Endpoints;
@@ -120,7 +121,13 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CheckoutSessionIndexProvider>()
             .AddIndexProvider<PaymentAttemptIndexProvider>()
             .AddIndexProvider<PaymentRefundIndexProvider>()
-            .AddIndexProvider<CheckoutSessionCustomerIndexProvider>();
+            .AddIndexProvider<CheckoutSessionCustomerIndexProvider>()
+            .AddIndexProvider<CustomerPaymentMethodIndexProvider>();
+
+        // The cards customers kept for charges made without them, filled by every checkout that keeps one.
+        services.AddScoped<ISavedPaymentMethodStore, SavedPaymentMethodStore>();
+        services.AddScoped<ICheckoutHandler, SavedPaymentMethodCheckoutHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, SavedPaymentMethodPersonalDataContributor>();
 
         services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();
         services.AddScoped<ICommercePersonalDataContributor, CouponPersonalDataContributor>();

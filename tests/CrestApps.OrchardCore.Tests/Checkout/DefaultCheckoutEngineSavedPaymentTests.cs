@@ -49,6 +49,45 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
     }
 
     [Fact]
+    public async Task BeginPaymentAsync_WhenTheCardholderMustApprove_ReportsItAsADeclineThatNeedsAuthentication()
+    {
+        // Arrange
+        var attempts = new InMemoryPaymentAttemptStore();
+        var provider = new ScriptedProvider { Result = PaymentBeginResult.AuthenticationRequired("The bank wants the cardholder to approve it.", "pi_auth") };
+        var (engine, sessions) = CreateEngine(attempts, provider);
+        sessions.Seed(CreateSession());
+
+        // Act
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(outcome.Succeeded);
+        Assert.True(outcome.Declined);
+        Assert.True(outcome.RequiresAuthentication);
+        Assert.Equal("The bank wants the cardholder to approve it.", outcome.ProviderErrorMessage);
+
+        var attempt = Assert.Single(await attempts.GetBySessionAsync("session-1", TestContext.Current.CancellationToken));
+
+        Assert.Equal(PaymentAttemptState.Failed, attempt.State);
+    }
+
+    [Fact]
+    public async Task BeginPaymentAsync_WhenTheGatewayDeclines_DoesNotReportThatAuthenticationIsNeeded()
+    {
+        // Arrange
+        var provider = new ScriptedProvider { Result = PaymentBeginResult.Decline("Declined.") };
+        var (engine, sessions) = CreateEngine(new InMemoryPaymentAttemptStore(), provider);
+        sessions.Seed(CreateSession());
+
+        // Act
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(outcome.Declined);
+        Assert.False(outcome.RequiresAuthentication);
+    }
+
+    [Fact]
     public async Task BeginPaymentAsync_WhenTheProviderCannotStart_LeavesTheAttemptToBeResumed()
     {
         // Arrange

@@ -155,8 +155,9 @@ through the refund's session and obligation. A handler that fails is logged and 
 | `AdjustAsync(id, amount, kind, reason)` | Lowers what is owed without money being received. `kind` is a `TransactionAdjustmentKind`: `Discount`, `Waiver`, `Credit` or `WriteOff`. Adds to `Transaction.AmountAdjusted` and records a `TransactionEventType.Adjusted` event (`Amount`, `AdjustmentKind`, `Reason`). An adjustment can never exceed `OutstandingAmount`. When nothing is left to pay, the transaction becomes `Paid` with `SettlementMethod = "adjusted"`, so it is never reminded. No payment handler runs, because no money moved. Adjustments are printed as negative lines on the invoice and noted on each receipt. |
 | `SendInvoiceAsync(id)` | Issues the invoice number when there is none and sends an *Invoice INV-1001* notice (not a reminder) with the pay link, through `ITransactionReminderService.SendInvoiceAsync`. It records a `TransactionEventType.InvoiceSent` event and counts as the first notice (`ReminderCount` and `LastReminderSentUtc`). Needs the **Transaction Reminders** feature; refused for a transaction collected automatically (`AutoCollection`). |
 | `RefundAsync(id, amount?, reason)` | Finds the confirmed payment attempts made for the transaction (from its timeline and `IPaymentAttemptStore.GetByReferenceAsync("Transaction", id)`), and refunds them through `ICheckoutRefundService`, newest first, each up to what it still has to give back, until `amount` (or everything refundable when `null`) is refunded. Attempts from a provider that defers payment, or with a refund waiting for manual settlement, are skipped. An amount above what can be refunded is refused before anything is refunded. `IPaymentRefundHandler` then records each refund on the transaction. Needs the **Checkout** feature. |
+| `ChargeSavedPaymentMethodAsync(id, savedPaymentMethodId)` | Charges what is still owed to a card the transaction's owner kept (`ISavedPaymentMethodStore`, see [Kept payment methods](checkout.md#kept-payment-methods)), without the owner present. See [Charging a kept card](#charging-a-kept-card). Needs the **Checkout** feature and a provider that can charge saved payment methods. |
 
-Each command returns a `TransactionCommandResult`: `Succeeded`, `Errors` (messages ready to show), the `Transaction` as saved (`null` when no transaction has that id), the timeline `Event` it recorded, and the `Refunds` it requested. A command takes a distributed lock on the transaction (`IDistributedLock`), loads it, checks the transaction accepts the command (`TransactionStateMachine`), saves it through `ITransactionManager` (which raises the lifecycle events) and commits the session before releasing the lock, so concurrent commands never overwrite each other; a conflict comes back as an error. Payment handlers run after that commit. The service does not check permissions; the caller decides who may run a command. The signed-in user is recorded as the event's actor.
+Each command returns a `TransactionCommandResult`: `Succeeded`, `Errors` (messages ready to show), the `Transaction` as saved (`null` when no transaction has that id), the timeline `Event` it recorded, the `Refunds` it requested, and, for a charge of a kept card, its `ChargeStatus`. A command takes a distributed lock on the transaction (`IDistributedLock`), loads it, checks the transaction accepts the command (`TransactionStateMachine`), saves it through `ITransactionManager` (which raises the lifecycle events) and commits the session before releasing the lock, so concurrent commands never overwrite each other; a conflict comes back as an error. Payment handlers run after that commit. The service does not check permissions; the caller decides who may run a command. The signed-in user is recorded as the event's actor.
 
 ```csharp
 public sealed class RegistrationPayments
@@ -176,6 +177,55 @@ public sealed class RegistrationPayments
     }
 }
 ```
+
+#### Charging a kept card
+
+`ChargeSavedPaymentMethodAsync` lets a module collect a transaction from the card its owner agreed to keep, for example to renew a subscription charged to the card on file, and fall back to the invoice when that doesn't work:
+
+1. It refuses, without contacting the provider, a transaction that owes nothing or can't take a payment, a kept card that belongs to anyone but the transaction's owner (`Transaction.OwnerId` must match `CustomerPaymentMethod.OwnerId`), and an expired card. `ChargeStatus` is then `NotCharged`.
+2. A charge of the same transaction still settling at the provider is finished (`ICheckoutEngine.TryCompleteAsync`) instead of being repeated, so calling the command twice never charges the owner twice. Charges of one transaction take their own lock, `Transactions:Charge:{id}`.
+3. It starts a checkout for the transaction on the owner's behalf (`StartCheckoutRequest.OwnerId`) and begins the payment with `CheckoutPaymentDataKeys.ForOffSessionCharge(card)`. The money moves through the checkout, so a charge that goes through is verified against the provider, recorded on the transaction as a `PaymentRecorded` event by the settlement handler, receipted, and raised to `ITransactionPaymentHandler` and `ITransactionEventHandler` like any checkout payment.
+4. A charge that is not taken is recorded on the timeline as a `TransactionEventType.PaymentFailed` event (**Payment failed**) with the amount, the card's description, the provider's reason and the failed attempt (`PaymentAttemptId`). The transaction stays as it was.
+
+| `ChargeStatus` | Meaning | `Succeeded` |
+| --- | --- | --- |
+| `Succeeded` | The payment was taken and recorded. `Event` is the recorded payment. | `true` |
+| `Pending` | The provider accepted the charge but hasn't confirmed it. The reconciliation sweep records it once it settles; don't charge again. | `true` |
+| `Declined` | The provider refused the payment. | `false` |
+| `RequiresAuthentication` | The card's bank asked the cardholder to approve the payment (`PaymentBeginResult.RequiresAuthentication`), which can't be done without them. The owner has to pay it, for example from the invoice's pay link. | `false` |
+| `Failed` | The payment couldn't be started, for example the provider was unreachable. Nothing was charged; try again later. | `false` |
+| `NotCharged` | The command was refused before the provider was asked. | `false` |
+
+```csharp
+public sealed class RenewalCollector
+{
+    private readonly ITransactionCommandService _commands;
+    private readonly ISavedPaymentMethodStore _paymentMethods;
+
+    public RenewalCollector(ITransactionCommandService commands, ISavedPaymentMethodStore paymentMethods)
+    {
+        _commands = commands;
+        _paymentMethods = paymentMethods;
+    }
+
+    public async Task CollectAsync(Transaction renewal, CancellationToken cancellationToken)
+    {
+        var card = await _paymentMethods.GetDefaultAsync(renewal.OwnerId, cancellationToken);
+
+        var result = card is null
+            ? null
+            : await _commands.ChargeSavedPaymentMethodAsync(renewal.ItemId, card.ItemId, cancellationToken);
+
+        // No card, a decline or a bank that wants the cardholder to approve: send the invoice instead.
+        if (result?.ChargeStatus is not (SavedPaymentMethodChargeStatus.Succeeded or SavedPaymentMethodChargeStatus.Pending))
+        {
+            await _commands.SendInvoiceAsync(renewal.ItemId, cancellationToken);
+        }
+    }
+}
+```
+
+The command spends a card without its owner present, so only server code may call it; never pass it a kept payment method id taken from a request without checking whose card it is. The [test payment provider](checkout.md#magic-amounts) declines an off-session charge ending in `02` and refuses one ending in `03` as needing the cardholder's approval, so all three outcomes can be tested.
 
 ### Reacting to lifecycle changes
 

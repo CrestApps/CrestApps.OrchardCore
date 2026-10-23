@@ -21,8 +21,10 @@ namespace CrestApps.OrchardCore.Checkout.Services;
 /// </para>
 /// <para>
 /// The last two digits of the amount an obligation charges, in the currency's smallest unit, choose an outcome,
-/// the way gateway test cards do: <see cref="DeclinedCents"/> is declined, and <see cref="PendingCents"/> stays
-/// pending until it is <see cref="PendingSettlementDelay"/> old, so the reconciliation sweep settles it.
+/// the way gateway test cards do: <see cref="DeclinedCents"/> is declined, <see cref="PendingCents"/> stays
+/// pending until it is <see cref="PendingSettlementDelay"/> old, so the reconciliation sweep settles it, and
+/// <see cref="RequiresAuthenticationCents"/> charged to a saved payment method without the payer present is refused
+/// because the cardholder would have to approve it.
 /// </para>
 /// </remarks>
 public sealed class TestCheckoutPaymentProvider :
@@ -45,6 +47,13 @@ public sealed class TestCheckoutPaymentProvider :
     /// The last two digits, in the currency's smallest unit, of an amount the test provider leaves pending.
     /// </summary>
     public const int PendingCents = 5;
+
+    /// <summary>
+    /// The last two digits, in the currency's smallest unit, of an amount the test provider refuses to charge to a
+    /// saved payment method without the payer present, because the card's bank "asks the cardholder to approve it".
+    /// A payment the payer makes themselves with such an amount is approved as usual.
+    /// </summary>
+    public const int RequiresAuthenticationCents = 3;
 
     /// <summary>
     /// How long a payment with <see cref="PendingCents"/> stays pending after it was begun. It matches the age at
@@ -110,10 +119,18 @@ public sealed class TestCheckoutPaymentProvider :
 
         var attempt = context.Attempt;
 
-        if (CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.OffSession) &&
-            !IsSavedPaymentMethod(context.ProviderData))
+        var offSession = CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.OffSession);
+
+        if (offSession && !IsSavedPaymentMethod(context.ProviderData))
         {
             return Task.FromResult(PaymentBeginResult.Failure(S["There is no saved test payment method to charge."]));
+        }
+
+        if (offSession && GetMagicCents(attempt) == RequiresAuthenticationCents)
+        {
+            return Task.FromResult(PaymentBeginResult.AuthenticationRequired(
+                S["The test card's bank asked the cardholder to approve this payment, because the amount ends in .03."],
+                PaymentReferencePrefix + IdGenerator.GenerateId()));
         }
 
         var prefix = CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.SavePaymentMethod)

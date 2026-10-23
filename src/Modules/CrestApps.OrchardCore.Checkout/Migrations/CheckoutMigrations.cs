@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Checkout.Indexes;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Transactions.Models;
 using OrchardCore.Data.Migration;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Checkout.Migrations;
 
 /// <summary>
 /// Creates the index tables that back checkout sessions, the lookup of a person's checkout sessions, the durable
-/// payment attempt ledger, and the durable refund ledger.
+/// payment attempt ledger, the durable refund ledger, and the payment methods customers kept.
 /// </summary>
 internal sealed class CheckoutMigrations : DataMigration
 {
@@ -92,6 +93,24 @@ internal sealed class CheckoutMigrations : DataMigration
             table.CreateIndex("IDX_PaymentRefundIndex_OriginalTransaction", "OriginalTransactionId", "Status");
             table.CreateIndex("IDX_PaymentRefundIndex_Session", "SessionId");
             table.CreateIndex("IDX_PaymentRefundIndex_Idempotency", "IdempotencyKey");
+        });
+
+        // The payment methods customers kept for charges made without them: listed per owner, and found again by the
+        // provider's reference so keeping the same card twice updates it.
+        await SchemaBuilder.CreateMapIndexTableAsync<CustomerPaymentMethodIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("OwnerId", column => column.WithLength(64))
+            .Column<string>("ProviderKey", column => column.WithLength(64))
+            .Column<string>("PaymentMethodReference", column => column.WithLength(255))
+            .Column<bool>("IsDefault")
+            .Column<DateTime>("CreatedUtc")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<CustomerPaymentMethodIndex>(table =>
+        {
+            table.CreateIndex("IDX_CustomerPaymentMethodIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_CustomerPaymentMethodIndex_Owner", "OwnerId", "CreatedUtc");
+            table.CreateIndex("IDX_CustomerPaymentMethodIndex_Reference", "OwnerId", "ProviderKey", "PaymentMethodReference");
         });
 
         return 1;

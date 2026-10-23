@@ -35,6 +35,13 @@ public sealed class PaymentBeginOutcome
     public bool Declined { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a charge made without the payer present was refused because the card's
+    /// bank asked the cardholder to approve it (<see cref="PaymentBeginResult.RequiresAuthentication"/>). Such a
+    /// payment can only be taken with the payer present.
+    /// </summary>
+    public bool RequiresAuthentication { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the payment was refused because what the checkout costs changed,
     /// such as a promotion code that ran out, so the buyer has to see the new total before paying.
     /// </summary>

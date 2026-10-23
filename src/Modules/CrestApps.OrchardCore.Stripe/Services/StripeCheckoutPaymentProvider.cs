@@ -522,11 +522,14 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         if (!response.Succeeded)
         {
-            var message = response.RequiresAuthentication
-                ? S["The card's bank asked the cardholder to approve this payment, which cannot be done without them. The customer needs to pay it themselves."].Value
-                : response.ErrorMessage ?? S["The card was declined."].Value;
+            if (response.RequiresAuthentication)
+            {
+                return PaymentBeginResult.AuthenticationRequired(
+                    S["The card's bank asked the cardholder to approve this payment, which cannot be done without them. The customer needs to pay it themselves."].Value,
+                    response.PaymentIntentId);
+            }
 
-            return PaymentBeginResult.Decline(message, response.PaymentIntentId);
+            return PaymentBeginResult.Decline(response.ErrorMessage ?? S["The card was declined."].Value, response.PaymentIntentId);
         }
 
         return new PaymentBeginResult

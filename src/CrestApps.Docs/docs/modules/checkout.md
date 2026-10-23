@@ -510,6 +510,32 @@ A provider can report a fraud rating with the verification (`PaymentVerification
 - With payment showing, the payment script takes the submit as on the stepped layout. A post from that page with no `checkout-action` completes the checkout, for a purchase that needs no gateway.
 - A change to a section above payment switches the button to **Update order**, a submit named `checkout-action` with `CheckoutConstants.FormActions.Update`, which saves and shows the new total before anything is charged.
 
+## Kept payment methods
+
+**`ISavedPaymentMethodStore`** (in `CrestApps.OrchardCore.Checkout.Abstractions`, registered by the **Checkout** feature) holds the payment methods each customer kept for charges made without them present, whatever provider holds them. A module uses it to find a customer's cards and charge one later, for example to renew a subscription charged to the card on file, through [`ITransactionCommandService.ChargeSavedPaymentMethodAsync`](transactions.md#charging-a-kept-card).
+
+- **How it fills.** When a checkout whose `CheckoutSession.SavePaymentMethod` is set completes, `SavedPaymentMethodCheckoutHandler` reads back the card each confirmed attempt kept (`ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync`) and saves it for the session's owner (`CheckoutSession.OwnerId`). That covers every checkout that keeps the card, such as an [installment plan's](installment-plans.md) first payment and a booking deposit. A guest checkout keeps nothing here. A card that can't be read back is logged and skipped; it never fails the checkout.
+- **What it keeps.** One `CustomerPaymentMethod` per owner and card: `ItemId`, `OwnerId`, the provider's `SavedPaymentMethod` (provider key, customer and payment method references, brand, last four digits, expiry), `IsDefault`, `SourceSessionId`, `CreatedUtc`, `UpdatedUtc` and `LastChargedUtc`. The card itself stays with the provider. The same card kept again (same owner, provider and `PaymentMethodReference`) updates the record instead of adding another, so a renewed expiry is picked up.
+- **The default card.** The owner's first card becomes their default. `SetDefaultAsync` moves it, and removing the default makes the newest remaining card the default. `GetDefaultAsync` returns the default, or else the newest card that has not expired.
+
+| Member | What it does |
+| --- | --- |
+| `ListAsync(ownerId)` | The owner's cards, the default first, then the newest. |
+| `FindAsync(ownerId, id)` | One of the owner's cards, or `null` when the owner has none with that id. |
+| `FindByIdAsync(id)` | A card whoever it belongs to. Server code that charges it checks `OwnerId` itself, as `ChargeSavedPaymentMethodAsync` does. |
+| `GetDefaultAsync(ownerId)` | The card to charge when none is named. |
+| `SaveAsync(ownerId, paymentMethod, sourceSessionId)` | Keeps a card for the owner, or updates it. |
+| `SetDefaultAsync(ownerId, id)` | Makes one of the owner's cards their default. |
+| `MarkChargedAsync(id, chargedUtc)` | Records a successful charge without the owner present. |
+| `RemoveAsync(ownerId, id)` | Forgets one of the owner's cards. |
+| `RemoveAllAsync(ownerId)` | Forgets all of them. Erasing a customer's personal data does this. |
+
+Every lookup that takes an owner returns only that owner's cards, so an id sent from a browser can never reach someone else's card. Removing a card only stops this site from offering or charging it from the store: the provider is not asked to delete it, and a record that keeps its own copy, such as an installment plan's `InstallmentPlan.PaymentMethod`, keeps charging it.
+
+With Stripe enabled, the storefront account page **Payment methods** (`account/payment-methods`) lists the kept cards under **Cards for automatic payments**, from any provider, with **Make default** and **Remove**, above the cards saved for checkout. See [Payments](payments.md#saved-cards-for-the-buyers-own-purchases).
+
+A provider that can be charged this way reports `SupportsSavedPaymentMethods`, implements `ICheckoutSavedPaymentMethodProvider`, and honors `CheckoutPaymentDataKeys.OffSession`. When the card's bank asks the cardholder to approve an off-session charge, it returns `PaymentBeginResult.AuthenticationRequired(...)`; the engine then reports `PaymentBeginOutcome.RequiresAuthentication` alongside `Declined`, so the caller can ask the customer to pay it themselves rather than trying the card again.
+
 ## Test payments
 
 | | |
@@ -572,7 +598,7 @@ The setting is read when the tenant starts, so a change takes effect after the t
 | `VerifyAsync` | Reports `Succeeded` with `ReportsAuthoritativeAmount = true`, the attempt's expected amount and tax, its currency, and `GatewayMode.Testing`. Because the amount is authoritative, the checkout cross-checks it exactly as it does for Stripe. |
 | `CancelAsync` | Always succeeds. |
 | `RefundAsync` | Succeeds for the requested amount with `GatewayMode.Testing`. The refund reference is derived from the idempotency key, so a retried refund returns the same refund. Refunds flow back to the transaction like any other refund. |
-| `GetSavedPaymentMethodAsync` | After a payment begun with `CheckoutPaymentDataKeys.SavePaymentMethod`, returns a saved method (`Test •••• 4242`) whose references a later off-session charge (`CheckoutPaymentDataKeys.ForOffSessionCharge`) accepts. An off-session charge naming any other method fails. |
+| `GetSavedPaymentMethodAsync` | After a payment begun with `CheckoutPaymentDataKeys.SavePaymentMethod`, returns a saved method (`Test •••• 4242`) whose references a later off-session charge (`CheckoutPaymentDataKeys.ForOffSessionCharge`) accepts. An off-session charge naming any other method fails. A checkout that keeps the card adds it to the owner's [kept payment methods](#kept-payment-methods). |
 | `BeginRecurringAsync` | Establishes an agreement with a `test_sub_…` reference. Cancel, pause and update always succeed. |
 
 The provider declares one-time, recurring and combined payments, refunds and saved payment methods. It declares in-page collection (`SupportsEmbeddedElements`) because its panel is shown on the page, which is what lets the installment plan down payment screen offer it. It does not defer payment, so it can pay off an existing balance.
@@ -586,6 +612,7 @@ The last two digits of what an obligation charges, tax included, in the currency
 | Amount ends in | Outcome |
 | --- | --- |
 | `02` (for example `10.02`) | The payment is **declined** when it begins: the attempt is recorded as failed and the begin request returns an error, as a declined card does. Off-session charges and recurring agreements are declined too. |
+| `03` (for example `10.03`) | An **off-session charge** of a saved payment method is refused because the cardholder would have to approve it: the begin result is `PaymentBeginResult.AuthenticationRequired`, so `ChargeSavedPaymentMethodAsync` reports `RequiresAuthentication`. A payment the payer makes themselves succeeds. |
 | `05` (for example `10.05`) | The payment stays **pending** for two minutes (`TestCheckoutPaymentProvider.PendingSettlementDelay`) after the attempt was created. The status endpoint reports `Pending` and the browser stops waiting; the reconciliation sweep picks the attempt up once it is that old and completes the checkout. |
 | Anything else | The payment succeeds. |
 

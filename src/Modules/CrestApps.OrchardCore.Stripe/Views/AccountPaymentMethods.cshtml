@@ -1,9 +1,10 @@
 @using CrestApps.OrchardCore.Stripe.ViewModels
 @model AccountPaymentMethodsViewModel
 
-@* The cards the buyer saved at checkout, each with a way to remove it. *@
+@* The cards the buyer saved at checkout, each with a way to remove it, and the cards kept for payments taken without
+   them, each with a way to make it the default or remove it. *@
 
-@if (Model.Cards.Count == 0)
+@if (Model.Cards.Count == 0 && Model.KeptPaymentMethods.Count == 0)
 {
     <div class="card">
         <div class="card-body text-center py-5">
@@ -15,23 +16,73 @@
 }
 else
 {
-    <ul class="list-group mb-3">
-        @foreach (var card in Model.Cards)
-        {
-            <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="fa-regular fa-credit-card fa-lg text-body-secondary" aria-hidden="true"></span>
-                    <div>
-                        <div class="fw-semibold">@T["{0} ending in {1}", card.Brand?.ToUpperInvariant(), card.Last4]</div>
-                        <div class="small text-body-secondary">@T["Expires {0:00}/{1}", card.ExpMonth, card.ExpYear]</div>
+    if (Model.KeptPaymentMethods.Count > 0)
+    {
+        <h2 class="h5 mb-1">@T["Cards for automatic payments"]</h2>
+        <p class="small text-body-secondary mb-2">@T["These cards are charged for payments you agreed to, such as installments and renewals, without you having to pay at checkout. The default card is charged unless a payment names another."]</p>
+        <ul class="list-group mb-4">
+            @foreach (var kept in Model.KeptPaymentMethods)
+            {
+                var method = kept.PaymentMethod;
+                <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fa-regular fa-credit-card fa-lg text-body-secondary" aria-hidden="true"></span>
+                        <div>
+                            <div class="fw-semibold">
+                                @method?.Describe()
+                                @if (kept.IsDefault)
+                                {
+                                    <span class="badge text-bg-primary ms-1">@T["Default"]</span>
+                                }
+                            </div>
+                            @if (method?.ExpirationMonth is int month && method.ExpirationYear is int year)
+                            {
+                                <div class="small text-body-secondary">@T["Expires {0:00}/{1}", month, year]</div>
+                            }
+                        </div>
                     </div>
-                </div>
-                <form method="post" action="@Url.RouteUrl("AccountPaymentMethodRemove", new { paymentMethodId = card.Id })">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="@T["Remove the {0} card ending in {1}", card.Brand, card.Last4]">@T["Remove"]</button>
-                </form>
-            </li>
+                    <div class="d-flex gap-2">
+                        @if (!kept.IsDefault)
+                        {
+                            <form method="post" action="@Url.RouteUrl("AccountKeptPaymentMethodDefault", new { id = kept.ItemId })">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" aria-label="@T["Make {0} your default card", method?.Describe()]">@T["Make default"]</button>
+                            </form>
+                        }
+                        <form method="post" action="@Url.RouteUrl("AccountKeptPaymentMethodRemove", new { id = kept.ItemId })">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="@T["Remove {0}", method?.Describe()]">@T["Remove"]</button>
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    if (Model.Cards.Count > 0)
+    {
+        if (Model.KeptPaymentMethods.Count > 0)
+        {
+            <h2 class="h5 mb-2">@T["Cards saved for checkout"]</h2>
         }
-    </ul>
-    <p class="small text-body-secondary">@T["Your cards are kept securely by Stripe, not on this site."]</p>
+        <ul class="list-group mb-3">
+            @foreach (var card in Model.Cards)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fa-regular fa-credit-card fa-lg text-body-secondary" aria-hidden="true"></span>
+                        <div>
+                            <div class="fw-semibold">@T["{0} ending in {1}", card.Brand?.ToUpperInvariant(), card.Last4]</div>
+                            <div class="small text-body-secondary">@T["Expires {0:00}/{1}", card.ExpMonth, card.ExpYear]</div>
+                        </div>
+                    </div>
+                    <form method="post" action="@Url.RouteUrl("AccountPaymentMethodRemove", new { paymentMethodId = card.Id })">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="@T["Remove the {0} card ending in {1}", card.Brand, card.Last4]">@T["Remove"]</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    }
+    <p class="small text-body-secondary">@T["Your cards are kept securely by the payment provider, not on this site."]</p>
 }
