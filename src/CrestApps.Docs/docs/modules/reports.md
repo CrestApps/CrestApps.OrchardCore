@@ -203,6 +203,48 @@ The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptio
 - `ReportSubscriptionsBackgroundTask` (every five minutes) sends the subscriptions that are due. A late run covers the period it was due for. `ReportSubscriptionService.SendAsync` runs the report with that date range, resolves its display values, and emails its metrics and tables (`ReportWorkflowService.ToHtml`), with the export attached when asked. It records `LastError` when the email or the report fails.
 - **Reports > Subscriptions** (`ReportSubscriptionsController`, `Reports/subscriptions`, the `AdminList`) needs **Manage report subscriptions**, and lists only the reports the person can see. **Save and send now** sends one at once without moving its schedule.
 
+## Dashboard widgets
+
+The **Report Dashboard Widgets** feature (`CrestApps.OrchardCore.Reports.DashboardWidgets`, needs Orchard Core's **Admin Dashboard**) shows any report on the admin dashboard. Add a widget from **Manage Dashboard > Add Widget** and set:
+
+- **Report**: any report the person adding it may view. A ready-made widget fixes the report, so only the options below are set.
+- **Period**: today, yesterday, the last 7, 30 or 90 days, this month, last month, this year, the last 12 months, all time, or custom dates. Every period except custom dates moves with the clock, so "last 30 days" is always the 30 days up to now, in the site's time zone. This is the date range filter of the report.
+- **Show**: figures and tables (the default), figures only, tables only, charts only, or everything. Charts are left out of the default because they need room.
+- **Rows per table**: how many rows of each table, and bars of each bar list, to show. A total row stays.
+- **Keep for (minutes)**: how long the widget keeps what it shows before it runs the report again. The default is 30 minutes, so the dashboard stays quick however often it opens. 0 runs the report on every visit. Saving the widget starts over.
+
+Each widget keeps its result in the tenant's memory cache, per widget and language. A person sees a widget only when they may view its report: the kept result is checked against the report's permission on every visit. A report that fails shows a message in its own tile and is not kept, so one broken report does not stop the dashboard.
+
+The same part, `ReportWidgetPart`, is on every widget below. A module ships a ready-made widget with `IContentDefinitionManager.DefineReportWidgetAsync`, which creates a `DashboardWidget` type fixed to a report with defaults for the period, what to show and the rows. A module enables its widgets only when this feature is on, in a startup class marked `[RequireFeatures(ReportWidgetConstants.Feature)]`.
+
+| Widget | Report | Default |
+| --- | --- | --- |
+| Report | Any report | Last 30 days, figures and tables |
+| Sales Overview | `order-sales` | Last 30 days, figures |
+| Sales Trend | `order-sales` | Last 30 days, chart |
+| Top Selling Products | `order-product-sales` | Last 30 days, top 5 |
+| Sales by Category | `order-category-sales` | Last 30 days, top 5 |
+| Sales by Country | `order-country-sales` | Last 30 days, 5 rows |
+| Orders to Ship | `unfulfilled-orders` | All time, oldest 5 |
+| Customer Insights | `order-customers` | Last 30 days, figures and 5 buyers |
+| Checkout Conversion | `checkout-conversion` | Last 30 days, figures |
+| Refunds | `order-refunds` | Last 30 days, figures and 5 refunds |
+| Payment Disputes | `order-disputes` | Last 90 days, open ones first |
+| Discount Codes Used | `order-discounts` | Last 30 days, 5 codes |
+| Tax Collected | `order-tax` | This month, figures |
+| Low Stock | `stock-on-hand` | All time, the 5 items with the least stock |
+| Stock Movements | `stock-movements` | Last 30 days |
+| Product Reviews | `product-reviews` | Last 30 days |
+| Shipping Times | `shipping-performance` | Last 30 days |
+| Digital Downloads | `digital-downloads` | Last 30 days |
+| Subscriptions Overview | `subscriptions-dashboard` | Last 30 days, figures |
+| Subscription Revenue | `subscription-revenue` | Last 30 days, figures |
+| Expiring Subscriptions | `expiring-subscriptions` | All time, table |
+| New Subscriptions Trend | `new-subscriptions-trend` | Last 12 months, chart |
+| Subscription Products | `product-performance` | Last 30 days |
+
+The **Sales Summary** and **Subscription Summary** widgets are not report widgets. They count the store's orders or subscriptions directly and have their own options; see [Sales Summary widget](carts-and-orders#sales-summary-widget) and [Subscriptions](subscriptions).
+
 ## Enable via recipe
 
 ```json
@@ -213,7 +255,8 @@ The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptio
       "enable": [
       "CrestApps.OrchardCore.Reports",
       "CrestApps.OrchardCore.Reports.OpenXml",
-      "CrestApps.OrchardCore.Reports.Pdf"
+      "CrestApps.OrchardCore.Reports.Pdf",
+      "CrestApps.OrchardCore.Reports.DashboardWidgets"
       ]
     }
   ]

@@ -30,3 +30,14 @@ public class SubscriptionSummaryViewModel
     /// </summary>
     public decimal TotalRevenue { get; set; }
 }
+
+/// <summary>
+/// The editor of the subscription summary widget.
+/// </summary>
+public class SubscriptionSummaryEditViewModel
+{
+    /// <summary>
+    /// Gets or sets how many minutes the widget keeps its figures.
+    /// </summary>
+    public int CacheMinutes { get; set; }
+}

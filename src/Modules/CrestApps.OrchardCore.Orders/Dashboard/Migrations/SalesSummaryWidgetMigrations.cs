@@ -16,6 +16,27 @@ namespace CrestApps.OrchardCore.Orders.Dashboard;
 /// </summary>
 public sealed class SalesSummaryPart : ContentPart
 {
+    /// <summary>
+    /// Gets or sets how many minutes the widget keeps its figures before it counts the orders again; 0 counts them on
+    /// every visit to the dashboard.
+    /// </summary>
+    public int CacheMinutes { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the days the first window after today covers.
+    /// </summary>
+    public int ShortDays { get; set; } = 7;
+
+    /// <summary>
+    /// Gets or sets the days the second window after today covers.
+    /// </summary>
+    public int LongDays { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the channel whose orders count: <see cref="OrderChannels.Online"/>,
+    /// <see cref="OrderChannels.PointOfSale"/> or <see cref="OrderChannels.Draft"/>; empty counts them all.
+    /// </summary>
+    public string Channel { get; set; }
 }
 
 /// <summary>

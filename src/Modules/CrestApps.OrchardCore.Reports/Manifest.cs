@@ -46,3 +46,17 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.DataPipelines.Core",
     ]
 )]
+
+[assembly: Feature(
+    Id = ReportWidgetConstants.Feature,
+    Name = "Report Dashboard Widgets",
+    Description = "Shows any report on the admin dashboard as a widget: pick the report, the period (last 30 days, this month, custom dates), what of it to show and how long to keep the result (30 minutes by default) so the dashboard stays quick. Other modules ship ready-made widgets on top of it.",
+    Category = "Reporting",
+    Dependencies =
+    [
+        ReportsConstants.Feature,
+        "OrchardCore.AdminDashboard",
+        "OrchardCore.Contents",
+        "OrchardCore.Title",
+    ]
+)]

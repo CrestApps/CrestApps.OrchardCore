@@ -353,7 +353,7 @@ Subscription plans are content items, so they are defined and imported through O
 When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for the module's content parts, giving editor validation and IntelliSense while authoring content-definition recipes:
 
 - **`SubscriptionPart`** — its billing payload (`InitialAmount`, `BillingDuration`, `DurationType`, `BillingCycleLimit`, `SubscriptionDayDelay`, `Sort`, and the initial-amount description) and the `SubscriptionPartSettings.ContentTypes` option.
-- **`SubscriptionSummaryPart`** — the dashboard-widget marker part.
+- **`SubscriptionSummaryPart`** — the dashboard-widget part. Its **Keep for (minutes)** option (30 by default, 0 for every visit) sets how long the widget keeps its figures before it counts the subscriptions again. For subscriptions by period, use the [report widgets](reports#dashboard-widgets).
 - **`TenantOnboardingPart`** — its `RecipeName` and `FeatureProfile` payload, contributed only when the **Subscriptions - Sites** feature is also enabled.
 
 ## Installation
