@@ -257,9 +257,12 @@ for through the provider-neutral `CheckoutPaymentDataKeys` on an ordinary checko
 - **`offSession`** with **`savedCustomerReference`** and **`savedPaymentMethodReference`** — the PaymentIntent is
   created and confirmed server-side with `off_session = true`. A declined card is reported as a decline carrying
   Stripe's reason, and the engine records the attempt as failed; a bank that insists on authenticating the
-  cardholder declines with `authentication_required`, and that payment has to be made by the customer. A network
+  cardholder is reported with `PaymentBeginResult.AuthenticationRequired` (a decline that also sets
+  `RequiresAuthentication`), and that payment has to be made by the customer. A network
   failure is not a decline, so it is retried without counting against the card. Only server code sets these keys:
   the down payment page strips them from anything the browser sends.
+
+A card kept this way is added to the customer's [kept payment methods](checkout.md#kept-payment-methods) when the checkout completes, and any module can charge it for a later transaction with [`ITransactionCommandService.ChargeSavedPaymentMethodAsync`](transactions.md#charging-a-kept-card).
 
 ### Saved cards for the buyer's own purchases
 
@@ -268,7 +271,7 @@ A signed-in buyer paying for a one-time purchase can keep the card and pay with 
 - **`savedCardId`** (`StripeCheckoutPaymentProvider.SavedCardDataKey`) — the PaymentIntent is created on the buyer's customer with that card, after checking it is one of theirs; a guest's request, or a card that isn't theirs, is refused.
 - **`rememberCard`** with **`paymentMethodId`** — the card the browser tokenized is attached to the buyer's customer with `setup_future_usage = on_session` (`CreateCheckoutPaymentIntentRequest.SaveForOnSessionUse`). A guest's request pays without keeping the card.
 
-Either way the buyer confirms with Stripe.js as usual. `account/payment-methods` (`AccountPaymentMethods`) lists the cards in the storefront account and detaches one, again only after checking it is the buyer's. The personal data contributor redacts wallet customers like the ones the checkout creates.
+Either way the buyer confirms with Stripe.js as usual. `account/payment-methods` (`AccountPaymentMethods`) lists the cards in the storefront account and detaches one, again only after checking it is the buyer's. When the **Checkout** feature is on, the same page lists the buyer's [kept payment methods](checkout.md#kept-payment-methods) from any provider first, under **Cards for automatic payments**, where **Make default** (`account/payment-methods/kept/{id}/default`) and **Remove** (`account/payment-methods/kept/{id}/remove`) change only the buyer's own records; a card listed there is not listed again with the saved cards. `AccountPaymentMethodsViewModel.KeptPaymentMethods` carries them to the `AccountPaymentMethods` shape. The personal data contributor redacts wallet customers like the ones the checkout creates.
 
 ### Disputes and fraud rating
 

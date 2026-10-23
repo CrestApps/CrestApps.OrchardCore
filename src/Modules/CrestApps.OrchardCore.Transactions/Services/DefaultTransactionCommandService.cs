@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core.Services;
@@ -25,6 +26,7 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 public sealed class DefaultTransactionCommandService : ITransactionCommandService
 {
     internal const string LockPrefix = "Transactions:Command:";
+    internal const string ChargeLockPrefix = "Transactions:Charge:";
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
@@ -455,9 +457,235 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
         }, saveOnFailure: true, save: false, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default)
+    {
+        var result = new TransactionCommandResult();
+        var checkoutEngine = _serviceProvider.GetService<ICheckoutEngine>();
+        var sessionStore = _serviceProvider.GetService<ICheckoutSessionStore>();
+        var paymentMethods = _serviceProvider.GetService<ISavedPaymentMethodStore>();
+
+        if (checkoutEngine is null || sessionStore is null || paymentMethods is null)
+        {
+            return result.Fail(S["Saved cards are charged through the Checkout feature. Enable it to charge one."]);
+        }
+
+        if (string.IsNullOrEmpty(transactionId))
+        {
+            return result.Fail(S["The transaction could not be found."]);
+        }
+
+        // Its own lock, not the command lock: completing the checkout records the payment through the commands, which
+        // take the command lock themselves.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(ChargeLockPrefix + transactionId, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return result.Fail(S["This transaction is already being charged. Try again in a moment."]);
+        }
+
+        await using var _ = locker;
+
+        var transaction = await _transactionManager.FindByIdAsync(transactionId, cancellationToken);
+
+        if (transaction is null)
+        {
+            return result.Fail(S["The transaction could not be found."]);
+        }
+
+        result.Transaction = transaction;
+
+        if (!TransactionStateMachine.CanRecordPayment(transaction) || transaction.OutstandingAmount <= 0m)
+        {
+            return result.Fail(S["This transaction has no outstanding balance to charge."]);
+        }
+
+        var saved = string.IsNullOrEmpty(savedPaymentMethodId)
+            ? null
+            : await paymentMethods.FindByIdAsync(savedPaymentMethodId, cancellationToken);
+
+        // Only the owner's own card may pay their transaction: an identifier can name anyone's card.
+        if (saved?.PaymentMethod is null ||
+            string.IsNullOrEmpty(transaction.OwnerId) ||
+            !string.Equals(saved.OwnerId, transaction.OwnerId, StringComparison.Ordinal))
+        {
+            return result.Fail(S["The saved card could not be found among the cards the transaction's owner kept."]);
+        }
+
+        if (saved.PaymentMethod.IsExpired(_clock.UtcNow))
+        {
+            return result.Fail(S["The saved card has expired, so it was not charged."]);
+        }
+
+        // A charge already handed to the provider is finished rather than repeated: charging again while it is settling is
+        // how an owner gets charged twice.
+        var previous = await sessionStore.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, cancellationToken: cancellationToken);
+
+        if (previous?.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending)
+        {
+            var pending = await checkoutEngine.TryCompleteAsync(previous.SessionId, cancellationToken);
+
+            if (pending.IsCompleted || pending.Status == CheckoutCompletionStatus.Pending)
+            {
+                return await ChargedAsync(result, transactionId, pending.IsCompleted, chargedId: null, paymentMethods, cancellationToken);
+            }
+        }
+
+        if (previous?.Status == CheckoutSessionStatus.Pending)
+        {
+            // A checkout that never reached the provider is closed so it can't be paid later by accident.
+            await checkoutEngine.CancelAsync(previous.SessionId, "Replaced by a charge of a saved card.", cancellationToken);
+        }
+
+        var session = await checkoutEngine.StartAsync(
+            new StartCheckoutRequest
+            {
+                ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+                ReferenceId = transaction.ItemId,
+                OwnerId = transaction.OwnerId,
+            },
+            cancellationToken);
+
+        var outcome = await checkoutEngine.BeginPaymentAsync(
+            session.SessionId,
+            new BeginPaymentOptions
+            {
+                ProviderKey = saved.PaymentMethod.ProviderKey,
+                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(saved.PaymentMethod),
+            },
+            cancellationToken);
+
+        SavedPaymentMethodChargeStatus status;
+        string reason;
+
+        if (outcome.Succeeded)
+        {
+            var completion = await checkoutEngine.TryCompleteAsync(session.SessionId, cancellationToken);
+
+            if (completion.IsCompleted || completion.Status == CheckoutCompletionStatus.Pending)
+            {
+                return await ChargedAsync(result, transactionId, completion.IsCompleted, saved.ItemId, paymentMethods, cancellationToken);
+            }
+
+            status = SavedPaymentMethodChargeStatus.Declined;
+            reason = completion.ErrorMessage;
+        }
+        else
+        {
+            await checkoutEngine.CancelAsync(session.SessionId, "The charge of a saved card was not accepted.", cancellationToken);
+
+            status = outcome.RequiresAuthentication
+                ? SavedPaymentMethodChargeStatus.RequiresAuthentication
+                : outcome.Declined
+                    ? SavedPaymentMethodChargeStatus.Declined
+                    : SavedPaymentMethodChargeStatus.Failed;
+
+            reason = outcome.ProviderErrorMessage ?? outcome.ErrorMessage;
+        }
+
+        var attemptId = await FindLastAttemptIdAsync(session.SessionId, cancellationToken);
+
+        return await RecordChargeFailureAsync(transactionId, saved.PaymentMethod.Describe(), status, reason, attemptId, cancellationToken);
+    }
+
     // A follow-up that does nothing: the command changed something that must be saved, but has nothing to raise.
     private static Task NoFollowUp()
         => Task.CompletedTask;
+
+    // The charge went through, or is settling. The checkout recorded the payment on the transaction and committed it, so
+    // the transaction is read again rather than returned as it was before the charge.
+    private async Task<TransactionCommandResult> ChargedAsync(
+        TransactionCommandResult result,
+        string transactionId,
+        bool completed,
+        string chargedId,
+        ISavedPaymentMethodStore paymentMethods,
+        CancellationToken cancellationToken)
+    {
+        result.ChargeStatus = completed
+            ? SavedPaymentMethodChargeStatus.Succeeded
+            : SavedPaymentMethodChargeStatus.Pending;
+
+        result.Transaction = await _transactionManager.FindByIdAsync(transactionId, cancellationToken) ?? result.Transaction;
+        result.Event = completed
+            ? result.Transaction.Events.LastOrDefault(evt => evt.Type == TransactionEventType.PaymentRecorded)
+            : null;
+
+        if (completed && !string.IsNullOrEmpty(chargedId))
+        {
+            await paymentMethods.MarkChargedAsync(chargedId, _clock.UtcNow, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
+    }
+
+    private async Task<string> FindLastAttemptIdAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        if (_serviceProvider.GetService<IPaymentAttemptStore>() is not { } attemptStore)
+        {
+            return null;
+        }
+
+        return (await attemptStore.GetBySessionAsync(sessionId, cancellationToken))
+            .OrderByDescending(attempt => attempt.CreatedUtc)
+            .FirstOrDefault()?.ItemId;
+    }
+
+    // Records the charge that was not taken on the timeline, through the command lock like every other change, and
+    // reports what happened so the caller can fall back, for example to sending the invoice.
+    private async Task<TransactionCommandResult> RecordChargeFailureAsync(
+        string transactionId,
+        string paymentMethodName,
+        SavedPaymentMethodChargeStatus status,
+        string reason,
+        string attemptId,
+        CancellationToken cancellationToken)
+    {
+        var recorded = await ExecuteAsync(transactionId, async (transaction, commandResult) =>
+        {
+            var amount = $"{CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)} {transaction.Currency}";
+            var trimmedReason = Trim(reason);
+
+            var message = status switch
+            {
+                SavedPaymentMethodChargeStatus.RequiresAuthentication => S["A charge of {0} to {1} was not taken, because the card's bank asked the cardholder to approve it.", amount, paymentMethodName].Value,
+                SavedPaymentMethodChargeStatus.Failed => S["A charge of {0} to {1} could not be made.", amount, paymentMethodName].Value,
+                _ => S["A charge of {0} to {1} was declined.", amount, paymentMethodName].Value,
+            };
+
+            var failed = new TransactionEvent
+            {
+                Id = IdGenerator.GenerateId(),
+                CreatedUtc = _clock.UtcNow,
+                Type = TransactionEventType.PaymentFailed,
+                Amount = transaction.OutstandingAmount,
+                Method = TransactionsConstants.SettlementMethods.Online,
+                Reason = trimmedReason,
+                PaymentAttemptId = attemptId,
+                Message = trimmedReason is null
+                    ? message
+                    : S["{0} Reason: {1}", message, trimmedReason].Value,
+            };
+
+            await SetActorAsync(failed);
+
+            transaction.Events.Add(failed);
+            transaction.UpdatedUtc = failed.CreatedUtc;
+            commandResult.Event = failed;
+
+            return NoFollowUp;
+        }, saveOnFailure: false, save: true, cancellationToken);
+
+        recorded.ChargeStatus = status;
+
+        return recorded.Fail(status switch
+        {
+            SavedPaymentMethodChargeStatus.RequiresAuthentication => S["The card's bank asked the cardholder to approve this payment, so the owner has to pay it themselves."].Value,
+            SavedPaymentMethodChargeStatus.Failed => S["The saved card could not be charged right now. Try again later."].Value,
+            _ => S["The saved card was declined."].Value,
+        });
+    }
 
     // Runs one command under the transaction's lock. The command validates and changes the transaction, and returns a
     // follow-up (such as telling the payment handlers) that runs only once the change is saved, or null when it has

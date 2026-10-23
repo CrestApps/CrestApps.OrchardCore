@@ -32,6 +32,13 @@ public sealed class TransactionCommandResult
     public IList<PaymentRefund> Refunds { get; } = [];
 
     /// <summary>
+    /// Gets or sets how a charge of a saved payment method ended, for
+    /// <see cref="ITransactionCommandService.ChargeSavedPaymentMethodAsync"/>. Every other command leaves it
+    /// <see cref="SavedPaymentMethodChargeStatus.NotCharged"/>.
+    /// </summary>
+    public SavedPaymentMethodChargeStatus ChargeStatus { get; set; }
+
+    /// <summary>
     /// Gets the reasons the command was refused or did not fully succeed, ready to show to the person who asked.
     /// </summary>
     public IList<string> Errors { get; } = [];

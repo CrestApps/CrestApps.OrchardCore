@@ -213,7 +213,7 @@ A signed-in buyer opens **My account** from the user menu, or `/account` on your
 | **Balances and invoices** | What they owe and their invoices and receipts. | Transactions |
 | **Addresses** | Their address book: add, edit, delete, and pick the default billing and shipping addresses. | Customers |
 | **Account details** | Whether they buy for themselves or a business, their name, phone and marketing consent, and a link to change their password. | Customers |
-| **Payment methods** | The cards they saved at checkout, to remove one. | Stripe |
+| **Payment methods** | The cards they saved at checkout, to remove one, and the cards kept for automatic payments such as installments, to pick the default one or remove one. | Stripe |
 | **Store credit** | Their store credit and each change to it. See [Store credit](store-credit-and-rewards.md#store-credit). | Store Credit |
 | **Rewards** | Their loyalty points, what they're worth, and how they earn and spend them. See [Loyalty points](store-credit-and-rewards.md#loyalty-points). | Loyalty Points |
 | **Refer a friend** | Their referral link, and the friends who bought through it. See [Referrals](store-credit-and-rewards.md#referrals). | Referrals |
