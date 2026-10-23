@@ -21,6 +21,12 @@ public sealed class LeadImportListCache
     private Entry _entry;
 
     /// <summary>
+    /// Lets one request at a time read the imports from the database, so several editors opened together, or opened
+    /// right after the kept imports expire, share one read instead of each paying for it.
+    /// </summary>
+    internal SemaphoreSlim ReadGate { get; } = new(1, 1);
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="LeadImportListCache"/> class.
     /// </summary>
     /// <param name="clock">The clock the lifetime is measured with.</param>

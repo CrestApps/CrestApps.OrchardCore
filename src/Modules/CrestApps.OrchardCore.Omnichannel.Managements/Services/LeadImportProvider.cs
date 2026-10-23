@@ -77,15 +77,63 @@ public sealed class LeadImportProvider
         {
             var version = await GetHistoryVersionAsync();
 
-            if (_importsCache is null || !_importsCache.TryGet(version, out _imports))
+            if (_importsCache is null)
             {
                 _imports = await ReadImportsAsync();
+            }
+            else if (!_importsCache.TryGet(version, out _imports))
+            {
+                await _importsCache.ReadGate.WaitAsync();
 
-                _importsCache?.Set(version, _imports);
+                try
+                {
+                    // A request that waited here finds the imports the one ahead of it read.
+                    if (!_importsCache.TryGet(version, out _imports))
+                    {
+                        _imports = await ReadImportsAsync();
+
+                        _importsCache.Set(version, _imports);
+                    }
+                }
+                finally
+                {
+                    _importsCache.ReadGate.Release();
+                }
             }
         }
 
         return _imports;
+    }
+
+    /// <summary>
+    /// Returns only the selected import as an option, named by its file and when it was imported, without counting the
+    /// leads of any import. The editor renders this, so opening it never reads the lead import index; the full list
+    /// is read by <see cref="GetOptionsAsync"/> once the operator asks for it.
+    /// </summary>
+    /// <param name="selectedEntryId">The identifier of the selected import, if any.</param>
+    public async Task<IList<SelectListItem>> GetSelectedOptionsAsync(string selectedEntryId)
+    {
+        if (string.IsNullOrWhiteSpace(selectedEntryId))
+        {
+            return [];
+        }
+
+        var selected = selectedEntryId.Trim();
+
+        // Without the content import feature there is no import history to read the file's name from.
+        var entry = _backfillState is null
+            ? null
+            : await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(index => index.EntryId == selected).FirstOrDefaultAsync();
+
+        if (entry is null)
+        {
+            return [new SelectListItem(S["The selected import"].Value, selected, true)];
+        }
+
+        var importedLocal = await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(entry.CreatedUtc, DateTimeKind.Utc)));
+        var fileName = string.IsNullOrWhiteSpace(entry.UploadedFileName) ? S["Unnamed file"].Value : entry.UploadedFileName.Trim();
+
+        return [new SelectListItem(S["{0} (imported {1})", fileName, importedLocal.ToString("g", CultureInfo.CurrentCulture)].Value, selected, true)];
     }
 
     /// <summary>

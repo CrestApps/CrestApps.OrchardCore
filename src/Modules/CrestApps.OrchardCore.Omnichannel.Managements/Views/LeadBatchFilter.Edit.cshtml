@@ -44,7 +44,7 @@
         <div class="ocat-wrapper">
             <label asp-for="ImportEntryId" class="ocat-label">@T["Imported file"]</label>
             <div class="ocat-end">
-                <select asp-for="ImportEntryId" asp-items="Model.Imports" class="selectpicker show-tick" data-live-search="true" data-none-results-text="@T["No imported file matches {0}"].Value">
+                <select asp-for="ImportEntryId" asp-items="Model.Imports" class="selectpicker show-tick" data-live-search="true" data-none-results-text="@T["No imported file matches {0}"].Value" data-imports-url="@Url.RouteUrl("OmnichannelActivityBatchesLeadImports")" data-loading-text="@T["Loading imported files..."].Value">
                     <option value="">@T["Any imported file"]</option>
                 </select>
                 <span class="hint">@T["Load only the leads imported from this file. A lead imported from more than one file is part of each one."]</span>
@@ -106,9 +106,80 @@
         }
 
         const leadTypes = (panel.dataset.leadTypes || '').split(',').filter(Boolean);
-        const refresh = () => panel.classList.toggle('d-none', !leadTypes.includes(select.value));
+        const imports = panel.querySelector('select[data-imports-url]');
+        let importsRequested = false;
 
+        // Counting the leads of every import is slow, so the list is read the first time the lead filters are shown
+        // instead of each time the editor opens. Only the saved import is rendered until then.
+        const loadImports = async () => {
+            if (!imports || importsRequested) {
+                return;
+            }
+
+            importsRequested = true;
+
+            const placeholder = imports.querySelector('option[value=""]');
+            const placeholderText = placeholder?.textContent;
+            const refreshPicker = () => window.Selectpicker?.getOrCreateInstance?.(imports)?.refresh();
+
+            if (placeholder) {
+                placeholder.textContent = imports.dataset.loadingText || placeholderText;
+                refreshPicker();
+            }
+
+            try {
+                const url = new URL(imports.dataset.importsUrl, window.location.origin);
+
+                if (imports.value) {
+                    url.searchParams.set('selected', imports.value);
+                }
+
+                const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+
+                if (!response.ok) {
+                    throw new Error(response.statusText);
+                }
+
+                const items = await response.json();
+
+                imports.querySelectorAll('option:not([value=""])').forEach(option => option.remove());
+
+                for (const item of items) {
+                    const option = document.createElement('option');
+
+                    option.value = item.value;
+                    option.textContent = item.text;
+                    option.selected = item.selected;
+                    imports.appendChild(option);
+                }
+            } catch {
+                // The saved import stays selectable, and the list is read again the next time the filters are shown.
+                importsRequested = false;
+            } finally {
+                if (placeholder) {
+                    placeholder.textContent = placeholderText;
+                }
+
+                refreshPicker();
+            }
+        };
+
+        const refresh = () => {
+            const isLead = leadTypes.includes(select.value);
+
+            panel.classList.toggle('d-none', !isLead);
+
+            if (isLead) {
+                loadImports();
+            }
+        };
+
+        // The record type can be chosen while the page is still loading, or restored by the browser after this
+        // script ran, so the panel follows the select's value whenever either can have changed it.
         select.addEventListener('change', refresh);
+        window.addEventListener('DOMContentLoaded', refresh);
+        window.addEventListener('load', refresh);
+        window.addEventListener('pageshow', refresh);
         refresh();
     })();
 </script>
