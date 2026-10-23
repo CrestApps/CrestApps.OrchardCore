@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,8 +24,8 @@ namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 
 [BackgroundTask(
     Title = "Imported Files Processor",
-    Schedule = "*/10 * * * *",
-    Description = "Regularly check for imported files and process them.",
+    Schedule = "* * * * *",
+    Description = "Regularly check for imported files and process them, and resume imports that a restart interrupted.",
     LockTimeout = 3_000,
     LockExpiration = 30_000)]
 public sealed class ImportFilesBackgroundTask : IBackgroundTask
@@ -55,6 +56,14 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     internal const int MaxStalledRowAttempts = 2;
 
     /// <summary>
+    /// How many runs in a row may fail at the same saved row, with no progress between them, before the import is
+    /// marked as failed. A restart, a dropped connection or a deployment can fail the run that was working when it
+    /// happened; marking the import failed on the first such error left it waiting for someone to resume it by hand.
+    /// A failure that comes back run after run is the import itself, and it is then marked as failed with its reason.
+    /// </summary>
+    internal const int MaxFailedRunAttempts = 3;
+
+    /// <summary>
     /// How long an import may go without saving progress before a run that finds its lock taken reports it.
     /// </summary>
     private static readonly TimeSpan _stalledProgressThreshold = TimeSpan.FromMinutes(10);
@@ -64,6 +73,14 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
     internal static async Task ProcessEntriesAsync(IServiceProvider serviceProvider, string entryId = null, CancellationToken cancellationToken = default)
     {
+        // A run started from the admin pages gets no token of its own, so nothing told it the host was stopping. The
+        // errors a stopping host throws at it, such as a database connection that is closed under it, then marked the
+        // import as failed. The run is stopped with the host like the scheduled one, and the import resumes after the
+        // restart.
+        var applicationStopping = serviceProvider.GetService<IHostApplicationLifetime>()?.ApplicationStopping ?? CancellationToken.None;
+        using var stoppingSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, applicationStopping);
+        cancellationToken = stoppingSource.Token;
+
         var session = serviceProvider.GetRequiredService<ISession>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
         var clock = serviceProvider.GetRequiredService<IClock>();
@@ -1131,6 +1148,33 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 return;
             }
 
+            var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
+
+            if (!RecordFailedRun(progressPart))
+            {
+                // The failure may have been the restart or the connection rather than the import, so the import keeps
+                // resuming on the next run until the same failure has stopped it from making progress a few times.
+                entry.Put(progressPart);
+                entry.Error = localizer["A run of the import failed and it will resume automatically: {0}", exception.Message];
+                entry.ProcessSaveUtc = clock.UtcNow;
+
+                await session.SaveAsync(entry, false, collection: null, cancellationToken);
+                await session.SaveChangesAsync(cancellationToken);
+
+                if (logger.IsEnabled(LogLevel.Warning))
+                {
+                    logger.LogWarning(
+                        exception,
+                        "A run of the import of entry '{EntryId}' failed at row {Row}, failure {Attempts} of the {MaxAttempts} allowed before the import is marked as failed. It will resume from its last saved row on the next run.",
+                        entryId,
+                        progressPart.FailedRunRow,
+                        progressPart.FailedRunAttempts,
+                        MaxFailedRunAttempts);
+                }
+
+                return;
+            }
+
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing file: {0}", exception.Message], cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -1141,6 +1185,26 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 logger.LogWarning(ex, "Could not record why the import of entry '{EntryId}' stopped.", entryId);
             }
         }
+    }
+
+    /// <summary>
+    /// Counts a failed run against the row it stopped at. A run that fails at the same saved row as the one before
+    /// it, with no batch saved between them, adds to the count; a run that failed further on starts it over.
+    /// </summary>
+    /// <returns><see langword="true"/> when the import has now failed too many runs in a row to keep resuming.</returns>
+    internal static bool RecordFailedRun(ImportFileProcessStatsPart progressPart)
+    {
+        if (progressPart.FailedRunRow == progressPart.CurrentRow && progressPart.FailedRunAttempts > 0)
+        {
+            progressPart.FailedRunAttempts++;
+        }
+        else
+        {
+            progressPart.FailedRunRow = progressPart.CurrentRow;
+            progressPart.FailedRunAttempts = 1;
+        }
+
+        return progressPart.FailedRunAttempts >= MaxFailedRunAttempts;
     }
 
     internal static bool IsTransient(Exception exception)
