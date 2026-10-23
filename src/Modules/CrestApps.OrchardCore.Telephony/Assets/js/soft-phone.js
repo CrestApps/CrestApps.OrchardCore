@@ -159,7 +159,9 @@ import {
     REGISTRATION_RETRY_MS,
     REGISTRATION_TIMEOUT_MS,
     answerClickAction,
+    credentialToReportOnReconnect,
     guardRegistration,
+    holdsLiveProviderCall,
     isAnswerInProgress,
     planMicrophoneLossRecovery,
     planRegistrationSelfHeal,
@@ -2104,6 +2106,22 @@ import {
             });
         }
 
+        // Any provider call ending tells the core, once the handler below has done its bookkeeping: a renewal put off
+        // while a call was up can run in the moment before the next leg arrives, which for an agent on a Power campaign
+        // -- parked on one leg after another -- is the only idle moment there is.
+        client.on('telnyx.notification', function (notification) {
+            if (disposed || !notification || notification.type !== 'callUpdate' || !notification.call ||
+                !isTelnyxTerminalState(notification.call.state) || typeof context.onProviderCallEnded !== 'function') {
+                return;
+            }
+
+            window.setTimeout(function () {
+                if (!disposed) {
+                    context.onProviderCallEnded();
+                }
+            }, 0);
+        });
+
         client.on('telnyx.notification', function (notification) {
             if (!notification || notification.type !== 'callUpdate' || !notification.call) {
                 return;
@@ -2470,6 +2488,14 @@ import {
                 // Ends every call this browser placed that the SDK no longer has; the core asks on every refresh of its
                 // call list and after its hub reconnects. Returns the ids it ended.
                 reconcileCalls: sweepVanishedCalls,
+                // Whether any provider call this registration holds is still up, the ones the core does not list
+                // included (a leg parked for a dialer call, a held offer leg, a monitor leg): tearing the registration
+                // down would hang them up.
+                hasLiveCalls: function () {
+                    return !disposed && holdsLiveProviderCall(
+                        [currentCall, inboundRingingCall].concat(allLegs(legs), heldOfferCalls, monitorCalls),
+                        isTelnyxTerminalState);
+                },
                 // Re-applies the playout hint to the live call after the agent changes it.
                 refreshPlayoutDelay: function () {
                     if (currentCall) {
@@ -3681,8 +3707,11 @@ import {
         // A call of the phone's own, or a supervisor's monitor leg: media that tearing the registration down would drop.
         // Live, a microphone that failed while the supervisor listened found no call up, registered the phone again, and
         // that hung the monitor leg up.
+        // The provider's own calls count too: the server tells the phone of a dialer call only once the agent is joined,
+        // so a leg parked for it, or a call whose join was never recorded, is in no list of the phone's.
         function hasLiveMedia() {
-            return hasLiveCall() || holdsMonitorLeg(monitorLegs);
+            return hasLiveCall() || holdsMonitorLeg(monitorLegs) ||
+                (!!browserAudioSession && typeof browserAudioSession.hasLiveCalls === 'function' && browserAudioSession.hasLiveCalls());
         }
 
         function stopLocalAudioStream() {
@@ -5448,6 +5477,9 @@ import {
                         // The capture went silent mid-call: the microphone is live as far as the browser is
                         // concerned but is delivering nothing, so the caller cannot hear the agent.
                         onCaptureSilent: handleSilentCapture,
+                        // A provider call ended: a credential renewal held off while it was up runs now, if nothing
+                        // else is up, rather than on the next heartbeat, by when the next leg has usually arrived.
+                        onProviderCallEnded: renewBrowserAudioIfNeeded,
                         // Nothing is leaving a connected call: the caller cannot hear the agent. See send-audio.js.
                         reviveCapture: reviveSendCapture,
                         isOutboundSuppressed: isOutboundAudioSuppressed,
@@ -11234,6 +11266,19 @@ import {
             // The hub is back: clear the reconnecting overlay (render() below restores the real status).
             setHubReconnecting(false);
             startBrowserAudioHeartbeat();
+
+            // The registration outlived the connection that reported it; say it is this connection's now, or the server
+            // goes on treating the phone's only credential as a closed window's.
+            var keptCredentialId = credentialToReportOnReconnect({
+                credentialId: browserAudioCredentialId(browserAudioSession),
+                registering: !!browserAudioPromise
+            });
+
+            if (keptCredentialId) {
+                reportCredentialRegistered(keptCredentialId);
+                reportClientCapabilities(keptCredentialId, browserAudioSession.clientCapabilities);
+            }
+
             // Register with the provider now that the soft phone is connected, so the agent is reachable for
             // inbound calls while idle -- not only while placing a call.
             registerBrowserAudioForInbound();

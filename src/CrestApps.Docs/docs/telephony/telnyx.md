@@ -159,7 +159,7 @@ account requires otherwise.
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| **Credential lifetime (minutes)** | `180` | How long a browser SIP telephony credential is valid. Kept short so a lost session cannot register indefinitely; renewal is deferred during a live call so media is never dropped mid-call. |
+| **Credential lifetime (minutes)** | `180` | How long a browser SIP telephony credential is valid, at least `30`. Kept limited so a lost session cannot register indefinitely. The soft phone renews its credential in the last 10 minutes, never while it holds a call, including a leg parked for a dialer call, and as soon as that call ends. A shorter lifetime is refused on save and raised to 30 where it is already stored, because renewing every few minutes made calls ring a credential being replaced. |
 | **Audio test destination** | — | Optional Telnyx number or SIP URI that echoes audio back, used by the diagnostics **Run audio test** action and the health canary to verify round-trip audio without a second person. When empty, the audio test is unavailable. |
 | **Calls with no local record** | Report | What to do when the connection has a call up that the platform has no interaction for, such as one placed immediately before a restart. **Report** records it and leaves it connected; **End call** speaks an apology and hangs up. |
 | **Answering machine detection** | Premium | How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone. **Premium** and **Standard** are billed by Telnyx per call. With **Off**, a voicemail is still recognised from its greeting or from a line nobody speaks on. A caller who rang in is never taken for a voicemail. |

@@ -2204,6 +2204,16 @@
 		if (state.expiring || state.reregisterRequested) return "reregister";
 		return state.captureDead ? "replace-capture" : "keep";
 	}
+	function holdsLiveProviderCall(calls, isTerminal) {
+		if (!Array.isArray(calls)) return false;
+		return calls.some(function(call) {
+			return !!call && !(typeof isTerminal === "function" && isTerminal(call.state));
+		});
+	}
+	function credentialToReportOnReconnect(state) {
+		state = state || {};
+		return state.credentialId && !state.registering ? String(state.credentialId) : "";
+	}
 	function planMicrophoneLossRecovery(state) {
 		return {
 			first: "replace-capture",
@@ -5553,6 +5563,12 @@
 				});
 			}
 			client.on("telnyx.notification", function(notification) {
+				if (disposed || !notification || notification.type !== "callUpdate" || !notification.call || !isTelnyxTerminalState(notification.call.state) || typeof context.onProviderCallEnded !== "function") return;
+				window.setTimeout(function() {
+					if (!disposed) context.onProviderCallEnded();
+				}, 0);
+			});
+			client.on("telnyx.notification", function(notification) {
 				if (!notification || notification.type !== "callUpdate" || !notification.call) return;
 				var call = notification.call;
 				releaseSharedCapture(call, context.localStream);
@@ -5757,6 +5773,9 @@
 					echoTestDestination: registrationConfig.echoTestDestination || "",
 					getDiagnostics: getCallDiagnostics,
 					reconcileCalls: sweepVanishedCalls,
+					hasLiveCalls: function() {
+						return !disposed && holdsLiveProviderCall([currentCall, inboundRingingCall].concat(allLegs(legs), heldOfferCalls, monitorCalls), isTelnyxTerminalState);
+					},
 					refreshPlayoutDelay: function() {
 						if (currentCall) applyPlayoutDelayToCall(currentCall);
 					},
@@ -6503,7 +6522,7 @@
 				});
 			}
 			function hasLiveMedia() {
-				return hasLiveCall() || holdsMonitorLeg(monitorLegs);
+				return hasLiveCall() || holdsMonitorLeg(monitorLegs) || !!browserAudioSession && typeof browserAudioSession.hasLiveCalls === "function" && browserAudioSession.hasLiveCalls();
 			}
 			function stopLocalAudioStream() {
 				if (sendPipeline) {
@@ -7385,6 +7404,7 @@
 								reportDiagnostic("info", "browser-call-vanished", "The provider SDK no longer had a call the phone placed; the phone ended it.", callId);
 							},
 							onCaptureSilent: handleSilentCapture,
+							onProviderCallEnded: renewBrowserAudioIfNeeded,
 							reviveCapture: reviveSendCapture,
 							isOutboundSuppressed: isOutboundAudioSuppressed,
 							onOutboundAudioStalled: handleOutboundAudioStalled,
@@ -10629,6 +10649,14 @@
 				showError(null);
 				setHubReconnecting(false);
 				startBrowserAudioHeartbeat();
+				var keptCredentialId = credentialToReportOnReconnect({
+					credentialId: browserAudioCredentialId(browserAudioSession),
+					registering: !!browserAudioPromise
+				});
+				if (keptCredentialId) {
+					reportCredentialRegistered(keptCredentialId);
+					reportClientCapabilities(keptCredentialId, browserAudioSession.clientCapabilities);
+				}
 				registerBrowserAudioForInbound();
 				return Promise.all([refreshCapabilities(), refreshConnectionStatus()]).then(function() {
 					loadExtensionDirectory(true);

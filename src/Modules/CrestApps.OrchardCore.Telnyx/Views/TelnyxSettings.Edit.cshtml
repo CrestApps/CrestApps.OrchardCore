@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using CrestApps.OrchardCore.Telnyx.Services
 @model TelnyxSettingsViewModel
 
 <div data-telnyx-connect
@@ -137,7 +138,8 @@
 
             <div class="mb-3">
                 <label asp-for="CredentialLifetimeMinutes">@T["Credential lifetime (minutes)"]</label>
-                <input type="number" min="1" class="form-control" asp-for="CredentialLifetimeMinutes" />
+                <input type="number" min="@TelnyxCredentialLifetime.MinimumMinutes" class="form-control" asp-for="CredentialLifetimeMinutes" />
+                <span class="hint">@T["How long each soft phone's credential lasts before it is renewed; at least {0} minutes. The default, {1}, suits almost everyone: renewing too often makes calls ring a credential that is being replaced.", TelnyxCredentialLifetime.MinimumMinutes, TelnyxCredentialLifetime.DefaultMinutes]</span>
             </div>
 
             <div class="mb-3">

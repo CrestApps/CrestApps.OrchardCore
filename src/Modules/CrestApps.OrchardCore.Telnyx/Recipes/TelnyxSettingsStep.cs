@@ -57,10 +57,7 @@ internal sealed class TelnyxSettingsStep : NamedRecipeStepHandler
         settings.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine);
         settings.NoiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(settings.NoiseSuppressionStrength);
 
-        if (settings.CredentialLifetimeMinutes <= 0)
-        {
-            settings.CredentialLifetimeMinutes = 180;
-        }
+        settings.CredentialLifetimeMinutes = TelnyxCredentialLifetime.Normalize(settings.CredentialLifetimeMinutes);
 
         site.Put(settings);
 

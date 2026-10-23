@@ -87,6 +87,33 @@ export function planRegistrationSelfHeal(state) {
     return state.captureDead ? 'replace-capture' : 'keep';
 }
 
+// Whether any provider call the phone itself holds is still up: the call on screen, one ringing, the legs the platform
+// rang for an offer or a supervisor, and -- above all -- the leg parked for a Power, Progressive or Predictive dial.
+// The server does not tell the phone about that leg until the agent is connected, so the phone's own call list does
+// not show it; judged by that list alone, the phone renewed its credential under a parked leg, which hung it up, and
+// the leg rung meanwhile was refused on the credential being replaced (SIP 480).
+//   calls      - the provider calls, any of them null.
+//   isTerminal - says whether a provider call state is over.
+export function holdsLiveProviderCall(calls, isTerminal) {
+    if (!Array.isArray(calls)) {
+        return false;
+    }
+
+    return calls.some(function (call) {
+        return !!call && !(typeof isTerminal === 'function' && isTerminal(call.state));
+    });
+}
+
+// The credential to report again once the hub connection is back, or '' for none. A connection that closes marks the
+// credential its phone registered on as closed, and a phone keeps that registration across a reconnect; unreported, the
+// only credential the phone can be rung on read as a closed window's until the phone next registered.
+//   state - { credentialId, registering }
+export function credentialToReportOnReconnect(state) {
+    state = state || {};
+
+    return state.credentialId && !state.registering ? String(state.credentialId) : '';
+}
+
 // How a microphone that stopped delivering is recovered: a fresh capture swapped in where it is, first, whether or
 // not anything is up; if that fails, an idle phone registers again and a phone with media up tells its user.
 //   state - { liveMedia }
