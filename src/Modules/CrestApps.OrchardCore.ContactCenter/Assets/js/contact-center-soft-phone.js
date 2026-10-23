@@ -8,6 +8,7 @@ import {
     isOwnOfferNotification,
     isOwnPresence,
     normalizePresenceStatus,
+    ownDialHoldReservationId,
     pendingPresenceLabel,
     presenceLabel,
 } from './shared/agent-presence.js';
@@ -133,14 +134,16 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
             return;
         }
 
+        // Known before anything else here: the phone needs its own user to answer the leg of a dial it is held for, on a
+        // page without the presence header too.
+        if (snapshot.userId) {
+            ownUserId = snapshot.userId;
+        }
+
         var container = document.querySelector('[data-contact-center-presence]');
 
         if (!container) {
             return;
-        }
-
-        if (snapshot.userId) {
-            ownUserId = snapshot.userId;
         }
 
         var current = {
@@ -305,6 +308,19 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
             ownUserId || snapshot.userId || '');
     }
 
+    // The agent is held Reserved for an automated dial (Power, Progressive, Predictive) accepted under this reservation
+    // until the customer answers. The phone answers that call's leg by itself, as a dialer connects a live answer to the
+    // agent; told only by the accept's own push, a phone that missed it rang the leg with Answer/Decline. Only this
+    // agent's own hold is noted: a supervisor's connection also hears every other agent's presence.
+    function noteDialHold(root, source) {
+        var api = root && root.__contactCenterSoftPhoneApi;
+        var reservationId = ownDialHoldReservationId ? ownDialHoldReservationId(source, ownUserId) : '';
+
+        if (reservationId && api && typeof api.noteAcceptedDialHold === 'function') {
+            api.noteAcceptedDialHold(reservationId, ownUserId);
+        }
+    }
+
     function updateMembershipUi(root, snapshot) {
         if (!root || !snapshot) {
             return;
@@ -313,6 +329,7 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
         root.__contactCenterMembershipSnapshot = snapshot;
         updatePresenceUi(snapshot);
         syncPredictiveStandby(root, snapshot.presenceStatus || 'Offline');
+        noteDialHold(root, snapshot);
 
         var isSignedIn = !!(snapshot.queueIds && snapshot.queueIds.length) || !!(snapshot.campaignIds && snapshot.campaignIds.length);
         var signedInText = root.getAttribute('data-contact-center-signed-in-text') || 'Signed in';
@@ -712,6 +729,10 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
         api.__contactCenterQueuedVoiceSyncBound = true;
         root.__contactCenterSoftPhoneApi = api;
         syncPredictiveStandby(root);
+
+        // A snapshot that arrived before the phone's API was attached still names the dial the agent is held for.
+        noteDialHold(root, root.__contactCenterMembershipSnapshot);
+
         bindMembershipForms(root, api, client);
         bindPresenceForms(root, api, client);
 
@@ -731,6 +752,7 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
                 });
 
                 syncPredictiveStandby(root, notification.status);
+                noteDialHold(root, notification);
             });
 
             client.connection.on('OfferReceived', function () {

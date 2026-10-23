@@ -247,7 +247,7 @@ A checkout that pays a balance that already exists (`CheckoutSession.SettlesExis
 - When it is `false`, `CouponCheckoutFlowDisplayDriver` renders no promotion code box and ignores a posted code, and `DefaultCheckoutDiscountService` applies no discounts (and clears any recorded earlier), so `InitialPaymentAmount` and `DueNow` are untouched and nothing is redeemed.
 - When it is `true`, discounts apply as on any checkout. `CouponRedemptionCheckoutHandler` still redeems nothing for a session that settles an existing balance: the settling module redeems the codes itself, once the balance is settled.
 
-The Transactions module sets both flags. On completion, `TransactionSettlementCheckoutHandler` records each one-time discount line the invoice applied as a `Discount` adjustment of exactly that amount (`ITransactionCommandService.AdjustAsync`, never more than is still owed), then applies the confirmed payment. A 100% code settles the transaction with no payment attempt; a partial code plus the payment settles it in full. Only when the transaction ends with nothing owed does it call each `ICheckoutDiscountProvider.RedeemAsync`, so a code is never used up by a checkout that left the balance owing. A partial code with no confirmed payment records nothing. See [Transaction commands](transactions.md#transaction-commands).
+The Transactions module sets both flags. On completion, `TransactionSettlementCheckoutHandler` records each one-time discount line the invoice applied as a `Discount` adjustment of exactly that amount (`ITransactionCommandService.AdjustAsync`, never more than is still owed), then applies the confirmed payment. A 100% code settles the transaction with no payment attempt; a partial code plus the payment settles it in full. Only when the transaction ends with nothing owed does it call each `ICheckoutDiscountProvider.RedeemAsync`, so a code is never used up by a checkout that left the balance owing. A partial code with no confirmed payment records nothing. See [Transaction commands](transactions.md#transaction-commands). A checkout that settles several transactions at once sets `SettlesExistingBalance` but not `AcceptsDiscountsOnBalance`, so it offers no promotion code.
 
 ### Limiting a coupon to a source, a reference type or one customer
 
@@ -405,6 +405,14 @@ When a provider reaches the gateway and the payment is refused — a saved card 
 example — it returns `PaymentBeginResult.Decline`. The engine records the attempt as **failed** with the gateway's
 reason, reports it as `PaymentBeginOutcome.Declined` with `ProviderErrorMessage`, and gives the next attempt for the
 same obligation its own idempotency key, so retrying with another card is not answered with the old decline.
+
+### Paying for several things at once
+
+A checkout can pay for several things of one reference type with one payment. **`StartCheckoutRequest.References`** lists them (`CheckoutReference`: `ReferenceType` and `ReferenceId`) instead of `ReferenceId`. The session keeps them in `CheckoutSession.References`, its `ReferenceType` is the shared type, and its `ReferenceId` is empty, so do not set `ReferenceVersionId` either. A list of one entry starts exactly the checkout `ReferenceType` and `ReferenceId` start. `StartAsync` throws `ArgumentException` before anything is created when the entries have different reference types, an id appears twice, or both `ReferenceId` and `References` are set.
+
+The handler of the reference type reads `CheckoutSession.References` in `ActivatingAsync` and contributes a billing item for each. It decides whether they can be paid together, and refuses the checkout with **`CheckoutFlowActivatingContext.Reject(error)`** otherwise, rather than by throwing (an exception a handler throws is logged and the next handler still runs). When any handler rejected it, `StartAsync` throws **`CheckoutRejectedException`**, whose `Errors` list the reasons, and saves nothing. The [Transactions](transactions) module uses this to settle several outstanding transactions of one customer at once; see [Paying several transactions at once](transactions.md#paying-several-transactions-at-once).
+
+A refund of a payment that paid for several things can name the one it gives money back for: `RequestPaymentRefundContext.ReferenceType` and `ReferenceId` are copied onto the `PaymentRefund`, so the module that owns the reference records the refund against that one only.
 
 ### Where the customer returns
 

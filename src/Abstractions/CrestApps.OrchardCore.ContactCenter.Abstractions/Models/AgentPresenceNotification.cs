@@ -43,6 +43,12 @@ public sealed class AgentPresenceNotification
     public IList<string> QueueIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the reservation an automated dial was accepted under for the agent while the agent is held
+    /// Reserved for it, until the customer answers and the agent is connected. Null when the agent is not held.
+    /// </summary>
+    public string DialHoldReservationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the presence change occurred.
     /// </summary>
     public DateTime ChangedUtc { get; set; }

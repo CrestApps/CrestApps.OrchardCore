@@ -92,6 +92,10 @@
 	function isOwnOfferNotification(notification, ownUserId) {
 		return isOwnPresence(notification, ownUserId);
 	}
+	function ownDialHoldReservationId(source, ownUserId) {
+		if (!source || !source.dialHoldReservationId || !source.userId || !ownUserId) return "";
+		return String(source.userId) === String(ownUserId) ? String(source.dialHoldReservationId) : "";
+	}
 	function text(labels, key, fallback) {
 		return labels && labels[key] || fallback;
 	}
@@ -177,9 +181,9 @@
 		}
 		function updatePresenceUi(snapshot) {
 			if (!snapshot) return;
+			if (snapshot.userId) ownUserId = snapshot.userId;
 			var container = document.querySelector("[data-contact-center-presence]");
 			if (!container) return;
-			if (snapshot.userId) ownUserId = snapshot.userId;
 			var current = {
 				status: snapshot.presenceStatus || "Offline",
 				reason: snapshot.presenceReason,
@@ -283,11 +287,17 @@
 			if (presenceStatus !== void 0 && presenceStatus !== null && presenceStatus !== "") root.__contactCenterPresenceStatus = normalizePresenceStatus ? normalizePresenceStatus(presenceStatus) : presenceStatus;
 			api.setPredictiveStandby(isStandbyEligible(root.__contactCenterPresenceStatus, snapshot.campaignIds || []), ownUserId || snapshot.userId || "");
 		}
+		function noteDialHold(root, source) {
+			var api = root && root.__contactCenterSoftPhoneApi;
+			var reservationId = ownDialHoldReservationId ? ownDialHoldReservationId(source, ownUserId) : "";
+			if (reservationId && api && typeof api.noteAcceptedDialHold === "function") api.noteAcceptedDialHold(reservationId, ownUserId);
+		}
 		function updateMembershipUi(root, snapshot) {
 			if (!root || !snapshot) return;
 			root.__contactCenterMembershipSnapshot = snapshot;
 			updatePresenceUi(snapshot);
 			syncPredictiveStandby(root, snapshot.presenceStatus || "Offline");
+			noteDialHold(root, snapshot);
 			var isSignedIn = !!(snapshot.queueIds && snapshot.queueIds.length) || !!(snapshot.campaignIds && snapshot.campaignIds.length);
 			var signedInText = root.getAttribute("data-contact-center-signed-in-text") || "Signed in";
 			var offlineText = root.getAttribute("data-contact-center-offline-text") || "Signed out";
@@ -515,6 +525,7 @@
 			api.__contactCenterQueuedVoiceSyncBound = true;
 			root.__contactCenterSoftPhoneApi = api;
 			syncPredictiveStandby(root);
+			noteDialHold(root, root.__contactCenterMembershipSnapshot);
 			bindMembershipForms(root, api, client);
 			bindPresenceForms(root, api, client);
 			if (client && client.connection) {
@@ -526,6 +537,7 @@
 						requestedPresenceStatus: notification.requestedStatus
 					});
 					syncPredictiveStandby(root, notification.status);
+					noteDialHold(root, notification);
 				});
 				client.connection.on("OfferReceived", function() {
 					recoverSoftPhoneState(root, api, client);

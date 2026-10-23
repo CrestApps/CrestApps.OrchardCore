@@ -11,13 +11,12 @@ public sealed class ContactCenterAgentEntitlementDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterAgentEntitlementDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterAgentEntitlementDeploymentStep>("Contact Center Agent Entitlements");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterAgentEntitlementDeploymentStep"/> class.
-    /// </summary>
-    public ContactCenterAgentEntitlementDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.AgentEntitlement;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.AgentEntitlement;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

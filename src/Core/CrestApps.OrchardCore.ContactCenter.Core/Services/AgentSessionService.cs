@@ -403,6 +403,7 @@ public sealed class AgentSessionService : IAgentSessionService
             snapshot.PresenceReason = profile.PresenceReason;
             snapshot.RequestedPresenceStatus = profile.RequestedPresenceStatus?.ToString();
             snapshot.ActiveReservationId = profile.ActiveReservationId;
+            snapshot.DialHoldReservationId = profile.DialHoldReservationId;
             snapshot.QueueIds = AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
             snapshot.CampaignIds = AgentEntitlementUtilities.FilterEntitled(profile.CampaignIds, profile.AllowedCampaignIds);
 

@@ -44,6 +44,12 @@ public sealed class AgentDesktopSnapshot
     public string ActiveReservationId { get; set; }
 
     /// <summary>
+    /// Gets or sets the reservation an automated dial was accepted under while the agent is held Reserved for it, so a
+    /// client that connects while the customer is still being reached still answers the agent's leg on its own.
+    /// </summary>
+    public string DialHoldReservationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the queues the agent is currently signed in to.
     /// </summary>
     public IList<string> QueueIds { get; set; } = [];

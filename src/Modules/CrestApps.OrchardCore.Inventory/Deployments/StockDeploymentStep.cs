@@ -12,10 +12,12 @@ public sealed class StockDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<StockDeploymentStep>("Commerce");
     private static readonly LocalizationSource _title = LocalizationSource.Create<StockDeploymentStep>("Stock");
 
-    public StockDeploymentStep()
-    {
-        Name = InventoryConstants.StockRecipeStep;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => InventoryConstants.StockRecipeStep;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

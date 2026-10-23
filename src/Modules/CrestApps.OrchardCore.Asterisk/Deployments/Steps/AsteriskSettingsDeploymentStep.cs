@@ -11,13 +11,12 @@ public sealed class AsteriskSettingsDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<AsteriskSettingsDeploymentStep>("Telephony");
     private static readonly LocalizationSource _title = LocalizationSource.Create<AsteriskSettingsDeploymentStep>("Asterisk Settings");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AsteriskSettingsDeploymentStep"/> class.
-    /// </summary>
-    public AsteriskSettingsDeploymentStep()
-    {
-        Name = AsteriskDeploymentSteps.Settings;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => AsteriskDeploymentSteps.Settings;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

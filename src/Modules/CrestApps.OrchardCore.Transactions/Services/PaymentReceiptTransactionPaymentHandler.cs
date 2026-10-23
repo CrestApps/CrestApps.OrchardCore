@@ -174,13 +174,33 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         var attempt = await attemptStore.FindByIdAsync(refund.OriginalAttemptId, cancellationToken);
 
         if (attempt is null ||
-            !string.Equals(attempt.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrEmpty(attempt.ReferenceId))
+            !string.Equals(attempt.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        var transaction = await _transactionManager.FindByIdAsync(attempt.ReferenceId, cancellationToken);
+        // A payment that settled several transactions names none of them: the refund names the one it was started from,
+        // and a refund of the whole payment is told against the first, since one customer owes them all.
+        var refundedFor = string.Equals(refund.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrEmpty(refund.ReferenceId)
+                ? refund.ReferenceId
+                : attempt.ReferenceId;
+
+        var several = string.IsNullOrEmpty(refundedFor);
+
+        if (several)
+        {
+            var settled = await SharedPaymentAttempts.GetTransactionIdsAsync(_serviceProvider, attempt, cancellationToken);
+
+            refundedFor = settled.Count > 0 ? settled[0] : null;
+        }
+
+        if (string.IsNullOrEmpty(refundedFor))
+        {
+            return;
+        }
+
+        var transaction = await _transactionManager.FindByIdAsync(refundedFor, cancellationToken);
 
         if (transaction is null || string.IsNullOrEmpty(transaction.OwnerId))
         {
@@ -188,7 +208,7 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         }
 
         var amount = $"{refund.Currency} {CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)}";
-        var title = string.IsNullOrEmpty(transaction.Title) ? S["your purchase"].Value : transaction.Title;
+        var title = several || string.IsNullOrEmpty(transaction.Title) ? S["your purchase"].Value : transaction.Title;
         var subject = S["Your refund of {0}", amount].Value;
         var text = S["We refunded {0} for {1} to the card or account you paid with. It can take a few business days to appear on your statement.", amount, title].Value;
 

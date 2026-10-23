@@ -111,6 +111,34 @@ public sealed class GuestSessionTokenManagerTests
         Assert.False(returningManager.Verify(_scope, "session-2", firstHash));
     }
 
+    /// <summary>
+    /// A token issued during a request is only in the response cookie. Later calls in the same request must still see
+    /// it, or a record created a moment ago cannot be found again before the response is sent.
+    /// </summary>
+    [Fact]
+    public void ATokenIssuedEarlierInTheSameRequest_IsSeenByLaterCalls()
+    {
+        // Arrange
+        var protectionProvider = new EphemeralDataProtectionProvider();
+        var context = new DefaultHttpContext();
+        var manager = CreateManager(protectionProvider, context);
+
+        // Act
+        var firstHash = manager.Issue(_scope, "session-1");
+        var secondHash = manager.Issue(_scope, "session-2");
+
+        // Assert
+        Assert.Equal(firstHash, manager.GetHash(_scope, "session-1"));
+        Assert.True(manager.Verify(_scope, "session-1", firstHash));
+        Assert.True(manager.Verify(_scope, "session-2", secondHash));
+
+        // The response cookie, which is the last one written, still carries both tokens to the next request.
+        var returningManager = CreateManager(protectionProvider, CreateReturningContext(context));
+
+        Assert.True(returningManager.Verify(_scope, "session-1", firstHash));
+        Assert.True(returningManager.Verify(_scope, "session-2", secondHash));
+    }
+
     [Fact]
     public void Revoke_PreventsTheSessionFromBeingResumedAgain()
     {
@@ -139,12 +167,12 @@ public sealed class GuestSessionTokenManagerTests
     }
 
     // Turns the cookie a response wrote into the cookie the next request sends, which is what a browser does
-    // between two visits.
+    // between two visits. When a response set the cookie more than once, the browser keeps the last one.
     private static DefaultHttpContext CreateReturningContext(DefaultHttpContext previous)
     {
         var context = new DefaultHttpContext();
 
-        var setCookie = previous.Response.Headers.SetCookie.ToString();
+        var setCookie = previous.Response.Headers.SetCookie.LastOrDefault();
 
         if (!string.IsNullOrEmpty(setCookie))
         {

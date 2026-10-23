@@ -28,8 +28,8 @@ public sealed class PermissionsProvider : IPermissionProvider
 
         foreach (var contentTypeDefinition in await _contentDefinitionManager.LoadTypeDefinitionsAsync())
         {
-            permissions.Add(ContentTypePermissionsHelper.CreateDynamicPermission(ContentTransferPermissions.ImportContentFromFileOfType, contentTypeDefinition.Name));
-            permissions.Add(ContentTypePermissionsHelper.CreateDynamicPermission(ContentTransferPermissions.ExportContentFromFileOfType, contentTypeDefinition.Name));
+            permissions.Add(ContentTransferPermissions.CreateDynamicPermission(ContentTransferPermissions.ImportContentFromFileOfType, contentTypeDefinition.Name));
+            permissions.Add(ContentTransferPermissions.CreateDynamicPermission(ContentTransferPermissions.ExportContentFromFileOfType, contentTypeDefinition.Name));
         }
 
         return permissions;

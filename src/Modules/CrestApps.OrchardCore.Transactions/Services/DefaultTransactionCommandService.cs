@@ -399,7 +399,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             }
 
             // Newest payment first, each up to what it still has to give back, until the amount is refunded.
-            foreach (var (attempt, remaining) in refundable)
+            foreach (var (attempt, remaining, shared) in refundable)
             {
                 if (left <= 0m)
                 {
@@ -418,6 +418,11 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                             OriginalTransactionId = attempt.TransactionId,
                             Amount = portion,
                             Reason = Trim(reason),
+
+                            // A payment that settled several transactions gives back only this one's share, and the
+                            // refund is recorded on this one.
+                            ReferenceType = shared ? TransactionsConstants.ReferenceTypes.Transaction : null,
+                            ReferenceId = shared ? transaction.ItemId : null,
                         },
                         cancellationToken);
                 }
@@ -758,7 +763,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     // The confirmed payments made for the transaction that still have money to give back, newest first. They are found
     // both on the transaction's timeline (every payment applied online names its attempt) and by the attempts' own
     // reference, so a payment whose recording was interrupted is found too.
-    private async Task<List<(PaymentAttempt Attempt, decimal Remaining)>> GetRefundableAttemptsAsync(
+    private async Task<List<(PaymentAttempt Attempt, decimal Remaining, bool Shared)>> GetRefundableAttemptsAsync(
         Transaction transaction,
         IPaymentAttemptStore attemptStore,
         IPaymentRefundStore refundStore,
@@ -789,7 +794,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             }
         }
 
-        var refundable = new List<(PaymentAttempt Attempt, decimal Remaining)>();
+        var refundable = new List<(PaymentAttempt Attempt, decimal Remaining, bool Shared)>();
 
         foreach (var attempt in attempts.Values.OrderByDescending(attempt => attempt.CreatedUtc))
         {
@@ -816,10 +821,29 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                 .Sum(refund => refund.RefundGrossAmount);
 
             var remaining = CurrencyScale.Round(attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount - alreadyRefunded, transaction.Currency);
+            var shared = SharedPaymentAttempts.PaysSeveralTransactions(attempt);
+
+            // A payment that settled several transactions has only this one's share to give back here: what was applied
+            // to it, less what was already refunded for it, whether started from it (still in flight or finished) or
+            // shared out to it from a refund of the whole payment.
+            if (shared)
+            {
+                var forThis = refunds
+                    .Where(refund => string.Equals(refund.ReferenceId, transaction.ItemId, StringComparison.Ordinal))
+                    .ToArray();
+
+                var forThisIds = forThis.Select(refund => refund.ItemId).ToHashSet(StringComparer.Ordinal);
+                var refundedForThis = forThis
+                    .Where(refund => refund.Status is not (RefundStatus.Failed or RefundStatus.Canceled))
+                    .Sum(refund => refund.RefundGrossAmount) +
+                    SharedPaymentAttempts.GetRecordedRefunds(transaction, attempt.ItemId, forThisIds);
+
+                remaining = Math.Min(remaining, CurrencyScale.Round(SharedPaymentAttempts.GetAppliedAmount(transaction, attempt.ItemId) - refundedForThis, transaction.Currency));
+            }
 
             if (remaining > 0m)
             {
-                refundable.Add((attempt, remaining));
+                refundable.Add((attempt, remaining, shared));
             }
         }
 

@@ -11,13 +11,12 @@ public sealed class OmnichannelDispositionDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelDispositionDeploymentStep>("Omnichannel");
     private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelDispositionDeploymentStep>("Omnichannel Dispositions");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OmnichannelDispositionDeploymentStep"/> class.
-    /// </summary>
-    public OmnichannelDispositionDeploymentStep()
-    {
-        Name = OmnichannelDeploymentSteps.Disposition;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => OmnichannelDeploymentSteps.Disposition;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }
