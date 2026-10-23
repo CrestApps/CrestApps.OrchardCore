@@ -314,6 +314,38 @@ public sealed class ActivityBatchesController : Controller
     }
 
     /// <summary>
+    /// Lists the file imports leads arrived in, for the imported file filter of the editor. The editor asks for the list
+    /// when the lead filters are shown, because counting the leads of every import is too slow to do each time the
+    /// editor opens.
+    /// </summary>
+    /// <param name="selected">The identifier of the import the load already filters by, kept in the list even when no lead records it.</param>
+    [Admin("omnichannel/activity/batches/lead-imports", "OmnichannelActivityBatchesLeadImports")]
+    public async Task<IActionResult> LeadImports(string selected)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
+        {
+            return Forbid();
+        }
+
+        // The provider exists only while the CRM feature is enabled.
+        var imports = HttpContext.RequestServices.GetService<LeadImportProvider>();
+
+        if (imports is null)
+        {
+            return NotFound();
+        }
+
+        var options = await imports.GetOptionsAsync(selected);
+
+        return Json(options.Select(option => new
+        {
+            value = option.Value,
+            text = option.Text,
+            selected = option.Selected,
+        }));
+    }
+
+    /// <summary>
     /// Performs the edit operation.
     /// </summary>
     /// <param name="id">The id.</param>
