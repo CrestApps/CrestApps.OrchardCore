@@ -8,6 +8,10 @@
     <i class="fa-solid fa-check text-secondary me-1" aria-hidden="true"></i>@Model.Value.SentCount
 </span>
 
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Queued"]">
+    <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@Model.Value.QueuedCount
+</span>
+
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Failed"]">
     <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@Model.Value.FailedCount
 </span>

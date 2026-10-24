@@ -27,6 +27,11 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public string ServiceAddress { get; set; }
 
     /// <summary>
+    /// Gets or sets the subject line sent to every recipient, on a channel that supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the message body sent to every recipient.
     /// </summary>
     public string Body { get; set; }
@@ -56,6 +61,12 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     /// Gets or sets the number of recipients sent successfully.
     /// </summary>
     public int SentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of recipients whose message is queued: held back by the sending address's limits, or
+    /// waiting for a retry. The outbox sends them later; they are neither sent nor failed yet.
+    /// </summary>
+    public int QueuedCount { get; set; }
 
     /// <summary>
     /// Gets or sets the number of recipients that failed to send.

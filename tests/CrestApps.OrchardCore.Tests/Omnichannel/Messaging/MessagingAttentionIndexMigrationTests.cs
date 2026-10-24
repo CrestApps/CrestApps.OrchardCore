@@ -32,7 +32,7 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(4, version);
+            Assert.Equal(5, version);
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
         });
