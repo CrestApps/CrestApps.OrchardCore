@@ -1,7 +1,7 @@
 ---
 sidebar_label: Share and Run Reports
 title: Share, Run and Export Reports
-description: Put a report in the admin menu, share it with people and roles, send people a link to it, and run and export it.
+description: Put a report in the admin menu, share it with people and roles, send people a link to it, run and export it, and show it on the admin dashboard.
 technical_manual:
   - modules/report-builder/permissions
 ---
@@ -96,6 +96,27 @@ The links of every feature of the site, such as report links and the files of da
 The export uses the filters on screen. People the report is shared with can export it when **Let people the report is shared with export it** is on; people who may change the report can always export it. A share link exports only when its **Allow export** is checked.
 
 When you may change the report, **Edit design** opens it in the builder.
+
+## Show a report on the dashboard
+
+When your site uses the admin dashboard, you can put a report you built on it as a widget. The widget shows the report's headline numbers, tables and charts for a period such as the last 30 days, and keeps itself up to date. You do not need a developer.
+
+1. Publish the report. A report that was never published cannot be shown.
+2. Open the admin dashboard and click **Manage Dashboard**, then **Add Widget**, and pick **Custom Report**.
+3. Give the widget a title, and fill in the settings below.
+4. Save the widget.
+
+| Setting | What it does |
+| --- | --- |
+| **Report** | The report to show. The list has the published reports you may run and, if you build reports, the views you may use. A view shows as one table. |
+| **Period** | Today, yesterday, the last 7, 30 or 90 days, this month, last month, this year, the last 12 months, all time, or your own dates. Every period except your own dates moves with the clock: the last 30 days is always the 30 days up to today. The period goes into the report's first date filter that people may change (a filter with **Let viewers change this filter** on, shown as a date range). A report without such a filter shows its usual dates, and the widget says **Its own dates**. |
+| **Show** | Everything (the first time), figures and tables, figures only, tables only, or charts only. Figures are the headline numbers. |
+| **Rows per table** | How many rows of each table to show. It starts at 10. A total row always stays. 0 shows every row. |
+| **Keep for (minutes)** | How long the widget keeps what it shows before it runs the report again. It starts at 30, so the dashboard stays quick. 0 runs the report each time the dashboard opens. Saving the widget, or publishing a new version of the report, starts over. |
+
+Everyone who opens the dashboard sees the widget, but only people who may run the report see its numbers: the owner, the people and roles it is shared with, and people who may view all custom reports. Other people see *You can't view this report*. As when the report runs from the list, it shows data with its owner's access. A view shows data with the access of the person who looks at it, and only people who build reports can see it.
+
+Click **Open the full report** under the widget to open the report with all its filters. If the report is deleted, the widget asks you to choose another one: edit the widget and pick a report. If the report cannot run, the widget shows the same message as the report's page.
 
 ## Clone and delete
 

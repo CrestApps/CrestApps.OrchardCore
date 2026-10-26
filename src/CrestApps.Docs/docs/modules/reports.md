@@ -245,6 +245,19 @@ The same part, `ReportWidgetPart`, is on every widget below. A module ships a re
 
 The **Sales Summary** and **Subscription Summary** widgets are not report widgets. They count the store's orders or subscriptions directly and have their own options; see [Sales Summary widget](carts-and-orders#sales-summary-widget) and [Subscriptions](subscriptions).
 
+### Report Builder widget
+
+With the **Report Builder** (`CrestApps.OrchardCore.Reports.Builder`) and Orchard Core's **Admin Dashboard** both enabled, the **Custom Report** widget (`ReportDesignWidget`, part `ReportDesignWidgetPart`, both in `ReportWidgetConstants`) shows a published report built in the report builder, or a reusable view as a table, with the same options as the report widget. It is registered by `DesignWidgetsStartup`, which belongs to the Report Builder feature and is marked `[RequireFeatures(ReportWidgetConstants.AdminDashboardFeature)]`; its migration creates the part and the `DashboardWidget` type. A store owner can build a report and put it on the dashboard without a developer.
+
+- **Report**: `ReportId` (a published `ReportDesign`) or `ViewId` (a `ReportView`), never both. The editor lists the published reports the editor may run and the views the editor may use, and refuses any other. A report that was never published is not in the list, because only published reports are in the catalog.
+- **Period**: the same choices as the report widget, resolved by `ReportWidgetPeriods` in the site's time zone. It is passed to `ReportDesignRunner.RunAsync` as a `ReportRunPeriod` of whole days and set on the report's first exposed filter whose control is a date range (`ReportDesignRunner.FindPeriodFilter`), overriding that filter's default. **All time** turns the filter off. A report with no such filter keeps its own dates, `ReportDesignWidgetResult.PeriodApplied` is `false`, and the tile says **Its own dates**.
+- **Show**: `ReportWidgetContent` applied to the report's visuals through `ReportWidgetTrimmer`: figures are the headline-number visuals, tables are the table and pivot visuals, charts are the chart visuals. The default is everything, since the person who built the report chose its visuals. A view is always shown as one table.
+- **Rows per table**: 10 by default; a total row stays. **Keep for (minutes)**: `ReportWidgetConstants.DefaultCacheMinutes` (30) by default; 0 runs the report on every visit.
+
+`ReportDesignWidgetService` checks `ReportDesignerPermissions.ViewAllReportDesigns` against the report or view on every visit, before it reads the cache: the same check as the report's own page, so a person sees the tile's numbers only when they may run the report (an owner, a person or role it is shared with, or *View all custom reports*), and a view only when they build reports. A report reads its data with its owner's access, whoever views it, so its kept result is keyed by the widget and its last change, the report and its last publish, the owner, the period, what to show, the rows and the language, and is shared by everyone who may run the report. A view reads with the viewer's access, so its result is also keyed by the viewer. A report whose run fails (for example its owner's account is disabled) shows the same errors as its page and is not kept; a report or view that was deleted, or never published, says so. The widget runs the report live and does not raise the report-run workflow event; a view runs live with the viewer's access and does not read its scheduled snapshot.
+
+The widget renders the report's document with the same `_ReportWidgetSections` partial as the report widget, and its editor uses the same `_ReportWidgetOptions` partial and `ReportWidgetChoices`.
+
 ## Enable via recipe
 
 ```json

@@ -22,6 +22,16 @@ public static class ReportWidgetConstants
     public const string GenericWidgetType = "ReportWidget";
 
     /// <summary>
+    /// The name of the content part that makes a dashboard widget show a report or a view built in the report builder.
+    /// </summary>
+    public const string DesignPartName = "ReportDesignWidgetPart";
+
+    /// <summary>
+    /// The name of the widget type that shows a report or a view built in the report builder, which its viewer may see.
+    /// </summary>
+    public const string DesignWidgetType = "ReportDesignWidget";
+
+    /// <summary>
     /// The stereotype of admin dashboard widget types.
     /// </summary>
     public const string DashboardWidgetStereotype = "DashboardWidget";

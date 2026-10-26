@@ -1,0 +1,12 @@
+@model ReportDesignWidgetEditViewModel
+
+<div class="mb-3">
+    <label asp-for="Source" class="form-label">@T["Report"]</label>
+    <select asp-for="Source" asp-items="Model.Sources" class="form-select">
+        <option value="">@T["Choose a report"]</option>
+    </select>
+    <span asp-validation-for="Source" class="text-danger"></span>
+    <span class="hint">@T["Any published report you may run under Reports > Report Builder, or a view you may use there, which shows as a table. The period below sets the report's first date range filter that viewers can change; a report without one shows its own dates."]</span>
+</div>
+
+<partial name="_ReportWidgetOptions" model="Model" />

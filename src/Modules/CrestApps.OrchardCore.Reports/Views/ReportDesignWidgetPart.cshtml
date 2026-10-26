@@ -1,0 +1,84 @@
+@model ReportDesignWidgetViewModel
+
+@* A report built in the report builder, or a view, on the admin dashboard: its figures, tables and charts, with the period and when the result was made. *@
+
+@{
+    var result = Model.Result;
+}
+
+@switch (result.Outcome)
+{
+    case ReportWidgetOutcome.NotConfigured:
+        <p class="text-muted mb-0">
+            @if (result.IsMissing)
+            {
+                @T["The report this widget shows was deleted or is not published. Choose another one by editing the widget."]
+            }
+            else
+            {
+                @T["Choose the report this widget shows by editing it."]
+            }
+        </p>
+
+        break;
+
+    case ReportWidgetOutcome.Denied:
+        <p class="text-muted mb-0">@T["You can't view this report."]</p>
+
+        break;
+
+    case ReportWidgetOutcome.Failed:
+        <p class="text-danger mb-0">@T["The {0} report couldn't be run.", result.Title]</p>
+
+        if (result.Errors.Count > 0)
+        {
+            <ul class="text-danger small mb-0 mt-1">
+                @foreach (var error in result.Errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted small mb-0">@T["The details are in the log."]</p>
+        }
+
+        break;
+
+    default:
+        {
+            var document = result.Document;
+
+            <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                <span class="fw-semibold">@result.Title</span>
+                <span class="text-muted small">@Model.PeriodText</span>
+            </div>
+
+            if (!document.HasContent)
+            {
+                <p class="text-muted mb-0">@T["Nothing to show for this period."]</p>
+            }
+
+            <partial name="_ReportWidgetSections" model="document" />
+
+            foreach (var warning in result.Warnings)
+            {
+                <p class="text-warning small mb-1"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @warning</p>
+            }
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 text-muted small">
+                <span>@Model.UpdatedText</span>
+                @if (Model.CanOpen && result.IsView)
+                {
+                    <a asp-route="ReportViewsEdit" asp-route-id="@result.ItemId">@T["Open the view"]</a>
+                }
+                else if (Model.CanOpen)
+                {
+                    <a asp-route="ReportDesignsRun" asp-route-id="@result.ItemId">@T["Open the full report"]</a>
+                }
+            </div>
+        }
+
+        break;
+}
