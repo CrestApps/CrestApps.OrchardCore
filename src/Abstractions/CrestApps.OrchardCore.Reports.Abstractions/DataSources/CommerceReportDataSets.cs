@@ -231,6 +231,16 @@ public static class CommerceReportDataSets
         /// The transactions data set: one row per transaction.
         /// </summary>
         public const string Transactions = "Transactions";
+
+        /// <summary>
+        /// The payment attempts data set: one row per payment the store tried to take.
+        /// </summary>
+        public const string PaymentAttempts = "PaymentAttempts";
+
+        /// <summary>
+        /// The payment refunds data set: one row per refund of a payment.
+        /// </summary>
+        public const string PaymentRefunds = "PaymentRefunds";
     }
 
     /// <summary>
