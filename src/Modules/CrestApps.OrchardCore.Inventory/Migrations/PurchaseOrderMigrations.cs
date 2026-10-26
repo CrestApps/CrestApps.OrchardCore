@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -28,6 +29,29 @@ internal sealed class PurchaseOrderMigrations : DataMigration
             table.CreateIndex("IDX_PurchaseOrderIndex_Number", "Number");
         }, collection: InventoryConstants.CollectionName);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read purchase orders through, newest first by <c>CreatedUtc</c> a page at a time, so each
+    /// page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<PurchaseOrderIndex>(
+            SchemaBuilder,
+            "IDX_PurchaseOrderIndex_Report",
+            InventoryConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

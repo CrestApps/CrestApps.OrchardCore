@@ -699,7 +699,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             return $"DELETE FROM {_documentTable} WHERE {_idColumn} IN ({placeholders})";
         }
 
-        public static LocalDncEntryDeleteStatements Create(YesSql.IConfiguration configuration)
+        public static LocalDncEntryDeleteStatements Create(IConfiguration configuration)
         {
             var dialect = configuration.SqlDialect;
             var prefix = configuration.TablePrefix;

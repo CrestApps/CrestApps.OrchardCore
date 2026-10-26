@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Downloads.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -36,6 +37,29 @@ internal sealed class DownloadMigrations : DataMigration
             table.CreateIndex("IDX_DownloadEntitlementIndex_OrderId", "OrderId", "CreatedUtc");
         }, collection: DownloadsConstants.CollectionName);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read download entitlements through, newest first by <c>CreatedUtc</c> a page at a time,
+    /// so each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<DownloadEntitlementIndex>(
+            SchemaBuilder,
+            "IDX_DownloadEntitlementIndex_Report",
+            DownloadsConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

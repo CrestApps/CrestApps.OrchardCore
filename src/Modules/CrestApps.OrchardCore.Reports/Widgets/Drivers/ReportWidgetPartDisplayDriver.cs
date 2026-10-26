@@ -76,7 +76,7 @@ public sealed class ReportWidgetPartDisplayDriver : ContentPartDisplayDriver<Rep
             }
 
             var period = part.Period ?? settings.DefaultPeriod;
-            model.PeriodText = DescribePeriod(period, result.From, result.To);
+            model.PeriodText = ReportWidgetChoices.DescribePeriod(S, period, result.From, result.To);
 
             var generated = await _localClock.ConvertToLocalAsync(result.GeneratedUtc);
             model.UpdatedText = S["Updated {0}", generated.DateTime.ToString("g", CultureInfo.CurrentCulture)].Value;
@@ -100,8 +100,8 @@ public sealed class ReportWidgetPartDisplayDriver : ContentPartDisplayDriver<Rep
             model.Content = part.Show ?? settings.DefaultContent;
             model.MaxRows = part.MaxRows ?? settings.DefaultMaxRows;
             model.CacheMinutes = part.CacheMinutes;
-            model.Periods = BuildPeriods();
-            model.Contents = BuildContents();
+            model.Periods = ReportWidgetChoices.Periods(S);
+            model.Contents = ReportWidgetChoices.Contents(S);
             model.Reports = fixedReport is null ? await BuildReportsAsync() : [];
         });
     }
@@ -123,61 +123,17 @@ public sealed class ReportWidgetPartDisplayDriver : ContentPartDisplayDriver<Rep
             part.ReportName = model.ReportName;
         }
 
-        if (!Enum.IsDefined(model.Period))
-        {
-            model.Period = settings.DefaultPeriod;
-        }
-
-        if (model.Period == ReportWidgetPeriod.Custom && model.From is null && model.To is null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.From), S["Give at least the first or the last day of the period."]);
-        }
-
-        if (model.MaxRows is < 0 or > 100)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxRows), S["Show between 0 (all) and 100 rows."]);
-        }
-
-        if (model.CacheMinutes is < 0 or > 24 * 60)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CacheMinutes), S["Keep the result between 0 (don't) and 1440 minutes (a day)."]);
-        }
+        ReportWidgetChoices.Validate(model, context.Updater, Prefix, S, settings.DefaultPeriod, settings.DefaultContent);
 
         part.Period = model.Period;
         part.From = model.Period == ReportWidgetPeriod.Custom ? model.From : null;
         part.To = model.Period == ReportWidgetPeriod.Custom ? model.To : null;
-        part.Show = Enum.IsDefined(model.Content) ? model.Content : settings.DefaultContent;
-        part.MaxRows = Math.Clamp(model.MaxRows, 0, 100);
-        part.CacheMinutes = Math.Clamp(model.CacheMinutes, 0, 24 * 60);
+        part.Show = model.Content;
+        part.MaxRows = Math.Clamp(model.MaxRows, 0, ReportWidgetChoices.MaxRows);
+        part.CacheMinutes = Math.Clamp(model.CacheMinutes, 0, ReportWidgetChoices.MaxCacheMinutes);
 
         return await EditAsync(part, context);
     }
-
-    private IList<SelectListItem> BuildPeriods()
-        =>
-        [
-            new(S["Today"], nameof(ReportWidgetPeriod.Today)),
-            new(S["Yesterday"], nameof(ReportWidgetPeriod.Yesterday)),
-            new(S["Last 7 days"], nameof(ReportWidgetPeriod.Last7Days)),
-            new(S["Last 30 days"], nameof(ReportWidgetPeriod.Last30Days)),
-            new(S["Last 90 days"], nameof(ReportWidgetPeriod.Last90Days)),
-            new(S["This month"], nameof(ReportWidgetPeriod.ThisMonth)),
-            new(S["Last month"], nameof(ReportWidgetPeriod.LastMonth)),
-            new(S["This year"], nameof(ReportWidgetPeriod.ThisYear)),
-            new(S["Last 12 months"], nameof(ReportWidgetPeriod.Last12Months)),
-            new(S["All time"], nameof(ReportWidgetPeriod.AllTime)),
-            new(S["Custom dates"], nameof(ReportWidgetPeriod.Custom)),
-        ];
-
-    private IList<SelectListItem> BuildContents()
-        =>
-        [
-            new(S["Figures and tables"], nameof(ReportWidgetContent.FiguresAndTables)),
-            new(S["Figures only"], nameof(ReportWidgetContent.FiguresOnly)),
-            new(S["Tables only"], nameof(ReportWidgetContent.TablesOnly)),
-            new(S["Charts only"], nameof(ReportWidgetContent.ChartsOnly)),
-            new(S["Everything"], nameof(ReportWidgetContent.Everything)),
-        ];
 
     private async Task<IList<SelectListItem>> BuildReportsAsync()
     {
@@ -200,24 +156,4 @@ public sealed class ReportWidgetPartDisplayDriver : ContentPartDisplayDriver<Rep
 
         return items;
     }
-
-    private string DescribePeriod(ReportWidgetPeriod period, DateTime? from, DateTime? to)
-        => period switch
-        {
-            ReportWidgetPeriod.Today => S["Today"].Value,
-            ReportWidgetPeriod.Yesterday => S["Yesterday"].Value,
-            ReportWidgetPeriod.Last7Days => S["Last 7 days"].Value,
-            ReportWidgetPeriod.Last30Days => S["Last 30 days"].Value,
-            ReportWidgetPeriod.Last90Days => S["Last 90 days"].Value,
-            ReportWidgetPeriod.ThisMonth => S["This month"].Value,
-            ReportWidgetPeriod.LastMonth => S["Last month"].Value,
-            ReportWidgetPeriod.ThisYear => S["This year"].Value,
-            ReportWidgetPeriod.Last12Months => S["Last 12 months"].Value,
-            ReportWidgetPeriod.AllTime => S["All time"].Value,
-            _ => from.HasValue && to.HasValue
-                ? S["{0} to {1}", from.Value.ToString("d", CultureInfo.CurrentCulture), to.Value.ToString("d", CultureInfo.CurrentCulture)].Value
-                : from.HasValue
-                    ? S["Since {0}", from.Value.ToString("d", CultureInfo.CurrentCulture)].Value
-                    : S["Until {0}", (to ?? DateTime.MinValue).ToString("d", CultureInfo.CurrentCulture)].Value,
-        };
 }

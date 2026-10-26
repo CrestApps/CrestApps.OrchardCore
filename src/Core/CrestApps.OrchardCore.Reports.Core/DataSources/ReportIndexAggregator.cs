@@ -214,7 +214,7 @@ public static class ReportIndexAggregator
             selects.Add(measure.Function switch
             {
                 DataAggregate.Count => $"COUNT({column})",
-                DataAggregate.Sum => $"SUM({column})",
+                DataAggregate.Sum => $"SUM({Widen(dialect, column, type)})",
                 DataAggregate.Min => $"MIN({column})",
                 _ => $"MAX({column})",
             });
@@ -404,6 +404,15 @@ public static class ReportIndexAggregator
         return false;
     }
 
+    // SQL Server adds up an int or smallint column as an int, which overflows past about two billion, such as the tokens
+    // of a busy month; the other databases widen the sum of whole numbers themselves.
+    private static string Widen(ISqlDialect dialect, string column, Type type)
+    {
+        return (type == typeof(int) || type == typeof(short)) && string.Equals(dialect.Name, "SqlServer", StringComparison.OrdinalIgnoreCase)
+            ? $"CAST({column} AS BIGINT)"
+            : column;
+    }
+
     private static object[] ReadRow(DbDataReader reader, ReportIndexStatement statement)
     {
         var row = new object[reader.FieldCount];
@@ -413,12 +422,52 @@ public static class ReportIndexAggregator
             var value = reader.IsDBNull(index) ? null : reader.GetValue(index);
             var type = index < statement.Columns.Count ? statement.Columns[index] : null;
 
-            row[index] = value is not null && type is { IsEnum: true }
-                ? Enum.ToObject(type, Convert.ToInt64(value, CultureInfo.InvariantCulture)).ToString()
-                : value;
+            row[index] = Normalize(value, type);
         }
 
         return row;
+    }
+
+    // Databases return a column in their own type, such as a boolean or a date as a number or text on SQLite, so each
+    // value is given the CLR type its field's type maps to: enums as names, whole numbers as long, other numbers as
+    // decimal, booleans as bool, and date-times in UTC.
+    private static object Normalize(object value, Type type)
+    {
+        if (value is null || type is null)
+        {
+            return value;
+        }
+
+        if (type.IsEnum)
+        {
+            return Enum.ToObject(type, Convert.ToInt64(value, CultureInfo.InvariantCulture)).ToString();
+        }
+
+        if (type == typeof(bool))
+        {
+            return value as bool? ?? Convert.ToInt64(value, CultureInfo.InvariantCulture) != 0;
+        }
+
+        if (type == typeof(int) || type == typeof(long) || type == typeof(short))
+        {
+            return Convert.ToInt64(value, CultureInfo.InvariantCulture);
+        }
+
+        if (type == typeof(decimal) || type == typeof(double) || type == typeof(float))
+        {
+            return Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+        }
+
+        if (type == typeof(DateTime))
+        {
+            var date = value is DateTime dateTime
+                ? dateTime
+                : DateTime.Parse(Convert.ToString(value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+
+            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
+        }
+
+        return value;
     }
 }
 

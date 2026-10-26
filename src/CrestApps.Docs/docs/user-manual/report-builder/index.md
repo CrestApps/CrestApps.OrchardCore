@@ -38,6 +38,7 @@ People who only run reports that were shared with them need no permission: they 
 | Save drafts, publish, and go back to an earlier version | [Publish and versions](publish-and-versions.md) |
 | Prepare data once and reuse it in many reports | [Reusable views](views.md) |
 | Share a report, put it in the menu, run it and export it | [Share and run reports](share-and-run.md) |
+| Show a report on the admin dashboard | [Show a report on the dashboard](share-and-run.md#show-a-report-on-the-dashboard) |
 | Email a report on a schedule, send share links, or react when a report is run | [Automate with workflows](workflows.md) |
 | Fix a report that does not work as expected | [Troubleshooting](troubleshooting.md) |
 
@@ -57,7 +58,7 @@ Your administrator gives these permissions to roles. Administrators have all of 
 
 | Word | What it means |
 | --- | --- |
-| **Data source** | Where data comes from, such as **Content items** (the content types of the site), **Queries** (saved queries), **Report views** or **Users**. Other features add their own. See [Data sources](data-sources.md). |
+| **Data source** | Where data comes from, such as **Content items** (the content types of the site), **Queries** (saved queries), **Report views** or **Users**. Other features add their own, such as **Orders**, **Customers**, **Inventory** or **Contact Center**. See [Data sources](data-sources.md). |
 | **Data set** | One table of data from a source, such as the *Customer* content type. |
 | **Field** | One piece of information in a data set, such as *Email* or *Total*. |
 | **Column** | A field you placed on the report, with its settings. |

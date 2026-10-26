@@ -1,0 +1,273 @@
+{
+  "name": "CommerceReportBuilderReports",
+  "displayName": "Reports: store reports to adapt",
+  "description": "Turns on the Report Builder and adds store reports built from the Orders data source: sales by day, sales by product, sales by country, tax by jurisdiction, discounts, refunds, disputes and orders to ship. They show what the built-in order reports show, so you can open one in the builder, change it, and save your own. The person who runs the recipe owns them.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "reports",
+    "report builder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Reports.Builder"
+      ]
+    },
+    {
+      "name": "ReportDesigns",
+      "Reports": [
+        {
+          "itemId": "store-sales-by-day",
+          "displayText": "Sales by day",
+          "description": "Orders paid each day and what they came to, in each currency: gross sales, discounts, shipping, tax, total charged, refunded and net.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "o", "source": "Orders", "dataSet": "Orders", "displayName": "Orders" }
+            ],
+            "filters": [
+              { "id": "paid", "field": "o.PaidUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Paid", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "day", "field": "o.PaidUtc", "label": "Day", "transform": "Day" },
+              { "id": "currency", "field": "o.Currency", "label": "Currency" },
+              { "id": "orders", "field": "$count", "label": "Orders" },
+              { "id": "units", "field": "o.ItemCount", "label": "Units", "aggregate": "Sum" },
+              { "id": "gross", "field": "o.Subtotal", "label": "Gross sales", "aggregate": "Sum" },
+              { "id": "discounts", "field": "o.DiscountTotal", "label": "Discounts", "aggregate": "Sum" },
+              { "id": "shipping", "field": "o.ShippingAmount", "label": "Shipping", "aggregate": "Sum" },
+              { "id": "tax", "field": "o.TaxAmount", "label": "Tax", "aggregate": "Sum" },
+              { "id": "total", "field": "o.Total", "label": "Total charged", "aggregate": "Sum" },
+              { "id": "refunded", "field": "o.RefundedAmount", "label": "Refunded", "aggregate": "Sum" },
+              { "id": "net", "field": "o.NetAmount", "label": "Net", "aggregate": "Sum" }
+            ],
+            "sorts": [
+              { "columnId": "day" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "orders", "units", "total", "net" ] },
+            { "id": "trend", "type": "Chart", "title": "Net sales by day", "chartType": "Line", "categoryColumnId": "day", "seriesColumnId": "currency", "valueColumnIds": [ "net" ] },
+            { "id": "table", "type": "Table", "title": "Sales by day", "columnIds": [ "day", "currency", "orders", "units", "gross", "discounts", "shipping", "tax", "total", "refunded", "net" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "store-sales-by-product",
+          "displayText": "Sales by product",
+          "description": "Units and sales of each product and variant on the orders paid in the period, top sellers first.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "l", "source": "Orders", "dataSet": "OrderLines", "displayName": "Order lines" }
+            ],
+            "filters": [
+              { "id": "paid", "field": "l.OrderPaidUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Paid", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "product", "field": "l.Title", "label": "Product" },
+              { "id": "variant", "field": "l.VariantTitle", "label": "Variant" },
+              { "id": "sku", "field": "l.Sku", "label": "SKU" },
+              { "id": "currency", "field": "l.Currency", "label": "Currency" },
+              { "id": "orders", "field": "l.OrderId", "label": "Orders", "aggregate": "CountDistinct" },
+              { "id": "units", "field": "l.Quantity", "label": "Units", "aggregate": "Sum" },
+              { "id": "sales", "field": "l.LineTotal", "label": "Sales", "aggregate": "Sum" }
+            ],
+            "sorts": [
+              { "columnId": "units", "descending": true }
+            ]
+          },
+          "visuals": [
+            { "id": "top", "type": "Chart", "title": "Units by product", "chartType": "HorizontalBar", "categoryColumnId": "product", "valueColumnIds": [ "units" ] },
+            { "id": "table", "type": "Table", "title": "Sales by product", "columnIds": [ "product", "variant", "sku", "currency", "orders", "units", "sales" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "store-sales-by-country",
+          "displayText": "Sales by country",
+          "description": "Orders paid in the period, their tax and total, by the country they ship to.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "o", "source": "Orders", "dataSet": "Orders", "displayName": "Orders" }
+            ],
+            "filters": [
+              { "id": "paid", "field": "o.PaidUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Paid", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "country", "field": "o.ShippingCountry", "label": "Ships to" },
+              { "id": "currency", "field": "o.Currency", "label": "Currency" },
+              { "id": "orders", "field": "$count", "label": "Orders" },
+              { "id": "tax", "field": "o.TaxAmount", "label": "Tax", "aggregate": "Sum" },
+              { "id": "total", "field": "o.Total", "label": "Total charged", "aggregate": "Sum" }
+            ],
+            "sorts": [
+              { "columnId": "total", "descending": true }
+            ]
+          },
+          "visuals": [
+            { "id": "share", "type": "Chart", "title": "Orders by country", "chartType": "Doughnut", "categoryColumnId": "country", "valueColumnIds": [ "orders" ] },
+            { "id": "table", "type": "Table", "title": "Sales by country", "columnIds": [ "country", "currency", "orders", "tax", "total" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "store-tax-by-jurisdiction",
+          "displayText": "Tax by jurisdiction",
+          "description": "The tax charged on the orders paid in the period, by jurisdiction, tax and rate, with what it was charged on.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "t", "source": "Orders", "dataSet": "OrderTaxes", "displayName": "Order taxes" }
+            ],
+            "filters": [
+              { "id": "paid", "field": "t.OrderPaidUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Paid", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "jurisdiction", "field": "t.JurisdictionName", "label": "Jurisdiction" },
+              { "id": "tax", "field": "t.TaxName", "label": "Tax" },
+              { "id": "rate", "field": "t.Rate", "label": "Rate" },
+              { "id": "currency", "field": "t.Currency", "label": "Currency" },
+              { "id": "orders", "field": "t.OrderId", "label": "Orders", "aggregate": "CountDistinct" },
+              { "id": "taxable", "field": "t.TaxableAmount", "label": "Taxable amount", "aggregate": "Sum" },
+              { "id": "amount", "field": "t.TaxAmount", "label": "Tax amount", "aggregate": "Sum" }
+            ],
+            "sorts": [
+              { "columnId": "jurisdiction" },
+              { "columnId": "rate", "descending": true }
+            ]
+          },
+          "visuals": [
+            { "id": "table", "type": "Table", "title": "Tax by jurisdiction", "columnIds": [ "jurisdiction", "tax", "rate", "currency", "orders", "taxable", "amount" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "store-discounts",
+          "displayText": "Discounts on orders",
+          "description": "The orders paid in the period that used each discount code, and what the discounts took off.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "d", "source": "Orders", "dataSet": "OrderDiscounts", "displayName": "Order discounts" }
+            ],
+            "filters": [
+              { "id": "paid", "field": "d.OrderPaidUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Paid", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "code", "field": "d.Code", "label": "Code" },
+              { "id": "description", "field": "d.Description", "label": "Description" },
+              { "id": "currency", "field": "d.Currency", "label": "Currency" },
+              { "id": "orders", "field": "d.OrderId", "label": "Orders", "aggregate": "CountDistinct" },
+              { "id": "amount", "field": "d.Amount", "label": "Taken off", "aggregate": "Sum" }
+            ],
+            "sorts": [
+              { "columnId": "amount", "descending": true }
+            ]
+          },
+          "visuals": [
+            { "id": "table", "type": "Table", "title": "Discounts on orders", "columnIds": [ "code", "description", "currency", "orders", "amount" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "store-refunds",
+          "displayText": "Refunds",
+          "description": "Each refund given in the period: when, for which order, how much and why.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "r", "source": "Orders", "dataSet": "OrderRefunds", "displayName": "Order refunds" }
+            ],
+            "filters": [
+              { "id": "refunded", "field": "r.RefundedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Refunded", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "refunded", "field": "r.RefundedUtc", "label": "Refunded" },
+              { "id": "order", "field": "r.OrderNumber", "label": "Order" },
+              { "id": "currency", "field": "r.Currency", "label": "Currency" },
+              { "id": "amount", "field": "r.Amount", "label": "Amount" },
+              { "id": "reason", "field": "r.Reason", "label": "Reason" }
+            ],
+            "sorts": [
+              { "columnId": "refunded", "descending": true }
+            ]
+          },
+          "visuals": [
+            { "id": "table", "type": "Table", "title": "Refunds", "columnIds": [ "refunded", "order", "currency", "amount", "reason" ] }
+          ]
+        },
+        {
+          "itemId": "store-disputes",
+          "displayText": "Disputes",
+          "description": "The disputes, or chargebacks, opened in the period, open ones first, with why, their status and the amount.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "x", "source": "Orders", "dataSet": "OrderDisputes", "displayName": "Order disputes" }
+            ],
+            "filters": [
+              { "id": "opened", "field": "x.OpenedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "90" ], "exposed": true, "label": "Opened", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "opened", "field": "x.OpenedUtc", "label": "Opened" },
+              { "id": "order", "field": "x.OrderNumber", "label": "Order" },
+              { "id": "gateway", "field": "x.Gateway", "label": "Gateway" },
+              { "id": "reason", "field": "x.Reason", "label": "Reason" },
+              { "id": "status", "field": "x.Status", "label": "Status" },
+              { "id": "closed", "field": "x.IsClosed", "label": "Closed" },
+              { "id": "currency", "field": "x.DisputeCurrency", "label": "Currency" },
+              { "id": "amount", "field": "x.Amount", "label": "Amount" }
+            ],
+            "sorts": [
+              { "columnId": "closed" },
+              { "columnId": "opened", "descending": true }
+            ]
+          },
+          "visuals": [
+            { "id": "table", "type": "Table", "title": "Disputes", "columnIds": [ "opened", "order", "gateway", "reason", "status", "closed", "currency", "amount" ] }
+          ]
+        },
+        {
+          "itemId": "store-orders-to-ship",
+          "displayText": "Orders to ship",
+          "description": "Paid orders with something to ship that is not shipped in full, oldest first.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "o", "source": "Orders", "dataSet": "Orders", "displayName": "Orders" }
+            ],
+            "filters": [
+              { "id": "status", "field": "o.Status", "stage": "Rows", "operator": "Equals", "values": [ "Paid" ] },
+              { "id": "ships", "field": "o.ShippingMethod", "stage": "Rows", "operator": "IsNotEmpty" },
+              { "id": "fulfillment", "field": "o.FulfillmentStatus", "stage": "Rows", "operator": "NotEquals", "values": [ "Fulfilled" ] }
+            ],
+            "columns": [
+              { "id": "paid", "field": "o.PaidUtc", "label": "Paid" },
+              { "id": "order", "field": "o.OrderNumber", "label": "Order" },
+              { "id": "customer", "field": "o.CustomerName", "label": "Customer" },
+              { "id": "method", "field": "o.ShippingMethod", "label": "Shipping method" },
+              { "id": "country", "field": "o.ShippingCountry", "label": "Ships to" },
+              { "id": "fulfillment", "field": "o.FulfillmentStatus", "label": "Shipped" },
+              { "id": "units", "field": "o.ItemCount", "label": "Units" },
+              { "id": "currency", "field": "o.Currency", "label": "Currency" },
+              { "id": "total", "field": "o.Total", "label": "Total" }
+            ],
+            "sorts": [
+              { "columnId": "paid" }
+            ]
+          },
+          "visuals": [
+            { "id": "count", "type": "Metrics", "title": "To ship", "valueColumnIds": [ "units" ] },
+            { "id": "table", "type": "Table", "title": "Orders to ship", "columnIds": [ "paid", "order", "customer", "method", "country", "fulfillment", "units", "currency", "total" ] }
+          ]
+        }
+      ]
+    }
+  ]
+}

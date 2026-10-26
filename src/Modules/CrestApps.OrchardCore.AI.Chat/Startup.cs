@@ -202,7 +202,9 @@ public sealed class DataSourcesStartup : StartupBase
 }
 
 /// <summary>
-/// Adds the chat session metrics data set to the AI chat data source.
+/// Adds the data sets of the records the analytics feature keeps to the AI chat data source: the chat session
+/// metrics, and the AI usage (every metered AI request and every AI voice session summary). The feature indexes the
+/// usage records, so their data sets are listed only while it is on.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
 [RequireFeatures("OrchardCore.DataPipelines.Core")]
@@ -210,7 +212,10 @@ public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>();
+        services
+            .AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>()
+            .AddScoped<IAIChatReportDataSet, AICompletionUsageReportDataSet>()
+            .AddScoped<IAIChatReportDataSet, AIVoiceUsageReportDataSet>();
     }
 }
 

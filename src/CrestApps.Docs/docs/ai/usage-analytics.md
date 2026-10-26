@@ -207,6 +207,60 @@ zeros it never measured.
 - A call is summarized once. When the hangup and the end of a live session race, the summary that measured the
   audio is kept.
 
+## Report Builder data source
+
+The usage records are also two data sets of the **AI chat** data source (technical name `AIChat`), so the [Report Builder](../modules/report-builder/index.md) can build your own usage and cost reports from them, such as the cost per model per month or the tokens each profile used per day. The same source has the **Chat sessions** (`ChatSessions`) and **Chat session metrics** (`ChatSessionMetrics`) data sets.
+
+| | |
+| --- | --- |
+| **Data source** | `AIChat` |
+| **Registered when** | **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) and **AI Chat Session Analytics** (`CrestApps.OrchardCore.AI.Chat.Analytics`) are enabled. That feature indexes the usage records, so the two data sets are listed only while it is on. |
+| **Permission** | **View AI Chat Analytics** (`ViewChatAnalytics`), the permission of the AI Usage Analytics page. |
+
+| Data set | Technical name | Rows | Main date |
+| --- | --- | --- | --- |
+| **AI completion usage** | `CompletionUsage` | One row for each request sent to an AI provider, of every kind and from every feature: the rows of the metered usage table, not only the completions the completion table counts. | `CreatedUtc` |
+| **AI voice usage** | `VoiceUsage` | One row for each AI voice session summary. | `CreatedUtc` |
+
+Both data sets are filled only while **Enable AI usage tracking** is on. A usage record has no success flag: a request is recorded when the provider answered it. A voice summary has no user, because the caller is not a user of the site.
+
+### AI completion usage fields
+
+| Group | Fields |
+| --- | --- |
+| **Request** | `CreatedUtc` (when the request was recorded), `OperationType` (the kind: `Chat`, `Embedding`, `Image`, `SpeechToText`, `TextToSpeech`, `Realtime` or `RealtimeTranscription`; a request recorded before kinds were recorded is `Chat`), `ContextType` (the category), `Purpose`, `IsStreaming`, `ResponseLatencyMs` |
+| **Model** | `ClientName` (the provider), `ConnectionName`, `DeploymentName`, `ModelName` (the model the provider reported, empty when it reported none), `Model` (the model the provider reported, or the deployment when it reported none) |
+| **Context** | `ProfileId` (identifier), `ProfileName` (the current name of the AI profile), `SessionId` (identifier, references `AIChat.ChatSessions.SessionId`), `InteractionId` (identifier), `UserId` (identifier, references `Users.UserId`), `UserName`, `IsAuthenticated` |
+| **Billing units** | `InputTokenCount`, `OutputTokenCount`, `TotalTokenCount`, `CachedInputTokenCount`, `ReasoningTokenCount`, `InputAudioTokenCount`, `OutputAudioTokenCount`, `AudioDurationMs`, `AudioMinutes`, `CharacterCount`, `ImageCount` |
+
+The client identifier, the visitor identifier and the provider's response identifier are not exposed.
+
+### AI voice usage fields
+
+| Group | Fields |
+| --- | --- |
+| **Call** | `ItemId` (identifier), `ActivityId` (identifier, references `Omnichannel.Activities.ItemId`), `AISessionId` (identifier, references `AIChat.ChatSessions.SessionId`), `Channel`, `ChannelEndpointId` (identifier), `ProviderName` (the telephony provider), `CampaignId` (identifier, references `Omnichannel.Campaigns.ItemId`), `CampaignName`, `Engine` (`Realtime` or `TurnBased`), `Outcome`, `StartedUtc`, `EndedUtc`, `CreatedUtc` (when the summary was written) |
+| **Model** | `AIProfileId` (identifier), `AIProfileName` (the name of the profile when the call ended), `DeploymentName`, `ModelName`, `ConnectionName` |
+| **Talk time** | `SessionDurationMs`, `SessionSeconds`, `SessionMinutes`, `AssistantSpeakingMs`, `AIMinutes`, `CallerSpeakingMs`, `CallerMinutes`, `MutualSilenceMs`, `SilenceMinutes`, `TimeToFirstAssistantAudioMs`, `EchoHeldMs` |
+| **Turns** | `AssistantTurns`, `CallerTurns`, `BargeIns`, `IdlePrompts` |
+| **Tokens** | `InputAudioTokens`, `OutputAudioTokens`, `InputTextTokens`, `OutputTextTokens`, `CachedInputTokens` |
+
+A measurement that the engine of the call cannot make is empty, as described in [How each metric is measured](#how-each-metric-is-measured). The provider's call identifier is not exposed. The names keep at most 255 characters, as the index does. The AI Usage Analytics page counts one summary per activity; in the rare case that a call has two summaries, count the distinct `ActivityId` values to count calls.
+
+### Cost per model
+
+To estimate the cost of each model, group **AI completion usage** by `Model` (and `OperationType` when a model is billed for more than one kind of request), and add a [calculated field](../modules/report-builder/formulas.md) that multiplies each billing unit by the provider's price for it. For example, with prices per million tokens, and `Usage` as the alias of the data set in the report:
+
+```text
+IF([Usage.Model] = 'gpt-4o', ([Usage.InputTokenCount] - [Usage.CachedInputTokenCount]) * 2.50 / 1000000 + [Usage.CachedInputTokenCount] * 1.25 / 1000000 + [Usage.OutputTokenCount] * 10.00 / 1000000, 0)
+```
+
+Add the field as a measure with the **Sum** aggregate, and add one such term for each model you use.
+
+Use `AudioMinutes` for speech-to-text models billed by the minute, `CharacterCount` for text-to-speech models billed by the character, and `ImageCount` for image models billed by the image. To match the invoice instead of the list prices, see [Turning usage into cost](#turning-usage-into-cost).
+
+Each data set reads its newest rows first, a page at a time, and narrows the read to the date range of the report's filters on `CreatedUtc`, to the join keys of its identifier fields, and to the values the filters allow for the category, provider, connection, deployment and model (and for the voice usage, the channel, engine and outcome). A report that only groups and adds up the fields the index holds is calculated in the database.
+
 ## Related
 
 - [AI Chat Session Analytics](chat-analytics.md) — per-session conversation metrics for chat.

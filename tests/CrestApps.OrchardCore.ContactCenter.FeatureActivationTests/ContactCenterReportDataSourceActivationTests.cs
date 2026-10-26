@@ -47,13 +47,16 @@ public sealed class ContactCenterReportDataSourceActivationTests
                     ContactCenterReportDataSets.Queues,
                     ContactCenterReportDataSets.QueueGroups,
                     ContactCenterReportDataSets.QueueItems,
+                    ContactCenterReportDataSets.DialerDecisions,
                     ContactCenterReportDataSets.AgentProfiles,
                     ContactCenterReportDataSets.AgentSessions,
+                    ContactCenterReportDataSets.AgentStateChanges,
                 ],
                 StringComparer.Ordinal));
         Assert.DoesNotContain(ContactCenterReportDataSets.CallRecordings, dataSets);
         Assert.DoesNotContain(ContactCenterReportDataSets.DialerProfiles, dataSets);
         Assert.DoesNotContain(ContactCenterReportDataSets.CallbackRequests, dataSets);
+        Assert.DoesNotContain(ContactCenterReportDataSets.DialerPacingCycles, dataSets);
         Assert.DoesNotContain(ContactCenterReportDataSets.SharedVoicemails, dataSets);
     }
 

@@ -137,9 +137,13 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
 
         var keyFilters = new List<(Expression<Func<TIndex, string>> Column, string[] Values)>();
 
+        // Only the keys of a join are matched exactly. A viewer's filter on a key field is left to the consumer, which
+        // compares text without regard to case, as an exact match in the database could drop a row it keeps.
+        var joinKeys = query.Conditions?.Where(condition => condition is { IsJoinKey: true }).ToArray() ?? [];
+
         foreach (var (field, column) in KeyColumns)
         {
-            if (DataConditions.Keys(query.Conditions, field) is not { } keys)
+            if (DataConditions.Keys(joinKeys, field) is not { } keys)
             {
                 continue;
             }

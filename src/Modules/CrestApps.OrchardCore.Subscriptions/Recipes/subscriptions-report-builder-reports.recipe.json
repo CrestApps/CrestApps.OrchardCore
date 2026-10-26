@@ -1,0 +1,89 @@
+{
+  "name": "SubscriptionsReportBuilderReports",
+  "displayName": "Reports: subscription reports to adapt",
+  "description": "Turns on the Report Builder and adds subscription reports built from the Subscriptions data source: new subscriptions by month and the subscriptions that expire in the next 30 days. They show what the built-in subscription reports show, so you can open one in the builder, change it, and save your own. The person who runs the recipe owns them.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "subscriptions",
+    "reports",
+    "report builder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Subscriptions",
+        "CrestApps.OrchardCore.Reports.Builder"
+      ]
+    },
+    {
+      "name": "ReportDesigns",
+      "Reports": [
+        {
+          "itemId": "subscriptions-new",
+          "displayText": "New subscriptions",
+          "description": "The number of subscriptions started each month in the period.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "s", "source": "Subscriptions", "dataSet": "Subscriptions", "displayName": "Subscriptions" }
+            ],
+            "filters": [
+              { "id": "started", "field": "s.CreatedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "365" ], "exposed": true, "label": "Started", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "month", "field": "s.CreatedUtc", "label": "Month", "transform": "Month" },
+              { "id": "subscriptions", "field": "$count", "label": "New subscriptions" }
+            ],
+            "sorts": [
+              { "columnId": "month" }
+            ]
+          },
+          "visuals": [
+            { "id": "trend", "type": "Chart", "title": "New subscriptions by month", "chartType": "Line", "categoryColumnId": "month", "valueColumnIds": [ "subscriptions" ] },
+            { "id": "table", "type": "Table", "title": "New subscriptions by month", "columnIds": [ "month", "subscriptions" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "subscriptions-expiring",
+          "displayText": "Expiring subscriptions",
+          "description": "The active, trialing and past due subscriptions whose paid period ends in the next 30 days, the soonest first.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "s", "source": "Subscriptions", "dataSet": "Subscriptions", "displayName": "Subscriptions" }
+            ],
+            "calculatedFields": [
+              { "name": "DaysLeft", "label": "Days remaining", "expression": "CEILING([s.CurrentPeriodEndUtc] - NOW())" }
+            ],
+            "filters": [
+              { "id": "status", "field": "s.Status", "stage": "Rows", "operator": "In", "values": [ "Active", "Trialing", "PastDue" ] },
+              { "id": "ends", "field": "s.CurrentPeriodEndUtc", "stage": "Rows", "operator": "InNextDays", "values": [ "30" ] }
+            ],
+            "columns": [
+              { "id": "subscriber", "field": "s.OwnerId", "label": "Subscriber" },
+              { "id": "subscription", "field": "s.Title", "label": "Subscription" },
+              { "id": "status", "field": "s.Status", "label": "Status" },
+              { "id": "started", "field": "s.CreatedUtc", "label": "Started" },
+              { "id": "expires", "field": "s.CurrentPeriodEndUtc", "label": "Expires" },
+              { "id": "daysleft", "field": "DaysLeft", "label": "Days remaining" }
+            ],
+            "sorts": [
+              { "columnId": "expires" }
+            ]
+          },
+          "visuals": [
+            { "id": "table", "type": "Table", "title": "Expiring subscriptions", "columnIds": [ "subscriber", "subscription", "status", "started", "expires", "daysleft" ] }
+          ]
+        }
+      ]
+    }
+  ]
+}

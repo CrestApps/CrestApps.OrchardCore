@@ -66,6 +66,39 @@ services.Configure<CartOptions>(options =>
 });
 ```
 
+### Carts Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as it is with the [Report Builder](report-builder/index.md), the **Carts** feature registers the **Carts** data source (`Carts`), so reports and data pipelines can read the shoppers' open carts and, with the [Wishlists](#wishlists) feature on, their wishlists. A cart holds what is not bought yet: what an order buys leaves its cart, and empty and expired carts are deleted. Every data set needs **Manage orders** (`ManageOrders`), the permission of the order screens, as Carts has no screens of its own; a person reads the carts only when they may read the orders the carts become.
+
+| Data set | One row per | Feature |
+| --- | --- | --- |
+| **Carts** (`Carts`) | Open cart | Carts |
+| **Cart lines** (`CartLines`) | Product line of an open cart | Carts |
+| **Wishlists** (`Wishlists`) | Signed-in shopper's wishlist | Wishlists |
+| **Wishlist items** (`WishlistItems`) | Product saved to a wishlist | Wishlists |
+
+The carts and wishlists indexes hold no dates, so these data sets have no main date: they read their newest records first by their index rows, and a date range a report puts on them is applied to the rows read. The keys of a join narrow the read in the database. The token that finds a guest's cart, and what a shopper typed for add-ons and line details, are never exposed.
+
+| Data set | Field | Display name | Notes |
+| --- | --- | --- | --- |
+| Carts | `ItemId` | Cart ID | An order's cart ID joins it. |
+| Carts | `UserId`, `IsGuest` | User ID, Guest | `UserId` joins **Users**. Empty for a guest. |
+| Carts | `LineCount`, `ItemCount` | Lines, Units | |
+| Carts | `Currency`, `Value` | Currency, Value when added | The units at the prices they had when they were added, in the cart's currency. It is never charged. |
+| Carts | `CreatedUtc`, `ModifiedUtc`, `ExpiresUtc` | Started, Last changed, Expires | |
+| Cart lines | `CartId` | Cart ID | Joins **Carts**. |
+| Cart lines | `UserId`, `Currency`, `CartModifiedUtc` | User ID, Currency, Cart last changed | From the cart. `UserId` joins **Users**. |
+| Cart lines | `LineId`, `Position` | Line ID, Line number | |
+| Cart lines | `ProductId`, `VariantId`, `PriceId` | Product ID, Variant ID, Price ID | `ProductId` joins **Products** and `VariantId` joins **Product variants**. |
+| Cart lines | `Quantity`, `AddedUnitPrice`, `Value` | Quantity, Unit price when added, Value when added | In the cart's currency. |
+| Cart lines | `AddedUtc` | Added | |
+| Wishlists | `ItemId`, `UserId` | Wishlist ID, User ID | `UserId` joins **Users**. |
+| Wishlists | `ItemCount` | Products saved | |
+| Wishlists | `ModifiedUtc` | Last changed | |
+| Wishlist items | `WishlistId` | Wishlist ID | Joins **Wishlists**. |
+| Wishlist items | `UserId`, `Position`, `ProductId` | User ID, Position, Product ID | `ProductId` joins **Products**. Position 1 is the newest. |
+| Wishlist items | `AddedUtc` | Saved | |
+
 ## Orders
 
 ### Checking out
@@ -302,6 +335,54 @@ Other commerce features add their own reports under **Reports > Commerce** when 
 | Downloads | Digital Downloads | `ManageDigitalDownloads` | Download links given in the period, per product and file: used, never used, downloads made, used up, expired and taken back. |
 | Product reviews | Product Reviews | `ManageProductReviews` | Reviews written in the period: waiting, approved and rejected, the stars given, verified purchases, and each product's average from its approved reviews. |
 
+### Report Builder data source
+
+The Orders feature publishes the **Orders** data source (`Orders`) for the [Report Builder](report-builder/index.md) and Orchard Core's data pipelines. It is registered when Orchard Core's Data Pipelines Core feature (`OrchardCore.DataPipelines.Core`) is on, which the Report Builder turns on. Each data set reads the newest orders first, a page at a time, through the order index, and narrows the read to the period a report's filters put on its main date, to the orders a join needs, and to the statuses and sales channels a filter allows. A person who may not use a data set does not see it, and a report that uses it gets no rows.
+
+| Data set | Rows | Feature | Permission |
+| --- | --- | --- | --- |
+| **Orders** (`Orders`) | One per order, drafts and quotes included | Orders | `ManageOrders` |
+| **Order lines** (`OrderLines`) | One per product line of an order | Orders | `ManageOrders` |
+| **Order refunds** (`OrderRefunds`) | One per refund that went through | Orders | `ManageOrders` |
+| **Order disputes** (`OrderDisputes`) | One per dispute, or chargeback, against an order's payment | Orders | `ManageOrders` |
+| **Order discounts** (`OrderDiscounts`) | One per discount an order was given | Orders | `ManageOrders` |
+| **Order taxes** (`OrderTaxes`) | One per tax an order was charged, by jurisdiction | Orders | `ManageOrders` |
+| **Returns** (`Returns`) | One per return a buyer asked for | Returns | `ManageOrders` |
+| **Gift cards** (`GiftCards`) | One per gift card | Gift Cards | `ManageGiftCards` |
+
+Money is in the order's own currency, which the `Currency` field of the same row names, and each money field says so in its description. Personal details are those the order page shows (the customer's name and email, and the city, region, postal code and country of the addresses), and an anonymized order has none. The street lines, phone number, checkout fields, notes and gift card codes are never exposed: a gift card shows only the last characters of its code.
+
+| Data set | Fields |
+| --- | --- |
+| **Orders** | `ItemId` (identifier), `OrderNumber`, `Status`, `Channel`, `Culture`, `PurchaseOrderNumber`, `LineCount`, `ItemCount` (units), `CartId` (references `Carts.Carts`), `CheckoutSessionId` (references `Checkout.CheckoutSessions`); money: `Currency`, `Subtotal`, `DiscountTotal`, `ShippingAmount`, `TaxAmount`, `Total`, `TenderedAmount` (paid from gift cards and store credit), `RefundedAmount`, `NetAmount` (total less refunds), `RefundStatus`, `HasOpenDispute`, `PaymentRisk`; dates: `CreatedUtc` (placed, the main date), `PaidUtc`, `CanceledUtc`, `CancelReason`, `ModifiedUtc`, `IsAnonymized`, `RecoveryEmailSentUtc` (when the buyer was emailed a link back to the unpaid checkout), `IsRecovered` (paid after that email); customer: `CustomerId` (references `Customers.Customers`), `UserId` (references `Users`), `IsGuest`, `CustomerName`, `CustomerEmail`, `CompanyId` (references `Companies.Companies`); addresses: `BillingCountry`, `BillingRegion`, `BillingCity`, `BillingPostalCode`, `ShippingCountry`, `ShippingRegion`, `ShippingCity`, `ShippingPostalCode`; fulfillment: `FulfillmentStatus`, `ShippingMethod`, `ShippingProvider`, `IsPickup`; store: `LocationId` (references `Inventory.Locations`), `RegisterId` (references `PointOfSale.Registers`), `RegisterName`, `ShiftId` (references `PointOfSale.RegisterShifts`), `StaffUserId` (references `Users`), `StaffName`; quote and approval: `QuoteStatus`, `QuoteRequestedUtc`, `QuoteSentUtc`, `ApprovalStatus`, `IsInvoice`, `InvoiceDueUtc` |
+| Every order entry data set | `OrderId` (references `Orders`), `OrderNumber`, `OrderStatus`, `OrderChannel`, `OrderCreatedUtc` (the main date), `OrderPaidUtc`, `Currency`, `CustomerId` (references `Customers.Customers`), then the fields below |
+| **Order lines** | `LineId` (identifier), `Position`, `Quantity`, `UnitPrice`, `LineTotal`, `QuotedUnitPrice`, `PriceName`, `AddOns`, `AddOnAmount`, `ExcludeFromDiscounts`, `ShipsFromUtc`, `ProductId` (references `Products.Products`), `ProductVersionId`, `ContentType`, `Title`, `Sku`, `VariantId` (references `Products.ProductVariants`), `VariantTitle`, `ProductType`, `Categories` (category ids, comma separated), `IsBundle`, `TaxCategoryCode` |
+| **Order refunds** | `RefundId` (identifier), `Amount`, `Reason`, `RefundedUtc` |
+| **Order disputes** | `DisputeReference` (identifier), `Gateway`, `Amount`, `DisputeCurrency`, `Reason`, `Status`, `IsClosed`, `OpenedUtc`, `UpdatedUtc` |
+| **Order discounts** | `Code`, `Description`, `Amount`, `DiscountProvider`, `Target` |
+| **Order taxes** | `JurisdictionId`, `JurisdictionName`, `TaxCode`, `TaxName`, `TaxType`, `Rate`, `TaxableAmount`, `TaxAmount`, `Treatment`, `IncludedInPrice`, `IsCompound`, `BillingCountry`, `BillingRegion` |
+| **Returns** | `ItemId` (identifier), `Number`, `OrderId` (references `Orders`), `OrderNumber`, `UserId` (references `Users`), `Status`, `Resolution`, `LineCount`, `Quantity`, `RestockedUnits`, `Currency`, `ReturnedAmount`, `RefundedAmount`, `RestockLocationId` (references `Inventory.Locations`), `CreatedUtc` (the main date), `ApprovedUtc`, `ReceivedUtc`, `ClosedUtc` |
+| **Gift cards** | `ItemId` (identifier), `LastCharacters`, `Currency`, `InitialValue`, `Balance`, `SpentAmount`, `IsEnabled`, `ExpiresUtc`, `RecipientName`, `RecipientEmail`, `OrderId` (references `Orders`), `OrderNumber`, `UseCount`, `LastUsedUtc`, `CreatedUtc` (the main date), `UpdatedUtc` |
+
+The main date of the orders and their entries is when the order was placed, since the order index holds it; to report by payment, filter or group on `PaidUtc` or `OrderPaidUtc`. A report on **Orders** alone that counts or adds up fields the index holds, such as orders by status, sales channel or day placed, is grouped in the database. The orders read by date through the `IDX_OrderIndex_Report` database index, returns through `IDX_OrderReturnIndex_Report`, and gift cards through `IDX_GiftCardIndex_Report`, added by a migration on upgrade.
+
+### Store reports to adapt
+
+The **Reports: store reports to adapt** recipe (`CommerceReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, under the **Store** category. They show what the built-in reports above show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Sales by day | **Orders**, paid in the last 30 days, grouped by day and currency | Sales |
+| Sales by product | **Order lines** of orders paid in the last 30 days, grouped by product and variant | Sales by product |
+| Sales by country | **Orders**, grouped by the country they ship to | Sales by country |
+| Tax by jurisdiction | **Order taxes**, grouped by jurisdiction, tax and rate | Tax on orders |
+| Discounts on orders | **Order discounts**, grouped by code | Discounts on orders |
+| Refunds | **Order refunds** given in the last 30 days | Refunds |
+| Disputes | **Order disputes** opened in the last 90 days, open ones first | Disputes |
+| Orders to ship | Paid **Orders** with a shipping method that are not shipped in full | Orders to ship |
+
+The customers, cohorts, checkouts, sales by category and VAT one-stop-shop reports work out figures across orders and periods, such as a buyer's first order, that a report built in the builder does not, so they stay built-in only.
+
 ### Workflow events
 
 With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
@@ -332,6 +413,7 @@ The **Wishlists** feature (`CrestApps.OrchardCore.Carts.Wishlists`) keeps a `Wis
 
 - `WishlistButtonDisplayDriver` adds the `WishlistButton` shape to a product's `Detail` display (`Content:before:6`). It posts to `wishlist/{contentItemId}/add` (`WishlistAdd`) or `.../remove` (`WishlistRemove`), or links to sign in.
 - `account/wishlist` (`AccountWishlist`, the `AccountWishlist` shape) lists the saved products that are still published, each with its `ProductAction` display (its add to cart), and adds **Wishlist** to the account menu.
+- With Data Pipelines Core on, it adds the **Wishlists** and **Wishlist items** data sets to the [Carts data source](#carts-report-builder-data-source).
 
 ## API
 

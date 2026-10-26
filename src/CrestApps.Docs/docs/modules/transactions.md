@@ -481,6 +481,74 @@ It is also the only place a refund starts. **Refund** isn't offered on a payment
 
 Both screens require the **Manage payments and refunds** permission.
 
+## Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as it is with the [Report Builder](report-builder/index.md), the **Transactions** feature registers the **Transactions** data source (`Transactions`), so reports and data pipelines can read the ledger, the outstanding balances, and the payments and refunds. The payments and refunds data sets are registered only while [Checkout](checkout), which keeps those ledgers, is enabled too. Each data set reads its newest records first, a page at a time, through its index. Money is in each record's own currency, which the **Currency** field next to it names. Identifier fields reference the data sets they point to, so checkout sessions, orders, users and payments join automatically.
+
+| Data set | One row per | Feature | Permission |
+| --- | --- | --- | --- |
+| **Transactions** (`Transactions`) | Transaction of the ledger | Transactions | **Manage transactions** (`ManageTransactions`) |
+| **Payments** (`PaymentAttempts`) | Payment the checkout tried to take | Transactions with Checkout | **Manage payments and refunds** (`ManageRefunds`) |
+| **Refunds** (`PaymentRefunds`) | Refund of a payment | Transactions with Checkout | **Manage payments and refunds** (`ManageRefunds`) |
+
+The outstanding transactions are those with the status `Outstanding` or `PartiallyPaid`; a status filter narrows the read in the database, as do the date range a report puts on the main date of transactions and payments and the keys of a join. The refunds index holds no creation date, so refunds have no main date: they are read newest first, and a date range a report puts on them is applied to the rows read. A transaction's history and notes, its settlement reference, and the keys a payment or refund is made with are never exposed.
+
+### Transactions
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Transaction ID | |
+| `Title`, `Status`, `Source`, `InvoiceNumber` | Title, Status, Source, Invoice number | `Source` is the provider that recorded the transaction, such as Pay Later. |
+| `ReferenceType`, `ReferenceId` | Reference type, Reference ID | What the transaction is for. |
+| `OrderId` | Order ID | The reference when it is an order. Joins **Orders**. |
+| `ParentReferenceType`, `ParentReferenceId` | Parent reference type, Parent reference ID | |
+| `CheckoutSessionId` | Checkout session ID | Joins **Checkout sessions**. |
+| `IsRecurring`, `IsAutoCollected`, `ReminderCount` | Recurring, Collected automatically, Reminders sent | |
+| `Currency` | Currency | |
+| `Amount`, `TaxAmount`, `TotalAmount`, `AmountPaid`, `AmountAdjusted`, `AmountRefunded` | Amount before tax, Tax, Total, Paid, Adjusted or waived, Refunded | In the transaction's currency. |
+| `OutstandingAmount` | Outstanding | The total less what was adjusted and paid, rounded to the currency, in the transaction's currency. |
+| `SettlementMethod` | Settled by | `online`, `offline` or `adjusted`. |
+| `CreatedUtc` | Recorded | The main date. |
+| `DueUtc`, `BecameOverdueUtc`, `SettledUtc`, `LastReminderSentUtc`, `UpdatedUtc` | Due, Became overdue, Settled, Last reminder, Last changed | |
+| `OwnerId`, `OwnerKind`, `IsGuest` | Owner ID, Owner kind, Guest | A guest's owner ID is their guest customer ID. |
+| `UserId` | User ID | The owner when they have an account. Joins **Users**. |
+| `GuestContactName`, `GuestContactEmail` | Guest name, Guest email | As the transactions list shows a guest owner. |
+
+### Payments
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Payment ID | |
+| `State` | State | `Created`, `Pending`, `Succeeded`, `Failed` or `Canceled`. |
+| `ProviderKey`, `GatewayMode` | Payment method, Gateway mode | |
+| `ProviderReference` | Gateway reference | As the payments ledger shows it. |
+| `FailureReason`, `IsSuperseded`, `RiskLevel` | Why it failed, Replaced by a later payment, Payment risk | |
+| `SessionId` | Checkout session ID | Joins **Checkout sessions**. |
+| `ReferenceType`, `ReferenceId` | Reference type, Reference ID | What the payment was for. |
+| `TransactionId` | Transaction ID | The reference when it is a transaction. Joins **Transactions**. |
+| `OrderId` | Order ID | The reference when it is an order. Joins **Orders**. |
+| `Currency` | Currency | |
+| `ExpectedAmount`, `ExpectedTaxAmount` | Expected amount, Expected tax | What was asked for, in the payment's currency. |
+| `ConfirmedAmount`, `ConfirmedTaxAmount`, `ConfirmedTotal` | Confirmed amount, Confirmed tax, Confirmed total | What the gateway confirmed, in the payment's currency. |
+| `CreatedUtc` | Started | The main date. |
+| `UpdatedUtc` | Last changed | |
+
+### Refunds
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Refund ID | |
+| `Status` | Status | `Requested`, `Pending`, `Succeeded`, `Failed`, `Canceled` or `PendingManualReview`. |
+| `ProviderKey`, `GatewayMode` | Payment method, Gateway mode | |
+| `Reason`, `FailureCode`, `FailureReason` | Reason, Failure code, Why it failed | |
+| `OriginalAttemptId` | Payment ID | The payment it gave back. Joins **Payments**. |
+| `SessionId` | Checkout session ID | Joins **Checkout sessions**. |
+| `ReferenceType`, `ReferenceId`, `TransactionId`, `OrderId` | Reference type, Reference ID, Transaction ID, Order ID | As for payments. |
+| `Currency` | Currency | |
+| `RefundGrossAmount`, `RefundTaxAmount`, `RefundTaxableAmount` | Amount, Tax refunded, Taxable amount refunded | In the refund's currency. The amount includes the tax. |
+| `CreatedUtc` | Asked for | |
+| `CompletedUtc`, `UpdatedUtc` | Completed, Last changed | |
+
 ## Permissions
 
 | Permission | Grants |
