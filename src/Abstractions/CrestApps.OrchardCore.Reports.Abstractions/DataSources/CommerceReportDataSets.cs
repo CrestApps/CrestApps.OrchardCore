@@ -160,9 +160,40 @@ public static class CommerceReportDataSets
         public const string Name = "Inventory";
 
         /// <summary>
-        /// The stock items data set: one row per product or variant stocked at a location.
+        /// The stock items data set: one row per product or variant whose stock is counted, with its units at every
+        /// location together.
         /// </summary>
         public const string StockItems = "StockItems";
+
+        /// <summary>
+        /// The stock levels data set: one row per product or variant stocked at a location, with its units there.
+        /// </summary>
+        public const string StockLevels = "StockLevels";
+
+        /// <summary>
+        /// The stock movements data set: one row per change to the units on hand of a stock item.
+        /// </summary>
+        public const string StockMovements = "StockMovements";
+
+        /// <summary>
+        /// The stock reservations data set: one row per hold of units for an order.
+        /// </summary>
+        public const string StockReservations = "StockReservations";
+
+        /// <summary>
+        /// The purchase orders data set: one row per order of stock from a supplier.
+        /// </summary>
+        public const string PurchaseOrders = "PurchaseOrders";
+
+        /// <summary>
+        /// The purchase order lines data set: one row per stock item a purchase order asks for.
+        /// </summary>
+        public const string PurchaseOrderLines = "PurchaseOrderLines";
+
+        /// <summary>
+        /// The back-in-stock alerts data set: one row per request to be told that a product is back in stock.
+        /// </summary>
+        public const string StockAlerts = "StockAlerts";
 
         /// <summary>
         /// The locations data set: one row per place stock is kept.
@@ -306,6 +337,21 @@ public static class CommerceReportDataSets
         /// The shipments data set: one row per shipment of an order.
         /// </summary>
         public const string Shipments = "Shipments";
+
+        /// <summary>
+        /// The shipment lines data set: one row per order line a shipment holds units of.
+        /// </summary>
+        public const string ShipmentLines = "ShipmentLines";
+
+        /// <summary>
+        /// The shipping zones data set: one row per zone of countries and regions shipping methods apply to.
+        /// </summary>
+        public const string ShippingZones = "ShippingZones";
+
+        /// <summary>
+        /// The shipping methods data set: one row per shipping method a zone offers.
+        /// </summary>
+        public const string ShippingMethods = "ShippingMethods";
     }
 
     /// <summary>
