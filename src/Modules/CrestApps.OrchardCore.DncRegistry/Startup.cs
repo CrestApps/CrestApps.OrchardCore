@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.DncRegistry.Drivers;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Migrations;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.DncRegistry.Reports.DataSources;
 using CrestApps.OrchardCore.DncRegistry.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -113,5 +114,22 @@ public sealed class LocalDncRegistryStartup : StartupBase
         services.AddScoped<IDisplayDriver<LocalDncList>, LocalDncListDisplayDriver>();
         services.AddScoped<IDisplayDriver<LocalDncListOptions>, LocalDncListOptionsDisplayDriver>();
         services.AddScoped<IDisplayDriver<ImportLocalDncList>, ImportLocalDncListDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Exposes the local do-not-call lists and their phone numbers as a data source of Orchard Core, for reports and data
+/// pipelines. Only the local registry stores records, so the data source is listed only while it is on.
+/// </summary>
+[Feature(DncRegistryConstants.Features.Local)]
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class LocalDncDataSourcesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<DncListsReportDataSet>()
+            .AddScoped<DncEntriesReportDataSet>()
+            .AddDataSource<DncRegistryReportDataSource>();
     }
 }
