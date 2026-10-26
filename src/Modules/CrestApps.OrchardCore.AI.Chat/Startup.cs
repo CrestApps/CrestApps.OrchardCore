@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
@@ -54,7 +55,6 @@ public sealed class Startup : StartupBase
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
-            .AddNavigationProvider<AIUsageAnalyticsAdminMenu>()
             .AddScoped<AIChatProfileAccessEvaluator>()
             .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
@@ -96,6 +96,9 @@ public sealed class Startup : StartupBase
         // The usage report asks for voice session summaries whether or not the analytics feature that keeps them
         // is on; until it is, there are none.
         services.TryAddScoped<IAIVoiceSessionSummaryStore, NullAIVoiceSessionSummaryStore>();
+
+        // Lives in AI Chat, not in the AI Usage Analytics feature, because it is what enables that feature.
+        services.AddDataMigration<AIUsageAnalyticsFeatureMigrations>();
 
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();
@@ -167,6 +170,20 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the AI Usage Analytics feature. Usage is recorded only while this
+/// feature is enabled.
+/// </summary>
+[Feature(AIConstants.Feature.UsageAnalytics)]
+public sealed class UsageAnalyticsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<AIUsageAnalyticsAdminMenu>();
+        services.AddCoreAIUsageTracking();
     }
 }
 

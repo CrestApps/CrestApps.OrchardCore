@@ -115,12 +115,11 @@ This configuration is useful for default completion parameters. Provider-specifi
 
 Use **Settings -> Artificial Intelligence** for tenant-managed options such as:
 
-- usage tracking
 - preemptive memory retrieval
 - orchestrator defaults
 - distributed caching and OpenTelemetry overrides
 
-The page is made of cards contributed by the enabled features. The **General** card holds **Enable AI usage tracking**, **Enable preemptive memory retrieval**, **Maximum iterations per request** (capped by the host), **Enable distributed caching** and **Enable OpenTelemetry**. The other cards are **Default Deployments**, **Prompt Security**, **Visitor Identity**, **Default Orchestrator**, **Data Sources**, **Chat Interactions**, **Documents**, **Memory**, **Admin Widget**, **Copilot**, **Claude** and **MCP Server**; each is described on the page of the feature that adds it. The User Manual explains the ones administrators change in the browser, starting at [Choose the default models](../user-manual/ai/connections.md#choose-the-default-models).
+The page is made of cards contributed by the enabled features. The **General** card holds **Enable preemptive memory retrieval**, **Maximum iterations per request** (capped by the host), **Enable distributed caching** and **Enable OpenTelemetry**. The other cards are **Default Deployments**, **Prompt Security**, **Visitor Identity**, **Default Orchestrator**, **Data Sources**, **Chat Interactions**, **Documents**, **Memory**, **Admin Widget**, **Copilot**, **Claude** and **MCP Server**; each is described on the page of the feature that adds it. The User Manual explains the ones administrators change in the browser, starting at [Choose the default models](../user-manual/ai/connections.md#choose-the-default-models).
 
 ## Creating AI profiles
 

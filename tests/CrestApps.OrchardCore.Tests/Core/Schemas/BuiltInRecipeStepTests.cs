@@ -68,9 +68,9 @@ public sealed class BuiltInRecipeStepTests
     {
         var permissions = new[]
         {
-            new Permission("EditContent", "Edit content"),
-            new Permission("ViewContent", "View content"),
-            new Permission("ViewMediaContent", "View media content"),
+            new Permission("EditContent"),
+            new Permission("ViewContent"),
+            new Permission("ViewMediaContent"),
         };
 
         var permissionService = new Mock<IPermissionService>();

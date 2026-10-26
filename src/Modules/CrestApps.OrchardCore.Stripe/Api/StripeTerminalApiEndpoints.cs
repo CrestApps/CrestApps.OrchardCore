@@ -19,8 +19,8 @@ namespace CrestApps.OrchardCore.Stripe.Api;
 internal static class StripeTerminalApiEndpoints
 {
     // The Point of Sale module's permissions, by name: what lets staff sell at a register and manage registers.
-    private static readonly Permission _sellAtRegister = new("SellAtRegister", "Sell at a register");
-    private static readonly Permission _manageRegisters = new("ManageRegisters", "Manage registers and shifts");
+    private static readonly Permission _sellAtRegister = new("SellAtRegister");
+    private static readonly Permission _manageRegisters = new("ManageRegisters");
 
     public static IEndpointRouteBuilder MapStripeTerminalApi(this IEndpointRouteBuilder routes)
     {

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -33,7 +34,7 @@ internal sealed class AIVoiceSessionSummaryWriter
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ICatalog<OmnichannelCampaign> _campaigns;
     private readonly IAIVoiceSessionSummaryStore _summaries;
-    private readonly IOptionsMonitor<GeneralAIOptions> _generalAIOptions;
+    private readonly IEnumerable<IAICompletionUsageObserver> _usageObservers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -47,7 +48,7 @@ internal sealed class AIVoiceSessionSummaryWriter
         IAIDeploymentManager deploymentManager,
         ICatalog<OmnichannelCampaign> campaigns,
         IAIVoiceSessionSummaryStore summaries,
-        IOptionsMonitor<GeneralAIOptions> generalAIOptions,
+        IEnumerable<IAICompletionUsageObserver> usageObservers,
         IClock clock,
         ILogger<AIVoiceSessionSummaryWriter> logger)
     {
@@ -57,7 +58,7 @@ internal sealed class AIVoiceSessionSummaryWriter
         _deploymentManager = deploymentManager;
         _campaigns = campaigns;
         _summaries = summaries;
-        _generalAIOptions = generalAIOptions;
+        _usageObservers = usageObservers;
         _clock = clock;
         _logger = logger;
     }
@@ -70,7 +71,7 @@ internal sealed class AIVoiceSessionSummaryWriter
     /// <returns>The summary written, or <see langword="null"/> when none was.</returns>
     public async Task<AIVoiceSessionSummary> WriteAsync(AIVoiceSessionDraft draft, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(draft?.ActivityId) || !_generalAIOptions.CurrentValue.EnableAIUsageTracking)
+        if (string.IsNullOrEmpty(draft?.ActivityId) || !_usageObservers.Any())
         {
             return null;
         }

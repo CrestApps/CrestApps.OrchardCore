@@ -9,8 +9,8 @@ user_manual:
 
 | | |
 | --- | --- |
-| **Feature Name** | AI Chat |
-| **Feature ID** | `CrestApps.OrchardCore.AI.Chat` |
+| **Feature Name** | AI Usage Analytics |
+| **Feature ID** | `CrestApps.OrchardCore.AI.UsageAnalytics` |
 | **Page** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/AI/UsageAnalytics/Index`) |
 | **Permission** | `ViewChatAnalytics` |
 
@@ -24,9 +24,8 @@ The AI Usage Analytics page reports what AI cost a tenant, in three parts:
 - **Voice** — one summary per automated AI voice call: how long the caller heard the assistant, how long the caller
   spoke, how long neither did, how the call ended, and which model held it.
 
-All three are captured only while **Enable AI usage tracking** is on, under **Settings → Artificial
-Intelligence**. The page shows a warning while it is off; nothing recorded before it was turned on can be
-reported.
+All three are captured only while the **AI Usage Analytics** feature is enabled; the report and its menu entry
+come with it. Nothing used before the feature was enabled can be reported.
 
 Running the report and reading its figures is described in the User Manual under
 [AI Usage Analytics](../user-manual/ai/analytics.md#ai-usage-analytics). This page covers what is recorded
@@ -39,6 +38,7 @@ and how each figure is measured.
 | **Date range** | All | The dates to report on, picked from presets such as Today or Last 30 Days, or set as a custom range, in the site's time zone. Completions are matched on when they were recorded; voice calls on when their summary was written, which is when the assistant's part of the call ended. |
 | **AI profile** | All | Limits the report to one chat profile. Metered requests that belong to no profile, such as indexing, are left out while a profile is chosen. |
 | **Group metered usage by** | Metered usage | **Model**, **Model and category** or **Model and purpose**. |
+| **Group audio usage by** | Audio usage | **Model**, **Model and voice** or **Model and language**. |
 | **Group completions by** | Completions | **User and model** (the original breakdown: user, client and model together), **Model**, **Deployment**, **AI profile** or **Connection**. |
 | **Group voice calls by** | Voice | **Deployment (model)**, **AI profile**, **Campaign**, **Channel**, **Engine** (realtime or turn-based) or **Day** (the local day the call started). |
 
@@ -104,6 +104,27 @@ Multiplying a row by the provider's list prices gives an estimate. To match what
 of each billing meter from the provider's invoice for a period and divide it in proportion to the units each row
 used on that meter in the same period. Discounts, credits and committed capacity are then included, and the shares
 always add up to the bill.
+
+## Audio usage
+
+The **Audio usage** table reports speech-to-text and text-to-speech on their own, with the units audio models are
+billed in. It is built from the same metered requests, so it needs no extra setup.
+
+| Column | Meaning |
+|---|---|
+| **Requests** | Speech-to-text or text-to-speech requests |
+| **Hours** | Total length of the audio. Speech-to-text runs to where the last recognized speech ended. Text-to-speech length is known when the provider reports it or the audio is WAV |
+| **Speech hours** | Speech-to-text length without the silence before the first word |
+| **Characters** | Characters synthesized by text-to-speech |
+| **Audio in**, **Audio out** | Size of the audio sent for transcription and of the audio generated |
+| **Segments** | Pieces of text a transcription returned |
+| **Tokens** | Tokens, for models that bill audio by token |
+
+**Group audio usage by** is **Model**, **Model and voice** or **Model and language**. An asterisk next to the
+hours means some requests did not report an audio length, so the figure is a minimum. Each request also keeps the
+sample rate, audio format, speed, pitch and target language, for reporting outside this page.
+
+Requires the CrestApps.Core release that records audio usage details.
 
 ## Completions
 

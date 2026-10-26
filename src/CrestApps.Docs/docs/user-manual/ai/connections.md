@@ -113,7 +113,7 @@ The same page has these sections, each explained on its own page:
 
 | Section | Where it is explained |
 | --- | --- |
-| **General** | **Enable AI usage tracking** turns on the data for the [usage report](analytics.md#ai-usage-analytics). **Enable preemptive memory retrieval** lets the assistant read a user's [memory](memory.md) before it answers. The other options are technical; see the [Technical Manual](../../ai/overview.md#site-settings). |
+| **General** | **Enable preemptive memory retrieval** lets the assistant read a user's [memory](memory.md) before it answers. The other options are technical; see the [Technical Manual](../../ai/overview.md#site-settings). |
 | **Default Orchestrator** | **Enable preemptive retrieval-augmented generation (RAG)**: search your knowledge before every answer. See [Knowledge](knowledge.md). |
 | **Prompt Security** and **Visitor Identity** | Protections for public chat. See [Chat widgets](chat-widgets.md#protect-a-public-assistant). |
 | **Data Sources** and **Documents** | Defaults for [Knowledge](knowledge.md). |

@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.TenantHierarchy.Services;
 internal sealed class ParentAdminMenu : AdminNavigationProvider
 {
     // The Audit Trail's own permission is not public; permissions are matched by name.
-    private static readonly Permission _viewAuditTrail = new("ViewAuditTrail", "View Audit Trail");
+    private static readonly Permission _viewAuditTrail = new("ViewAuditTrail");
 
     private readonly ShellSettings _shellSettings;
     private readonly HierarchyLabelsProvider _labelsProvider;

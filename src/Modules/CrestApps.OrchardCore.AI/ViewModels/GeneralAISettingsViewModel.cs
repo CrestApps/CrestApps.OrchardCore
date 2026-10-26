@@ -6,11 +6,6 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 public class GeneralAISettingsViewModel
 {
     /// <summary>
-    /// Gets or sets a value indicating whether enable AI usage tracking.
-    /// </summary>
-    public bool EnableAIUsageTracking { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether enable preemptive memory retrieval.
     /// </summary>
     public bool EnablePreemptiveMemoryRetrieval { get; set; }

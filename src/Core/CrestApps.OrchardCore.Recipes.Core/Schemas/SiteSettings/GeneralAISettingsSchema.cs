@@ -20,7 +20,6 @@ public sealed class GeneralAISettingsSchema : SiteSettingsSchemaBase
             .Type(SchemaValueType.Object)
             .Description("General configuration for AI services.")
             .Properties(
-                ("EnableAIUsageTracking", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to track AI usage metrics.")),
                 ("EnableAnalytics", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to enable AI analytics.")),
                 ("EnablePreemptiveMemoryRetrieval", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to enable preemptive memory retrieval for AI sessions.")),
                 ("OverrideMaximumIterationsPerRequest", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to override the default maximum iterations per request.")),
