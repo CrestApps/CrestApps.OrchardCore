@@ -48,6 +48,11 @@ public sealed class UsageAnalyticsIndexViewModel
     public AIUsageReportGrouping MeteringGroupBy { get; set; }
 
     /// <summary>
+    /// Gets or sets how the audio usage table is grouped: per model, or per model broken down by voice or language.
+    /// </summary>
+    public AIAudioUsageReportGrouping AudioGroupBy { get; set; }
+
+    /// <summary>
     /// Gets or sets the profiles the report can be limited to.
     /// </summary>
     [BindNever]
@@ -95,6 +100,12 @@ public sealed class UsageAnalyticsIndexViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyList<AIUsageReportRow> MeteringRows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the speech-to-text and text-to-speech usage grouped by <see cref="AudioGroupBy"/>.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<AIAudioUsageReportRow> AudioRows { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the voice usage of every automated call in the range.
