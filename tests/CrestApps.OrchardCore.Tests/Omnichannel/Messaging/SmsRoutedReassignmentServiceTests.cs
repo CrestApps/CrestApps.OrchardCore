@@ -40,6 +40,10 @@ public class SmsRoutedReassignmentServiceTests
         harness.Notifier.Verify(n => n.NewInboundMessageAsync(
             It.Is<MessagingInboundNotification>(x => x.ConversationId == "conv1" && x.AssignedAgentId == "a2"),
             It.IsAny<CancellationToken>()), Times.Once);
+        // The next agent is told it is theirs, and the one who let it sit drops it from their inbox.
+        harness.Notifier.Verify(n => n.ConversationAssignedAsync(
+            It.Is<MessagingAssignmentNotification>(x => x.ConversationId == "conv1" && x.AssignedAgentId == "a2" && x.PreviousAgentId == "a1" && x.AssignedByAgentId == null && x.OwnerQueueId == null),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -68,6 +72,10 @@ public class SmsRoutedReassignmentServiceTests
         harness.Store.Verify(s => s.UpdateAsync(stale, It.IsAny<CancellationToken>()), Times.Once);
         harness.Notifier.Verify(n => n.NewInboundMessageAsync(
             It.Is<MessagingInboundNotification>(x => x.ConversationId == "conv1" && x.OwnerQueueId == "q1" && x.AssignedAgentId == null),
+            It.IsAny<CancellationToken>()), Times.Once);
+        // Only the agent it was taken from hears of the change, so it leaves their inbox.
+        harness.Notifier.Verify(n => n.ConversationAssignedAsync(
+            It.Is<MessagingAssignmentNotification>(x => x.ConversationId == "conv1" && x.AssignedAgentId == null && x.PreviousAgentId == "a1" && x.OwnerQueueId == null),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

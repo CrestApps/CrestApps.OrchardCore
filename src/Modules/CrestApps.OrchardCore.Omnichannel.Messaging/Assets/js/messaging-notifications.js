@@ -8,6 +8,7 @@
  * workspace, and routed distribution does not push conversations at somebody with no inbox on screen.
  */
 import {
+    assignmentToastBody,
     assignmentToastTitle,
     classifyAssignment,
     createRecentNotifications,
@@ -41,6 +42,8 @@ import { createAttentionBadge } from './shared/messaging-attention-badge.js';
     var transferTexts = {
         someone: host.getAttribute('data-someone-text'),
         toYou: host.getAttribute('data-transferred-to-you-text'),
+        assigned: host.getAttribute('data-assigned-to-you-text'),
+        assignedFrom: host.getAttribute('data-assigned-from-to-you-text'),
         toQueue: host.getAttribute('data-transferred-to-queue-text'),
         toYourQueue: host.getAttribute('data-transferred-to-your-queue-text'),
     };
@@ -161,12 +164,21 @@ import { createAttentionBadge } from './shared/messaging-attention-badge.js';
 
         var kind = classifyAssignment(notification, view);
 
-        // A claim, a routed assignment or the agent's own transfer only changes the count.
-        if ((kind !== 'to-me' && kind !== 'to-queue') || !recent.isNew(notificationKey(kind, notification))) {
+        // The agent's own claim, reply or transfer, or somebody else's conversation, only changes the count.
+        if ((kind !== 'to-me' && kind !== 'assigned-to-me' && kind !== 'to-queue') || !recent.isNew(notificationKey(kind, notification))) {
             return;
         }
 
-        showToast(assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
+        if (kind !== 'to-queue') {
+            // Routing announces the thread it pushed to this agent just before its message; that message is not
+            // announced a second time.
+            recent.isNew(notificationKey('inbound', notification));
+        }
+
+        showToast(
+            assignmentToastTitle(kind, notification, transferTexts),
+            assignmentToastBody(kind, notification),
+            conversationHref(notification.conversationId));
     }
 
     badge.start();
