@@ -378,7 +378,7 @@ Money is in the subscription's own currency, which the `Currency` field names.
 | `ProviderSubscriptionId` | Gateway reference | The agreement's identifier at the payment provider. |
 | `GatewayMode` | Gateway mode | `Live` or `Testing`. |
 | `LineCount` | Lines | |
-| `OwnerId` | Owner ID | The user who owns the subscription; for a guest, the guest's own identifier, which matches no user. Points at the users data set. |
+| `OwnerId` | Owner ID | The user who owns the subscription; for a guest, the guest's own identifier, which matches no user. Points at the users data set, and at the customer who has that user account (`Customers.Customers`, on `UserId`). |
 | `IsGuest` | Guest | |
 | `GuestContactEmail` | Guest email | |
 | `Currency` | Currency | |
