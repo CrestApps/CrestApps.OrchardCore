@@ -34,7 +34,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="Channel">
-        <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+        <label asp-for="Channel" class="ocat-label ocat-label-required">@T["Channel"]</label>
         <div class="ocat-end">
             <select asp-for="Channel" asp-items="Model.Channels" class="form-select" data-omnichannel-subject-channel>
                 <option value="">@T["Select a channel"]</option>
@@ -44,7 +44,7 @@
     </div>
 
     <div class="ocat-wrapper subject-inbound-automated-only@(Model.Direction == SubjectDirection.Inbound && Model.InteractionType == ActivityInteractionType.Automated ? string.Empty : " d-none")" asp-validation-class-for="ChannelEndpointId">
-        <label asp-for="ChannelEndpointId" class="ocat-label">@T["Address"]</label>
+        <label asp-for="ChannelEndpointId" class="ocat-label ocat-label-required">@T["Address"]</label>
         <div class="ocat-end">
             <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select">
                 <option value="">@T["Select an address"]</option>

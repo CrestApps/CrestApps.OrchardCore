@@ -152,7 +152,7 @@
                 <div class="card-header">@T["Refund"]</div>
                 <div class="card-body">
                     <form asp-action="Refund" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
-                        <label class="form-label small" for="refund-amount">@T["Amount"]</label>
+                        <label class="form-label small ocat-label-required" for="refund-amount">@T["Amount"]</label>
                         <input id="refund-amount" name="amount" type="number" min="0.01" step="0.01" max="@Model.Refundable.ToString(CultureInfo.InvariantCulture)" value="@Model.SuggestedRefund.ToString(CultureInfo.InvariantCulture)" class="form-control w-auto mb-1" />
                         <span class="hint d-block mb-2">@T["What the items were paid, before tax and shipping. Up to {0} can still be refunded on the order.", ProductPriceFormatter.Format(Model.Refundable, orderReturn.Currency)]</span>
                         <button type="submit" class="btn btn-success btn-sm" data-title="@T["Refund"]" data-message="@T["Refund the buyer now? The money goes back the way they paid."]">@T["Refund and close"]</button>
@@ -182,7 +182,7 @@
                 <div class="card-header">@T["Decline"]</div>
                 <div class="card-body">
                     <form asp-action="Reject" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
-                        <label class="form-label small" for="reject-message">@T["Why (the buyer is told)"]</label>
+                        <label class="form-label small ocat-label-required" for="reject-message">@T["Why (the buyer is told)"]</label>
                         <textarea id="reject-message" name="message" rows="2" maxlength="2000" class="form-control mb-2" required></textarea>
                         <button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline the return"]</button>
                     </form>

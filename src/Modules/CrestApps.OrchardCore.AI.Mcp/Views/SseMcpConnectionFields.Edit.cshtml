@@ -10,7 +10,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="Endpoint" class="ocat-label">@T["Endpoint"]</label>
+    <label asp-for="Endpoint" class="ocat-label ocat-label-required">@T["Endpoint"]</label>
     <div class="ocat-end">
         <input type="url" asp-for="Endpoint" class="form-control" />
         <span asp-validation-for="Endpoint" class="text-danger"></span>
@@ -53,7 +53,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="ApiKey" class="ocat-label">@T["API Key"]</label>
+        <label asp-for="ApiKey" class="ocat-label @(!Model.HasApiKey ? "ocat-label-required" : "")">@T["API Key"]</label>
         <div class="ocat-end">
             <input type="password" asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="ApiKey" class="text-danger"></span>
@@ -64,7 +64,7 @@
 @* Basic Authentication Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.Basic">
     <div class="ocat-wrapper">
-        <label asp-for="BasicUsername" class="ocat-label">@T["Username"]</label>
+        <label asp-for="BasicUsername" class="ocat-label ocat-label-required">@T["Username"]</label>
         <div class="ocat-end">
             <input type="text" asp-for="BasicUsername" class="form-control" autocomplete="off" />
             <span asp-validation-for="BasicUsername" class="text-danger"></span>
@@ -72,7 +72,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="BasicPassword" class="ocat-label">@T["Password"]</label>
+        <label asp-for="BasicPassword" class="ocat-label @(!Model.HasBasicPassword ? "ocat-label-required" : "")">@T["Password"]</label>
         <div class="ocat-end">
             <input type="password" asp-for="BasicPassword" class="form-control" autocomplete="new-password" placeholder="@(Model.HasBasicPassword? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="BasicPassword" class="text-danger"></span>
@@ -83,7 +83,7 @@
 @* OAuth 2.0 Shared Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2ClientCredentials authentication-type-dependent-@McpClientAuthenticationType.OAuth2PrivateKeyJwt authentication-type-dependent-@McpClientAuthenticationType.OAuth2Mtls">
     <div class="ocat-wrapper">
-        <label asp-for="OAuth2TokenEndpoint" class="ocat-label">@T["Token Endpoint"]</label>
+        <label asp-for="OAuth2TokenEndpoint" class="ocat-label ocat-label-required">@T["Token Endpoint"]</label>
         <div class="ocat-end">
             <input type="url" asp-for="OAuth2TokenEndpoint" class="form-control" placeholder="https://auth.example.com/oauth2/token" />
             <span asp-validation-for="OAuth2TokenEndpoint" class="text-danger"></span>
@@ -92,7 +92,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="OAuth2ClientId" class="ocat-label">@T["Client ID"]</label>
+        <label asp-for="OAuth2ClientId" class="ocat-label ocat-label-required">@T["Client ID"]</label>
         <div class="ocat-end">
             <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
             <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
@@ -111,7 +111,7 @@
 @* OAuth 2.0 Client Credentials Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2ClientCredentials">
     <div class="ocat-wrapper">
-        <label asp-for="OAuth2ClientSecret" class="ocat-label">@T["Client Secret"]</label>
+        <label asp-for="OAuth2ClientSecret" class="ocat-label @(!Model.HasOAuth2ClientSecret ? "ocat-label-required" : "")">@T["Client Secret"]</label>
         <div class="ocat-end">
             <input type="password" asp-for="OAuth2ClientSecret" class="form-control" autocomplete="new-password" placeholder="@(Model.HasOAuth2ClientSecret? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="OAuth2ClientSecret" class="text-danger"></span>
@@ -122,7 +122,7 @@
 @* OAuth 2.0 Private Key JWT Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2PrivateKeyJwt">
     <div class="ocat-wrapper">
-        <label asp-for="OAuth2PrivateKey" class="ocat-label">@T["Private Key (PEM)"]</label>
+        <label asp-for="OAuth2PrivateKey" class="ocat-label @(!Model.HasOAuth2PrivateKey ? "ocat-label-required" : "")">@T["Private Key (PEM)"]</label>
         <div class="ocat-end">
             <textarea asp-for="OAuth2PrivateKey" class="form-control" rows="4" autocomplete="off" placeholder="@(Model.HasOAuth2PrivateKey? securedPlaceholder : T["-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"])"></textarea>
             <span asp-validation-for="OAuth2PrivateKey" class="text-danger"></span>
@@ -142,7 +142,7 @@
 @* OAuth 2.0 Mutual TLS (mTLS) Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2Mtls">
     <div class="ocat-wrapper">
-        <label asp-for="OAuth2ClientCertificate" class="ocat-label">@T["Client Certificate (Base64 PFX)"]</label>
+        <label asp-for="OAuth2ClientCertificate" class="ocat-label @(!Model.HasOAuth2ClientCertificate ? "ocat-label-required" : "")">@T["Client Certificate (Base64 PFX)"]</label>
         <div class="ocat-end">
             <textarea asp-for="OAuth2ClientCertificate" class="form-control" rows="4" autocomplete="off" placeholder="@(Model.HasOAuth2ClientCertificate? securedPlaceholder : string.Empty)"></textarea>
             <span asp-validation-for="OAuth2ClientCertificate" class="text-danger"></span>

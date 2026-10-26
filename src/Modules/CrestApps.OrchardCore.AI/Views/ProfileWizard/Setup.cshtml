@@ -32,7 +32,7 @@
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="ocat-wrapper">
-        <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
+        <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Title"]</label>
         <div class="ocat-end">
             <input asp-for="DisplayText" class="form-control" autofocus />
             <span asp-validation-for="DisplayText" class="text-danger"></span>
@@ -41,7 +41,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Technical name"]</label>
         <div class="ocat-end">
             <input asp-for="Name" class="form-control" />
             <span asp-validation-for="Name" class="text-danger"></span>

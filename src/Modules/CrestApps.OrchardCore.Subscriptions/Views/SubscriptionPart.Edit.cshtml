@@ -3,7 +3,7 @@
 @model SubscriptionPartViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="BillingDuration">
-    <label asp-for="BillingDuration" class="ocat-label">@T["Billing duration"]</label>
+    <label asp-for="BillingDuration" class="ocat-label ocat-label-required">@T["Billing duration"]</label>
     <div class="ocat-end">
         <div class="input-group">
             <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />

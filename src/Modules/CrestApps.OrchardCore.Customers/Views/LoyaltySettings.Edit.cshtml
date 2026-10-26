@@ -18,7 +18,7 @@
 </div>
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="PointValue">
-    <label asp-for="PointValue" class="ocat-label">@T["What a point is worth"]</label>
+    <label asp-for="PointValue" class="ocat-label ocat-label-required">@T["What a point is worth"]</label>
     <div class="ocat-limited">
         <input asp-for="PointValue" type="number" step="0.0001" min="0.0001" class="form-control" />
         <span asp-validation-for="PointValue"></span>
@@ -27,7 +27,7 @@
 </div>
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="MinimumPointsToRedeem">
-    <label asp-for="MinimumPointsToRedeem" class="ocat-label">@T["Fewest points to spend"]</label>
+    <label asp-for="MinimumPointsToRedeem" class="ocat-label ocat-label-required">@T["Fewest points to spend"]</label>
     <div class="ocat-limited">
         <input asp-for="MinimumPointsToRedeem" type="number" min="1" class="form-control" />
         <span asp-validation-for="MinimumPointsToRedeem"></span>

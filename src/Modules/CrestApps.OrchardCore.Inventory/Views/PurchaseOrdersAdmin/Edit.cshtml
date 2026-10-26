@@ -55,7 +55,7 @@
         <div class="card-header">@T["Details"]</div>
         <div class="card-body">
             <div class="ocat-wrapper" asp-validation-class-for="Supplier">
-                <label asp-for="Supplier" class="ocat-label">@T["Supplier"]</label>
+                <label asp-for="Supplier" class="ocat-label ocat-label-required">@T["Supplier"]</label>
                 <div class="ocat-end">
                     <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
                     <datalist id="purchase-order-suppliers">

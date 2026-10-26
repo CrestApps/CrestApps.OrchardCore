@@ -15,7 +15,7 @@
 else
 {
     <div class="mb-3">
-        <label asp-for="ReportName" class="form-label">@T["Report"]</label>
+        <label asp-for="ReportName" class="form-label ocat-label-required">@T["Report"]</label>
         <select asp-for="ReportName" asp-items="Model.Reports" class="form-select">
             <option value="">@T["Choose a report"]</option>
         </select>

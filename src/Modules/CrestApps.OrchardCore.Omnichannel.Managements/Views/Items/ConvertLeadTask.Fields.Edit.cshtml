@@ -4,7 +4,7 @@
 @model ConvertLeadTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="LeadContentItemId">
-    <label class="ocat-label" asp-for="LeadContentItemId">@T["Lead"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="LeadContentItemId">@T["Lead"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="LeadContentItemId" />
         <span asp-validation-for="LeadContentItemId"></span>

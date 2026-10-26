@@ -8,7 +8,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+    <label asp-for="BaseUrl" class="ocat-label ocat-label-required">@T["Base URL"]</label>
     <div class="ocat-end">
         <input asp-for="BaseUrl" class="form-control" placeholder="https://api.example.com/v1/orders" />
         <span asp-validation-for="BaseUrl" class="text-danger"></span>
@@ -80,7 +80,7 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+            <label asp-for="ApiKey" class="ocat-label @(!Model.HasApiKey ? "ocat-label-required" : "")">@T["API key"]</label>
             <div class="ocat-end">
                 <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ApiKey" class="text-danger"></span>
@@ -100,7 +100,7 @@
 
     <div class="auth-fields" data-auth-type="@nameof(HttpApiRequestAuthenticationType.Bearer)">
         <div class="ocat-wrapper">
-            <label asp-for="BearerToken" class="ocat-label">@T["Bearer token"]</label>
+            <label asp-for="BearerToken" class="ocat-label @(!Model.HasBearerToken ? "ocat-label-required" : "")">@T["Bearer token"]</label>
             <div class="ocat-end">
                 <input asp-for="BearerToken" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="BearerToken" class="text-danger"></span>
@@ -149,7 +149,7 @@
 
     <div class="auth-fields" data-auth-type="@nameof(HttpApiRequestAuthenticationType.OAuth2)">
         <div class="ocat-wrapper">
-            <label asp-for="TokenEndpoint" class="ocat-label">@T["Token endpoint"]</label>
+            <label asp-for="TokenEndpoint" class="ocat-label ocat-label-required">@T["Token endpoint"]</label>
             <div class="ocat-end">
                 <input asp-for="TokenEndpoint" class="form-control" placeholder="https://login.example.com/oauth2/token" />
                 <span asp-validation-for="TokenEndpoint" class="text-danger"></span>
@@ -158,7 +158,7 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="ClientId" class="ocat-label">@T["Client id"]</label>
+            <label asp-for="ClientId" class="ocat-label ocat-label-required">@T["Client id"]</label>
             <div class="ocat-end">
                 <input asp-for="ClientId" class="form-control" autocomplete="off" />
                 <span asp-validation-for="ClientId" class="text-danger"></span>

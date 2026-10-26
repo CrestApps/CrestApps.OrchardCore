@@ -2,12 +2,12 @@
 
 <div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
-        <label asp-for="ShortDays" class="form-label">@T["First window (days)"]</label>
+        <label asp-for="ShortDays" class="form-label ocat-label-required">@T["First window (days)"]</label>
         <input asp-for="ShortDays" type="number" min="1" max="365" class="form-control" />
         <span asp-validation-for="ShortDays" class="text-danger"></span>
     </div>
     <div class="col-6 col-md-3">
-        <label asp-for="LongDays" class="form-label">@T["Second window (days)"]</label>
+        <label asp-for="LongDays" class="form-label ocat-label-required">@T["Second window (days)"]</label>
         <input asp-for="LongDays" type="number" min="1" max="365" class="form-control" />
     </div>
     <div class="col-12 col-md-6">

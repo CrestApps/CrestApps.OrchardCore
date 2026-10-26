@@ -15,7 +15,7 @@
 
 <form asp-action="Json" method="post" class="no-multisubmit" id="@Html.IdFor(x => x.Json)_Form">
     <div class="mb-3">
-        <label asp-for="Json" class="form-label">@T["Recipe JSON"]</label>
+        <label asp-for="Json" class="form-label ocat-label-required">@T["Recipe JSON"]</label>
         <div id="@Html.IdFor(x => x.Json)_editor" data-schema="@schemaJson" style="min-height: 500px; border: 1px solid var(--bs-border-color);"></div>
         <textarea asp-for="Json" hidden></textarea>
         <span asp-validation-for="Json"></span>

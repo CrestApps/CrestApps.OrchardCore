@@ -5,7 +5,7 @@
 <partial name="_ReportWorkflowTaskFields" model="Model" />
 
 <div class="ocat-wrapper" asp-validation-class-for="Format">
-    <label class="ocat-label" asp-for="Format">@T["Format"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="Format">@T["Format"]</label>
     <div class="ocat-end">
         <select class="form-select" asp-for="Format" asp-items="Model.Formats"></select>
         <span asp-validation-for="Format"></span>

@@ -11,11 +11,11 @@
 
 <form asp-route="OrdersTrack" method="post" class="no-multisubmit">
     <div class="mb-3">
-        <label asp-for="OrderNumber" class="form-label">@T["Order number"]</label>
+        <label asp-for="OrderNumber" class="form-label ocat-label-required">@T["Order number"]</label>
         <input asp-for="OrderNumber" class="form-control text-uppercase" autocomplete="off" placeholder="261019-ABC123" required />
     </div>
     <div class="mb-3">
-        <label asp-for="Email" class="form-label">@T["Email"]</label>
+        <label asp-for="Email" class="form-label ocat-label-required">@T["Email"]</label>
         <input asp-for="Email" type="email" class="form-control" autocomplete="email" required />
     </div>
     <button type="submit" class="btn btn-primary">@T["Track"]</button>

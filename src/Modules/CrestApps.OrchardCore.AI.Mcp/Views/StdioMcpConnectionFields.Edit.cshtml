@@ -5,7 +5,7 @@
 @model StdioConnectionFieldsViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Command" class="ocat-label">@T["Command"]</label>
+    <label asp-for="Command" class="ocat-label ocat-label-required">@T["Command"]</label>
     <div class="ocat-end">
         <input type="text" asp-for="Command" class="form-control" />
         <span asp-validation-for="Command" class="text-danger"></span>

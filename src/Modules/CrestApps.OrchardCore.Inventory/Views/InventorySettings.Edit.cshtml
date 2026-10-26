@@ -10,7 +10,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="HoldMinutes">
-    <label asp-for="HoldMinutes" class="ocat-label">@T["Hold stock for (minutes)"]</label>
+    <label asp-for="HoldMinutes" class="ocat-label ocat-label-required">@T["Hold stock for (minutes)"]</label>
     <div class="ocat-end">
         <input asp-for="HoldMinutes" type="number" min="1" class="form-control" />
         <span asp-validation-for="HoldMinutes"></span>
@@ -52,7 +52,7 @@
         </legend>
         <input type="hidden" asp-for="Locations[i].LocationId" />
         <div class="ocat-wrapper" asp-validation-class-for="Locations[i].Name">
-            <label asp-for="Locations[i].Name" class="ocat-label">@T["Name"]</label>
+            <label asp-for="Locations[i].Name" class="ocat-label @(location.IsDefault ? "ocat-label-required" : "")">@T["Name"]</label>
             <div class="ocat-end">
                 <input asp-for="Locations[i].Name" class="form-control" placeholder="@T["Main warehouse"]" />
                 <span asp-validation-for="Locations[i].Name"></span>

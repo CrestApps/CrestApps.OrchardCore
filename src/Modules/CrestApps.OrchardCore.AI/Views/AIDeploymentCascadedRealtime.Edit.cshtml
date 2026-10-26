@@ -11,21 +11,21 @@
         </p>
 
         <div class="mb-3">
-            <label asp-for="SpeechToTextDeploymentName" class="form-label">@T["Speech-to-text deployment"]</label>
+            <label asp-for="SpeechToTextDeploymentName" class="form-label ocat-label-required">@T["Speech-to-text deployment"]</label>
             <select asp-for="SpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select"></select>
             <span asp-validation-for="SpeechToTextDeploymentName"></span>
             <span class="hint">@T["Hears the user. Only deployments whose model declares the realtime capability can transcribe continuously."]</span>
         </div>
 
         <div class="mb-3">
-            <label asp-for="ChatDeploymentName" class="form-label">@T["Chat deployment"]</label>
+            <label asp-for="ChatDeploymentName" class="form-label ocat-label-required">@T["Chat deployment"]</label>
             <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select"></select>
             <span asp-validation-for="ChatDeploymentName"></span>
             <span class="hint">@T["Generates the reply, with the profile's tools, data sources, and instructions applied."]</span>
         </div>
 
         <div class="mb-3">
-            <label asp-for="TextToSpeechDeploymentName" class="form-label">@T["Text-to-speech deployment"]</label>
+            <label asp-for="TextToSpeechDeploymentName" class="form-label ocat-label-required">@T["Text-to-speech deployment"]</label>
             <select asp-for="TextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select"></select>
             <span asp-validation-for="TextToSpeechDeploymentName"></span>
             <span class="hint">@T["Speaks the reply. The voice picker on a profile lists this deployment's voices."]</span>

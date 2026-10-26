@@ -28,7 +28,7 @@
                 <p class="small mb-2">@string.Join(", ", Model.Shipment.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</p>
                 <form asp-action="Rates" asp-route-shipmentId="@Model.Shipment.ItemId" method="post" class="no-multisubmit">
                     <div class="mb-2">
-                        <label asp-for="Weight" class="form-label small mb-0">@(Model.WeightUnit == WeightUnit.Pound ? T["Weight (lb)"] : T["Weight (kg)"])</label>
+                        <label asp-for="Weight" class="form-label small mb-0 ocat-label-required">@(Model.WeightUnit == WeightUnit.Pound ? T["Weight (lb)"] : T["Weight (kg)"])</label>
                         <input asp-for="Weight" type="number" min="0" step="any" class="form-control w-auto" />
                         <span class="hint">@T["The items' weight plus the box. Weigh the packed parcel to be sure."]</span>
                     </div>

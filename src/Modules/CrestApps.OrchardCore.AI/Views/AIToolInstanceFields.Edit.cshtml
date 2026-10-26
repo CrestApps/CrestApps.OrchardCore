@@ -3,7 +3,7 @@
 @model AIToolInstanceFieldsViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <label asp-for="Name" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Name"]</label>
     <div class="ocat-end">
         @if (Model.IsNew)
         {
@@ -19,7 +19,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <label asp-for="Description" class="ocat-label ocat-label-required">@T["Description"]</label>
     <div class="ocat-end">
         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>

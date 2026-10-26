@@ -14,7 +14,7 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 
 <div class="ocat-wrapper">
-    <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
+    <label asp-for="SubjectContentType" class="ocat-label ocat-label-required">@T["Subject content type"]</label>
     <div class="ocat-end">
         <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
             <option value="">@T["Select a subject content type"]</option>
@@ -25,7 +25,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="ScheduleAt" class="ocat-label">@T["Schedule at"]</label>
+    <label asp-for="ScheduleAt" class="ocat-label ocat-label-required">@T["Schedule at"]</label>
     <div class="ocat-end">
         <input type="text"
                id="@Html.IdFor(m => m.ScheduleAt)"
@@ -49,7 +49,7 @@
 </script>
 
 <div class="ocat-wrapper">
-    <label asp-for="UserId" class="ocat-label">@T["User to assign activity to"]</label>
+    <label asp-for="UserId" class="ocat-label ocat-label-required">@T["User to assign activity to"]</label>
     <div class="ocat-end">
         <select asp-for="UserId" asp-items="Model.Users" class="form-select"></select>
         <span asp-validation-for="UserId" class="text-danger"></span>

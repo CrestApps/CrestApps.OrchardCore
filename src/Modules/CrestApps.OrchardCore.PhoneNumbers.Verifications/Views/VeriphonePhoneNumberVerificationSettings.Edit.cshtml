@@ -15,7 +15,7 @@
 
 <div id="Veriphone_Provider_Settings" class="collapse @(Model.IsEnabled ? "show" : string.Empty)">
     <div class="ocat-wrapper">
-        <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+        <label asp-for="ApiKey" class="ocat-label @(Model.HasApiKey ? "" : "ocat-label-required")">@T["API key"]</label>
         <div class="ocat-end">
             <input type="password" class="form-control" asp-for="ApiKey" autocomplete="new-password" placeholder='@T["Enter a new API key to replace the saved key"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="ApiKey" class="text-danger"></span>

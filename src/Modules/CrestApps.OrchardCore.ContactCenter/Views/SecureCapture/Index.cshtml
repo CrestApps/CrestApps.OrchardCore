@@ -18,6 +18,7 @@
         .secure-capture__badge { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; color: #0a7d33; }
         .secure-capture__field { margin-bottom: 1.1rem; }
         .secure-capture__field label { display: block; font-weight: 600; margin-bottom: .35rem; }
+        .secure-capture__field .ocat-label-required::after { content: " *"; color: #b42318; }
         .secure-capture__field input { width: 100%; box-sizing: border-box; padding: .65rem .75rem; border: 1px solid #c4c4c8; border-radius: .5rem; font-size: 1rem; }
         .secure-capture__submit { width: 100%; padding: .75rem; border: 0; border-radius: .5rem; background: #0a5cd6; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
         .secure-capture__note { font-size: .82rem; color: #55555c; margin-top: 1rem; }
@@ -52,7 +53,7 @@
                     @foreach (var field in Model.Fields)
                     {
                         <div class="secure-capture__field">
-                            <label for="field_@field">@SecureCaptureFieldLabel(field)</label>
+                            <label for="field_@field" class="ocat-label-required">@SecureCaptureFieldLabel(field)</label>
                             <input type="text"
                                    id="field_@field"
                                    name="field_@field"

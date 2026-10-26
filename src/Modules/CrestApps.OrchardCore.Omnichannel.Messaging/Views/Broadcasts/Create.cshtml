@@ -17,13 +17,13 @@
     @Html.ValidationSummary()
 
     <div class="mb-3">
-        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
         <input asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="EndpointId" class="form-label">@T["Send from"]</label>
+        <label asp-for="EndpointId" class="form-label ocat-label-required">@T["Send from"]</label>
         <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" title="@T["Select the channel and address to send from"]"></select>
         <span class="hint">@T["The address you pick decides the channel the broadcast is sent on."]</span>
         <span asp-validation-for="EndpointId" class="text-danger"></span>
@@ -50,7 +50,7 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="Body" class="form-label">@T["Message"]</label>
+        <label asp-for="Body" class="form-label ocat-label-required">@T["Message"]</label>
         <textarea asp-for="Body" class="form-control" rows="3"></textarea>
         <span asp-validation-for="Body" class="text-danger"></span>
     </div>

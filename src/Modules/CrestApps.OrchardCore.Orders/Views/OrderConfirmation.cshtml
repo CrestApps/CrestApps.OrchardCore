@@ -35,11 +35,11 @@
                 <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
                 <input type="text" name="username" value="@Model.Email" autocomplete="username" hidden />
                 <div class="col-sm">
-                    <label for="order-account-password" class="form-label small">@T["Password"]</label>
+                    <label for="order-account-password" class="form-label small ocat-label-required">@T["Password"]</label>
                     <input id="order-account-password" name="Password" type="password" class="form-control" autocomplete="new-password" data-account-password required />
                 </div>
                 <div class="col-sm">
-                    <label for="order-account-confirm" class="form-label small">@T["Confirm password"]</label>
+                    <label for="order-account-confirm" class="form-label small ocat-label-required">@T["Confirm password"]</label>
                     <input id="order-account-confirm" name="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-account-password required />
                 </div>
                 <div class="col-sm-auto">

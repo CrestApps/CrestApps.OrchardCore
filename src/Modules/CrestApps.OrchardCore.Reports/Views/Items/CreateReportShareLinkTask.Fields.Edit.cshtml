@@ -5,7 +5,7 @@
 <partial name="_ReportWorkflowTaskFields" model="Model" />
 
 <div class="ocat-wrapper" asp-validation-class-for="Recipients">
-    <label class="ocat-label" asp-for="Recipients">@T["Recipients"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="Recipients">@T["Recipients"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="Recipients" />
         <span asp-validation-for="Recipients"></span>
@@ -23,7 +23,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="ExpiresAfterDays">
-    <label class="ocat-label" asp-for="ExpiresAfterDays">@T["Expires after (days)"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="ExpiresAfterDays">@T["Expires after (days)"]</label>
     <div class="ocat-end">
         <input type="number" min="1" class="form-control" asp-for="ExpiresAfterDays" />
         <span asp-validation-for="ExpiresAfterDays"></span>

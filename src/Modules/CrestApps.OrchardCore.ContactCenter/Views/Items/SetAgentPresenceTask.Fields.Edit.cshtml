@@ -3,7 +3,7 @@
 @model SetAgentPresenceTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="UserId">
-    <label class="ocat-label" asp-for="UserId">@T["User"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="UserId">@T["User"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="UserId" />
         <span asp-validation-for="UserId"></span>

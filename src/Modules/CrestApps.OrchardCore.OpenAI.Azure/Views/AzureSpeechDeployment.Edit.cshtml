@@ -7,7 +7,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="Endpoint" class="ocat-label">@T["Endpoint"]</label>
+    <label asp-for="Endpoint" class="ocat-label ocat-label-required">@T["Endpoint"]</label>
     <div class="ocat-end">
         <input type="url" asp-for="Endpoint" class="form-control" />
         <span asp-validation-for="Endpoint" class="text-danger"></span>
@@ -25,7 +25,7 @@
 </div>
 
 <div class="ocat-wrapper@(Model.AuthenticationType == AzureAuthenticationType.ApiKey ? string.Empty : " d-none")" id="@apiKeyWrapperId">
-    <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+    <label asp-for="ApiKey" class="ocat-label @(!Model.HasApiKey ? "ocat-label-required" : "")">@T["API key"]</label>
     <div class="ocat-end">
         <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey? T["A key is securely stored. Provide a new one to replace it or leave it blank."] : T["The API key"])" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>

@@ -10,7 +10,7 @@
     <div asp-validation-summary="ModelOnly"></div>
 
     <div class="ocat-wrapper" asp-validation-class-for="Name">
-        <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
         <div class="ocat-end">
             <input asp-for="Name" class="form-control" />
             <span asp-validation-for="Name"></span>
@@ -19,7 +19,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="Url">
-        <label asp-for="Url" class="ocat-label">@T["URL"]</label>
+        <label asp-for="Url" class="ocat-label ocat-label-required">@T["URL"]</label>
         <div class="ocat-end">
             <input asp-for="Url" class="form-control font-monospace" type="url" placeholder="https://" />
             <span asp-validation-for="Url"></span>
@@ -38,7 +38,7 @@
     </div>
 
     <div class="ocat-wrapper" role="group" aria-labelledby="webhook-events-label" asp-validation-class-for="Events">
-        <span class="ocat-label" id="webhook-events-label">@T["Events"]</span>
+        <span class="ocat-label ocat-label-required" id="webhook-events-label">@T["Events"]</span>
         <div class="ocat-end">
             <span asp-validation-for="Events"></span>
             <div class="form-check mb-2">

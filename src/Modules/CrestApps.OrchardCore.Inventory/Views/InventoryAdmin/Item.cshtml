@@ -151,7 +151,7 @@
                         <form asp-action="Transfer" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
                             <div class="row g-2 mb-2">
                                 <div class="col-12">
-                                    <label asp-for="Transfer.FromLocationId" class="form-label small mb-0">@T["From"]</label>
+                                    <label asp-for="Transfer.FromLocationId" class="form-label small mb-0 ocat-label-required">@T["From"]</label>
                                     <select asp-for="Transfer.FromLocationId" class="form-select">
                                         @foreach (var location in Model.Locations)
                                         {
@@ -160,7 +160,7 @@
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <label asp-for="Transfer.ToLocationId" class="form-label small mb-0">@T["To"]</label>
+                                    <label asp-for="Transfer.ToLocationId" class="form-label small mb-0 ocat-label-required">@T["To"]</label>
                                     <select asp-for="Transfer.ToLocationId" class="form-select">
                                         @for (var i = 0; i < Model.ListedLocations.Count; i++)
                                         {

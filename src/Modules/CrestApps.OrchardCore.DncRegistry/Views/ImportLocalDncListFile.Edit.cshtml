@@ -1,7 +1,7 @@
 @model CrestApps.OrchardCore.DncRegistry.ViewModels.UploadLocalDncListViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["List name"]</label>
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["List name"]</label>
     <div class="ocat-end">
         <input asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger"></span>
@@ -10,7 +10,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="CountryCode" class="ocat-label">@T["Country"]</label>
+    <label asp-for="CountryCode" class="ocat-label ocat-label-required">@T["Country"]</label>
     <div class="ocat-end">
         <select asp-for="CountryCode" asp-items="Model.CountryOptions" class="form-select">
             <option value="">@T["Select a country"]</option>
@@ -21,7 +21,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="File" class="ocat-label">@T["CSV file"]</label>
+    <label asp-for="File" class="ocat-label ocat-label-required">@T["CSV file"]</label>
     <div class="ocat-end">
         <input asp-for="File" type="file" class="form-control" accept=".csv" />
         <span asp-validation-for="File" class="text-danger"></span>
