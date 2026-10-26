@@ -88,7 +88,7 @@ The store, Omnichannel, Contact Center, AI chat, Messaging and other data source
 
 A store can sell in several currencies, so every amount comes with a **Currency** column. Group or filter by it before you add amounts up.
 
-To get started with the store's data, your administrator can run the **Reports: store reports to adapt** recipe. It adds reports such as *Sales by day*, *Sales by product* and *Orders to ship*, built from the **Orders** data source. Open one, change it, and save your own copy.
+To get started with the store's data, your administrator can run the **Reports: store reports to adapt** recipe. It adds reports such as *Sales by day*, *Sales by product* and *Orders to ship*, built from the **Orders** data source. Open one, change it, and save your own copy. Other features have recipes like it: **Reports: inventory reports to adapt** (*Stock on hand*, *Stock movements*), **Reports: product review reports to adapt**, **Reports: download reports to adapt**, **Reports: subscription reports to adapt** (*New subscriptions*, *Expiring subscriptions*) and **Reports: shipping reports to adapt** (*Shipments by carrier*).
 
 To report on the cost of AI, use **Completion usage**: it has the model and the tokens of every request, so a formula can multiply them by your provider's prices.
 
