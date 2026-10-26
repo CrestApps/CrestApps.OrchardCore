@@ -127,6 +127,7 @@ public sealed class UsageAnalyticsController : Controller
 
         model.TotalMeteredRequests = meteredRecords.Count;
         model.MeteringRows = AIUsageReport.Build(meteredRecords, model.MeteringGroupBy);
+        model.AudioRows = AIAudioUsageReport.Build(meteredRecords, model.AudioGroupBy);
 
         var relevantRecords = AICompletionUsageReport.Relevant(records, model.ProfileId);
 

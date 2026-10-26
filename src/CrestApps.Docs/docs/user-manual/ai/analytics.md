@@ -121,11 +121,14 @@ Shows what AI used across the whole site: every request sent to an AI service, t
 2. Choose a **Date range**, and optionally an **AI profile**.
 3. Choose how to group the figures:
    - **Group metered usage by**: **Model**, **Model and category** (which feature made the request: chat, SMS, voice calls, the API, workflows) or **Model and purpose** (why: answering, searching, indexing documents, transcribing, and so on).
+   - **Group audio usage by**: **Model**, **Model and voice** or **Model and language**.
    - **Group completions by**: **User and model**, **Model**, **Deployment**, **AI profile** or **Connection**.
    - **Group voice calls by**: **Deployment (model)**, **AI profile**, **Campaign**, **Channel**, **Engine** or **Day**.
 4. Click **Show**.
 
 The **Metered usage** table counts every request sent to an AI service, of every kind: chat, embeddings for search, images, speech-to-text, text-to-speech and realtime voice. One answer can take several requests, such as searching your documents, using a tool and writing the reply, and each is counted. Next to the tokens it shows the other things AI services charge for: cached input, reasoning, audio tokens, audio minutes, characters spoken and images. These are the figures to compare with your AI provider's bill.
+
+The **Audio usage** table covers only speech-to-text and text-to-speech: requests, hours of audio, hours of speech, characters, audio size, segments and tokens. An asterisk next to the hours means some requests did not report an audio length, so the figure is a minimum.
 
 Under **Chat completions**, the top tiles show **Provider calls**, **Chat sessions**, **Chat interactions** and **Total tokens**. The table shows, per group, the **Calls**, **Sessions**, **Interactions**, **Input**, **Output** and total **Tokens**, and the **Avg latency**.
 

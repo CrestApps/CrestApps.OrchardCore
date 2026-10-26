@@ -237,10 +237,8 @@ public sealed class AIVoiceSessionTrackerTests
     private static AIVoiceSessionSummaryWriter CreateWriterThatWritesNothing()
     {
         // A tenant that does not track usage: the writer returns before it touches anything else.
-        var options = new Mock<IOptionsMonitor<GeneralAIOptions>>();
-        options.SetupGet(monitor => monitor.CurrentValue).Returns(new GeneralAIOptions { EnableAIUsageTracking = false });
 
-        return new AIVoiceSessionSummaryWriter(null, null, null, null, null, null, options.Object, null, NullLogger<AIVoiceSessionSummaryWriter>.Instance);
+        return new AIVoiceSessionSummaryWriter(null, null, null, null, null, null, [], null, NullLogger<AIVoiceSessionSummaryWriter>.Instance);
     }
 
     private static IShellHost CreateShellHost(Action<IServiceCollection> configure)
