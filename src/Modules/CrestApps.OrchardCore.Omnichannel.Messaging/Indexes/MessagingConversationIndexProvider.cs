@@ -38,6 +38,9 @@ public sealed class MessagingConversationIndexProvider : IndexProvider<Messaging
                 Status = conversation.Status.ToString(),
                 IsRead = conversation.IsRead,
                 LastMessageUtc = conversation.LastMessageUtc,
+                LastActivityUtc = conversation.LastActivityUtc > conversation.LastMessageUtc || conversation.LastMessageUtc is null
+                    ? conversation.LastActivityUtc
+                    : conversation.LastMessageUtc,
                 UnreadCount = conversation.UnreadCount,
                 AssignedUtc = conversation.AssignedUtc,
                 FirstResponseDueUtc = conversation.FirstResponseDueUtc,

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -33,6 +34,9 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
     // How long the state outlives the leg's own ring window, so a late webhook still finds the leg it describes
     // (and is recognized as stale) rather than being mistaken for a leg nobody rang.
     private static readonly TimeSpan _stateRetention = TimeSpan.FromMinutes(2);
+
+    // A join races a few webhook writes of the same call; more attempts than that is a loop.
+    private const int MaxJoinRecordAttempts = 4;
 
     private readonly IAgentPreDialLegStore _store;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
@@ -612,14 +616,30 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
     {
         try
         {
-            if (inOwnScope)
+            for (var attempt = 1; ; attempt++)
             {
-                await _scopeExecutor.ExecuteAsync<IContactCenterAgentLegFailureService>(service =>
-                    RecordLegAnsweredAsync(service, leg));
-            }
-            else
-            {
-                await RecordLegAnsweredAsync(_agentLegFailureService, leg);
+                try
+                {
+                    if (inOwnScope)
+                    {
+                        await _scopeExecutor.ExecuteAsync<IContactCenterAgentLegFailureService>(service =>
+                            RecordLegAnsweredAsync(service, leg));
+                    }
+                    else
+                    {
+                        await RecordLegAnsweredAsync(_agentLegFailureService, leg);
+                    }
+
+                    break;
+                }
+                catch (ConcurrencyException) when (attempt < MaxJoinRecordAttempts)
+                {
+                    // The call's webhooks (the customer's answer, the bridge) write the same call session at the moment
+                    // of the join. Losing that race used to leave the agent talking to the customer while still shown
+                    // "Waiting for a connected call", with no activity to work. The join is recorded again on a fresh
+                    // read, in a scope of its own: a failed flush has already cancelled the caller's session.
+                    inOwnScope = true;
+                }
             }
         }
         catch (Exception ex)

@@ -71,6 +71,7 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
                 .Column<string>("Status", column => column.WithLength(32))
                 .Column<bool>("IsRead")
                 .Column<DateTime>("LastMessageUtc", column => column.Nullable())
+                .Column<DateTime>("LastActivityUtc", column => column.Nullable())
                 .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
                 .Column<DateTime>("AssignedUtc", column => column.Nullable())
                 .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
