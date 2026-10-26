@@ -3,7 +3,7 @@
 @model ScheduleCallbackTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="Destination">
-    <label class="ocat-label" asp-for="Destination">@T["Destination"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="Destination">@T["Destination"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="Destination" />
         <span asp-validation-for="Destination"></span>

@@ -5,7 +5,7 @@
 
 @* Shown for an AI agent target only: the entry point's routing card shows the fields marked for AI agents when it routes to one. *@
 <div class="ocat-wrapper" asp-validation-class-for="TargetAIProfileId" data-entry-point-ai-field>
-    <label asp-for="TargetAIProfileId" class="ocat-label">@T["AI agent"]</label>
+    <label asp-for="TargetAIProfileId" class="ocat-label ocat-label-required">@T["AI agent"]</label>
     <div class="ocat-end">
         <select asp-for="TargetAIProfileId" asp-items="Model.ProfileOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an AI profile"]" data-width="100%" title="@T["No AI agent"]">
             <option value="">@T["No AI agent"]</option>

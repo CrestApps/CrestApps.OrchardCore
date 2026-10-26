@@ -830,7 +830,7 @@
 				return h("div", { className: "card mb-3" }, [h("div", { className: "card-body" }, [
 					h("div", { className: "row g-3" }, [h("div", { className: "col-md-3" }, [
 						h("label", {
-							className: "form-label",
+							className: "form-label ocat-label-required",
 							for: retriesId,
 							text: t("maxRetries", "Tries")
 						}),

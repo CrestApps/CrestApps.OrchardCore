@@ -25,7 +25,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <label asp-for="Name" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Technical name"]</label>
     <div class="ocat-end">
         <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
         <span asp-validation-for="Name" class="text-danger"></span>
@@ -49,7 +49,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Instructions" class="ocat-label">@T["Persona instructions"]</label>
+    <label asp-for="Instructions" class="ocat-label ocat-label-required">@T["Persona instructions"]</label>
     <div class="ocat-end">
         @* The Liquid token is passed as an argument: braces in a localized string are format placeholders. *@
         <div class="hint mb-1">@T["Who the assistant is and how it talks: its personality, tone and manners. They go before the system instructions of every profile and interaction that uses this persona, so leave the task and the rules to the profile. Liquid is supported: use {0} to insert the assistant name.", new HtmlString("<code>{{ assistant_name }}</code>")]</div>

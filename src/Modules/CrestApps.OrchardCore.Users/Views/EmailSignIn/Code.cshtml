@@ -13,7 +13,7 @@
         <input type="hidden" name="Email" value="@Model.Email" />
         <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
         <div class="card-body">
-            <label for="email-sign-in-code" class="form-label">@T["Code"]</label>
+            <label for="email-sign-in-code" class="form-label ocat-label-required">@T["Code"]</label>
             <input id="email-sign-in-code" name="Code" class="form-control form-control-lg text-center font-monospace" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" autofocus required style="letter-spacing: .4em" />
             <span asp-validation-for="Code" class="text-danger small"></span>
         </div>

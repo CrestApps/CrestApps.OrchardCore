@@ -28,11 +28,11 @@
     {
         <form asp-controller="LoyaltyAdmin" asp-action="Change" asp-route-customerId="@Model.CustomerId" method="post" class="row g-2 align-items-end mb-3">
             <div class="col-6 col-sm-3">
-                <label class="form-label" for="loyalty-points">@T["Points"]</label>
+                <label class="form-label ocat-label-required" for="loyalty-points">@T["Points"]</label>
                 <input id="loyalty-points" name="points" type="number" step="1" class="form-control" required />
             </div>
             <div class="col-12 col-sm-7">
-                <label class="form-label" for="loyalty-reason">@T["Reason"]</label>
+                <label class="form-label ocat-label-required" for="loyalty-reason">@T["Reason"]</label>
                 <input id="loyalty-reason" name="reason" class="form-control" required />
             </div>
             <div class="col-12 col-sm-2">

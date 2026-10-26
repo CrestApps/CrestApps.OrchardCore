@@ -192,7 +192,7 @@
                     <form asp-action="RecordPayment" method="post">
                         <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
                         <div class="mb-2">
-                            <label class="form-label" for="Amount">@T["Amount"]</label>
+                            <label class="form-label ocat-label-required" for="Amount">@T["Amount"]</label>
                             <input type="number" step="@amountStep" min="0" class="form-control" id="Amount" name="Amount" value="@CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency).ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canRecordPayment)" />
                         </div>
                         <div class="mb-2">
@@ -227,7 +227,7 @@
                             </select>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label" for="AdjustmentAmount">@T["Amount"]</label>
+                            <label class="form-label ocat-label-required" for="AdjustmentAmount">@T["Amount"]</label>
                             <input type="number" step="@amountStep" min="0" class="form-control" id="AdjustmentAmount" name="Amount" value="@CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency).ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canAdjust)" />
                             <div class="form-text">@T["At most the {0} {1} still owed.", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]</div>
                         </div>

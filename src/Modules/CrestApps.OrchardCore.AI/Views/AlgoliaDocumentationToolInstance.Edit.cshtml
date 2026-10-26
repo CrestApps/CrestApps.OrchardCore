@@ -3,7 +3,7 @@
 @model AlgoliaDocumentationToolInstanceViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="ApplicationId" class="ocat-label">@T["Application id"]</label>
+    <label asp-for="ApplicationId" class="ocat-label ocat-label-required">@T["Application id"]</label>
     <div class="ocat-end">
         <input asp-for="ApplicationId" class="form-control" autocomplete="off" />
         <span asp-validation-for="ApplicationId" class="text-danger"></span>
@@ -12,7 +12,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="ApiKey" class="ocat-label">@T["Search-only API key"]</label>
+    <label asp-for="ApiKey" class="ocat-label @(!Model.HasApiKey ? "ocat-label-required" : "")">@T["Search-only API key"]</label>
     <div class="ocat-end">
         <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
@@ -30,7 +30,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="IndexName" class="ocat-label">@T["Index name"]</label>
+    <label asp-for="IndexName" class="ocat-label ocat-label-required">@T["Index name"]</label>
     <div class="ocat-end">
         <input asp-for="IndexName" class="form-control" autocomplete="off" />
         <span asp-validation-for="IndexName" class="text-danger"></span>

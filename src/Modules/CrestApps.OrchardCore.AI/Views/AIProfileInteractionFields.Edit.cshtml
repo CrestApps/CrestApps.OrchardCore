@@ -32,7 +32,7 @@
 </div>
 
 <div id="initialPromptGroup" class="ocat-wrapper profile-type profile-type-chat d-none">
-    <label asp-for="InitialPrompt" class="ocat-label">@T["Opening message"]</label>
+    <label asp-for="InitialPrompt" class="ocat-label ocat-label-required">@T["Opening message"]</label>
     <div class="ocat-end">
         <textarea asp-for="InitialPrompt" class="form-control" rows="4"></textarea>
         <span asp-validation-for="InitialPrompt" class="text-danger"></span>

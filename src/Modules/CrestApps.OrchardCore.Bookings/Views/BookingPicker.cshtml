@@ -18,7 +18,7 @@
     @switch (Model.Kind)
     {
         case BookingKind.Departure:
-            <label class="form-label small" for="@(id)-date">@T["Date"]</label>
+            <label class="form-label small @(Model.Departures.Count > 0 ? "ocat-label-required" : "")" for="@(id)-date">@T["Date"]</label>
             @if (Model.Departures.Count == 0)
             {
                 <p class="small text-body-secondary mb-0">@T["No dates are open for booking right now."]</p>
@@ -43,11 +43,11 @@
         case BookingKind.Nightly:
             <div class="row g-2">
                 <div class="col-6">
-                    <label class="form-label small" for="@(id)-date">@T["Check-in"]</label>
+                    <label class="form-label small ocat-label-required" for="@(id)-date">@T["Check-in"]</label>
                     <input type="date" class="form-control form-control-sm" id="@(id)-date" name="@dateName" form="@Model.FormId" min="@Model.MinDate" max="@Model.MaxDate" value="@Model.SelectedDate" required />
                 </div>
                 <div class="col-6">
-                    <label class="form-label small" for="@(id)-end">@T["Check-out"]</label>
+                    <label class="form-label small ocat-label-required" for="@(id)-end">@T["Check-out"]</label>
                     <input type="date" class="form-control form-control-sm" id="@(id)-end" name="@endName" form="@Model.FormId" min="@Model.MinDate" value="@Model.SelectedEnd" required />
                 </div>
             </div>
@@ -55,7 +55,7 @@
             break;
 
         case BookingKind.TimeSlot:
-            <label class="form-label small" for="@(id)-date">@T["Time"]</label>
+            <label class="form-label small @(Model.Days.Count > 0 ? "ocat-label-required" : "")" for="@(id)-date">@T["Time"]</label>
             @if (Model.Days.Count == 0)
             {
                 <p class="small text-body-secondary mb-0">@T["No times are free in the next two weeks."]</p>
@@ -83,7 +83,7 @@
     }
     else if (Model.Occupancies.Count > 1)
     {
-        <label class="form-label small mt-2" for="@(id)-occupancy">@T["Option"]</label>
+        <label class="form-label small mt-2 ocat-label-required" for="@(id)-occupancy">@T["Option"]</label>
         <select class="form-select form-select-sm" id="@(id)-occupancy" name="@occupancyName" form="@Model.FormId" required>
             @foreach (var occupancy in Model.Occupancies)
             {

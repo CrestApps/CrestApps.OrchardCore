@@ -14,7 +14,7 @@
 }
 
 <fieldset>
-    <legend class="h6">@T["How would you like to pay {0} {1}?", Model.Currency, CurrencyScale.Format(Model.FullAmount, Model.Currency)]</legend>
+    <legend class="h6 ocat-label-required">@T["How would you like to pay {0} {1}?", Model.Currency, CurrencyScale.Format(Model.FullAmount, Model.Currency)]</legend>
 
     @if (!string.IsNullOrEmpty(Model.Title))
     {

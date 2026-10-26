@@ -19,7 +19,7 @@
         <legend class="ocat-label">@T["Source"]</legend>
         <div class="ocat-end">
             <div class="mb-0">
-                <label asp-for="SourceIndexProfileName" class="form-label">@T["Source index"]</label>
+                <label asp-for="SourceIndexProfileName" class="form-label ocat-label-required">@T["Source index"]</label>
                 @if (Model.IsConfigurationLocked)
                 {
                     <input type="text" class="form-control" value="@Model.SourceIndexProfileName" readonly />

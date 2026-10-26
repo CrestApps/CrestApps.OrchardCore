@@ -12,7 +12,7 @@
     <input type="hidden" name="contentItemId" value="@Model.ContentItemId" />
     <input type="hidden" name="variantId" value="" data-stock-alert-variant />
     <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-    <label class="form-label small text-body-secondary mb-1" for="stock-alert-@Model.ContentItemId">@T["Sold out. Get an email when it's back:"]</label>
+    <label class="form-label small text-body-secondary mb-1 ocat-label-required" for="stock-alert-@Model.ContentItemId">@T["Sold out. Get an email when it's back:"]</label>
     <div class="input-group input-group-sm">
         <input type="email" id="stock-alert-@Model.ContentItemId" name="email" class="form-control" value="@Model.Email" placeholder="@T["Your email"]" autocomplete="email" required maxlength="254" />
         <button type="submit" class="btn btn-outline-primary">

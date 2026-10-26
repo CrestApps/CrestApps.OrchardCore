@@ -4,7 +4,7 @@
 @model DataSourceSearchToolInstanceViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="DataSourceId" class="ocat-label">@T["Data source"]</label>
+    <label asp-for="DataSourceId" class="ocat-label ocat-label-required">@T["Data source"]</label>
     <div class="ocat-end">
         <select asp-for="DataSourceId" class="form-select">
             <option value="">@T["Select a data source"]</option>

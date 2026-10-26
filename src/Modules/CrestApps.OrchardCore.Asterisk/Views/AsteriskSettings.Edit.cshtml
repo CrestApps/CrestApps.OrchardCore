@@ -13,7 +13,7 @@
 
 <div id="asterisk-provider-settings" class="@(Model.IsEnabled ? string.Empty : "d-none")">
     <div class="ocat-wrapper" asp-validation-class-for="BaseUrl">
-        <label asp-for="BaseUrl" class="ocat-label">@T["ARI base URL"]</label>
+        <label asp-for="BaseUrl" class="ocat-label ocat-label-required">@T["ARI base URL"]</label>
         <div class="ocat-end">
             <input asp-for="BaseUrl" class="form-control" autocomplete="off" />
             <span asp-validation-for="BaseUrl"></span>
@@ -22,7 +22,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="UserName">
-        <label asp-for="UserName" class="ocat-label">@T["ARI user name"]</label>
+        <label asp-for="UserName" class="ocat-label ocat-label-required">@T["ARI user name"]</label>
         <div class="ocat-end">
             <input asp-for="UserName" class="form-control" autocomplete="off" />
             <span asp-validation-for="UserName"></span>
@@ -31,7 +31,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="Password">
-        <label asp-for="Password" class="ocat-label">@T["ARI password"]</label>
+        <label asp-for="Password" class="ocat-label @(!Model.HasPassword ? "ocat-label-required" : "")">@T["ARI password"]</label>
         <div class="ocat-end">
             <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="Password"></span>
@@ -47,7 +47,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="ApplicationName">
-        <label asp-for="ApplicationName" class="ocat-label">@T["Stasis application name"]</label>
+        <label asp-for="ApplicationName" class="ocat-label ocat-label-required">@T["Stasis application name"]</label>
         <div class="ocat-end">
             <input asp-for="ApplicationName" class="form-control" autocomplete="off" placeholder="@AsteriskConstants.SuggestedApplicationName" />
             <span asp-validation-for="ApplicationName"></span>

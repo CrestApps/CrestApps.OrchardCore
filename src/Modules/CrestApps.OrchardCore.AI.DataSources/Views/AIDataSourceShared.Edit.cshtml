@@ -13,7 +13,7 @@
         }
         else if (Model.AIKnowledgeBaseIndexProfileNames?.Any() == true)
         {
-            <label asp-for="AIKnowledgeBaseIndexProfileName" class="form-label">@T["Destination index"]</label>
+            <label asp-for="AIKnowledgeBaseIndexProfileName" class="form-label ocat-label-required">@T["Destination index"]</label>
             <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.AIKnowledgeBaseIndexProfileNames" class="form-select">
                 <option value="">@T["Select a destination index"]</option>
             </select>
@@ -34,7 +34,7 @@
     <legend class="ocat-label">@T["Field Mapping"]</legend>
     <div class="ocat-end">
         <div class="mb-3">
-            <label asp-for="ContentFieldName" class="form-label">@T["Content field"]</label>
+            <label asp-for="ContentFieldName" class="form-label ocat-label-required">@T["Content field"]</label>
             @if (Model.IsConfigurationLocked)
             {
                 <input type="text" class="form-control" value="@Model.ContentFieldName" readonly />

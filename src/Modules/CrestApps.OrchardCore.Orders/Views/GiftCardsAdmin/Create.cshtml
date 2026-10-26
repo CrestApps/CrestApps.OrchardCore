@@ -19,7 +19,7 @@
     </div>
 
     <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
-        <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+        <label asp-for="Currency" class="ocat-label ocat-label-required">@T["Currency"]</label>
         <div class="ocat-limited">
             <input asp-for="Currency" class="form-control" maxlength="3" />
             <span asp-validation-for="Currency"></span>

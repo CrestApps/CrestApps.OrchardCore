@@ -19,7 +19,7 @@
         var id = control && control.id ? control.id : null;
 
         return h('div', { className: 'ocat-wrapper' },
-            h('label', { className: 'ocat-label', for: id }, label),
+            h('label', { className: 'ocat-label' + (control && control.required ? ' ocat-label-required' : ''), for: id }, label),
             h('div', { className: 'ocat-end' },
                 control,
                 hint ? h('span', { className: 'hint' }, hint) : null));

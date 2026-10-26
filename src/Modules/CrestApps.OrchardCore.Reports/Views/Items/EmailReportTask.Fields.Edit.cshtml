@@ -5,7 +5,7 @@
 <partial name="_ReportWorkflowTaskFields" model="Model" />
 
 <div class="ocat-wrapper" asp-validation-class-for="To">
-    <label class="ocat-label" asp-for="To">@T["To"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="To">@T["To"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="To" />
         <span asp-validation-for="To"></span>

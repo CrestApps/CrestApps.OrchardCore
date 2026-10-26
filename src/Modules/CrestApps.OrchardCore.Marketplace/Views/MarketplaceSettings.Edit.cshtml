@@ -1,7 +1,7 @@
 @model CrestApps.OrchardCore.Marketplace.ViewModels.MarketplaceSettingsViewModel
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="CommissionPercent">
-    <label asp-for="CommissionPercent" class="ocat-label">@T["Commission (%)"]</label>
+    <label asp-for="CommissionPercent" class="ocat-label ocat-label-required">@T["Commission (%)"]</label>
     <div class="ocat-limited">
         <input asp-for="CommissionPercent" inputmode="decimal" class="form-control" />
         <span class="hint">@T["What the store keeps of each vendor's sale, after discounts. A vendor can have its own."]</span>

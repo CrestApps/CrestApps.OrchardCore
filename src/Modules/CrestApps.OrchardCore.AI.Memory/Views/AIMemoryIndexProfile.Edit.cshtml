@@ -3,7 +3,7 @@
 @model AIMemoryIndexProfileViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="EmbeddingDeploymentName" class="ocat-label">@T["Embedding deployment"]</label>
+    <label asp-for="EmbeddingDeploymentName" class="ocat-label @(!Model.IsLocked ? "ocat-label-required" : "")">@T["Embedding deployment"]</label>
     <div class="ocat-end">
         @if (Model.IsLocked)
         {

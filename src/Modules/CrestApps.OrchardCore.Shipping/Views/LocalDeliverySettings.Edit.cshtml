@@ -1,7 +1,7 @@
 @model LocalDeliverySettingsViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="PostalCodes">
-    <label asp-for="PostalCodes" class="ocat-label">@T["Postal codes delivered to"]</label>
+    <label asp-for="PostalCodes" class="ocat-label ocat-label-required">@T["Postal codes delivered to"]</label>
     <div class="ocat-end">
         <textarea asp-for="PostalCodes" rows="4" class="form-control font-monospace"></textarea>
         <span asp-validation-for="PostalCodes"></span>

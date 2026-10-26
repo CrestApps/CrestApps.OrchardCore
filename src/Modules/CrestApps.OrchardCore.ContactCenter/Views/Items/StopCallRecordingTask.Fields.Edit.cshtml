@@ -3,7 +3,7 @@
 @model RecordingInteractionTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="InteractionId">
-    <label class="ocat-label" asp-for="InteractionId">@T["Interaction"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="InteractionId">@T["Interaction"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="InteractionId" />
         <span asp-validation-for="InteractionId"></span>

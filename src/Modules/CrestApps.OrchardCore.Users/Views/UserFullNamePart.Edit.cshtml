@@ -7,7 +7,7 @@
 @if (Model.Settings.DisplayName != DisplayNamePropertyType.None)
 {
     <div class="ocat-wrapper">
-        <label asp-for="DisplayName" class="ocat-label">@T["Display Name"]</label>
+        <label asp-for="DisplayName" class="ocat-label @(Model.Settings.DisplayName == DisplayNamePropertyType.Required ? "ocat-label-required" : "")">@T["Display Name"]</label>
         <div class="ocat-end">
             <input asp-for="DisplayName" class="form-control" />
             <span asp-validation-for="DisplayName" class="text-danger"></span>
@@ -18,7 +18,7 @@
 @if (Model.Settings.FirstName != DisplayNamePropertyType.None)
 {
     <div class="ocat-wrapper">
-        <label asp-for="FirstName" class="ocat-label">@T["First Name"]</label>
+        <label asp-for="FirstName" class="ocat-label @(Model.Settings.FirstName == DisplayNamePropertyType.Required ? "ocat-label-required" : "")">@T["First Name"]</label>
         <div class="ocat-end">
             <input asp-for="FirstName" class="form-control" />
             <span asp-validation-for="FirstName" class="text-danger"></span>
@@ -29,7 +29,7 @@
 @if (Model.Settings.MiddleName != DisplayNamePropertyType.None)
 {
     <div class="ocat-wrapper">
-        <label asp-for="MiddleName" class="ocat-label">@T["Middle Name"]</label>
+        <label asp-for="MiddleName" class="ocat-label @(Model.Settings.MiddleName == DisplayNamePropertyType.Required ? "ocat-label-required" : "")">@T["Middle Name"]</label>
         <div class="ocat-end">
             <input asp-for="MiddleName" class="form-control" />
             <span asp-validation-for="MiddleName" class="text-danger"></span>
@@ -40,7 +40,7 @@
 @if (Model.Settings.LastName != DisplayNamePropertyType.None)
 {
     <div class="ocat-wrapper">
-        <label asp-for="LastName" class="ocat-label">@T["Last Name"]</label>
+        <label asp-for="LastName" class="ocat-label @(Model.Settings.LastName == DisplayNamePropertyType.Required ? "ocat-label-required" : "")">@T["Last Name"]</label>
         <div class="ocat-end">
             <input asp-for="LastName" class="form-control" />
             <span asp-validation-for="LastName" class="text-danger"></span>

@@ -16,7 +16,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="ConnectionName" class="ocat-label">@T["Connection name"]</label>
+    <label asp-for="ConnectionName" class="ocat-label ocat-label-required">@T["Connection name"]</label>
     <div class="ocat-end">
         <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
         <span asp-validation-for="ConnectionName" class="text-danger"></span>

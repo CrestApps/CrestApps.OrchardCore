@@ -20,7 +20,7 @@ else
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="RevalidationIntervalDays" class="ocat-label">@T["Revalidation interval (days)"]</label>
+    <label asp-for="RevalidationIntervalDays" class="ocat-label ocat-label-required">@T["Revalidation interval (days)"]</label>
     <div class="ocat-end">
         <input type="number" min="1" class="form-control" asp-for="RevalidationIntervalDays" />
         <span asp-validation-for="RevalidationIntervalDays" class="text-danger"></span>
@@ -29,7 +29,7 @@ else
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="MaxVerificationAttempts" class="ocat-label">@T["Maximum verification attempts"]</label>
+    <label asp-for="MaxVerificationAttempts" class="ocat-label ocat-label-required">@T["Maximum verification attempts"]</label>
     <div class="ocat-end">
         <input type="number" min="1" class="form-control" asp-for="MaxVerificationAttempts" />
         <span asp-validation-for="MaxVerificationAttempts" class="text-danger"></span>

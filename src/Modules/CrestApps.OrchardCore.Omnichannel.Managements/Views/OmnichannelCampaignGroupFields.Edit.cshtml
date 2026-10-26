@@ -3,7 +3,7 @@
 @model OmnichannelCampaignGroupViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
     <div class="ocat-end">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
