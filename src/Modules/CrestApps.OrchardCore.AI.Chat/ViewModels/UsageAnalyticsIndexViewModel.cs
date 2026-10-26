@@ -12,11 +12,6 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 public sealed class UsageAnalyticsIndexViewModel
 {
     /// <summary>
-    /// Gets or sets a value indicating whether is AI usage tracking enabled.
-    /// </summary>
-    public bool IsAIUsageTrackingEnabled { get; set; }
-
-    /// <summary>
     /// Gets or sets the start date in local time.
     /// </summary>
     public DateTime? StartDate { get; set; }

@@ -4,12 +4,12 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
 
@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 /// <summary>
 /// Provides endpoints for managing usage analytics resources.
 /// </summary>
+[Feature(AIConstants.Feature.UsageAnalytics)]
 [Admin("AI/UsageAnalytics/{action}", "UsageAnalytics.{action}")]
 public sealed class UsageAnalyticsController : Controller
 {
@@ -27,7 +28,6 @@ public sealed class UsageAnalyticsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
-    private readonly IOptionsMonitor<GeneralAIOptions> _generalAIOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UsageAnalyticsController"/> class.
@@ -38,15 +38,13 @@ public sealed class UsageAnalyticsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="localClock">The local clock for timezone conversions.</param>
     /// <param name="clock">The clock, for converting call times to the site's time zone.</param>
-    /// <param name="generalAIOptions">The general AI options.</param>
     public UsageAnalyticsController(
         IAICompletionUsageService usageService,
         IAIVoiceSessionSummaryStore voiceSessionStore,
         IAIProfileStore profileStore,
         IAuthorizationService authorizationService,
         ILocalClock localClock,
-        IClock clock,
-        IOptionsMonitor<GeneralAIOptions> generalAIOptions)
+        IClock clock)
     {
         _usageService = usageService;
         _voiceSessionStore = voiceSessionStore;
@@ -54,7 +52,6 @@ public sealed class UsageAnalyticsController : Controller
         _authorizationService = authorizationService;
         _localClock = localClock;
         _clock = clock;
-        _generalAIOptions = generalAIOptions;
     }
 
     /// <summary>
@@ -68,10 +65,7 @@ public sealed class UsageAnalyticsController : Controller
             return Forbid();
         }
 
-        var model = new UsageAnalyticsIndexViewModel
-        {
-            IsAIUsageTrackingEnabled = _generalAIOptions.CurrentValue.EnableAIUsageTracking,
-        };
+        var model = new UsageAnalyticsIndexViewModel();
 
         model.Profiles = ToSelectList(await GetProfileNamesAsync());
 
@@ -90,8 +84,6 @@ public sealed class UsageAnalyticsController : Controller
         {
             return Forbid();
         }
-
-        model.IsAIUsageTrackingEnabled = _generalAIOptions.CurrentValue.EnableAIUsageTracking;
 
         var profileNames = await GetProfileNamesAsync();
         model.Profiles = ToSelectList(profileNames);

@@ -67,13 +67,6 @@
     <p class="text-muted mb-0">@T["Review provider usage by user, model, deployment, profile and connection across chat sessions and chat interactions, and the talk time of automated voice calls."]</p>
 </div>
 
-@if (!Model.IsAIUsageTrackingEnabled)
-{
-    <div class="alert alert-warning">
-        @T["AI usage tracking is currently disabled. Enable AI usage tracking in Settings -> Artificial Intelligence to capture future provider usage data and automated voice call summaries for this report."]
-    </div>
-}
-
 <div class="card mb-3">
     <div class="card-header">
         <form asp-action="Index" method="post">
