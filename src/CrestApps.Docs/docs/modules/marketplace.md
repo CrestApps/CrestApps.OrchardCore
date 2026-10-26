@@ -54,3 +54,61 @@ The store's Stripe account must have Connect turned on in the Stripe dashboard. 
 ## Pages
 
 **Commerce > Vendors** (`ManageMarketplace`) lists vendors on the admin list. A vendor's page shows what it has earned (held, ready and paid out), its sales and payouts, **Release now** for an order, and **Pay out what's ready**. The storefront account's **Vendor** page (`account/vendor`, the `VendorDashboard` shape) shows the same to the people who run the vendor, with **Set up payouts** for Stripe.
+
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, the Marketplace feature adds the **Marketplace** data source (`Marketplace`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage the marketplace** (`ManageMarketplace`), the permission of **Commerce > Vendors**. The Stripe Connect feature adds no data set. A vendor's Stripe account, the key used to make it, the provider's reference for a transfer and its error messages are never exposed.
+
+The **Vendors** data set (`Vendors`) has one row per vendor, newest first by when it was added; it has no default date. Joins on the vendor ID and status filters are applied in the database, and simple groups and totals of the vendor ID and status are counted there too.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Vendor ID | Identifies the vendor. |
+| `Name` | Vendor | |
+| `Email` | Email | |
+| `Status` | Status | `Active` or `Suspended`. |
+| `CommissionPercent` | Commission (%) | Empty when the vendor has the store's default. |
+| `UserCount` | People | How many users run the vendor. |
+| `UserNames` | Run by | Their usernames, separated by commas, as they were when added. |
+| `CreatedUtc` | Added | |
+| `ModifiedUtc` | Last changed | |
+| `Country` | Country | The country its payout account is made in. |
+| `HasPayoutAccount` | Has a payout account | |
+| `PayoutsEnabled` | Payouts enabled | Whether its payout account is set up and can take transfers. |
+
+The **Vendor earnings** data set (`VendorEarnings`) has one row per sale or refund of a vendor, newest first by when it was recorded, which is its default date. Date ranges on that date, joins on the earning, vendor and order IDs, and status filters are applied in the database, and simple groups and totals of those fields and of the hold date are counted there too. Money is in the order's currency, which the `Currency` field names; a refund's amounts are negative.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Earning ID | Identifies the earning. |
+| `VendorId` | Vendor ID | References `Marketplace` > `Vendors`. |
+| `OrderId` | Order ID | References `Orders` > `Orders`. |
+| `OrderNumber` | Order number | |
+| `LineId` | Order line ID | References `Orders` > `OrderLines` > `LineId`. |
+| `Title` | Item | |
+| `Kind` | Kind | `Sale` or `Refund`. |
+| `Status` | Status | `Held`, `Available` or `PaidOut`. |
+| `AwaitsFulfillment` | Waits for fulfillment | |
+| `PayoutId` | Payout ID | References `Marketplace` > `VendorPayouts`. |
+| `Currency` | Currency | |
+| `Gross` | Gross | What the buyer paid for the line after its share of the order's discounts. |
+| `CommissionPercent` | Commission (%) | |
+| `Commission` | Commission | |
+| `Net` | Net | What the vendor gets: the gross less the commission. |
+| `CreatedUtc` | Recorded | The default date. |
+| `HoldUntilUtc` | Held until | |
+| `ReleasedUtc` | Released | |
+
+The **Vendor payouts** data set (`VendorPayouts`) has one row per payout, newest first by when it was made, which is its default date. Date ranges on that date and joins on the payout and vendor IDs are applied in the database, and simple groups and totals of those fields are counted there too.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Payout ID | Identifies the payout. |
+| `VendorId` | Vendor ID | References `Marketplace` > `Vendors`. |
+| `OrderId` | Order ID | References `Orders` > `Orders`. |
+| `OrderNumber` | Order number | |
+| `Status` | Status | `Paid` or `Failed`. |
+| `Currency` | Currency | |
+| `Amount` | Amount | In the payout's currency. |
+| `EarningCount` | Earnings paid | |
+| `CreatedUtc` | Made | The default date. |

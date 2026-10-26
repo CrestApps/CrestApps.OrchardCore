@@ -130,3 +130,77 @@ Each result links to the product with its date. **Commerce > Bookings > Calendar
 ## Recipes
 
 The `BookingDates` recipe step adds dates to booking products: each with `ContentItemId`, `Date` (or `DaysFromToday`), an optional `Time`, `Capacity` and `Price`. A date the product has already is left as it is.
+
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Bookings adds the **Bookings** data source (`Bookings`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage bookings** (`ManageBookings`), the permission of **Commerce > Bookings**. The travelers' details, the reason a booking was canceled, the cancellation policy, the card a balance is charged to and the payment provider's error messages are never exposed.
+
+The **Bookings** data set (`Bookings`) has one row per booking, newest first by when it was booked, which is its default date. Date ranges on that date, joins on the booking, order, product and cart IDs, and status filters are applied in the database, and simple groups and totals of those fields and of the start date are counted there too. Money is in the booking's currency, which the `Currency` field names.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Booking ID | Identifies the booking. |
+| `Status` | Status | `Held`, `Requested`, `Confirmed`, `Completed`, `NoShow`, `Canceled` or `Expired`. |
+| `Kind` | Kind | `Departure`, `Nightly` or `TimeSlot`. |
+| `ProductId` | Product ID | References the product (`Products` > `Products` > `ContentItemId`). |
+| `Title` | Product | |
+| `OccupancyLabel` | Occupancy | Such as a double room. |
+| `Units` | Units | Such as rooms. |
+| `People` | People | |
+| `Seats` | Seats | How much of each date it takes: seats for a departure, units otherwise. |
+| `DateCount` | Dates taken | One for a departure or a time slot, one per night of a stay. |
+| `TravelerCount` | Travelers named | How many travelers' details the buyer gave. |
+| `OrderId` | Order ID | References `Orders` > `Orders`. |
+| `OrderNumber` | Order number | |
+| `LineId` | Order line ID | References `Orders` > `OrderLines` > `LineId`. |
+| `CartId` | Cart ID | References `Carts` > `Carts`. |
+| `UserId` | User ID | References the user (`Users`). |
+| `CustomerName` | Buyer name | |
+| `CustomerEmail` | Buyer email | |
+| `Currency` | Currency | |
+| `Total` | Price | |
+| `CancellationFee` | Cancellation fee | What the cancellation policy kept; empty unless it was canceled. |
+| `Refunded` | Refunded | What was refunded when it was canceled. |
+| `CreatedUtc` | Booked | The default date. |
+| `StartsUtc` | Starts | |
+| `EndsUtc` | Ends | A stay's check-out. |
+| `HoldExpiresUtc` | Hold ends | |
+| `ConfirmedUtc`, `CompletedUtc`, `CanceledUtc` | Confirmed, Completed, Canceled | |
+| `ModifiedUtc` | Last changed | |
+
+The **Booking dates** data set (`BookingSlots`) has one row per date of a booking product (a departure, a night or a time slot), newest first by when it starts, which is its default date. Date ranges on that date and joins on the date and product IDs are applied in the database, and simple groups and totals of the product, date, start, places left and closed fields are counted there too. A date's own price is in the product's currency, which the date doesn't record, so only whether it has one is exposed.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Date ID | Identifies the date. |
+| `ProductId` | Product ID | References the product (`Products` > `Products` > `ContentItemId`). |
+| `SlotKey` | Date or time | The date (`yyyy-MM-dd`) or the time (`yyyy-MM-ddTHH:mm`) in the site's time zone. |
+| `StartsUtc` | Starts | The default date. |
+| `Capacity` | Capacity | |
+| `Held` | Held | How much unpaid orders hold. |
+| `Sold` | Sold | How much paid bookings take. |
+| `Remaining` | Left | |
+| `Closed` | Closed | |
+| `HasOwnPrice` | Has its own price | |
+| `ModifiedUtc` | Last changed | |
+
+The **Booking balances** data set (`BookingBalances`) has one row per balance left to pay on an order whose bookings were paid by deposit, newest first by when it is due, which is its default date. Date ranges on that date, joins on the balance and order IDs, and status filters are applied in the database, and simple groups and totals of those fields are counted there too. Money is in the balance's currency, which the `Currency` field names.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Balance ID | Identifies the balance. |
+| `Status` | Status | `Scheduled`, `Paid`, `Failed` or `Canceled`. |
+| `Currency` | Currency | |
+| `Amount` | Amount | |
+| `Attempts` | Charge attempts | |
+| `OrderId` | Order ID | References `Orders` > `Orders`. |
+| `OrderNumber` | Order number | |
+| `TransactionId` | Transaction ID | The ledger transaction the balance is owed on; references `Transactions` > `Transactions`. |
+| `DepositSessionId` | Deposit checkout ID | The checkout that paid the deposit; references `Checkout` > `CheckoutSessions`. |
+| `UserId` | User ID | References the user (`Users`). |
+| `CustomerName` | Buyer name | |
+| `CustomerEmail` | Buyer email | |
+| `DueUtc` | Due | The default date. |
+| `LastAttemptUtc` | Last charge attempt | |
+| `NextAttemptUtc` | Next charge attempt | |
+| `CreatedUtc` | Created | |
