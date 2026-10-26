@@ -200,6 +200,127 @@ See [Commerce API](commerce-api.md) for the endpoints, the conventions they shar
 
 **My Account** (`my-account`) is the signed-in user's own page: their customer details and address book. It is an admin-area page marked `[CustomerAdminPage]`, so a customer reaches it without **Access admin panel**. The first visit makes the user's customer record with `GetOrCreateForUserAsync`; a disabled or anonymized customer can't edit it.
 
+## Report Builder data source
+
+The **Customers** data source (technical name `Customers`) lets the [Report Builder](report-builder/index.md) and Orchard Core data pipelines read the store's customers, their loyalty points, their store credit and their referral links. It is registered when the Customers feature and **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) are both enabled. The Report Builder enables Data Pipelines Core. Each data set is listed only while the feature that stores its records is enabled, and only to a person whose role has its permission. A person without the permission does not see the data set, and a report that reads it gets no rows.
+
+| Data set | Display name | Registered by | Permission |
+| --- | --- | --- | --- |
+| `Customers` | Customers | Customers (`CrestApps.OrchardCore.Customers`) | **View customers** |
+| `LoyaltyAccounts` | Loyalty accounts | Loyalty Points (`CrestApps.OrchardCore.Customers.Loyalty`) | **View customers** |
+| `LoyaltyActivity` | Loyalty activity | Loyalty Points | **View customers** |
+| `StoreCreditAccounts` | Store credit accounts | Store Credit (`CrestApps.OrchardCore.Customers.StoreCredit`) | **View customers** |
+| `StoreCreditActivity` | Store credit activity | Store Credit | **View customers** |
+| `Referrals` | Referrals | Referrals (`CrestApps.OrchardCore.Customers.Referrals`) | **Manage customers** |
+| `ReferralRewards` | Referral rewards | Referrals | **Manage customers** |
+
+**View customers** is the permission of the customers list and of the customer's page, where the store credit and the points are shown. No admin screen lists referral links, so their data sets need **Manage customers**, the permission of the **Referrals** settings. **Manage customers** implies **View customers**.
+
+The personal details are the ones the customer's admin page shows, and an anonymized customer has none. The tax id, the reason for a tax exemption, the ids at outside services, the street lines of addresses, the privacy log, the code in a referral link, and the name and email of a referred friend are never exposed. The customer record keeps no customer group, tags, order count or total spent: join the Orders data source on **Customer ID** to report on what customers bought.
+
+### Customers
+
+One row per customer, guests, disabled, merged and anonymized customers included. Customers are read newest first by **Customer since**, the data set's main date. A date range on it, a join on **Customer ID** or **User ID**, and a filter on **Status** or **Kind** are applied in the database, which also groups and counts customers by the fields its index holds. The Customers feature's migration adds the index `IDX_CustomerIndex_Report` on the creation date for these reads.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Customer ID | Identifies the customer. The `CustomerId` of the Orders data set refers to it. |
+| `Name` | Name | The name the store shows: the display name, the person's or company's name, or the email. |
+| `FirstName` | First name | |
+| `LastName` | Last name | |
+| `CompanyName` | Company | |
+| `Kind` | Kind | `Person` or `Business`. |
+| `Status` | Status | `Active`, `Disabled`, `Anonymized` or `Merged`. |
+| `HasAccount` | Has an account | |
+| `UserId` | User ID | Refers to the Users data source. Empty for a guest. |
+| `IsTaxExempt` | Exempt from tax | |
+| `IsAnonymized` | Anonymized | |
+| `MergedIntoCustomerId` | Merged into customer ID | The customer a merged guest's history moved to. Refers to `Customers`. |
+| `MergedCustomerCount` | Merged guests | |
+| `Email` | Email | |
+| `Phone` | Phone | |
+| `AcceptsMarketing` | Accepts marketing | |
+| `AddressCount` | Addresses | The addresses in the customer's address book. |
+| `BillingCountry`, `BillingRegion`, `BillingCity`, `BillingPostalCode` | Billing country, Billing region, Billing city, Billing postal code | Of the default billing address. |
+| `ShippingCountry`, `ShippingRegion`, `ShippingCity`, `ShippingPostalCode` | Shipping country, Shipping region, Shipping city, Shipping postal code | Of the default shipping address. |
+| `CreatedUtc` | Customer since | The main date. |
+| `LastActivityUtc` | Last activity | |
+| `ModifiedUtc` | Last changed | |
+| `MergedUtc` | Merged | |
+| `AnonymizedUtc` | Anonymized on | |
+
+### Loyalty accounts and loyalty activity
+
+`LoyaltyAccounts` gives one row per customer's loyalty points account. `LoyaltyActivity` gives one row per change to the points, as the customer's page lists them, with each account's changes oldest first. Points are not money, so these data sets have no currency. The accounts' index holds no date, so accounts are read newest first by their index rows, and these data sets have no main date. A join on the account or on **Customer ID** is applied in the database, and the accounts can be grouped and counted there.
+
+| Field | Display name | Data set | Notes |
+| --- | --- | --- | --- |
+| `ItemId` | Loyalty account ID | Loyalty accounts | Identifies the account. |
+| `LoyaltyAccountId` | Loyalty account ID | Loyalty activity | Refers to `LoyaltyAccounts`. |
+| `CustomerId` | Customer ID | Both | Refers to `Customers`. |
+| `Points` | Points | Both | On an account, the points held now. On a change, positive when points were earned or given and negative when they were spent or taken back. |
+| `EarnedPoints` | Points earned | Loyalty accounts | The points orders earned, before any were taken back. |
+| `SpentPoints` | Points spent | Loyalty accounts | The points spent at checkouts, before any were given back. |
+| `ActivityCount` | Changes | Loyalty accounts | |
+| `CreatedUtc` | Opened | Loyalty accounts | |
+| `UpdatedUtc` | Last changed | Loyalty accounts | |
+| `Position` | Change number | Loyalty activity | The change's place in the account, from 1. |
+| `CreatedUtc` | When | Loyalty activity | |
+| `Kind` | Kind | Loyalty activity | `Earned`, `Reversed`, `Spent`, `Returned` or `Adjusted`. |
+| `Balance` | Balance after | Loyalty activity | |
+| `Reason` | What | Loyalty activity | The reason the customer's page shows. |
+| `Actor` | Changed by | Loyalty activity | The staff member who changed the points by hand. |
+| `OrderId` | Order ID | Loyalty activity | Refers to the Orders data source. |
+| `CheckoutSessionId` | Checkout session ID | Loyalty activity | Refers to the checkout sessions of the Checkout data source. |
+
+### Store credit accounts and store credit activity
+
+`StoreCreditAccounts` gives one row per customer's store credit in one currency. `StoreCreditActivity` gives one row per change to it, as the customer's page lists them, with each account's changes oldest first. All money is in the account's own currency, which the **Currency** field next to it names. As for loyalty points, the accounts are read newest first by their index rows, and there is no main date. A join on the account or on **Customer ID**, and a filter on **Currency**, are applied in the database, and the accounts can be grouped and summed there, such as the balance by currency.
+
+| Field | Display name | Data set | Notes |
+| --- | --- | --- | --- |
+| `ItemId` | Store credit account ID | Store credit accounts | Identifies the account. |
+| `StoreCreditAccountId` | Store credit account ID | Store credit activity | Refers to `StoreCreditAccounts`. |
+| `CustomerId` | Customer ID | Both | Refers to `Customers`. |
+| `Currency` | Currency | Both | The account's currency. |
+| `Balance` | Balance | Store credit accounts | In the account's currency. |
+| `GivenAmount` | Given | Store credit accounts | All the credit given by staff, as refunds or as rewards, in the account's currency. |
+| `SpentAmount` | Spent | Store credit accounts | All the credit spent or taken away, in the account's currency. |
+| `ActivityCount` | Changes | Store credit accounts | |
+| `CreatedUtc` | Opened | Store credit accounts | |
+| `UpdatedUtc` | Last changed | Store credit accounts | |
+| `Position` | Change number | Store credit activity | The change's place in the account, from 1. |
+| `CreatedUtc` | When | Store credit activity | |
+| `Amount` | Amount | Store credit activity | Positive when credit was given, negative when it was spent or taken away, in the account's currency. |
+| `Balance` | Balance after | Store credit activity | In the account's currency. |
+| `Reason` | What | Store credit activity | The reason the customer's page shows. |
+| `Actor` | Changed by | Store credit activity | The staff member who changed the credit by hand. |
+| `CheckoutSessionId` | Checkout session ID | Store credit activity | Refers to the checkout sessions of the Checkout data source. |
+
+### Referrals and referral rewards
+
+`Referrals` gives one row per customer's referral link. `ReferralRewards` gives one row per friend's first order the customer was rewarded for, with each link's rewards oldest first. Links are read newest first by their index rows, and there is no main date. A join on the link or on **Customer ID** is applied in the database.
+
+| Field | Display name | Data set | Notes |
+| --- | --- | --- | --- |
+| `ItemId` | Referral ID | Referrals | Identifies the link. |
+| `ReferralId` | Referral ID | Referral rewards | Refers to `Referrals`. |
+| `CustomerId` | Customer ID | Both | The customer who shared the link. Refers to `Customers`. |
+| `ReferralCount` | Friends rewarded for | Referrals | |
+| `RewardPoints` | Points rewarded | Referrals | All the points the link earned the customer. |
+| `LastReferralUtc` | Last friend's order | Referrals | |
+| `CreatedUtc` | Created | Referrals | |
+| `UpdatedUtc` | Last changed | Referrals | |
+| `Position` | Reward number | Referral rewards | The reward's place in the link, from 1. |
+| `CreatedUtc` | Rewarded | Referral rewards | |
+| `OrderId` | Friend's order ID | Referral rewards | Refers to the Orders data source. |
+| `OrderNumber` | Friend's order number | Referral rewards | |
+| `RewardKind` | Reward kind | Referral rewards | `None`, `StoreCredit` or `Points`. |
+| `Reward` | Reward | Referral rewards | What the customer was given, as text. |
+| `Currency` | Currency | Referral rewards | The currency of the store credit given. |
+| `RewardAmount` | Store credit given | Referral rewards | In the reward's currency. Zero for a reward in points. |
+| `RewardPoints` | Points given | Referral rewards | |
+
 ## Permissions
 
 | Permission | Allows |

@@ -163,6 +163,36 @@ public static class CommerceReportDataSets
         /// The customers data set: one row per customer.
         /// </summary>
         public const string Customers = "Customers";
+
+        /// <summary>
+        /// The loyalty accounts data set: one row per customer's loyalty points account.
+        /// </summary>
+        public const string LoyaltyAccounts = "LoyaltyAccounts";
+
+        /// <summary>
+        /// The loyalty activity data set: one row per change to a customer's loyalty points.
+        /// </summary>
+        public const string LoyaltyActivity = "LoyaltyActivity";
+
+        /// <summary>
+        /// The store credit accounts data set: one row per customer's store credit in one currency.
+        /// </summary>
+        public const string StoreCreditAccounts = "StoreCreditAccounts";
+
+        /// <summary>
+        /// The store credit activity data set: one row per change to a customer's store credit.
+        /// </summary>
+        public const string StoreCreditActivity = "StoreCreditActivity";
+
+        /// <summary>
+        /// The referrals data set: one row per customer's referral link.
+        /// </summary>
+        public const string Referrals = "Referrals";
+
+        /// <summary>
+        /// The referral rewards data set: one row per friend's first order a customer was rewarded for.
+        /// </summary>
+        public const string ReferralRewards = "ReferralRewards";
     }
 
     /// <summary>
@@ -315,6 +345,21 @@ public static class CommerceReportDataSets
         /// The companies data set: one row per company that buys from the store.
         /// </summary>
         public const string Companies = "Companies";
+
+        /// <summary>
+        /// The company buyers data set: one row per person who buys for a company.
+        /// </summary>
+        public const string CompanyBuyers = "CompanyBuyers";
+
+        /// <summary>
+        /// The price lists data set: one row per price list companies buy on.
+        /// </summary>
+        public const string PriceLists = "PriceLists";
+
+        /// <summary>
+        /// The price list entries data set: one row per price a price list sets for a SKU.
+        /// </summary>
+        public const string PriceListEntries = "PriceListEntries";
     }
 
     /// <summary>
