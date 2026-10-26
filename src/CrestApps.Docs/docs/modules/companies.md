@@ -106,6 +106,81 @@ The store's sign-in cookie is `SameSite=Lax`, so open the punchout in a top-leve
 | **Commerce > Companies** (`CompaniesAdminController`, admin route `companies`) and **Commerce > Price lists** (`PriceListsAdminController`, `companies/price-lists`), both on Orchard Core's `AdminList` | `ManageCompanies` (**Manage companies**) | Administrator |
 | The account's **Company** page (`account/company`) | A company buyer; approvals for its admins | |
 
+## Report Builder data source
+
+The **Companies** data source (technical name `Companies`) lets the [Report Builder](report-builder/index.md) and Orchard Core data pipelines read the companies, their buyers, and the price lists they buy on. It is registered when the Companies feature and **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) are both enabled. The Report Builder enables Data Pipelines Core. Every data set needs **Manage companies** (`ManageCompanies`), the permission of the **Companies** and **Price lists** screens. A person without it does not see the data sets, and a report that reads them gets no rows.
+
+| Data set | Display name | Rows |
+| --- | --- | --- |
+| `Companies` | Companies | One per company. The `CompanyId` of the Orders data set refers to it. |
+| `CompanyBuyers` | Company buyers | One per person who buys for a company. |
+| `PriceLists` | Price lists | One per price list. |
+| `PriceListEntries` | Price list entries | One per price a price list sets for a SKU. |
+
+The indexes of companies and price lists hold no date, so the records are read newest first by when they were stored, and the data sets have no main date. The credit limit, the monthly budget and a buyer's order limit are in the store's currency, as the company's admin page shows them, and the **Currency** field next to them names it. The punchout key is never exposed.
+
+### Companies
+
+A join on **Company ID** and a filter on **Name** are applied in the database, which also groups and counts companies by name and by whether they are on.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Company ID | Identifies the company. |
+| `Name` | Name | |
+| `TaxId` | Tax or VAT number | As the companies list shows it. |
+| `BillingEmail` | Billing email | |
+| `IsEnabled` | On | |
+| `BuyerCount` | Buyers | |
+| `AdminCount` | Admins | The buyers with the Admin role. |
+| `LocationCount` | Locations | |
+| `PriceListId` | Price list ID | Refers to `PriceLists`. Empty when the company pays the store's prices. |
+| `PunchoutEnabled` | Shops by punchout | |
+| `OffersTerms` | Buys on terms | |
+| `NetDays` | Net days | |
+| `DepositPercent` | Deposit (%) | |
+| `RequirePurchaseOrder` | Purchase order required | |
+| `Currency` | Currency | The store's currency. |
+| `CreditLimit` | Credit limit | In the store's currency. Empty for no limit. |
+| `MonthlyBudget` | Monthly budget | In the store's currency. Empty for no budget. |
+| `CreatedUtc` | Added | |
+| `ModifiedUtc` | Last changed | |
+
+### Company buyers
+
+Each company gives its buyers in their order, buyers without a user included. The buyers are read with their company, so a join on **Company ID** is applied in the database. A join on **User ID** is applied after the read: the index of buyers holds a row per buyer, which would read a company once for each of its buyers.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `CompanyId` | Company ID | Refers to `Companies`. |
+| `CompanyName` | Company | |
+| `CompanyEnabled` | Company on | |
+| `Position` | Buyer number | The buyer's place in the company, from 1. |
+| `UserId` | User ID | Refers to the Users data source. |
+| `UserName` | User name | |
+| `Email` | Email | |
+| `Role` | Role | `Buyer` or `Admin`. |
+| `Currency` | Currency | The store's currency. |
+| `OrderLimit` | Order limit | The most an order the buyer places may come to before a company admin approves it, in the store's currency. Empty for no limit. |
+
+### Price lists and price list entries
+
+All prices by SKU are in the price list's currency, which the **Currency** field names. A join on the price list and a filter on its name are applied in the database.
+
+| Field | Display name | Data set | Notes |
+| --- | --- | --- | --- |
+| `ItemId` | Price list ID | Price lists | Identifies the price list. |
+| `PriceListId` | Price list ID | Price list entries | Refers to `PriceLists`. |
+| `Name` | Name | Price lists | |
+| `PriceListName` | Price list | Price list entries | |
+| `PercentOff` | Percent off | Price lists | The percentage off every product the list does not price by SKU. Empty when there is none. |
+| `Currency` | Currency | Both | The currency of the list's prices by SKU. |
+| `EntryCount` | Prices by SKU | Price lists | |
+| `CreatedUtc` | Added | Price lists | |
+| `ModifiedUtc` | Last changed | Price lists | |
+| `Position` | Price number | Price list entries | The price's place in the list, from 1. |
+| `Sku` | SKU | Price list entries | |
+| `UnitPrice` | Unit price | Price list entries | In the price list's currency. |
+
 ## Related modules
 
 - [Carts and Orders](carts-and-orders.md): quotes, draft orders and the order's purchase order number.
