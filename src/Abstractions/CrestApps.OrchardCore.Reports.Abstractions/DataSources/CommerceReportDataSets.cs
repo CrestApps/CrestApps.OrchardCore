@@ -189,6 +189,16 @@ public static class CommerceReportDataSets
         /// The coupons data set: one row per coupon.
         /// </summary>
         public const string Coupons = "Coupons";
+
+        /// <summary>
+        /// The coupon redemptions data set: one row per use of a coupon code at a checkout.
+        /// </summary>
+        public const string CouponRedemptions = "CouponRedemptions";
+
+        /// <summary>
+        /// The saved payment methods data set: one row per payment method a customer kept for later charges.
+        /// </summary>
+        public const string SavedPaymentMethods = "SavedPaymentMethods";
     }
 
     /// <summary>
