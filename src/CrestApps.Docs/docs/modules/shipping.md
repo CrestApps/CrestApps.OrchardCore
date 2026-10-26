@@ -171,6 +171,16 @@ The store's note on a shipment, the links to its label and tracking page, and th
 | `FlatAmount`, `PerItemAmount` | Flat amount, Amount per item | For flat methods, in the method's currency; empty for other methods. |
 | `FreeFromSubtotal` | Free from subtotal | For free methods, in the method's currency; empty for other methods. |
 
+## Reports to adapt
+
+The **Reports: shipping reports to adapt** recipe (`ShippingReportBuilderReports`) turns on the Report Builder and adds a report built from these data sets, under the **Store** category. It shows the carriers part of the built-in **Shipping times** report, so you can open it in the builder, change it, and save it as your own. The person who runs the recipe owns it, and it reads with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Shipments by carrier | **Shipments** sent in the last 30 days, grouped by carrier, with calculated fields for the shipments delivered and returned and the average days from leaving to delivered | Shipping times: by carrier |
+
+The built-in report also shows the time from each order's payment to its shipment leaving: the average, the median, the share shipped within 2 days, and the slowest shipments. These need the date each order was paid, which the shipments do not hold, so they stay in the built-in **Shipping times** report only.
+
 ## Recipes and deployments
 
 The **ShippingZones** step creates or updates zones, found by `ItemId` or `Name`. Zone names are unique: a new zone named like another is reported as a recipe error. Methods without a `MethodId` get one. Provider settings go in the method's `Properties`, keyed by type name:

@@ -75,3 +75,14 @@ The **Product reviews** data set (`ProductReviews`) has one row per review, newe
 | `CreatedUtc` | Written | The default date. |
 | `ModifiedUtc` | Last changed | |
 | `ModeratedUtc` | Approved or rejected | When the store last decided on it. |
+
+## Reports to adapt
+
+The **Reports: product review reports to adapt** recipe (`ReviewsReportBuilderReports`) turns on the Report Builder and adds reports built from this data set, under the **Store** category. Together they show what the built-in **Product reviews** report shows, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Reviews by stars | **Product reviews** written in the last 30 days, grouped by stars and status | Product reviews: the stars given and the reviews that wait for approval |
+| Reviews by product | **Product reviews** written in the last 30 days, grouped by product, with calculated fields for the reviews that wait or are approved, the average rating of the approved reviews, and the share of verified purchases | Product reviews: the products |
+
+A designed report has one set of groups, so the recipe splits the built-in report in two. No part of it stays built-in only.

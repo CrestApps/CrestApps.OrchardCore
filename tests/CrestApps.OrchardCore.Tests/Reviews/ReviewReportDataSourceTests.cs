@@ -262,6 +262,33 @@ public sealed class ReviewReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RecipeReports_RunOverTheReviewsDataSource()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var designs = ReportRecipeDesigns.Load("CrestApps.OrchardCore.Reviews", "reviews-report-builder-reports.recipe.json");
+
+        // Act
+        var results = await ReportRecipeDesigns.RunAsync(designs, _user, _start.AddDays(10), new TestDataSourceEntry(ReviewReportDataSource.Name, Source(session)));
+
+        // Assert
+        Assert.Equal(["reviews-by-stars", "reviews-by-product"], designs.Select(design => design.ItemId));
+        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+
+        // Each of the four reviews gave different stars.
+        Assert.Equal(4, results["reviews-by-stars"].Rows.Count);
+
+        // Each product has one approved review, which sets its average rating, and one of its two reviews is verified.
+        var products = results["reviews-by-product"];
+        var rows = Enumerable.Range(0, products.Rows.Count).ToDictionary(row => (string)ReportRecipeDesigns.Value(products, row, "product"));
+        Assert.Equal(2, products.Rows.Count);
+        Assert.Equal(5m, Convert.ToDecimal(ReportRecipeDesigns.Value(products, rows["Mug"], "rating"), CultureInfo.InvariantCulture));
+        Assert.Equal(4m, Convert.ToDecimal(ReportRecipeDesigns.Value(products, rows["Cap"], "rating"), CultureInfo.InvariantCulture));
+        Assert.Equal(1m, Convert.ToDecimal(ReportRecipeDesigns.Value(products, rows["Mug"], "waiting"), CultureInfo.InvariantCulture));
+        Assert.Equal(0.5m, Convert.ToDecimal(ReportRecipeDesigns.Value(products, rows["Cap"], "verified"), CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
     public async Task ReportIndexMigration_CanRunAgain()
     {
         // Arrange

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Payments;
@@ -322,6 +323,33 @@ public sealed class SubscriptionReportDataSourceTests : IAsyncLifetime
         Assert.Equal(6, all.Count);
         Assert.Equal(["sub-2", "sub-2", "sub-1", "sub-1", "sub-0", "sub-0"], all.Select(row => row[SubscriptionLinesReportDataSet.SubscriptionIdField]));
         Assert.Null(groups);
+    }
+
+    [Fact]
+    public async Task RecipeReports_RunOverTheSubscriptionsDataSource()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var designs = ReportRecipeDesigns.Load("CrestApps.OrchardCore.Subscriptions", "subscriptions-report-builder-reports.recipe.json");
+
+        // Act
+        var results = await ReportRecipeDesigns.RunAsync(designs, _user, _start.AddDays(10), new TestDataSourceEntry(SubscriptionReportDataSource.Name, Source(session)));
+
+        // Assert
+        Assert.Equal(["subscriptions-new", "subscriptions-expiring"], designs.Select(design => design.ItemId));
+        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+
+        // The three subscriptions started in the same month.
+        var started = Assert.Single(results["subscriptions-new"].Rows);
+        Assert.Equal(3m, Convert.ToDecimal(started[results["subscriptions-new"].IndexOf("subscriptions")], CultureInfo.InvariantCulture));
+
+        // The active and the past due subscriptions are paid through a month after they started, 20 and 21 days from now.
+        // The canceled one is left out.
+        var expiring = results["subscriptions-expiring"];
+        Assert.Equal(2, expiring.Rows.Count);
+        Assert.Equal("user-1", ReportRecipeDesigns.Value(expiring, 0, "subscriber"));
+        Assert.Equal(20m, Convert.ToDecimal(ReportRecipeDesigns.Value(expiring, 0, "daysleft"), CultureInfo.InvariantCulture));
+        Assert.Equal("session-9", ReportRecipeDesigns.Value(expiring, 1, "subscriber"));
     }
 
     [Fact]

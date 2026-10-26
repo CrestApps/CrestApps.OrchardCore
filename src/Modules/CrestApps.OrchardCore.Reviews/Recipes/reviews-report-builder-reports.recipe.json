@@ -1,0 +1,96 @@
+{
+  "name": "ReviewsReportBuilderReports",
+  "displayName": "Reports: product review reports to adapt",
+  "description": "Turns on the Report Builder and adds product review reports built from the Reviews data source: reviews by stars and status, and reviews by product with the average rating. They show what the built-in product reviews report shows, so you can open one in the builder, change it, and save your own. The person who runs the recipe owns them.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "reviews",
+    "reports",
+    "report builder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Reviews",
+        "CrestApps.OrchardCore.Reports.Builder"
+      ]
+    },
+    {
+      "name": "ReportDesigns",
+      "Reports": [
+        {
+          "itemId": "reviews-by-stars",
+          "displayText": "Reviews by stars",
+          "description": "The reviews written in the period, by the stars given and whether they wait for approval, are approved or are rejected.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "r", "source": "Reviews", "dataSet": "ProductReviews", "displayName": "Product reviews" }
+            ],
+            "filters": [
+              { "id": "written", "field": "r.CreatedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Written", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "stars", "field": "r.Rating", "label": "Stars" },
+              { "id": "status", "field": "r.Status", "label": "Status" },
+              { "id": "reviews", "field": "$count", "label": "Reviews" }
+            ],
+            "sorts": [
+              { "columnId": "stars", "descending": true },
+              { "columnId": "status" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "reviews" ] },
+            { "id": "stars", "type": "Chart", "title": "Stars given", "chartType": "Bar", "categoryColumnId": "stars", "seriesColumnId": "status", "valueColumnIds": [ "reviews" ], "stacked": true },
+            { "id": "pivot", "type": "Pivot", "title": "Reviews by stars and status", "columnIds": [ "stars" ], "seriesColumnId": "status", "valueColumnIds": [ "reviews" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "reviews-by-product",
+          "displayText": "Reviews by product",
+          "description": "The reviews of each product written in the period: how many wait for approval or are approved, the average rating from the approved reviews, and the share from verified buyers.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "r", "source": "Reviews", "dataSet": "ProductReviews", "displayName": "Product reviews" }
+            ],
+            "calculatedFields": [
+              { "name": "Waiting", "label": "Waiting", "expression": "SUM(IF([r.Status] = 'Pending', 1, 0))" },
+              { "name": "Approved", "label": "Approved", "expression": "SUM(IF([r.IsApproved], 1, 0))" },
+              { "name": "AverageRating", "label": "Average rating", "expression": "SUM(IF([r.IsApproved], [r.Rating], 0)) / SUM(IF([r.IsApproved], 1, 0))" },
+              { "name": "Verified", "label": "Verified", "expression": "SUM(IF([r.VerifiedPurchase], 1, 0)) / COUNT()" }
+            ],
+            "filters": [
+              { "id": "written", "field": "r.CreatedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Written", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "product", "field": "r.ProductTitle", "label": "Product" },
+              { "id": "reviews", "field": "$count", "label": "Reviews" },
+              { "id": "waiting", "field": "Waiting", "label": "Waiting" },
+              { "id": "approved", "field": "Approved", "label": "Approved" },
+              { "id": "rating", "field": "AverageRating", "label": "Average rating", "format": "N1" },
+              { "id": "verified", "field": "Verified", "label": "Verified", "format": "P0" }
+            ],
+            "sorts": [
+              { "columnId": "reviews", "descending": true },
+              { "columnId": "product" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "reviews", "waiting", "approved", "rating", "verified" ] },
+            { "id": "table", "type": "Table", "title": "Products", "columnIds": [ "product", "reviews", "waiting", "approved", "rating", "verified" ], "showTotals": true }
+          ]
+        }
+      ]
+    }
+  ]
+}

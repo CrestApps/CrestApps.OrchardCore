@@ -410,6 +410,17 @@ The gateway's customer identifier, the history messages and what the entitlement
 | `Quantity` | Quantity | |
 | `UnitPrice`, `LineTotal` | Unit price, Line total | In the subscription's currency. |
 
+## Reports to adapt
+
+The **Reports: subscription reports to adapt** recipe (`SubscriptionsReportBuilderReports`) turns on the Report Builder and adds reports built from the `Subscriptions` data set, under the **Store** category. They show what the built-in reports they match show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| New subscriptions | `Subscriptions` started in the last 12 months, grouped by month | New subscriptions trend |
+| Expiring subscriptions | Active, trialing and past due `Subscriptions` whose paid period ends in the next 30 days, soonest first, with a calculated field for the days remaining | Expiring subscriptions |
+
+The subscription revenue, tax collected and product performance reports read the payment ledger, not these data sets, and the subscriptions dashboard shows figures for the period and figures for now side by side, so they stay built-in only.
+
 ## Recipes and schema
 
 Subscription plans are content items, so they are defined and imported through Orchard Core's built-in `ContentDefinition` and `Content` recipe steps — no subscription-specific recipe step is required.

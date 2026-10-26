@@ -100,3 +100,13 @@ The **Download entitlements** data set (`DownloadEntitlements`) has one row per 
 | `ProductId` | Product ID | References the product (`Products` > `Products` > `ContentItemId`). |
 | `ProductTitle` | Product | The product's title when the order was paid. |
 | `FileName` | File | The file's name, as the order's page shows it. |
+
+## Reports to adapt
+
+The **Reports: download reports to adapt** recipe (`DownloadsReportBuilderReports`) turns on the Report Builder and adds a report built from this data set, under the **Store** category. It shows what the built-in **Downloads** report shows, so you can open it in the builder, change it, and save it as your own. The person who runs the recipe owns it, and it reads with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Downloads | **Download entitlements** given in the last 30 days, grouped by product and file, with calculated fields for the links used, never used, used up, expired and taken back | Downloads |
+
+Like the built-in report, the designed report counts a used-up link as used up, not as expired, even when it also expired. No part of the built-in report stays built-in only.

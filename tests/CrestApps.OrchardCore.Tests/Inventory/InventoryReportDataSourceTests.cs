@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Inventory;
 using CrestApps.OrchardCore.Inventory.Core;
@@ -641,6 +642,36 @@ public sealed class InventoryReportDataSourceTests : IAsyncLifetime
         Assert.Equal("Shop", location["Name"]);
         Assert.Equal("1 High Street", location["Address"]);
         Assert.Empty(noRows);
+    }
+
+    [Fact]
+    public async Task RecipeReports_RunOverTheInventoryDataSource()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var designs = ReportRecipeDesigns.Load("CrestApps.OrchardCore.Inventory", "inventory-report-builder-reports.recipe.json");
+
+        // Act
+        var results = await ReportRecipeDesigns.RunAsync(designs, _user, _start.AddDays(10), new TestDataSourceEntry(InventoryReportDataSource.Name, Source(session)));
+
+        // Assert
+        Assert.Equal(["inventory-stock-on-hand", "inventory-stock-movements"], designs.Select(design => design.ItemId));
+        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+
+        // The archived item is left out, and the cap, with the fewest units available, comes first.
+        var stock = results["inventory-stock-on-hand"];
+        Assert.Equal(2, stock.Rows.Count);
+        Assert.Equal("Cap, Red", ReportRecipeDesigns.Value(stock, 0, "item"));
+
+        // The mug received 10 units and sold 2, and the cap was corrected by 3. Moving the mug to the shop changes neither.
+        var movements = results["inventory-stock-movements"];
+        Assert.Equal(2, movements.Rows.Count);
+        Assert.Equal("Mug", ReportRecipeDesigns.Value(movements, 0, "item"));
+        Assert.Equal(10m, Convert.ToDecimal(ReportRecipeDesigns.Value(movements, 0, "received"), CultureInfo.InvariantCulture));
+        Assert.Equal(2m, Convert.ToDecimal(ReportRecipeDesigns.Value(movements, 0, "sold"), CultureInfo.InvariantCulture));
+        Assert.Equal(10m, Convert.ToDecimal(ReportRecipeDesigns.Value(movements, 0, "onhand"), CultureInfo.InvariantCulture));
+        Assert.Equal("Cap, Red", ReportRecipeDesigns.Value(movements, 1, "item"));
+        Assert.Equal(3m, Convert.ToDecimal(ReportRecipeDesigns.Value(movements, 1, "corrections"), CultureInfo.InvariantCulture));
     }
 
     [Fact]

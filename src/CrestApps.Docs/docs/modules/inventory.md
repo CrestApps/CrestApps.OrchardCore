@@ -238,6 +238,17 @@ The note of a purchase order is never exposed.
 
 Like the item's admin page, which shows only how many shoppers wait, the alerts never expose who asked: neither the email address nor the user.
 
+## Reports to adapt
+
+The **Reports: inventory reports to adapt** recipe (`InventoryReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, under the **Store** category. They show the units of each item that the built-in stock reports show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Stock on hand | **Stock items** that are not archived, the fewest units available first | Stock on hand |
+| Stock movements | **Stock movements** of the last 30 days, joined to **Stock items** and grouped by item, with calculated fields for the units received, sold, returned and corrected | Stock movements |
+
+The built-in **Stock on hand** report also counts the items, and the items that are out of stock or low. The built-in **Stock movements** report also counts the items that moved and the items that run out within 14 days, and shows the days of stock left at the period's rate of sale. A designed report that lists each item does not also count the items, and it does not know the length of its period, so these figures stay built-in only.
+
 ## Availability
 
 `InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items, every location together: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant, and `ReleaseDateUtc` while the item's release date is to come, which makes a backorder `ProductAvailabilityStatus.Preorder`. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
