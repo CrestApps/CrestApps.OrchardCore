@@ -56,9 +56,29 @@ public sealed class ReportDesignRunner
     /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The run outcome.</returns>
+    public Task<ReportRunResult> RunAsync(
+        ReportDesign design,
+        IDictionary<string, IList<string>> filterValues,
+        CancellationToken cancellationToken = default)
+    {
+        return RunAsync(design, filterValues, period: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a saved report with its owner's access, for a period set on its date range filter.
+    /// </summary>
+    /// <param name="design">The report.</param>
+    /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
+    /// <param name="period">
+    /// The days the report covers, set on the first filter it lets its viewers pick a date range with (see
+    /// <see cref="FindPeriodFilter"/>), or <see langword="null"/> to keep that filter's value.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The run outcome.</returns>
     public async Task<ReportRunResult> RunAsync(
         ReportDesign design,
         IDictionary<string, IList<string>> filterValues,
+        ReportRunPeriod period,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(design);
@@ -75,7 +95,7 @@ public sealed class ReportDesignRunner
             return result;
         }
 
-        return await RunAsync(design, owner, filterValues, cancellationToken);
+        return await RunAsync(design, owner, filterValues, period, cancellationToken);
     }
 
     /// <summary>
@@ -86,10 +106,32 @@ public sealed class ReportDesignRunner
     /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The run outcome.</returns>
+    public Task<ReportRunResult> RunAsync(
+        ReportDesign design,
+        ClaimsPrincipal dataUser,
+        IDictionary<string, IList<string>> filterValues,
+        CancellationToken cancellationToken = default)
+    {
+        return RunAsync(design, dataUser, filterValues, period: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a report with the access of a given principal, for a period set on its date range filter.
+    /// </summary>
+    /// <param name="design">The report, saved or not.</param>
+    /// <param name="dataUser">The principal whose access reads the data.</param>
+    /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
+    /// <param name="period">
+    /// The days the report covers, set on the first filter it lets its viewers pick a date range with (see
+    /// <see cref="FindPeriodFilter"/>), or <see langword="null"/> to keep that filter's value.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The run outcome.</returns>
     public async Task<ReportRunResult> RunAsync(
         ReportDesign design,
         ClaimsPrincipal dataUser,
         IDictionary<string, IList<string>> filterValues,
+        ReportRunPeriod period,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(design);
@@ -114,6 +156,15 @@ public sealed class ReportDesignRunner
                 }
 
                 return result;
+            }
+
+            // The period overrides whatever was entered for the filter it is set on.
+            var periodFilter = period is null ? null : FindPeriodFilter(plan);
+
+            if (periodFilter is not null)
+            {
+                context.FilterValues[periodFilter.Definition.Id] = period.ToFilterValues();
+                result.PeriodFilterId = periodFilter.Definition.Id;
             }
 
             var visuals = design.Visuals ?? [];
@@ -165,6 +216,22 @@ public sealed class ReportDesignRunner
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Finds the filter a period is set on: the first filter, in the report's order, that its viewers pick a date range
+    /// with.
+    /// </summary>
+    /// <param name="plan">The plan of the report's query.</param>
+    /// <returns>The filter, or <see langword="null"/> when the report lets its viewers pick no date range.</returns>
+    public static PlannedFilter FindPeriodFilter(ReportQueryPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        return plan.Filters.FirstOrDefault(filter =>
+            filter.Definition.Exposed &&
+            !string.IsNullOrEmpty(filter.Definition.Id) &&
+            ResolveControl(filter.Definition, filter.DataType) == ReportFilterControl.DateRange);
     }
 
     /// <summary>
@@ -242,6 +309,12 @@ public sealed class ReportRunResult
     /// Gets the exposed filters to render, with their current values and choices.
     /// </summary>
     public IList<ReportExposedFilter> Filters { get; } = [];
+
+    /// <summary>
+    /// Gets or sets the identifier of the filter the run's period was set on, or <see langword="null"/> when the run had
+    /// no period or the report lets its viewers pick no date range.
+    /// </summary>
+    public string PeriodFilterId { get; set; }
 }
 
 /// <summary>
