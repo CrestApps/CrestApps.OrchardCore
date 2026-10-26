@@ -346,6 +346,70 @@ Every money figure is read from the **payment ledger** and every subscriber figu
 
 Revenue is reported **per currency** and never summed across them, because a single total mixing currencies is a number that means nothing — and silently adding them hides that the site took money in a currency the owner did not expect.
 
+## Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, which the Report Builder enables, the **Subscriptions** feature registers the **Subscriptions** data source (technical name `Subscriptions`). The Report Builder and Orchard Core data pipelines both read it. The **Subscriptions - Installment Plans** feature adds its own data sets to the same source, and registers the source when it is on without the Subscriptions feature; see [Installment Plans](installment-plans#report-builder-data-source).
+
+| Data set | Registered by | Permission | Rows |
+| --- | --- | --- | --- |
+| `Subscriptions` | Subscriptions | Manage subscriptions | One per subscription agreement. |
+| `SubscriptionLines` | Subscriptions | Manage subscriptions | One per line a subscription bills each cycle. |
+| `InstallmentPlans` | Subscriptions - Installment Plans | Manage installment plans | One per installment plan. |
+| `Installments` | Subscriptions - Installment Plans | Manage installment plans | One per payment of an installment plan. |
+
+The permission is the one the built-in subscription reports and the **Agreements** screen use. Without it, or without a principal, a data set is not listed and gives no rows. The rows come newest first by when the subscription started. A date range on the start date, a join on the subscription, its owner, its plan or its checkout session, and a filter on the status, the payment provider or the currency narrow the read. The `Subscriptions` rows can be grouped and added up in the database by the fields the index holds, such as the status, the currency and the total per cycle; the report groups by the other fields, and the lines, itself.
+
+A subscription has no customer record of its own: it belongs to a user, or to a guest. To join subscriptions to customers, join on the user.
+
+### Subscriptions
+
+Money is in the subscription's own currency, which the `Currency` field names.
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `ItemId` | Subscription ID | Identifier. |
+| `Title` | Title | Usually the plan bought. |
+| `Status` | Status | `Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused` or `Incomplete`. |
+| `ReferenceType` | Bought as | `Subscription` for a subscription plan. |
+| `ReferenceId` | Plan ID | The subscription plan the subscription was bought from. Points at `Products/Products/ContentItemId`. |
+| `ReferenceVersionId` | Plan version ID | The version of the plan the subscriber agreed to. |
+| `CheckoutSessionId` | Checkout session ID | Points at `Checkout/CheckoutSessions/ItemId`. |
+| `ProviderKey` | Payment provider | The key of the payment provider that bills the agreement. |
+| `ProviderSubscriptionId` | Gateway reference | The agreement's identifier at the payment provider. |
+| `GatewayMode` | Gateway mode | `Live` or `Testing`. |
+| `LineCount` | Lines | |
+| `OwnerId` | Owner ID | The user who owns the subscription; for a guest, the guest's own identifier, which matches no user. Points at the users data set. |
+| `IsGuest` | Guest | |
+| `GuestContactEmail` | Guest email | |
+| `Currency` | Currency | |
+| `Amount`, `TaxAmount`, `TotalAmount` | Amount per cycle, Tax per cycle, Total per cycle | In the subscription's currency. The total includes tax. |
+| `BillingDuration`, `DurationType` | Billing every, Billing unit | The billing cycle, such as 1 Month. |
+| `BillingCycleLimit` | Cycles agreed | Empty when the subscription bills until it is canceled. |
+| `CyclesBilled` | Cycles billed | |
+| `CreatedUtc` | Started | The data set's main date. |
+| `CurrentPeriodStartUtc`, `CurrentPeriodEndUtc` | Period start, Paid through | |
+| `NextBillingUtc` | Next billing | |
+| `TrialEndsUtc`, `PastDueSinceUtc`, `GraceEndsUtc` | Trial ends, Past due since, Grace ends | |
+| `CancelAtPeriodEnd`, `CanceledUtc`, `CancellationReason` | Cancels at period end, Canceled, Cancel reason | |
+| `UpdatedUtc` | Last changed | |
+
+The gateway's customer identifier, the history messages and what the entitlements carry are not exposed.
+
+### SubscriptionLines
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `SubscriptionId` | Subscription ID | Points at `Subscriptions/Subscriptions/ItemId`. A join on it narrows the read. |
+| `SubscriptionTitle`, `SubscriptionStatus` | Subscription, Subscription status | From the subscription. |
+| `Currency` | Currency | The subscription's currency. |
+| `OwnerId` | Owner ID | Points at the users data set. |
+| `SubscriptionCreatedUtc` | Subscription started | The data set's main date. |
+| `LineId` | Line ID | The checkout line the line came from. |
+| `Position` | Line number | |
+| `Description` | Description | What the customer sees on an invoice. |
+| `Quantity` | Quantity | |
+| `UnitPrice`, `LineTotal` | Unit price, Line total | In the subscription's currency. |
+
 ## Recipes and schema
 
 Subscription plans are content items, so they are defined and imported through Orchard Core's built-in `ContentDefinition` and `Content` recipe steps — no subscription-specific recipe step is required.
