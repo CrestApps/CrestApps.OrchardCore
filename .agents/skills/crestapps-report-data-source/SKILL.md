@@ -117,7 +117,8 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
 
     protected override async IAsyncEnumerable<Invoice> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // DataConditions.Keys(query.Conditions, "InvoiceId"): null = no key filter, empty = nothing can match.
+        // DataConditions.Keys(query.Conditions.Where(c => c.IsJoinKey), "InvoiceId"): null = no key filter,
+        // empty = nothing can match. Pass only join keys: the engine compares a viewer's filter without regard to case.
         // DataConditions.DateRange(query.Conditions, "IssuedUtc"): inclusive bounds for the index column.
         await foreach (var invoice in ReportIndexPages.ReadAsync(_session, Query, collection: null, cancellationToken))
         {
@@ -174,9 +175,12 @@ public sealed class BillingReportDataSource : RecordDataSource, IDataSource   //
 
 ## Join keys
 
-Mark a field `IsKeyFilterable` only if `LoadAsync` applies `DataConditions.Keys(query.Conditions, field)` **exactly**
-(every record whose value is a key, no other). `null` means no key filter; an empty list means nothing can match
-(`yield break`). The engine sends keys as an `In` condition with `IsJoinKey`, in batches of `JoinKeyBatchSize`.
+Mark a field `IsKeyFilterable` only if `LoadAsync` applies the keys of the join **exactly** (every record whose value
+is a key, no other): `DataConditions.Keys(query.Conditions.Where(c => c.IsJoinKey), field)`. `null` means no key
+filter; an empty list means nothing can match (`yield break`). The engine sends keys as an `In` condition with
+`IsJoinKey`, in batches of `JoinKeyBatchSize`. Never pass every condition: `DataConditions.Keys` also returns a
+viewer's `Equals`/`In` filter on the field, which the engine compares without regard to case, so an exact match in the
+database drops rows. `IndexedReportDataSet` already does this.
 
 ## Aggregate push-down
 

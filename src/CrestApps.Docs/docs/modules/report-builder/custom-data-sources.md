@@ -99,9 +99,12 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
 
     protected override async IAsyncEnumerable<Invoice> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // Join keys: read only the invoices a joined report can match. An empty list means none can match.
-        var invoiceIds = DataConditions.Keys(query.Conditions, "InvoiceId")?.Select(key => key?.ToString()).ToArray();
-        var customerIds = DataConditions.Keys(query.Conditions, "CustomerId")?.Select(key => key?.ToString()).ToArray();
+        // Join keys: read only the invoices a joined report can match. An empty list means none can match. Only the
+        // conditions of a join are matched exactly; the engine compares a viewer's filter on the same field without
+        // regard to case, so that one is left to the engine.
+        var joinKeys = query.Conditions.Where(condition => condition.IsJoinKey).ToArray();
+        var invoiceIds = DataConditions.Keys(joinKeys, "InvoiceId")?.Select(key => key?.ToString()).ToArray();
+        var customerIds = DataConditions.Keys(joinKeys, "CustomerId")?.Select(key => key?.ToString()).ToArray();
 
         // A viewer's filter that limits the status to a list of values is applied by the database, without regard to
         // case like the engine's own filter.
@@ -475,7 +478,7 @@ Without it the database sorts the whole index table for every page.
 When a report joins a data set with an inner or left join, the engine can send the distinct keys of the rows before it, so the joined data set reads only the records that can match instead of its newest records up to the row limit. To take part:
 
 1. Mark the field `IsKeyFilterable` (with the helper, `Fields.MarkKeyFilterable(names)`). Only `Text` and `Integer` fields joined to a field of the same type are narrowed.
-2. Read the keys with `DataConditions.Keys(query.Conditions, field)`: `null` when no condition limits the field to a list of values, an empty list when no record can match, or the values.
+2. Read the keys from the conditions of the join only, those with `IsJoinKey` set: `DataConditions.Keys(query.Conditions.Where(condition => condition.IsJoinKey), field)` gives `null` when no condition limits the field to a list of values, an empty list when no record can match, or the values. `DataConditions.Keys` also returns the values of a viewer's `Equals` or `In` filter on the field. The engine compares those without regard to case, so an exact match in the database could drop a row the engine keeps: leave them to the engine, or apply them with `ReportIndexConditions.Text`, which compares in upper case. `IndexedReportDataSet` does this for you.
 3. Apply them **exactly**: return every record whose value is one of the keys, and no other. A source that cannot must not set the flag.
 
 The keys arrive as an `In` condition with `IsJoinKey` set, in batches of `JoinKeyBatchSize`, up to `MaxJoinKeys` keys; with more keys, the joined data set is read in full (see [Configuration](index.md#configuration)).

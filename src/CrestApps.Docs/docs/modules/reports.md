@@ -39,6 +39,8 @@ PDFsharp reads the host's fonts. On Windows it uses the Windows fonts; on Linux 
 
 The optional **Report Builder** add-on lets people design their own reports with drag and drop from pluggable data sources, and share them. See [Report Builder](report-builder/index.md).
 
+The modules publish their records as data sources for the builder and for Orchard Core's data pipelines: **Orders**, **Products**, **Customers**, **Companies**, **Inventory**, **Checkout**, **Carts**, **Transactions**, **Subscriptions**, **Shipping**, **Reviews**, **Downloads**, **Bookings**, **Marketplace**, **Point of Sale**, **Contact Center**, **Omnichannel**, **Messaging**, **AI chat** (with AI usage), **Phone number verifications** and **DNC registry**, beside Orchard Core's **Content items**, **Users** and **Queries** and the builder's **Report views**. Each one is registered when Data Pipelines Core and the feature that stores its data are on, and each data set needs the permission of the module's own screens. [Data sources](report-builder/data-sources.md) lists them with their data sets, permissions and relationships, and each module's page lists the fields of its data sets. Where a built-in report can be built in the builder, the module ships a recipe that adds it as a report you can copy and change, such as **Reports: store reports to adapt** for the order reports.
+
 The implementation is split into three layers:
 
 - **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportRunner`, `ReportDescriptor`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
