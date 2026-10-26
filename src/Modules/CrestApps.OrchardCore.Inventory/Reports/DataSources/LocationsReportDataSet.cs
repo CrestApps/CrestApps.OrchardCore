@@ -61,7 +61,9 @@ public sealed class LocationsReportDataSet : RecordDataSet<ReportChildRow<IReadO
     /// <inheritdoc/>
     protected override async IAsyncEnumerable<ReportChildRow<IReadOnlyList<InventoryLocation>, InventoryLocation>> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var keys = DataConditions.Keys(query.Conditions, CommerceReportDataSets.ItemIdField);
+        // Only the keys of a join are matched exactly; a viewer's filter on the field is left to the consumer, which compares
+        // text without regard to case.
+        var keys = DataConditions.Keys(query.Conditions?.Where(condition => condition is { IsJoinKey: true }) ?? [], CommerceReportDataSets.ItemIdField);
 
         if (keys is { Count: 0 })
         {

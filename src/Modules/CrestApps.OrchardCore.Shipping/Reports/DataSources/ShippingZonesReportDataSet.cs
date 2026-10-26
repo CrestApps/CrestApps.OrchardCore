@@ -78,14 +78,17 @@ public sealed class ShippingZonesReportDataSet : RecordDataSet<ShippingZone>, IS
     }
 
     /// <summary>
-    /// Gets the keys a join asks for on a field, or <see langword="null"/> when it asks for none.
+    /// Gets the keys a join asks for on a field, or <see langword="null"/> when it asks for none. A viewer's filter on the
+    /// field is not a join's keys.
     /// </summary>
     /// <param name="query">The query.</param>
     /// <param name="field">The field.</param>
     /// <returns>The keys, or <see langword="null"/>.</returns>
     internal static HashSet<string> KeysOf(DataSourceQuery query, string field)
     {
-        return DataConditions.Keys(query.Conditions, field)?
+        // Only the keys of a join are matched exactly; a viewer's filter on the field is left to the consumer, which compares
+        // text without regard to case.
+        return DataConditions.Keys(query.Conditions?.Where(condition => condition is { IsJoinKey: true }) ?? [], field)?
             .Select(key => key?.ToString())
             .ToHashSet(StringComparer.Ordinal);
     }

@@ -140,6 +140,18 @@ public sealed class AICompletionUsageReportDataSet : IndexedReportDataSet<AIComp
     protected override bool CanAggregate => true;
 
     /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, string> GetAggregateColumns()
+    {
+        // The index keeps the latency as a floating-point number, which the database adds up differently from the
+        // consumer's decimals, so it is left to the consumer.
+        var columns = new Dictionary<string, string>(base.GetAggregateColumns(), StringComparer.Ordinal);
+
+        columns.Remove(nameof(AICompletionUsageRecord.ResponseLatencyMs));
+
+        return columns;
+    }
+
+    /// <inheritdoc/>
     protected override void DescribeColumns(ReportIndexConditions<AICompletionUsageIndex> columns)
     {
         columns

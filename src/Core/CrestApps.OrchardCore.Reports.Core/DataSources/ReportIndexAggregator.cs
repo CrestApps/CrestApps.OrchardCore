@@ -214,7 +214,7 @@ public static class ReportIndexAggregator
             selects.Add(measure.Function switch
             {
                 DataAggregate.Count => $"COUNT({column})",
-                DataAggregate.Sum => $"SUM({column})",
+                DataAggregate.Sum => $"SUM({Widen(dialect, column, type)})",
                 DataAggregate.Min => $"MIN({column})",
                 _ => $"MAX({column})",
             });
@@ -402,6 +402,15 @@ public static class ReportIndexAggregator
         }
 
         return false;
+    }
+
+    // SQL Server adds up an int or smallint column as an int, which overflows past about two billion, such as the tokens
+    // of a busy month; the other databases widen the sum of whole numbers themselves.
+    private static string Widen(ISqlDialect dialect, string column, Type type)
+    {
+        return (type == typeof(int) || type == typeof(short)) && string.Equals(dialect.Name, "SqlServer", StringComparison.OrdinalIgnoreCase)
+            ? $"CAST({column} AS BIGINT)"
+            : column;
     }
 
     private static object[] ReadRow(DbDataReader reader, ReportIndexStatement statement)

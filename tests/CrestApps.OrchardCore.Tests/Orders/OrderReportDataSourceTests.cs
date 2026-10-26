@@ -323,6 +323,39 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Query_Orders_FiltersThatDifferInCaseFromTheData_NeverDropAMatchingRow()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+
+        // A viewer's filter on a key field is compared without regard to case by the report, so it is not matched exactly.
+        var customer = Query(CommerceReportDataSets.OrderSource.Orders, CommerceReportDataSets.ItemIdField);
+        customer.Conditions.Add(Condition("CustomerId", DataFilterOperator.Equals, "CUSTOMER-1"));
+
+        // Two filters on the status that differ in case allow the same orders.
+        var status = Query(CommerceReportDataSets.OrderSource.Orders, CommerceReportDataSets.ItemIdField);
+        status.Conditions.Add(Condition("Status", DataFilterOperator.In, "Paid"));
+        status.Conditions.Add(Condition("Status", DataFilterOperator.Equals, "paid"));
+
+        // A join's keys are still matched exactly.
+        var joined = Query(CommerceReportDataSets.OrderSource.Orders, CommerceReportDataSets.ItemIdField);
+        joined.Conditions.Add(Condition("CustomerId", DataFilterOperator.Equals, "CUSTOMER-1"));
+        joined.Conditions.Add(new DataCondition { Field = "CustomerId", Operator = DataFilterOperator.In, Values = ["customer-1"], IsJoinKey = true });
+
+        // Act
+        var customerRows = Rows(await ReportDesignerTestServices.ReadAsync(source, customer, TestContext.Current.CancellationToken));
+        var statusRows = Rows(await ReportDesignerTestServices.ReadAsync(source, status, TestContext.Current.CancellationToken));
+        var joinedRows = Rows(await ReportDesignerTestServices.ReadAsync(source, joined, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains(customerRows, row => (string)row[CommerceReportDataSets.ItemIdField] == "order-1");
+        Assert.Contains(customerRows, row => (string)row[CommerceReportDataSets.ItemIdField] == "order-0");
+        Assert.Equal(["order-2", "order-1", "order-0"], statusRows.Select(row => row[CommerceReportDataSets.ItemIdField]));
+        Assert.Equal(["order-1", "order-0"], joinedRows.Select(row => row[CommerceReportDataSets.ItemIdField]));
+    }
+
+    [Fact]
     public async Task Query_Orders_StopsAtMaxRows()
     {
         // Arrange
