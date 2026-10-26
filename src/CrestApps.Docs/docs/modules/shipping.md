@@ -100,6 +100,77 @@ See [Commerce API](commerce-api.md) for the endpoints, the conventions they shar
 
 Administrators have it by default.
 
+## Report Builder data source
+
+Shipping exposes its records to the [Report Builder](report-builder/data-sources.md) and to Orchard Core data pipelines as the **Shipping** data source (`Shipping`). The data source and its four data sets are registered when **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`), which the Report Builder needs, is enabled with Shipping.
+
+The shipments and shipment lines need **Ship orders and update their shipments** (`FulfillOrders`), the permission of an order's Shipments section and of the **Shipping times** report. The zones and methods need **Manage shipping zones, methods and settings** (`ManageShipping`), the permission of **Commerce > Shipping**. A report without a user reads nothing. Identifier fields reference the data sets they point to, so the builder joins them: an `OrderId` joins the **Orders** data source's orders, and a shipment line's `LineId` joins its order lines.
+
+| Data set | Name | Main date | One row per |
+| --- | --- | --- | --- |
+| **Shipments** | `Shipments` | `CreatedUtc` | Shipment of an order |
+| **Shipment lines** | `ShipmentLines` | `ShipmentCreatedUtc` | Order line a shipment holds units of |
+| **Shipping zones** | `ShippingZones` | None | Shipping zone, in the order zones are tried |
+| **Shipping methods** | `ShippingMethods` | None | Shipping method a zone offers |
+
+The shipments are read newest first, a page at a time, and group simple reports in the database for the fields their index holds; see [Large data](report-builder/large-data.md). The zones and methods are few, and are read from their catalog. Carriers are not records: a shipment keeps its carrier's name, and the carrier accounts are settings with secrets, so they are not exposed. Rates are worked out for each checkout and not kept, so they are not exposed either; the methods give the amounts of flat and free rates.
+
+### Shipments
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Shipment ID | Identifier. |
+| `OrderId`, `OrderNumber` | Order ID, Order number | The order ID references the **Orders** data set. |
+| `Number` | Shipment number | The shipment's place among the order's shipments, from 1. |
+| `Status` | Status | `Pending`, `Shipped`, `Delivered` or `Returned`. |
+| `Carrier`, `TrackingNumber`, `TrackingStatus` | Carrier, Tracking number, Carrier's latest status | |
+| `LineCount`, `ItemCount` | Lines, Units | |
+| `HasLabel` | Label bought | |
+| `Currency` | Label currency | The currency of the label cost. |
+| `LabelCost` | Label cost | In the label's currency. |
+| `CreatedUtc`, `ShippedUtc`, `DeliveredUtc`, `ReturnedUtc`, `ShippedEmailSentUtc`, `ModifiedUtc` | Created, Shipped, Delivered, Returned, Buyer emailed, Last changed | Created is the main date. |
+
+The store's note on a shipment, the links to its label and tracking page, and the carrier's tracking events are never exposed.
+
+### Shipment lines
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ShipmentId` | Shipment ID | References **Shipments**. |
+| `OrderId`, `OrderNumber` | Order ID, Order number | The order ID references the **Orders** data set. |
+| `ShipmentNumber`, `ShipmentStatus`, `Carrier` | Shipment number, Shipment status, Carrier | From the shipment. |
+| `ShipmentCreatedUtc`, `ShippedUtc`, `DeliveredUtc` | Shipment created, Shipped, Delivered | Shipment created is the main date. |
+| `LineId` | Order line ID | References the **Order lines** data set of the **Orders** data source. |
+| `Position` | Line number | |
+| `Title`, `Sku` | Product, SKU | As they were when the order was placed. |
+| `Quantity` | Units | |
+
+### Shipping zones
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Zone ID | Identifier. |
+| `Name` | Zone | |
+| `Position` | Position | The zone's place in the order zones are tried. The rest of the world is tried last. |
+| `Countries`, `Regions` | Countries, Regions | Codes separated by commas. |
+| `RestOfWorld` | Rest of the world | |
+| `MethodCount`, `EnabledMethodCount` | Methods, Methods on | |
+| `CreatedUtc`, `ModifiedUtc` | Created, Last changed | |
+
+### Shipping methods
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ZoneId`, `ZoneName` | Zone ID, Zone | The zone ID references **Shipping zones**. |
+| `MethodId` | Method ID | Identifier. |
+| `Name`, `Description` | Method, Description | |
+| `ProviderName` | Rate provider | Such as `Flat`, `Table`, `Free`, `LocalDelivery` or `Carrier`. |
+| `Enabled`, `Position` | On, Position | |
+| `TaxCategoryCode` | Tax category | |
+| `Currency` | Currency | The method's currency. |
+| `FlatAmount`, `PerItemAmount` | Flat amount, Amount per item | For flat methods, in the method's currency; empty for other methods. |
+| `FreeFromSubtotal` | Free from subtotal | For free methods, in the method's currency; empty for other methods. |
+
 ## Recipes and deployments
 
 The **ShippingZones** step creates or updates zones, found by `ItemId` or `Name`. Zone names are unique: a new zone named like another is reported as a recipe error. Methods without a `MethodId` get one. Provider settings go in the method's `Properties`, keyed by type name:
