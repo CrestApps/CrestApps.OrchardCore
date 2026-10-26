@@ -77,7 +77,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         if (string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["API key is required field."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
         if (hasNewKey)
