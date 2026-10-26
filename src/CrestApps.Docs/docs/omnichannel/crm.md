@@ -15,7 +15,7 @@ user_manual:
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.Crm` |
 | **Depends on** | Omnichannel Management, `OrchardCore.Lists`, `OrchardCore.Title` |
 
-The Omnichannel CRM feature adds Salesforce-style **leads**, **accounts** and **opportunities** to the Omnichannel CRM. None of them is a new storage model. Each is an ordinary content type, recognised by the parts it carries. The admin screens (lead lists and search terms, the Convert screen, AI lead conversion on a load, the Convert Lead subject action, lead statuses, lead sources, opportunity stages, imports and exports) are described step by step in [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) in the User Manual.
+The Omnichannel CRM feature adds **leads**, **accounts** and **opportunities**, as sales teams know them, to the Omnichannel CRM. None of them is a new storage model. Each is an ordinary content type, recognised by the parts it carries. The admin screens (lead lists and search terms, the Convert screen, AI lead conversion on a load, the Convert Lead subject action, lead statuses, lead sources, opportunity stages, imports and exports) are described step by step in [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) in the User Manual.
 
 With the feature off, nothing changes: every type with `OmnichannelContactPart` is a contact, as before.
 
