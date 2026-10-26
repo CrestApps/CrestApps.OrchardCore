@@ -35,6 +35,7 @@ Watch the short video, then read about each data source below.
 | **Contact Center** | **Interactions**, **Interaction events**, **Call sessions**, **Call quality**, **Call recordings**, **Callback requests**, **Dialer profiles**, **Queues**, **Queue groups**, **Queue items**, **Agent profiles**, **Agent sessions** and **Shared voicemails**, each when the Contact Center feature that stores it is on. | A Contact Center feature is on. | **View Contact Center reports**. Call recordings also need **Listen to anyone's call recordings**; shared voicemails need **Access shared queue voicemail for entitled queues**, and show only the queues you may answer. |
 | **AI chat** | **Chat sessions** and **Chat session metrics** (messages, handle time, tokens, ratings, resolution and conversion). | **AI Chat** is on; the metrics need **AI Chat Session Analytics**. | **View AI Chat Analytics**. |
 | **Messaging** | **Conversations** and **Messages** of the messaging workspace. | **Omnichannel Messaging Workspace** is on. | **View all messaging conversations**. |
+| **Orders** | **Orders**, **Order lines**, **Order refunds**, **Order disputes**, **Order discounts** and **Order taxes**; **Returns** and **Gift cards** when those features are on. | **Orders** is on. | **Manage orders**. Gift cards also need **Manage gift cards**. |
 
 If a data source or data set is missing, your site may not use the feature that stores that data, or you may not have the permission it asks for. Ask your administrator.
 
