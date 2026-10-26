@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Reports.Models;
-using MigraDoc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
 
@@ -40,19 +39,6 @@ public sealed class PdfReportExportFormat : IReportExportFormat
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        ReportPdfFonts.Ensure();
-
-        var renderer = new PdfDocumentRenderer
-        {
-            Document = new ReportPdfDocumentBuilder(document, S["Page {0} of {1}"].Value).Build(),
-        };
-
-        renderer.RenderDocument();
-
-        using var stream = new MemoryStream();
-
-        renderer.PdfDocument.Save(stream, false);
-
-        return stream.ToArray();
+        return new ReportPdfDocumentBuilder(document, S["Page {0} of {1}"].Value, ReportPdfFonts.Installed).Build();
     }
 }

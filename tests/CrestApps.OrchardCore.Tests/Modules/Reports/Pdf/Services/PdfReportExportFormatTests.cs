@@ -278,6 +278,103 @@ public sealed class PdfReportExportFormatTests
         AssertInOrder(text, "Nothing", "No metrics", "No table", "No bars", "Zero", "Full", "Over", "No chart", "Null chart");
     }
 
+    [Fact]
+    public void Serialize_WhenTextHasMoreCharactersThanOneEmbeddedFontHolds_ShouldWriteThemAll()
+    {
+        // Arrange
+        Assert.SkipWhen(ReportPdfFonts.Installed.Regular is null, "No TrueType font is installed.");
+
+        // The letters of Latin-1 and Latin Extended-A, and of ASCII: more than the 255 characters of one embedded font.
+        var characters = string.Concat(Enumerable.Range(0x00C0, 0x0180 - 0x00C0).Select(code => (char)code))
+            + "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var words = characters.Chunk(8).Select(chunk => new string(chunk)).ToList();
+        var document = new ReportDocument { Title = "Characters" }
+            .Add(ReportSection.ForTable("Characters", [new ReportColumn("Text")], [new ReportRow([string.Join(' ', words)])]));
+
+        // Act
+        var content = CreateFormat().Serialize(document);
+
+        // Assert
+        using var pdf = PdfDocument.Open(content);
+        var written = pdf.GetPages().SelectMany(page => page.GetWords()).Select(word => word.Text).ToHashSet(StringComparer.Ordinal);
+
+        Assert.All(words, word => Assert.Contains(word, written));
+    }
+
+    [Fact]
+    public void Serialize_WhenARowIsTallerThanAPage_ShouldContinueItOnTheNextPages()
+    {
+        // Arrange
+        var notes = string.Join('\n', Enumerable.Range(1, 150).Select(index => $"Line{index}"));
+        var document = new ReportDocument { Title = "Notes" }
+            .Add(ReportSection.ForTable("Notes", [new ReportColumn("Note"), new ReportColumn("Count")], [new ReportRow([notes, "1"]), new ReportRow(["After", "2"])]));
+
+        // Act
+        var content = CreateFormat().Serialize(document);
+
+        // Assert
+        using var pdf = PdfDocument.Open(content);
+        var pages = pdf.GetPages().ToList();
+        var text = string.Join(' ', pages.Select(GetText));
+
+        Assert.True(pages.Count > 1);
+        Assert.All(pages, page => Assert.Contains("Note", GetText(page)));
+        AssertInOrder(text, [.. Enumerable.Range(1, 150).Select(index => $"Line{index} "), "After"]);
+    }
+
+    [Theory]
+    [InlineData(ReportChartType.Line)]
+    [InlineData(ReportChartType.Bar)]
+    [InlineData(ReportChartType.HorizontalBar)]
+    public void Serialize_WhenAChartHasManyOrLongLabels_ShouldKeepItsTextInsideThePageAndApart(ReportChartType type)
+    {
+        // Arrange
+        var labels = Enumerable.Range(1, 40).Select(index => $"A rather long category name {index}").ToList();
+        var document = new ReportDocument { Title = "Chart" }
+            .Add(ReportSection.ForChart("Volume", new ReportChart
+            {
+                Type = type,
+                Labels = labels,
+                Datasets =
+                [
+                    new ReportChartDataset("Inbound calls that were answered", [.. Enumerable.Range(1, 40).Select(index => index * 1.5)]),
+                    new ReportChartDataset("Outbound", [.. Enumerable.Range(1, 40).Select(index => (double)(40 - index))]),
+                ],
+            }));
+
+        // Act
+        var content = CreateFormat().Serialize(document);
+
+        // Assert
+        using var pdf = PdfDocument.Open(content);
+
+        foreach (var page in pdf.GetPages())
+        {
+            AssertWordsInsideThePageAndApart(page);
+        }
+    }
+
+    private static void AssertWordsInsideThePageAndApart(Page page)
+    {
+        var words = page.GetWords().ToList();
+
+        Assert.All(words, word => Assert.True(
+            word.BoundingBox.Left >= 0 && word.BoundingBox.Right <= page.Width,
+            $"'{word.Text}' runs off the page."));
+
+        foreach (var line in words.GroupBy(word => Math.Round(word.BoundingBox.Bottom)))
+        {
+            var ordered = line.OrderBy(word => word.BoundingBox.Left).ToList();
+
+            for (var index = 1; index < ordered.Count; index++)
+            {
+                Assert.True(
+                    ordered[index - 1].BoundingBox.Right <= ordered[index].BoundingBox.Left + 0.5,
+                    $"'{ordered[index - 1].Text}' runs into '{ordered[index].Text}'.");
+            }
+        }
+    }
+
     private static PdfReportExportFormat CreateFormat()
     {
         return new PdfReportExportFormat(new PassThroughStringLocalizer<PdfReportExportFormat>());
