@@ -117,7 +117,8 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
 
     protected override async IAsyncEnumerable<Invoice> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // DataConditions.Keys(query.Conditions, "InvoiceId"): null = no key filter, empty = nothing can match.
+        // DataConditions.Keys(query.Conditions.Where(c => c.IsJoinKey), "InvoiceId"): null = no key filter,
+        // empty = nothing can match. Pass only join keys: the engine compares a viewer's filter without regard to case.
         // DataConditions.DateRange(query.Conditions, "IssuedUtc"): inclusive bounds for the index column.
         await foreach (var invoice in ReportIndexPages.ReadAsync(_session, Query, collection: null, cancellationToken))
         {
@@ -151,6 +152,20 @@ public sealed class BillingReportDataSource : RecordDataSource, IDataSource   //
   (for example `.OrderByDescending(i => i.IssuedUtc).ThenByDescending(i => i.Id)`).
 - A source whose data sets depend on features injects them through an interface each feature registers (see
   `IContactCenterReportDataSet`), so data sets of disabled features are never listed.
+- For YesSql records read through a map index, derive from `IndexedReportDataSet<TRecord, TIndex>`
+  (`CrestApps.OrchardCore.Reports.Designer.DataSources`, Reports.Core) instead of writing `LoadAsync`: pass the
+  collection and the module's existing permissions to the constructor, add the fields, override `DateColumn` (a
+  non-nullable index column holding exactly the field's value), `KeyColumns`, `DescribeColumns` and
+  `GetAggregateColumns` (drop columns the index changes, such as upper-cased emails), and call `CompleteDescription()`.
+  For the entries a record holds (order lines, refunds...), derive from
+  `IndexedReportDataSet<TDocument, TIndex, ReportChildRow<TDocument, TEntry>>` and return
+  `ReportChildRow<TDocument, TEntry>.For(document, document.Entries)` from `GetRows`. The Orders source
+  (`src/Modules/CrestApps.OrchardCore.Orders/Reports/DataSources/`) is the reference.
+- Store modules name their sources and data sets in `CommerceReportDataSets` (Reports.Abstractions) and reference each
+  other through it (`Reference(source, dataSet)`, `ProductReference()`, `VariantReference()`); users and content items
+  through `ReportDataReferences.User()` and `ReportDataReferences.ContentItem(type)`.
+- Every index read by date needs a database index on the date column and `Id`, created with
+  `IndexTableIndexCreation.CreateIfMissingAsync` from the migration's `CreateAsync` and a new `UpdateFromNAsync` step.
 - Reference other modules' data sets by their stable names, such as
   `new DataFieldReference("ContactCenter", "DialerProfiles", "ItemId")`, the users data set
   (`ReportsConstants.UsersDataSource`, `UsersDataSet`, `UserIdField`), or a content type
@@ -160,9 +175,12 @@ public sealed class BillingReportDataSource : RecordDataSource, IDataSource   //
 
 ## Join keys
 
-Mark a field `IsKeyFilterable` only if `LoadAsync` applies `DataConditions.Keys(query.Conditions, field)` **exactly**
-(every record whose value is a key, no other). `null` means no key filter; an empty list means nothing can match
-(`yield break`). The engine sends keys as an `In` condition with `IsJoinKey`, in batches of `JoinKeyBatchSize`.
+Mark a field `IsKeyFilterable` only if `LoadAsync` applies the keys of the join **exactly** (every record whose value
+is a key, no other): `DataConditions.Keys(query.Conditions.Where(c => c.IsJoinKey), field)`. `null` means no key
+filter; an empty list means nothing can match (`yield break`). The engine sends keys as an `In` condition with
+`IsJoinKey`, in batches of `JoinKeyBatchSize`. Never pass every condition: `DataConditions.Keys` also returns a
+viewer's `Equals`/`In` filter on the field, which the engine compares without regard to case, so an exact match in the
+database drops rows. `IndexedReportDataSet` already does this.
 
 ## Aggregate push-down
 

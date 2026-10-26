@@ -60,6 +60,8 @@ public static class AIConstants
         public const string ChatSessionDocuments = "CrestApps.OrchardCore.AI.Documents.ChatSessions";
 
         public const string ChatAnalytics = "CrestApps.OrchardCore.AI.Chat.Analytics";
+
+        public const string UsageAnalytics = "CrestApps.OrchardCore.AI.UsageAnalytics";
     }
 
     /// <summary>

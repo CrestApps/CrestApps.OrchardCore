@@ -3,7 +3,7 @@
 @model StartOmnichannelActivityTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="ActivityItemId">
-    <label class="ocat-label" asp-for="ActivityItemId">@T["Activity"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="ActivityItemId">@T["Activity"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="ActivityItemId" />
         <span asp-validation-for="ActivityItemId"></span>

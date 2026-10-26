@@ -12,15 +12,14 @@ public sealed class McpPromptDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<McpPromptDeploymentStep>("Artificial Intelligence");
     private static readonly LocalizationSource _title = LocalizationSource.Create<McpPromptDeploymentStep>("MCP Prompts");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpPromptDeploymentStep"/> class.
-    /// </summary>
-    public McpPromptDeploymentStep()
-    {
-        Name = McpPromptStep.StepKey;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => McpPromptStep.StepKey;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets the include all.

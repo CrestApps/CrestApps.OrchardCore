@@ -54,7 +54,6 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     {
         return Initialize<GeneralAISettingsViewModel>("GeneralAISettings_Edit", model =>
         {
-            model.EnableAIUsageTracking = settings.EnableAIUsageTracking;
             model.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
             model.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
             model.AbsoluteMaximumIterationsPerRequest = _defaultAIOptions.AbsoluteMaximumIterationsPerRequest;
@@ -76,7 +75,6 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         await context.Updater.TryUpdateModelAsync(model, Prefix);
         var maximumIterationsPerRequest = Math.Min(model.MaximumIterationsPerRequest, _defaultAIOptions.AbsoluteMaximumIterationsPerRequest);
         var settingsChanged =
-            settings.EnableAIUsageTracking != model.EnableAIUsageTracking ||
             settings.EnablePreemptiveMemoryRetrieval != model.EnablePreemptiveMemoryRetrieval ||
             settings.MaximumIterationsPerRequest != maximumIterationsPerRequest ||
             settings.EnableDistributedCaching != model.EnableDistributedCaching ||
@@ -97,7 +95,6 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
             return Edit(site, settings, context);
         }
 
-        settings.EnableAIUsageTracking = model.EnableAIUsageTracking;
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
         settings.MaximumIterationsPerRequest = maximumIterationsPerRequest;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;

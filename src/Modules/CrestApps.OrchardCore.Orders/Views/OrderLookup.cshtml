@@ -6,7 +6,7 @@
 
 <form asp-route="@CrestApps.OrchardCore.Orders.Core.OrderConstants.RouteNames.Find" method="post" class="no-multisubmit">
     <div class="mb-3">
-        <label asp-for="Email" class="form-label">@T["Email"]</label>
+        <label asp-for="Email" class="form-label ocat-label-required">@T["Email"]</label>
         <input asp-for="Email" type="email" class="form-control" autocomplete="email" required />
         <span asp-validation-for="Email" class="text-danger"></span>
     </div>

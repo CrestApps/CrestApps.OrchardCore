@@ -11,14 +11,14 @@
         <legend class="ocat-label">@T["Azure AI Search Connection"]</legend>
         <div class="ocat-end">
             <div class="mb-3">
-                <label asp-for="IndexName" class="form-label">@T["Index name"]</label>
+                <label asp-for="IndexName" class="form-label ocat-label-required">@T["Index name"]</label>
                 <input asp-for="IndexName" class="form-control" />
                 <span asp-validation-for="IndexName" class="text-danger"></span>
                 <span class="hint">@T["The Azure AI Search index name on the remote service."]</span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="Endpoint" class="form-label">@T["Azure AI Search endpoint"]</label>
+                <label asp-for="Endpoint" class="form-label ocat-label-required">@T["Azure AI Search endpoint"]</label>
                 <input asp-for="Endpoint" class="form-control" placeholder="https://" />
                 <span asp-validation-for="Endpoint" class="text-danger"></span>
             </div>
@@ -44,7 +44,7 @@
 
             <div data-ai-data-source-azure-ai-search-api-key-settings hidden>
                 <div class="mb-0">
-                    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+                    <label asp-for="ApiKey" class="form-label @(Model.HasApiKey ? "" : "ocat-label-required")">@T["API key"]</label>
                     <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                     <span asp-validation-for="ApiKey" class="text-danger"></span>
                 </div>

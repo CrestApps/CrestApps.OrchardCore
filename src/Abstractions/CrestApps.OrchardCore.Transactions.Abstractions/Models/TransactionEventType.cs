@@ -49,4 +49,10 @@ public enum TransactionEventType
     /// The invoice was sent to the owner.
     /// </summary>
     InvoiceSent = 8,
+
+    /// <summary>
+    /// A charge of a saved payment method, made without the owner present, was not taken: declined, refused because the
+    /// cardholder must approve it, or not started at the provider.
+    /// </summary>
+    PaymentFailed = 9,
 }

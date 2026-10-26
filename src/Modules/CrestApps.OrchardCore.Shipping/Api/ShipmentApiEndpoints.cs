@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Shipping.Api;
 internal static class ShipmentApiEndpoints
 {
     // The Orders module's permission, by name: what lets a buyer see their own orders.
-    private static readonly Permission _viewOwnOrders = new("ViewOwnOrders", "View own orders");
+    private static readonly Permission _viewOwnOrders = new("ViewOwnOrders");
 
     public static IEndpointRouteBuilder MapShipmentApi(this IEndpointRouteBuilder routes)
     {

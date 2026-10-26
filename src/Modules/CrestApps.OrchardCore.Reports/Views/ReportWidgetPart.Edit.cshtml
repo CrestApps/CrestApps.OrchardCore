@@ -1,0 +1,23 @@
+@model ReportWidgetEditViewModel
+
+@if (Model.ReportIsFixed)
+{
+    <div class="mb-3">
+        <label class="form-label">@T["Report"]</label>
+        <input type="text" class="form-control" value="@Model.FixedReportDisplayName" disabled />
+        <span class="hint">@T["This kind of widget always shows this report. Add the Report widget to choose any report."]</span>
+    </div>
+}
+else
+{
+    <div class="mb-3">
+        <label asp-for="ReportName" class="form-label ocat-label-required">@T["Report"]</label>
+        <select asp-for="ReportName" asp-items="Model.Reports" class="form-select">
+            <option value="">@T["Choose a report"]</option>
+        </select>
+        <span asp-validation-for="ReportName" class="text-danger"></span>
+        <span class="hint">@T["Any report you may view under Reports. Figures, tables and charts all fit; the date range below is the filter."]</span>
+    </div>
+}
+
+<partial name="_ReportWidgetOptions" model="Model" />

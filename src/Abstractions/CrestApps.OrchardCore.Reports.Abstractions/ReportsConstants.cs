@@ -58,6 +58,18 @@ public static class ReportsConstants
     public const string UserIdField = "UserId";
 
     /// <summary>
+    /// The technical name of Orchard Core's data source of the content items of the site, whose data sets are the
+    /// content types, which data sets reference to join a content item identifier, such as a product's, to its item.
+    /// </summary>
+    public const string ContentsDataSource = "Contents";
+
+    /// <summary>
+    /// The technical name of the identifier field of each content type data set of Orchard Core's content items data
+    /// source.
+    /// </summary>
+    public const string ContentItemIdField = "ContentItemId";
+
+    /// <summary>
     /// The priority of the top-level Reports admin menu item built by the Reports module. Orchard Core merges menu items
     /// with the same text and keeps the identifier, classes, and position of the one with the highest priority, so other
     /// modules that add items under Reports use a lower priority and the Reports item keeps its <c>reports</c>

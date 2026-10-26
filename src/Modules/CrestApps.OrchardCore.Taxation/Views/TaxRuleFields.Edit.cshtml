@@ -1,7 +1,7 @@
 @model TaxRuleViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <label asp-for="Name" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Name"]</label>
     <div class="ocat-end">
         @if (Model.IsNew)
         {
@@ -37,7 +37,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="TaxType" class="ocat-label">@T["Tax type"]</label>
+    <label asp-for="TaxType" class="ocat-label ocat-label-required">@T["Tax type"]</label>
     <div class="ocat-end">
         <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-select"></select>
         <span class="hint">@T["Labels the kind of tax this rule produces, such as sales tax or VAT. It is used to group and report taxes and does not change how the amount is calculated."]</span>

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -33,6 +34,9 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
     // How long the state outlives the leg's own ring window, so a late webhook still finds the leg it describes
     // (and is recognized as stale) rather than being mistaken for a leg nobody rang.
     private static readonly TimeSpan _stateRetention = TimeSpan.FromMinutes(2);
+
+    // A join races a few webhook writes of the same call; more attempts than that is a loop.
+    private const int MaxJoinRecordAttempts = 4;
 
     private readonly IAgentPreDialLegStore _store;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
@@ -266,9 +270,9 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 
         if (leg.AgentAnsweredUtc.HasValue)
         {
-            // The agent's device answered first; the caller being ready is the second half. The topology is left to
-            // the answer command that is readying the caller, which records the leg as answered from this result.
-            return await BridgeAsync(leg, recordAnswered: false, cancellationToken);
+            // The agent's device answered first; the caller being ready is the second half. This runs inside the answer
+            // command that readied the caller, so the join is committed in a scope of its own (see RecordJoinedAsync).
+            return await BridgeAsync(leg, recordInOwnScope: true, cancellationToken);
         }
 
         await SaveAsync(leg, cancellationToken);
@@ -316,7 +320,12 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 
         if (leg.BridgedUtc.HasValue)
         {
-            // A redelivered webhook.
+            // A redelivered webhook -- or the retry of one whose work failed after the bridge, which is marked before the
+            // join is recorded and outside the work's own transaction (a concurrent update of the call refused its save).
+            // Returning left the agent talking to the customer while still shown "Waiting for a connected call". The
+            // join is recorded again, which changes nothing when it already was.
+            await RecordJoinedAsync(leg, inOwnScope: false);
+
             return;
         }
 
@@ -342,7 +351,7 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 
                 if (leg.CallerReadyUtc.HasValue)
                 {
-                    await BridgeAsync(leg, recordAnswered: true, cancellationToken);
+                    await BridgeAsync(leg, recordInOwnScope: false, cancellationToken);
                 }
                 else
                 {
@@ -547,7 +556,7 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
         await ReleaseAsync(reservationId, cancellationToken);
     }
 
-    private async Task<bool> BridgeAsync(AgentPreDialLeg leg, bool recordAnswered, CancellationToken cancellationToken)
+    private async Task<bool> BridgeAsync(AgentPreDialLeg leg, bool recordInOwnScope, CancellationToken cancellationToken)
     {
         if (_voiceProviderResolver.Get(leg.ProviderName) is not IContactCenterVoiceAgentPreDialProvider provider)
         {
@@ -561,20 +570,22 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
         leg.BridgedUtc = _clock.UtcNow;
         await SaveAsync(leg, cancellationToken);
 
-        var result = await provider.BridgePreDialedAgentAsync(leg.ProviderCallId, leg.AgentLegId, cancellationToken);
+        // Never cancelled once asked for: inside the answer command, its timeout cancels the work while the provider may
+        // already be joining the two, and a bridge abandoned halfway was never recorded.
+        var result = await provider.BridgePreDialedAgentAsync(leg.ProviderCallId, leg.AgentLegId, CancellationToken.None);
 
         if (result?.Succeeded == true)
         {
-            if (recordAnswered)
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                // The leg's own answered event is keyed by the agent leg, which belongs to no interaction. Record the
-                // answer against the caller's call so the topology says the agent connected.
-                await _agentLegFailureService.RecordAnsweredAsync(
-                    leg.ProviderName,
-                    peerProviderCallId: leg.ProviderCallId,
-                    agentLegProviderCallId: leg.AgentLegId,
-                    cancellationToken);
+                _logger.LogInformation(
+                    "Joined pre-dialed agent leg '{AgentLegId}' of reservation '{ReservationId}' to call '{ProviderCallId}'.",
+                    leg.AgentLegId.SanitizeLogValue(),
+                    leg.ReservationId.SanitizeLogValue(),
+                    leg.ProviderCallId.SanitizeLogValue());
             }
+
+            await RecordJoinedAsync(leg, recordInOwnScope);
 
             return true;
         }
@@ -590,6 +601,64 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 
         return false;
     }
+
+    // The agent and the customer are talking from the moment the bridge succeeds, so that is when the join is recorded:
+    // the agent goes on the call, and their screens show it and open its record. The leg's own answered event is keyed by
+    // the agent leg, which belongs to no interaction, so the answer is recorded against the caller's call.
+    //
+    // Recorded here whichever half arrived second. When it was the customer answering, the join was left to the answer
+    // command that readied the caller, which recorded it only once its own result was projected: a command that ran past
+    // its timeout (waiting on this offer's lock counts against it), or whose projection failed, left the two talking with
+    // the agent still Reserved, shown "Waiting for a connected call" and no record. Inside that command nothing would
+    // commit it, so it is committed in a scope of its own; it is never cancelled, as the bridge cannot be taken back.
+    // Recording it again, as the command's projection or a redelivered answer then does, changes nothing.
+    private async Task RecordJoinedAsync(AgentPreDialLeg leg, bool inOwnScope)
+    {
+        try
+        {
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    if (inOwnScope)
+                    {
+                        await _scopeExecutor.ExecuteAsync<IContactCenterAgentLegFailureService>(service =>
+                            RecordLegAnsweredAsync(service, leg));
+                    }
+                    else
+                    {
+                        await RecordLegAnsweredAsync(_agentLegFailureService, leg);
+                    }
+
+                    break;
+                }
+                catch (ConcurrencyException) when (attempt < MaxJoinRecordAttempts)
+                {
+                    // The call's webhooks (the customer's answer, the bridge) write the same call session at the moment
+                    // of the join. Losing that race used to leave the agent talking to the customer while still shown
+                    // "Waiting for a connected call", with no activity to work. The join is recorded again on a fresh
+                    // read, in a scope of its own: a failed flush has already cancelled the caller's session.
+                    inOwnScope = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "The pre-dialed agent leg '{AgentLegId}' of reservation '{ReservationId}' was joined to call '{ProviderCallId}', but the join could not be recorded.",
+                leg.AgentLegId.SanitizeLogValue(),
+                leg.ReservationId.SanitizeLogValue(),
+                leg.ProviderCallId.SanitizeLogValue());
+        }
+    }
+
+    private static Task<bool> RecordLegAnsweredAsync(IContactCenterAgentLegFailureService service, AgentPreDialLeg leg)
+        => service.RecordAnsweredAsync(
+            leg.ProviderName,
+            peerProviderCallId: leg.ProviderCallId,
+            agentLegProviderCallId: leg.AgentLegId,
+            CancellationToken.None);
 
     private async Task ReleaseLegAsync(AgentPreDialLeg leg, CancellationToken cancellationToken)
     {

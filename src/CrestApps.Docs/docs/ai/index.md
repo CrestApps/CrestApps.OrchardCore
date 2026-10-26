@@ -37,7 +37,7 @@ Use the Core site when you need:
 | --- | --- | --- | --- |
 | Foundational AI features | `CrestApps.OrchardCore.AI`, `CrestApps.OrchardCore.AI.ConnectionManagement`, `CrestApps.OrchardCore.AI.Chat.Core`, `CrestApps.OrchardCore.AI.Chat.Api` | [AI Services](overview) | [Connections and deployments](../user-manual/ai/connections.md), [AI profiles](../user-manual/ai/profiles.md) |
 | Profile-driven chat UI | `CrestApps.OrchardCore.AI.Chat`, `CrestApps.OrchardCore.AI.Chat.AdminWidget` | [AI Chat](chat) | [Chat](../user-manual/ai/chat.md), [Chat widgets](../user-manual/ai/chat-widgets.md) |
-| Session analytics | `CrestApps.OrchardCore.AI.Chat.Analytics` | [AI Chat Session Analytics](chat-analytics), [AI Usage Analytics](usage-analytics) | [Analytics](../user-manual/ai/analytics.md) |
+| Session and usage analytics | `CrestApps.OrchardCore.AI.Chat.Analytics`, `CrestApps.OrchardCore.AI.UsageAnalytics` | [AI Chat Session Analytics](chat-analytics), [AI Usage Analytics](usage-analytics) | [Analytics](../user-manual/ai/analytics.md) |
 | Ad-hoc chat experiences | `CrestApps.OrchardCore.AI.Chat.Interactions` | [AI Chat Interactions](chat-interactions) | [Chat interactions](../user-manual/ai/chat-interactions.md) |
 | Chat notifications (developer API) | `CrestApps.OrchardCore.AI.Chat` | [AI Chat Notifications](chat-notifications) | |
 | Copilot orchestration | `CrestApps.OrchardCore.AI.Chat.Copilot` | [Copilot Integration](copilot) | [AI profiles](../user-manual/ai/profiles.md) |

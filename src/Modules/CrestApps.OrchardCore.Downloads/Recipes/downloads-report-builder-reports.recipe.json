@@ -1,0 +1,72 @@
+{
+  "name": "DownloadsReportBuilderReports",
+  "displayName": "Reports: download reports to adapt",
+  "description": "Turns on the Report Builder and adds a downloads report built from the Downloads data source: the download links given in the period by product and file, and what became of them. It shows what the built-in downloads report shows, so you can open it in the builder, change it, and save your own. The person who runs the recipe owns it.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "downloads",
+    "reports",
+    "report builder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Downloads",
+        "CrestApps.OrchardCore.Reports.Builder"
+      ]
+    },
+    {
+      "name": "ReportDesigns",
+      "Reports": [
+        {
+          "itemId": "downloads-by-product",
+          "displayText": "Downloads",
+          "description": "The download links given in the period, by product and file: how many were used, never used, used up, expired or taken back, and the downloads made with them.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "d", "source": "Downloads", "dataSet": "DownloadEntitlements", "displayName": "Download entitlements" }
+            ],
+            "calculatedFields": [
+              { "name": "Downloaded", "label": "Downloaded", "expression": "SUM(IF([d.DownloadCount] > 0, 1, 0))" },
+              { "name": "NeverDownloaded", "label": "Never downloaded", "expression": "SUM(IF([d.DownloadCount] = 0, 1, 0))" },
+              { "name": "UsedUp", "label": "Used up", "expression": "SUM(IF(NOT [d.IsRevoked] AND [d.DownloadLimit] > 0 AND [d.DownloadCount] >= [d.DownloadLimit], 1, 0))" },
+              { "name": "Expired", "label": "Expired", "expression": "SUM(IF([d.Status] = 'Expired' AND NOT ([d.DownloadLimit] > 0 AND [d.DownloadCount] >= [d.DownloadLimit]), 1, 0))" },
+              { "name": "TakenBack", "label": "Taken back", "expression": "SUM(IF([d.IsRevoked], 1, 0))" }
+            ],
+            "filters": [
+              { "id": "given", "field": "d.CreatedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Given", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "product", "field": "d.ProductTitle", "label": "Product" },
+              { "id": "file", "field": "d.FileName", "label": "File" },
+              { "id": "links", "field": "$count", "label": "Links given" },
+              { "id": "downloaded", "field": "Downloaded", "label": "Downloaded" },
+              { "id": "never", "field": "NeverDownloaded", "label": "Never downloaded" },
+              { "id": "downloads", "field": "d.DownloadCount", "label": "Downloads made", "aggregate": "Sum" },
+              { "id": "usedup", "field": "UsedUp", "label": "Used up" },
+              { "id": "expired", "field": "Expired", "label": "Expired" },
+              { "id": "takenback", "field": "TakenBack", "label": "Taken back" }
+            ],
+            "sorts": [
+              { "columnId": "links", "descending": true },
+              { "columnId": "product" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "links", "downloaded", "never", "downloads", "usedup", "expired", "takenback" ] },
+            { "id": "table", "type": "Table", "title": "Products", "columnIds": [ "product", "file", "links", "downloaded", "never", "downloads", "usedup", "expired", "takenback" ], "showTotals": true }
+          ]
+        }
+      ]
+    }
+  ]
+}

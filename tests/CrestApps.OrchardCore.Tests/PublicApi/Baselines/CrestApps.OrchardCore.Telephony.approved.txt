@@ -151,6 +151,9 @@ namespace CrestApps.OrchardCore.Telephony.Deployments.Steps
     public sealed class TelephonyExtensionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public TelephonyExtensionDeploymentStep() { }
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Deployments

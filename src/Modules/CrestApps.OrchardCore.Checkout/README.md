@@ -44,6 +44,7 @@ bug to fix later:
 | `ICheckoutRecurringPaymentProvider` | Establish, change, and cancel a recurring agreement. |
 | `ICheckoutPaymentRefundProvider` | Give money back at the gateway. |
 | `ICheckoutRefundService` | The only way to issue a refund, so the ledger, tax allocation, and over-refund protection always apply. |
+| `ISavedPaymentMethodStore` | The cards each customer kept for charges made without them, filled by every checkout that keeps one. Charge one with `ITransactionCommandService.ChargeSavedPaymentMethodAsync`. |
 
 ## Adding a step
 

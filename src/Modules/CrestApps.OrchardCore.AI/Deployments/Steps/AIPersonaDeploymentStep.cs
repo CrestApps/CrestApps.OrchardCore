@@ -12,15 +12,14 @@ public sealed class AIPersonaDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<AIPersonaDeploymentStep>("Artificial Intelligence");
     private static readonly LocalizationSource _title = LocalizationSource.Create<AIPersonaDeploymentStep>("AI Personas");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AIPersonaDeploymentStep"/> class.
-    /// </summary>
-    public AIPersonaDeploymentStep()
-    {
-        Name = AIPersonaStep.StepKey;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => AIPersonaStep.StepKey;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets a value indicating whether every saved persona is exported.

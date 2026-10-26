@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Shipping.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -41,6 +42,29 @@ internal sealed class ShippingMigrations : DataMigration
             table.CreateIndex("IDX_ShipmentIndex_TrackingNumber", "TrackingNumber");
         }, collection: ShippingConstants.CollectionName);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read shipments through, newest first by <c>CreatedUtc</c> a page at a time, so each page
+    /// and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<ShipmentIndex>(
+            SchemaBuilder,
+            "IDX_ShipmentIndex_Report",
+            ShippingConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

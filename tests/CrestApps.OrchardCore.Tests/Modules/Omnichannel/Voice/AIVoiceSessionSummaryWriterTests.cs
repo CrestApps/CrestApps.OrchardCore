@@ -1,4 +1,5 @@
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -337,10 +338,8 @@ public sealed class AIVoiceSessionSummaryWriterTests
                 .Setup(store => store.GetAsync(It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<AIVoiceSessionSummaryIndex>());
 
-            var options = new Mock<IOptionsMonitor<GeneralAIOptions>>();
-            options
-                .Setup(monitor => monitor.CurrentValue)
-                .Returns(new GeneralAIOptions { EnableAIUsageTracking = trackingEnabled });
+            // Usage is tracked when an observer is registered to receive it.
+            IAICompletionUsageObserver[] usageObservers = trackingEnabled ? [Mock.Of<IAICompletionUsageObserver>()] : [];
 
             Writer = new AIVoiceSessionSummaryWriter(
                 activityStore.Object,
@@ -349,7 +348,7 @@ public sealed class AIVoiceSessionSummaryWriterTests
                 deploymentManager.Object,
                 campaigns.Object,
                 summaries.Object,
-                options.Object,
+                usageObservers,
                 new StubClock(_now),
                 NullLogger<AIVoiceSessionSummaryWriter>.Instance);
         }

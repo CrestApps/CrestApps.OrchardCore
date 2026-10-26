@@ -85,6 +85,7 @@ public sealed class TransactionDisplayText
             TransactionEventType.Refunded => S["Refunded"],
             TransactionEventType.Adjusted => S["Adjusted"],
             TransactionEventType.InvoiceSent => S["Invoice sent"],
+            TransactionEventType.PaymentFailed => S["Payment failed"],
             _ => type.ToString(),
         };
 

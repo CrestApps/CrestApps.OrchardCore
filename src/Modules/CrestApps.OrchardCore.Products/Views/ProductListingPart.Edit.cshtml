@@ -86,7 +86,7 @@
     <div class="visually-hidden" role="status" aria-live="polite" data-product-editor-status></div>
 
     <div class="ocat-wrapper">
-        <label class="ocat-label">@T["Products"]</label>
+        <label class="ocat-label ocat-label-required">@T["Products"]</label>
         <div class="ocat-end">
             @if (Model.ContentTypes.Count == 0)
             {
@@ -381,7 +381,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="PageSizes">
-        <label asp-for="PageSizes" class="ocat-label">@T["Page sizes"]</label>
+        <label asp-for="PageSizes" class="ocat-label ocat-label-required">@T["Page sizes"]</label>
         <div class="ocat-end">
             <input asp-for="PageSizes" class="form-control" placeholder="12, 24, 48" />
             <span class="hint">@T["The page sizes visitors can pick from, separated by commas."]</span>

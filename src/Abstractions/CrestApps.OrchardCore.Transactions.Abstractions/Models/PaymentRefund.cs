@@ -45,6 +45,19 @@ public sealed class PaymentRefund : CatalogItem
     public string ObligationId { get; set; }
 
     /// <summary>
+    /// The kind of thing the refund gives money back for, when the original payment paid for several things at once
+    /// (for example a checkout that settled several transactions). Empty when the payment paid for one thing.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// The identifier of the thing the refund gives money back for, when the original payment paid for several things
+    /// at once, for example the one transaction it is recorded against. Empty when the payment paid for one thing, or
+    /// when the refund was not started for one of them, such as a refund made at the gateway's dashboard.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
+    /// <summary>
     /// The provider's authoritative reference for this refund (for example a Stripe refund id). Stored as
     /// soon as the provider returns it so the remote refund is never lost.
     /// </summary>

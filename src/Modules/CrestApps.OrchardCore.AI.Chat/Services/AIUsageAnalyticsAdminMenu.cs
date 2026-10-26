@@ -5,8 +5,8 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 /// <summary>
-/// Lists the AI usage report under the Billing &amp; Usage category of the top-level Reports menu. It lives in the AI
-/// Chat feature rather than the session analytics feature because the report works without it.
+/// Lists the AI usage report under the Billing &amp; Usage category of the top-level Reports menu. It belongs to the AI
+/// Usage Analytics feature, which also turns usage recording on.
 /// </summary>
 public sealed class AIUsageAnalyticsAdminMenu : AdminNavigationProvider
 {

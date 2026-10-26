@@ -19,7 +19,7 @@
     <h5 class="mb-3">@T["Parent"]</h5>
 
     <div class="ocat-wrapper">
-        <label asp-for="TenantName" class="ocat-label">@T["Tenant"]</label>
+        <label asp-for="TenantName" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Tenant"]</label>
         <div class="ocat-end">
             @if (Model.IsNew)
             {
@@ -45,7 +45,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+        <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Display name"]</label>
         <div class="ocat-end">
             <input asp-for="DisplayName" class="form-control" />
             <span asp-validation-for="DisplayName" class="text-danger"></span>
@@ -54,7 +54,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="Slug" class="ocat-label">@T["Address"]</label>
+        <label asp-for="Slug" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Address"]</label>
         <div class="ocat-end">
             @if (Model.IsNew)
             {

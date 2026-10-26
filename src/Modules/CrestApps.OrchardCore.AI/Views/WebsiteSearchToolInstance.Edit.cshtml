@@ -3,7 +3,7 @@
 @model WebsiteSearchToolInstanceViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+    <label asp-for="BaseUrl" class="ocat-label ocat-label-required">@T["Base URL"]</label>
     <div class="ocat-end">
         <input asp-for="BaseUrl" class="form-control" placeholder="https://www.example.com" />
         <span asp-validation-for="BaseUrl" class="text-danger"></span>
@@ -12,7 +12,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="SearchPath" class="ocat-label">@T["Search endpoint path"]</label>
+    <label asp-for="SearchPath" class="ocat-label ocat-label-required">@T["Search endpoint path"]</label>
     <div class="ocat-end">
         <input asp-for="SearchPath" class="form-control font-monospace" placeholder="/wp-json/wp/v2/search" />
         <span asp-validation-for="SearchPath" class="text-danger"></span>
@@ -21,7 +21,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="QueryParameter" class="ocat-label">@T["Query parameter"]</label>
+    <label asp-for="QueryParameter" class="ocat-label ocat-label-required">@T["Query parameter"]</label>
     <div class="ocat-end">
         <input asp-for="QueryParameter" class="form-control font-monospace" placeholder="search" />
         <span asp-validation-for="QueryParameter" class="text-danger"></span>
@@ -48,7 +48,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="TitlePath" class="ocat-label">@T["Title path"]</label>
+    <label asp-for="TitlePath" class="ocat-label ocat-label-required">@T["Title path"]</label>
     <div class="ocat-end">
         <input asp-for="TitlePath" class="form-control font-monospace" placeholder="title" />
         <span asp-validation-for="TitlePath" class="text-danger"></span>
@@ -57,7 +57,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="UrlPath" class="ocat-label">@T["URL path"]</label>
+    <label asp-for="UrlPath" class="ocat-label ocat-label-required">@T["URL path"]</label>
     <div class="ocat-end">
         <input asp-for="UrlPath" class="form-control font-monospace" placeholder="url" />
         <span asp-validation-for="UrlPath" class="text-danger"></span>

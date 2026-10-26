@@ -1,7 +1,7 @@
 @model TaxCategoryViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <label asp-for="Name" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Name"]</label>
     <div class="ocat-end">
         @if (Model.IsNew)
         {
@@ -18,7 +18,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+    <label asp-for="Code" class="ocat-label ocat-label-required">@T["Code"]</label>
     <div class="ocat-end">
         <input asp-for="Code" class="form-control" />
         <span class="hint">@T["The unique code of the category, for example Electronics or Television."]</span>

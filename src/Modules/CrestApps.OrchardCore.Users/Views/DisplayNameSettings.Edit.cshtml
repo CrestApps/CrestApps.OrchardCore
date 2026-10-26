@@ -12,7 +12,7 @@
 </div>
 
 <div class="ocat-limited-wrapper" id="TemplateWrapper">
-    <label asp-for="Template" class="ocat-label">@T["Liquid format"]</label>
+    <label asp-for="Template" class="ocat-label ocat-label-required">@T["Liquid format"]</label>
     <div class="ocat-limited">
         <input type="text" asp-for="Template" class="form-control" />
         <span asp-validation-for="Template" class="text-danger"></span>

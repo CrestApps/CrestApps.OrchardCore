@@ -247,7 +247,7 @@ A checkout that pays a balance that already exists (`CheckoutSession.SettlesExis
 - When it is `false`, `CouponCheckoutFlowDisplayDriver` renders no promotion code box and ignores a posted code, and `DefaultCheckoutDiscountService` applies no discounts (and clears any recorded earlier), so `InitialPaymentAmount` and `DueNow` are untouched and nothing is redeemed.
 - When it is `true`, discounts apply as on any checkout. `CouponRedemptionCheckoutHandler` still redeems nothing for a session that settles an existing balance: the settling module redeems the codes itself, once the balance is settled.
 
-The Transactions module sets both flags. On completion, `TransactionSettlementCheckoutHandler` records each one-time discount line the invoice applied as a `Discount` adjustment of exactly that amount (`ITransactionCommandService.AdjustAsync`, never more than is still owed), then applies the confirmed payment. A 100% code settles the transaction with no payment attempt; a partial code plus the payment settles it in full. Only when the transaction ends with nothing owed does it call each `ICheckoutDiscountProvider.RedeemAsync`, so a code is never used up by a checkout that left the balance owing. A partial code with no confirmed payment records nothing. See [Transaction commands](transactions.md#transaction-commands).
+The Transactions module sets both flags. On completion, `TransactionSettlementCheckoutHandler` records each one-time discount line the invoice applied as a `Discount` adjustment of exactly that amount (`ITransactionCommandService.AdjustAsync`, never more than is still owed), then applies the confirmed payment. A 100% code settles the transaction with no payment attempt; a partial code plus the payment settles it in full. Only when the transaction ends with nothing owed does it call each `ICheckoutDiscountProvider.RedeemAsync`, so a code is never used up by a checkout that left the balance owing. A partial code with no confirmed payment records nothing. See [Transaction commands](transactions.md#transaction-commands). A checkout that settles several transactions at once sets `SettlesExistingBalance` but not `AcceptsDiscountsOnBalance`, so it offers no promotion code.
 
 ### Limiting a coupon to a source, a reference type or one customer
 
@@ -406,6 +406,14 @@ example — it returns `PaymentBeginResult.Decline`. The engine records the atte
 reason, reports it as `PaymentBeginOutcome.Declined` with `ProviderErrorMessage`, and gives the next attempt for the
 same obligation its own idempotency key, so retrying with another card is not answered with the old decline.
 
+### Paying for several things at once
+
+A checkout can pay for several things of one reference type with one payment. **`StartCheckoutRequest.References`** lists them (`CheckoutReference`: `ReferenceType` and `ReferenceId`) instead of `ReferenceId`. The session keeps them in `CheckoutSession.References`, its `ReferenceType` is the shared type, and its `ReferenceId` is empty, so do not set `ReferenceVersionId` either. A list of one entry starts exactly the checkout `ReferenceType` and `ReferenceId` start. `StartAsync` throws `ArgumentException` before anything is created when the entries have different reference types, an id appears twice, or both `ReferenceId` and `References` are set.
+
+The handler of the reference type reads `CheckoutSession.References` in `ActivatingAsync` and contributes a billing item for each. It decides whether they can be paid together, and refuses the checkout with **`CheckoutFlowActivatingContext.Reject(error)`** otherwise, rather than by throwing (an exception a handler throws is logged and the next handler still runs). When any handler rejected it, `StartAsync` throws **`CheckoutRejectedException`**, whose `Errors` list the reasons, and saves nothing. The [Transactions](transactions) module uses this to settle several outstanding transactions of one customer at once; see [Paying several transactions at once](transactions.md#paying-several-transactions-at-once).
+
+A refund of a payment that paid for several things can name the one it gives money back for: `RequestPaymentRefundContext.ReferenceType` and `ReferenceId` are copied onto the `PaymentRefund`, so the module that owns the reference records the refund against that one only.
+
 ### Where the customer returns
 
 The module that starts a checkout can say where the customer goes back to and what the confirmation is called, through three optional `StartCheckoutRequest` properties:
@@ -510,6 +518,32 @@ A provider can report a fraud rating with the verification (`PaymentVerification
 - With payment showing, the payment script takes the submit as on the stepped layout. A post from that page with no `checkout-action` completes the checkout, for a purchase that needs no gateway.
 - A change to a section above payment switches the button to **Update order**, a submit named `checkout-action` with `CheckoutConstants.FormActions.Update`, which saves and shows the new total before anything is charged.
 
+## Kept payment methods
+
+**`ISavedPaymentMethodStore`** (in `CrestApps.OrchardCore.Checkout.Abstractions`, registered by the **Checkout** feature) holds the payment methods each customer kept for charges made without them present, whatever provider holds them. A module uses it to find a customer's cards and charge one later, for example to renew a subscription charged to the card on file, through [`ITransactionCommandService.ChargeSavedPaymentMethodAsync`](transactions.md#charging-a-kept-card).
+
+- **How it fills.** When a checkout whose `CheckoutSession.SavePaymentMethod` is set completes, `SavedPaymentMethodCheckoutHandler` reads back the card each confirmed attempt kept (`ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync`) and saves it for the session's owner (`CheckoutSession.OwnerId`). That covers every checkout that keeps the card, such as an [installment plan's](installment-plans.md) first payment and a booking deposit. A guest checkout keeps nothing here. A card that can't be read back is logged and skipped; it never fails the checkout.
+- **What it keeps.** One `CustomerPaymentMethod` per owner and card: `ItemId`, `OwnerId`, the provider's `SavedPaymentMethod` (provider key, customer and payment method references, brand, last four digits, expiry), `IsDefault`, `SourceSessionId`, `CreatedUtc`, `UpdatedUtc` and `LastChargedUtc`. The card itself stays with the provider. The same card kept again (same owner, provider and `PaymentMethodReference`) updates the record instead of adding another, so a renewed expiry is picked up.
+- **The default card.** The owner's first card becomes their default. `SetDefaultAsync` moves it, and removing the default makes the newest remaining card the default. `GetDefaultAsync` returns the default, or else the newest card that has not expired.
+
+| Member | What it does |
+| --- | --- |
+| `ListAsync(ownerId)` | The owner's cards, the default first, then the newest. |
+| `FindAsync(ownerId, id)` | One of the owner's cards, or `null` when the owner has none with that id. |
+| `FindByIdAsync(id)` | A card whoever it belongs to. Server code that charges it checks `OwnerId` itself, as `ChargeSavedPaymentMethodAsync` does. |
+| `GetDefaultAsync(ownerId)` | The card to charge when none is named. |
+| `SaveAsync(ownerId, paymentMethod, sourceSessionId)` | Keeps a card for the owner, or updates it. |
+| `SetDefaultAsync(ownerId, id)` | Makes one of the owner's cards their default. |
+| `MarkChargedAsync(id, chargedUtc)` | Records a successful charge without the owner present. |
+| `RemoveAsync(ownerId, id)` | Forgets one of the owner's cards. |
+| `RemoveAllAsync(ownerId)` | Forgets all of them. Erasing a customer's personal data does this. |
+
+Every lookup that takes an owner returns only that owner's cards, so an id sent from a browser can never reach someone else's card. Removing a card only stops this site from offering or charging it from the store: the provider is not asked to delete it, and a record that keeps its own copy, such as an installment plan's `InstallmentPlan.PaymentMethod`, keeps charging it.
+
+With Stripe enabled, the storefront account page **Payment methods** (`account/payment-methods`) lists the kept cards under **Cards for automatic payments**, from any provider, with **Make default** and **Remove**, above the cards saved for checkout. See [Payments](payments.md#saved-cards-for-the-buyers-own-purchases).
+
+A provider that can be charged this way reports `SupportsSavedPaymentMethods`, implements `ICheckoutSavedPaymentMethodProvider`, and honors `CheckoutPaymentDataKeys.OffSession`. When the card's bank asks the cardholder to approve an off-session charge, it returns `PaymentBeginResult.AuthenticationRequired(...)`; the engine then reports `PaymentBeginOutcome.RequiresAuthentication` alongside `Declined`, so the caller can ask the customer to pay it themselves rather than trying the card again.
+
 ## Test payments
 
 | | |
@@ -572,7 +606,7 @@ The setting is read when the tenant starts, so a change takes effect after the t
 | `VerifyAsync` | Reports `Succeeded` with `ReportsAuthoritativeAmount = true`, the attempt's expected amount and tax, its currency, and `GatewayMode.Testing`. Because the amount is authoritative, the checkout cross-checks it exactly as it does for Stripe. |
 | `CancelAsync` | Always succeeds. |
 | `RefundAsync` | Succeeds for the requested amount with `GatewayMode.Testing`. The refund reference is derived from the idempotency key, so a retried refund returns the same refund. Refunds flow back to the transaction like any other refund. |
-| `GetSavedPaymentMethodAsync` | After a payment begun with `CheckoutPaymentDataKeys.SavePaymentMethod`, returns a saved method (`Test •••• 4242`) whose references a later off-session charge (`CheckoutPaymentDataKeys.ForOffSessionCharge`) accepts. An off-session charge naming any other method fails. |
+| `GetSavedPaymentMethodAsync` | After a payment begun with `CheckoutPaymentDataKeys.SavePaymentMethod`, returns a saved method (`Test •••• 4242`) whose references a later off-session charge (`CheckoutPaymentDataKeys.ForOffSessionCharge`) accepts. An off-session charge naming any other method fails. A checkout that keeps the card adds it to the owner's [kept payment methods](#kept-payment-methods). |
 | `BeginRecurringAsync` | Establishes an agreement with a `test_sub_…` reference. Cancel, pause and update always succeed. |
 
 The provider declares one-time, recurring and combined payments, refunds and saved payment methods. It declares in-page collection (`SupportsEmbeddedElements`) because its panel is shown on the page, which is what lets the installment plan down payment screen offer it. It does not defer payment, so it can pay off an existing balance.
@@ -586,6 +620,7 @@ The last two digits of what an obligation charges, tax included, in the currency
 | Amount ends in | Outcome |
 | --- | --- |
 | `02` (for example `10.02`) | The payment is **declined** when it begins: the attempt is recorded as failed and the begin request returns an error, as a declined card does. Off-session charges and recurring agreements are declined too. |
+| `03` (for example `10.03`) | An **off-session charge** of a saved payment method is refused because the cardholder would have to approve it: the begin result is `PaymentBeginResult.AuthenticationRequired`, so `ChargeSavedPaymentMethodAsync` reports `RequiresAuthentication`. A payment the payer makes themselves succeeds. |
 | `05` (for example `10.05`) | The payment stays **pending** for two minutes (`TestCheckoutPaymentProvider.PendingSettlementDelay`) after the attempt was created. The status endpoint reports `Pending` and the browser stops waiting; the reconciliation sweep picks the attempt up once it is that old and completes the checkout. |
 | Anything else | The payment succeeds. |
 
@@ -612,6 +647,85 @@ To use the framework in your own module:
 7. To let a gateway bill on a cycle, also implement **`ICheckoutRecurringPaymentProvider`** under the same provider key. Implementations must be idempotent on the attempt's idempotency key, so a retried begin resumes the same agreement instead of creating a second one and billing the customer twice.
 8. To let buyers pay with a balance they hold, such as a voucher or a wallet, implement **`ICheckoutTenderProvider`**; see [Adding a kind of balance](#adding-a-kind-of-balance).
 9. To let apps collect a gateway's payment over the commerce API, implement **`ICheckoutPaymentClientConfigurationProvider`** for it; see [The commerce API](#the-commerce-api).
+
+## Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as it is with the [Report Builder](report-builder/index.md), the **Checkout** feature registers the **Checkout** data source (`Checkout`), so reports and data pipelines can read the checkouts buyers started, the coupons and their uses, and the payment methods customers kept. Each data set reads its newest records first, a page at a time, through its index. The date range a report puts on the main date, the keys of a join and a status filter narrow the read in the database. Money is in each record's own currency, which the **Currency** field next to it names. Identifier fields reference the data sets they point to, so orders, users and transactions join automatically.
+
+| Data set | One row per | Permission |
+| --- | --- | --- |
+| **Checkout sessions** (`CheckoutSessions`) | Checkout a buyer started, abandoned ones included | **Manage orders** (`ManageOrders`), the permission of the Orders feature's **Checkouts** report |
+| **Coupons** (`Coupons`) | Coupon | **Manage coupons** (`ManageCoupons`) |
+| **Coupon uses** (`CouponRedemptions`) | Use of a coupon code at a checkout | **Manage coupons** (`ManageCoupons`) |
+| **Saved payment methods** (`SavedPaymentMethods`) | Payment method a customer kept for later charges | **Manage payments and refunds** (`ManageRefunds`), from [Transactions](transactions.md#permissions) |
+
+An abandoned checkout is one with the status `Expired`: the sweep expires a checkout nobody finished after the session lifetime, and its **Expired** field holds when. The buyer's name, email, phone, street address, IP address, browser, guest token and what they typed into the steps are never exposed; the billing country and region stay, as they do when a checkout is anonymized. A coupon's customer limit is never exposed, and a kept payment method never exposes its digits or the references the provider charges it by.
+
+### Checkout sessions
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Checkout session ID | The session ID. An order's checkout session ID joins it. |
+| `Status` | Status | `Pending`, `AwaitingProvider`, `PaymentPending`, `Completed`, `Failed`, `Canceled` or `Expired`. |
+| `CurrentStep` | Step reached | The key of the step the buyer was on. |
+| `ReferenceType` | Bought for | `Order` for a store order, or the kind of thing another module sells. |
+| `ReferenceId` | Reference ID | |
+| `OrderId` | Order ID | The reference when it is an order. Joins **Orders**. |
+| `SettlesExistingBalance` | Pays a balance owed | |
+| `SavePaymentMethod` | Keeps the payment method | |
+| `LineCount`, `ItemCount` | Lines, Units | Empty while the invoice was never built. |
+| `Currency` | Currency | |
+| `Total`, `DueNow`, `TaxAmount`, `DiscountTotal`, `TenderedAmount`, `AmountDue` | Total, Due now, Tax, Discounts, Paid from balances, Left to pay | In the checkout's currency. Empty while the invoice was never built. |
+| `CreatedUtc` | Started | The main date. |
+| `ModifiedUtc`, `CompletedUtc`, `ExpiredUtc` | Last changed, Completed, Expired | |
+| `IsAnonymized` | Anonymized | |
+| `UserId` | User ID | The account the checkout belongs to. Joins **Users**. Empty for a guest and once anonymized. |
+| `BillingCountry`, `BillingRegion` | Billing country, Billing region | |
+
+### Coupons
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Coupon ID | |
+| `Code`, `Description` | Code, Description | |
+| `IsEnabled`, `IsAutomatic`, `OnlyGeneratedCodes` | Enabled, Applies by itself, Only generated codes | |
+| `IsLimited` | Limited to some buyers | Limited to sources, kinds of purchase or one customer. |
+| `Kind`, `Target` | Kind, Applies to | |
+| `Percentage` | Percentage off | |
+| `Currency`, `Amount` | Currency, Amount off | A fixed amount off, in the coupon's currency. |
+| `MinimumAmount` | Minimum spend | In the currency of the checkout the coupon is used on. |
+| `MinimumQuantity`, `MaxRedemptions`, `MaxRedemptionsPerCustomer`, `RedemptionCount` | Minimum quantity, Most uses, Most uses per customer, Times used | |
+| `StartsUtc`, `EndsUtc`, `UpdatedUtc` | Starts, Ends, Last changed | |
+| `CreatedUtc` | Created | The main date. |
+
+### Coupon uses
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Use ID | |
+| `Code` | Code | |
+| `Status` | Status | `Held`, `Redeemed`, `Released` or `Returned`. |
+| `IsCounted` | Counts toward the limits | |
+| `Currency`, `Amount` | Currency, Discount | In the checkout's currency. |
+| `SessionId` | Checkout session ID | Joins **Checkout sessions**. |
+| `ReferenceType`, `ReferenceId` | Used for, Reference ID | |
+| `OrderId` | Order ID | Joins **Orders**. |
+| `UserId` | User ID | Joins **Users**. Empty for a guest. |
+| `CreatedUtc` | Put on the checkout | The main date. |
+| `ExpiresUtc`, `RedeemedUtc`, `EndedUtc` | Hold expires, Used, Let go or given back | |
+
+### Saved payment methods
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Saved payment method ID | |
+| `ProviderKey` | Payment method | The provider that keeps it. |
+| `IsExpired` | Expired | Whether the card's expiry has passed when the report runs. No card detail, such as the brand, expiry or digits, is exposed. |
+| `IsDefault` | Default | |
+| `UserId` | User ID | Joins **Users**. |
+| `CreatedUtc` | Kept | The main date. |
+
+The payment attempts and refunds Checkout records are in the [Transactions](transactions.md#report-builder-data-source) data source.
 
 ## Related
 

@@ -22,6 +22,7 @@ public sealed class ReportIndexConditions<TIndex>
 {
     private readonly IEnumerable<DataCondition> _conditions;
     private readonly List<Func<IQueryIndex<TIndex>, IQueryIndex<TIndex>>> _filters = [];
+    private int _parameterCount;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportIndexConditions{TIndex}"/> class.
@@ -48,43 +49,10 @@ public sealed class ReportIndexConditions<TIndex>
     {
         ArgumentException.ThrowIfNullOrEmpty(column);
 
-        if (DataConditions.Keys(_conditions, field) is not { } keys)
+        foreach (var keys in GetKeys(field))
         {
-            return this;
+            AddText(column, keys);
         }
-
-        if (keys.Count == 0)
-        {
-            MatchesNothing = true;
-
-            return this;
-        }
-
-        var values = new string[keys.Count];
-
-        for (var index = 0; index < keys.Count; index++)
-        {
-            // Only ASCII text is compared in upper case the same way by every database and by the consumer.
-            if (keys[index] is not string text || !text.All(char.IsAscii))
-            {
-                return this;
-            }
-
-            values[index] = text.ToUpperInvariant();
-        }
-
-        var names = values.Select((_, index) => $"{column}_in{index}").ToArray();
-        var list = string.Join(", ", names.Select(name => "@" + name));
-
-        _filters.Add(rows =>
-        {
-            for (var index = 0; index < values.Length; index++)
-            {
-                rows = rows.WithParameter(names[index], values[index]);
-            }
-
-            return rows.Where(dialect => $"UPPER({dialect.QuoteForColumnName(column)}) IN ({list})");
-        });
 
         return this;
     }
@@ -103,53 +71,10 @@ public sealed class ReportIndexConditions<TIndex>
     {
         ArgumentNullException.ThrowIfNull(column);
 
-        if (DataConditions.Keys(_conditions, field) is not { } keys)
+        foreach (var keys in GetKeys(field))
         {
-            return this;
+            AddEnum(column, keys);
         }
-
-        var values = new HashSet<TEnum>();
-
-        foreach (var key in keys)
-        {
-            if (key is TEnum value)
-            {
-                values.Add(value);
-            }
-            else if (key is string text)
-            {
-                // A name that isn't one of the enumeration's matches no record.
-                if (System.Enum.TryParse<TEnum>(text, ignoreCase: true, out var parsed))
-                {
-                    values.Add(parsed);
-                }
-            }
-            else
-            {
-                // A value of another type is compared by the consumer.
-                return this;
-            }
-        }
-
-        if (values.Count == 0)
-        {
-            MatchesNothing = true;
-
-            return this;
-        }
-
-        Expression body = null;
-
-        foreach (var value in values)
-        {
-            var equal = Expression.Equal(column.Body, Expression.Constant(value, typeof(TEnum)));
-
-            body = body is null ? equal : Expression.OrElse(body, equal);
-        }
-
-        var predicate = Expression.Lambda<Func<TIndex, bool>>(body, column.Parameters);
-
-        _filters.Add(rows => rows.Where(predicate));
 
         return this;
     }
@@ -169,5 +94,108 @@ public sealed class ReportIndexConditions<TIndex>
         }
 
         return rows;
+    }
+
+    // The values each condition that limits the field to a list of values allows, one list per condition. The lists of
+    // several conditions are not intersected here: the consumer compares text without regard to case, and an
+    // intersection would not, so each condition is applied on its own and the database keeps the rows all of them allow.
+    private IEnumerable<IReadOnlyList<object>> GetKeys(string field)
+    {
+        foreach (var condition in _conditions)
+        {
+            if (condition is not null &&
+                string.Equals(condition.Field, field, StringComparison.Ordinal) &&
+                DataConditions.Keys([condition], field) is { } keys)
+            {
+                yield return keys;
+            }
+        }
+    }
+
+    private void AddText(string column, IReadOnlyList<object> keys)
+    {
+        if (keys.Count == 0)
+        {
+            MatchesNothing = true;
+
+            return;
+        }
+
+        var values = new string[keys.Count];
+
+        for (var index = 0; index < keys.Count; index++)
+        {
+            // Only ASCII text is compared in upper case the same way by every database and by the consumer.
+            if (keys[index] is not string text || !text.All(char.IsAscii))
+            {
+                return;
+            }
+
+            values[index] = text.ToUpperInvariant();
+        }
+
+        var first = _parameterCount;
+
+        _parameterCount += values.Length;
+
+        var names = values.Select((_, index) => $"{column}_in{first + index}").ToArray();
+        var list = string.Join(", ", names.Select(name => "@" + name));
+
+        _filters.Add(rows =>
+        {
+            for (var index = 0; index < values.Length; index++)
+            {
+                rows = rows.WithParameter(names[index], values[index]);
+            }
+
+            return rows.Where(dialect => $"UPPER({dialect.QuoteForColumnName(column)}) IN ({list})");
+        });
+    }
+
+    private void AddEnum<TEnum>(Expression<Func<TIndex, TEnum>> column, IReadOnlyList<object> keys)
+        where TEnum : struct, Enum
+    {
+        var values = new HashSet<TEnum>();
+
+        foreach (var key in keys)
+        {
+            if (key is TEnum value)
+            {
+                values.Add(value);
+            }
+            else if (key is string text)
+            {
+                // A name that isn't one of the enumeration's matches no record.
+                if (System.Enum.TryParse<TEnum>(text, ignoreCase: true, out var parsed))
+                {
+                    values.Add(parsed);
+                }
+            }
+            else
+            {
+                // A value of another type is compared by the consumer.
+                return;
+            }
+        }
+
+        if (values.Count == 0)
+        {
+            MatchesNothing = true;
+
+            return;
+        }
+
+        Expression body = null;
+
+        foreach (var value in values)
+        {
+            var equal = Expression.Equal(column.Body, Expression.Constant(value, typeof(TEnum)));
+
+            body = body is null ? equal : Expression.OrElse(body, equal);
+        }
+
+        var predicate = Expression.Lambda<Func<TIndex, bool>>(body, column.Parameters);
+
+        _filters.Add(rows => rows.Where(predicate));
     }
 }

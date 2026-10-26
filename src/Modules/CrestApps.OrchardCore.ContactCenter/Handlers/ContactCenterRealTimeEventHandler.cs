@@ -288,6 +288,10 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             RequestedStatus = profile.RequestedPresenceStatus?.ToString(),
             Reason = profile.PresenceReason,
             QueueIds = [.. profile.QueueIds],
+
+            // The agent's phone answers the leg of the dial it is held for by itself, rather than ringing it with
+            // Answer/Decline; this tells it which leg that is, whenever its accept push was missed.
+            DialHoldReservationId = profile.DialHoldReservationId,
             ChangedUtc = profile.PresenceChangedUtc ?? interactionEvent.OccurredUtc,
         }, cancellationToken);
     }

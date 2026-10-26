@@ -576,6 +576,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public AgentPresenceNotification() { }
         public string AgentId { get; set; }
         public System.DateTime ChangedUtc { get; set; }
+        public string DialHoldReservationId { get; set; }
         public string DisplayName { get; set; }
         public System.Collections.Generic.IList<string> QueueIds { get; set; }
         public string Reason { get; set; }

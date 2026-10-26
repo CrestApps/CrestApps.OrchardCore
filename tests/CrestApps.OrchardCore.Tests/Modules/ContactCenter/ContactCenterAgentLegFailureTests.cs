@@ -317,6 +317,76 @@ public sealed class ContactCenterAgentLegFailureTests
     }
 
     [Fact]
+    public async Task RecordAnsweredAsync_WhenTheHeldAgentCannotBeMovedOnACall_StillRecordsTheJoin()
+    {
+        // Arrange
+        // The agent's profile was locked by other work for longer than the connect waits. The throw used to undo the
+        // join with it, so the agent talked to the customer while their screens said "Waiting for a connected call".
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "Telnyx",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            ActivityItemId = "activity-1",
+            Direction = InteractionDirection.Outbound,
+            AnsweredUtc = _now.AddSeconds(-5),
+        }.RestorePersistedStatus(InteractionStatus.Connected);
+        interaction.TechnicalMetadata[DialerCallMetadata.DialerProfileIdKey] = "profile-1";
+
+        var session = new CallSession
+        {
+            ItemId = "call-session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Outbound,
+            AnsweredUtc = _now.AddSeconds(-5),
+        }.RestorePersistedState(VoiceCallState.Connected);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Telnyx", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        presenceManager
+            .Setup(manager => manager.ConnectHeldAgentAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The Contact Center agent profile for user 'user-1' is currently being updated."));
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        var service = new ContactCenterAgentLegFailureService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<ITelephonyService>(MockBehavior.Strict).Object,
+            _auditRecorder,
+            new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
+            clock.Object,
+            NullLogger<ContactCenterAgentLegFailureService>.Instance,
+            presenceManager.Object,
+            Mock.Of<IDialerAbandonmentTracker>(),
+            Mock.Of<IActivityReservationManager>(),
+            Mock.Of<IActivityReservationService>());
+
+        // Act
+        var advanced = await service.RecordAnsweredAsync("Telnyx", "call-1", "agent-leg-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(advanced);
+        Assert.True(DialerCallMetadata.HasAgentJoined(interaction));
+        interactionManager.Verify(manager => manager.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Single(_auditRecorder.CallsOf(ContactCenterConstants.Events.AgentLegAnswered));
+    }
+
+    [Fact]
     public async Task RecordAnsweredAsync_WhenTheAgentLegAnswers_AdvancesTheAgentLegToAnswered()
     {
         // Arrange

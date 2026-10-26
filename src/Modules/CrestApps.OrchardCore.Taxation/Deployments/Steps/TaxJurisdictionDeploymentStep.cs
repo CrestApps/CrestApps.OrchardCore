@@ -11,13 +11,12 @@ public sealed class TaxJurisdictionDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<TaxJurisdictionDeploymentStep>("Taxation");
     private static readonly LocalizationSource _title = LocalizationSource.Create<TaxJurisdictionDeploymentStep>("Tax Jurisdictions");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TaxJurisdictionDeploymentStep"/> class.
-    /// </summary>
-    public TaxJurisdictionDeploymentStep()
-    {
-        Name = TaxationDeploymentSteps.TaxJurisdiction;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => TaxationDeploymentSteps.TaxJurisdiction;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

@@ -1,0 +1,48 @@
+@model ReportWidgetViewModel
+
+@* A report on the admin dashboard: compact figures, bars and tables, with the period and when the result was made. *@
+
+@switch (Model.Outcome)
+{
+    case ReportWidgetOutcome.NotConfigured:
+        <p class="text-muted mb-0">@T["Choose the report this widget shows by editing it."]</p>
+
+        break;
+
+    case ReportWidgetOutcome.Denied:
+        <p class="text-muted mb-0">@T["You can't view the {0} report.", Model.ReportDisplayName]</p>
+
+        break;
+
+    case ReportWidgetOutcome.Failed:
+        <p class="text-danger mb-0">@T["The {0} report couldn't be run. The details are in the log.", Model.ReportDisplayName]</p>
+
+        break;
+
+    default:
+        {
+            var document = Model.Result.Document;
+
+            <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                <span class="fw-semibold">@Model.ReportDisplayName</span>
+                <span class="text-muted small">@Model.PeriodText</span>
+            </div>
+
+            if (!document.HasContent)
+            {
+                <p class="text-muted mb-0">@T["Nothing to show for this period."]</p>
+            }
+
+            <partial name="_ReportWidgetSections" model="document" />
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 text-muted small">
+                <span>@Model.UpdatedText</span>
+                @if (Model.CanOpenReport)
+                {
+                    <a asp-action="Display" asp-controller="Reports" asp-area="CrestApps.OrchardCore.Reports" asp-route-id="@Model.ReportName">@T["Open the full report"]</a>
+                }
+            </div>
+        }
+
+        break;
+}

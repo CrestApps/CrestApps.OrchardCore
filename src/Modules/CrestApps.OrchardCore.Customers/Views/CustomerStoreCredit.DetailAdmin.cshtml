@@ -32,15 +32,15 @@
     {
         <form asp-controller="StoreCreditAdmin" asp-action="Change" asp-route-customerId="@Model.CustomerId" method="post" class="row g-2 align-items-end mb-3">
             <div class="col-6 col-sm-3">
-                <label class="form-label" for="store-credit-amount">@T["Amount"]</label>
+                <label class="form-label ocat-label-required" for="store-credit-amount">@T["Amount"]</label>
                 <input id="store-credit-amount" name="amount" type="number" step="0.01" class="form-control" required />
             </div>
             <div class="col-6 col-sm-2">
-                <label class="form-label" for="store-credit-currency">@T["Currency"]</label>
+                <label class="form-label ocat-label-required" for="store-credit-currency">@T["Currency"]</label>
                 <input id="store-credit-currency" name="currency" value="@Model.DefaultCurrency" maxlength="3" class="form-control" required />
             </div>
             <div class="col-12 col-sm-5">
-                <label class="form-label" for="store-credit-reason">@T["Reason"]</label>
+                <label class="form-label ocat-label-required" for="store-credit-reason">@T["Reason"]</label>
                 <input id="store-credit-reason" name="reason" class="form-control" required />
             </div>
             <div class="col-12 col-sm-2">

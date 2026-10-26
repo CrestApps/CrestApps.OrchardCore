@@ -235,6 +235,48 @@ public sealed class ImportFilesBackgroundTaskTests
     }
 
     [Fact]
+    public void RecordFailedRun_KeepsTheImportResuming_UntilTheSameRowHasFailedEveryAllowedRun()
+    {
+        var progressPart = new ImportFileProcessStatsPart { CurrentRow = 5_000 };
+
+        for (var attempt = 1; attempt < ImportFilesBackgroundTask.MaxFailedRunAttempts; attempt++)
+        {
+            // A restart or a dropped connection fails a run or two; the import resumes by itself after each.
+            Assert.False(ImportFilesBackgroundTask.RecordFailedRun(progressPart));
+        }
+
+        Assert.True(ImportFilesBackgroundTask.RecordFailedRun(progressPart));
+        Assert.Equal(5_000, progressPart.FailedRunRow);
+    }
+
+    [Fact]
+    public void RecordFailedRun_StartsOver_WhenTheImportSavedProgressSinceTheLastFailure()
+    {
+        var progressPart = new ImportFileProcessStatsPart { CurrentRow = 5_000 };
+
+        ImportFilesBackgroundTask.RecordFailedRun(progressPart);
+        ImportFilesBackgroundTask.RecordFailedRun(progressPart);
+
+        // A batch was saved after the failures, so the import is making progress and the failures were passing.
+        progressPart.CurrentRow = 5_100;
+
+        Assert.False(ImportFilesBackgroundTask.RecordFailedRun(progressPart));
+        Assert.Equal(5_100, progressPart.FailedRunRow);
+        Assert.Equal(1, progressPart.FailedRunAttempts);
+    }
+
+    [Theory]
+    [InlineData(1, 15)]
+    [InlineData(2, 30)]
+    [InlineData(3, 60)]
+    [InlineData(4, 120)]
+    [InlineData(5, 120)]
+    public void RetryBackoff_GrowsWithEachFailedRun_UpToTwoMinutes(int failedRuns, int expectedSeconds)
+    {
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), ImportFilesBackgroundTask.RetryBackoff.GetDelay(failedRuns));
+    }
+
+    [Fact]
     public void RunLimits_StopARunBeforeItsLockExpires_AndLeaveRoomForTheLastBatch()
     {
         var limits = ImportFilesBackgroundTask.RunLimits;

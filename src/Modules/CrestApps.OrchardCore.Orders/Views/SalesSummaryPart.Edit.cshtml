@@ -1,0 +1,25 @@
+@model CrestApps.OrchardCore.Orders.Dashboard.SalesSummaryEditViewModel
+
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <label asp-for="ShortDays" class="form-label ocat-label-required">@T["First window (days)"]</label>
+        <input asp-for="ShortDays" type="number" min="1" max="365" class="form-control" />
+        <span asp-validation-for="ShortDays" class="text-danger"></span>
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="LongDays" class="form-label ocat-label-required">@T["Second window (days)"]</label>
+        <input asp-for="LongDays" type="number" min="1" max="365" class="form-control" />
+    </div>
+    <div class="col-12 col-md-6">
+        <label asp-for="Channel" class="form-label">@T["Orders counted"]</label>
+        <select asp-for="Channel" asp-items="Model.Channels" class="form-select"></select>
+    </div>
+</div>
+<span class="hint d-block mb-3">@T["The widget shows today and these two windows of days. Pick a channel to count only its orders."]</span>
+
+<div class="mb-3">
+    <label asp-for="CacheMinutes" class="form-label">@T["Keep for (minutes)"]</label>
+    <input asp-for="CacheMinutes" type="number" min="0" max="1440" class="form-control" />
+    <span asp-validation-for="CacheMinutes" class="text-danger"></span>
+    <span class="hint">@T["The widget keeps its figures for these minutes instead of counting the orders on every visit to the dashboard. 0 counts them every time. Saving the widget starts over."]</span>
+</div>

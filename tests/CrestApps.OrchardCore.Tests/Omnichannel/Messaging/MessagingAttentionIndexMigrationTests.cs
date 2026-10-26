@@ -24,6 +24,7 @@ public sealed class MessagingAttentionIndexMigrationTests
 
     private static readonly string[] _agentAttentionColumns = ["AssignedAgentId", "Status", "IsRead", "LastMessageUtc", "DocumentId"];
     private static readonly string[] _ownerAttentionColumns = ["OwnerType", "OwnerId", "Status", "IsRead", "AssignmentStatus", "AssignedAgentId", "DocumentId"];
+    private static readonly string[] _activityColumns = ["LastActivityUtc", "DocumentId"];
 
     [Fact]
     public async Task CreateAsync_CreatesTheAttentionIndexes()
@@ -32,9 +33,33 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(5, version);
+            Assert.Equal(6, version);
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
+            Assert.Equal(_activityColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.ActivityIndexName));
+        });
+    }
+
+    // Live: a conversation transferred to an agent sat below every thread with a newer message, past the first page of
+    // their inbox, because the inbox was ordered by the last message alone.
+    [Fact]
+    public async Task UpdateFrom4Async_OnAVersion4Table_AddsTheActivityColumnFromTheLastMessage()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 4 released: the same table without the activity column and its index.
+            await DropIndexAsync(schemaBuilder, MessagingMigrations.ActivityIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN LastActivityUtc");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TableName(schemaBuilder)} (DocumentId, ItemId, LastMessageUtc, IsRead, UnreadCount) VALUES (1, 'c1', '2026-10-24 05:59:00', 0, 0)");
+
+            var version = await migration.UpdateFrom4Async();
+
+            Assert.Equal(5, version);
+            Assert.Equal(_activityColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.ActivityIndexName));
+            Assert.Equal("2026-10-24 05:59:00", await ScalarAsync(schemaBuilder, $"SELECT LastActivityUtc FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'"));
         });
     }
 
@@ -84,6 +109,27 @@ public sealed class MessagingAttentionIndexMigrationTests
         => schemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(
             table => table.DropIndex(indexName),
             collection: MessagingStorage.CollectionName);
+
+    private static string TableName(SchemaBuilder schemaBuilder)
+        => schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessagingConversationIndex), MessagingStorage.CollectionName);
+
+    private static async Task ExecuteAsync(SchemaBuilder schemaBuilder, string sql)
+    {
+        await using var command = schemaBuilder.Connection.CreateCommand();
+        command.Transaction = schemaBuilder.Transaction;
+        command.CommandText = sql;
+
+        await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<string> ScalarAsync(SchemaBuilder schemaBuilder, string sql)
+    {
+        await using var command = schemaBuilder.Connection.CreateCommand();
+        command.Transaction = schemaBuilder.Transaction;
+        command.CommandText = sql;
+
+        return Convert.ToString(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken), System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     // The indexed columns in order, or none when the index is missing.
     private static async Task<string[]> IndexColumnsAsync(SchemaBuilder schemaBuilder, string indexName)

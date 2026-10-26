@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
+using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -62,6 +64,15 @@ internal sealed class ContentTransferEntryManager : IContentTransferEntryManager
         if (entry == null || entry.Status == ContentTransferEntryStatus.Deleting)
         {
             return;
+        }
+
+        // Resuming by hand starts the count of failed runs over, so the import gets its full set of attempts again.
+        if (entry.Has<ImportFileProcessStatsPart>())
+        {
+            var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
+            progressPart.FailedRunRow = 0;
+            progressPart.FailedRunAttempts = 0;
+            entry.Put(progressPart);
         }
 
         entry.Status = ContentTransferEntryStatus.Processing;

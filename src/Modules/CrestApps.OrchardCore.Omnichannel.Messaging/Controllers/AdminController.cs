@@ -131,7 +131,7 @@ public sealed class AdminController : Controller
         return Json(new { count = await _workspaceBuilder.CountNeedingAttentionAsync(User, refresh, HttpContext.RequestAborted) });
     }
 
-    [Admin("messaging/conversation/{id}", "MessagingConversation")]
+    [Admin("messaging/conversation/{id}", "MessagingConversation"), Filters.EndAbortedRequest]
     public async Task<IActionResult> Conversation(string id, string show, string channel, int page = 1, long beforeTicks = 0)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))

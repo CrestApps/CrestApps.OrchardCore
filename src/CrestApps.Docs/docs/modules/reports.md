@@ -39,6 +39,8 @@ PDFsharp reads the host's fonts. On Windows it uses the Windows fonts; on Linux 
 
 The optional **Report Builder** add-on lets people design their own reports with drag and drop from pluggable data sources, and share them. See [Report Builder](report-builder/index.md).
 
+The modules publish their records as data sources for the builder and for Orchard Core's data pipelines: **Orders**, **Products**, **Customers**, **Companies**, **Inventory**, **Checkout**, **Carts**, **Transactions**, **Subscriptions**, **Shipping**, **Reviews**, **Downloads**, **Bookings**, **Marketplace**, **Point of Sale**, **Contact Center**, **Omnichannel**, **Messaging**, **AI chat** (with AI usage), **Phone number verifications** and **DNC registry**, beside Orchard Core's **Content items**, **Users** and **Queries** and the builder's **Report views**. Each one is registered when Data Pipelines Core and the feature that stores its data are on, and each data set needs the permission of the module's own screens. [Data sources](report-builder/data-sources.md) lists them with their data sets, permissions and relationships, and each module's page lists the fields of its data sets. Where a built-in report can be built in the builder, the module ships a recipe that adds it as a report you can copy and change, such as **Reports: store reports to adapt** for the order reports.
+
 The implementation is split into three layers:
 
 - **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportRunner`, `ReportDescriptor`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
@@ -202,6 +204,61 @@ The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptio
 - `ReportSubscriptionSchedule.GetNextRunUtc` and `GetPeriod` work in the site's time zone. A run covers the day, the seven days, or the calendar month before it, from midnight to midnight.
 - `ReportSubscriptionsBackgroundTask` (every five minutes) sends the subscriptions that are due. A late run covers the period it was due for. `ReportSubscriptionService.SendAsync` runs the report with that date range, resolves its display values, and emails its metrics and tables (`ReportWorkflowService.ToHtml`), with the export attached when asked. It records `LastError` when the email or the report fails.
 - **Reports > Subscriptions** (`ReportSubscriptionsController`, `Reports/subscriptions`, the `AdminList`) needs **Manage report subscriptions**, and lists only the reports the person can see. **Save and send now** sends one at once without moving its schedule.
+
+## Dashboard widgets
+
+With Orchard Core's **Admin Dashboard** enabled next to **Reports**, any report can be shown on the admin dashboard. There is no feature of its own to turn on: the widgets appear when both are enabled. Add a widget from **Manage Dashboard > Add Widget** and set:
+
+- **Report**: any report the person adding it may view. A ready-made widget fixes the report, so only the options below are set.
+- **Period**: today, yesterday, the last 7, 30 or 90 days, this month, last month, this year, the last 12 months, all time, or custom dates. Every period except custom dates moves with the clock, so "last 30 days" is always the 30 days up to now, in the site's time zone. This is the date range filter of the report.
+- **Show**: figures and tables (the default), figures only, tables only, charts only, or everything. Charts are left out of the default because they need room.
+- **Rows per table**: how many rows of each table, and bars of each bar list, to show. A total row stays.
+- **Keep for (minutes)**: how long the widget keeps what it shows before it runs the report again. The default is 30 minutes, so the dashboard stays quick however often it opens. 0 runs the report on every visit. Saving the widget starts over.
+
+Each widget keeps its result in the tenant's memory cache, per widget and language. A person sees a widget only when they may view its report: the kept result is checked against the report's permission on every visit. A report that fails shows a message in its own tile and is not kept, so one broken report does not stop the dashboard.
+
+The same part, `ReportWidgetPart`, is on every widget below. A module ships a ready-made widget with `IContentDefinitionManager.DefineReportWidgetAsync`, which creates a `DashboardWidget` type fixed to a report with defaults for the period, what to show and the rows. A module adds its widgets in a startup class marked `[RequireFeatures(ReportsConstants.Feature, ReportWidgetConstants.AdminDashboardFeature)]`, so they exist only when both features are on.
+
+| Widget | Report | Default |
+| --- | --- | --- |
+| Report | Any report | Last 30 days, figures and tables |
+| Sales Overview | `order-sales` | Last 30 days, figures |
+| Sales Trend | `order-sales` | Last 30 days, chart |
+| Top Selling Products | `order-product-sales` | Last 30 days, top 5 |
+| Sales by Category | `order-category-sales` | Last 30 days, top 5 |
+| Sales by Country | `order-country-sales` | Last 30 days, 5 rows |
+| Orders to Ship | `unfulfilled-orders` | All time, oldest 5 |
+| Customer Insights | `order-customers` | Last 30 days, figures and 5 buyers |
+| Checkout Conversion | `checkout-conversion` | Last 30 days, figures |
+| Refunds | `order-refunds` | Last 30 days, figures and 5 refunds |
+| Payment Disputes | `order-disputes` | Last 90 days, open ones first |
+| Discount Codes Used | `order-discounts` | Last 30 days, 5 codes |
+| Tax Collected | `order-tax` | This month, figures |
+| Low Stock | `stock-on-hand` | All time, the 5 items with the least stock |
+| Stock Movements | `stock-movements` | Last 30 days |
+| Product Reviews | `product-reviews` | Last 30 days |
+| Shipping Times | `shipping-performance` | Last 30 days |
+| Digital Downloads | `digital-downloads` | Last 30 days |
+| Subscriptions Overview | `subscriptions-dashboard` | Last 30 days, figures |
+| Subscription Revenue | `subscription-revenue` | Last 30 days, figures |
+| Expiring Subscriptions | `expiring-subscriptions` | All time, table |
+| New Subscriptions Trend | `new-subscriptions-trend` | Last 12 months, chart |
+| Subscription Products | `product-performance` | Last 30 days |
+
+The **Sales Summary** and **Subscription Summary** widgets are not report widgets. They count the store's orders or subscriptions directly and have their own options; see [Sales Summary widget](carts-and-orders#sales-summary-widget) and [Subscriptions](subscriptions).
+
+### Report Builder widget
+
+With the **Report Builder** (`CrestApps.OrchardCore.Reports.Builder`) and Orchard Core's **Admin Dashboard** both enabled, the **Custom Report** widget (`ReportDesignWidget`, part `ReportDesignWidgetPart`, both in `ReportWidgetConstants`) shows a published report built in the report builder, or a reusable view as a table, with the same options as the report widget. It is registered by `DesignWidgetsStartup`, which belongs to the Report Builder feature and is marked `[RequireFeatures(ReportWidgetConstants.AdminDashboardFeature)]`; its migration creates the part and the `DashboardWidget` type. A store owner can build a report and put it on the dashboard without a developer.
+
+- **Report**: `ReportId` (a published `ReportDesign`) or `ViewId` (a `ReportView`), never both. The editor lists the published reports the editor may run and the views the editor may use, and refuses any other. A report that was never published is not in the list, because only published reports are in the catalog.
+- **Period**: the same choices as the report widget, resolved by `ReportWidgetPeriods` in the site's time zone. It is passed to `ReportDesignRunner.RunAsync` as a `ReportRunPeriod` of whole days and set on the report's first exposed filter on a `Date` or `DateTime` field whose control is a date range (`DateRange`) or a relative date (`RelativeDate`, "in the last N days", the filter a new report starts with) (`ReportDesignRunner.FindPeriodFilter`). For that run only, the filter becomes a `Between` over the period's days in the run's own plan, so a relative date filter covers the widget's period instead of its days; the saved report doesn't change. **All time** turns the filter off. A fixed filter, which viewers can't change, is never replaced. A report with no such filter keeps its own dates, `ReportDesignWidgetResult.PeriodApplied` is `false`, and the tile says **Its own dates**.
+- **Show**: `ReportWidgetContent` applied to the report's visuals through `ReportWidgetTrimmer`: figures are the headline-number visuals, tables are the table and pivot visuals, charts are the chart visuals. The default is everything, since the person who built the report chose its visuals. A view is always shown as one table.
+- **Rows per table**: 10 by default; a total row stays. **Keep for (minutes)**: `ReportWidgetConstants.DefaultCacheMinutes` (30) by default; 0 runs the report on every visit.
+
+`ReportDesignWidgetService` checks `ReportDesignerPermissions.ViewAllReportDesigns` against the report or view on every visit, before it reads the cache: the same check as the report's own page, so a person sees the tile's numbers only when they may run the report (an owner, a person or role it is shared with, or *View all custom reports*), and a view only when they build reports. A report reads its data with its owner's access, whoever views it, so its kept result is keyed by the widget and its last change, the report and its last publish, the owner, the period, what to show, the rows and the language, and is shared by everyone who may run the report. A view reads with the viewer's access, so its result is also keyed by the viewer. A report whose run fails (for example its owner's account is disabled) shows the same errors as its page and is not kept; a report or view that was deleted, or never published, says so. The widget runs the report live and does not raise the report-run workflow event; a view runs live with the viewer's access and does not read its scheduled snapshot.
+
+The widget renders the report's document with the same `_ReportWidgetSections` partial as the report widget, and its editor uses the same `_ReportWidgetOptions` partial and `ReportWidgetChoices`.
 
 ## Enable via recipe
 

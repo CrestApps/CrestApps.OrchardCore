@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
 /// The actions staff take on a <see cref="Transaction"/>: record an offline payment, mark it paid, cancel it, lower what
-/// is owed, send its invoice, and refund it. The Commerce console uses it, so a module that offers the same actions on
+/// is owed, send its invoice, refund it, and charge it to a card its owner kept. The Commerce console uses it, so a module that offers the same actions on
 /// its own screens gets the same timeline entries, receipts and handler calls
 /// (<see cref="ITransactionPaymentHandler"/>, <see cref="IPaymentRefundHandler"/> and <see cref="ITransactionEventHandler"/>).
 /// </summary>
@@ -81,4 +81,25 @@ public interface ITransactionCommandService
     /// <param name="reason">An optional reason passed on to each refund.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<TransactionCommandResult> RefundAsync(string transactionId, decimal? amount, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Charges what is still owed on the transaction to a payment method its owner kept, without the owner present, for
+    /// example to renew a subscription charged to the card on file. The charge runs through the checkout like any other
+    /// payment, so a payment that goes through is recorded on the transaction, receipted and reported to the payment and
+    /// lifecycle handlers exactly as a checkout payment is. A charge that is not taken is recorded on the timeline as a
+    /// <see cref="TransactionEventType.PaymentFailed"/> event, and <see cref="TransactionCommandResult.ChargeStatus"/>
+    /// tells the caller what to do next: for example, send the invoice when the card was declined or needs the
+    /// cardholder to approve the payment. Needs the Checkout feature and a payment provider that can charge saved
+    /// payment methods.
+    /// </summary>
+    /// <remarks>
+    /// The payment method must belong to the transaction's owner (<c>ISavedPaymentMethodStore</c> in the checkout
+    /// abstractions lists an owner's payment methods). A charge already handed to the provider for this transaction is
+    /// finished rather than repeated, so calling the command again never charges the owner twice. Only server code may
+    /// call it: it spends a card without its owner present.
+    /// </remarks>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="savedPaymentMethodId">The identifier of the owner's kept payment method to charge.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default);
 }

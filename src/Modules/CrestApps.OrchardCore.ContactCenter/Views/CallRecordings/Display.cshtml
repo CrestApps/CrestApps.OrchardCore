@@ -158,7 +158,7 @@
                 else
                 {
                     <form asp-action="Erase" asp-route-id="@recording.ItemId" method="post" class="no-multisubmit">
-                        <label for="reason" class="form-label">@T["Why is it being erased?"]</label>
+                        <label for="reason" class="form-label ocat-label-required">@T["Why is it being erased?"]</label>
                         <div class="input-group" style="max-width: 40rem;">
                             <input type="text" id="reason" name="reason" class="form-control" maxlength="500" required placeholder="@T["For example, the customer asked for their data to be deleted"]" />
                             <button type="submit" class="btn btn-danger">@T["Erase"]</button>

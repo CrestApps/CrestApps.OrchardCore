@@ -211,6 +211,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes
         public long DocumentId { get; set; }
         public System.DateTime? FirstResponseDueUtc { get; set; }
         public bool IsRead { get; set; }
+        public System.DateTime? LastActivityUtc { get; set; }
         public System.DateTime? LastMessageUtc { get; set; }
         public string OwnerId { get; set; }
         public string OwnerType { get; set; }
@@ -312,6 +313,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public System.DateTime? FirstResponseDueUtc { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversationEvent> History { get; set; }
         public bool IsRead { get; set; }
+        public System.DateTime? LastActivityUtc { get; set; }
         public System.DateTime? LastAutoReplyUtc { get; set; }
         public string LastMessagePreview { get; set; }
         public System.DateTime? LastMessageUtc { get; set; }

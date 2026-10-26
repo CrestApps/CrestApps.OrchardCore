@@ -77,15 +77,63 @@ public sealed class LeadImportProvider
         {
             var version = await GetHistoryVersionAsync();
 
-            if (_importsCache is null || !_importsCache.TryGet(version, out _imports))
+            if (_importsCache is null)
             {
                 _imports = await ReadImportsAsync();
+            }
+            else if (!_importsCache.TryGet(version, out _imports))
+            {
+                await _importsCache.ReadGate.WaitAsync();
 
-                _importsCache?.Set(version, _imports);
+                try
+                {
+                    // A request that waited here finds the imports the one ahead of it read.
+                    if (!_importsCache.TryGet(version, out _imports))
+                    {
+                        _imports = await ReadImportsAsync();
+
+                        _importsCache.Set(version, _imports);
+                    }
+                }
+                finally
+                {
+                    _importsCache.ReadGate.Release();
+                }
             }
         }
 
         return _imports;
+    }
+
+    /// <summary>
+    /// Returns only the selected import as an option, named by its file and when it was imported, without counting the
+    /// leads of any import. The editor renders this, so opening it never reads the lead import index; the full list
+    /// is read by <see cref="GetOptionsAsync"/> once the operator asks for it.
+    /// </summary>
+    /// <param name="selectedEntryId">The identifier of the selected import, if any.</param>
+    public async Task<IList<SelectListItem>> GetSelectedOptionsAsync(string selectedEntryId)
+    {
+        if (string.IsNullOrWhiteSpace(selectedEntryId))
+        {
+            return [];
+        }
+
+        var selected = selectedEntryId.Trim();
+
+        // Without the content import feature there is no import history to read the file's name from.
+        var entry = _backfillState is null
+            ? null
+            : await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(index => index.EntryId == selected).FirstOrDefaultAsync();
+
+        if (entry is null)
+        {
+            return [new SelectListItem(S["The selected import"].Value, selected, true)];
+        }
+
+        var importedLocal = await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(entry.CreatedUtc, DateTimeKind.Utc)));
+        var fileName = string.IsNullOrWhiteSpace(entry.UploadedFileName) ? S["Unnamed file"].Value : entry.UploadedFileName.Trim();
+
+        return [new SelectListItem(S["{0} (imported {1})", fileName, importedLocal.ToString("g", CultureInfo.CurrentCulture)].Value, selected, true)];
     }
 
     /// <summary>
@@ -126,33 +174,41 @@ public sealed class LeadImportProvider
         var configuration = _session.Store.Configuration;
         var dialect = configuration.SqlDialect;
         var entryId = dialect.QuoteForColumnName(nameof(LeadImportIndex.EntryId));
-        var fileName = dialect.QuoteForColumnName(nameof(LeadImportIndex.FileName));
-        var importedUtc = dialect.QuoteForColumnName(nameof(LeadImportIndex.ImportedUtc));
         var latest = dialect.QuoteForColumnName(nameof(LeadImportIndex.Latest));
 
-        // Every row of an import carries the same file name and time, so grouping by them keeps one row per
-        // import while the columns keep their own types. A lead has one latest version and records an import once,
-        // so each row is a distinct lead and the rows are counted without the sort a distinct count needs.
+        // Only the lead count is grouped. EntryId and Latest are both columns of IDX_LeadImportIndex_EntryId, so the
+        // counts are read from that index alone. The count used to group by the file name and the time as well, which
+        // are not in the index, so the database read the table row of every lead to count them; on a large tenant that
+        // random read outlasted the command timeout of a busy database on every render of the inventory load editor.
+        // A lead has one latest version and records an import once, so each row is a distinct lead.
         var builder = new SqlBuilder(configuration.TablePrefix, dialect);
         builder.Select();
-        builder.Selector($"{entryId} AS EntryId, {fileName} AS FileName, {importedUtc} AS ImportedUtc, COUNT(*) AS LeadCount");
+        builder.Selector($"{entryId} AS EntryId, COUNT(*) AS LeadCount");
         builder.Table(configuration.TableNameConvention.GetIndexTable(typeof(LeadImportIndex), null), alias: null, configuration.Schema);
         builder.WhereAnd($"{latest} = @Latest");
         builder.WhereAnd($"{entryId} IS NOT NULL");
-        builder.GroupBy($"{entryId}, {fileName}, {importedUtc}");
+        builder.GroupBy($"{entryId}");
 
         // The session's own transaction is used, so the read never opens a second connection beside it.
         var transaction = await _session.BeginTransactionAsync();
-        var rows = await transaction.Connection.QueryAsync<LeadImportRow>(builder.ToSqlString(), new { Latest = true }, transaction);
+        var rows = (await transaction.Connection.QueryAsync<LeadImportRow>(builder.ToSqlString(), new { Latest = true }, transaction)).ToList();
 
-        var imports = rows
-            .GroupBy(row => row.EntryId, StringComparer.Ordinal)
-            .Select(group => new LeadImportSummary(
-                group.Key,
-                group.Select(row => row.FileName).FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)),
-                DateTime.SpecifyKind(group.Min(row => row.ImportedUtc), DateTimeKind.Utc),
-                group.Sum(row => row.LeadCount)))
-            .ToList();
+        var imports = new List<LeadImportSummary>(rows.Count);
+
+        // Every row of an import carries the same file name and time, so one row per import names it. Reading it by
+        // the entry id seeks to the import in the index and reads a single table row.
+        foreach (var row in rows)
+        {
+            var named = await _session
+                .QueryIndex<LeadImportIndex>(index => index.EntryId == row.EntryId && index.Latest)
+                .FirstOrDefaultAsync();
+
+            imports.Add(new LeadImportSummary(
+                row.EntryId,
+                string.IsNullOrWhiteSpace(named?.FileName) ? null : named.FileName,
+                DateTime.SpecifyKind(named?.ImportedUtc ?? DateTime.UtcNow, DateTimeKind.Utc),
+                row.LeadCount));
+        }
 
         imports.AddRange(await GetImportsStillBeingIndexedAsync(imports.Select(import => import.EntryId)));
 
@@ -256,10 +312,6 @@ public sealed class LeadImportProvider
     private sealed class LeadImportRow
     {
         public string EntryId { get; set; }
-
-        public string FileName { get; set; }
-
-        public DateTime ImportedUtc { get; set; }
 
         public long LeadCount { get; set; }
     }

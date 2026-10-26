@@ -231,6 +231,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         // Pre-compute contact-level filter sets (phone, timezone, last activity).
         HashSet<string> eligibleContactIds = null;
 
+        // The document id of each record the index-based filters read, taken from the rows they already read. It saves
+        // looking each picked record up again by its content item id before the load can start.
+        var knownDocumentIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
         // The converted leads the lead filter picked, read from the lead index so they are reported without reading
         // their documents.
         HashSet<string> convertedLeadIds = null;
@@ -260,7 +264,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             if (hasLeadFilter)
             {
                 convertedLeadIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                leadIds = await FindLeadIdsAsync(readonlySession, batch, leadFilter, convertedLeadIds, cancellationToken);
+                leadIds = await FindLeadIdsAsync(readonlySession, batch, leadFilter, convertedLeadIds, knownDocumentIds, cancellationToken);
             }
 
             if (hasPhoneFilter)
@@ -280,6 +284,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                     var phoneContacts = await phoneQuery.ListAsync(cancellationToken);
                     phoneIds = phoneContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    RememberDocumentIds(knownDocumentIds, phoneContacts, batch.ContactContentType);
                 }
             }
 
@@ -294,6 +300,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     .ListAsync(cancellationToken);
 
                 timeZoneIds = tzContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                RememberDocumentIds(knownDocumentIds, tzContacts, batch.ContactContentType);
             }
 
             if (hasLastActivityFilter)
@@ -429,6 +437,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 readonlySession,
                 batch,
                 eligibleContactIds,
+                knownDocumentIds,
                 documentId,
                 leadCreatedFrom,
                 leadCreatedTo,
@@ -933,12 +942,14 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// <param name="batch">The load.</param>
     /// <param name="filter">The lead filters of the load.</param>
     /// <param name="convertedIds">Receives the converted leads among those returned.</param>
+    /// <param name="knownDocumentIds">Receives the document id of each lead read.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     private static async Task<HashSet<string>> FindLeadIdsAsync(
         ISession session,
         OmnichannelActivityBatch batch,
         LeadBatchFilter filter,
         HashSet<string> convertedIds,
+        Dictionary<string, long> knownDocumentIds,
         CancellationToken cancellationToken)
     {
         var query = batch.OnlyPublishedLeads
@@ -984,6 +995,9 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         foreach (var lead in leads)
         {
             leadIds.Add(lead.ContentItemId);
+
+            // The lead index is read for this content type and version only, so its row is the record's row.
+            knownDocumentIds[lead.ContentItemId] = lead.DocumentId;
 
             if (lead.IsConverted)
             {
@@ -1108,21 +1122,46 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// and version, after <paramref name="afterDocumentId"/>.
     /// </summary>
     /// <remarks>
-    /// Only the index is read, each record found through the index on its id, a chunk of ids at a time so that a query
-    /// never names more parameters than a database accepts.
+    /// A record the filters read from an index of the load's own type and version already has its document id, so it is
+    /// not looked up again: with no creation window, which the filters' indexes do not hold, that is all the lookup would
+    /// have checked. Every other record is found through the index on its id, a chunk of ids at a time so that a query
+    /// never names more parameters than a database accepts. Looking up every picked record cost a query for each
+    /// <see cref="_idLookupChunkSize"/> of them, thousands for a large import, on every load and every preview.
     /// </remarks>
-    private static async Task<List<long>> FindCandidateDocumentIdsAsync(
+    internal static async Task<List<long>> FindCandidateDocumentIdsAsync(
         ISession readonlySession,
         OmnichannelActivityBatch batch,
         HashSet<string> eligibleContactIds,
+        IReadOnlyDictionary<string, long> knownDocumentIds,
         long afterDocumentId,
         DateTime? leadCreatedFrom,
         DateTime? leadCreatedTo,
         CancellationToken cancellationToken)
     {
         var documentIds = new List<long>();
+        var unresolvedIds = eligibleContactIds;
 
-        foreach (var chunk in eligibleContactIds.Chunk(_idLookupChunkSize))
+        if (knownDocumentIds is { Count: > 0 } && leadCreatedFrom is null && leadCreatedTo is null)
+        {
+            unresolvedIds = [];
+
+            foreach (var contentItemId in eligibleContactIds)
+            {
+                if (!knownDocumentIds.TryGetValue(contentItemId, out var knownDocumentId))
+                {
+                    unresolvedIds.Add(contentItemId);
+
+                    continue;
+                }
+
+                if (knownDocumentId > afterDocumentId)
+                {
+                    documentIds.Add(knownDocumentId);
+                }
+            }
+        }
+
+        foreach (var chunk in unresolvedIds.Chunk(_idLookupChunkSize))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1136,6 +1175,19 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         documentIds.Sort();
 
         return documentIds;
+    }
+
+    private static void RememberDocumentIds(Dictionary<string, long> knownDocumentIds, IEnumerable<OmnichannelContactIndex> rows, string contentType)
+    {
+        foreach (var row in rows)
+        {
+            // The contact index is read for every contact type; only a row of the load's own type is the record the
+            // load reads.
+            if (string.Equals(row.ContentType, contentType, StringComparison.Ordinal))
+            {
+                knownDocumentIds[row.ContentItemId] = row.DocumentId;
+            }
+        }
     }
 
     private static IQuery<ContentItem, ContentItemIndex> ApplyVersionFilter(IQuery<ContentItem, ContentItemIndex> query, OmnichannelActivityBatch batch)

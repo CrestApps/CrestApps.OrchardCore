@@ -27,7 +27,7 @@
 @if (Model.ShowTaxTable)
 {
     <div class="ocat-wrapper">
-        <label asp-for="TaxTableId" class="ocat-label">@T["Tax table"]</label>
+        <label asp-for="TaxTableId" class="ocat-label ocat-label-required">@T["Tax table"]</label>
         <div class="ocat-end">
             <select asp-for="TaxTableId" asp-items="Model.TaxTables" class="form-select"></select>
             <span class="hint">@T["The tax table used by table-based calculation methods such as brackets, progressive schedules, and lookups."]</span>

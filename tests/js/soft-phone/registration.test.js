@@ -4,7 +4,9 @@ import {
     REGISTRATION_RETRY_MS,
     REGISTRATION_TIMEOUT_MS,
     answerClickAction,
+    credentialToReportOnReconnect,
     guardRegistration,
+    holdsLiveProviderCall,
     isAnswerInProgress,
     planMicrophoneLossRecovery,
     planRegistrationSelfHeal,
@@ -219,5 +221,54 @@ describe('retrying a registration that failed', () => {
         expect(shouldReportRegistrationFailure(3, 'refused', 'stalled')).toBe(true);
         expect(shouldReportRegistrationFailure(10, 'stalled', 'stalled')).toBe(true);
         expect(shouldReportRegistrationFailure(11, 'stalled', 'stalled')).toBe(false);
+    });
+});
+
+// Live: an agent on a Power campaign kept getting a new credential, and the platform's legs were refused on the one
+// being replaced (SIP 480). The phone judged itself idle by its own call list, which never shows the leg parked for a
+// dialer call, so it renewed its registration under that leg and hung it up.
+describe('holdsLiveProviderCall', () => {
+    const isTerminal = (state) => state === 'hangup' || state === 'destroy' || state === 'purge';
+
+    it('counts a leg the phone holds that its call list does not show, such as one parked for a dialer call', () => {
+        expect(holdsLiveProviderCall([null, null, { state: 'active' }], isTerminal)).toBe(true);
+        expect(holdsLiveProviderCall([{ state: 'ringing' }], isTerminal)).toBe(true);
+        expect(holdsLiveProviderCall([{ state: 'held' }], isTerminal)).toBe(true);
+    });
+
+    it('does not count calls that are over, or nothing at all', () => {
+        expect(holdsLiveProviderCall([{ state: 'hangup' }, { state: 'destroy' }, null], isTerminal)).toBe(false);
+        expect(holdsLiveProviderCall([], isTerminal)).toBe(false);
+        expect(holdsLiveProviderCall(null, isTerminal)).toBe(false);
+    });
+
+    it('takes a call as up when it cannot tell whether its state is over', () => {
+        expect(holdsLiveProviderCall([{ state: 'hangup' }], null)).toBe(true);
+    });
+
+    it('keeps the registration under such a leg, whatever else asks for a new one', () => {
+        const liveMedia = holdsLiveProviderCall([{ state: 'active' }], isTerminal);
+
+        expect(planRegistrationSelfHeal({ expiring: true, liveMedia })).toBe('keep');
+        expect(planRegistrationSelfHeal({ reregisterRequested: true, liveMedia })).toBe('keep');
+        expect(planMicrophoneLossRecovery({ liveMedia }).onFailure).toBe('warn');
+    });
+});
+
+// A closing hub connection marks the credential its phone registered on as closed, and the phone keeps that registration
+// across the reconnect: unless it says so again, its only credential reads as a closed window's.
+describe('credentialToReportOnReconnect', () => {
+    it('reports the credential the phone kept', () => {
+        expect(credentialToReportOnReconnect({ credentialId: 'cred-1' })).toBe('cred-1');
+    });
+
+    it('reports nothing while a registration is under way, which reports its own credential when it completes', () => {
+        expect(credentialToReportOnReconnect({ credentialId: 'cred-1', registering: true })).toBe('');
+    });
+
+    it('reports nothing for a phone that holds no registration', () => {
+        expect(credentialToReportOnReconnect({ credentialId: null })).toBe('');
+        expect(credentialToReportOnReconnect({})).toBe('');
+        expect(credentialToReportOnReconnect(null)).toBe('');
     });
 });

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -75,6 +76,35 @@ internal sealed class CouponMigrations : DataMigration
             table.CreateIndex("IDX_CouponCodeIndex_ItemId", "ItemId");
         }, collection: CheckoutConstants.CouponCollectionName);
 
-        return 1;
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the indexes reports read coupons and the uses of their codes through, newest first by <c>CreatedUtc</c> a
+    /// page at a time, so each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    private async Task CreateReportIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponIndex>(
+            SchemaBuilder,
+            "IDX_CouponIndex_Report",
+            CheckoutConstants.CouponCollectionName,
+            "CreatedUtc", "Id");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponRedemptionIndex>(
+            SchemaBuilder,
+            "IDX_CouponRedemptionIndex_Report",
+            CheckoutConstants.CouponCollectionName,
+            "CreatedUtc", "Id");
     }
 }

@@ -158,7 +158,7 @@ public sealed class InstallmentPlanReferencePersistenceTests
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-        Assert.Equal(1, await new InstallmentPlanMigrations { SchemaBuilder = schemaBuilder }.CreateAsync());
+        Assert.Equal(2, await new InstallmentPlanMigrations { SchemaBuilder = schemaBuilder }.CreateAsync());
         await new TransactionMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

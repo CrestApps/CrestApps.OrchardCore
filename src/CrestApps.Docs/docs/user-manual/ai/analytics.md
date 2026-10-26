@@ -13,7 +13,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 | --- | --- |
 | **Menu** | Reports > Artificial Intelligence Reports |
 | **Permission** | View AI Chat Analytics (Export AI Chat Analytics to download CSV files) |
-| **Feature** | AI Chat Session Analytics |
+| **Feature** | AI Chat Session Analytics, AI Usage Analytics |
 
 <AskYourAdmin />
 
@@ -31,7 +31,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 The reports only contain what was collected, and only from the moment collection was turned on.
 
 - **For the chat reports**, open each chat profile under **Artificial Intelligence > Profiles**, go to the **Data Processing & Metrics** tab and tick **Enable session metrics**. Tick **Enable AI resolution detection** to have the AI judge whether each chat solved the problem, and **Enable conversion metrics** to score chats against goals. Data extraction and conversion goals are set on the same tab; see [AI profiles](profiles.md#data-processing-and-metrics).
-- **For the usage report**, an administrator ticks **Enable AI usage tracking** in the **General** section of **Settings > Artificial Intelligence**. While it is off, the report shows a warning.
+- **For the usage report**, an administrator enables the **AI Usage Analytics** feature under **Tools > Features**. Usage is recorded from that moment on, and the report appears under **Reports > Billing & Usage**.
 
 When session metrics are on, every answer in the chat gets **Thumbs up** and **Thumbs down** buttons, and people's ratings feed the **User Feedback** section.
 
@@ -117,15 +117,18 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 Shows what AI used across the whole site: every request sent to an AI service, the completions from chats and chat interactions, and the automated AI phone calls. Use it to see which models and which features your AI budget goes to.
 
-1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs only the **AI Chat** feature, not **AI Chat Session Analytics**.
+1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs the **AI Usage Analytics** feature, not **AI Chat Session Analytics**.
 2. Choose a **Date range**, and optionally an **AI profile**.
 3. Choose how to group the figures:
    - **Group metered usage by**: **Model**, **Model and category** (which feature made the request: chat, SMS, voice calls, the API, workflows) or **Model and purpose** (why: answering, searching, indexing documents, transcribing, and so on).
+   - **Group audio usage by**: **Model**, **Model and voice** or **Model and language**.
    - **Group completions by**: **User and model**, **Model**, **Deployment**, **AI profile** or **Connection**.
    - **Group voice calls by**: **Deployment (model)**, **AI profile**, **Campaign**, **Channel**, **Engine** or **Day**.
 4. Click **Show**.
 
 The **Metered usage** table counts every request sent to an AI service, of every kind: chat, embeddings for search, images, speech-to-text, text-to-speech and realtime voice. One answer can take several requests, such as searching your documents, using a tool and writing the reply, and each is counted. Next to the tokens it shows the other things AI services charge for: cached input, reasoning, audio tokens, audio minutes, characters spoken and images. These are the figures to compare with your AI provider's bill.
+
+The **Audio usage** table covers only speech-to-text and text-to-speech: requests, hours of audio, hours of speech, characters, audio size, segments and tokens. An asterisk next to the hours means some requests did not report an audio length, so the figure is a minimum.
 
 Under **Chat completions**, the top tiles show **Provider calls**, **Chat sessions**, **Chat interactions** and **Total tokens**. The table shows, per group, the **Calls**, **Sessions**, **Interactions**, **Input**, **Output** and total **Tokens**, and the **Avg latency**.
 

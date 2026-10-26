@@ -39,8 +39,18 @@ public sealed class ContactCenterCallPathLookupIndexMigrationTests
             m => m.CreateAsync(),
             m => m.UpdateFrom9Async(),
             expectedVersion: 10,
+            expectedFreshVersion: 11,
             ("IDX_InteractionIndex_ProviderId", "ProviderInteractionId, ProviderName, CreatedUtc"),
             ("IDX_InteractionIndex_CorrelationId", "CorrelationId, CreatedUtc"));
+
+    [Fact]
+    public Task InteractionIndex_HasTheRecentByAgentIndex()
+        => AssertLookupIndexesAsync<InteractionIndex, InteractionIndexMigrations>(
+            store => new InteractionIndexMigrations(store),
+            m => m.CreateAsync(),
+            m => m.UpdateFrom10Async(),
+            expectedVersion: 11,
+            ("IDX_InteractionIndex_RecentByAgent", "AgentId, CreatedUtc"));
 
     [Fact]
     public Task CallSessionIndex_HasTheProviderCallAndInteractionLookupIndexes()
@@ -66,11 +76,25 @@ public sealed class ContactCenterCallPathLookupIndexMigrationTests
     /// version before it, and requires both to carry the lookup indexes, non-unique, with the same table shape, and
     /// the step to change nothing when it runs again.
     /// </summary>
+    private static Task AssertLookupIndexesAsync<TIndex, TMigration>(
+        Func<IStore, TMigration> createMigration,
+        Func<TMigration, Task<int>> create,
+        Func<TMigration, Task<int>> lookupStep,
+        int expectedVersion,
+        params (string Name, string Columns)[] expectedIndexes)
+        where TMigration : DataMigration
+        => AssertLookupIndexesAsync<TIndex, TMigration>(createMigration, create, lookupStep, expectedVersion, expectedVersion, expectedIndexes);
+
+    /// <summary>
+    /// As above, for a step that is not the last one of the chain: the step returns <paramref name="expectedVersion"/>,
+    /// and a fresh tenant ends the chain at <paramref name="expectedFreshVersion"/>.
+    /// </summary>
     private static async Task AssertLookupIndexesAsync<TIndex, TMigration>(
         Func<IStore, TMigration> createMigration,
         Func<TMigration, Task<int>> create,
         Func<TMigration, Task<int>> lookupStep,
         int expectedVersion,
+        int expectedFreshVersion,
         params (string Name, string Columns)[] expectedIndexes)
         where TMigration : DataMigration
     {
@@ -93,7 +117,7 @@ public sealed class ContactCenterCallPathLookupIndexMigrationTests
             var freshVersion = await MigrationChainRunner.RunUpgradeChainAsync(migration, await create(migration));
             var freshSchema = await SqliteSchemaSnapshot.CaptureAsync(schemaBuilder.Connection, transaction, tableName);
 
-            Assert.Equal(expectedVersion, freshVersion);
+            Assert.Equal(expectedFreshVersion, freshVersion);
 
             foreach (var (name, columns) in expectedIndexes)
             {

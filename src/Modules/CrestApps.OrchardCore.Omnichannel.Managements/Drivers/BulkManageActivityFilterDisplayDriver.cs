@@ -114,7 +114,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
 
-            model.Channels = _optionsProvider.GetChannelOptions(filter.Channel, "Any channel");
+            model.Channels = _optionsProvider.GetChannelOptions(filter.Channel, S["Any channel"]);
 
             model.AttemptFilters =
             [
@@ -134,14 +134,14 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                 new(S["5- attempts"], "5-"),
             ];
 
-            model.Sources = _optionsProvider.GetSourceOptions(filter.Source, "Any source");
-            model.InteractionTypes = _optionsProvider.GetInteractionTypeOptions(model.InteractionType, "Any interaction type");
-            model.Statuses = _optionsProvider.GetStatusOptions(model.Status, "Any active status");
-            model.AssignmentStatuses = _optionsProvider.GetAssignmentStatusOptions(model.AssignmentStatus, "Any assignment status");
-            model.Campaigns = await _optionsProvider.GetCampaignOptionsAsync(filter.CampaignId, "Any campaign");
+            model.Sources = _optionsProvider.GetSourceOptions(filter.Source, S["Any source"]);
+            model.InteractionTypes = _optionsProvider.GetInteractionTypeOptions(model.InteractionType, S["Any interaction type"]);
+            model.Statuses = _optionsProvider.GetStatusOptions(model.Status, S["Any active status"]);
+            model.AssignmentStatuses = _optionsProvider.GetAssignmentStatusOptions(model.AssignmentStatus, S["Any assignment status"]);
+            model.Campaigns = await _optionsProvider.GetCampaignOptionsAsync(filter.CampaignId, S["Any campaign"]);
 
             // Only the empty choice comes back when no dialer is available, and then there is nothing to filter by.
-            var dialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(filter.DialerProfileId, "Any dialer profile");
+            var dialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(filter.DialerProfileId, S["Any dialer profile"]);
             model.DialerProfiles = dialerProfiles.Count > 1 ? dialerProfiles : [];
 
             model.PhoneNumberMatchTypes =

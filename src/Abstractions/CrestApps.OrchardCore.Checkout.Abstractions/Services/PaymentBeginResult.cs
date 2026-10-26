@@ -47,6 +47,14 @@ public sealed class PaymentBeginResult
     public bool Declined { get; set; }
 
     /// <summary>
+    /// Whether the gateway refused a charge made without the payer present because the card's bank asked the
+    /// cardholder to approve it (for example a 3-D Secure challenge). Such a payment can only be taken with the payer
+    /// present, so the caller asks them to pay it themselves instead of trying the card again. It is always also
+    /// <see cref="Declined"/>.
+    /// </summary>
+    public bool RequiresAuthentication { get; set; }
+
+    /// <summary>
     /// Creates a successful result.
     /// </summary>
     /// <param name="providerReference">The provider's authoritative reference.</param>
@@ -67,4 +75,13 @@ public sealed class PaymentBeginResult
     /// <param name="providerReference">The reference of the refused payment, when the gateway created one.</param>
     public static PaymentBeginResult Decline(string errorMessage, string providerReference = null)
         => new() { Succeeded = false, Declined = true, ErrorMessage = errorMessage, ProviderReference = providerReference };
+
+    /// <summary>
+    /// Creates a result for a charge made without the payer present that the card's bank wants the cardholder to
+    /// approve (<see cref="RequiresAuthentication"/>).
+    /// </summary>
+    /// <param name="errorMessage">The explanation, suitable to show the payer.</param>
+    /// <param name="providerReference">The reference of the refused payment, when the gateway created one.</param>
+    public static PaymentBeginResult AuthenticationRequired(string errorMessage, string providerReference = null)
+        => new() { Succeeded = false, Declined = true, RequiresAuthentication = true, ErrorMessage = errorMessage, ProviderReference = providerReference };
 }

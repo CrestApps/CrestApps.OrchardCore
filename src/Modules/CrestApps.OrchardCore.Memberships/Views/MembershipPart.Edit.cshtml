@@ -4,7 +4,7 @@
     <legend class="h5">@T["Membership"]</legend>
 
     <div class="ocat-wrapper" asp-validation-class-for="RoleNames">
-        <span class="ocat-label">@T["Roles members are in"]</span>
+        <span class="ocat-label ocat-label-required">@T["Roles members are in"]</span>
         <div class="ocat-end">
             @if (Model.AvailableRoles.Count == 0)
             {

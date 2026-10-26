@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -28,6 +29,29 @@ internal sealed class OrderReturnMigrations : DataMigration
             table.CreateIndex("IDX_OrderReturnIndex_Status", "Status", "CreatedUtc");
         }, collection: OrderConstants.CollectionName);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read returns through, newest first by <c>CreatedUtc</c> a page at a time, so each page and
+    /// each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<OrderReturnIndex>(
+            SchemaBuilder,
+            "IDX_OrderReturnIndex_Report",
+            OrderConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

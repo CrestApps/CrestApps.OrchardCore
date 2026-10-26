@@ -119,8 +119,30 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         var message = await GetOrCreateMessageAsync(interactionEvent, cancellationToken);
         using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Area);
 
-        if (workLease is null || !await TryClaimAsync(message, cancellationToken))
+        if (workLease is null)
         {
+            return;
+        }
+
+        try
+        {
+            if (!await TryClaimAsync(message, cancellationToken))
+            {
+                return;
+            }
+        }
+        catch (ConcurrencyException)
+        {
+            // The redelivery pass claimed the message first and is running its handlers; this inline dispatch has
+            // nothing left to do. Thrown out of the deferred task, the lost claim was logged as an error.
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Contact Center event '{EventType}' ({EventId}) was claimed by another dispatcher first.",
+                    interactionEvent.EventType,
+                    interactionEvent.ItemId.SanitizeLogValue());
+            }
+
             return;
         }
 

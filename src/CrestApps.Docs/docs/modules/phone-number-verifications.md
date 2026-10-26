@@ -176,6 +176,27 @@ Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Ve
 
 ![Phone number verifications report dashboard](/img/docs/phone-number-verifications-report.png)
 
+## Report Builder data source
+
+The verification records are also a data source of Orchard Core, so the [Report Builder](report-builder/index.md) and Orchard Core's data pipelines can read them, for example to count the verified, invalid and failed numbers per provider and country, or to join the verified numbers to the [DNC registry](dnc-registry.md#report-builder-data-source) entries.
+
+| | |
+| --- | --- |
+| **Data source** | **Phone number verifications** (`PhoneNumberVerifications`) |
+| **Registered when** | **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) and **Phone Number Verifications** are enabled. |
+| **Permission** | **Run 'Phone Number Verifications' Report** (`RunPhoneNumberVerificationsReport`), the permission of the **Phone Verifications Queue**. |
+
+The **Phone number verifications** data set (`Verifications`) has one row for each content item that carries a `PhoneNumberVerificationPart`, in its latest version. The fields are the details the queue shows:
+
+| Group | Fields |
+| --- | --- |
+| **Record** | `ContentItemId` (identifier), `DisplayText`, `ContentType` |
+| **Phone number** | `PhoneNumber`, `NormalizedPhoneNumber` (E.164), `CountryCode` |
+| **Verification** | `VerificationStatus` (`Unverified`, `Verified`, `Invalid` or `Failed`), `IsVerified`, `VerificationProvider`, `LastVerifiedUtc`, `LastAttemptUtc`, `NextVerificationDueUtc`, `VerificationAttemptCount`, `FailedAttemptCount`, `IsExhausted` (the record reached the **Maximum verification attempts** and is no longer retried automatically), `LastError` |
+| **Line** | `LineType`, `IsMobile`, `IsLandline`, `IsVoip`, `Carrier`, `LineStatus`, `MinimumAge` |
+
+The raw provider response, the provider's reference and the user who triggered the last verification are not exposed. No verification date is always set, so the data set has no main date. It reads its rows a page at a time, newest first, and narrows the read to the join keys of `ContentItemId` and `NormalizedPhoneNumber` and to the values a report's filters allow for the status, provider, country and line status. A report that only groups and counts the fields the SQL index holds is calculated in the database.
+
 ## Configuration
 
 Configure the module under **Settings** -> **Phone Number Verifications** (requires `ManagePhoneNumberVerificationSettings`). The settings are described for administrators in the [User Manual](../user-manual/administration/phone-number-verification.md#set-up-a-provider); the defaults are:

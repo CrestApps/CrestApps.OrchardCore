@@ -247,7 +247,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 }
             }
 
-            model.DialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(model.DialerProfileId, "Select a dialer profile");
+            model.DialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(model.DialerProfileId, S["Select a dialer profile"]);
 
             if (model.RequiresUserAssignment && batch.UserIds is { Length: > 0 })
             {

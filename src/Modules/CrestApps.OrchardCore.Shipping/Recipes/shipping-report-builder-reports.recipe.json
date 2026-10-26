@@ -1,0 +1,70 @@
+{
+  "name": "ShippingReportBuilderReports",
+  "displayName": "Reports: shipping reports to adapt",
+  "description": "Turns on the Report Builder and adds a shipping report built from the Shipping data source: the shipments sent in the period by carrier, with how many were delivered and how long carriers took to deliver. It shows part of what the built-in shipping times report shows, so you can open it in the builder, change it, and save your own. The person who runs the recipe owns it.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "shipping",
+    "reports",
+    "report builder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Shipping",
+        "CrestApps.OrchardCore.Reports.Builder"
+      ]
+    },
+    {
+      "name": "ReportDesigns",
+      "Reports": [
+        {
+          "itemId": "shipping-by-carrier",
+          "displayText": "Shipments by carrier",
+          "description": "The shipments sent in the period, by carrier: the orders and units they carried, how many were delivered or returned, and the average days from leaving to delivered.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "s", "source": "Shipping", "dataSet": "Shipments", "displayName": "Shipments" }
+            ],
+            "calculatedFields": [
+              { "name": "Delivered", "label": "Delivered", "expression": "COUNT([s.DeliveredUtc])" },
+              { "name": "DeliveryDays", "label": "Average delivery time (days)", "expression": "SUM(IF(ISNULL([s.DeliveredUtc]), 0, [s.DeliveredUtc] - [s.ShippedUtc])) / COUNT([s.DeliveredUtc])" },
+              { "name": "Returned", "label": "Returned", "expression": "COUNT([s.ReturnedUtc])" }
+            ],
+            "filters": [
+              { "id": "sent", "field": "s.ShippedUtc", "stage": "Rows", "operator": "IsNotEmpty" },
+              { "id": "shipped", "field": "s.ShippedUtc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Shipped", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "carrier", "field": "s.Carrier", "label": "Carrier" },
+              { "id": "shipments", "field": "$count", "label": "Shipments" },
+              { "id": "orders", "field": "s.OrderId", "label": "Orders", "aggregate": "CountDistinct" },
+              { "id": "units", "field": "s.ItemCount", "label": "Units", "aggregate": "Sum" },
+              { "id": "delivered", "field": "Delivered", "label": "Delivered" },
+              { "id": "deliverydays", "field": "DeliveryDays", "label": "Average delivery time (days)", "format": "N1" },
+              { "id": "returned", "field": "Returned", "label": "Returned" }
+            ],
+            "sorts": [
+              { "columnId": "shipments", "descending": true },
+              { "columnId": "carrier" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "shipments", "orders", "delivered", "deliverydays", "returned" ] },
+            { "id": "share", "type": "Chart", "title": "Shipments by carrier", "chartType": "Doughnut", "categoryColumnId": "carrier", "valueColumnIds": [ "shipments" ] },
+            { "id": "table", "type": "Table", "title": "By carrier", "columnIds": [ "carrier", "shipments", "orders", "units", "delivered", "deliverydays", "returned" ], "showTotals": true }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 @model CurrencyEntryViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Currency code"]</label>
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Currency code"]</label>
     <div class="ocat-end">
         @if (Model.IsNew)
         {
@@ -21,7 +21,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+    <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Display name"]</label>
     <div class="ocat-end">
         <input asp-for="DisplayName" class="form-control" />
         <span asp-validation-for="DisplayName" class="text-danger"></span>

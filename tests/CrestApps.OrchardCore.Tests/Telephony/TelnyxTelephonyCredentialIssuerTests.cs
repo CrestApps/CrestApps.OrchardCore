@@ -36,6 +36,26 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
         Assert.Equal("cred-1", harness.Store.Created[0].CredentialId);
     }
 
+    [Theory]
+    [InlineData(5)]
+    [InlineData(10)]
+    public async Task Issue_WithALifetimeInsideTheRenewalWindow_IssuesTheMinimumLifetime(int configuredMinutes)
+    {
+        // Arrange
+        // The soft phone renews a credential within ten minutes of expiry, so one this short was renewed on every
+        // heartbeat: a new credential every few minutes, and a call rung meanwhile refused on the one being replaced.
+        var harness = new Harness(configuredMinutes);
+        harness.Handler.RespondWith(HttpStatusCode.OK, """{"data":{"id":"cred-1","sip_username":"user-1","sip_password":"secret"}}""");
+
+        // Act
+        var credential = await harness.Issuer.IssueAsync("u1", "Agent One", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(credential);
+        Assert.Equal(_now.AddMinutes(TelnyxCredentialLifetime.MinimumMinutes), credential.ExpiresAtUtc);
+        Assert.Equal(_now.AddMinutes(TelnyxCredentialLifetime.MinimumMinutes), harness.Store.Created[0].ExpiresUtc);
+    }
+
     [Fact]
     public async Task Issue_WhenTheProviderRefuses_StoresNothing()
     {
@@ -160,7 +180,7 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
 
         public TelnyxTelephonyCredentialIssuer Issuer { get; }
 
-        public Harness()
+        public Harness(int credentialLifetimeMinutes = 60)
         {
             var httpClient = new HttpClient(Handler)
             {
@@ -180,7 +200,7 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
                 ApiKey = "test-api-key",
                 ConnectionId = "conn-1",
                 SipConnectionId = "sip-conn-1",
-                CredentialLifetimeMinutes = 60,
+                CredentialLifetimeMinutes = credentialLifetimeMinutes,
             };
 
             var monitor = new Mock<IOptionsMonitor<TelnyxOptions>>();

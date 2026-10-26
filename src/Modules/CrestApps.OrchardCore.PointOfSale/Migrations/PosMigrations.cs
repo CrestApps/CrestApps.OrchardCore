@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.PointOfSale.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -39,6 +40,29 @@ internal sealed class PosMigrations : DataMigration
             table.CreateIndex("IDX_RegisterShiftIndex_Register", "RegisterId", "Status");
         }, collection: PosConstants.CollectionName);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read shifts through, newest first by <c>OpenedUtc</c> a page at a time, so each page and
+    /// each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<RegisterShiftIndex>(
+            SchemaBuilder,
+            "IDX_RegisterShiftIndex_Report",
+            PosConstants.CollectionName,
+            "OpenedUtc", "Id");
     }
 }

@@ -12,15 +12,14 @@ public sealed class DeleteAIDeploymentDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<DeleteAIDeploymentDeploymentStep>("Artificial Intelligence");
     private static readonly LocalizationSource _title = LocalizationSource.Create<DeleteAIDeploymentDeploymentStep>("Delete AI Deployments");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DeleteAIDeploymentDeploymentStep"/> class.
-    /// </summary>
-    public DeleteAIDeploymentDeploymentStep()
-    {
-        Name = DeleteAIDeploymentStep.StepKey;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => DeleteAIDeploymentStep.StepKey;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets the include all.

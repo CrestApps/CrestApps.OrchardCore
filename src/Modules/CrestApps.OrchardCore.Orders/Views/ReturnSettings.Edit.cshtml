@@ -1,7 +1,7 @@
 @model ReturnSettingsViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="WindowDays">
-    <label asp-for="WindowDays" class="ocat-label">@T["Return window (days)"]</label>
+    <label asp-for="WindowDays" class="ocat-label ocat-label-required">@T["Return window (days)"]</label>
     <div class="ocat-end">
         <input asp-for="WindowDays" type="number" min="1" max="365" class="form-control w-auto" />
         <span asp-validation-for="WindowDays"></span>
@@ -10,7 +10,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Reasons">
-    <label asp-for="Reasons" class="ocat-label">@T["Reasons"]</label>
+    <label asp-for="Reasons" class="ocat-label ocat-label-required">@T["Reasons"]</label>
     <div class="ocat-end">
         <textarea asp-for="Reasons" rows="5" class="form-control"></textarea>
         <span asp-validation-for="Reasons"></span>

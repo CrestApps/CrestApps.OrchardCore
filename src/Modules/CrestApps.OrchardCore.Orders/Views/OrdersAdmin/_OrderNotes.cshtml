@@ -14,7 +14,7 @@
     <div class="card-header">@T["Notes"]</div>
     <div class="card-body">
         <form asp-action="AddNote" asp-route-orderId="@order.ItemId" method="post" class="mb-3">
-            <label class="form-label visually-hidden" for="order-note">@T["Note"]</label>
+            <label class="form-label visually-hidden ocat-label-required" for="order-note">@T["Note"]</label>
             <textarea id="order-note" name="text" rows="2" class="form-control mb-2" maxlength="2000" placeholder="@T["Write a note for the store"]"></textarea>
             <button type="submit" class="btn btn-sm btn-outline-primary">@T["Add note"]</button>
         </form>

@@ -127,7 +127,7 @@ The plan's payment page shows the provider's embedded card form. With Stripe, it
 
 Once the checkout settles the down-payment transaction, the Transactions feature raises `ITransactionPaymentHandler.PaymentRecordedAsync`. The feature's `InstallmentPlanTransactionPaymentHandler` reacts to transactions whose `ReferenceType` is `InstallmentPlan`. It calls `ProcessAsync`, which **activates** the plan:
 
-1. It reads the kept card back from the provider (`ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync`). It stores the card's brand, last four digits and expiry on the plan as a `SavedPaymentMethod`. Card numbers never reach the site; only the gateway's references are kept.
+1. It reads the kept card back from the provider (`ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync`). It stores the card's brand, last four digits and expiry on the plan as a `SavedPaymentMethod`. Card numbers never reach the site; only the gateway's references are kept. Because the down-payment checkout keeps the card, the card is also added to the customer's [kept payment methods](checkout.md#kept-payment-methods), where other modules can find it; the plan keeps charging its own copy even if the customer removes it there.
 2. It creates a `Pending` transaction for every scheduled payment. When the plan charges the card, each transaction gets a `TransactionAutoCollection` naming the card.
 3. It moves the plan to `Active`.
 
@@ -327,11 +327,61 @@ The Installment Plans notices go through Orchard Core's `INotificationService` w
 
 | What | Where |
 | --- | --- |
-| Plans | YesSql documents of type `InstallmentPlan` in the `InstallmentPlan` collection. `InstallmentPlanIndex` holds the title, customer, status, currency, total, next due date, creation date, `ReferenceType`, `ReferenceId` (both up to 255 characters) and `SourceTransactionId`. The last three were added by an additive migration step (version 2); plans created before it have them empty. |
+| Plans | YesSql documents of type `InstallmentPlan` in the `InstallmentPlan` collection. `InstallmentPlanIndex` holds the title, customer, status, currency, total, next due date, creation date, `ReferenceType`, `ReferenceId` (both up to 255 characters) and `SourceTransactionId`. The second migration step (version 2) adds the database index the Report Builder reads plans through, by creation date. |
 | Payments | The plan's `Payments` list. Each payment names its transaction (`TransactionId`) and the checkout sessions that charged it. |
 | Transactions | The source is `installment-plan` and the `ReferenceType` is `InstallmentPlan`. `ReferenceId` is the plan id, and `ObligationId` is the payment number (`0` is the down payment). `ParentReferenceType` and `ParentReferenceId` name the record the plan pays for, and are indexed in `TransactionParentReferenceIndex`; `Properties` is a copy of the plan's. |
 
 The plan's computed values (`DownPayment`, `FirstPayment`, `AmountPaid`, `AmountOutstanding` and `NextPayment`) are `[JsonIgnore]`. Orchard Core's document serializer populates existing collections when it reads a document. So a stored computed property that returns a list item is read back into that same item, and its lists double on every save. Keep any property you add that derives from other members out of the document the same way.
+
+## Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, which the Report Builder enables, the feature adds the `InstallmentPlans` and `Installments` data sets to the **Subscriptions** data source (technical name `Subscriptions`). The Report Builder and Orchard Core data pipelines both read it. The feature registers the source itself, so the data sets are there without the **Subscriptions** feature; with it, the source also has the subscription data sets (see [Subscriptions](subscriptions#report-builder-data-source)).
+
+Both data sets need **Manage installment plans** (`ManageInstallmentPlans`), the permission of the **Installment Plans** screens. Without it, or without a principal, they are not listed and give no rows. The rows come newest first by when the plan was created. A date range on the creation date, a join on the plan, its customer or the transaction it replaces, and a filter on the status or the currency narrow the read. The `InstallmentPlans` rows can be grouped and added up in the database by the fields the index holds unchanged. The index cuts the title, the customer's name and email, and the record type and identifier to 255 characters, so the report groups by those itself, as it does for the computed amounts and for the payments.
+
+Money is in the plan's own currency, which the `Currency` field names. The saved card, the note, the history messages and what the payment provider said about a declined charge are not exposed.
+
+### InstallmentPlans
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `ItemId` | Plan ID | Identifier. |
+| `Title` | Title | What the plan pays for. |
+| `Status` | Status | `Draft`, `Active`, `PastDue`, `Completed` or `Canceled`. |
+| `ReferenceType`, `ReferenceId` | Record type, Record ID | The record the plan pays for, as the module that owns it names it. |
+| `SourceTransactionId` | Replaced transaction ID | The outstanding transaction the customer chose to pay in installments at checkout. Points at `Transactions/Transactions/ItemId`. |
+| `InstallmentCount` | Scheduled payments | The number of payments after the down payment. |
+| `Frequency` | Frequency | `Weekly`, `BiWeekly`, `Monthly` or `Quarterly`. |
+| `CollectionMethod` | Collected by | `AutoCharge` or `Invoice`. |
+| `CreatedById`, `CreatedByName` | Created by user ID, Created by | The administrator, or the customer who chose installments at checkout. The identifier points at the users data set. |
+| `OwnerId` | Customer user ID | Points at the users data set. |
+| `CustomerName`, `CustomerEmail` | Customer name, Customer email | As they were when the plan was created. |
+| `Currency` | Currency | |
+| `TotalAmount` | Total | What the customer pays over the life of the plan, the down payment included. |
+| `DownPaymentAmount` | Down payment | |
+| `AmountPaid` | Received | |
+| `AmountOutstanding` | Outstanding | What is still to be received; payments canceled with the plan are left out. |
+| `CreatedUtc` | Created | The data set's main date. |
+| `FirstDueUtc`, `NextDueUtc` | First due, Next due | |
+| `ActivatedUtc`, `CompletedUtc`, `CanceledUtc`, `UpdatedUtc` | Started, Completed, Canceled, Last changed | |
+
+### Installments
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `PlanId` | Plan ID | Points at `Subscriptions/InstallmentPlans/ItemId`. A join on it narrows the read. |
+| `PlanTitle`, `PlanStatus` | Plan, Plan status | From the plan. |
+| `Currency` | Currency | The plan's currency. |
+| `OwnerId` | Customer user ID | Points at the users data set. |
+| `PlanCreatedUtc` | Plan created | The data set's main date. |
+| `Number` | Payment number | 0 for the down payment, then 1, 2 and so on. |
+| `IsDownPayment` | Down payment | |
+| `DueUtc` | Due | |
+| `Amount` | Amount | In the plan's currency. |
+| `Status` | Status | `Scheduled`, `Due`, `Paid`, `Failed` or `Canceled`. |
+| `PaidUtc` | Received | |
+| `TransactionId` | Transaction ID | The ledger transaction that records the payment. Points at `Transactions/Transactions/ItemId`. |
+| `ChargeAttempts`, `LastChargeAttemptUtc`, `NextChargeAttemptUtc` | Charge attempts, Last charged, Next try | |
 
 ## Extending
 

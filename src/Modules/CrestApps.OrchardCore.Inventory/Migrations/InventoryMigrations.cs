@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -78,6 +79,29 @@ internal sealed class InventoryMigrations : DataMigration
             .WithDisplayName("Inventory")
             .WithDescription("Counts how many units of a product, or each of its variants, are on hand."));
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read stock movements through, newest first by <c>Utc</c> a page at a time, so each page and
+    /// each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<StockMovementIndex>(
+            SchemaBuilder,
+            "IDX_StockMovementIndex_Report",
+            InventoryConstants.CollectionName,
+            "Utc", "Id");
     }
 }

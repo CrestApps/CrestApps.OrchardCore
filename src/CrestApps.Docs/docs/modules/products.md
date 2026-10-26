@@ -504,6 +504,115 @@ The **Catalog API** feature (`CrestApps.OrchardCore.Products.Api`, it needs Prod
 
 See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.
 
+## Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, which the Report Builder enables, the module registers the **Products** data source (technical name `Products`). The Report Builder and Orchard Core data pipelines both read it.
+
+The source uses the content permissions, as the content screens do. A principal reads the products of each product type it may view (**View content** for that type). For a type it may also edit (**Edit content**), it reads the latest version of each product, drafts included; for any other type, the published version. A product gives its rows once, whatever number of versions it has. Without a principal, or when no product type is readable, the source lists no data set. Because the readable products depend on the principal, the data sets are never grouped in the database; the report groups the rows it reads.
+
+The rows come newest first. The content item index has no date that is never empty, so no date range is applied while the rows are read: the report filters the dates itself. A join on the product's identifier, and a filter on the content type, narrow the read.
+
+| Data set | Registered by | Rows |
+| --- | --- | --- |
+| `Products` | Products | One per product. |
+| `ProductVariants` | Products | One per variant of a product sold in variants. |
+| `ProductPrices` | Products | One per named price a product is offered at. |
+| `ProductBundleItems` | Product Bundles | One per product a bundle is made of. |
+| `ProductAttributes` | Product Listing | One per attribute value of a listed product. |
+
+Other data sets point at these ones by name: an order line's product and variant point at `Products/Products/ContentItemId` and `Products/ProductVariants/VariantId`.
+
+### Products
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `ContentItemId` | Product ID | Identifier. A join on it narrows the read. |
+| `ContentItemVersionId` | Version ID | The version read. |
+| `ContentType` | Product type | The content type. A filter on it narrows the read. |
+| `Title` | Product | The display text. |
+| `Sku` | SKU | |
+| `ProductType` | Kind of product | `Good`, `Service`, `Digital` or `Undefined`, from the content type's settings. |
+| `IsPurchasable` | For sale | Whether the product can be bought online, from the item and its type's sales mode. |
+| `Featured` | Featured | |
+| `IsBundle` | Bundle | Whether the product is made of other products. |
+| `VariantCount` | Variants | |
+| `Categories` | Category IDs | The taxonomy terms the product's taxonomy fields hold, separated by commas. |
+| `TaxCategoryCode` | Tax category | From the Taxation part. |
+| `Published` | Published | Whether this is the published version. |
+| `Owner` | Owner ID | Points at the users data set. |
+| `Currency` | Currency | The product's currency, else its content type's default, in upper case. |
+| `Price` | Price | In the product's currency. Empty for a product sold only at its named prices, or whose price is not shown. |
+| `CompareAtPrice` | Compare-at price | In the product's currency. |
+| `SalePrice` | Sale price | In the product's currency. |
+| `SaleStartsUtc`, `SaleEndsUtc` | Sale starts, Sale ends | |
+| `PriceCount` | Named prices | |
+| `CreatedUtc`, `ModifiedUtc`, `PublishedUtc` | Created, Last changed, Published on | |
+
+### ProductVariants
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `ProductId` | Product ID | Points at `Products/Products/ContentItemId`. A join on it narrows the read. |
+| `ProductTitle`, `ContentType`, `Published` | Product, Product type, Published | From the product. |
+| `Currency` | Currency | The product's currency. |
+| `VariantId` | Variant ID | Identifier. |
+| `Position` | Variant number | |
+| `VariantTitle` | Variant | The option values in option order, such as Red / M. |
+| `Sku` | SKU | The variant's own SKU, else the product's. |
+| `Price` | Price | The variant's own price, else the product's, in the product's currency. |
+| `HasOwnPrice` | Own price | |
+| `CompareAtPrice` | Compare-at price | The variant's own, else the product's, in the product's currency. |
+| `SalePrice` | Sale price | In the product's currency. A variant priced on its own has only its own sale price. |
+| `Enabled` | Can be chosen | |
+
+The variant's image is not exposed.
+
+### ProductPrices
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `ProductId` | Product ID | Points at `Products/Products/ContentItemId`. A join on it narrows the read. |
+| `ProductTitle`, `ContentType`, `Published` | Product, Product type, Published | From the product. |
+| `PriceId` | Price ID | Identifier. |
+| `Position` | Price number | |
+| `PriceName` | Price | The name shown to the buyer, such as Monthly. |
+| `Kind` | Charged | `OneTime` or `Recurring`. |
+| `Currency` | Currency | The price's currency. |
+| `Amount` | Amount | In the price's currency. |
+| `BillingDuration`, `Interval` | Billing every, Billing unit | The cycle of a recurring price. |
+| `BillingCycleLimit` | Cycles | Empty when the price bills until it is canceled. |
+| `TrialDays` | Trial days | |
+| `SetupFee` | Setup fee | In the price's currency. |
+| `AllowCustomAmount`, `MinimumAmount`, `MaximumAmount` | Buyer names the amount, Least amount, Most amount | The amounts are in the price's currency. |
+| `IsDefault`, `IsActive` | Default, Active | |
+| `EffectiveFromUtc`, `EffectiveToUtc` | Offered from, Offered until | |
+
+### ProductBundleItems
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `BundleId` | Bundle ID | The bundle. Points at `Products/Products/ContentItemId`. A join on it narrows the read. |
+| `BundleTitle`, `ContentType`, `Published` | Bundle, Bundle type, Published | From the bundle. |
+| `ProductId` | Product ID | The product in the bundle. Points at `Products/Products/ContentItemId`. |
+| `ProductTitle` | Product | The product's title when the bundle was saved. |
+| `Quantity` | Quantity | How many of the product each bundle holds. |
+| `Position` | Item number | |
+
+### ProductAttributes
+
+The attribute values come from the search record the Product Listing feature keeps for each published product, in each culture. They are the values the listing filters and counts products by.
+
+| Field | Label | Notes |
+| --- | --- | --- |
+| `ProductId` | Product ID | Points at `Products/Products/ContentItemId`. A join on it narrows the read. |
+| `ProductTitle`, `ContentType` | Product, Product type | A filter on the content type narrows the read. |
+| `Culture` | Culture | Empty for a product that shows in every culture. |
+| `AttributeKey` | Attribute | The field the value comes from, or a name the listing keeps for its own values, such as `Product.Price`. |
+| `Value` | Value | The text filters match on: the text itself, a term or content item identifier, or true or false. |
+| `Label` | Label | The text shown to visitors. |
+| `NumberValue`, `DateValue` | Number, Date | For numeric and date attributes. |
+| `Level` | Level | The depth of a taxonomy term, or 0. |
+
 ## Recipes and schema
 
 The **Product** part is defined and imported through Orchard Core's built-in `ContentDefinition` recipe step, and product content items through the built-in `Content` step.

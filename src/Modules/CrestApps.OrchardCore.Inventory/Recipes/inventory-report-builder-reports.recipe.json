@@ -1,0 +1,105 @@
+{
+  "name": "InventoryReportBuilderReports",
+  "displayName": "Reports: inventory reports to adapt",
+  "description": "Turns on the Report Builder and adds inventory reports built from the Inventory data source: stock on hand and stock movements. They show what the built-in inventory reports show, so you can open one in the builder, change it, and save your own. The person who runs the recipe owns them.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "inventory",
+    "reports",
+    "report builder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Inventory",
+        "CrestApps.OrchardCore.Reports.Builder"
+      ]
+    },
+    {
+      "name": "ReportDesigns",
+      "Reports": [
+        {
+          "itemId": "inventory-stock-on-hand",
+          "displayText": "Stock on hand",
+          "description": "Every counted item with its units on hand, held for orders and available, the ones running out first. It shows stock as it is when it runs.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "i", "source": "Inventory", "dataSet": "StockItems", "displayName": "Stock items" }
+            ],
+            "filters": [
+              { "id": "archived", "field": "i.Archived", "stage": "Rows", "operator": "Equals", "values": [ "false" ] }
+            ],
+            "columns": [
+              { "id": "item", "field": "i.Title", "label": "Item" },
+              { "id": "sku", "field": "i.Sku", "label": "SKU" },
+              { "id": "onhand", "field": "i.OnHand", "label": "On hand" },
+              { "id": "held", "field": "i.Reserved", "label": "Held" },
+              { "id": "available", "field": "i.Available", "label": "Available" },
+              { "id": "status", "field": "i.StockStatus", "label": "Status" }
+            ],
+            "sorts": [
+              { "columnId": "available" },
+              { "columnId": "item" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "onhand", "held", "available" ] },
+            { "id": "table", "type": "Table", "title": "Items", "columnIds": [ "item", "sku", "onhand", "held", "available", "status" ], "showTotals": true }
+          ]
+        },
+        {
+          "itemId": "inventory-stock-movements",
+          "displayText": "Stock movements",
+          "description": "What each item received, sold, got back and was corrected by in the period, with what is on hand now, the most sold first.",
+          "category": "Store",
+          "query": {
+            "dataSets": [
+              { "alias": "m", "source": "Inventory", "dataSet": "StockMovements", "displayName": "Stock movements" },
+              { "alias": "i", "source": "Inventory", "dataSet": "StockItems", "displayName": "Stock items" }
+            ],
+            "joins": [
+              { "alias": "i", "type": "Left", "conditions": [ { "leftField": "m.StockItemId", "rightField": "i.ItemId" } ] }
+            ],
+            "calculatedFields": [
+              { "name": "Received", "label": "Received", "expression": "SUM(IF([m.Kind] = 'Received', [m.Quantity], 0))" },
+              { "name": "Sold", "label": "Sold", "expression": "SUM(IF([m.Kind] = 'Sold', -[m.Quantity], 0))" },
+              { "name": "Returned", "label": "Returned", "expression": "SUM(IF([m.Kind] = 'Returned', [m.Quantity], 0))" },
+              { "name": "Corrections", "label": "Corrections", "expression": "SUM(IF(IN([m.Kind], 'Adjusted', 'Counted'), [m.Quantity], 0))" }
+            ],
+            "filters": [
+              { "id": "date", "field": "m.Utc", "stage": "Rows", "operator": "InLastDays", "values": [ "30" ], "exposed": true, "label": "Date", "control": "RelativeDate" }
+            ],
+            "columns": [
+              { "id": "stockitem", "field": "m.StockItemId", "label": "Stock item ID", "hidden": true },
+              { "id": "item", "field": "i.Title", "label": "Item" },
+              { "id": "sku", "field": "i.Sku", "label": "SKU" },
+              { "id": "received", "field": "Received", "label": "Received" },
+              { "id": "sold", "field": "Sold", "label": "Sold" },
+              { "id": "returned", "field": "Returned", "label": "Returned" },
+              { "id": "corrections", "field": "Corrections", "label": "Corrections" },
+              { "id": "onhand", "field": "i.OnHand", "label": "On hand now" }
+            ],
+            "sorts": [
+              { "columnId": "sold", "descending": true },
+              { "columnId": "item" }
+            ]
+          },
+          "visuals": [
+            { "id": "summary", "type": "Metrics", "title": "Summary", "valueColumnIds": [ "received", "sold", "returned", "corrections" ] },
+            { "id": "top", "type": "Chart", "title": "Most sold", "chartType": "HorizontalBar", "categoryColumnId": "item", "valueColumnIds": [ "sold" ] },
+            { "id": "table", "type": "Table", "title": "Items", "columnIds": [ "item", "sku", "received", "sold", "returned", "corrections", "onhand" ], "showTotals": true }
+          ]
+        }
+      ]
+    }
+  ]
+}

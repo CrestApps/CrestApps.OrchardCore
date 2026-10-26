@@ -397,7 +397,7 @@
                     }
 
                     <div class="mb-3" data-transfer-target="@nameof(ConversationRouteTargetType.Agent)">
-                        <label class="form-label d-block">@T["Person"]</label>
+                        <label class="form-label d-block ocat-label-required">@T["Person"]</label>
                         @await Component.InvokeAsync("ItemSelector", new
                         {
                             id = "messaging-transfer-agent-selector",
@@ -417,7 +417,7 @@
                     @if (Model.CanTransferToQueue)
                     {
                         <div class="mb-3 d-none" data-transfer-target="@nameof(ConversationRouteTargetType.Queue)">
-                            <label class="form-label d-block">@T["Queue"]</label>
+                            <label class="form-label d-block ocat-label-required">@T["Queue"]</label>
                             @await Component.InvokeAsync("ItemSelector", new
                             {
                                 id = "messaging-transfer-queue-selector",

@@ -26,10 +26,12 @@ public sealed class PermissionsProvider : IPermissionProvider
     {
         var permissions = new List<Permission>(_allPermissions);
 
-        foreach (var contentTypeDefinition in await _contentDefinitionManager.LoadTypeDefinitionsAsync())
+        // The cached definitions: every breadcrumb resolves permissions through here, and the Load variant read the
+        // content definition document from the database on each one.
+        foreach (var contentTypeDefinition in await _contentDefinitionManager.ListTypeDefinitionsAsync())
         {
-            permissions.Add(ContentTypePermissionsHelper.CreateDynamicPermission(ContentTransferPermissions.ImportContentFromFileOfType, contentTypeDefinition.Name));
-            permissions.Add(ContentTypePermissionsHelper.CreateDynamicPermission(ContentTransferPermissions.ExportContentFromFileOfType, contentTypeDefinition.Name));
+            permissions.Add(ContentTransferPermissions.CreateDynamicPermission(ContentTransferPermissions.ImportContentFromFileOfType, contentTypeDefinition.Name));
+            permissions.Add(ContentTransferPermissions.CreateDynamicPermission(ContentTransferPermissions.ExportContentFromFileOfType, contentTypeDefinition.Name));
         }
 
         return permissions;

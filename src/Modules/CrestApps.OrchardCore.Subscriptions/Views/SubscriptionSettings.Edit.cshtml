@@ -15,7 +15,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Currency">
-    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <label asp-for="Currency" class="ocat-label ocat-label-required">@T["Currency"]</label>
     <div class="ocat-end">
         <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
             <option value="">@T["Select default currency"]</option>

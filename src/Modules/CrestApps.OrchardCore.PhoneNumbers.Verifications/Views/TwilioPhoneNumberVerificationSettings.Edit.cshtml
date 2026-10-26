@@ -28,7 +28,7 @@
 
     <div class="authentication-type-dependent authentication-type-dependent-@TwilioPhoneNumberVerificationAuthenticationType.ApiKey@(Model.AuthenticationType == TwilioPhoneNumberVerificationAuthenticationType.ApiKey ? string.Empty : " d-none")">
         <div class="ocat-wrapper">
-            <label asp-for="ApiKeySid" class="ocat-label">@T["API key SID"]</label>
+            <label asp-for="ApiKeySid" class="ocat-label ocat-label-required">@T["API key SID"]</label>
             <div class="ocat-end">
                 <input type="text" class="form-control" asp-for="ApiKeySid" autocomplete="off" />
                 <span asp-validation-for="ApiKeySid" class="text-danger"></span>
@@ -37,7 +37,7 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="ApiKeySecret" class="ocat-label">@T["API key secret"]</label>
+            <label asp-for="ApiKeySecret" class="ocat-label @(Model.HasApiKeySecret ? "" : "ocat-label-required")">@T["API key secret"]</label>
             <div class="ocat-end">
                 <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="new-password" placeholder='@T["Enter a new API key secret to replace the saved value"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ApiKeySecret" class="text-danger"></span>
@@ -55,7 +55,7 @@
 
     <div class="authentication-type-dependent authentication-type-dependent-@TwilioPhoneNumberVerificationAuthenticationType.AccountCredentials@(Model.AuthenticationType == TwilioPhoneNumberVerificationAuthenticationType.AccountCredentials ? string.Empty : " d-none")">
         <div class="ocat-wrapper">
-            <label asp-for="AccountSid" class="ocat-label">@T["Account SID"]</label>
+            <label asp-for="AccountSid" class="ocat-label ocat-label-required">@T["Account SID"]</label>
             <div class="ocat-end">
                 <input type="text" class="form-control" asp-for="AccountSid" autocomplete="off" />
                 <span asp-validation-for="AccountSid" class="text-danger"></span>
@@ -64,7 +64,7 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="AuthToken" class="ocat-label">@T["Auth Token"]</label>
+            <label asp-for="AuthToken" class="ocat-label @(Model.HasAuthToken ? "" : "ocat-label-required")">@T["Auth Token"]</label>
             <div class="ocat-end">
                 <input type="password" class="form-control" asp-for="AuthToken" autocomplete="new-password" placeholder='@T["Enter a new Auth Token to replace the saved value"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="AuthToken" class="text-danger"></span>

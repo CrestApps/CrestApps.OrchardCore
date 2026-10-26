@@ -304,6 +304,23 @@ internal sealed class InteractionIndexMigrations : DataMigration
         return 10;
     }
 
+    /// <summary>
+    /// Adds the index an agent's newest interactions are read through. The agent workspace asks for them on every poll,
+    /// and without an index that leads with <c>AgentId</c> and then <c>CreatedUtc</c> each ask read every interaction of
+    /// the agent and sorted them.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom10Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(
+            SchemaBuilder,
+            "IDX_InteractionIndex_RecentByAgent",
+            ContactCenterStorage.CollectionName,
+            "AgentId", "CreatedUtc");
+
+        return 11;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(

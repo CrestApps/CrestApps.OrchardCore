@@ -28,7 +28,7 @@
     <div asp-validation-summary="All" class="alert alert-danger m-3 mb-0 py-2 small flex-shrink-0"></div>
 
     <div class="messaging-compose-line">
-        <label asp-for="EndpointId" class="messaging-compose-label">@T["From"]</label>
+        <label asp-for="EndpointId" class="messaging-compose-label ocat-label-required">@T["From"]</label>
         <div class="flex-grow-1" style="min-width: 0;">
             <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" data-style="btn-theme border-0 bg-transparent px-0" title="@T["Choose the channel and address to send from"]"></select>
         </div>

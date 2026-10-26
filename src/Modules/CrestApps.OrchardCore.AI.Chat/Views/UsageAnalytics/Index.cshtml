@@ -31,6 +31,15 @@
         _ => null,
     };
 
+    var audioBreakdownLabel = Model.AudioGroupBy switch
+    {
+        AIAudioUsageReportGrouping.ModelAndVoice => T["Voice"],
+        AIAudioUsageReportGrouping.ModelAndLanguage => T["Language"],
+        _ => null,
+    };
+
+    string Bytes(long value) => value > 0 ? (value / 1048576d).ToString("N1", CultureInfo.CurrentCulture) + " MB" : "-";
+
     string KindLabel(string operationType) => operationType switch
     {
         AIUsageOperationTypes.Chat => T["Chat"].Value,
@@ -66,13 +75,6 @@
 <div class="mb-3">
     <p class="text-muted mb-0">@T["Review provider usage by user, model, deployment, profile and connection across chat sessions and chat interactions, and the talk time of automated voice calls."]</p>
 </div>
-
-@if (!Model.IsAIUsageTrackingEnabled)
-{
-    <div class="alert alert-warning">
-        @T["AI usage tracking is currently disabled. Enable AI usage tracking in Settings -> Artificial Intelligence to capture future provider usage data and automated voice call summaries for this report."]
-    </div>
-}
 
 <div class="card mb-3">
     <div class="card-header">
@@ -124,6 +126,14 @@
                         <option value="@AIUsageReportGrouping.Model">@T["Model"]</option>
                         <option value="@AIUsageReportGrouping.ModelAndCategory">@T["Model and category"]</option>
                         <option value="@AIUsageReportGrouping.ModelAndPurpose">@T["Model and purpose"]</option>
+                    </select>
+                </div>
+                <div class="col p-1">
+                    <label asp-for="AudioGroupBy" class="form-label">@T["Group audio usage by"]</label>
+                    <select asp-for="AudioGroupBy" class="form-select">
+                        <option value="@AIAudioUsageReportGrouping.Model">@T["Model"]</option>
+                        <option value="@AIAudioUsageReportGrouping.ModelAndVoice">@T["Model and voice"]</option>
+                        <option value="@AIAudioUsageReportGrouping.ModelAndLanguage">@T["Model and language"]</option>
                     </select>
                 </div>
                 <div class="col p-1 d-flex align-items-end">
@@ -211,6 +221,79 @@
                     </div>
                     <div class="card-footer text-muted small">
                         @T["Cached input, reasoning and audio tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended."]
+                    </div>
+                </div>
+            }
+
+            <h2 class="h4">@T["Audio usage"]</h2>
+            <p class="text-muted">@T["Speech-to-text and text-to-speech requests, with the hours of audio, characters, audio size and tokens each model was billed for."]</p>
+
+            if (Model.AudioRows.Count == 0)
+            {
+                <div class="alert alert-warning">@T["No speech-to-text or text-to-speech usage was found for the selected filters."]</div>
+            }
+            else
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>@(audioBreakdownLabel is null ? T["Audio usage by model"] : T["Audio usage by model and {0}", audioBreakdownLabel.Value.ToLower(CultureInfo.CurrentCulture)])</span>
+                        <span class="text-muted">@T["{0} requests", Model.AudioRows.Sum(row => row.RequestCount).ToString("N0", CultureInfo.CurrentCulture)]</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>@T["Provider"]</th>
+                                    <th>@T["Model"]</th>
+                                    <th>@T["Kind"]</th>
+                                    @if (audioBreakdownLabel is not null)
+                                    {
+                                        <th>@audioBreakdownLabel</th>
+                                    }
+                                    <th class="text-end">@T["Requests"]</th>
+                                    <th class="text-end">@T["Hours"]</th>
+                                    <th class="text-end">@T["Speech hours"]</th>
+                                    <th class="text-end">@T["Characters"]</th>
+                                    <th class="text-end">@T["Audio in"]</th>
+                                    <th class="text-end">@T["Audio out"]</th>
+                                    <th class="text-end">@T["Segments"]</th>
+                                    <th class="text-end">@T["Tokens"]</th>
+                                    <th class="text-end">@T["Avg latency"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var row in Model.AudioRows)
+                            {
+                                <tr>
+                                    <td>@row.ClientName</td>
+                                    <td class="fw-semibold">@row.ModelName</td>
+                                    <td>@KindLabel(row.OperationType)</td>
+                                    @if (audioBreakdownLabel is not null)
+                                    {
+                                        <td>@(Model.AudioGroupBy == AIAudioUsageReportGrouping.ModelAndVoice ? row.VoiceId : row.Language)</td>
+                                    }
+                                    <td class="text-end">@row.RequestCount.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                    <td class="text-end fw-semibold">
+                                        @(row.AudioDurationMs > 0 ? row.AudioHours.ToString("N2", CultureInfo.CurrentCulture) : "-")
+                                        @if (row.AudioDurationMs > 0 && row.RequestsWithDurationCount < row.RequestCount)
+                                        {
+                                            <span class="text-muted small" title="@T["{0} of {1} requests reported an audio length", row.RequestsWithDurationCount, row.RequestCount]">*</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">@(row.SpeechDurationMs > 0 ? (row.SpeechDurationMs / 3600000d).ToString("N2", CultureInfo.CurrentCulture) : "-")</td>
+                                    <td class="text-end">@Count(row.CharacterCount)</td>
+                                    <td class="text-end">@Bytes(row.AudioInputBytes)</td>
+                                    <td class="text-end">@Bytes(row.AudioOutputBytes)</td>
+                                    <td class="text-end">@Count(row.SegmentCount)</td>
+                                    <td class="text-end">@Count(row.TotalTokenCount)</td>
+                                    <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        @T["An asterisk means some requests did not report an audio length, so the hours are a minimum. Speech-to-text hours run to where the last recognized speech ended; speech hours leave out the silence before the first word. Text-to-speech length is known only when the provider reports it or the audio is WAV."]
                     </div>
                 </div>
             }

@@ -8,7 +8,7 @@
     <p class="hint">@T["Configure how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage."]</p>
 
     <div class="ocat-wrapper">
-        <label asp-for="CookieName" class="ocat-label">@T["Visitor cookie name"]</label>
+        <label asp-for="CookieName" class="ocat-label ocat-label-required">@T["Visitor cookie name"]</label>
         <div class="ocat-end">
             <input asp-for="CookieName" class="form-control" />
             <span asp-validation-for="CookieName" class="text-danger"></span>

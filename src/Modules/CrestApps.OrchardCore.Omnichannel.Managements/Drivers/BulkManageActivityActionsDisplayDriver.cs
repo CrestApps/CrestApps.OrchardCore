@@ -62,11 +62,11 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
             }
 
             vm.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
-            vm.SourceOptions = _optionsProvider.GetManuallyAssignableSourceOptions("Select a source");
-            vm.InteractionTypeOptions = _optionsProvider.GetInteractionTypeOptions(string.Empty, "Keep current interaction type");
-            vm.DialerProfileOptions = await _optionsProvider.GetDialerProfileOptionsAsync(string.Empty, "Select a dialer profile");
-            vm.CampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(string.Empty, "No campaign");
-            vm.DialerCampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(string.Empty, "Keep current campaign");
+            vm.SourceOptions = _optionsProvider.GetManuallyAssignableSourceOptions(S["Select a source"]);
+            vm.InteractionTypeOptions = _optionsProvider.GetInteractionTypeOptions(string.Empty, S["Keep current interaction type"]);
+            vm.DialerProfileOptions = await _optionsProvider.GetDialerProfileOptionsAsync(string.Empty, S["Select a dialer profile"]);
+            vm.CampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(string.Empty, S["No campaign"]);
+            vm.DialerCampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(string.Empty, S["Keep current campaign"]);
             vm.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
             vm.TotalCount = model.TotalCount;
         }).Location("Content:5");

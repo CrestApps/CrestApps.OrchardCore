@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.DataSources.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
   </ItemGroup>
 

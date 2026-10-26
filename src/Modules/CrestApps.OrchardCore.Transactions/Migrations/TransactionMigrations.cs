@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -52,6 +53,29 @@ internal sealed class TransactionMigrations : DataMigration
             table.CreateIndex("IDX_TransactionIndex_NextCycle", "NextCycleUtc");
         }, collection: TransactionsConstants.CollectionName);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read transactions through, newest first by <c>CreatedUtc</c> a page at a time, so each
+    /// page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<TransactionIndex>(
+            SchemaBuilder,
+            "IDX_TransactionIndex_Report",
+            TransactionsConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

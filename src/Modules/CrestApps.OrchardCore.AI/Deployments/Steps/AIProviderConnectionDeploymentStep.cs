@@ -12,15 +12,14 @@ public sealed class AIProviderConnectionDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<AIProviderConnectionDeploymentStep>("Artificial Intelligence");
     private static readonly LocalizationSource _title = LocalizationSource.Create<AIProviderConnectionDeploymentStep>("AI Provider Connections");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentStep"/> class.
-    /// </summary>
-    public AIProviderConnectionDeploymentStep()
-    {
-        Name = AIProviderConnectionsStep.StepKey;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => AIProviderConnectionsStep.StepKey;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets the include all.

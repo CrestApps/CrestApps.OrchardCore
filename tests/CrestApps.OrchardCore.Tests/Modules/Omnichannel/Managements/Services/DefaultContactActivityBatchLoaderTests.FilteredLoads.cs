@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -17,6 +18,38 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 /// </summary>
 public sealed partial class DefaultContactActivityBatchLoaderTests
 {
+    [Fact]
+    public async Task FindCandidateDocumentIdsAsync_WhenEveryPickedRecordHasItsDocumentId_ReadsNothingFromTheDatabase()
+    {
+        // Arrange
+        // A null session fails the test if the lookup reaches for it: a record the filters read from an index already has
+        // its document id, and looking it up again cost a query per five hundred records on every load and preview.
+        var batch = new OmnichannelActivityBatch { ContactContentType = "Lead" };
+        var eligible = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "a", "b", "c", "d" };
+        var known = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["a"] = 40,
+            ["b"] = 10,
+            ["c"] = 25,
+            ["d"] = 5,
+        };
+
+        // Act
+        var documentIds = await DefaultContactActivityBatchLoader.FindCandidateDocumentIdsAsync(
+            readonlySession: null,
+            batch,
+            eligible,
+            known,
+            afterDocumentId: 5,
+            leadCreatedFrom: null,
+            leadCreatedTo: null,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // In order, and past the cursor only.
+        Assert.Equal([10L, 25L, 40L], documentIds);
+    }
+
     [Fact]
     public async Task LoadAsync_WhenAFilterPicksAFewRecordsOfALongList_ReadsOnlyThoseRecords()
     {

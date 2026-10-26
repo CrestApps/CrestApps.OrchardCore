@@ -55,7 +55,7 @@
 </div>
 
 <div id="@specificOwnerContainerId" class="@specificOwnerClass">
-    <label asp-for="NormalizedUserName" class="ocat-label">@T["Assign to user"]</label>
+    <label asp-for="NormalizedUserName" class="ocat-label ocat-label-required">@T["Assign to user"]</label>
     <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {

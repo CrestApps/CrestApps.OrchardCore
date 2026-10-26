@@ -11,13 +11,12 @@ public sealed class ContactCenterEntryPointDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterEntryPointDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterEntryPointDeploymentStep>("Contact Center Entry Points");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterEntryPointDeploymentStep"/> class.
-    /// </summary>
-    public ContactCenterEntryPointDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.EntryPoint;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.EntryPoint;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

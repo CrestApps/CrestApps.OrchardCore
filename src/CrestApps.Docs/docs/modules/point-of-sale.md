@@ -324,6 +324,52 @@ Content-Type: application/json
 
 Administrators have both by default.
 
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Point of Sale adds the **Point of Sale** data source (`PointOfSale`) to the Report Builder and to Orchard Core data pipelines. Both data sets need **Manage registers and shifts** (`ManageRegisters`), the permission of the registers and shifts admin pages. The orders data set's register and shift IDs reference these data sets, so a report can join a sale to its register and shift.
+
+The **Registers** data set (`Registers`) has one row per register, newest first by when it was added; it has no default date. Joins on the register and location IDs and filters on the register's name are applied in the database, and simple groups and totals of the fields its index holds (name, location and enabled) are counted there too. The store's street address is never exposed, only its country, region, city and postal code.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Register ID | Identifies the register. |
+| `Name` | Register | |
+| `IsEnabled` | Enabled | |
+| `LocationId` | Location ID | References `Inventory` > `Locations`. |
+| `Currency` | Currency | Empty when the register sells in the products' own currency. |
+| `Roles` | Roles that may sell | The role names, separated by commas; empty when anyone who may sell at a register may sell here. |
+| `CreatedUtc` | Added | |
+| `ModifiedUtc` | Last changed | |
+| `Country`, `Region`, `City`, `PostalCode` | Country, Region, City, Postal code | From the store's address. |
+
+The **Register shifts** data set (`RegisterShifts`) has one row per shift, newest first by when it was opened, which is its default date. Date ranges on that date and joins on the shift, register and location IDs are applied in the database, and simple groups and totals of the register, location and opening date are counted there too. Money is in the shift's currency, which the `Currency` field names: the register's, or the store's when the register has none. The note left at the close and the reasons given for cash put in or taken out are never exposed.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Shift ID | Identifies the shift. |
+| `RegisterId` | Register ID | References `PointOfSale` > `Registers`. |
+| `RegisterName` | Register | |
+| `LocationId` | Location ID | References `Inventory` > `Locations`. |
+| `Status` | Status | `Open` or `Closed`. |
+| `OpenedUtc` | Opened | The default date. |
+| `ClosedUtc` | Closed | |
+| `OpenedByUserId`, `ClosedByUserId` | Opened by user ID, Closed by user ID | Reference the users (`Users`). |
+| `OpenedByName`, `ClosedByName` | Opened by, Closed by | The staff member's name. |
+| `Currency` | Currency | The currency of every money field of the shift. |
+| `OpeningFloat` | Opening float | The cash put in the drawer at the start. |
+| `CashMovementCount` | Cash movements | How many times cash was put in or taken out outside a sale, refunds at the till included. |
+| `CashIn` | Cash put in | |
+| `CashOut` | Cash taken out | A positive amount, refunds at the till included. |
+| `ExpectedCash` | Expected cash | Empty while the shift is open. |
+| `CountedCash` | Counted cash | Empty while the shift is open. |
+| `CashDifference` | Difference | The cash counted less the cash expected: negative when the drawer was short. |
+| `SaleCount` | Sales | Kept when the shift closes; empty while it is open, like the sales fields below. |
+| `SalesTotal` | Sales total | |
+| `CashSales` | Cash kept | The cash handed over for sales less the change given. |
+| `CardSales` | Card | |
+| `OtherSales` | Gift cards and balances | |
+| `RefundedAmount` | Refunded | Refunds of the shift's sales. |
+
 ## Related modules
 
 - [Carts and Orders](carts-and-orders#sales-channels): the order's channel, location, register and shift.

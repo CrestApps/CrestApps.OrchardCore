@@ -36,7 +36,7 @@
                 @if (Model.AvailableFeatures.Any())
                 {
                     <div class="mb-4">
-                        <label class="form-label fw-semibold">@T["Trained features"]</label>
+                        <label class="form-label fw-semibold ocat-label-required">@T["Trained features"]</label>
                         <p class="text-muted small mb-2">@T["Capabilities the underlying model was trained with. Only declared features are sent to the provider."]</p>
                         @foreach (var group in Model.AvailableFeatures.GroupBy(feature => feature.Category ?? "Trained Features").OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase))
                         {

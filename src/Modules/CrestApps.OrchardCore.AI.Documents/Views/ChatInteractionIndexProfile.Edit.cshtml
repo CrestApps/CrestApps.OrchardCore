@@ -1,7 +1,7 @@
 @model CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels.ChatInteractionIndexProfileViewModel
 
 <div class="ocat-limited-wrapper">
-    <label asp-for="EmbeddingDeploymentName" class="ocat-label">@T["Embedding deployment"]</label>
+    <label asp-for="EmbeddingDeploymentName" class="ocat-label ocat-label-required">@T["Embedding deployment"]</label>
     <div class="ocat-limited">
         @if (Model.EmbeddingDeployments.Count == 0)
         {

@@ -192,6 +192,9 @@ public sealed class ReportDesignerApiController : Controller
             return Forbid();
         }
 
+        // The function catalog belongs to Orchard Core and describes each function with plain strings, which Orchard
+        // Core's own formula editor translates the same way.
+#pragma warning disable OCLOC104 // The localizer key is not a compile-time constant
         return Json(_functions.Functions.Select(function => new
         {
             function.Name,
@@ -200,6 +203,7 @@ public sealed class ReportDesignerApiController : Controller
             Description = S[function.Description].Value,
             function.IsAggregate,
         }), ReportDesignerJson.Options);
+#pragma warning restore OCLOC104
     }
 
     /// <summary>

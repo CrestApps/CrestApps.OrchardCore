@@ -76,6 +76,10 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
                     CreatedUtc = _day.AddDays(day),
                     ScheduledUtc = _day.AddDays(day),
                     CompletedUtc = day == 0 ? _day.AddMinutes(90) : null,
+                    ConvertedFromLeadItemId = day == 1 ? "lead-1" : null,
+                    ContactResolutionStatus = day == 1 ? ContactResolutionStatus.Resolved : ContactResolutionStatus.Unknown,
+                    AiEscalated = day == 1,
+                    HandoffSummaryUtc = day == 1 ? _day.AddDays(1).AddMinutes(3) : null,
                 }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             }
 
@@ -152,6 +156,32 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         Assert.Equal(90m, completed["HandleMinutes"]);
         Assert.Equal(DateTimeKind.Utc, ((DateTime)completed["CreatedUtc"]).Kind);
         Assert.Null(rows[0]["Disposition"]);
+    }
+
+    [Fact]
+    public async Task Activities_ReadTheLeadTheyCameFrom_TheContactMatch_AndTheHandoff()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var context = new DataSourceContext { User = _user };
+
+        // Act
+        var schema = await source.GetSchemaAsync("Activities", context, TestContext.Current.CancellationToken);
+        var rows = Rows(await ReportDesignerTestServices.ReadAsync(source, Query("Activities"), TestContext.Current.CancellationToken));
+
+        // Assert
+        var handedOff = Assert.Single(rows, row => (string)row["ItemId"] == "a1");
+        Assert.Equal("lead-1", handedOff["ConvertedFromLeadItemId"]);
+        Assert.Equal("Resolved", handedOff["ContactResolutionStatus"]);
+        Assert.Equal(true, handedOff["AiEscalated"]);
+        Assert.Equal(_day.AddDays(1).AddMinutes(3), handedOff["HandoffSummaryUtc"]);
+        Assert.Null(rows.Single(row => (string)row["ItemId"] == "a2")["HandoffSummaryUtc"]);
+
+        // Contacts and leads are content items of types the site defines, so their identifiers declare no reference.
+        Assert.True(schema.FindField("ConvertedFromLeadItemId").IsIdentifier);
+        Assert.Empty(schema.FindField("ConvertedFromLeadItemId").References ?? []);
+        Assert.Empty(schema.FindField("ContactContentItemId").References ?? []);
     }
 
     [Fact]

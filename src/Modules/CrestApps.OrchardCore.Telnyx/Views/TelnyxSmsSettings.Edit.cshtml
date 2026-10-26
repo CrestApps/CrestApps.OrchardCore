@@ -34,7 +34,7 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+        <label asp-for="ApiKey" class="form-label @(!Model.HasApiKey ? "ocat-label-required" : "")">@T["API key"]</label>
         <input asp-for="ApiKey" class="form-control" type="password" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx API v2 key"].Value)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span class="hint">@T["The Telnyx account API key used as the bearer token on the Messaging API."]</span>
         <span asp-validation-for="ApiKey" class="text-danger"></span>

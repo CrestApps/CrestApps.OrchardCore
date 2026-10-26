@@ -11,13 +11,12 @@ public sealed class ContactCenterDialerProfileDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterDialerProfileDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterDialerProfileDeploymentStep>("Contact Center Dialer Profiles");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterDialerProfileDeploymentStep"/> class.
-    /// </summary>
-    public ContactCenterDialerProfileDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.DialerProfile;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.DialerProfile;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

@@ -171,6 +171,13 @@ public sealed class ReportDesignDocumentBuilder
                     break;
 
                 default:
+                    var tableGrouping = GetTableGrouping(visual, columns);
+
+                    if (tableGrouping is not null)
+                    {
+                        groupings.Add(tableGrouping);
+                    }
+
                     if (visual.ShowTotals)
                     {
                         groupings.Add([]);
@@ -247,8 +254,44 @@ public sealed class ReportDesignDocumentBuilder
         return document;
     }
 
+    // The dimension columns a table groups the result by, when it lists columns and leaves out some dimensions of an
+    // aggregated result: the table then has one row per combination of the dimensions it shows, with its measures
+    // computed over every row of that combination, instead of repeating those rows once per hidden dimension value.
+    // Null when the table shows the result as it is.
+    private static string[] GetTableGrouping(ReportVisualDefinition visual, IReadOnlyList<ReportResultColumn> columns)
+    {
+        if (visual.ColumnIds.Count == 0 || !columns.Any(column => column.IsMeasure))
+        {
+            return null;
+        }
+
+        var shown = visual.ColumnIds
+            .Distinct(StringComparer.Ordinal)
+            .Select(id => columns.FirstOrDefault(column => column.Id == id))
+            .Where(column => column is { IsMeasure: false })
+            .Select(column => column.Id)
+            .ToArray();
+
+        return shown.Length < columns.Count(column => !column.IsMeasure) ? shown : null;
+    }
+
     private ReportSection BuildTable(ReportVisualDefinition visual, ReportQueryResult result)
     {
+        var grouping = GetTableGrouping(visual, result.Columns);
+
+        if (grouping is not null)
+        {
+            var groups = result.Regroup(grouping);
+            var original = result;
+
+            // The regrouped rows are the table's result; subtotals and totals still regroup the rows behind the original.
+            result = new ReportQueryResult(
+                original.Columns,
+                groups.Select(group => group.Values).ToList(),
+                isAggregated: true,
+                positions => original.Regroup(positions.Select(position => original.Columns[position].Id)));
+        }
+
         var indexes = visual.ColumnIds.Count > 0
             ? visual.ColumnIds.Select(result.IndexOf).Where(index => index >= 0).ToArray()
             : Enumerable.Range(0, result.Columns.Count).Where(index => !result.Columns[index].Hidden).ToArray();

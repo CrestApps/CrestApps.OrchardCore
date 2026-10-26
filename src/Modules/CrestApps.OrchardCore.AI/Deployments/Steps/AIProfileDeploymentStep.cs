@@ -12,15 +12,14 @@ public sealed class AIProfileDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<AIProfileDeploymentStep>("Artificial Intelligence");
     private static readonly LocalizationSource _title = LocalizationSource.Create<AIProfileDeploymentStep>("AI Profiles");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AIProfileDeploymentStep"/> class.
-    /// </summary>
-    public AIProfileDeploymentStep()
-    {
-        Name = AIProfileStep.StepKey;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => AIProfileStep.StepKey;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets the include all.

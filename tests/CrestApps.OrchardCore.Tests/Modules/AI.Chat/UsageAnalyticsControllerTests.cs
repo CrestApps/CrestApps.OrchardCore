@@ -11,7 +11,6 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 
@@ -105,9 +104,6 @@ public sealed class UsageAnalyticsControllerTests
                 .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
                 .ReturnsAsync(AuthorizationResult.Success());
 
-            var options = new Mock<IOptionsMonitor<GeneralAIOptions>>();
-            options.Setup(monitor => monitor.CurrentValue).Returns(new GeneralAIOptions { EnableAIUsageTracking = true });
-
             var clock = new Mock<IClock>();
             clock
                 .Setup(value => value.ConvertToTimeZone(It.IsAny<DateTimeOffset>(), It.IsAny<ITimeZone>()))
@@ -122,8 +118,7 @@ public sealed class UsageAnalyticsControllerTests
                 profileStore.Object,
                 authorizationService.Object,
                 localClock.Object,
-                clock.Object,
-                options.Object)
+                clock.Object)
             {
                 ControllerContext = new ControllerContext
                 {

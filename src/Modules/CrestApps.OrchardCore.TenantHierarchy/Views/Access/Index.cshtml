@@ -125,7 +125,7 @@
             </div>
 
             <div class="mb-3" data-th-for="Role">
-                <label asp-for="PrincipalRole" class="form-label">@T["Their role in {0}", Model.ParentName]</label>
+                <label asp-for="PrincipalRole" class="form-label ocat-label-required">@T["Their role in {0}", Model.ParentName]</label>
                 <select asp-for="PrincipalRole" class="form-select">
                     @foreach (var role in Model.ParentRoles)
                     {
@@ -135,7 +135,7 @@
             </div>
 
             <div class="mb-3 d-none" data-th-for="User">
-                <span class="form-label d-block">@T["Person"]</span>
+                <span class="form-label d-block ocat-label-required">@T["Person"]</span>
                 @await Component.InvokeAsync("UserPicker", new
                 {
                     name = Html.NameFor(m => m.Principal).ToString(),
@@ -149,7 +149,7 @@
             </div>
 
             <div class="mb-3">
-                <span class="form-label d-block">@T["Their roles inside the {0}", labels.ChildLower]</span>
+                <span class="form-label d-block ocat-label-required">@T["Their roles inside the {0}", labels.ChildLower]</span>
                 @foreach (var role in Model.ChildRoles)
                 {
                     var id = $"th-child-role-{role}";

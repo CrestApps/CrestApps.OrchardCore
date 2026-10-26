@@ -63,7 +63,9 @@ public sealed class StripeCheckoutCustomerResolver : IStripeCheckoutCustomerReso
             return null;
         }
 
-        if (_resolved.TryGetValue(sessionId, out var cached))
+        var cacheKey = sessionId + "|" + paymentMethodId;
+
+        if (_resolved.TryGetValue(cacheKey, out var cached))
         {
             return cached;
         }
@@ -78,10 +80,12 @@ public sealed class StripeCheckoutCustomerResolver : IStripeCheckoutCustomerReso
             Email = contact?.Email,
             PaymentMethodId = paymentMethodId,
 
-            // Keyed by the checkout, not by the attempt: the two obligations of one checkout have different
-            // attempts, and keying by attempt would create a second customer the prepared payment method
-            // does not belong to — which is the very mismatch this type exists to prevent.
-            IdempotencyKey = "checkout_" + sessionId + "_customer",
+            // Keyed by the checkout and the payment method, not by the attempt: the two obligations of one
+            // checkout have different attempts but share the prepared payment method, and keying by attempt
+            // would create a second customer it does not belong to — the very mismatch this type exists to
+            // prevent. The payment method is part of the key because Stripe rejects a reused key whose request
+            // differs, and a customer who retries the same checkout with another card sends another payment method.
+            IdempotencyKey = "checkout_" + sessionId + "_" + paymentMethodId + "_customer",
             Metadata = new Dictionary<string, string>
             {
                 ["checkout_session_id"] = sessionId,
@@ -92,7 +96,7 @@ public sealed class StripeCheckoutCustomerResolver : IStripeCheckoutCustomerReso
 
         if (!string.IsNullOrEmpty(customerId))
         {
-            _resolved[sessionId] = customerId;
+            _resolved[cacheKey] = customerId;
         }
 
         return customerId;

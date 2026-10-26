@@ -140,6 +140,29 @@ public sealed class SmsInboxQueryTests
         Assert.Equal(25, all.Distinct(StringComparer.Ordinal).Count());
     }
 
+    // Live: a conversation transferred to an agent was listed by its two-day-old last message, below every newer
+    // thread and past the first page, so the agent it was transferred to could not find it.
+    [Fact]
+    public async Task QueryAsync_ListsAThreadHandedOverSinceItsLastMessage_AboveThreadsWithNewerMessages()
+    {
+        await using var harness = await Harness.CreateAsync();
+
+        var transferred = Personal("transferred", ownerId: "agent-1");
+        transferred.LastMessageUtc = _now.AddDays(-2);
+        transferred.LastActivityUtc = _now;
+
+        var newer = Personal("newer", ownerId: "agent-1");
+        newer.LastMessageUtc = _now.AddHours(-1);
+
+        await harness.SeedAsync(newer, transferred);
+
+        var results = await harness.Store.QueryAsync(
+            new MessagingInboxQuery { AgentId = "agent-1", Take = 10 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["transferred", "newer"], results.Select(conversation => conversation.ItemId));
+    }
+
     [Fact]
     public async Task CountAsync_CountsTheSameSetTheTabShows()
     {
@@ -587,6 +610,7 @@ public sealed class SmsInboxQueryTests
                     .Column<string>("Status", column => column.WithLength(32))
                     .Column<bool>("IsRead")
                     .Column<DateTime>("LastMessageUtc")
+                    .Column<DateTime>("LastActivityUtc", column => column.Nullable())
                     .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
                     .Column<DateTime>("AssignedUtc", column => column.Nullable())
                     .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),

@@ -111,6 +111,144 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Commerce**, permission `ViewInventory`) lists every counted item with its units on hand, held and available, out of stock and low first, with totals. It shows stock as it is when it runs.
 
+## Report Builder data source
+
+Inventory exposes its records to the [Report Builder](report-builder/data-sources.md) and to Orchard Core data pipelines as the **Inventory** data source (`Inventory`). The data source is registered when **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, which the Report Builder needs. Inventory registers the stock items, stock levels, stock movements, stock reservations and locations data sets; **Purchase Orders** adds the purchase orders and purchase order lines, and **Back-in-Stock Alerts** adds the alerts. A data set whose feature is off is not listed.
+
+Every data set needs **View inventory** (`ViewInventory`), the permission of the Inventory and Purchase orders screens and of the stock reports (**Manage inventory** implies it). A report without a user reads nothing. Each data set reads its newest records first, a page at a time. Identifier fields reference the data sets they point to, so the builder joins them: a `StockItemId` joins **Stock items**, a `LocationId` joins **Locations**, an `OrderId` joins the **Orders** data source's orders, a product or variant ID joins the **Products** data source, and a user ID joins **Users**. A location that a record leaves empty is the default location (`default`).
+
+| Data set | Name | Registered by | Main date | One row per |
+| --- | --- | --- | --- | --- |
+| **Stock items** | `StockItems` | Inventory | None | Product or variant whose stock is counted, with its units at every location together |
+| **Stock levels** | `StockLevels` | Inventory | None | Product or variant at a location |
+| **Stock movements** | `StockMovements` | Inventory | `Utc` | Change to the units on hand of a stock item |
+| **Stock reservations** | `StockReservations` | Inventory | None | Hold of units for an order |
+| **Locations** | `Locations` | Inventory | None | Place stock is kept, from the Inventory settings |
+| **Purchase orders** | `PurchaseOrders` | Purchase Orders | `CreatedUtc` | Order of stock from a supplier |
+| **Purchase order lines** | `PurchaseOrderLines` | Purchase Orders | `PurchaseOrderCreatedUtc` | Stock item a purchase order asks for |
+| **Back-in-stock alerts** | `StockAlerts` | Back-in-Stock Alerts | `CreatedUtc` | Request to be emailed when a product is back in stock |
+
+Stock is a snapshot of the moment the report runs, so the stock items and stock levels have no main date. The index of the stock reservations holds no date the hold was made, so they have no main date either. The data sets with one row per record group simple reports in the database, for the fields their index holds; the stock levels, purchase order lines and locations are grouped by the report itself. See [Large data](report-builder/large-data.md).
+
+### Stock items
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Stock item ID | Identifier. |
+| `ProductId` | Product ID | References the **Products** data set. |
+| `VariantId` | Variant ID | References the **Variants** data set; empty for a product without variants. |
+| `Sku`, `Title` | SKU, Item | As the lists show them. |
+| `Archived` | Archived | The product or variant is gone or no longer counted. |
+| `OnHand`, `Reserved`, `Available` | On hand, Held for orders, Available | Every location together. Available is below zero when backorders were sold. |
+| `LowStockThreshold` | Low-stock threshold | The item's reorder point: its own threshold, or the site's default. |
+| `StockStatus` | Stock status | `InStock`, `Low` or `Out`. |
+| `IsLow`, `IsBackordered`, `AllowBackorder` | Low, Backordered, Takes backorders | |
+| `ReleaseDateUtc` | Ships from | The release date that makes a backorder a pre-order. |
+| `CreatedUtc`, `ModifiedUtc` | Created, Last changed | |
+
+### Stock levels
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `StockItemId` | Stock item ID | References **Stock items**. |
+| `LocationId` | Location ID | References **Locations**. |
+| `ProductId`, `VariantId`, `Sku`, `Title`, `Archived` | Product ID, Variant ID, SKU, Item, Archived | From the stock item. |
+| `OnHand`, `Reserved`, `Available` | On hand, Held for orders, Available | At the location. |
+
+An item counted before there were locations has its units at the default location, and so has any part of its totals that no location accounts for, as on the item's admin page.
+
+### Stock movements
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Movement ID | Identifier. |
+| `StockItemId` | Stock item ID | References **Stock items**. |
+| `LocationId` | Location ID | References **Locations**. |
+| `Kind` | Kind | `Received`, `Adjusted`, `Counted`, `Sold`, `Returned` or `Transferred`. |
+| `Quantity` | Change in units | Positive when units came in, negative when they went out. |
+| `OnHandAfter` | On hand after | |
+| `Utc` | Date | Main date. |
+| `Reason` | Reason | |
+| `OrderId` | Order ID | References the **Orders** data set; set for sales and returns. |
+| `PurchaseOrderId` | Purchase order ID | References **Purchase orders**; set for units received for one. |
+| `ActorId`, `ActorName` | Changed by user ID, Changed by | The user ID references **Users**. |
+
+### Stock reservations
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Reservation ID | Identifier. |
+| `StockItemId` | Stock item ID | References **Stock items**. |
+| `OrderId` | Order ID | References the **Orders** data set. |
+| `LocationId` | Location ID | References **Locations**. |
+| `Status` | Status | `Held`, `Committed`, `Released` or `Returned`. |
+| `Quantity`, `ReturnedQuantity` | Units, Units returned | |
+| `ReleaseReason` | Release reason | Why a hold ended without a sale. |
+| `CreatedUtc`, `ExpiresUtc`, `ModifiedUtc` | Held, Hold expires, Last changed | |
+
+### Locations
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Location ID | Identifier. The orders and returns of the **Orders** data source join here. |
+| `Name`, `Address` | Location, Address | |
+| `Position` | Order taken from | The place of the location in the order orders take units from, from 1. |
+| `IsDefault` | Default location | |
+
+### Purchase orders
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Purchase order ID | Identifier. |
+| `Number`, `Status` | Purchase order number, Status | Status is `Draft`, `Ordered`, `PartiallyReceived`, `Received` or `Canceled`. |
+| `Supplier`, `SupplierEmail` | Supplier, Supplier's email | |
+| `LocationId` | Location ID | References **Locations**. |
+| `OwnerId`, `Author` | Started by user ID, Started by | The user ID references **Users**. |
+| `LineCount`, `Ordered`, `Received`, `Outstanding` | Lines, Units ordered, Units received, Units to come | |
+| `Currency` | Currency | The purchase order's currency. |
+| `Total`, `ReceivedCost` | Total cost, Cost received | In the purchase order's currency. |
+| `CreatedUtc`, `OrderedUtc`, `ExpectedUtc`, `ReceivedUtc`, `ModifiedUtc` | Started, Ordered, Expected, Received, Last changed | Started is the main date. |
+
+The note of a purchase order is never exposed.
+
+### Purchase order lines
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `PurchaseOrderId` | Purchase order ID | References **Purchase orders**. |
+| `PurchaseOrderNumber`, `PurchaseOrderStatus`, `Supplier` | Purchase order number, Purchase order status, Supplier | From the purchase order. |
+| `LocationId` | Location ID | References **Locations**. |
+| `Currency` | Currency | The purchase order's currency. |
+| `PurchaseOrderCreatedUtc`, `PurchaseOrderReceivedUtc` | Purchase order started, Purchase order received | Purchase order started is the main date. |
+| `LineId`, `Position` | Line ID, Line number | |
+| `StockItemId` | Stock item ID | References **Stock items**. |
+| `Title`, `Sku` | Item, SKU | |
+| `Ordered`, `Received`, `Outstanding` | Units ordered, Units received, Units to come | |
+| `UnitCost`, `LineTotal` | Unit cost, Line cost | In the purchase order's currency. |
+
+### Back-in-stock alerts
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Alert ID | Identifier. |
+| `StockItemId` | Stock item ID | References **Stock items**. |
+| `ProductId`, `VariantId` | Product ID, Variant ID | Reference the **Products** data source. |
+| `Waiting` | Waiting | The email has not gone out yet. |
+| `CreatedUtc`, `SentUtc` | Asked, Emailed | Asked is the main date. |
+
+Like the item's admin page, which shows only how many shoppers wait, the alerts never expose who asked: neither the email address nor the user.
+
+## Reports to adapt
+
+The **Reports: inventory reports to adapt** recipe (`InventoryReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, under the **Store** category. They show the units of each item that the built-in stock reports show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Stock on hand | **Stock items** that are not archived, the fewest units available first | Stock on hand |
+| Stock movements | **Stock movements** of the last 30 days, joined to **Stock items** and grouped by item, with calculated fields for the units received, sold, returned and corrected | Stock movements |
+
+The built-in **Stock on hand** report also counts the items, and the items that are out of stock or low. The built-in **Stock movements** report also counts the items that moved and the items that run out within 14 days, and shows the days of stock left at the period's rate of sale. A designed report that lists each item does not also count the items, and it does not know the length of its period, so these figures stay built-in only.
+
 ## Availability
 
 `InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items, every location together: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant, and `ReleaseDateUtc` while the item's release date is to come, which makes a backorder `ProductAvailabilityStatus.Preorder`. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.

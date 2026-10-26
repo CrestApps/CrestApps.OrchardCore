@@ -11,13 +11,12 @@ public sealed class AgentStateReasonCodeDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _category = LocalizationSource.Create<AgentStateReasonCodeDeploymentStep>("Contact Center");
     private static readonly LocalizationSource _title = LocalizationSource.Create<AgentStateReasonCodeDeploymentStep>("Agent State Reason Codes");
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AgentStateReasonCodeDeploymentStep"/> class.
-    /// </summary>
-    public AgentStateReasonCodeDeploymentStep()
-    {
-        Name = ContactCenterDeploymentSteps.AgentStateReasonCode;
-        Category = _category;
-        Title = _title;
-    }
+    /// <inheritdoc />
+    public override string Name => ContactCenterDeploymentSteps.AgentStateReasonCode;
+
+    /// <inheritdoc />
+    public override LocalizationSource Category => _category;
+
+    /// <inheritdoc />
+    public override LocalizationSource Title => _title;
 }

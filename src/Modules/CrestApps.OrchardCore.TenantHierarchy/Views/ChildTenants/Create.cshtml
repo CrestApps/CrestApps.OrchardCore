@@ -17,7 +17,7 @@
     <p class="text-muted">@T["The new {0} gets its own site at its own address, with its own users and data. It is ready a few moments after you save.", labels.ChildLower]</p>
 
     <div class="ocat-wrapper">
-        <label asp-for="DisplayName" class="ocat-label">@T["Name"]</label>
+        <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label>
         <div class="ocat-end">
             <input asp-for="DisplayName" class="form-control" autofocus autocomplete="off" maxlength="100" data-th-name />
             <span asp-validation-for="DisplayName" class="text-danger"></span>
@@ -26,7 +26,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="Slug" class="ocat-label">@T["Address"]</label>
+        <label asp-for="Slug" class="ocat-label ocat-label-required">@T["Address"]</label>
         <div class="ocat-end">
             <div class="input-group">
                 <span class="input-group-text">@($"{Model.Scheme}://")</span>
@@ -51,7 +51,7 @@
     </div>
 
     <div class="ocat-wrapper">
-        <span class="ocat-label">@T["Start from"]</span>
+        <span class="ocat-label ocat-label-required">@T["Start from"]</span>
         <div class="ocat-end">
             @if (Model.Recipes.Count == 0)
             {

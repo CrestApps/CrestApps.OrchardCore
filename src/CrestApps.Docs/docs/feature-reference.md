@@ -32,6 +32,7 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.AI.Chat` | AI Chat | [AI Chat](./ai/chat) |
 | `CrestApps.OrchardCore.AI.Chat.AdminWidget` | AI Chat Admin Widget | [AI Chat](./ai/chat) |
 | `CrestApps.OrchardCore.AI.Chat.Analytics` | AI Chat Session Analytics | [AI Chat Session Analytics](./ai/chat-analytics) |
+| `CrestApps.OrchardCore.AI.UsageAnalytics` | AI Usage Analytics | [AI Usage Analytics](./ai/usage-analytics) |
 | `CrestApps.OrchardCore.AI.Chat.Interactions` | AI Chat Interactions | [AI Chat Interactions](./ai/chat-interactions) |
 | `CrestApps.OrchardCore.AI.Agent` | Orchard Core AI Agent | [AI Agents](./ai/agent) |
 | `CrestApps.OrchardCore.AI.Prompting` | AI Prompt Templates | [AI Prompt Templates](./ai/prompt-templates) |

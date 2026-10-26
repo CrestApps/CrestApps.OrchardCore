@@ -323,6 +323,66 @@ public sealed class TransactionCommandServiceTests
     }
 
     [Fact]
+    public async Task RefundAsync_ForAPaymentThatSettledSeveralTransactions_GivesBackOnlyThisOnesShare()
+    {
+        // Arrange: one payment of 150 settled this transaction (100) and another one (50).
+        var paid = CreateOutstanding();
+        paid.AmountPaid = 100m;
+        paid.Status = TransactionStatus.Paid;
+        paid.Events.Add(new TransactionEvent
+        {
+            Type = TransactionEventType.PaymentRecorded,
+            PaymentAttemptId = "attempt-shared",
+            Amount = 100m,
+        });
+
+        var shared = CreateAttempt("attempt-shared", 150m, _now);
+        shared.ReferenceId = null;
+
+        var context = new TestContextBuilder(paid);
+        var refunds = context.UseRefunds(shared);
+
+        // Act
+        var result = await context.Service.RefundAsync("transaction-1", amount: null, "Withdrawn", TestContext.Current.CancellationToken);
+
+        // Assert: the refund is for this transaction's share, and names it, so it is recorded against this one only.
+        Assert.True(result.Succeeded);
+
+        var refund = Assert.Single(refunds);
+        Assert.Equal(100m, refund.Amount);
+        Assert.Equal(TransactionsConstants.ReferenceTypes.Transaction, refund.ReferenceType);
+        Assert.Equal("transaction-1", refund.ReferenceId);
+    }
+
+    [Fact]
+    public async Task RefundAsync_ForMoreThanThisTransactionsShareOfASharedPayment_RefundsNothing()
+    {
+        // Arrange
+        var paid = CreateOutstanding();
+        paid.AmountPaid = 100m;
+        paid.Status = TransactionStatus.Paid;
+        paid.Events.Add(new TransactionEvent
+        {
+            Type = TransactionEventType.PaymentRecorded,
+            PaymentAttemptId = "attempt-shared",
+            Amount = 100m,
+        });
+
+        var shared = CreateAttempt("attempt-shared", 150m, _now);
+        shared.ReferenceId = null;
+
+        var context = new TestContextBuilder(paid);
+        var refunds = context.UseRefunds(shared);
+
+        // Act
+        var result = await context.Service.RefundAsync("transaction-1", 120m, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(refunds);
+    }
+
+    [Fact]
     public async Task RefundAsync_ForMoreThanWasPaid_RefundsNothing()
     {
         // Arrange

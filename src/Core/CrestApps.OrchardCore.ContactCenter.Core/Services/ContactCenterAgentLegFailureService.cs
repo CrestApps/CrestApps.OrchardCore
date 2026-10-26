@@ -259,8 +259,22 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
-        // Held Reserved while the dialer reached the customer, the agent is on the call from now.
-        await _presenceManager.ConnectHeldAgentAsync(session.AgentId, interaction, now, cancellationToken);
+        // Held Reserved while the dialer reached the customer, the agent is on the call from now. The agent's profile
+        // can be locked by other work for longer than the connect waits; that must not undo the join recorded above,
+        // which is what shows the agent the call and its record. The state follows with the agent's next change.
+        try
+        {
+            await _presenceManager.ConnectHeldAgentAsync(session.AgentId, interaction, now, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Agent '{AgentId}' was connected to call '{ProviderCallId}' (interaction '{InteractionId}') but could not be moved from Reserved to on a call.",
+                session.AgentId.SanitizeLogValue(),
+                peerProviderCallId.SanitizeLogValue(),
+                interaction.ItemId.SanitizeLogValue());
+        }
 
         var data = ContactCenterCallAudit.ForSession(session, interaction);
         data.ProviderLegId = agentLegProviderCallId;

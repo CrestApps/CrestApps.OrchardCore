@@ -25,7 +25,6 @@ internal sealed class GeneralAIOptionsConfiguration : IConfigureOptions<GeneralA
     {
         var settings = _siteService.GetSettings<GeneralAISettings>();
 
-        options.EnableAIUsageTracking = settings.EnableAIUsageTracking;
         options.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
         options.OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest;
         options.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;

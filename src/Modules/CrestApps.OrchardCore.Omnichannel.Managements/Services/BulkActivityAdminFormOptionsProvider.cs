@@ -43,18 +43,18 @@ public sealed class BulkActivityAdminFormOptionsProvider
 
     internal IList<SelectListItem> GetSourceOptions(
         string selectedSource,
-        string emptyText)
+        LocalizedString emptyText)
     {
         var options = ActivityFilterSelectListBuilder.BuildSourceItems(_activitySourceOptions, selectedSource);
-        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedSource)));
+        options.Insert(0, new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedSource)));
 
         return options;
     }
 
-    internal IList<SelectListItem> GetManuallyAssignableSourceOptions(string emptyText)
+    internal IList<SelectListItem> GetManuallyAssignableSourceOptions(LocalizedString emptyText)
     {
         var options = ActivityFilterSelectListBuilder.BuildManuallyAssignableSourceItems(_activitySourceOptions);
-        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, selected: true));
+        options.Insert(0, new SelectListItem(emptyText, string.Empty, selected: true));
 
         return options;
     }
@@ -62,29 +62,29 @@ public sealed class BulkActivityAdminFormOptionsProvider
     internal string[] GetStoredSourceValues(string selectedSource)
         => _activitySourceOptions.GetStoredValues(selectedSource);
 
-    internal IList<SelectListItem> GetChannelOptions(string selectedChannel, string emptyText)
+    internal IList<SelectListItem> GetChannelOptions(string selectedChannel, LocalizedString emptyText)
     {
         var options = ActivityFilterSelectListBuilder.BuildChannelItems(_activityChannelOptions, selectedChannel);
-        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedChannel)));
+        options.Insert(0, new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedChannel)));
 
         return options;
     }
 
-    internal IList<SelectListItem> GetInteractionTypeOptions(string selectedInteractionType, string emptyText)
+    internal IList<SelectListItem> GetInteractionTypeOptions(string selectedInteractionType, LocalizedString emptyText)
     {
         return
         [
-            new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedInteractionType)),
+            new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedInteractionType)),
             new SelectListItem(S["Manual"], nameof(ActivityInteractionType.Manual), string.Equals(selectedInteractionType, nameof(ActivityInteractionType.Manual), StringComparison.Ordinal)),
             new SelectListItem(S["Automated"], nameof(ActivityInteractionType.Automated), string.Equals(selectedInteractionType, nameof(ActivityInteractionType.Automated), StringComparison.Ordinal)),
         ];
     }
 
-    internal IList<SelectListItem> GetStatusOptions(string selectedStatus, string emptyText)
+    internal IList<SelectListItem> GetStatusOptions(string selectedStatus, LocalizedString emptyText)
     {
         return
         [
-            new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedStatus)),
+            new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedStatus)),
             new SelectListItem(S["Not started"], nameof(ActivityStatus.NotStated), string.Equals(selectedStatus, nameof(ActivityStatus.NotStated), StringComparison.Ordinal)),
             new SelectListItem(S["Scheduled"], nameof(ActivityStatus.Scheduled), string.Equals(selectedStatus, nameof(ActivityStatus.Scheduled), StringComparison.Ordinal)),
             new SelectListItem(S["Pending"], nameof(ActivityStatus.Pending), string.Equals(selectedStatus, nameof(ActivityStatus.Pending), StringComparison.Ordinal)),
@@ -94,11 +94,11 @@ public sealed class BulkActivityAdminFormOptionsProvider
         ];
     }
 
-    internal IList<SelectListItem> GetAssignmentStatusOptions(string selectedAssignmentStatus, string emptyText)
+    internal IList<SelectListItem> GetAssignmentStatusOptions(string selectedAssignmentStatus, LocalizedString emptyText)
     {
         return
         [
-            new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedAssignmentStatus)),
+            new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedAssignmentStatus)),
             new SelectListItem(S["Unassigned"], nameof(ActivityAssignmentStatus.Unassigned), string.Equals(selectedAssignmentStatus, nameof(ActivityAssignmentStatus.Unassigned), StringComparison.Ordinal)),
             new SelectListItem(S["Available"], nameof(ActivityAssignmentStatus.Available), string.Equals(selectedAssignmentStatus, nameof(ActivityAssignmentStatus.Available), StringComparison.Ordinal)),
             new SelectListItem(S["Reserved"], nameof(ActivityAssignmentStatus.Reserved), string.Equals(selectedAssignmentStatus, nameof(ActivityAssignmentStatus.Reserved), StringComparison.Ordinal)),
@@ -108,7 +108,7 @@ public sealed class BulkActivityAdminFormOptionsProvider
         ];
     }
 
-    internal async Task<IList<SelectListItem>> GetCampaignOptionsAsync(string selectedCampaignId, string emptyText)
+    internal async Task<IList<SelectListItem>> GetCampaignOptionsAsync(string selectedCampaignId, LocalizedString emptyText)
     {
         var campaigns = await _campaignManager.GetAllAsync();
         var options = campaigns
@@ -116,7 +116,7 @@ public sealed class BulkActivityAdminFormOptionsProvider
             .Select(campaign => new SelectListItem(GetCampaignText(campaign), campaign.ItemId, string.Equals(selectedCampaignId, campaign.ItemId, StringComparison.Ordinal)))
             .ToList();
 
-        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedCampaignId)));
+        options.Insert(0, new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedCampaignId)));
 
         if (!string.IsNullOrWhiteSpace(selectedCampaignId) &&
             options.All(option => !string.Equals(option.Value, selectedCampaignId, StringComparison.Ordinal)))
@@ -127,7 +127,7 @@ public sealed class BulkActivityAdminFormOptionsProvider
         return options;
     }
 
-    internal async Task<IList<SelectListItem>> GetDialerProfileOptionsAsync(string selectedDialerProfileId, string emptyText)
+    internal async Task<IList<SelectListItem>> GetDialerProfileOptionsAsync(string selectedDialerProfileId, LocalizedString emptyText)
     {
         var dialerContributor = _dialerContributors.FirstOrDefault();
 
@@ -135,7 +135,7 @@ public sealed class BulkActivityAdminFormOptionsProvider
         {
             return
             [
-                new SelectListItem(S[emptyText], string.Empty, selected: true),
+                new SelectListItem(emptyText, string.Empty, selected: true),
             ];
         }
 
@@ -145,7 +145,7 @@ public sealed class BulkActivityAdminFormOptionsProvider
             .Select(profile => new SelectListItem(profile.DisplayName, profile.ProfileId, string.Equals(selectedDialerProfileId, profile.ProfileId, StringComparison.Ordinal)))
             .ToList();
 
-        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedDialerProfileId)));
+        options.Insert(0, new SelectListItem(emptyText, string.Empty, string.IsNullOrEmpty(selectedDialerProfileId)));
 
         if (!string.IsNullOrWhiteSpace(selectedDialerProfileId) &&
             options.All(option => !string.Equals(option.Value, selectedDialerProfileId, StringComparison.Ordinal)))
