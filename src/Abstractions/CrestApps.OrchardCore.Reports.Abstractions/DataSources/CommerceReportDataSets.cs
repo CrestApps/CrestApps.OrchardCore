@@ -131,6 +131,22 @@ public static class CommerceReportDataSets
         /// The product variants data set: one row per variant of a product sold in variants.
         /// </summary>
         public const string Variants = "ProductVariants";
+
+        /// <summary>
+        /// The product prices data set: one row per named price a product is offered at, such as a monthly and an
+        /// annual plan.
+        /// </summary>
+        public const string Prices = "ProductPrices";
+
+        /// <summary>
+        /// The product bundle items data set: one row per product a bundle is made of.
+        /// </summary>
+        public const string BundleItems = "ProductBundleItems";
+
+        /// <summary>
+        /// The product attributes data set: one row per attribute value a listed product is filtered by.
+        /// </summary>
+        public const string Attributes = "ProductAttributes";
     }
 
     /// <summary>
@@ -237,6 +253,21 @@ public static class CommerceReportDataSets
         /// The subscriptions data set: one row per subscription.
         /// </summary>
         public const string Subscriptions = "Subscriptions";
+
+        /// <summary>
+        /// The subscription lines data set: one row per line a subscription bills each cycle.
+        /// </summary>
+        public const string SubscriptionLines = "SubscriptionLines";
+
+        /// <summary>
+        /// The installment plans data set: one row per installment plan.
+        /// </summary>
+        public const string InstallmentPlans = "InstallmentPlans";
+
+        /// <summary>
+        /// The installments data set: one row per payment of an installment plan, the down payment included.
+        /// </summary>
+        public const string Installments = "Installments";
     }
 
     /// <summary>
