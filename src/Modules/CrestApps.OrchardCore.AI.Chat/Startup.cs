@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
@@ -182,7 +183,7 @@ public sealed class UsageAnalyticsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNavigationProvider<AIUsageAnalyticsAdminMenu>();
-        services.PostConfigure<GeneralAIOptions>(options => options.EnableAIUsageTracking = true);
+        services.AddCoreAIUsageTracking();
     }
 }
 
