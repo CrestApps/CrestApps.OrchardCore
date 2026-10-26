@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Orders;
 using CrestApps.OrchardCore.Orders.Core;
@@ -9,6 +11,10 @@ using CrestApps.OrchardCore.Orders.Reports.DataSources;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer;
+using CrestApps.OrchardCore.Reports.Designer.Models;
+using CrestApps.OrchardCore.Reports.Designer.Services;
+using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
@@ -469,6 +475,54 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RecipeReports_RunOverTheOrdersDataSource()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var planner = ReportDesignerTestServices.Planner(new TestDataSourceEntry(OrderReportDataSource.Name, source));
+        var engine = new ReportQueryEngine(planner, ReportDesignerTestServices.Formatter, new ReportQueryGate(), new PassThroughStringLocalizer<ReportQueryEngine>());
+        var designs = RecipeReports();
+        var results = new Dictionary<string, ReportQueryResult>(StringComparer.Ordinal);
+
+        // Act
+        foreach (var design in designs)
+        {
+            var context = ReportDesignerTestServices.Context(_start.AddDays(10));
+            context.DataSourceContext.User = _user;
+
+            var plan = await planner.PlanAsync(design.Query, context.DataSourceContext, TestContext.Current.CancellationToken);
+
+            Assert.True(plan.IsValid, $"{design.ItemId}: {string.Join(" ", plan.Errors)}");
+
+            foreach (var grouping in ReportDesignDocumentBuilder.GetGroupings(design.Visuals, ReportQueryEngine.DescribeColumns(plan)))
+            {
+                context.Groupings.Add(grouping);
+            }
+
+            var result = await engine.ExecuteAsync(plan, context, TestContext.Current.CancellationToken);
+
+            Assert.Empty(ReportDesignerTestServices.DocumentBuilder().Validate(design.Visuals, result.Columns));
+            results[design.ItemId] = result;
+        }
+
+        // Assert
+        Assert.Equal(
+            ["store-sales-by-day", "store-sales-by-product", "store-sales-by-country", "store-tax-by-jurisdiction", "store-discounts", "store-refunds", "store-disputes", "store-orders-to-ship"],
+            designs.Select(design => design.ItemId));
+        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+
+        // Three orders were paid, one a day; the canceled one never was.
+        Assert.Equal(3, results["store-sales-by-day"].Rows.Count);
+        Assert.Equal(2, results["store-sales-by-product"].Rows.Count);
+        Assert.Single(results["store-tax-by-jurisdiction"].Rows);
+        Assert.Single(results["store-discounts"].Rows);
+        Assert.Single(results["store-refunds"].Rows);
+        Assert.Single(results["store-disputes"].Rows);
+        Assert.Equal(2, results["store-orders-to-ship"].Rows.Count);
+    }
+
+    [Fact]
     public async Task ReportIndexMigration_CanRunAgain()
     {
         // Arrange
@@ -513,6 +567,35 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
         Assert.Equal(7, dataSets.Count);
     }
 
+    private static List<ReportDesign> RecipeReports()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+
+        var recipe = JsonNode.Parse(File.ReadAllText(Path.Combine(directory.FullName, "src", "Modules", "CrestApps.OrchardCore.Orders", "Recipes", "commerce-report-builder-reports.recipe.json")));
+        var steps = recipe["steps"].AsArray();
+
+        Assert.Contains(ReportsConstants.BuilderFeature, steps[0]["enable"].AsArray().Select(feature => (string)feature));
+
+        return steps[1]["Reports"].AsArray()
+            .Select(node =>
+            {
+                var design = node.Deserialize<ReportDesign>(ReportDesignerJson.Options);
+
+                design.Query = ReportDesignNormalizer.Normalize(design.Query);
+                design.Visuals = ReportDesignNormalizer.Normalize(design.Visuals);
+
+                return design;
+            })
+            .ToList();
+    }
+
     private static Order Order(int day)
     {
         var placed = _start.AddDays(day);
@@ -531,6 +614,8 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
             CustomerPhone = "+15550000000",
             BillingAddress = new Address { Country = "DE", Region = "BE", City = "Berlin", AddressLine1 = "1 Private Street" },
             RegisterId = day == 2 ? "register-1" : null,
+            Shipping = new OrderShipping { Name = "Standard", ProviderName = "Flat", Amount = 5m },
+            FulfillmentStatus = day == 1 ? OrderFulfillmentStatus.Fulfilled : null,
             Subtotal = 100m,
             Total = day == 3 ? null : 110m,
             TaxAmount = day == 3 ? null : 15m,

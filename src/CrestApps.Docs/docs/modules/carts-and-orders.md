@@ -302,6 +302,54 @@ Other commerce features add their own reports under **Reports > Commerce** when 
 | Downloads | Digital Downloads | `ManageDigitalDownloads` | Download links given in the period, per product and file: used, never used, downloads made, used up, expired and taken back. |
 | Product reviews | Product Reviews | `ManageProductReviews` | Reviews written in the period: waiting, approved and rejected, the stars given, verified purchases, and each product's average from its approved reviews. |
 
+### Report Builder data source
+
+The Orders feature publishes the **Orders** data source (`Orders`) for the [Report Builder](report-builder/index.md) and Orchard Core's data pipelines. It is registered when Orchard Core's Data Pipelines Core feature (`OrchardCore.DataPipelines.Core`) is on, which the Report Builder turns on. Each data set reads the newest orders first, a page at a time, through the order index, and narrows the read to the period a report's filters put on its main date, to the orders a join needs, and to the statuses and sales channels a filter allows. A person who may not use a data set does not see it, and a report that uses it gets no rows.
+
+| Data set | Rows | Feature | Permission |
+| --- | --- | --- | --- |
+| **Orders** (`Orders`) | One per order, drafts and quotes included | Orders | `ManageOrders` |
+| **Order lines** (`OrderLines`) | One per product line of an order | Orders | `ManageOrders` |
+| **Order refunds** (`OrderRefunds`) | One per refund that went through | Orders | `ManageOrders` |
+| **Order disputes** (`OrderDisputes`) | One per dispute, or chargeback, against an order's payment | Orders | `ManageOrders` |
+| **Order discounts** (`OrderDiscounts`) | One per discount an order was given | Orders | `ManageOrders` |
+| **Order taxes** (`OrderTaxes`) | One per tax an order was charged, by jurisdiction | Orders | `ManageOrders` |
+| **Returns** (`Returns`) | One per return a buyer asked for | Returns | `ManageOrders` |
+| **Gift cards** (`GiftCards`) | One per gift card | Gift Cards | `ManageGiftCards` |
+
+Money is in the order's own currency, which the `Currency` field of the same row names, and each money field says so in its description. Personal details are those the order page shows (the customer's name and email, and the city, region, postal code and country of the addresses), and an anonymized order has none. The street lines, phone number, checkout fields, notes and gift card codes are never exposed: a gift card shows only the last characters of its code.
+
+| Data set | Fields |
+| --- | --- |
+| **Orders** | `ItemId` (identifier), `OrderNumber`, `Status`, `Channel`, `Culture`, `PurchaseOrderNumber`, `LineCount`, `ItemCount` (units), `CartId` (references `Carts.Carts`), `CheckoutSessionId` (references `Checkout.CheckoutSessions`); money: `Currency`, `Subtotal`, `DiscountTotal`, `ShippingAmount`, `TaxAmount`, `Total`, `TenderedAmount` (paid from gift cards and store credit), `RefundedAmount`, `NetAmount` (total less refunds), `RefundStatus`, `HasOpenDispute`, `PaymentRisk`; dates: `CreatedUtc` (placed, the main date), `PaidUtc`, `CanceledUtc`, `CancelReason`, `ModifiedUtc`, `IsAnonymized`; customer: `CustomerId` (references `Customers.Customers`), `UserId` (references `Users`), `IsGuest`, `CustomerName`, `CustomerEmail`, `CompanyId` (references `Companies.Companies`); addresses: `BillingCountry`, `BillingRegion`, `BillingCity`, `BillingPostalCode`, `ShippingCountry`, `ShippingRegion`, `ShippingCity`, `ShippingPostalCode`; fulfillment: `FulfillmentStatus`, `ShippingMethod`, `ShippingProvider`, `IsPickup`; store: `LocationId` (references `Inventory.Locations`), `RegisterId` (references `PointOfSale.Registers`), `RegisterName`, `ShiftId` (references `PointOfSale.RegisterShifts`), `StaffUserId` (references `Users`), `StaffName`; quote and approval: `QuoteStatus`, `QuoteRequestedUtc`, `QuoteSentUtc`, `ApprovalStatus`, `IsInvoice`, `InvoiceDueUtc` |
+| Every order entry data set | `OrderId` (references `Orders`), `OrderNumber`, `OrderStatus`, `OrderChannel`, `OrderCreatedUtc` (the main date), `OrderPaidUtc`, `Currency`, `CustomerId` (references `Customers.Customers`), then the fields below |
+| **Order lines** | `LineId` (identifier), `Position`, `Quantity`, `UnitPrice`, `LineTotal`, `QuotedUnitPrice`, `PriceName`, `AddOns`, `AddOnAmount`, `ExcludeFromDiscounts`, `ShipsFromUtc`, `ProductId` (references `Products.Products`), `ProductVersionId`, `ContentType`, `Title`, `Sku`, `VariantId` (references `Products.ProductVariants`), `VariantTitle`, `ProductType`, `Categories` (category ids, comma separated), `IsBundle`, `TaxCategoryCode` |
+| **Order refunds** | `RefundId` (identifier), `Amount`, `Reason`, `RefundedUtc` |
+| **Order disputes** | `DisputeReference` (identifier), `Gateway`, `Amount`, `DisputeCurrency`, `Reason`, `Status`, `IsClosed`, `OpenedUtc`, `UpdatedUtc` |
+| **Order discounts** | `Code`, `Description`, `Amount`, `DiscountProvider`, `Target` |
+| **Order taxes** | `JurisdictionId`, `JurisdictionName`, `TaxCode`, `TaxName`, `TaxType`, `Rate`, `TaxableAmount`, `TaxAmount`, `Treatment`, `IncludedInPrice`, `IsCompound`, `BillingCountry`, `BillingRegion` |
+| **Returns** | `ItemId` (identifier), `Number`, `OrderId` (references `Orders`), `OrderNumber`, `UserId` (references `Users`), `CustomerName`, `CustomerEmail`, `Status`, `Resolution`, `LineCount`, `Quantity`, `RestockedUnits`, `Currency`, `ReturnedAmount`, `RefundedAmount`, `RestockLocationId` (references `Inventory.Locations`), `CreatedUtc` (the main date), `ApprovedUtc`, `ReceivedUtc`, `ClosedUtc` |
+| **Gift cards** | `ItemId` (identifier), `LastCharacters`, `Currency`, `InitialValue`, `Balance`, `SpentAmount`, `IsEnabled`, `ExpiresUtc`, `RecipientName`, `RecipientEmail`, `OrderId` (references `Orders`), `OrderNumber`, `UseCount`, `LastUsedUtc`, `CreatedUtc` (the main date), `UpdatedUtc` |
+
+The main date of the orders and their entries is when the order was placed, since the order index holds it; to report by payment, filter or group on `PaidUtc` or `OrderPaidUtc`. A report on **Orders** alone that counts or adds up fields the index holds, such as orders by status, sales channel or day placed, is grouped in the database. The orders read by date through the `IDX_OrderIndex_Report` database index, returns through `IDX_OrderReturnIndex_Report`, and gift cards through `IDX_GiftCardIndex_Report`, added by a migration on upgrade.
+
+### Store reports to adapt
+
+The **Reports: store reports to adapt** recipe (`CommerceReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, under the **Store** category. They show what the built-in reports above show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+
+| Report | Built from | Matches the built-in report |
+| --- | --- | --- |
+| Sales by day | **Orders**, paid in the last 30 days, grouped by day and currency | Sales |
+| Sales by product | **Order lines** of orders paid in the last 30 days, grouped by product and variant | Sales by product |
+| Sales by country | **Orders**, grouped by the country they ship to | Sales by country |
+| Tax by jurisdiction | **Order taxes**, grouped by jurisdiction, tax and rate | Tax on orders |
+| Discounts on orders | **Order discounts**, grouped by code | Discounts on orders |
+| Refunds | **Order refunds** given in the last 30 days | Refunds |
+| Disputes | **Order disputes** opened in the last 90 days, open ones first | Disputes |
+| Orders to ship | Paid **Orders** with a shipping method that are not shipped in full | Orders to ship |
+
+The customers, cohorts, checkouts, sales by category and VAT one-stop-shop reports work out figures across orders and periods, such as a buyer's first order, that a report built in the builder does not, so they stay built-in only.
+
 ### Workflow events
 
 With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
