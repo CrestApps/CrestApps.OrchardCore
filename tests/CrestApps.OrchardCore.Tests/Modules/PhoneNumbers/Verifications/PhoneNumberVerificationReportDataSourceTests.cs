@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
@@ -312,8 +311,7 @@ public sealed class PhoneNumberVerificationReportDataSourceTests : IAsyncLifetim
 
         // Assert
         Assert.NotNull(groups);
-        // SQLite returns a boolean column as a number.
-        var counts = groups.ToDictionary(row => ((string)row[0], Convert.ToBoolean(row[1], CultureInfo.InvariantCulture)), row => (long)row[2]);
+        var counts = groups.ToDictionary(row => ((string)row[0], Assert.IsType<bool>(row[1])), row => (long)row[2]);
         Assert.Equal(1L, counts[("Verified", true)]);
         Assert.Equal(1L, counts[("Failed", false)]);
         Assert.Equal(1L, counts[("Unverified", false)]);

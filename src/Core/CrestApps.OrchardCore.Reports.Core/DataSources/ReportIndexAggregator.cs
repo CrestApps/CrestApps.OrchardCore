@@ -413,12 +413,52 @@ public static class ReportIndexAggregator
             var value = reader.IsDBNull(index) ? null : reader.GetValue(index);
             var type = index < statement.Columns.Count ? statement.Columns[index] : null;
 
-            row[index] = value is not null && type is { IsEnum: true }
-                ? Enum.ToObject(type, Convert.ToInt64(value, CultureInfo.InvariantCulture)).ToString()
-                : value;
+            row[index] = Normalize(value, type);
         }
 
         return row;
+    }
+
+    // Databases return a column in their own type, such as a boolean or a date as a number or text on SQLite, so each
+    // value is given the CLR type its field's type maps to: enums as names, whole numbers as long, other numbers as
+    // decimal, booleans as bool, and date-times in UTC.
+    private static object Normalize(object value, Type type)
+    {
+        if (value is null || type is null)
+        {
+            return value;
+        }
+
+        if (type.IsEnum)
+        {
+            return Enum.ToObject(type, Convert.ToInt64(value, CultureInfo.InvariantCulture)).ToString();
+        }
+
+        if (type == typeof(bool))
+        {
+            return value as bool? ?? Convert.ToInt64(value, CultureInfo.InvariantCulture) != 0;
+        }
+
+        if (type == typeof(int) || type == typeof(long) || type == typeof(short))
+        {
+            return Convert.ToInt64(value, CultureInfo.InvariantCulture);
+        }
+
+        if (type == typeof(decimal) || type == typeof(double) || type == typeof(float))
+        {
+            return Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+        }
+
+        if (type == typeof(DateTime))
+        {
+            var date = value is DateTime dateTime
+                ? dateTime
+                : DateTime.Parse(Convert.ToString(value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+
+            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
+        }
+
+        return value;
     }
 }
 
