@@ -234,7 +234,8 @@ public sealed class BookingReportDataSourceTests : IAsyncLifetime
         Assert.Equal("order-1", confirmed["OrderId"]);
         Assert.Equal("line-0", confirmed["LineId"]);
         Assert.Equal("user-1", confirmed["UserId"]);
-        Assert.Equal("Ada", confirmed["CustomerName"]);
+        Assert.False(confirmed.ContainsKey("CustomerName"));
+        Assert.False(confirmed.ContainsKey("CustomerEmail"));
         Assert.Equal("USD", confirmed["Currency"]);
         Assert.Equal(198m, confirmed["Total"]);
         Assert.Equal(_start, confirmed["CreatedUtc"]);

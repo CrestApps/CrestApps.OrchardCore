@@ -198,7 +198,7 @@ public sealed class DncRegistryReportDataSourceTests : IAsyncLifetime
         Assert.Equal(DncRegistryReportDataSets.Source, list.Source);
         Assert.Equal(DncRegistryReportDataSets.DncLists, list.DataSet);
         Assert.Equal(DncRegistryReportDataSets.ListIdField, list.Field);
-        Assert.True(entries.FindField(DncRegistryReportDataSets.PhoneNumberField).IsKeyFilterable);
+        Assert.DoesNotContain(entries.Fields, field => field.Name is "PhoneNumber");
     }
 
     [Fact]
@@ -269,24 +269,20 @@ public sealed class DncRegistryReportDataSourceTests : IAsyncLifetime
         var all = Query(DncRegistryReportDataSets.DncEntries);
         var byList = Query(DncRegistryReportDataSets.DncEntries, DncRegistryReportDataSets.EntryIdField);
         byList.Conditions.Add(new DataCondition { Field = DncRegistryReportDataSets.ListIdField, Operator = DataFilterOperator.In, Values = ["list-2"], IsJoinKey = true });
-        var byNumber = Query(DncRegistryReportDataSets.DncEntries, DncRegistryReportDataSets.EntryIdField);
-        byNumber.Conditions.Add(new DataCondition { Field = DncRegistryReportDataSets.PhoneNumberField, Operator = DataFilterOperator.In, Values = ["+12065550100", "+19995550000"], IsJoinKey = true });
         var none = Query(DncRegistryReportDataSets.DncEntries, DncRegistryReportDataSets.EntryIdField);
         none.Conditions.Add(new DataCondition { Field = DncRegistryReportDataSets.EntryIdField, Operator = DataFilterOperator.In, Values = [], IsJoinKey = true });
 
         // Act
         var allRows = Rows(await ReportDesignerTestServices.ReadAsync(source, all, TestContext.Current.CancellationToken));
         var listRows = Rows(await ReportDesignerTestServices.ReadAsync(source, byList, TestContext.Current.CancellationToken));
-        var numberRows = Rows(await ReportDesignerTestServices.ReadAsync(source, byNumber, TestContext.Current.CancellationToken));
         var noRows = Rows(await ReportDesignerTestServices.ReadAsync(source, none, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Equal(["entry-4", "entry-3", "entry-2", "entry-1"], allRows.Select(row => row[DncRegistryReportDataSets.EntryIdField]));
         Assert.Equal("list-2", allRows[0][DncRegistryReportDataSets.ListIdField]);
         Assert.Equal("CA", allRows[0]["CountryCode"]);
-        Assert.Equal("+14165550100", allRows[0][DncRegistryReportDataSets.PhoneNumberField]);
+        Assert.DoesNotContain(allRows.SelectMany(row => row.Values), value => value is string text && text.StartsWith('+'));
         Assert.Equal(["entry-4"], listRows.Select(row => row[DncRegistryReportDataSets.EntryIdField]));
-        Assert.Equal(["entry-2"], numberRows.Select(row => row[DncRegistryReportDataSets.EntryIdField]));
         Assert.Empty(noRows);
     }
 

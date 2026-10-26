@@ -66,7 +66,6 @@ public sealed class CouponRedemptionsReportDataSet : IndexedReportDataSet<Coupon
         AddField("OrderId", S["Order ID"], DataFieldType.Text, record => string.Equals(record.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ? record.ReferenceId : null, use)
             .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.OrderSource.Name, CommerceReportDataSets.OrderSource.Orders));
         AddField(UserIdField, S["User ID"], DataFieldType.Text, record => record.CustomerId, use).Identifier(ReportDataReferences.User());
-        AddField(nameof(CouponRedemption.CustomerEmail), S["Customer email"], DataFieldType.Text, record => record.CustomerEmail, use);
 
         AddField(CreatedUtcField, S["Put on the checkout"], DataFieldType.DateTime, record => record.CreatedUtc, dates);
         AddField(nameof(CouponRedemption.ExpiresUtc), S["Hold expires"], DataFieldType.DateTime, record => record.ExpiresUtc, dates);

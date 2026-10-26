@@ -30,9 +30,4 @@ public static class DncRegistryReportDataSets
     /// The name of the field that identifies an entry of a local do-not-call list.
     /// </summary>
     public const string EntryIdField = "EntryId";
-
-    /// <summary>
-    /// The name of the field that holds the phone number of an entry, in E.164 format.
-    /// </summary>
-    public const string PhoneNumberField = "PhoneNumber";
 }

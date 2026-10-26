@@ -61,8 +61,6 @@ public sealed class BookingBalancesReportDataSet : IndexedReportDataSet<BookingB
             .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.CheckoutSource.Name, CommerceReportDataSets.CheckoutSource.CheckoutSessions));
 
         AddField("UserId", S["User ID"], DataFieldType.Text, record => record.OwnerId, buyer).Identifier(ReportDataReferences.User());
-        AddField(nameof(BookingBalance.CustomerName), S["Buyer name"], DataFieldType.Text, record => record.CustomerName, buyer);
-        AddField(nameof(BookingBalance.CustomerEmail), S["Buyer email"], DataFieldType.Text, record => record.CustomerEmail, buyer);
 
         AddField(DueUtcField, S["Due"], DataFieldType.DateTime, record => record.DueUtc, dates);
         AddField(nameof(BookingBalance.LastAttemptUtc), S["Last charge attempt"], DataFieldType.DateTime, record => record.LastAttemptUtc, dates);

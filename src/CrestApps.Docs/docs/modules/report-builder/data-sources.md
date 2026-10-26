@@ -105,7 +105,7 @@ CrestApps modules expose their own records as data sources, registered when Data
 | **Customers** | **Customers**, **Loyalty accounts** and **Loyalty activity**, **Store credit accounts** and **Store credit activity**, **Referrals** and **Referral rewards** (never referral codes) | **View customers** (`ViewCustomers`); referrals need **Manage customers** (`ManageCustomers`) |
 | **Companies** | **Companies**, **Company buyers**, **Price lists**, **Price list entries** | **Manage companies** (`ManageCompanies`) |
 | **Inventory** | **Stock items**, **Stock levels** (one row per item and location), **Stock movements**, **Stock reservations**, **Locations**, **Purchase orders**, **Purchase order lines**, **Back-in-stock alerts** (counts only, never the shoppers) | **View inventory** (`ViewInventory`) |
-| **Checkout** | **Checkout sessions** (status, amounts, current step, expiry, the order they made), **Coupons**, **Coupon uses**, **Saved payment methods** (kind, brand and expiry only) | Checkout sessions: **Manage orders** (`ManageOrders`); coupons: **Manage coupons** (`ManageCoupons`); saved payment methods: **Manage payments and refunds** (`ManageRefunds`) |
+| **Checkout** | **Checkout sessions** (status, amounts, current step, expiry, the order they made), **Coupons**, **Coupon uses**, **Saved payment methods** (kind, whether expired, and default; no card detail) | Checkout sessions: **Manage orders** (`ManageOrders`); coupons: **Manage coupons** (`ManageCoupons`); saved payment methods: **Manage payments and refunds** (`ManageRefunds`) |
 | **Carts** | **Carts**, **Cart lines**, **Wishlists**, **Wishlist items** | **Manage orders** (`ManageOrders`) |
 | **Transactions** | **Transactions** (outstanding ones by status), **Payment attempts**, **Payment refunds** | Transactions: **Manage transactions** (`ManageTransactions`); payment attempts and refunds: **Manage payments and refunds** (`ManageRefunds`) |
 | **Subscriptions** | **Subscriptions**, **Subscription lines**, **Installment plans**, **Installments** | **Manage subscriptions** (`ManageSubscriptions`); installment plans need **Manage installment plans and charge customers' saved cards** (`ManageInstallmentPlans`) |
@@ -116,7 +116,7 @@ CrestApps modules expose their own records as data sources, registered when Data
 | **Marketplace** | **Vendors**, **Vendor earnings**, **Vendor payouts** | **Manage the marketplace** (`ManageMarketplace`) |
 | **Point of Sale** | **Registers**, **Register shifts** (opening and closing cash, expected and counted, sales) | **Manage registers and shifts** (`ManageRegisters`) |
 | **Phone number verifications** | **Verifications** (one row per content item with a verified phone number part) | **Run 'Phone Number Verifications' Report** (`RunPhoneNumberVerificationsReport`) |
-| **DNC registry** | **DNC lists**, **DNC entries** (the numbers of the local lists) | **Manage DNC registry settings** (`ManageDncRegistrySettings`) |
+| **DNC registry** | **DNC lists**, **DNC entries** (one row per number of a local list, without the number) | **Manage DNC registry settings** (`ManageDncRegistrySettings`) |
 
 A dialer attempt is an activity plus the interaction that placed the call, so dialer reports join **Activities** to **Interactions** on the activity ID. Agent fields named `AgentId` hold agent profile IDs and join **Agent profiles**; fields holding user IDs join **Users**. Secrets, storage locations, IP addresses and message text are never exposed.
 

@@ -155,8 +155,6 @@ The **Bookings** data set (`Bookings`) has one row per booking, newest first by 
 | `LineId` | Order line ID | References `Orders` > `OrderLines` > `LineId`. |
 | `CartId` | Cart ID | References `Carts` > `Carts`. |
 | `UserId` | User ID | References the user (`Users`). |
-| `CustomerName` | Buyer name | |
-| `CustomerEmail` | Buyer email | |
 | `Currency` | Currency | |
 | `Total` | Price | |
 | `CancellationFee` | Cancellation fee | What the cancellation policy kept; empty unless it was canceled. |
@@ -198,8 +196,6 @@ The **Booking balances** data set (`BookingBalances`) has one row per balance le
 | `TransactionId` | Transaction ID | The ledger transaction the balance is owed on; references `Transactions` > `Transactions`. |
 | `DepositSessionId` | Deposit checkout ID | The checkout that paid the deposit; references `Checkout` > `CheckoutSessions`. |
 | `UserId` | User ID | References the user (`Users`). |
-| `CustomerName` | Buyer name | |
-| `CustomerEmail` | Buyer email | |
 | `DueUtc` | Due | The default date. |
 | `LastAttemptUtc` | Last charge attempt | |
 | `NextAttemptUtc` | Next charge attempt | |

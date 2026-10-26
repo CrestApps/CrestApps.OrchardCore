@@ -7,14 +7,15 @@ using CrestApps.OrchardCore.Transactions.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
+using OrchardCore.Modules;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Checkout.Reports.DataSources;
 
 /// <summary>
-/// One row per payment method a customer kept for charges made without them present: its kind, brand, expiry, whether
-/// it is their default, and when it was kept. The references the provider charges it by and the card's digits are
-/// never exposed.
+/// One row per payment method a customer kept for charges made without them present: its kind, whether it has expired,
+/// whether it is their default, and when it was kept. No card detail is exposed: not its brand, expiry or digits, nor the
+/// references the provider charges it by.
 /// </summary>
 public sealed class SavedPaymentMethodsReportDataSet : IndexedReportDataSet<CustomerPaymentMethod, CustomerPaymentMethodIndex>, ICheckoutReportDataSet
 {
@@ -33,16 +34,18 @@ public sealed class SavedPaymentMethodsReportDataSet : IndexedReportDataSet<Cust
     /// </summary>
     /// <param name="session">The YesSql session the payment methods are read from.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="clock">The clock, to tell whether a card has expired.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SavedPaymentMethodsReportDataSet(
         ISession session,
         IAuthorizationService authorizationService,
+        IClock clock,
         IStringLocalizer<SavedPaymentMethodsReportDataSet> stringLocalizer)
         : base(
             new DataSetDescriptor(
                 CommerceReportDataSets.CheckoutSource.SavedPaymentMethods,
                 stringLocalizer["Saved payment methods"],
-                stringLocalizer["One row per payment method a customer kept for later charges: its kind, brand, expiry, whether it is their default, and when it was kept."]),
+                stringLocalizer["One row per payment method a customer kept for later charges: its kind, whether it has expired, whether it is their default, and when it was kept."]),
             session,
             authorizationService,
             null,
@@ -53,9 +56,8 @@ public sealed class SavedPaymentMethodsReportDataSet : IndexedReportDataSet<Cust
 
         AddField(CommerceReportDataSets.ItemIdField, S["Saved payment method ID"], DataFieldType.Text, record => record.ItemId, method).Identifier();
         AddField("ProviderKey", S["Payment method"], DataFieldType.Text, record => record.PaymentMethod?.ProviderKey, method);
-        AddField("Brand", S["Brand"], DataFieldType.Text, record => record.PaymentMethod?.Brand, method);
-        AddField("ExpirationMonth", S["Expiry month"], DataFieldType.Integer, record => record.PaymentMethod?.ExpirationMonth, method);
-        AddField("ExpirationYear", S["Expiry year"], DataFieldType.Integer, record => record.PaymentMethod?.ExpirationYear, method);
+        AddField("IsExpired", S["Expired"], DataFieldType.Boolean, record => record.PaymentMethod?.IsExpired(clock.UtcNow) == true, method)
+            .Description = S["Whether the card's expiry has passed when the report runs."].Value;
         AddField(nameof(CustomerPaymentMethod.IsDefault), S["Default"], DataFieldType.Boolean, record => record.IsDefault, method);
         AddField(UserIdField, S["User ID"], DataFieldType.Text, record => record.OwnerId, method).Identifier(ReportDataReferences.User());
         AddField(CreatedUtcField, S["Kept"], DataFieldType.DateTime, record => record.CreatedUtc, method);

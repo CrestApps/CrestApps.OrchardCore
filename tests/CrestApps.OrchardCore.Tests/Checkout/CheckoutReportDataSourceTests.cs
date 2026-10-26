@@ -20,6 +20,7 @@ using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.DataSources;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Security;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -520,14 +521,13 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(SavedPaymentMethodsReportDataSet.CreatedUtcField, schema.DataSet.DefaultDateField);
-        Assert.DoesNotContain(schema.Fields, field => field.Name is "Last4" or "CustomerReference" or "PaymentMethodReference" or "SourceSessionId");
+        Assert.DoesNotContain(schema.Fields, field => field.Name is "Last4" or "Brand" or "ExpirationMonth" or "ExpirationYear" or "CustomerReference" or "PaymentMethodReference" or "SourceSessionId");
 
         Assert.Equal(["method-2", "method-1"], rows.Select(row => row[CommerceReportDataSets.ItemIdField]));
         var kept = rows[1];
         Assert.Equal("Stripe", kept["ProviderKey"]);
-        Assert.Equal("visa", kept["Brand"]);
-        Assert.Equal(12L, kept["ExpirationMonth"]);
-        Assert.Equal(2030L, kept["ExpirationYear"]);
+        Assert.Equal(false, kept["IsExpired"]);
+        Assert.Equal(true, rows[0]["IsExpired"]);
         Assert.Equal(true, kept["IsDefault"]);
         Assert.Equal("user-1", kept["UserId"]);
         Assert.All(rows, row => Assert.DoesNotContain(row.Values, value => value is string text && (text.Contains("secret", StringComparison.Ordinal) || text.Contains("4242", StringComparison.Ordinal) || text.Contains("5454", StringComparison.Ordinal))));
@@ -567,6 +567,7 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
 
         services.AddSingleton(session);
         services.AddSingleton(Authorization(_allGrants));
+        services.AddSingleton(Clock());
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
 
         // Act
@@ -656,8 +657,17 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
             new CheckoutSessionsReportDataSet(session, authorizationService, new PassThroughStringLocalizer<CheckoutSessionsReportDataSet>()),
             new CouponsReportDataSet(session, authorizationService, new PassThroughStringLocalizer<CouponsReportDataSet>()),
             new CouponRedemptionsReportDataSet(session, authorizationService, new PassThroughStringLocalizer<CouponRedemptionsReportDataSet>()),
-            new SavedPaymentMethodsReportDataSet(session, authorizationService, new PassThroughStringLocalizer<SavedPaymentMethodsReportDataSet>()),
+            new SavedPaymentMethodsReportDataSet(session, authorizationService, Clock(), new PassThroughStringLocalizer<SavedPaymentMethodsReportDataSet>()),
         ]);
+    }
+
+    // The second card expired in January 2028; the first is good until the end of 2030.
+    private static IClock Clock()
+    {
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2028, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        return clock.Object;
     }
 
     private static IAuthorizationService Authorization(string[] grants)

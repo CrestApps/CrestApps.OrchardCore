@@ -52,8 +52,6 @@ public sealed class ReturnsReportDataSet : IndexedReportDataSet<OrderReturn, Ord
             .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.OrderSource.Name, CommerceReportDataSets.OrderSource.Orders));
         AddField(nameof(OrderReturn.OrderNumber), S["Order number"], DataFieldType.Text, record => record.OrderNumber, orderReturn);
         AddField(nameof(OrderReturn.UserId), S["User ID"], DataFieldType.Text, record => record.UserId, orderReturn).Identifier(ReportDataReferences.User());
-        AddField(nameof(OrderReturn.CustomerName), S["Customer name"], DataFieldType.Text, record => record.CustomerName, orderReturn);
-        AddField(nameof(OrderReturn.CustomerEmail), S["Customer email"], DataFieldType.Text, record => record.CustomerEmail, orderReturn);
         AddField(nameof(OrderReturn.Status), S["Status"], DataFieldType.Text, record => record.Status, orderReturn);
         AddField(nameof(OrderReturn.Resolution), S["Resolution"], DataFieldType.Text, record => record.Resolution, orderReturn);
         AddField("LineCount", S["Lines"], DataFieldType.Integer, record => record.Lines?.Count ?? 0, orderReturn);

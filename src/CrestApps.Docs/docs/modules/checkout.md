@@ -711,7 +711,6 @@ An abandoned checkout is one with the status `Expired`: the sweep expires a chec
 | `ReferenceType`, `ReferenceId` | Used for, Reference ID | |
 | `OrderId` | Order ID | Joins **Orders**. |
 | `UserId` | User ID | Joins **Users**. Empty for a guest. |
-| `CustomerEmail` | Customer email | As the coupon's page shows it. |
 | `CreatedUtc` | Put on the checkout | The main date. |
 | `ExpiresUtc`, `RedeemedUtc`, `EndedUtc` | Hold expires, Used, Let go or given back | |
 
@@ -721,7 +720,7 @@ An abandoned checkout is one with the status `Expired`: the sweep expires a chec
 | --- | --- | --- |
 | `ItemId` | Saved payment method ID | |
 | `ProviderKey` | Payment method | The provider that keeps it. |
-| `Brand`, `ExpirationMonth`, `ExpirationYear` | Brand, Expiry month, Expiry year | |
+| `IsExpired` | Expired | Whether the card's expiry has passed when the report runs. No card detail, such as the brand, expiry or digits, is exposed. |
 | `IsDefault` | Default | |
 | `UserId` | User ID | Joins **Users**. |
 | `CreatedUtc` | Kept | The main date. |

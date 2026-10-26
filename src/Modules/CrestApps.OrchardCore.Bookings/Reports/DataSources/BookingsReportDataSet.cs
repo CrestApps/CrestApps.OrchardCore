@@ -78,8 +78,6 @@ public sealed class BookingsReportDataSet : IndexedReportDataSet<Booking, Bookin
             .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.CartSource.Name, CommerceReportDataSets.CartSource.Carts));
 
         AddField(nameof(Booking.UserId), S["User ID"], DataFieldType.Text, record => record.UserId, buyer).Identifier(ReportDataReferences.User());
-        AddField(nameof(Booking.CustomerName), S["Buyer name"], DataFieldType.Text, record => record.CustomerName, buyer);
-        AddField(nameof(Booking.CustomerEmail), S["Buyer email"], DataFieldType.Text, record => record.CustomerEmail, buyer);
 
         AddField(nameof(Booking.Currency), S["Currency"], DataFieldType.Text, record => record.Currency, money);
         AddField(nameof(Booking.Total), S["Price"], DataFieldType.Decimal, record => record.Total, money).Description = inCurrency;
@@ -121,12 +119,11 @@ public sealed class BookingsReportDataSet : IndexedReportDataSet<Booking, Bookin
     /// <inheritdoc/>
     protected override IReadOnlyDictionary<string, string> GetAggregateColumns()
     {
-        // The index keeps at most the first 255 characters of the title and the buyer's name, so neither is always the
-        // field's value. The product is kept under the content item's name.
+        // The index keeps at most the first 255 characters of the title, so it is not always the field's value. The
+        // product is kept under the content item's name.
         var columns = new Dictionary<string, string>(base.GetAggregateColumns(), StringComparer.Ordinal);
 
         columns.Remove(nameof(Booking.Title));
-        columns.Remove(nameof(Booking.CustomerName));
         columns[ProductIdField] = nameof(BookingIndex.ContentItemId);
 
         return columns;

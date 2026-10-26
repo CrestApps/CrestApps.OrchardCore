@@ -12,8 +12,9 @@ namespace CrestApps.OrchardCore.DncRegistry.Reports.DataSources;
 
 /// <summary>
 /// The <c>DncEntries</c> data set: one row per phone number imported into a local do-not-call list, with its list and
-/// country, so a report can count the numbers of each list or join the numbers to the phone numbers of other records.
-/// Only principals allowed to manage the DNC registry settings, who upload the lists, read it.
+/// country, so a report can count the numbers of each list and country. The numbers themselves are never exposed: the
+/// registry's screens show the lists, not the numbers on them. Only principals allowed to manage the DNC registry
+/// settings, who upload the lists, read it.
 /// </summary>
 /// <remarks>
 /// An entry has no date, so the data set has no main date and is read newest first by its index rows.
@@ -34,7 +35,7 @@ public sealed class DncEntriesReportDataSet : IndexedReportDataSet<LocalDncEntry
             new DataSetDescriptor(
                 DncRegistryReportDataSets.DncEntries,
                 stringLocalizer["DNC entries"],
-                stringLocalizer["One row per phone number imported into a local do-not-call list, with its list and country."]),
+                stringLocalizer["One row per phone number imported into a local do-not-call list: its list and country, never the number."]),
             session,
             authorizationService,
             DncRegistryConstants.CollectionName,
@@ -47,8 +48,6 @@ public sealed class DncEntriesReportDataSet : IndexedReportDataSet<LocalDncEntry
         AddField(DncRegistryReportDataSets.ListIdField, S["List ID"], DataFieldType.Text, record => record.ListId, entry)
             .Identifier(new DataFieldReference(DncRegistryReportDataSets.Source, DncRegistryReportDataSets.DncLists, DncRegistryReportDataSets.ListIdField));
         AddField(nameof(LocalDncEntry.CountryCode), S["Country"], DataFieldType.Text, record => record.CountryCode, entry);
-        AddField(DncRegistryReportDataSets.PhoneNumberField, S["Phone number"], DataFieldType.Text, record => record.PhoneNumber, entry)
-            .Description = S["The phone number in E.164 format, such as +14255551212."].Value;
 
         CompleteDescription();
     }
@@ -59,7 +58,6 @@ public sealed class DncEntriesReportDataSet : IndexedReportDataSet<LocalDncEntry
         {
             [DncRegistryReportDataSets.EntryIdField] = index => index.EntryId,
             [DncRegistryReportDataSets.ListIdField] = index => index.ListId,
-            [DncRegistryReportDataSets.PhoneNumberField] = index => index.PhoneNumber,
         };
 
     /// <inheritdoc/>
