@@ -116,6 +116,10 @@ A number shared by a contact and a lead resolves to the contact on both channels
 
    Finished callbacks and resolved voicemails stay with the lead as its history.
 
+## Report Builder
+
+Leads, accounts and opportunities are content items, so the Report Builder reads them through Orchard Core's **Content items** data source: one data set per content type, with the values of `LeadPart` and `OpportunityPart`, such as `LeadPart.IsConverted`, `LeadPart.ConvertedAccountItemId` or `OpportunityPart.IsWon`. An activity's `ConvertedFromLeadItemId` in the Omnichannel **Activities** data set names the lead it belonged to before the conversion. The site decides which content types are leads, so join that field to the `ContentItemId` of the lead type the report reads. See [Report Builder data sets](management.md#report-builder-data-sets).
+
 ## Extension points
 
 | Interface | Use it to |

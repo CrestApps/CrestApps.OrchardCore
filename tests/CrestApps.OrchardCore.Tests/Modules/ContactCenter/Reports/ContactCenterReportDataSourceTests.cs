@@ -151,6 +151,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         AssertReference(schema.FindField(nameof(Interaction.QueueId)), ContactCenterReportDataSets.Source, ContactCenterReportDataSets.Queues, ContactCenterReportDataSets.ItemIdField);
         AssertReference(schema.FindField(nameof(Interaction.ActivityItemId)), "Omnichannel", "Activities", ContactCenterReportDataSets.ItemIdField);
         AssertReference(schema.FindField(nameof(Interaction.CreatedById)), ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField);
+        AssertReference(schema.FindField(nameof(Interaction.HandoffAiSessionId)), "AIChat", "ChatSessions", "SessionId");
         Assert.Equal(DataFieldType.DateTime, schema.FindField(nameof(Interaction.CreatedUtc)).Type);
         Assert.Equal(DataFieldType.Decimal, schema.FindField("TalkSeconds").Type);
         Assert.Equal(DataFieldType.Integer, schema.FindField("Dialer.AttemptNumber").Type);
@@ -420,6 +421,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
     [InlineData(typeof(DataSourcesStartup), null)]
     [InlineData(typeof(QueuesDataSourcesStartup), ContactCenterConstants.Feature.Queues)]
     [InlineData(typeof(DialerDataSourcesStartup), ContactCenterConstants.Feature.Dialer)]
+    [InlineData(typeof(DialerPacedDataSourcesStartup), ContactCenterConstants.Feature.DialerPaced)]
     [InlineData(typeof(RecordingDataSourcesStartup), ContactCenterConstants.Feature.Recording)]
     [InlineData(typeof(AgentServicesDataSourcesStartup), ContactCenterConstants.Feature.AgentServices)]
     [InlineData(typeof(AgentsDataSourcesStartup), ContactCenterConstants.Feature.Agents)]
@@ -449,6 +451,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         new DataSourcesStartup().ConfigureServices(services);
         new QueuesDataSourcesStartup().ConfigureServices(services);
         new DialerDataSourcesStartup().ConfigureServices(services);
+        new DialerPacedDataSourcesStartup().ConfigureServices(services);
         new RecordingDataSourcesStartup().ConfigureServices(services);
         new AgentServicesDataSourcesStartup().ConfigureServices(services);
         new AgentsDataSourcesStartup().ConfigureServices(services);
@@ -470,11 +473,14 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
                 typeof(QueueReportDataSet),
                 typeof(QueueGroupReportDataSet),
                 typeof(QueueItemReportDataSet),
+                typeof(DialerDecisionReportDataSet),
                 typeof(DialerProfileReportDataSet),
                 typeof(CallbackRequestReportDataSet),
+                typeof(DialerPacingCycleReportDataSet),
                 typeof(CallRecordingReportDataSet),
                 typeof(AgentProfileReportDataSet),
                 typeof(AgentSessionReportDataSet),
+                typeof(AgentStateChangeReportDataSet),
                 typeof(SharedVoicemailReportDataSet),
             ],
             dataSetTypes);

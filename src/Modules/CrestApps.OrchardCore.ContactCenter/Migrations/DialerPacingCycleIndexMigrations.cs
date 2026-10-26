@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -12,7 +13,7 @@ internal sealed class DialerPacingCycleIndexMigrations : DataMigration
 {
     /// <summary>
     /// Creates the dialer pacing cycle index table and the indexes its latest cycle of a queue or profile, its period
-    /// reads and its retention purge are found by.
+    /// reads, its retention purge and the reports that read it are found by.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync()
@@ -60,6 +61,29 @@ internal sealed class DialerPacingCycleIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName
         );
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the pacing cycles through, newest first by <c>CompletedUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<DialerPacingCycleIndex>(
+            SchemaBuilder,
+            "IDX_DialerPacingCycleIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "CompletedUtc", "Id");
     }
 }
