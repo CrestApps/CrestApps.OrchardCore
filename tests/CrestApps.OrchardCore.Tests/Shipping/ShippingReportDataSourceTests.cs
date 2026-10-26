@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
@@ -411,6 +412,33 @@ public sealed class ShippingReportDataSourceTests : IAsyncLifetime
 
         Assert.Null(methods[2]["FlatAmount"]);
         Assert.Empty(noZones);
+    }
+
+    [Fact]
+    public async Task RecipeReports_RunOverTheShippingDataSource()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var designs = ReportRecipeDesigns.Load("CrestApps.OrchardCore.Shipping", "shipping-report-builder-reports.recipe.json");
+
+        // Act
+        var results = await ReportRecipeDesigns.RunAsync(designs, _user, _start.AddDays(10), new TestDataSourceEntry(ShippingReportDataSource.Name, Source(session)));
+
+        // Assert
+        Assert.Equal(["shipping-by-carrier"], designs.Select(design => design.ItemId));
+        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+
+        // Two shipments were sent, one by each carrier; the one being packed is left out. The UPS one took two days less
+        // the two hours it waited to leave.
+        var carriers = results["shipping-by-carrier"];
+        Assert.Equal(2, carriers.Rows.Count);
+        Assert.Equal("UPS", ReportRecipeDesigns.Value(carriers, 0, "carrier"));
+        Assert.Equal(3m, Convert.ToDecimal(ReportRecipeDesigns.Value(carriers, 0, "units"), CultureInfo.InvariantCulture));
+        Assert.Equal(1m, Convert.ToDecimal(ReportRecipeDesigns.Value(carriers, 0, "delivered"), CultureInfo.InvariantCulture));
+        Assert.Equal(1.92m, Math.Round(Convert.ToDecimal(ReportRecipeDesigns.Value(carriers, 0, "deliverydays"), CultureInfo.InvariantCulture), 2));
+        Assert.Equal("USPS", ReportRecipeDesigns.Value(carriers, 1, "carrier"));
+        Assert.Equal(0m, Convert.ToDecimal(ReportRecipeDesigns.Value(carriers, 1, "delivered"), CultureInfo.InvariantCulture));
+        Assert.Null(ReportRecipeDesigns.Value(carriers, 1, "deliverydays"));
     }
 
     [Fact]

@@ -240,6 +240,35 @@ public sealed class DownloadReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RecipeReports_RunOverTheDownloadsDataSource()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var designs = ReportRecipeDesigns.Load("CrestApps.OrchardCore.Downloads", "downloads-report-builder-reports.recipe.json");
+
+        // Act
+        var results = await ReportRecipeDesigns.RunAsync(designs, _user, _start.AddDays(10), new TestDataSourceEntry(DownloadReportDataSource.Name, Source(session)));
+
+        // Assert
+        Assert.Equal(["downloads-by-product"], designs.Select(design => design.ItemId));
+        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+
+        // The guide has three links: one used up, one taken back, and one still working. The notes' link expired unused.
+        var downloads = results["downloads-by-product"];
+        Assert.Equal(2, downloads.Rows.Count);
+        Assert.Equal("guide.pdf", ReportRecipeDesigns.Value(downloads, 0, "file"));
+        Assert.Equal(3m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 0, "links"), CultureInfo.InvariantCulture));
+        Assert.Equal(3m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 0, "downloaded"), CultureInfo.InvariantCulture));
+        Assert.Equal(5m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 0, "downloads"), CultureInfo.InvariantCulture));
+        Assert.Equal(1m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 0, "usedup"), CultureInfo.InvariantCulture));
+        Assert.Equal(0m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 0, "expired"), CultureInfo.InvariantCulture));
+        Assert.Equal(1m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 0, "takenback"), CultureInfo.InvariantCulture));
+        Assert.Equal("notes.txt", ReportRecipeDesigns.Value(downloads, 1, "file"));
+        Assert.Equal(1m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 1, "never"), CultureInfo.InvariantCulture));
+        Assert.Equal(1m, Convert.ToDecimal(ReportRecipeDesigns.Value(downloads, 1, "expired"), CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
     public async Task ReportIndexMigration_CanRunAgain()
     {
         // Arrange
