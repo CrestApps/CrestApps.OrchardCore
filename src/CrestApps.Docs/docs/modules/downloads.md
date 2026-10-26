@@ -75,3 +75,28 @@ The **Digital downloads sample** recipe makes a store that sells and delivers eb
 - the coupons **WELCOME10** (10% off, once per customer) and **EBOOKS5** ($5 off orders of $15 or more).
 
 An order of digital products only has no shipping step. Running the online store sample first makes a store that sells both.
+
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Digital Downloads adds the **Downloads** data source (`Downloads`) to the Report Builder and to Orchard Core data pipelines. Its data set needs **Manage digital files and downloads** (`ManageDigitalDownloads`), the permission of the built-in **Downloads** report, which keeps working as before.
+
+The **Download entitlements** data set (`DownloadEntitlements`) has one row per file a buyer may download from one order, newest first by when it was given, which is its default date. Date ranges on that date and joins on the entitlement and order IDs are applied in the database, and simple groups and totals of those fields are counted there too. Where a file is kept, its id in the private store and the buyer's download link are never exposed. An entitlement doesn't name the buyer: join its order to the **Orders** data set to report by customer or user.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Entitlement ID | Identifies the entitlement. |
+| `Status` | Status | Where the link stands when the report runs: `Active`, `Revoked`, `Expired` or `LimitReached`. |
+| `DownloadCount` | Downloads | How many times the file was downloaded. |
+| `DownloadLimit` | Download limit | Empty when there is no limit. |
+| `Remaining` | Downloads left | Empty when there is no limit. |
+| `ExpiresUtc` | Expires | Empty when the link never expires. |
+| `IsRevoked` | Taken back | Whether the order was canceled or refunded, or the store took the file back. |
+| `RevokedUtc` | Taken back on | |
+| `LastDownloadedUtc` | Last downloaded | |
+| `CreatedUtc` | Given | The default date. |
+| `OrderId` | Order ID | References `Orders` > `Orders`. |
+| `OrderNumber` | Order number | |
+| `OrderLineId` | Order line ID | References `Orders` > `OrderLines` > `LineId`. |
+| `ProductId` | Product ID | References the product (`Products` > `Products` > `ContentItemId`). |
+| `ProductTitle` | Product | The product's title when the order was paid. |
+| `FileName` | File | The file's name, as the order's page shows it. |
