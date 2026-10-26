@@ -27,7 +27,8 @@ public sealed class DataSourcesStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the data sets of the work distribution feature: queues, queue groups, and queue items.
+/// Registers the data sets of the work distribution feature: queues, queue groups, queue items, and the dialer decision
+/// log of the routing decisions it makes (and the dial suppressions of the dialer, which builds on it).
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
 [RequireFeatures("OrchardCore.DataPipelines.Core")]
@@ -38,7 +39,8 @@ public sealed class QueuesDataSourcesStartup : StartupBase
         services
             .AddScoped<IContactCenterReportDataSet, QueueReportDataSet>()
             .AddScoped<IContactCenterReportDataSet, QueueGroupReportDataSet>()
-            .AddScoped<IContactCenterReportDataSet, QueueItemReportDataSet>();
+            .AddScoped<IContactCenterReportDataSet, QueueItemReportDataSet>()
+            .AddScoped<IContactCenterReportDataSet, DialerDecisionReportDataSet>();
     }
 }
 
@@ -54,6 +56,19 @@ public sealed class DialerDataSourcesStartup : StartupBase
         services
             .AddScoped<IContactCenterReportDataSet, DialerProfileReportDataSet>()
             .AddScoped<IContactCenterReportDataSet, CallbackRequestReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Registers the data set of the paced dialing feature: the pacing cycles it records.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.DialerPaced)]
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DialerPacedDataSourcesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterReportDataSet, DialerPacingCycleReportDataSet>();
     }
 }
 
@@ -84,7 +99,7 @@ public sealed class AgentServicesDataSourcesStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the data set of the agents feature: agent sessions.
+/// Registers the data sets of the agents feature: agent sessions, and the agent state changes it records.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Agents)]
 [RequireFeatures("OrchardCore.DataPipelines.Core")]
@@ -92,7 +107,9 @@ public sealed class AgentsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContactCenterReportDataSet, AgentSessionReportDataSet>();
+        services
+            .AddScoped<IContactCenterReportDataSet, AgentSessionReportDataSet>()
+            .AddScoped<IContactCenterReportDataSet, AgentStateChangeReportDataSet>();
     }
 }
 
