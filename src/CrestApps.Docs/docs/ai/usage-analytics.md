@@ -218,7 +218,7 @@ The client identifier, the visitor identifier and the provider's response identi
 
 | Group | Fields |
 | --- | --- |
-| **Call** | `ItemId` (identifier), `ActivityId` (identifier), `AISessionId` (identifier, references `AIChat.ChatSessions.SessionId`), `Channel`, `ChannelEndpointId` (identifier), `ProviderName` (the telephony provider), `CampaignId` (identifier), `CampaignName`, `Engine` (`Realtime` or `TurnBased`), `Outcome`, `StartedUtc`, `EndedUtc`, `CreatedUtc` (when the summary was written) |
+| **Call** | `ItemId` (identifier), `ActivityId` (identifier, references `Omnichannel.Activities.ItemId`), `AISessionId` (identifier, references `AIChat.ChatSessions.SessionId`), `Channel`, `ChannelEndpointId` (identifier), `ProviderName` (the telephony provider), `CampaignId` (identifier, references `Omnichannel.Campaigns.ItemId`), `CampaignName`, `Engine` (`Realtime` or `TurnBased`), `Outcome`, `StartedUtc`, `EndedUtc`, `CreatedUtc` (when the summary was written) |
 | **Model** | `AIProfileId` (identifier), `AIProfileName` (the name of the profile when the call ended), `DeploymentName`, `ModelName`, `ConnectionName` |
 | **Talk time** | `SessionDurationMs`, `SessionSeconds`, `SessionMinutes`, `AssistantSpeakingMs`, `AIMinutes`, `CallerSpeakingMs`, `CallerMinutes`, `MutualSilenceMs`, `SilenceMinutes`, `TimeToFirstAssistantAudioMs`, `EchoHeldMs` |
 | **Turns** | `AssistantTurns`, `CallerTurns`, `BargeIns`, `IdlePrompts` |

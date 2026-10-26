@@ -30,6 +30,12 @@ public sealed class AIVoiceUsageReportDataSet : IndexedReportDataSet<AIVoiceSess
     /// </summary>
     public const string CreatedUtcField = "CreatedUtc";
 
+    // The stable names of the Omnichannel data source and the data sets a call's activity and campaign are in.
+    private const string OmnichannelSource = "Omnichannel";
+    private const string OmnichannelActivities = "Activities";
+    private const string OmnichannelCampaigns = "Campaigns";
+    private const string OmnichannelItemIdField = "ItemId";
+
     private const decimal MillisecondsPerSecond = 1_000m;
     private const decimal MillisecondsPerMinute = 60_000m;
 
@@ -64,14 +70,16 @@ public sealed class AIVoiceUsageReportDataSet : IndexedReportDataSet<AIVoiceSess
         var unknown = S["Empty when the engine that held the call can't measure it."].Value;
 
         AddField(nameof(AIVoiceSessionSummary.ItemId), S["Summary ID"], DataFieldType.Text, record => record.ItemId, call).Identifier();
-        AddField(nameof(AIVoiceSessionSummary.ActivityId), S["Activity ID"], DataFieldType.Text, record => record.ActivityId, call).Identifier()
-            .Description = S["The activity of the call. Count the distinct activities to count calls."].Value;
+        AddField(nameof(AIVoiceSessionSummary.ActivityId), S["Activity ID"], DataFieldType.Text, record => record.ActivityId, call)
+            .Identifier(new DataFieldReference(OmnichannelSource, OmnichannelActivities, OmnichannelItemIdField))
+            .Description = S["The Omnichannel activity of the call. Count the distinct activities to count calls."].Value;
         AddField(nameof(AIVoiceSessionSummary.AISessionId), S["Chat session ID"], DataFieldType.Text, record => record.AISessionId, call)
             .Identifier(new DataFieldReference(AIChatReportDataSource.SourceName, AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField));
         AddField(nameof(AIVoiceSessionSummary.Channel), S["Channel"], DataFieldType.Text, record => record.Channel, call);
         AddField(nameof(AIVoiceSessionSummary.ChannelEndpointId), S["Channel endpoint ID"], DataFieldType.Text, record => record.ChannelEndpointId, call).Identifier();
         AddField(nameof(AIVoiceSessionSummary.ProviderName), S["Telephony provider"], DataFieldType.Text, record => record.ProviderName, call);
-        AddField(nameof(AIVoiceSessionSummary.CampaignId), S["Campaign ID"], DataFieldType.Text, record => record.CampaignId, call).Identifier();
+        AddField(nameof(AIVoiceSessionSummary.CampaignId), S["Campaign ID"], DataFieldType.Text, record => record.CampaignId, call)
+            .Identifier(new DataFieldReference(OmnichannelSource, OmnichannelCampaigns, OmnichannelItemIdField));
         AddField(nameof(AIVoiceSessionSummary.CampaignName), S["Campaign"], DataFieldType.Text, record => Name(record.CampaignName), call);
         AddField(nameof(AIVoiceSessionSummary.Engine), S["Engine"], DataFieldType.Text, record => record.Engine, call)
             .Description = S["Realtime (speech-to-speech) or TurnBased."].Value;

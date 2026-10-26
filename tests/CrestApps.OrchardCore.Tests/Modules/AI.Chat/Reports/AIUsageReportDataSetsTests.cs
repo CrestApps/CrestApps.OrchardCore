@@ -396,6 +396,12 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
         Assert.Equal(AIChatReportDataSource.ChatSessionsDataSet, sessionReference.DataSet);
         Assert.Equal(AIChatReportDataSource.SessionIdField, sessionReference.Field);
         Assert.True(schema.FindField("ActivityId").IsKeyFilterable);
+
+        var activityReference = Assert.Single(schema.FindField("ActivityId").References);
+        Assert.Equal("Omnichannel", activityReference.Source);
+        Assert.Equal("Activities", activityReference.DataSet);
+        Assert.Equal("ItemId", activityReference.Field);
+        Assert.Equal("Campaigns", Assert.Single(schema.FindField("CampaignId").References).DataSet);
         Assert.DoesNotContain(schema.Fields, field => field.Name == "ProviderCallId");
 
         Assert.Equal(["summary-2", "summary-1", "summary-0"], rows.Select(row => row["ItemId"]));
