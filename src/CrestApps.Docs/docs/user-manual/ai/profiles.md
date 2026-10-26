@@ -181,7 +181,7 @@ Give the assistant your own content, and let users attach files. See [Knowledge]
 | **Filter** | Narrows which entries of the data source are searched. Ask your technical team for the expression. |
 | **Restrict answers to retrieved data only** | The assistant answers only from your content, never from general knowledge. |
 | **Strictness** | From 1 to 5: how closely a passage must match the question to be used. Empty uses the default of 3. |
-| **Retrieved documents** | From 3 to 20: how many passages are retrieved. |
+| **Retrieved documents** | From 3 to 20: how many passages are retrieved. Empty uses the site default. |
 | **Documents** | Drag files here or click **Browse Files** to upload documents the assistant always uses. **Supported formats** lists the file types. Files are added or removed when you save. |
 
 ### Capabilities tab

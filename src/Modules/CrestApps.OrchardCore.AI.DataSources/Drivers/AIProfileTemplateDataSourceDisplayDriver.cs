@@ -94,16 +94,17 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
+        // A blank field takes the site default, so only a value the user typed is range-checked.
         var strictness = dataSourceSettings.GetStrictness(model.Strictness);
         var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
 
-        if (strictness != model.Strictness)
+        if (model.Strictness.HasValue && strictness != model.Strictness)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
             S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
         }
 
-        if (topN != model.TopNDocuments)
+        if (model.TopNDocuments.HasValue && topN != model.TopNDocuments)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
             S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
@@ -119,8 +120,8 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         template.Alter<AIDataSourceRagMetadata>(t =>
         {
             t.Filter = model.Filter;
-            t.Strictness = model.Strictness;
-            t.TopNDocuments = model.TopNDocuments;
+            t.Strictness = strictness;
+            t.TopNDocuments = topN;
             t.IsInScope = model.IsInScope;
         });
 
