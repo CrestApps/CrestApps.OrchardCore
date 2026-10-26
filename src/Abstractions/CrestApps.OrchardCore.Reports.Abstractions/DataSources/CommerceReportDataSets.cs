@@ -266,6 +266,16 @@ public static class CommerceReportDataSets
         /// The coupons data set: one row per coupon.
         /// </summary>
         public const string Coupons = "Coupons";
+
+        /// <summary>
+        /// The coupon redemptions data set: one row per use of a coupon code at a checkout.
+        /// </summary>
+        public const string CouponRedemptions = "CouponRedemptions";
+
+        /// <summary>
+        /// The saved payment methods data set: one row per payment method a customer kept for later charges.
+        /// </summary>
+        public const string SavedPaymentMethods = "SavedPaymentMethods";
     }
 
     /// <summary>
@@ -282,6 +292,21 @@ public static class CommerceReportDataSets
         /// The carts data set: one row per cart.
         /// </summary>
         public const string Carts = "Carts";
+
+        /// <summary>
+        /// The cart lines data set: one row per product line of a cart.
+        /// </summary>
+        public const string CartLines = "CartLines";
+
+        /// <summary>
+        /// The wishlists data set: one row per shopper's wishlist.
+        /// </summary>
+        public const string Wishlists = "Wishlists";
+
+        /// <summary>
+        /// The wishlist items data set: one row per product saved to a wishlist.
+        /// </summary>
+        public const string WishlistItems = "WishlistItems";
     }
 
     /// <summary>
@@ -298,6 +323,16 @@ public static class CommerceReportDataSets
         /// The transactions data set: one row per transaction.
         /// </summary>
         public const string Transactions = "Transactions";
+
+        /// <summary>
+        /// The payment attempts data set: one row per payment the store tried to take.
+        /// </summary>
+        public const string PaymentAttempts = "PaymentAttempts";
+
+        /// <summary>
+        /// The payment refunds data set: one row per refund of a payment.
+        /// </summary>
+        public const string PaymentRefunds = "PaymentRefunds";
     }
 
     /// <summary>

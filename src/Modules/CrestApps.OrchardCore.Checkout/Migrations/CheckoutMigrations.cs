@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Indexes;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -113,6 +114,41 @@ internal sealed class CheckoutMigrations : DataMigration
             table.CreateIndex("IDX_CustomerPaymentMethodIndex_Reference", "OwnerId", "ProviderKey", "PaymentMethodReference");
         });
 
-        return 1;
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the indexes reports read checkout sessions, payment attempts and kept payment methods through, newest first
+    /// by <c>CreatedUtc</c> a page at a time, so each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    private async Task CreateReportIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<CheckoutSessionIndex>(
+            SchemaBuilder,
+            "IDX_CheckoutSessionIndex_Report",
+            null,
+            "CreatedUtc", "Id");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<PaymentAttemptIndex>(
+            SchemaBuilder,
+            "IDX_PaymentAttemptIndex_Report",
+            null,
+            "CreatedUtc", "Id");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<CustomerPaymentMethodIndex>(
+            SchemaBuilder,
+            "IDX_CustomerPaymentMethodIndex_Report",
+            null,
+            "CreatedUtc", "Id");
     }
 }
