@@ -17,13 +17,13 @@ namespace CrestApps.OrchardCore.Carts.Reports.DataSources;
 /// guest's cart is never exposed.
 /// </summary>
 /// <remarks>
-/// The carts index has no creation date, so a date range on <see cref="CreatedUtcField"/> is applied to the rows read
-/// rather than to the index: carts are read newest first by their index rows.
+/// The carts index holds no creation date, so the data set has no default date and reads the carts newest first by their
+/// index rows. A date range on <see cref="CreatedUtcField"/> is applied by the consumer to the rows read.
 /// </remarks>
 public sealed class CartsReportDataSet : IndexedReportDataSet<Cart, CartIndex>, ICartReportDataSet
 {
     /// <summary>
-    /// The name of the field that holds when the cart was started, the data set's main date.
+    /// The name of the field that holds when the cart was started.
     /// </summary>
     public const string CreatedUtcField = "CreatedUtc";
 
@@ -65,9 +65,6 @@ public sealed class CartsReportDataSet : IndexedReportDataSet<Cart, CartIndex>, 
         AddField(nameof(Cart.ExpiresUtc), S["Expires"], DataFieldType.DateTime, record => record.ExpiresUtc, dates);
 
         CompleteDescription();
-
-        // The main date is not in the index, so it is the default date without being pushed down.
-        Descriptor.DefaultDateField = CreatedUtcField;
     }
 
     /// <inheritdoc/>

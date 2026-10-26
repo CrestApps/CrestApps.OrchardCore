@@ -491,7 +491,7 @@ When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as i
 | **Payments** (`PaymentAttempts`) | Payment the checkout tried to take | Transactions with Checkout | **Manage payments and refunds** (`ManageRefunds`) |
 | **Refunds** (`PaymentRefunds`) | Refund of a payment | Transactions with Checkout | **Manage payments and refunds** (`ManageRefunds`) |
 
-The outstanding transactions are those with the status `Outstanding` or `PartiallyPaid`; a status filter narrows the read in the database, as do the date range a report puts on the main date of transactions and payments and the keys of a join. The refunds index holds no creation date, so the refunds are read newest first and their date range is applied to the rows read. A transaction's history and notes, its settlement reference, and the keys a payment or refund is made with are never exposed.
+The outstanding transactions are those with the status `Outstanding` or `PartiallyPaid`; a status filter narrows the read in the database, as do the date range a report puts on the main date of transactions and payments and the keys of a join. The refunds index holds no creation date, so refunds have no main date: they are read newest first, and a date range a report puts on them is applied to the rows read. A transaction's history and notes, its settlement reference, and the keys a payment or refund is made with are never exposed.
 
 ### Transactions
 
@@ -546,7 +546,7 @@ The outstanding transactions are those with the status `Outstanding` or `Partial
 | `ReferenceType`, `ReferenceId`, `TransactionId`, `OrderId` | Reference type, Reference ID, Transaction ID, Order ID | As for payments. |
 | `Currency` | Currency | |
 | `RefundGrossAmount`, `RefundTaxAmount`, `RefundTaxableAmount` | Amount, Tax refunded, Taxable amount refunded | In the refund's currency. The amount includes the tax. |
-| `CreatedUtc` | Asked for | The main date. |
+| `CreatedUtc` | Asked for | |
 | `CompletedUtc`, `UpdatedUtc` | Completed, Last changed | |
 
 ## Permissions

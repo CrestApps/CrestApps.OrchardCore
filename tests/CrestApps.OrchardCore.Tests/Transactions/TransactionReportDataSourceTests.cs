@@ -325,7 +325,7 @@ public sealed class TransactionReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(PaymentAttemptsReportDataSet.CreatedUtcField, payments.DataSet.DefaultDateField);
-        Assert.Equal(PaymentRefundsReportDataSet.CreatedUtcField, refunds.DataSet.DefaultDateField);
+        Assert.Null(refunds.DataSet.DefaultDateField);
         Assert.DoesNotContain(payments.Fields, field => field.Name is "IdempotencyKey" or "ObligationId" or "TaxSnapshot");
         Assert.DoesNotContain(refunds.Fields, field => field.Name is "IdempotencyKey" or "ObligationId" or "TaxLines" or "OriginalTransactionId" or "ProviderRefundReference");
 
@@ -431,6 +431,7 @@ public sealed class TransactionReportDataSourceTests : IAsyncLifetime
             ],
             Context = new DataSourceContext { User = _user },
         };
+
         var parent = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.TransactionSource.Transactions,
@@ -439,9 +440,19 @@ public sealed class TransactionReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        var unindexed = new DataAggregateQuery
+        {
+            DataSet = CommerceReportDataSets.TransactionSource.Transactions,
+            Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+            Context = new DataSourceContext { User = _user },
+        };
+
+        unindexed.Conditions.Add(Condition("Amount", DataFilterOperator.GreaterThan, 40m));
+
         // Act
         var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
         var declined = await ((IDataAggregateSource)source).AggregateAsync(parent, TestContext.Current.CancellationToken);
+        var filtered = await ((IDataAggregateSource)source).AggregateAsync(unindexed, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(groups);
@@ -451,6 +462,9 @@ public sealed class TransactionReportDataSourceTests : IAsyncLifetime
         Assert.Equal(1L, byCurrency["EUR"].Count);
         Assert.Equal(30m, byCurrency["EUR"].Outstanding);
         Assert.Null(declined);
+
+        // A condition on a field the index doesn't hold can't be answered in the database.
+        Assert.Null(filtered);
     }
 
     [Fact]

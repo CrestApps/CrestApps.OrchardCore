@@ -391,6 +391,7 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
             Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
             Context = new DataSourceContext { User = _user },
         };
+
         var currency = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.CheckoutSource.CheckoutSessions,
@@ -399,9 +400,20 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        var unindexed = new DataAggregateQuery
+        {
+            DataSet = CommerceReportDataSets.CheckoutSource.CheckoutSessions,
+            Groups = [new DataAggregateGroup { Field = "Status" }],
+            Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+            Context = new DataSourceContext { User = _user },
+        };
+
+        unindexed.Conditions.Add(Condition("Currency", DataFilterOperator.Equals, "USD"));
+
         // Act
         var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
         var declined = await ((IDataAggregateSource)source).AggregateAsync(currency, TestContext.Current.CancellationToken);
+        var filtered = await ((IDataAggregateSource)source).AggregateAsync(unindexed, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(groups);
@@ -410,6 +422,9 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
         Assert.Equal(1L, counts["Expired"]);
         Assert.Equal(1L, counts["Pending"]);
         Assert.Null(declined);
+
+        // A condition on a field the index doesn't hold can't be answered in the database.
+        Assert.Null(filtered);
     }
 
     [Fact]

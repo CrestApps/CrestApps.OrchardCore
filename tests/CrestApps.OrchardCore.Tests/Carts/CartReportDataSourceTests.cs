@@ -192,6 +192,7 @@ public sealed class CartReportDataSourceTests : IAsyncLifetime
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
         var carts = await source.GetSchemaAsync(CommerceReportDataSets.CartSource.Carts, context, TestContext.Current.CancellationToken);
         var lines = await source.GetSchemaAsync(CommerceReportDataSets.CartSource.CartLines, context, TestContext.Current.CancellationToken);
+        var wishlists = await source.GetSchemaAsync(CommerceReportDataSets.CartSource.Wishlists, context, TestContext.Current.CancellationToken);
         var items = await source.GetSchemaAsync(CommerceReportDataSets.CartSource.WishlistItems, context, TestContext.Current.CancellationToken);
 
         // Assert
@@ -205,7 +206,8 @@ public sealed class CartReportDataSourceTests : IAsyncLifetime
             ],
             dataSets.Select(dataSet => dataSet.Name));
 
-        Assert.Equal(CartsReportDataSet.CreatedUtcField, carts.DataSet.DefaultDateField);
+        // No index of carts or wishlists holds a date, so none of their data sets has a default date to push down.
+        Assert.All([carts, lines, wishlists, items], schema => Assert.Null(schema.DataSet.DefaultDateField));
         Assert.True(carts.FindField(CommerceReportDataSets.ItemIdField).IsIdentifier);
         Assert.True(carts.FindField(CommerceReportDataSets.ItemIdField).IsKeyFilterable);
         Assert.True(carts.FindField("UserId").IsKeyFilterable);
@@ -213,7 +215,6 @@ public sealed class CartReportDataSourceTests : IAsyncLifetime
         Assert.False(string.IsNullOrEmpty(carts.FindField("Value").Description));
         Assert.DoesNotContain(carts.Fields, field => field.Name is "GuestTokenHash" or "Lines");
 
-        Assert.Equal(CartLinesReportDataSet.AddedUtcField, lines.DataSet.DefaultDateField);
         Assert.True(lines.FindField(CartLinesReportDataSet.CartIdField).IsKeyFilterable);
         var cart = Assert.Single(lines.FindField(CartLinesReportDataSet.CartIdField).References);
         Assert.Equal(CommerceReportDataSets.CartSource.Name, cart.Source);
@@ -318,6 +319,7 @@ public sealed class CartReportDataSourceTests : IAsyncLifetime
             Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
             Context = new DataSourceContext { User = _user },
         };
+
         var byCurrency = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.CartSource.Carts,
@@ -325,6 +327,7 @@ public sealed class CartReportDataSourceTests : IAsyncLifetime
             Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
             Context = new DataSourceContext { User = _user },
         };
+
         var lines = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.CartSource.CartLines,
@@ -333,16 +336,41 @@ public sealed class CartReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        var unindexed = new DataAggregateQuery
+        {
+            DataSet = CommerceReportDataSets.CartSource.Carts,
+            Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+            Context = new DataSourceContext { User = _user },
+        };
+
+        unindexed.Conditions.Add(Condition("Value", DataFilterOperator.GreaterThan, 50m));
+
+        var userCount = new DataAggregateQuery
+        {
+            DataSet = CommerceReportDataSets.CartSource.Carts,
+            Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+            Context = new DataSourceContext { User = _user },
+        };
+
+        userCount.Conditions.Add(Condition("UserId", DataFilterOperator.In, "user-1", "user-2"));
+
         // Act
         var total = await ((IDataAggregateSource)source).AggregateAsync(count, TestContext.Current.CancellationToken);
         var currencies = await ((IDataAggregateSource)source).AggregateAsync(byCurrency, TestContext.Current.CancellationToken);
         var lineGroups = await ((IDataAggregateSource)source).AggregateAsync(lines, TestContext.Current.CancellationToken);
+        var filtered = await ((IDataAggregateSource)source).AggregateAsync(unindexed, TestContext.Current.CancellationToken);
+        var signedIn = await ((IDataAggregateSource)source).AggregateAsync(userCount, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(total);
         Assert.Equal(3L, (long)Assert.Single(total)[0]);
         Assert.Null(currencies);
         Assert.Null(lineGroups);
+
+        // A condition on a field the index doesn't hold can't be answered in the database; one it holds can.
+        Assert.Null(filtered);
+        Assert.NotNull(signedIn);
+        Assert.Equal(2L, (long)Assert.Single(signedIn)[0]);
     }
 
     [Fact]

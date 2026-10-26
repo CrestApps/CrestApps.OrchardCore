@@ -17,13 +17,13 @@ namespace CrestApps.OrchardCore.Transactions.Reports.DataSources;
 /// which the <c>Currency</c> field names. The keys the refund is made with are never exposed.
 /// </summary>
 /// <remarks>
-/// The refunds index has no creation date, so a date range on <see cref="CreatedUtcField"/> is applied to the rows read
-/// rather than to the index: refunds are read newest first by their index rows.
+/// The refunds index holds no creation date, so the data set has no default date and reads the refunds newest first by their
+/// index rows. A date range on <see cref="CreatedUtcField"/> is applied by the consumer to the rows read.
 /// </remarks>
 public sealed class PaymentRefundsReportDataSet : IndexedReportDataSet<PaymentRefund, PaymentRefundIndex>, ITransactionReportDataSet
 {
     /// <summary>
-    /// The name of the field that holds when the refund was asked for, the data set's main date.
+    /// The name of the field that holds when the refund was asked for.
     /// </summary>
     public const string CreatedUtcField = "CreatedUtc";
 
@@ -81,9 +81,6 @@ public sealed class PaymentRefundsReportDataSet : IndexedReportDataSet<PaymentRe
         AddField(nameof(PaymentRefund.UpdatedUtc), S["Last changed"], DataFieldType.DateTime, record => record.UpdatedUtc, dates);
 
         CompleteDescription();
-
-        // The main date is not in the index, so it is the default date without being pushed down.
-        Descriptor.DefaultDateField = CreatedUtcField;
     }
 
     /// <inheritdoc/>

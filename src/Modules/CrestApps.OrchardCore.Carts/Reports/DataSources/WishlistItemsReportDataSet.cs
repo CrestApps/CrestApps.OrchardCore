@@ -22,7 +22,7 @@ public sealed class WishlistItemsReportDataSet : IndexedReportDataSet<Wishlist, 
     public const string WishlistIdField = "WishlistId";
 
     /// <summary>
-    /// The name of the field that holds when the product was saved, the data set's main date.
+    /// The name of the field that holds when the product was saved.
     /// </summary>
     public const string AddedUtcField = "AddedUtc";
 
@@ -58,9 +58,6 @@ public sealed class WishlistItemsReportDataSet : IndexedReportDataSet<Wishlist, 
         AddField(AddedUtcField, S["Saved"], DataFieldType.DateTime, row => row.Child.AddedUtc, item);
 
         CompleteDescription();
-
-        // The index has no date, so the main date is the default date without being pushed down.
-        Descriptor.DefaultDateField = AddedUtcField;
     }
 
     /// <inheritdoc/>

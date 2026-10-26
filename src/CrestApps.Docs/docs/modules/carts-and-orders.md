@@ -77,7 +77,7 @@ When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as i
 | **Wishlists** (`Wishlists`) | Signed-in shopper's wishlist | Wishlists |
 | **Wishlist items** (`WishlistItems`) | Product saved to a wishlist | Wishlists |
 
-The carts and wishlists indexes hold no dates, so these data sets read their newest records first by their index rows and apply a report's date range to the rows read; the keys of a join narrow the read in the database. The token that finds a guest's cart, and what a shopper typed for add-ons and line details, are never exposed.
+The carts and wishlists indexes hold no dates, so these data sets have no main date: they read their newest records first by their index rows, and a date range a report puts on them is applied to the rows read. The keys of a join narrow the read in the database. The token that finds a guest's cart, and what a shopper typed for add-ons and line details, are never exposed.
 
 | Data set | Field | Display name | Notes |
 | --- | --- | --- | --- |
@@ -85,20 +85,19 @@ The carts and wishlists indexes hold no dates, so these data sets read their new
 | Carts | `UserId`, `IsGuest` | User ID, Guest | `UserId` joins **Users**. Empty for a guest. |
 | Carts | `LineCount`, `ItemCount` | Lines, Units | |
 | Carts | `Currency`, `Value` | Currency, Value when added | The units at the prices they had when they were added, in the cart's currency. It is never charged. |
-| Carts | `CreatedUtc` | Started | The main date. |
-| Carts | `ModifiedUtc`, `ExpiresUtc` | Last changed, Expires | |
+| Carts | `CreatedUtc`, `ModifiedUtc`, `ExpiresUtc` | Started, Last changed, Expires | |
 | Cart lines | `CartId` | Cart ID | Joins **Carts**. |
 | Cart lines | `UserId`, `Currency`, `CartModifiedUtc` | User ID, Currency, Cart last changed | From the cart. `UserId` joins **Users**. |
 | Cart lines | `LineId`, `Position` | Line ID, Line number | |
 | Cart lines | `ProductId`, `VariantId`, `PriceId` | Product ID, Variant ID, Price ID | `ProductId` joins **Products** and `VariantId` joins **Product variants**. |
 | Cart lines | `Quantity`, `AddedUnitPrice`, `Value` | Quantity, Unit price when added, Value when added | In the cart's currency. |
-| Cart lines | `AddedUtc` | Added | The main date. |
+| Cart lines | `AddedUtc` | Added | |
 | Wishlists | `ItemId`, `UserId` | Wishlist ID, User ID | `UserId` joins **Users**. |
 | Wishlists | `ItemCount` | Products saved | |
-| Wishlists | `ModifiedUtc` | Last changed | The main date. |
+| Wishlists | `ModifiedUtc` | Last changed | |
 | Wishlist items | `WishlistId` | Wishlist ID | Joins **Wishlists**. |
 | Wishlist items | `UserId`, `Position`, `ProductId` | User ID, Position, Product ID | `ProductId` joins **Products**. Position 1 is the newest. |
-| Wishlist items | `AddedUtc` | Saved | The main date. |
+| Wishlist items | `AddedUtc` | Saved | |
 
 ## Orders
 

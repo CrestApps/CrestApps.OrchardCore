@@ -24,7 +24,7 @@ public sealed class CartLinesReportDataSet : IndexedReportDataSet<Cart, CartInde
     public const string CartIdField = "CartId";
 
     /// <summary>
-    /// The name of the field that holds when the line was added, the data set's main date.
+    /// The name of the field that holds when the line was added.
     /// </summary>
     public const string AddedUtcField = "AddedUtc";
 
@@ -72,9 +72,6 @@ public sealed class CartLinesReportDataSet : IndexedReportDataSet<Cart, CartInde
         AddField(AddedUtcField, S["Added"], DataFieldType.DateTime, row => row.Child.AddedUtc, line);
 
         CompleteDescription();
-
-        // The main date is not in the index, so it is the default date without being pushed down.
-        Descriptor.DefaultDateField = AddedUtcField;
     }
 
     /// <inheritdoc/>

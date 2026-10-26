@@ -14,13 +14,13 @@ namespace CrestApps.OrchardCore.Carts.Reports.DataSources;
 /// One row per signed-in shopper's wishlist: whose it is, how many products it holds, and when it last changed.
 /// </summary>
 /// <remarks>
-/// The wishlists index has no date, so a date range on <see cref="ModifiedUtcField"/> is applied to the rows read
-/// rather than to the index: wishlists are read newest first by their index rows.
+/// The wishlists index holds no date, so the data set has no default date and reads the wishlists newest first by their
+/// index rows. A date range on <see cref="ModifiedUtcField"/> is applied by the consumer to the rows read.
 /// </remarks>
 public sealed class WishlistsReportDataSet : IndexedReportDataSet<Wishlist, WishlistIndex>, ICartReportDataSet
 {
     /// <summary>
-    /// The name of the field that holds when the wishlist last changed, the data set's main date.
+    /// The name of the field that holds when the wishlist last changed.
     /// </summary>
     public const string ModifiedUtcField = "ModifiedUtc";
 
@@ -53,9 +53,6 @@ public sealed class WishlistsReportDataSet : IndexedReportDataSet<Wishlist, Wish
         AddField(ModifiedUtcField, S["Last changed"], DataFieldType.DateTime, record => record.ModifiedUtc, wishlist);
 
         CompleteDescription();
-
-        // The index has no date, so the main date is the default date without being pushed down.
-        Descriptor.DefaultDateField = ModifiedUtcField;
     }
 
     /// <inheritdoc/>
