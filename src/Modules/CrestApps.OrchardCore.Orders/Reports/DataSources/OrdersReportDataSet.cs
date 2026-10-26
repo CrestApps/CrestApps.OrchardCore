@@ -86,6 +86,10 @@ public sealed class OrdersReportDataSet : IndexedReportDataSet<Order, OrderIndex
         AddField(nameof(Order.CancelReason), S["Cancel reason"], DataFieldType.Text, record => record.CancelReason, dates);
         AddField(nameof(Order.ModifiedUtc), S["Last changed"], DataFieldType.DateTime, record => record.ModifiedUtc, dates);
         AddField("IsAnonymized", S["Anonymized"], DataFieldType.Boolean, record => record.AnonymizedUtc.HasValue, dates);
+        AddField(nameof(Order.RecoveryEmailSentUtc), S["Recovery email sent"], DataFieldType.DateTime, record => record.RecoveryEmailSentUtc, dates)
+            .Description = S["When the buyer was emailed a link back to the order's checkout after leaving it unpaid."].Value;
+        AddField("IsRecovered", S["Recovered"], DataFieldType.Boolean, record => record.RecoveryEmailSentUtc.HasValue && record.PaidUtc > record.RecoveryEmailSentUtc, dates)
+            .Description = S["Whether the order was paid after the buyer was emailed a link back to its checkout."].Value;
 
         AddField(nameof(Order.CustomerId), S["Customer ID"], DataFieldType.Text, record => record.CustomerId, customer)
             .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.CustomerSource.Name, CommerceReportDataSets.CustomerSource.Customers));

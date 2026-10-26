@@ -266,12 +266,15 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
         Assert.Equal("DE", paid["BillingCountry"]);
         Assert.Equal(false, paid["IsGuest"]);
         Assert.Equal(false, paid["IsAnonymized"]);
+        Assert.Equal(true, paid["IsRecovered"]);
         Assert.Equal(DateTimeKind.Utc, Assert.IsType<DateTime>(paid["PaidUtc"]).Kind);
 
         var counter = rows[1];
         Assert.Equal(OrderChannels.PointOfSale, counter["Channel"]);
         Assert.Equal("register-1", counter["RegisterId"]);
         Assert.Equal(true, counter["IsGuest"]);
+        Assert.Equal(false, counter["IsRecovered"]);
+        Assert.Null(counter["RecoveryEmailSentUtc"]);
 
         var canceled = rows[0];
         Assert.Equal("Canceled", canceled["Status"]);
@@ -635,6 +638,7 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
         if (day == 1)
         {
             order.Refunds = [new OrderRefund { RefundId = "refund-1", Amount = 10m, Currency = "USD", Reason = "Damaged", CreatedUtc = placed.AddDays(1) }];
+            order.RecoveryEmailSentUtc = placed.AddMinutes(1);
             order.Disputes = [new OrderDispute { Reference = "dp-1", Gateway = "Stripe", Amount = 110m, Currency = "USD", Status = "needs_response", CreatedUtc = placed.AddDays(2), UpdatedUtc = placed.AddDays(2) }];
         }
 

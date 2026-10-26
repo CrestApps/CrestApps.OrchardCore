@@ -150,9 +150,13 @@ public sealed class SubscriptionReportDataSourceTests : IAsyncLifetime
         Assert.True(schema.FindField("ReferenceId").IsKeyFilterable);
         Assert.True(schema.FindField("CheckoutSessionId").IsKeyFilterable);
 
-        var user = Assert.Single(schema.FindField(SubscriptionsReportDataSet.OwnerIdField).References);
-        Assert.Equal(ReportsConstants.UsersDataSource, user.Source);
-        Assert.Equal(ReportsConstants.UserIdField, user.Field);
+        var owners = schema.FindField(SubscriptionsReportDataSet.OwnerIdField).References;
+        Assert.Equal(2, owners.Count);
+        Assert.Equal(ReportsConstants.UsersDataSource, owners[0].Source);
+        Assert.Equal(ReportsConstants.UserIdField, owners[0].Field);
+        Assert.Equal(CommerceReportDataSets.CustomerSource.Name, owners[1].Source);
+        Assert.Equal(CommerceReportDataSets.CustomerSource.Customers, owners[1].DataSet);
+        Assert.Equal(ReportsConstants.UserIdField, owners[1].Field);
 
         var plan = Assert.Single(schema.FindField("ReferenceId").References);
         Assert.Equal(CommerceReportDataSets.ProductSource.Name, plan.Source);

@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -73,7 +74,9 @@ public sealed class SubscriptionsReportDataSet : IndexedReportDataSet<Subscripti
         AddField("LineCount", S["Lines"], DataFieldType.Integer, record => record.Lines?.Count ?? 0, subscription);
 
         AddField(OwnerIdField, S["Owner ID"], DataFieldType.Text, record => record.OwnerId, subscriber)
-            .Identifier(ReportDataReferences.User())
+            .Identifier(
+                ReportDataReferences.User(),
+                new DataFieldReference(CommerceReportDataSets.CustomerSource.Name, CommerceReportDataSets.CustomerSource.Customers, ReportsConstants.UserIdField))
             .Description = S["The user who owns the subscription. For a guest, it is the guest's own identifier, which matches no user."].Value;
         AddField("IsGuest", S["Guest"], DataFieldType.Boolean, record => record.OwnerKind == CustomerOwnerKind.Guest, subscriber);
         AddField(nameof(Subscription.GuestContactEmail), S["Guest email"], DataFieldType.Text, record => record.GuestContactEmail, subscriber);
