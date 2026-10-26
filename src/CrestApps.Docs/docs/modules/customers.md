@@ -251,7 +251,7 @@ One row per customer, guests, disabled, merged and anonymized customers included
 
 ### Loyalty accounts and loyalty activity
 
-`LoyaltyAccounts` gives one row per customer's loyalty points account. `LoyaltyActivity` gives one row per change to the points, as the customer's page lists them, with each account's changes oldest first. Points are not money, so these data sets have no currency. The accounts' index holds no date, so accounts are read newest first by when they were stored, and these data sets have no main date. A join on the account or on **Customer ID** is applied in the database, and the accounts can be grouped and counted there.
+`LoyaltyAccounts` gives one row per customer's loyalty points account. `LoyaltyActivity` gives one row per change to the points, as the customer's page lists them, with each account's changes oldest first. Points are not money, so these data sets have no currency. The accounts' index holds no date, so accounts are read newest first by their index rows, and these data sets have no main date. A join on the account or on **Customer ID** is applied in the database, and the accounts can be grouped and counted there.
 
 | Field | Display name | Data set | Notes |
 | --- | --- | --- | --- |
@@ -275,7 +275,7 @@ One row per customer, guests, disabled, merged and anonymized customers included
 
 ### Store credit accounts and store credit activity
 
-`StoreCreditAccounts` gives one row per customer's store credit in one currency. `StoreCreditActivity` gives one row per change to it, as the customer's page lists them, with each account's changes oldest first. All money is in the account's own currency, which the **Currency** field next to it names. As for loyalty points, the accounts are read newest first by when they were stored, and there is no main date. A join on the account or on **Customer ID**, and a filter on **Currency**, are applied in the database, and the accounts can be grouped and summed there, such as the balance by currency.
+`StoreCreditAccounts` gives one row per customer's store credit in one currency. `StoreCreditActivity` gives one row per change to it, as the customer's page lists them, with each account's changes oldest first. All money is in the account's own currency, which the **Currency** field next to it names. As for loyalty points, the accounts are read newest first by their index rows, and there is no main date. A join on the account or on **Customer ID**, and a filter on **Currency**, are applied in the database, and the accounts can be grouped and summed there, such as the balance by currency.
 
 | Field | Display name | Data set | Notes |
 | --- | --- | --- | --- |
@@ -299,7 +299,7 @@ One row per customer, guests, disabled, merged and anonymized customers included
 
 ### Referrals and referral rewards
 
-`Referrals` gives one row per customer's referral link. `ReferralRewards` gives one row per friend's first order the customer was rewarded for, with each link's rewards oldest first. Links are read newest first by when they were stored, and there is no main date. A join on the link or on **Customer ID** is applied in the database.
+`Referrals` gives one row per customer's referral link. `ReferralRewards` gives one row per friend's first order the customer was rewarded for, with each link's rewards oldest first. Links are read newest first by their index rows, and there is no main date. A join on the link or on **Customer ID** is applied in the database.
 
 | Field | Display name | Data set | Notes |
 | --- | --- | --- | --- |

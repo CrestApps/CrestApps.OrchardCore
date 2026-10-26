@@ -117,7 +117,7 @@ The **Companies** data source (technical name `Companies`) lets the [Report Buil
 | `PriceLists` | Price lists | One per price list. |
 | `PriceListEntries` | Price list entries | One per price a price list sets for a SKU. |
 
-The indexes of companies and price lists hold no date, so the records are read newest first by when they were stored, and the data sets have no main date. The credit limit, the monthly budget and a buyer's order limit are in the store's currency, as the company's admin page shows them, and the **Currency** field next to them names it. The punchout key is never exposed.
+The indexes of companies and price lists hold no date, so the records are read newest first by their index rows, and the data sets have no main date. The credit limit, the monthly budget and a buyer's order limit are in the store's currency, as the company's admin page shows them, and the **Currency** field next to them names it. The punchout key is never exposed.
 
 ### Companies
 
