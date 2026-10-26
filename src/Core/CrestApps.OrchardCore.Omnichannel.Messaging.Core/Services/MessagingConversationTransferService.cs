@@ -166,6 +166,10 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         conversation.IsRead = false;
         conversation.ModifiedUtc = _clock.UtcNow;
 
+        // The hand-over is the newest thing on the thread for its recipient, so it is listed at the top of their inbox
+        // rather than below every conversation with a newer message.
+        conversation.LastActivityUtc = conversation.ModifiedUtc;
+
         var entry = new MessagingConversationEvent
         {
             Kind = MessagingConversationEventKind.Transferred,

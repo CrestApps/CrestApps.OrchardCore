@@ -48,4 +48,37 @@ internal static class MessagingMigrationSql
 
         await command.ExecuteNonQueryAsync();
     }
+
+    /// <summary>
+    /// Copies one column of a messaging workspace index table into another for every row, on the migration's own
+    /// connection and transaction.
+    /// </summary>
+    /// <param name="schemaBuilder">The active schema builder.</param>
+    /// <param name="store">The YesSql store.</param>
+    /// <param name="indexType">The index type whose table is updated.</param>
+    /// <param name="sourceColumn">The column the values are read from.</param>
+    /// <param name="targetColumn">The column the values are written to.</param>
+    public static async Task CopyColumnAsync(
+        ISchemaBuilder schemaBuilder,
+        IStore store,
+        Type indexType,
+        string sourceColumn,
+        string targetColumn)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+        ArgumentNullException.ThrowIfNull(store);
+
+        var tableName = schemaBuilder.TablePrefix +
+            schemaBuilder.TableNameConvention.GetIndexTable(indexType, MessagingStorage.CollectionName);
+        var quotedTableName = schemaBuilder.Dialect.QuoteForTableName(tableName, store.Configuration.Schema);
+        var quotedSource = schemaBuilder.Dialect.QuoteForColumnName(sourceColumn);
+        var quotedTarget = schemaBuilder.Dialect.QuoteForColumnName(targetColumn);
+
+        await using var command = schemaBuilder.Connection.CreateCommand();
+
+        command.Transaction = schemaBuilder.Transaction;
+        command.CommandText = $"UPDATE {quotedTableName} SET {quotedTarget} = {quotedSource}";
+
+        await command.ExecuteNonQueryAsync();
+    }
 }
