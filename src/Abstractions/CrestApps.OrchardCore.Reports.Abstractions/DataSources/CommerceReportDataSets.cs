@@ -215,6 +215,21 @@ public static class CommerceReportDataSets
         /// The carts data set: one row per cart.
         /// </summary>
         public const string Carts = "Carts";
+
+        /// <summary>
+        /// The cart lines data set: one row per product line of a cart.
+        /// </summary>
+        public const string CartLines = "CartLines";
+
+        /// <summary>
+        /// The wishlists data set: one row per shopper's wishlist.
+        /// </summary>
+        public const string Wishlists = "Wishlists";
+
+        /// <summary>
+        /// The wishlist items data set: one row per product saved to a wishlist.
+        /// </summary>
+        public const string WishlistItems = "WishlistItems";
     }
 
     /// <summary>

@@ -66,6 +66,40 @@ services.Configure<CartOptions>(options =>
 });
 ```
 
+### Carts Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as it is with the [Report Builder](report-builder/index.md), the **Carts** feature registers the **Carts** data source (`Carts`), so reports and data pipelines can read the shoppers' open carts and, with the [Wishlists](#wishlists) feature on, their wishlists. A cart holds what is not bought yet: what an order buys leaves its cart, and empty and expired carts are deleted. Every data set needs **Manage orders** (`ManageOrders`), the permission of the order screens, as Carts has no screens of its own; a person reads the carts only when they may read the orders the carts become.
+
+| Data set | One row per | Feature |
+| --- | --- | --- |
+| **Carts** (`Carts`) | Open cart | Carts |
+| **Cart lines** (`CartLines`) | Product line of an open cart | Carts |
+| **Wishlists** (`Wishlists`) | Signed-in shopper's wishlist | Wishlists |
+| **Wishlist items** (`WishlistItems`) | Product saved to a wishlist | Wishlists |
+
+The carts and wishlists indexes hold no dates, so these data sets read their newest records first by their index rows and apply a report's date range to the rows read; the keys of a join narrow the read in the database. The token that finds a guest's cart, and what a shopper typed for add-ons and line details, are never exposed.
+
+| Data set | Field | Display name | Notes |
+| --- | --- | --- | --- |
+| Carts | `ItemId` | Cart ID | An order's cart ID joins it. |
+| Carts | `UserId`, `IsGuest` | User ID, Guest | `UserId` joins **Users**. Empty for a guest. |
+| Carts | `LineCount`, `ItemCount` | Lines, Units | |
+| Carts | `Currency`, `Value` | Currency, Value when added | The units at the prices they had when they were added, in the cart's currency. It is never charged. |
+| Carts | `CreatedUtc` | Started | The main date. |
+| Carts | `ModifiedUtc`, `ExpiresUtc` | Last changed, Expires | |
+| Cart lines | `CartId` | Cart ID | Joins **Carts**. |
+| Cart lines | `UserId`, `Currency`, `CartModifiedUtc` | User ID, Currency, Cart last changed | From the cart. `UserId` joins **Users**. |
+| Cart lines | `LineId`, `Position` | Line ID, Line number | |
+| Cart lines | `ProductId`, `VariantId`, `PriceId` | Product ID, Variant ID, Price ID | `ProductId` joins **Products** and `VariantId` joins **Product variants**. |
+| Cart lines | `Quantity`, `AddedUnitPrice`, `Value` | Quantity, Unit price when added, Value when added | In the cart's currency. |
+| Cart lines | `AddedUtc` | Added | The main date. |
+| Wishlists | `ItemId`, `UserId` | Wishlist ID, User ID | `UserId` joins **Users**. |
+| Wishlists | `ItemCount` | Products saved | |
+| Wishlists | `ModifiedUtc` | Last changed | The main date. |
+| Wishlist items | `WishlistId` | Wishlist ID | Joins **Wishlists**. |
+| Wishlist items | `UserId`, `Position`, `ProductId` | User ID, Position, Product ID | `ProductId` joins **Products**. Position 1 is the newest. |
+| Wishlist items | `AddedUtc` | Saved | The main date. |
+
 ## Orders
 
 ### Checking out
@@ -332,6 +366,7 @@ The **Wishlists** feature (`CrestApps.OrchardCore.Carts.Wishlists`) keeps a `Wis
 
 - `WishlistButtonDisplayDriver` adds the `WishlistButton` shape to a product's `Detail` display (`Content:before:6`). It posts to `wishlist/{contentItemId}/add` (`WishlistAdd`) or `.../remove` (`WishlistRemove`), or links to sign in.
 - `account/wishlist` (`AccountWishlist`, the `AccountWishlist` shape) lists the saved products that are still published, each with its `ProductAction` display (its add to cart), and adds **Wishlist** to the account menu.
+- With Data Pipelines Core on, it adds the **Wishlists** and **Wishlist items** data sets to the [Carts data source](#carts-report-builder-data-source).
 
 ## API
 
