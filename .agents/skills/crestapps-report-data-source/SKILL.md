@@ -151,6 +151,20 @@ public sealed class BillingReportDataSource : RecordDataSource, IDataSource   //
   (for example `.OrderByDescending(i => i.IssuedUtc).ThenByDescending(i => i.Id)`).
 - A source whose data sets depend on features injects them through an interface each feature registers (see
   `IContactCenterReportDataSet`), so data sets of disabled features are never listed.
+- For YesSql records read through a map index, derive from `IndexedReportDataSet<TRecord, TIndex>`
+  (`CrestApps.OrchardCore.Reports.Designer.DataSources`, Reports.Core) instead of writing `LoadAsync`: pass the
+  collection and the module's existing permissions to the constructor, add the fields, override `DateColumn` (a
+  non-nullable index column holding exactly the field's value), `KeyColumns`, `DescribeColumns` and
+  `GetAggregateColumns` (drop columns the index changes, such as upper-cased emails), and call `CompleteDescription()`.
+  For the entries a record holds (order lines, refunds...), derive from
+  `IndexedReportDataSet<TDocument, TIndex, ReportChildRow<TDocument, TEntry>>` and return
+  `ReportChildRow<TDocument, TEntry>.For(document, document.Entries)` from `GetRows`. The Orders source
+  (`src/Modules/CrestApps.OrchardCore.Orders/Reports/DataSources/`) is the reference.
+- Store modules name their sources and data sets in `CommerceReportDataSets` (Reports.Abstractions) and reference each
+  other through it (`Reference(source, dataSet)`, `ProductReference()`, `VariantReference()`); users and content items
+  through `ReportDataReferences.User()` and `ReportDataReferences.ContentItem(type)`.
+- Every index read by date needs a database index on the date column and `Id`, created with
+  `IndexTableIndexCreation.CreateIfMissingAsync` from the migration's `CreateAsync` and a new `UpdateFromNAsync` step.
 - Reference other modules' data sets by their stable names, such as
   `new DataFieldReference("ContactCenter", "DialerProfiles", "ItemId")`, the users data set
   (`ReportsConstants.UsersDataSource`, `UsersDataSet`, `UserIdField`), or a content type
