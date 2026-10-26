@@ -290,6 +290,16 @@ public static class CommerceReportDataSets
         /// The vendors data set: one row per seller of the marketplace.
         /// </summary>
         public const string Vendors = "Vendors";
+
+        /// <summary>
+        /// The vendor earnings data set: one row per entry of a vendor's earnings, a sale or a refund.
+        /// </summary>
+        public const string Earnings = "VendorEarnings";
+
+        /// <summary>
+        /// The vendor payouts data set: one row per transfer of a vendor's released earnings.
+        /// </summary>
+        public const string Payouts = "VendorPayouts";
     }
 
     /// <summary>
@@ -354,5 +364,17 @@ public static class CommerceReportDataSets
         /// The bookings data set: one row per booking.
         /// </summary>
         public const string Bookings = "Bookings";
+
+        /// <summary>
+        /// The booking slots data set: one row per date of a booking product, such as a departure, a night or a time
+        /// slot.
+        /// </summary>
+        public const string Slots = "BookingSlots";
+
+        /// <summary>
+        /// The booking balances data set: one row per balance left to pay on an order whose bookings were paid by
+        /// deposit.
+        /// </summary>
+        public const string Balances = "BookingBalances";
     }
 }
