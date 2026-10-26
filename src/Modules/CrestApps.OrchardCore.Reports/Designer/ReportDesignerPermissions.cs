@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
@@ -12,21 +13,21 @@ public static class ReportDesignerPermissions
     /// <summary>
     /// Allows managing every designed report and view, whoever owns it.
     /// </summary>
-    public static readonly Permission ManageAllReportDesigns = new("ManageAllReportDesigns", "Manage all custom reports and views", isSecurityCritical: true);
+    public static readonly Permission ManageAllReportDesigns = new("ManageAllReportDesigns", LocalizationSource.Create("Manage all custom reports and views", typeof(ReportDesignerPermissions)), isSecurityCritical: true);
 
     /// <summary>
     /// Allows designing reports and views, and managing the ones the user owns.
     /// </summary>
-    public static readonly Permission ManageOwnReportDesigns = new("ManageOwnReportDesigns", "Build reports and manage own custom reports and views", [ManageAllReportDesigns]);
+    public static readonly Permission ManageOwnReportDesigns = new("ManageOwnReportDesigns", LocalizationSource.Create("Build reports and manage own custom reports and views", typeof(ReportDesignerPermissions)), [ManageAllReportDesigns]);
 
     /// <summary>
     /// Allows running every designed report, whoever owns it and whoever it is shared with.
     /// </summary>
-    public static readonly Permission ViewAllReportDesigns = new("ViewAllReportDesigns", "View all custom reports", [ManageAllReportDesigns]);
+    public static readonly Permission ViewAllReportDesigns = new("ViewAllReportDesigns", LocalizationSource.Create("View all custom reports", typeof(ReportDesignerPermissions)), [ManageAllReportDesigns]);
 
     /// <summary>
     /// Allows sharing designed reports with anonymous visitors and through share links. People with this permission
     /// can publish data they can read to anyone who has the link.
     /// </summary>
-    public static readonly Permission ShareReportsPublicly = new("ShareReportsPublicly", "Share custom reports publicly and through share links", isSecurityCritical: true);
+    public static readonly Permission ShareReportsPublicly = new("ShareReportsPublicly", LocalizationSource.Create("Share custom reports publicly and through share links", typeof(ReportDesignerPermissions)), isSecurityCritical: true);
 }

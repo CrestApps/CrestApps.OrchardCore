@@ -4,7 +4,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <NoWarn>$(NoWarn);CA1852</NoWarn>
+    <!-- OCLOC101 and OCLOC104 guard what is extracted to translation templates; test localizers and fake sources are never translated. -->
+    <NoWarn>$(NoWarn);CA1852;OCLOC101;OCLOC104</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

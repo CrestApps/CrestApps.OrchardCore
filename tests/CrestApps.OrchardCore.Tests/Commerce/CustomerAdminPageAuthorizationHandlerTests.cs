@@ -57,7 +57,7 @@ public sealed class CustomerAdminPageAuthorizationHandlerTests
     public async Task DoesNotGrantAnyOtherPermission_OnACustomerPage()
     {
         // Arrange: the page's own permission is still checked as usual.
-        var context = CreateContext(new Permission("ManageTransactions", "Manage transactions"), SignedIn());
+        var context = CreateContext(new Permission("ManageTransactions"), SignedIn());
 
         // Act
         await CreateHandler(new CustomerAdminPageAttribute()).HandleAsync(context);

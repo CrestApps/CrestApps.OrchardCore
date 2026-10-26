@@ -8,12 +8,12 @@ internal sealed class CommercePermissionProvider : IPermissionProvider
 {
     // The content and media permissions of Orchard Core's Contents and Media features, by name: this module references
     // neither package, and a stereotype grants a permission by its name.
-    private static readonly Permission _listContent = new("ListContent", "List content items");
-    private static readonly Permission _viewContent = new("ViewContent", "View all content");
-    private static readonly Permission _editContent = new("EditContent", "Edit content for others");
-    private static readonly Permission _publishContent = new("PublishContent", "Publish or unpublish content for others");
-    private static readonly Permission _deleteContent = new("DeleteContent", "Delete content for others");
-    private static readonly Permission _manageMedia = new("ManageMediaContent", "Manage Media");
+    private static readonly Permission _listContent = new("ListContent");
+    private static readonly Permission _viewContent = new("ViewContent");
+    private static readonly Permission _editContent = new("EditContent");
+    private static readonly Permission _publishContent = new("PublishContent");
+    private static readonly Permission _deleteContent = new("DeleteContent");
+    private static readonly Permission _manageMedia = new("ManageMediaContent");
 
     private readonly IEnumerable<Permission> _allPermissions =
     [

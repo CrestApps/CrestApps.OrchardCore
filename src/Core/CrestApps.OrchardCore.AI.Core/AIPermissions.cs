@@ -120,9 +120,9 @@ public static class AIPermissions
     /// </summary>
     public static readonly Permission AccessAITool = new("AccessAITool", LocalizationSource.Create("Access AI tool", typeof(AIPermissions)), [AccessAnyAITool]);
 
-    private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
+    private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", LocalizationSource.Create("Query AI profile - {0}", typeof(AIPermissions)), [QueryAnyAIProfile]);
 
-    private static readonly Permission _accessAIToolTemplate = new("AccessAITool_{0}", "Access AI tool - {0}", [AccessAnyAITool]);
+    private static readonly Permission _accessAIToolTemplate = new("AccessAITool_{0}", LocalizationSource.Create("Access AI tool - {0}", typeof(AIPermissions)), [AccessAnyAITool]);
 
     /// <summary>
     /// Generates a permission dynamically for a content type.
@@ -131,11 +131,13 @@ public static class AIPermissions
     {
         ArgumentException.ThrowIfNullOrEmpty(profileName);
 
+        // The description is the template's text with a name filled in at run time, so it cannot be extracted.
+#pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         return new Permission(
             string.Format(_queryAIProfileTemplate.Name, profileName),
-        string.Format(_queryAIProfileTemplate.Description?.Value, profileName),
-        _queryAIProfileTemplate.ImpliedBy ?? []
-        );
+            LocalizationSource.Create(string.Format(_queryAIProfileTemplate.Description?.Value, profileName), typeof(AIPermissions)),
+            _queryAIProfileTemplate.ImpliedBy ?? []);
+#pragma warning restore OCLOC103
     }
 
     /// <summary>
@@ -145,10 +147,12 @@ public static class AIPermissions
     {
         ArgumentException.ThrowIfNullOrEmpty(toolName);
 
+        // The description is the template's text with a name filled in at run time, so it cannot be extracted.
+#pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         return new Permission(
             string.Format(_accessAIToolTemplate.Name, toolName),
-        string.Format(_accessAIToolTemplate.Description?.Value, toolName),
-        _accessAIToolTemplate.ImpliedBy ?? []
-        );
+            LocalizationSource.Create(string.Format(_accessAIToolTemplate.Description?.Value, toolName), typeof(AIPermissions)),
+            _accessAIToolTemplate.ImpliedBy ?? []);
+#pragma warning restore OCLOC103
     }
 }

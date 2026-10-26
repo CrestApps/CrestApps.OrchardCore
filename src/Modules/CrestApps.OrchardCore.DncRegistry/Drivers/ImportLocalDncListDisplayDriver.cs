@@ -85,39 +85,39 @@ public sealed class ImportLocalDncListDisplayDriver : DisplayDriver<ImportLocalD
     {
         return
         [
-            CreateCountryOption("United States", "US"),
-            CreateCountryOption("Canada", "CA"),
-            CreateCountryOption("United Kingdom", "GB"),
-            CreateCountryOption("Australia", "AU"),
-            CreateCountryOption("Germany", "DE"),
-            CreateCountryOption("France", "FR"),
-            CreateCountryOption("India", "IN"),
-            CreateCountryOption("Brazil", "BR"),
-            CreateCountryOption("Mexico", "MX"),
-            CreateCountryOption("Japan", "JP"),
-            CreateCountryOption("South Korea", "KR"),
-            CreateCountryOption("Italy", "IT"),
-            CreateCountryOption("Spain", "ES"),
-            CreateCountryOption("Netherlands", "NL"),
-            CreateCountryOption("Belgium", "BE"),
-            CreateCountryOption("Switzerland", "CH"),
-            CreateCountryOption("Sweden", "SE"),
-            CreateCountryOption("Norway", "NO"),
-            CreateCountryOption("Denmark", "DK"),
-            CreateCountryOption("Finland", "FI"),
-            CreateCountryOption("Ireland", "IE"),
-            CreateCountryOption("New Zealand", "NZ"),
-            CreateCountryOption("South Africa", "ZA"),
-            CreateCountryOption("Argentina", "AR"),
-            CreateCountryOption("Colombia", "CO"),
-            CreateCountryOption("Chile", "CL"),
-            CreateCountryOption("Poland", "PL"),
-            CreateCountryOption("Austria", "AT"),
-            CreateCountryOption("Portugal", "PT"),
+            CreateCountryOption(S["United States"], "US"),
+            CreateCountryOption(S["Canada"], "CA"),
+            CreateCountryOption(S["United Kingdom"], "GB"),
+            CreateCountryOption(S["Australia"], "AU"),
+            CreateCountryOption(S["Germany"], "DE"),
+            CreateCountryOption(S["France"], "FR"),
+            CreateCountryOption(S["India"], "IN"),
+            CreateCountryOption(S["Brazil"], "BR"),
+            CreateCountryOption(S["Mexico"], "MX"),
+            CreateCountryOption(S["Japan"], "JP"),
+            CreateCountryOption(S["South Korea"], "KR"),
+            CreateCountryOption(S["Italy"], "IT"),
+            CreateCountryOption(S["Spain"], "ES"),
+            CreateCountryOption(S["Netherlands"], "NL"),
+            CreateCountryOption(S["Belgium"], "BE"),
+            CreateCountryOption(S["Switzerland"], "CH"),
+            CreateCountryOption(S["Sweden"], "SE"),
+            CreateCountryOption(S["Norway"], "NO"),
+            CreateCountryOption(S["Denmark"], "DK"),
+            CreateCountryOption(S["Finland"], "FI"),
+            CreateCountryOption(S["Ireland"], "IE"),
+            CreateCountryOption(S["New Zealand"], "NZ"),
+            CreateCountryOption(S["South Africa"], "ZA"),
+            CreateCountryOption(S["Argentina"], "AR"),
+            CreateCountryOption(S["Colombia"], "CO"),
+            CreateCountryOption(S["Chile"], "CL"),
+            CreateCountryOption(S["Poland"], "PL"),
+            CreateCountryOption(S["Austria"], "AT"),
+            CreateCountryOption(S["Portugal"], "PT"),
         ];
     }
 
-    private SelectListItem CreateCountryOption(string displayName, string countryCode)
+    private SelectListItem CreateCountryOption(LocalizedString displayName, string countryCode)
     {
         var callingCode = _phoneNumberService.GetCountryCode(countryCode);
 
@@ -126,6 +126,6 @@ public sealed class ImportLocalDncListDisplayDriver : DisplayDriver<ImportLocalD
             return new SelectListItem(S["{0} (+{1})", displayName, callingCode], countryCode);
         }
 
-        return new SelectListItem(S[displayName], countryCode);
+        return new SelectListItem(displayName, countryCode);
     }
 }
