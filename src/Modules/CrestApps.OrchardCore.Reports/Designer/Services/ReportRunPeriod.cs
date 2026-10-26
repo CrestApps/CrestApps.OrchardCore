@@ -4,7 +4,8 @@ namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
 /// <summary>
 /// The whole days a designed report covers, such as the period of a dashboard widget, in the site's time zone. It is
-/// set on the first filter the report lets its viewers pick a date range with.
+/// set on the first date range or relative date filter the report lets its viewers change, which then keeps the rows
+/// between these days for that run.
 /// </summary>
 public sealed class ReportRunPeriod
 {
