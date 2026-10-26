@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -74,6 +75,29 @@ internal sealed class GiftCardMigrations : DataMigration
             .WithPart("GiftCardPart", part => part.WithPosition("2"))
         );
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read gift cards through, newest first by <c>CreatedUtc</c> a page at a time, so each page
+    /// and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<GiftCardIndex>(
+            SchemaBuilder,
+            "IDX_GiftCardIndex_Report",
+            OrderConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

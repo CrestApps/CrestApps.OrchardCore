@@ -1,0 +1,358 @@
+using OrchardCore.DataSources;
+
+namespace CrestApps.OrchardCore.Reports.DataSources;
+
+/// <summary>
+/// The stable names of the data sources the store's modules publish and of their data sets, so a data set of one
+/// module can declare that its fields identify the records of another without referencing it. Report designs store
+/// these names, so they must never change.
+/// </summary>
+/// <remarks>
+/// Every data set of a store data source identifies its records with an <see cref="ItemIdField"/> field, except the
+/// products, which are content items identified by <see cref="ContentItemIdField"/>, and their variants, identified by
+/// <see cref="VariantIdField"/>. A reference to a data source that is not enabled is simply unused.
+/// </remarks>
+public static class CommerceReportDataSets
+{
+    /// <summary>
+    /// The name of the field that identifies the record of a row in every store data set.
+    /// </summary>
+    public const string ItemIdField = "ItemId";
+
+    /// <summary>
+    /// The name of the field that identifies a product, which is a content item.
+    /// </summary>
+    public const string ContentItemIdField = "ContentItemId";
+
+    /// <summary>
+    /// The name of the field that identifies a variant of a product sold in variants.
+    /// </summary>
+    public const string VariantIdField = "VariantId";
+
+    /// <summary>
+    /// Creates a reference to the identifier of the records of a store data set.
+    /// </summary>
+    /// <param name="source">The technical name of the data source.</param>
+    /// <param name="dataSet">The technical name of the data set.</param>
+    /// <returns>The reference.</returns>
+    public static DataFieldReference Reference(string source, string dataSet)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(source);
+        ArgumentException.ThrowIfNullOrEmpty(dataSet);
+
+        return new DataFieldReference(source, dataSet, ItemIdField);
+    }
+
+    /// <summary>
+    /// Creates a reference to the identifier of a product.
+    /// </summary>
+    /// <returns>The reference.</returns>
+    public static DataFieldReference ProductReference()
+    {
+        return new DataFieldReference(ProductSource.Name, ProductSource.Products, ContentItemIdField);
+    }
+
+    /// <summary>
+    /// Creates a reference to the identifier of a variant of a product.
+    /// </summary>
+    /// <returns>The reference.</returns>
+    public static DataFieldReference VariantReference()
+    {
+        return new DataFieldReference(ProductSource.Name, ProductSource.Variants, VariantIdField);
+    }
+
+    /// <summary>
+    /// The names of the orders data source and its data sets.
+    /// </summary>
+    public static class OrderSource
+    {
+        /// <summary>
+        /// The technical name of the orders data source.
+        /// </summary>
+        public const string Name = "Orders";
+
+        /// <summary>
+        /// The orders data set: one row per order, drafts and quotes included.
+        /// </summary>
+        public const string Orders = "Orders";
+
+        /// <summary>
+        /// The order lines data set: one row per product line of an order.
+        /// </summary>
+        public const string OrderLines = "OrderLines";
+
+        /// <summary>
+        /// The order refunds data set: one row per refund given for an order.
+        /// </summary>
+        public const string OrderRefunds = "OrderRefunds";
+
+        /// <summary>
+        /// The order disputes data set: one row per dispute opened against an order's payment.
+        /// </summary>
+        public const string OrderDisputes = "OrderDisputes";
+
+        /// <summary>
+        /// The order discounts data set: one row per discount an order was given.
+        /// </summary>
+        public const string OrderDiscounts = "OrderDiscounts";
+
+        /// <summary>
+        /// The order taxes data set: one row per tax an order was charged, by jurisdiction.
+        /// </summary>
+        public const string OrderTaxes = "OrderTaxes";
+
+        /// <summary>
+        /// The returns data set: one row per return a buyer asked for.
+        /// </summary>
+        public const string Returns = "Returns";
+
+        /// <summary>
+        /// The gift cards data set: one row per gift card.
+        /// </summary>
+        public const string GiftCards = "GiftCards";
+    }
+
+    /// <summary>
+    /// The names of the products data source and its data sets.
+    /// </summary>
+    public static class ProductSource
+    {
+        /// <summary>
+        /// The technical name of the products data source.
+        /// </summary>
+        public const string Name = "Products";
+
+        /// <summary>
+        /// The products data set: one row per product.
+        /// </summary>
+        public const string Products = "Products";
+
+        /// <summary>
+        /// The product variants data set: one row per variant of a product sold in variants.
+        /// </summary>
+        public const string Variants = "ProductVariants";
+    }
+
+    /// <summary>
+    /// The names of the customers data source and its data sets.
+    /// </summary>
+    public static class CustomerSource
+    {
+        /// <summary>
+        /// The technical name of the customers data source.
+        /// </summary>
+        public const string Name = "Customers";
+
+        /// <summary>
+        /// The customers data set: one row per customer.
+        /// </summary>
+        public const string Customers = "Customers";
+    }
+
+    /// <summary>
+    /// The names of the inventory data source and its data sets.
+    /// </summary>
+    public static class InventorySource
+    {
+        /// <summary>
+        /// The technical name of the inventory data source.
+        /// </summary>
+        public const string Name = "Inventory";
+
+        /// <summary>
+        /// The stock items data set: one row per product or variant stocked at a location.
+        /// </summary>
+        public const string StockItems = "StockItems";
+
+        /// <summary>
+        /// The locations data set: one row per place stock is kept.
+        /// </summary>
+        public const string Locations = "Locations";
+    }
+
+    /// <summary>
+    /// The names of the checkout data source and its data sets.
+    /// </summary>
+    public static class CheckoutSource
+    {
+        /// <summary>
+        /// The technical name of the checkout data source.
+        /// </summary>
+        public const string Name = "Checkout";
+
+        /// <summary>
+        /// The checkout sessions data set: one row per checkout a buyer started.
+        /// </summary>
+        public const string CheckoutSessions = "CheckoutSessions";
+
+        /// <summary>
+        /// The coupons data set: one row per coupon.
+        /// </summary>
+        public const string Coupons = "Coupons";
+    }
+
+    /// <summary>
+    /// The names of the carts data source and its data sets.
+    /// </summary>
+    public static class CartSource
+    {
+        /// <summary>
+        /// The technical name of the carts data source.
+        /// </summary>
+        public const string Name = "Carts";
+
+        /// <summary>
+        /// The carts data set: one row per cart.
+        /// </summary>
+        public const string Carts = "Carts";
+    }
+
+    /// <summary>
+    /// The names of the transactions data source and its data sets.
+    /// </summary>
+    public static class TransactionSource
+    {
+        /// <summary>
+        /// The technical name of the transactions data source.
+        /// </summary>
+        public const string Name = "Transactions";
+
+        /// <summary>
+        /// The transactions data set: one row per transaction.
+        /// </summary>
+        public const string Transactions = "Transactions";
+    }
+
+    /// <summary>
+    /// The names of the subscriptions data source and its data sets.
+    /// </summary>
+    public static class SubscriptionSource
+    {
+        /// <summary>
+        /// The technical name of the subscriptions data source.
+        /// </summary>
+        public const string Name = "Subscriptions";
+
+        /// <summary>
+        /// The subscriptions data set: one row per subscription.
+        /// </summary>
+        public const string Subscriptions = "Subscriptions";
+    }
+
+    /// <summary>
+    /// The names of the companies data source and its data sets.
+    /// </summary>
+    public static class CompanySource
+    {
+        /// <summary>
+        /// The technical name of the companies data source.
+        /// </summary>
+        public const string Name = "Companies";
+
+        /// <summary>
+        /// The companies data set: one row per company that buys from the store.
+        /// </summary>
+        public const string Companies = "Companies";
+    }
+
+    /// <summary>
+    /// The names of the point of sale data source and its data sets.
+    /// </summary>
+    public static class PointOfSaleSource
+    {
+        /// <summary>
+        /// The technical name of the point of sale data source.
+        /// </summary>
+        public const string Name = "PointOfSale";
+
+        /// <summary>
+        /// The registers data set: one row per register.
+        /// </summary>
+        public const string Registers = "Registers";
+
+        /// <summary>
+        /// The register shifts data set: one row per shift worked at a register.
+        /// </summary>
+        public const string Shifts = "RegisterShifts";
+    }
+
+    /// <summary>
+    /// The names of the marketplace data source and its data sets.
+    /// </summary>
+    public static class MarketplaceSource
+    {
+        /// <summary>
+        /// The technical name of the marketplace data source.
+        /// </summary>
+        public const string Name = "Marketplace";
+
+        /// <summary>
+        /// The vendors data set: one row per seller of the marketplace.
+        /// </summary>
+        public const string Vendors = "Vendors";
+    }
+
+    /// <summary>
+    /// The names of the shipping data source and its data sets.
+    /// </summary>
+    public static class ShippingSource
+    {
+        /// <summary>
+        /// The technical name of the shipping data source.
+        /// </summary>
+        public const string Name = "Shipping";
+
+        /// <summary>
+        /// The shipments data set: one row per shipment of an order.
+        /// </summary>
+        public const string Shipments = "Shipments";
+    }
+
+    /// <summary>
+    /// The names of the reviews data source and its data sets.
+    /// </summary>
+    public static class ReviewSource
+    {
+        /// <summary>
+        /// The technical name of the reviews data source.
+        /// </summary>
+        public const string Name = "Reviews";
+
+        /// <summary>
+        /// The product reviews data set: one row per review of a product.
+        /// </summary>
+        public const string Reviews = "ProductReviews";
+    }
+
+    /// <summary>
+    /// The names of the downloads data source and its data sets.
+    /// </summary>
+    public static class DownloadSource
+    {
+        /// <summary>
+        /// The technical name of the downloads data source.
+        /// </summary>
+        public const string Name = "Downloads";
+
+        /// <summary>
+        /// The download entitlements data set: one row per file a buyer may download.
+        /// </summary>
+        public const string Entitlements = "DownloadEntitlements";
+    }
+
+    /// <summary>
+    /// The names of the bookings data source and its data sets.
+    /// </summary>
+    public static class BookingSource
+    {
+        /// <summary>
+        /// The technical name of the bookings data source.
+        /// </summary>
+        public const string Name = "Bookings";
+
+        /// <summary>
+        /// The bookings data set: one row per booking.
+        /// </summary>
+        public const string Bookings = "Bookings";
+    }
+}
