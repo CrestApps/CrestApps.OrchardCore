@@ -1,6 +1,7 @@
 using System.Data;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -30,8 +31,9 @@ internal sealed class LocalDncRegistryMigrations : DataMigration
     {
         await CreateLocalDncListIndexAsync();
         await CreateLocalDncEntryIndexAsync();
+        await CreateListReportIndexAsync();
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -48,6 +50,18 @@ internal sealed class LocalDncRegistryMigrations : DataMigration
     public Task<int> UpdateFrom2Async()
     {
         return RepairIndexTablesAsync();
+    }
+
+    /// <summary>
+    /// Adds the index reports read the lists through, newest first by <c>CreatedUtc</c> a page at a time, so each page
+    /// and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateListReportIndexAsync();
+
+        return 4;
     }
 
     private async Task<int> RepairIndexTablesAsync()
@@ -138,6 +152,15 @@ internal sealed class LocalDncRegistryMigrations : DataMigration
                 "CreatedUtc"),
             collection: DncRegistryConstants.CollectionName
         );
+    }
+
+    private Task<bool> CreateListReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<LocalDncListIndex>(
+            SchemaBuilder,
+            "IDX_DNC_LocalDncListIndex_Report",
+            DncRegistryConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 
     private async Task CreateLocalDncEntryIndexAsync()

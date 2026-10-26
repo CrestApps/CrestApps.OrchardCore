@@ -1,5 +1,6 @@
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
@@ -28,6 +29,29 @@ internal sealed class AIVoiceSessionSummaryIndexMigrations : DataMigration
     {
         await AIVoiceSessionSummaryIndexSchema.CreateAsync(SchemaBuilder, _options);
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the summaries through, newest first by <c>CreatedUtc</c> a page at a time, so each
+    /// page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<AIVoiceSessionSummaryIndex>(
+            SchemaBuilder,
+            "IDX_AIVoiceSessionSummaryIndex_Report",
+            _options.AICollectionName,
+            "CreatedUtc", "Id");
     }
 }

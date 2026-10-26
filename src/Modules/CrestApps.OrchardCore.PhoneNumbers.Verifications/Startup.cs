@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Migrations;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Reports;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Reports.DataSources;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,6 +67,20 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddReport<PhoneNumberVerificationReportProvider>();
+    }
+}
+
+/// <summary>
+/// Exposes the phone number verification records as a data source of Orchard Core, for reports and data pipelines.
+/// </summary>
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DataSourcesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<PhoneNumberVerificationsReportDataSet>()
+            .AddDataSource<PhoneNumberVerificationReportDataSource>();
     }
 }
 
