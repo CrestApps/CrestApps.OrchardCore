@@ -65,12 +65,12 @@ public sealed class ReportDesignRunner
     }
 
     /// <summary>
-    /// Runs a saved report with its owner's access, for a period set on its date range filter.
+    /// Runs a saved report with its owner's access, for a period set on its first date filter its viewers can change.
     /// </summary>
     /// <param name="design">The report.</param>
     /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
     /// <param name="period">
-    /// The days the report covers, set on the first filter it lets its viewers pick a date range with (see
+    /// The days the report covers, set on the first date range or relative date filter its viewers can change (see
     /// <see cref="FindPeriodFilter"/>), or <see langword="null"/> to keep that filter's value.
     /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -116,13 +116,14 @@ public sealed class ReportDesignRunner
     }
 
     /// <summary>
-    /// Runs a report with the access of a given principal, for a period set on its date range filter.
+    /// Runs a report with the access of a given principal, for a period set on its first date filter its viewers can
+    /// change.
     /// </summary>
     /// <param name="design">The report, saved or not.</param>
     /// <param name="dataUser">The principal whose access reads the data.</param>
     /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
     /// <param name="period">
-    /// The days the report covers, set on the first filter it lets its viewers pick a date range with (see
+    /// The days the report covers, set on the first date range or relative date filter its viewers can change (see
     /// <see cref="FindPeriodFilter"/>), or <see langword="null"/> to keep that filter's value.
     /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -158,12 +159,17 @@ public sealed class ReportDesignRunner
                 return result;
             }
 
-            // The period overrides whatever was entered for the filter it is set on.
+            // The period overrides whatever was entered for the filter it is set on. A relative date filter ("in the
+            // last 30 days") covers the period as a date range: the plan is this run's own, so its copy of the filter
+            // changes and the saved report doesn't.
             var periodFilter = period is null ? null : FindPeriodFilter(plan);
 
             if (periodFilter is not null)
             {
-                context.FilterValues[periodFilter.Definition.Id] = period.ToFilterValues();
+                var values = period.ToFilterValues();
+
+                periodFilter.Definition = AsDateRange(periodFilter.Definition, values);
+                context.FilterValues[periodFilter.Definition.Id] = values;
                 result.PeriodFilterId = periodFilter.Definition.Id;
             }
 
@@ -219,11 +225,12 @@ public sealed class ReportDesignRunner
     }
 
     /// <summary>
-    /// Finds the filter a period is set on: the first filter, in the report's order, that its viewers pick a date range
-    /// with.
+    /// Finds the filter a period is set on: the first filter, in the report's order, that its viewers can change and
+    /// that picks a date range or a number of days back (a relative date, such as "in the last 30 days"), on a date or
+    /// a date and time.
     /// </summary>
     /// <param name="plan">The plan of the report's query.</param>
-    /// <returns>The filter, or <see langword="null"/> when the report lets its viewers pick no date range.</returns>
+    /// <returns>The filter, or <see langword="null"/> when the report has no such filter.</returns>
     public static PlannedFilter FindPeriodFilter(ReportQueryPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -231,7 +238,24 @@ public sealed class ReportDesignRunner
         return plan.Filters.FirstOrDefault(filter =>
             filter.Definition.Exposed &&
             !string.IsNullOrEmpty(filter.Definition.Id) &&
-            ResolveControl(filter.Definition, filter.DataType) == ReportFilterControl.DateRange);
+            filter.DataType is DataFieldType.Date or DataFieldType.DateTime &&
+            ResolveControl(filter.Definition, filter.DataType) is ReportFilterControl.DateRange or ReportFilterControl.RelativeDate);
+    }
+
+    // A copy of a filter that keeps the rows between the days of a period, whatever the filter compared before.
+    private static ReportFilterDefinition AsDateRange(ReportFilterDefinition filter, IList<string> values)
+    {
+        return new ReportFilterDefinition
+        {
+            Id = filter.Id,
+            Field = filter.Field,
+            Stage = filter.Stage,
+            Operator = DataFilterOperator.Between,
+            Values = values,
+            Exposed = filter.Exposed,
+            Label = filter.Label,
+            Control = ReportFilterControl.DateRange,
+        };
     }
 
     /// <summary>
@@ -312,7 +336,7 @@ public sealed class ReportRunResult
 
     /// <summary>
     /// Gets or sets the identifier of the filter the run's period was set on, or <see langword="null"/> when the run had
-    /// no period or the report lets its viewers pick no date range.
+    /// no period or the report has no date range or relative date filter its viewers can change.
     /// </summary>
     public string PeriodFilterId { get; set; }
 }

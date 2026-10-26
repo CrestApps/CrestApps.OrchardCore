@@ -35,8 +35,8 @@ public sealed class ReportDesignWidgetPart : ContentPart
     public string ViewId { get; set; }
 
     /// <summary>
-    /// Gets or sets the period the widget covers. It is set on the first filter the report lets its viewers pick a date
-    /// range with.
+    /// Gets or sets the period the widget covers. It is set on the first date range or relative date filter the report
+    /// lets its viewers change.
     /// </summary>
     public ReportWidgetPeriod Period { get; set; } = DefaultPeriod;
 

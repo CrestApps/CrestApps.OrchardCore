@@ -154,6 +154,85 @@ public sealed class ReportDesignWidgetTests
         Assert.Equal(["o4", "o5"], OrderIds(result.Document));
     }
 
+    [Theory]
+    [InlineData(ReportWidgetPeriod.LastMonth, new[] { "o2", "o3" })]
+    [InlineData(ReportWidgetPeriod.Custom, new[] { "o1" })]
+    [InlineData(ReportWidgetPeriod.AllTime, new[] { "o1", "o2", "o3", "o4", "o5" })]
+    public async Task ARelativeDateFilter_CoversTheWidgetsPeriodInstead(ReportWidgetPeriod period, string[] expected)
+    {
+        // Arrange
+        var design = Sales();
+        design.Query.Filters = [LastThirtyDays()];
+
+        var fixture = new Fixture(design);
+        var part = Fixture.Part();
+        part.Period = period;
+        part.From = new DateTime(2026, 1, 1);
+        part.To = new DateTime(2026, 1, 31);
+        part.MaxRows = 0;
+
+        // Act
+        var result = await fixture.Service.GetAsync(part, fixture.Manager, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.PeriodApplied);
+        Assert.Equal(expected, OrderIds(result.Document));
+    }
+
+    [Fact]
+    public async Task ARelativeDateFilter_CoversThePeriodForThatRunOnly()
+    {
+        // Arrange
+        var design = Sales();
+        design.Query.Filters = [LastThirtyDays()];
+
+        var fixture = new Fixture(design);
+        var february = new ReportRunPeriod(new DateOnly(2026, 2, 1), new DateOnly(2026, 2, 28));
+
+        // Act
+        var withPeriod = await fixture.Runner.RunAsync(design, filterValues: null, february, TestContext.Current.CancellationToken);
+        var withoutPeriod = await fixture.Runner.RunAsync(design, filterValues: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("placed", withPeriod.PeriodFilterId);
+        Assert.Equal(["o2", "o3"], OrderIds(withPeriod.Document));
+        Assert.Null(withoutPeriod.PeriodFilterId);
+        Assert.Equal(["o3", "o4", "o5"], OrderIds(withoutPeriod.Document));
+
+        var saved = Assert.Single(design.Query.Filters);
+
+        Assert.Equal(DataFilterOperator.InLastDays, saved.Operator);
+        Assert.Equal(ReportFilterControl.RelativeDate, saved.Control);
+        Assert.Equal(["30"], saved.Values);
+    }
+
+    [Fact]
+    public async Task AReportWhoseDateFilterViewersCannotChange_KeepsItsOwnDates()
+    {
+        // Arrange
+        var design = Sales();
+        var fixedDays = LastThirtyDays();
+        fixedDays.Exposed = false;
+        design.Query.Filters =
+        [
+            fixedDays,
+            new ReportFilterDefinition { Id = "order", Field = "o.Id", Operator = DataFilterOperator.In, Exposed = true, Control = ReportFilterControl.MultiSelect },
+        ];
+
+        var fixture = new Fixture(design);
+        var part = Fixture.Part();
+        part.Period = ReportWidgetPeriod.LastMonth;
+        part.MaxRows = 0;
+
+        // Act
+        var result = await fixture.Service.GetAsync(part, fixture.Manager, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ReportWidgetOutcome.Shown, result.Outcome);
+        Assert.False(result.PeriodApplied);
+        Assert.Equal(["o3", "o4", "o5"], OrderIds(result.Document));
+    }
+
     [Fact]
     public async Task AReportWithNoDateRangeFilter_KeepsItsOwnDates()
     {
@@ -474,6 +553,21 @@ public sealed class ReportDesignWidgetTests
         };
     }
 
+    // The filter a new report starts with in the builder: placed in the last 30 days, which its viewers can change.
+    private static ReportFilterDefinition LastThirtyDays()
+    {
+        return new ReportFilterDefinition
+        {
+            Id = "placed",
+            Field = "o.PlacedUtc",
+            Operator = DataFilterOperator.InLastDays,
+            Values = ["30"],
+            Exposed = true,
+            Label = "Placed",
+            Control = ReportFilterControl.RelativeDate,
+        };
+    }
+
     private static ReportQueryDefinition OrdersQuery()
     {
         return new ReportQueryDefinition
@@ -520,7 +614,7 @@ public sealed class ReportDesignWidgetTests
             var principalFactory = new Mock<IUserClaimsPrincipalFactory<IUser>>();
             principalFactory.Setup(factory => factory.CreateAsync(owner)).ReturnsAsync(User("owner", "Owner"));
 
-            var runner = new ReportDesignRunner(
+            Runner = new ReportDesignRunner(
                 Planner(Data),
                 Engine(Data),
                 DocumentBuilder(),
@@ -541,7 +635,7 @@ public sealed class ReportDesignWidgetTests
             Service = new ReportDesignWidgetService(
                 Catalog(design ?? Sales()),
                 Catalog(view),
-                runner,
+                Runner,
                 new DesignerAuthorization("designer-1", "designer-2"),
                 new ReportDisplayValueResolver(Mock.Of<IShapeFactory>(), Mock.Of<IDisplayHelper>()),
                 new MemoryCache(new MemoryCacheOptions()),
@@ -551,6 +645,8 @@ public sealed class ReportDesignWidgetTests
         }
 
         public InMemoryReportDataSource Data { get; }
+
+        public ReportDesignRunner Runner { get; }
 
         public ReportDesignWidgetService Service { get; }
 

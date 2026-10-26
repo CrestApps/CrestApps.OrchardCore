@@ -6,7 +6,7 @@
         <option value="">@T["Choose a report"]</option>
     </select>
     <span asp-validation-for="Source" class="text-danger"></span>
-    <span class="hint">@T["Any published report you may run under Reports > Report Builder, or a view you may use there, which shows as a table. The period below sets the report's first date range filter that viewers can change; a report without one shows its own dates."]</span>
+    <span class="hint">@T["Any published report you may run under Reports > Report Builder, or a view you may use there, which shows as a table. The period below replaces the report's first date filter that viewers can change, a date range or a number of past days; a report without one shows its own dates."]</span>
 </div>
 
 <partial name="_ReportWidgetOptions" model="Model" />

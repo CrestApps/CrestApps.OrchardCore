@@ -265,8 +265,8 @@ public sealed class ReportDesignWidgetResult
     public DateTime? To { get; private init; }
 
     /// <summary>
-    /// Gets a value indicating whether the period was set on the report: <see langword="false"/> when the report lets
-    /// its viewers pick no date range, so it shows its own dates.
+    /// Gets a value indicating whether the period was set on the report: <see langword="false"/> when the report has no
+    /// date range or relative date filter its viewers can change, so it shows its own dates.
     /// </summary>
     public bool PeriodApplied { get; private init; }
 
