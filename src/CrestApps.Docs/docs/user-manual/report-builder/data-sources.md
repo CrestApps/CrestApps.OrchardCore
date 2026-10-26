@@ -33,9 +33,25 @@ Watch the short video, then read about each data source below.
 | **Users** | **Users** (one row per user account) and **User roles** (one row per user and role). | Always. | **View Users**. |
 | **Omnichannel** | **Activities**, **Dispositions**, **Campaigns**, **Campaign groups** and **Activity batches**. | **Omnichannel Activities** is on. | **View Omnichannel reports**. |
 | **Contact Center** | **Interactions**, **Interaction events**, **Call sessions**, **Call quality**, **Call recordings**, **Callback requests**, **Dialer profiles**, **Queues**, **Queue groups**, **Queue items**, **Agent profiles**, **Agent sessions** and **Shared voicemails**, each when the Contact Center feature that stores it is on. | A Contact Center feature is on. | **View Contact Center reports**. Call recordings also need **Listen to anyone's call recordings**; shared voicemails need **Access shared queue voicemail for entitled queues**, and show only the queues you may answer. |
-| **AI chat** | **Chat sessions** and **Chat session metrics** (messages, handle time, tokens, ratings, resolution and conversion). | **AI Chat** is on; the metrics need **AI Chat Session Analytics**. | **View AI Chat Analytics**. |
+| **AI chat** | **Chat sessions** and **Chat session metrics** (messages, handle time, tokens, ratings, resolution and conversion), and the AI usage: **Completion usage** (every request sent to an AI model, with its tokens and other billing units) and **Voice usage** (every voice conversation, with its talk time). | **AI Chat** is on; the metrics and the usage need **AI Chat Session Analytics**. | **View AI Chat Analytics**. |
 | **Messaging** | **Conversations** and **Messages** of the messaging workspace. | **Omnichannel Messaging Workspace** is on. | **View all messaging conversations**. |
 | **Orders** | **Orders**, **Order lines**, **Order refunds**, **Order disputes**, **Order discounts** and **Order taxes**; **Returns** and **Gift cards** when those features are on. | **Orders** is on. | **Manage orders**. Gift cards also need **Manage gift cards**. |
+| **Products** | **Products**, **Product variants** and **Product prices**; **Product bundle items** and **Product attributes** when those features are on. | **Products** is on. | Permission to view the product type. You see the drafts of the types you may edit. |
+| **Customers** | **Customers**; **Loyalty accounts** and **Loyalty activity**, **Store credit accounts** and **Store credit activity**, and **Referrals** and **Referral rewards** when those features are on. | **Customers** is on. | **View customers**. Referrals need **Manage customers**. |
+| **Companies** | **Companies**, **Company buyers**, **Price lists** and **Price list entries**. | **Companies** is on. | **Manage companies**. |
+| **Inventory** | **Stock items**, **Stock levels** (each item at each location), **Stock movements**, **Stock reservations** and **Locations**; **Purchase orders**, **Purchase order lines** and **Back-in-stock alerts** when those features are on. | **Inventory** is on. | **View inventory**. |
+| **Checkout** | **Checkout sessions** (including the ones a buyer left), **Coupons**, **Coupon uses** and **Saved payment methods**. | **Checkout** is on. | Checkout sessions need **Manage orders**, coupons **Manage coupons**, and saved payment methods **Manage payments and refunds**. |
+| **Carts** | **Carts** and **Cart lines**; **Wishlists** and **Wishlist items** when Wishlists is on. | **Carts** is on. | **Manage orders**. |
+| **Transactions** | **Transactions**, **Payment attempts** and **Payment refunds**. | **Transactions** is on. | **Manage transactions**. Payment attempts and refunds need **Manage payments and refunds**. |
+| **Subscriptions** | **Subscriptions** and **Subscription lines**; **Installment plans** and **Installments** when installment plans are on. | **Subscriptions** or **Subscriptions - Installment Plans** is on. | **Manage subscriptions**. Installment plans need **Manage installment plans and charge customers' saved cards**. |
+| **Shipping** | **Shipments**, **Shipment lines**, **Shipping zones** and **Shipping methods**. | **Shipping** is on. | Shipments need **Ship orders and update their shipments**; zones and methods need **Manage shipping zones, methods and settings**. |
+| **Reviews** | **Product reviews**. | **Product Reviews** is on. | **Moderate product reviews**. |
+| **Downloads** | **Download entitlements**: the download links buyers were given. | **Digital Downloads** is on. | **Manage digital files and downloads**. |
+| **Bookings** | **Bookings**, **Booking dates** and **Booking balances**. | **Bookings** is on. | **Manage bookings**. |
+| **Marketplace** | **Vendors**, **Vendor earnings** and **Vendor payouts**. | **Marketplace** is on. | **Manage the marketplace**. |
+| **Point of Sale** | **Registers** and **Register shifts**. | **Point of Sale** is on. | **Manage registers and shifts**. |
+| **Phone number verifications** | **Verifications**: the phone numbers checked, and what the check found. | **Phone Number Verifications** is on. | **Run 'Phone Number Verifications' Report**. |
+| **DNC registry** | **DNC lists** and **DNC entries** of your own do-not-call lists. | **Local Do Not Call Registry** is on. | **Manage DNC registry settings**. |
 
 If a data source or data set is missing, your site may not use the feature that stores that data, or you may not have the permission it asks for. Ask your administrator.
 
@@ -68,7 +84,13 @@ The owner of a content item, and the records of other features that point to a u
 
 ## Records of other features
 
-The Omnichannel, Contact Center, AI chat and Messaging data sources offer the records those features keep. Related data sets are joined for you: an activity to its disposition and campaign, an interaction to its activity, an agent to their user account, and so on. Secrets, storage locations, IP addresses and message text are never shown.
+The store, Omnichannel, Contact Center, AI chat, Messaging and other data sources offer the records those features keep. Related data sets are joined for you: an order to its customer, an order line to its product, a shipment or a refund to its order, an activity to its disposition and campaign, an interaction to its activity, an agent to their user account, and so on. Secrets, card details, gift card codes, storage locations, IP addresses, notes and message text are never shown.
+
+A store can sell in several currencies, so every amount comes with a **Currency** column. Group or filter by it before you add amounts up.
+
+To get started with the store's data, your administrator can run the **Reports: store reports to adapt** recipe. It adds reports such as *Sales by day*, *Sales by product* and *Orders to ship*, built from the **Orders** data source. Open one, change it, and save your own copy.
+
+To report on the cost of AI, use **Completion usage**: it has the model and the tokens of every request, so a formula can multiply them by your provider's prices.
 
 These data sets read the newest records first and narrow the read to the period your report's date filter asks for, so keep a date filter on reports over a lot of data. See [Filters](filters.md#the-date-filter-a-new-report-starts-with).
 
