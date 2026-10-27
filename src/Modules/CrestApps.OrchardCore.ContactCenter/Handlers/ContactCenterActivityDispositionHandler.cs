@@ -99,6 +99,25 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
             return;
         }
 
+        // A disposition can land on an activity the agent finished earlier (an outcome recorded after the call, a
+        // supervisor's, the recovery's) while the agent is already on their next call. Busy then belongs to that call:
+        // completing the work here would make the agent available mid-call and offer them queued work.
+        var liveInteraction = await _interactionManager.FindActiveByAgentAsync(agent.ItemId, cancellationToken);
+
+        if (liveInteraction is not null && liveInteraction.ActivityItemId != activity.ItemId)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipped Contact Center completion reconciliation for activity '{ActivityId}' because agent '{AgentId}' is on interaction '{InteractionId}' for another activity.",
+                    activity.ItemId.SanitizeLogValue(),
+                    agent.ItemId.SanitizeLogValue(),
+                    liveInteraction.ItemId.SanitizeLogValue());
+            }
+
+            return;
+        }
+
         agent = await _presenceManager.CompleteWorkAsync(agent.ItemId, cancellationToken);
 
         if (agent?.PresenceStatus == AgentPresenceStatus.Available)
