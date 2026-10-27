@@ -125,7 +125,12 @@ public sealed class ReportDesignRunnerTests : IDisposable
         Assert.Equal(["c1", "c2", "c3", "c9"], table.Rows.Select(row => row.Key));
         Assert.Equal(["byMonth"], table.Selection.TargetIds);
         Assert.Equal(["c1"], table.Selection.SelectedKeys);
+        Assert.Equal(["c1"], table.Selection.SelectedLabels);
         Assert.Equal(4, run.RowCount);
+
+        // An export can say what filters the chart.
+        Assert.Same(table, Assert.Single(run.Document.GetFilteringSections(run.Document.Sections[1])));
+        Assert.Empty(run.Document.GetFilteringSections(table));
 
         // The chart shows only the customer's months.
         Assert.Equal([100d, 50d], Assert.Single(run.Document.Sections[1].Chart.Datasets).Values);
@@ -147,6 +152,12 @@ public sealed class ReportDesignRunnerTests : IDisposable
         Assert.Equal(["2026-01-01", "2026-02-01", "2026-03-01"], unpicked.Document.Sections[1].Chart.Keys);
         Assert.Equal([["c1", "50"], ["c2", "300"]], run.Document.Sections[0].Rows.Select(row => row.Cells.ToArray()));
         Assert.Equal(3, run.Document.Sections[1].Chart.Labels.Count);
+
+        // The month picked is named as the chart shows it, not by its key.
+        var selection = run.Document.Sections[1].Selection;
+        Assert.Equal(["2026-02-01"], selection.SelectedKeys);
+        Assert.Equal([run.Document.Sections[1].Chart.Labels[1]], selection.SelectedLabels);
+        Assert.NotEqual("2026-02-01", selection.SelectedLabels[0]);
     }
 
     [Fact]

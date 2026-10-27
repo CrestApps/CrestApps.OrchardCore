@@ -29,11 +29,18 @@ A designed report can work as an interactive dashboard: several queries grouped 
 
 Viewer filters are matched by identifier: a value submitted for a filter applies to every query that has a viewer filter with that identifier, and the page shows one control for them, taken from the first query that has it. The builder copies a query with its filters, so a copied query keeps its filters linked. A widget's period is set on the main query's date filter and on the filters of the other queries with the same identifier.
 
-`ReportDesignDocumentBuilder.AddContainers` adds the containers the sections use to the `ReportDocument`, in the order of their first sections. `ReportSection.Id` is the visual identifier and `ReportSection.ContainerId` its container. The report page renders a container as a card with its sections inside a scrolling body; exports read only `ReportDocument.Sections`, so they list every section.
+`ReportDesignDocumentBuilder.AddContainers` adds the containers the sections use to the `ReportDocument`, in the order of their first sections. `ReportSection.Id` is the visual identifier and `ReportSection.ContainerId` its container. The report page renders a container as a card with its sections inside a scrolling body.
+
+`ReportDocument.GetSectionGroups()` groups the sections as the page shows them: a container is placed where its first section is and holds all of its sections, and a section outside a container is a group of its own. Export formats use it:
+- The Excel format writes each group to a worksheet, named after the container or the section, with a container's sections one under the other under their titles.
+- The PDF format writes each container's title as a band above its sections.
+- The CSV format has no sheets and lists every section in order.
+
+A custom `IReportExportFormat` can call `GetSectionGroups()` the same way.
 
 ## Click actions
 
-A visual can be clicked when its action's column is a dimension it shows: a column of a table (shown by the table), or the category or series column of a chart. The document builder then gives each detail row of the table a `ReportRow.Key`, and the chart its `ReportChart.Keys` (categories) or `ReportChart.SeriesKeys`. `ReportSelectionKeys.ToKey` writes values in the invariant culture: dates as `yyyy-MM-dd`, or `yyyy-MM-ddTHH:mm:ss` with a time, and a missing value as an empty string. The section's `Selection` lists the visuals it filters and the keys picked now.
+A visual can be clicked when its action's column is a dimension it shows: a column of a table (shown by the table), or the category or series column of a chart. The document builder then gives each detail row of the table a `ReportRow.Key`, and the chart its `ReportChart.Keys` (categories) or `ReportChart.SeriesKeys`. `ReportSelectionKeys.ToKey` writes values in the invariant culture: dates as `yyyy-MM-dd`, or `yyyy-MM-ddTHH:mm:ss` with a time, and a missing value as an empty string. The section's `Selection` lists the visuals it filters and the keys picked now. `SelectedLabels` names the values picked as the section shows them, such as a month label for a month key; `ReportDocument.GetFilteringSections(section)` returns the sections whose picks filter a section, which the Excel and PDF formats write above it as a "Filtered by" line.
 
 The picked keys come back as `ReportRunOptions.Selections`, by visual identifier. For each target, the runner adds a row filter to a copy of the target's query with `ReportSelectionKeys.ToFilter`:
 

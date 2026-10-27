@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.Reports.Models;
 
 /// <summary>
 /// A framed block of a report page that holds sections under one title, scrolling them when they are taller than it.
-/// Exports ignore containers and list every section.
+/// Exports group sections the same way through <see cref="ReportDocument.GetSectionGroups"/>.
 /// </summary>
 public sealed class ReportContainer
 {

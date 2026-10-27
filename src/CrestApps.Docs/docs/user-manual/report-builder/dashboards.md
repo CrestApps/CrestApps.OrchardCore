@@ -43,7 +43,13 @@ To remove a query, pick it and click **Remove query**. Its visuals are removed w
 
 The widths of the visuals in a container divide the container's width: two visuals at **Half** in a container sit side by side. When the visuals are taller than the container, they scroll inside it, and the column headers of a table stay in view while you scroll.
 
-Exports ignore containers: a PDF, Excel or CSV export lists every visual in order.
+Exports keep the containers' layout where the format can:
+
+| Format | How containers are exported |
+| --- | --- |
+| Excel | Each container is a worksheet named after it, with its visuals one under the other, each under its title. A visual outside a container is a worksheet of its own, named after the visual. Chart values are numbers, so you can chart or add them up in Excel. |
+| PDF | Each container's title is a band across the page, with its visuals under it. A chart is drawn as on the page. |
+| CSV | A CSV file has no sheets, so it lists the data of every visual in order. A chart is exported as its data. |
 
 ## Filter by clicking
 
@@ -62,7 +68,7 @@ People who run the report can then:
 
 The visual they click keeps all of its rows, so they can pick another value. Only the visuals it is linked to load again; the rest of the page stays as it is.
 
-Changing a filter above the report keeps the values picked, and an export is filtered the same way as the page. The address of the page keeps them too, so reloading it or sending it to someone shows the same view.
+Changing a filter above the report keeps the values picked, and an export is filtered the same way as the page. In Excel and PDF, each visual filtered by a click says so above its data, such as **Filtered by Agents: Alice**. The address of the page keeps them too, so reloading it or sending it to someone shows the same view.
 
 You can try clicks in the **Preview** while you design.
 

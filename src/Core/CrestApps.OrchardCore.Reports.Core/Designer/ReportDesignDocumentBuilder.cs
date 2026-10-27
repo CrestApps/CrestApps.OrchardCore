@@ -279,7 +279,7 @@ public sealed class ReportDesignDocumentBuilder
             section.Width = Math.Clamp(visual.Width, 1, 12);
             section.Id = visual.Id;
             section.ContainerId = visual.ContainerId;
-            section.Selection = Selection(visual, section, selections);
+            section.Selection = Selection(visual, section, result, selections);
             document.Add(section);
         }
 
@@ -287,7 +287,11 @@ public sealed class ReportDesignDocumentBuilder
     }
 
     // What picking a value in a visual filters, when the section built for it carries the keys of the values it shows.
-    private static ReportSectionSelection Selection(ReportVisualDefinition visual, ReportSection section, IReadOnlyDictionary<string, IList<string>> selections)
+    private static ReportSectionSelection Selection(
+        ReportVisualDefinition visual,
+        ReportSection section,
+        ReportQueryResult result,
+        IReadOnlyDictionary<string, IList<string>> selections)
     {
         var targets = (visual.Action?.Targets ?? [])
             .Select(target => target?.VisualId)
@@ -301,11 +305,45 @@ public sealed class ReportDesignDocumentBuilder
             return null;
         }
 
+        var keys = selections is not null && selections.TryGetValue(visual.Id ?? string.Empty, out var picked) ? picked : [];
+
         return new ReportSectionSelection
         {
             TargetIds = targets,
-            SelectedKeys = selections is not null && selections.TryGetValue(visual.Id ?? string.Empty, out var keys) ? [.. keys] : [],
+            SelectedKeys = [.. keys],
+            SelectedLabels = [.. keys.Select(key => Label(visual, section, result, key) ?? key)],
         };
+    }
+
+    // How a section shows a value picked in it: the cell of its picked column, or the chart's label for it.
+    private static string Label(ReportVisualDefinition visual, ReportSection section, ReportQueryResult result, string key)
+    {
+        if (section.Chart is { } chart)
+        {
+            var index = chart.Keys?.IndexOf(key) ?? -1;
+
+            if (index >= 0 && index < chart.Labels.Count)
+            {
+                return chart.Labels[index];
+            }
+
+            index = chart.SeriesKeys?.IndexOf(key) ?? -1;
+
+            return index >= 0 && index < chart.Datasets.Count ? chart.Datasets[index].Label : null;
+        }
+
+        var position = Array.IndexOf(TableIndexes(visual, result), ActionIndex(visual, result));
+        var row = section.Rows.FirstOrDefault(candidate => candidate.Key == key);
+
+        return position >= 0 && row is not null && position < row.Cells.Count ? row.Cells[position] : null;
+    }
+
+    // The positions in the result of the columns a table shows: those it lists, or every column the result doesn't hide.
+    private static int[] TableIndexes(ReportVisualDefinition visual, ReportQueryResult result)
+    {
+        return visual.ColumnIds.Count > 0
+            ? visual.ColumnIds.Select(result.IndexOf).Where(index => index >= 0).ToArray()
+            : Enumerable.Range(0, result.Columns.Count).Where(index => !result.Columns[index].Hidden).ToArray();
     }
 
     // The position of the column clicking a visual picks, or -1 when clicking it picks nothing.
@@ -410,9 +448,7 @@ public sealed class ReportDesignDocumentBuilder
                 positions => original.Regroup(positions.Select(position => original.Columns[position].Id)));
         }
 
-        var indexes = visual.ColumnIds.Count > 0
-            ? visual.ColumnIds.Select(result.IndexOf).Where(index => index >= 0).ToArray()
-            : Enumerable.Range(0, result.Columns.Count).Where(index => !result.Columns[index].Hidden).ToArray();
+        var indexes = TableIndexes(visual, result);
 
         if (indexes.Length == 0)
         {
