@@ -325,6 +325,17 @@ public sealed partial class VoiceAgentConversationLoop
 
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
+        // A supervisor taking the call over is rung directly, whatever the subject's handoff settings say: the person
+        // asked for the caller, and the subject's queue may not exist at all.
+        var takeOver = activity.TryGet<AITakeOverRequest>(out var takeOverRequest) && !string.IsNullOrEmpty(takeOverRequest.TargetAgentId)
+            ? takeOverRequest
+            : null;
+
+        if (takeOver is not null)
+        {
+            handoffService = _handoffServices?.FirstOrDefault(candidate => candidate.CanHandle(OmnichannelConstants.Channels.Phone));
+        }
+
         if (handoffService is null)
         {
             _logger.LogWarning("An AI voice handoff was requested for Activity {ActivityId} but no handoff destination is available; ending the call.", activity.ItemId.SanitizeLogValue());
@@ -340,8 +351,11 @@ public sealed partial class VoiceAgentConversationLoop
             result = await handoffService.RequestHandoffAsync(new OmnichannelHandoffRequest
             {
                 Activity = activity,
-                TargetQueueId = flowSettings.HandoffQueueId,
-                Reason = "The automated assistant escalated the call to a live agent.",
+                TargetQueueId = takeOver is null ? flowSettings?.HandoffQueueId : null,
+                TargetAgentId = takeOver?.TargetAgentId,
+                Reason = takeOver is null
+                    ? "The automated assistant escalated the call to a live agent."
+                    : SupervisorTookOverReason,
                 ContactAddress = activity.PreferredDestination,
                 ProviderName = voiceEvent.ProviderName,
                 ProviderCallId = voiceEvent.ProviderCallId,

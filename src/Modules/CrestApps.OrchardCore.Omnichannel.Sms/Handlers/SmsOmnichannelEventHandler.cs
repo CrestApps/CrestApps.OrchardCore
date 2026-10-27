@@ -93,6 +93,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly ILocalLock _localLock;
     private readonly IToolRegistry _toolRegistry;
     private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
+    private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly IEnumerable<IMessagingAIConversationStarter> _aiConversationStarters;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly Redactor _addressRedactor;
@@ -122,6 +123,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="toolRegistry">The tool registry, which supplies the profile's tools for each reply.</param>
     /// <param name="conversationContextFactory">Describes the thread as a conversation for the system message, tools and workflows.</param>
+    /// <param name="turnNotifier">Tells the conversation turn handlers about each saved turn.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelEventHandler(
@@ -149,6 +151,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IRedactorProvider redactorProvider,
         IToolRegistry toolRegistry,
         IOmnichannelConversationContextFactory conversationContextFactory,
+        IAIConversationTurnNotifier turnNotifier,
         ILogger<SmsOmnichannelEventHandler> logger,
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
@@ -174,6 +177,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _aiConversationStarters = aiConversationStarters;
         _toolRegistry = toolRegistry;
         _conversationContextFactory = conversationContextFactory;
+        _turnNotifier = turnNotifier;
 
         _jsonSerializerOptions = jsonSerializerOptions.Value;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
@@ -353,6 +357,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             // The prompt remembers the provider's message id, so the handoff can tell the human thread which text
             // this was and the thread never records the same message twice.
             await _promptStore.CreateAsync(SmsHandoffTranscript.CreateCustomerPrompt(chatSession.SessionId, omnichannelEvent.Message, _clock.UtcNow), cancellationToken);
+            await _turnNotifier.NotifyAsync(chatSession, AIConversationTurn.CustomerRole, omnichannelEvent.Message?.Content, cancellationToken);
         }
 
         // One AI response per conversation at a time. Register this turn as the active generation, cancelling any
@@ -634,6 +639,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // That is exactly the growing "N customer message(s) owed" and the back-to-back assistant
                     // messages seen in a burst. Flushing inside the lock makes the reply visible to the next turn.
                     await _session.SaveChangesAsync(cancellationToken);
+                    await _turnNotifier.NotifyAsync(chatSession, AIConversationTurn.AssistantRole, bestChoice, cancellationToken);
 
                     chatSession.LastActivityUtc = _clock.UtcNow;
                     handledTurn = true;

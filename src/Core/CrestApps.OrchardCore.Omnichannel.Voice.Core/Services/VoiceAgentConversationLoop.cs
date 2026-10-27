@@ -79,6 +79,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IToolRegistry _toolRegistry;
     private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
+    private readonly IAIVoiceCallCommands _voiceCallCommands;
+    private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -111,6 +113,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         ILiquidTemplateManager liquidTemplateManager,
         IToolRegistry toolRegistry,
         IOmnichannelConversationContextFactory conversationContextFactory,
+        IAIVoiceCallCommands voiceCallCommands,
+        IAIConversationTurnNotifier turnNotifier,
         IContentManager contentManager,
         IClock clock,
         ILogger<VoiceAgentConversationLoop> logger,
@@ -141,6 +145,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _liquidTemplateManager = liquidTemplateManager;
         _toolRegistry = toolRegistry;
         _conversationContextFactory = conversationContextFactory;
+        _voiceCallCommands = voiceCallCommands;
+        _turnNotifier = turnNotifier;
         _contentManager = contentManager;
         _clock = clock;
         _logger = logger;
@@ -236,7 +242,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // The customer answered: advance out of AwaitingCustomerAnswer before anything long-running starts. A
         // realtime session holds the call for its whole duration, and leaving the activity in the awaiting state
         // for that long lets the no-response expiry pass fail a call that is being held right now.
-        await MarkInProgressAsync(activity, cancellationToken);
+        //
+        // Which engine holds the call is decided first, so the activity records it with the call: a supervisor's
+        // request is carried out differently for a live session than for the turn-based loop.
+        var realtimeDeploymentName = await ResolveRealtimeDeploymentNameAsync(profile, cancellationToken);
+
+        await MarkInProgressAsync(activity, voiceEvent, isRealtime: !string.IsNullOrWhiteSpace(realtimeDeploymentName), cancellationToken);
 
         // Whatever else the assistant says, a tenant that tells callers they are recorded has it say so first.
         var recordingDisclosure = await ResolveRecordingDisclosureAsync(cancellationToken);
@@ -250,8 +261,6 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // Realtime is a capability of the chat deployment now rather than a deployment of its own, so the
         // question is no longer "was a second deployment configured" but "can the one this profile already uses
         // do it".
-        var realtimeDeploymentName = await ResolveRealtimeDeploymentNameAsync(profile, cancellationToken);
-
         if (!string.IsNullOrWhiteSpace(realtimeDeploymentName))
         {
             // The transfer tool records the model's escalation on this turn rather than performing it, so the
@@ -276,6 +285,20 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             // Held until the call has been handed on below, so a node that starts shutting down waits for this
             // caller to be passed to somebody before it goes.
             using var heldCall = _callShutdown.HoldCall();
+
+            // A supervisor taking the call over ends the session the way the transfer tool does, and the handoff
+            // below then rings that supervisor instead of the subject's queue (see AITakeOverRequest).
+            using var takeOverRegistration = _voiceCallCommands.Register(activity.ItemId, command =>
+            {
+                if (command.Kind != AIVoiceCallCommandKind.TakeOver)
+                {
+                    return Task.FromResult(false);
+                }
+
+                _handoffTurn.RequestHandoff(SupervisorTookOverReason);
+
+                return Task.FromResult(true);
+            });
 
             try
             {
@@ -453,12 +476,21 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     /// window — that pass only transitions rows still awaiting an answer — so it cannot race the conclusion and
     /// flip a live, answered call to Failed while somebody is still on it.
     /// </remarks>
-    private async Task MarkInProgressAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task MarkInProgressAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent, bool isRealtime, CancellationToken cancellationToken)
     {
-        if (activity.Status == ActivityStatus.InProgress)
+        if (activity.Status == ActivityStatus.InProgress && activity.Has<AILiveCall>())
         {
             return;
         }
+
+        // The provider call is recorded with the call, so a supervisor can watch it, take it over or end it.
+        activity.Put(new AILiveCall
+        {
+            ProviderName = voiceEvent.ProviderName,
+            ProviderCallId = voiceEvent.ProviderCallId,
+            AnsweredUtc = _clock.UtcNow,
+            IsRealtime = isRealtime,
+        });
 
         activity.Status = ActivityStatus.InProgress;
         await _activityStore.UpdateAsync(activity, cancellationToken);
@@ -718,81 +750,5 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         }
 
         return (profile, session);
-    }
-
-    private async Task<(string Reply, bool HandoffRequested, string Reason, bool EndCallRequested)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, string turnGuidance, CancellationToken cancellationToken)
-    {
-        var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
-
-        var transcript = prompts
-            .Where(p => !p.IsGeneratedPrompt)
-            .Select(p => new ChatMessage(p.Role, (p.Content ?? string.Empty).Replace(HangupMarker, string.Empty)))
-            .ToList();
-
-        // When a live agent is available, enable the transfer tool for this turn and guide the model on when to
-        // escalate. Guidance is injected as a leading system message so the persona system prompt is preserved.
-        var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
-
-        if (handoffService is not null)
-        {
-            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
-
-            if (!string.IsNullOrEmpty(handoffInstructions))
-            {
-                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
-            }
-        }
-
-        // The same thing the live session is told, because a turn-based call is the same call: somebody has to
-        // hang up, and the model is the only one here who knows the conversation is over.
-        transcript.Insert(0, new ChatMessage(ChatRole.System, VoiceCallGuidance.EndingTheCall));
-
-        // What this particular turn is for, when it is not a reply to the customer. Put to the model as the turn it
-        // answers: added as one more system note it was outweighed by the persona and the conversation, and the
-        // model carried on selling to the recording instead of leaving a message on it.
-        if (!string.IsNullOrEmpty(turnGuidance))
-        {
-            transcript.Add(new ChatMessage(ChatRole.User, turnGuidance));
-        }
-
-        // The conversation this turn belongs to, current while the request is built (the system message is rendered
-        // with its values) and while the model's tools run (they read the caller, the contact and the variables).
-        var conversation = await _conversationContextFactory.CreateAsync(activity, session, profile, cancellationToken);
-        using var conversationScope = AIConversationScope.Begin(conversation);
-        using var invocationScope = AIInvocationScope.Begin();
-        invocationScope.Context.ToolExecutionContext = new AIToolExecutionContext(profile);
-        invocationScope.Context.ChatSession = session;
-
-        var context = await _contextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);
-        context.AdditionalProperties["Session"] = session;
-        invocationScope.Context.CompletionContext = context;
-
-        // Attach the profile's tools and the call's own once the context exists. The automated conversation calls
-        // the completion service directly rather than through the tool orchestrator, so the tools must be added here
-        // or the model never receives them. The SMS handler does the same.
-        await AttachCallToolsAsync(context, offerTransfer: handoffService is not null, cancellationToken);
-
-        var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
-
-        if (deployment is null)
-        {
-            return (null, false, null, false);
-        }
-
-        // The completion auto-invokes these tools when the model decides to escalate or to finish; each records
-        // its decision on a scoped turn, which is reset first and read back once the completion returns.
-        _handoffTurn.Reset();
-        _endCallTurn.Reset();
-
-        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
-        var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
-
-        var reply = completion?.Messages?.FirstOrDefault()?.Text;
-        var handoffRequested = handoffService is not null && _handoffTurn.HandoffRequested;
-
-        // A call being handed to a person is not a call that is over, whatever the model asked for alongside it.
-        var endCallRequested = _endCallTurn.EndCallRequested && !handoffRequested;
-
-        return (reply, handoffRequested, _handoffTurn.Reason, endCallRequested);
     }
 }

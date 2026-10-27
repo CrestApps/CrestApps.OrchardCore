@@ -137,6 +137,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAICompletionContextBuilderHandler, AIConversationLiquidCompletionContextBuilderHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIToolParameterContextResolver, AIConversationToolParameterContextResolver>());
         services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
+        services.TryAddScoped<IAIConversationTurnNotifier, AIConversationTurnNotifier>();
         services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
         services.Configure<TemplateOptions>(options =>
         {
@@ -260,6 +261,8 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
         services.AddActivity<AIToolCalledEvent, AIToolCalledEventDisplayDriver>();
         services.AddScoped<IAIConversationStartingHandler, WorkflowAIConversationStartingHandler>();
+        services.AddActivity<AIConversationTurnEvent, AIConversationTurnEventDisplayDriver>();
+        services.AddScoped<IAIConversationTurnHandler, WorkflowAIConversationTurnHandler>();
     }
 }
 
@@ -424,6 +427,7 @@ public sealed class ChatWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, ConversationTurnChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
     }
 }

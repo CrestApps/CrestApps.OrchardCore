@@ -386,6 +386,7 @@ public sealed class AIWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<UseAIProfileTaskSchema>()
             .AddWorkflowActivitySchema<DeclineConversationTaskSchema>()
             .AddWorkflowActivitySchema<AIToolCalledEventSchema>()
+            .AddWorkflowActivitySchema<AIConversationTurnEventSchema>()
             .AddWorkflowActivitySchema<AIChatSessionFieldExtractedEventSchema>()
             .AddWorkflowActivitySchema<AIChatSessionPostProcessedEventSchema>()
             .AddWorkflowActivitySchema<AICompletionFromProfileTaskSchema>()

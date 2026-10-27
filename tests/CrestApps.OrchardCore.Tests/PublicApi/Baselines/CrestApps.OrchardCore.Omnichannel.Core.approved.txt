@@ -1248,6 +1248,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Reason { get; set; }
         public string ServiceAddress { get; set; }
         public string Summary { get; set; }
+        public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffMessage> Transcript { get; set; }
     }

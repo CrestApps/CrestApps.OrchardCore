@@ -87,6 +87,12 @@ The tool works in website chats, text threads and on phone calls. A workflow tha
 **Set Conversation Variables** in a tool workflow changes the live conversation, so the AI's next answers see the new values.
 :::
 
+## React while the conversation is going on
+
+The **AI Conversation Turn** event (under **AI Conversations**) starts a workflow after each turn is saved, on every channel, while the conversation is still going on. What was said is in `Workflow.Input.Text`, and who said it in `Workflow.Input.Role` (`Customer` or `Assistant`). Choose **What the customer says** to run only on the customer's turns.
+
+For example, an **If/Else** on `{{ Workflow.Input.Text | downcase }}` containing *cancel* followed by **Notify** tells a supervisor, who can follow the call on the dashboard, message the AI or take the call over. These workflows run between turns, so keep them short: a slow one delays the AI's next reply.
+
 ## Act on a conversation after it ends
 
 These events start a workflow when a conversation ends or the AI captures something. Each one passes the conversation's `Transcript` (the whole conversation as text, one `Customer:` or `Assistant:` line per turn), its `Variables`, the `Session` and the `Profile`.

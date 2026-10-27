@@ -152,6 +152,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IOmnichannelConversationContextFactory, OmnichannelConversationContextFactory>();
         services.AddScoped<IOmnichannelAIConversationStarting, OmnichannelAIConversationStarting>();
         services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
+        services.TryAddScoped<IAIConversationTurnNotifier, AIConversationTurnNotifier>();
         services.Configure<TemplateOptions>(options =>
         {
             options.MemberAccessStrategy.Register<OmnichannelActivity>();

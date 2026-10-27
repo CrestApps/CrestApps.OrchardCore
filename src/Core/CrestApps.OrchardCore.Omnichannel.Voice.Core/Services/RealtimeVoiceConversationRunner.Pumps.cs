@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -742,6 +743,12 @@ public sealed partial class RealtimeVoiceConversationRunner
         // blocked agent presence heartbeats and other webhook deliveries until they timed out. Flushing per turn
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
+
+        await _turnNotifier.NotifyAsync(
+            context.Session,
+            role == ChatRole.User ? AIConversationTurn.CustomerRole : AIConversationTurn.AssistantRole,
+            content,
+            cancellationToken);
     }
 
     // Whether the model ended the call on voicemail, where its message is the closing line.

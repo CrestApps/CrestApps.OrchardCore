@@ -31,6 +31,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly ISession _session;
     private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
+    private readonly IAIVoiceCallCommands _voiceCallCommands;
+    private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -234,6 +236,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="chatSessionManager">The chat session manager.</param>
     /// <param name="session">The document session, flushed after each turn so the call does not hold a write transaction open.</param>
     /// <param name="conversationContextFactory">Describes the call as a conversation for the system message, tools and workflows.</param>
+    /// <param name="voiceCallCommands">Delivers a supervisor's notes to the session holding the call.</param>
+    /// <param name="turnNotifier">Tells the conversation turn handlers about each saved turn.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public RealtimeVoiceConversationRunner(
@@ -243,6 +247,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         IAIChatSessionManager chatSessionManager,
         ISession session,
         IOmnichannelConversationContextFactory conversationContextFactory,
+        IAIVoiceCallCommands voiceCallCommands,
+        IAIConversationTurnNotifier turnNotifier,
         IClock clock,
         ILogger<RealtimeVoiceConversationRunner> logger)
     {
@@ -252,6 +258,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         _chatSessionManager = chatSessionManager;
         _session = session;
         _conversationContextFactory = conversationContextFactory;
+        _voiceCallCommands = voiceCallCommands;
+        _turnNotifier = turnNotifier;
         _clock = clock;
         _logger = logger;
     }
@@ -320,6 +328,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // session is lost with the caller still there it is replaced, and everything that talks to the model reads
         // it from here rather than keeping the one it started with.
         await using var live = new LiveConversation(first, callScope.Token);
+
+        // A supervisor's note reaches the session holding the call, which acts on it at the next quiet moment.
+        using var supervisorNotes = context.Activity is null
+            ? null
+            : _voiceCallCommands.Register(context.Activity.ItemId, command => AcceptSupervisorNoteAsync(live, command, callScope.Token));
 
         // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
         _meter?.Start(answeredTicks);

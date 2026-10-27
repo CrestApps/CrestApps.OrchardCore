@@ -54,6 +54,11 @@ public sealed class Startup : StartupBase
         // calls only, and forgets each as it ends.
         services.AddSingleton<IAnsweringMachineSignals, AnsweringMachineSignals>();
 
+        // A supervisor's request reaches the live session holding an AI call through this registry, a singleton
+        // because the session and the request run in different scopes.
+        services.AddSingleton<IAIVoiceCallCommands, AIVoiceCallCommands>();
+        services.AddScoped<IAIVoiceCallSupervision, AIVoiceCallSupervision>();
+
         // The AI usage report's per-call summaries. The tracker outlives requests, because a turn-based call's
         // measurements span many of them; the store is the analytics feature's, and records nothing without it.
         services.AddSingleton<IAIVoiceSessionTracker, AIVoiceSessionTracker>();
