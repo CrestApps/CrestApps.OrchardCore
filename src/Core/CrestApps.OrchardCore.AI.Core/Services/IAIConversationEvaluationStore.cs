@@ -23,6 +23,21 @@ public interface IAIConversationEvaluationStore
     Task<AIConversationEvaluation> FindLatestBySessionAsync(string sessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets every evaluation of a session.
+    /// </summary>
+    /// <param name="sessionId">The AI session.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<AIConversationEvaluation>> ListBySessionAsync(string sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes every evaluation of a session.
+    /// </summary>
+    /// <param name="sessionId">The AI session.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>How many were deleted.</returns>
+    Task<int> DeleteBySessionAsync(string sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the evaluation rows made in a window, optionally for one profile.
     /// </summary>
     /// <param name="profileId">The profile, or <see langword="null"/> for all of them.</param>

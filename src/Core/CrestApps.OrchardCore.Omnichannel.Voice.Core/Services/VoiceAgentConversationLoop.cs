@@ -82,6 +82,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IAIVoiceCallCommands _voiceCallCommands;
     private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly IContentManager _contentManager;
+    private readonly AIGuardrailService _guardrails;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -115,6 +116,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IOmnichannelConversationContextFactory conversationContextFactory,
         IAIVoiceCallCommands voiceCallCommands,
         IAIConversationTurnNotifier turnNotifier,
+        AIGuardrailService guardrails,
         IContentManager contentManager,
         IClock clock,
         ILogger<VoiceAgentConversationLoop> logger,
@@ -147,6 +149,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _conversationContextFactory = conversationContextFactory;
         _voiceCallCommands = voiceCallCommands;
         _turnNotifier = turnNotifier;
+        _guardrails = guardrails;
         _contentManager = contentManager;
         _clock = clock;
         _logger = logger;

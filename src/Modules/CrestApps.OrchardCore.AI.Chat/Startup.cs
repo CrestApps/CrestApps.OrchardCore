@@ -17,6 +17,7 @@ using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
@@ -66,6 +67,7 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileContactMemoryDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDataPrivacyDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataExtractionDisplayDriver>()
@@ -75,6 +77,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePromptSecurityDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePromptSecurityDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileGuardrailDisplayDriver>()
+            .AddScoped<IOutputSecurityFilter, AIGuardrailOutputSecurityFilter>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddSiteDisplayDriver<PromptSecurityOptionsDisplayDriver>()
             .AddSiteDisplayDriver<AIVisitorIdentityOptionsDisplayDriver>()
@@ -160,6 +164,7 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
         services
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
+            .Configure<AIConversationPrivacyOptions>(options => options.IncludeExtractedDataRecords = true)
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()

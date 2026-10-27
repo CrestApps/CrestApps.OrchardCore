@@ -41,6 +41,19 @@ public sealed partial class VoiceAgentConversationLoop
     {
         var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
 
+        // A caller line the profile's guardrails refuse is answered with its placeholder reply, without asking the
+        // model, so a refused request never reaches the tools either.
+        if (string.IsNullOrEmpty(turnGuidance) && _guardrails is not null && AIGuardrailService.IsOn(profile, AIGuardrailDirection.Customer))
+        {
+            var callerLine = prompts.LastOrDefault(prompt => prompt.Role == ChatRole.User && !prompt.IsGeneratedPrompt)?.Content;
+            var refused = await _guardrails.CheckAsync(profile, callerLine, AIGuardrailDirection.Customer, session.SessionId, cancellationToken);
+
+            if (refused is not null)
+            {
+                return (refused.Reply, false, null, false);
+            }
+        }
+
         var transcript = prompts
             .Where(p => !p.IsGeneratedPrompt)
             .Select(p => new ChatMessage(p.Role, (p.Content ?? string.Empty).Replace(HangupMarker, string.Empty)))
@@ -113,6 +126,18 @@ public sealed partial class VoiceAgentConversationLoop
 
         var reply = completion?.Messages?.FirstOrDefault()?.Text;
         var handoffRequested = handoffService is not null && _handoffTurn.HandoffRequested;
+
+        // A reply the guardrails refuse is replaced before it is stored or spoken. What the model decided to do
+        // (hand over, hang up) stands; only its words change.
+        if (!string.IsNullOrWhiteSpace(reply) && _guardrails is not null && AIGuardrailService.IsOn(profile, AIGuardrailDirection.Reply))
+        {
+            var refused = await _guardrails.CheckAsync(profile, reply.Replace(HangupMarker, string.Empty, StringComparison.Ordinal), AIGuardrailDirection.Reply, session.SessionId, cancellationToken);
+
+            if (refused is not null)
+            {
+                reply = refused.Reply;
+            }
+        }
 
         // A call being handed to a person is not a call that is over, whatever the model asked for alongside it.
         var endCallRequested = _endCallTurn.EndCallRequested && !handoffRequested;

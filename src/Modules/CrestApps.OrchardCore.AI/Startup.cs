@@ -158,6 +158,12 @@ public sealed class Startup : StartupBase
             .AddDataMigration<AIContactMemoryIndexMigrations>()
             .AddIndexProvider<AIContactMemoryIndexProvider>();
 
+        // Speaking styles (tested prompt sections a profile turns on) and guardrails (topics a profile refuses).
+        services
+            .AddScoped<IAICompletionContextBuilderHandler, AISpeakingStyleCompletionContextBuilderHandler>()
+            .AddDisplayDriver<AIProfile, AIProfileSpeakingStyleDisplayDriver>()
+            .AddScoped<AIGuardrailService>();
+
         // Profile versions: every save of a profile is kept, numbered, and can be compared and restored.
         services
             .AddScoped<IAIProfileVersionStore, YesSqlAIProfileVersionStore>()
@@ -305,6 +311,8 @@ public sealed class WorkflowsStartup : StartupBase
         // Memory and integrations: rewriting a contact's memory, and signed webhooks to other systems.
         services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
         services.AddActivity<SendSignedWebhookTask, SendSignedWebhookTaskDisplayDriver>();
+        services.AddActivity<AIGuardrailTriggeredEvent, AIGuardrailTriggeredEventDisplayDriver>();
+        services.AddScoped<IAIGuardrailHandler, WorkflowAIGuardrailHandler>();
         services.AddHttpClient(SendSignedWebhookTask.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
     }
 }
@@ -426,6 +434,10 @@ public sealed class ChatCoreStartup : StartupBase
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
+        // Privacy: redacting or stripping ended conversations, and deleting those past the profile's retention.
+        services.AddScoped<AIConversationPrivacyService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIConversationPrivacyBackgroundTask>());
+
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 
         // Register the AI chat session prompt store.
@@ -486,7 +498,8 @@ public sealed class ApiChatStartup : StartupBase
         routes
             .AddApiAIChatSessionEndpoint()
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
-            .AddApiAICompletionEndpoint<ApiChatStartup>();
+            .AddApiAICompletionEndpoint<ApiChatStartup>()
+            .MapAIConversationsApi();
     }
 }
 

@@ -94,6 +94,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IToolRegistry _toolRegistry;
     private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
     private readonly IAIConversationTurnNotifier _turnNotifier;
+    private readonly AIGuardrailService _guardrails;
     private readonly IEnumerable<IMessagingAIConversationStarter> _aiConversationStarters;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly Redactor _addressRedactor;
@@ -152,6 +153,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IToolRegistry toolRegistry,
         IOmnichannelConversationContextFactory conversationContextFactory,
         IAIConversationTurnNotifier turnNotifier,
+        AIGuardrailService guardrails,
         ILogger<SmsOmnichannelEventHandler> logger,
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
@@ -176,6 +178,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _localLock = localLock;
         _aiConversationStarters = aiConversationStarters;
         _toolRegistry = toolRegistry;
+        _guardrails = guardrails;
         _conversationContextFactory = conversationContextFactory;
         _turnNotifier = turnNotifier;
 
@@ -474,79 +477,92 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     string bestChoice;
 
-                    try
+                    // Texts the profile's guardrails refuse are answered with its placeholder reply, without asking
+                    // the model, so a refused request never reaches the tools either.
+                    var refusedText = AIGuardrailService.IsOn(profile, AIGuardrailDirection.Customer)
+                        ? await _guardrails.CheckAsync(profile, string.Join(Environment.NewLine, pendingInbound.Select(prompt => prompt.Content)), AIGuardrailDirection.Customer, chatSession.SessionId, generationToken)
+                        : null;
+
+                    if (refusedText is not null)
                     {
-                        // The conversation this reply belongs to, current while the request is built (the system
-                        // message is rendered with its values) and while the profile's tools run.
-                        var conversationContext = await _conversationContextFactory.CreateAsync(activity, chatSession, profile, generationToken);
-                        using var conversationScope = AIConversationScope.Begin(conversationContext);
-                        using var invocationScope = AIInvocationScope.Begin();
-                        invocationScope.Context.ToolExecutionContext = new AIToolExecutionContext(profile);
-                        invocationScope.Context.ChatSession = chatSession;
-
-                        var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: generationToken);
-                        context.AdditionalProperties["Session"] = chatSession;
-                        invocationScope.Context.CompletionContext = context;
-
-                        // The profile's tools, plus the transfer tool when a live agent is available. The completion
-                        // service is called directly rather than through the orchestrator, so they must be attached
-                        // here or the model sees no tools at all.
-                        await AIConversationTools.AttachAsync(
-                            _toolRegistry,
-                            context,
-                            handoffAvailable
-                                ? [AIConversationTools.SystemTool(OmnichannelHandoffHelper.TransferToAgentToolName, "Transfers the current conversation to a live human agent.")]
-                                : [],
-                            generationToken);
-
-                        // When a live agent is available, guide the model on when to escalate. Guidance is injected
-                        // as a leading system message so it never leaks into the separate should-respond evaluation
-                        // above, which runs on the un-augmented transcript.
-                        if (handoffAvailable)
+                        bestChoice = refusedText.Reply;
+                    }
+                    else
+                    {
+                        try
                         {
-                            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
+                            // The conversation this reply belongs to, current while the request is built (the system
+                            // message is rendered with its values) and while the profile's tools run.
+                            var conversationContext = await _conversationContextFactory.CreateAsync(activity, chatSession, profile, generationToken);
+                            using var conversationScope = AIConversationScope.Begin(conversationContext);
+                            using var invocationScope = AIInvocationScope.Begin();
+                            invocationScope.Context.ToolExecutionContext = new AIToolExecutionContext(profile);
+                            invocationScope.Context.ChatSession = chatSession;
 
-                            if (!string.IsNullOrEmpty(handoffInstructions))
+                            var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: generationToken);
+                            context.AdditionalProperties["Session"] = chatSession;
+                            invocationScope.Context.CompletionContext = context;
+
+                            // The profile's tools, plus the transfer tool when a live agent is available. The completion
+                            // service is called directly rather than through the orchestrator, so they must be attached
+                            // here or the model sees no tools at all.
+                            await AIConversationTools.AttachAsync(
+                                _toolRegistry,
+                                context,
+                                handoffAvailable
+                                    ? [AIConversationTools.SystemTool(OmnichannelHandoffHelper.TransferToAgentToolName, "Transfers the current conversation to a live human agent.")]
+                                    : [],
+                                generationToken);
+
+                            // When a live agent is available, guide the model on when to escalate. Guidance is injected
+                            // as a leading system message so it never leaks into the separate should-respond evaluation
+                            // above, which runs on the un-augmented transcript.
+                            if (handoffAvailable)
                             {
-                                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
+                                var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
+
+                                if (!string.IsNullOrEmpty(handoffInstructions))
+                                {
+                                    transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
+                                }
+                            }
+
+                            var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
+                                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
+
+                            // One AI request per turn, cancelled by generationToken the moment a newer inbound message arrives.
+                            // A cancelled request unwinds the whole turn so the newer message regenerates the single reply
+                            // against the full history, rather than this stale request answering a superseded transcript.
+                            // The completion auto-invokes the transfer tool when the model decides to escalate; the tool
+                            // records the decision on the scoped turn, which we reset first and read back afterwards.
+                            _handoffTurn.Reset();
+
+                            using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms);
+                            var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
+
+                            bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
+                            handoffRequested = handoffAvailable && _handoffTurn.HandoffRequested;
+
+                            if (handoffRequested)
+                            {
+                                handoffReason = _handoffTurn.Reason;
                             }
                         }
-
-                        var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
-                            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
-
-                        // One AI request per turn, cancelled by generationToken the moment a newer inbound message arrives.
-                        // A cancelled request unwinds the whole turn so the newer message regenerates the single reply
-                        // against the full history, rather than this stale request answering a superseded transcript.
-                        // The completion auto-invokes the transfer tool when the model decides to escalate; the tool
-                        // records the decision on the scoped turn, which we reset first and read back afterwards.
-                        _handoffTurn.Reset();
-
-                        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms);
-                        var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
-
-                        bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
-                        handoffRequested = handoffAvailable && _handoffTurn.HandoffRequested;
-
-                        if (handoffRequested)
+                        catch (Exception ex) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                         {
-                            handoffReason = _handoffTurn.Reason;
+                            // A newer inbound message superseded this turn mid-generation. The cancellation can surface
+                            // wrapped — the AI client turns the aborted HTTP call into its own exception type rather than an
+                            // OperationCanceledException — so key off the token, not the exception type. Unwind as a
+                            // supersede (not a failure) so the newer turn composes the one consolidated reply and this turn
+                            // does not log a spurious error or strand the conversation.
+                            throw new OperationCanceledException("The SMS reply generation was superseded by a newer inbound message.", ex, generationToken);
                         }
-                    }
-                    catch (Exception ex) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-                    {
-                        // A newer inbound message superseded this turn mid-generation. The cancellation can surface
-                        // wrapped — the AI client turns the aborted HTTP call into its own exception type rather than an
-                        // OperationCanceledException — so key off the token, not the exception type. Unwind as a
-                        // supersede (not a failure) so the newer turn composes the one consolidated reply and this turn
-                        // does not log a spurious error or strand the conversation.
-                        throw new OperationCanceledException("The SMS reply generation was superseded by a newer inbound message.", ex, generationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
 
-                        break;
+                            break;
+                        }
                     }
 
                     if (string.IsNullOrWhiteSpace(bestChoice))
@@ -563,6 +579,18 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     {
                         hangupRequested = true;
                         bestChoice = bestChoice.Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
+                    }
+
+                    // A reply the guardrails refuse is replaced before it is sent. What the model decided to do (hand
+                    // over, wrap up) stands; only its words change.
+                    if (refusedText is null && !string.IsNullOrWhiteSpace(bestChoice) && AIGuardrailService.IsOn(profile, AIGuardrailDirection.Reply))
+                    {
+                        var refusedReply = await _guardrails.CheckAsync(profile, bestChoice, AIGuardrailDirection.Reply, chatSession.SessionId, generationToken);
+
+                        if (refusedReply is not null)
+                        {
+                            bestChoice = refusedReply.Reply;
+                        }
                     }
 
                     // handoffRequested was set from the transfer tool the model invoked during the completion above.

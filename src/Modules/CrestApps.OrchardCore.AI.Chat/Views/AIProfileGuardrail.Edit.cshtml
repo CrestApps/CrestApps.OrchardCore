@@ -1,0 +1,79 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core.Conversations
+@using CrestApps.OrchardCore.AI.Core.Models
+
+@model EditAIProfileGuardrailViewModel
+
+@{
+    var categories = new (string Id, string Title)[]
+    {
+        (AIGuardrailCategories.Harassment, T["Harassment and abuse"].Value),
+        (AIGuardrailCategories.Hate, T["Hate"].Value),
+        (AIGuardrailCategories.SelfHarm, T["Self-harm"].Value),
+        (AIGuardrailCategories.Sexual, T["Sexual content"].Value),
+        (AIGuardrailCategories.Violence, T["Violence and weapons"].Value),
+        (AIGuardrailCategories.IllegalActivity, T["Illegal activity"].Value),
+        (AIGuardrailCategories.RegulatedAdvice, T["Medical, legal or financial advice"].Value),
+        (AIGuardrailCategories.Jailbreak, T["Attempts to override the instructions"].Value),
+    };
+    var selected = new HashSet<string>(Model.Categories ?? [], StringComparer.OrdinalIgnoreCase);
+    var name = Html.NameFor(m => m.Categories);
+}
+
+<h5 class="mt-4">@T["Guardrails"]</h5>
+<p class="text-muted">@T["The utility model checks each message against the topics below and the AI answers with the placeholder reply instead. This is on top of Prompt Security, on web chat, text messages and turn-based calls; realtime voice calls are not checked. Each check is one more utility model request, which adds a moment to every turn."]</p>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CheckCustomer" />
+            <label class="form-check-label" asp-for="CheckCustomer">@T["Check what the customer says"]</label>
+            <span class="hint dashed">@T["A refused message is never answered by the model, so it can't reach the profile's tools."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CheckReplies" />
+            <label class="form-check-label" asp-for="CheckReplies">@T["Check the AI's replies"]</label>
+            <span class="hint dashed">@T["A refused reply is replaced before it is sent or spoken. On web chat the reply streams as it is written, so the placeholder replaces it once it is complete."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Topics to refuse"]</label>
+    <div class="ocat-end">
+        @for (var i = 0; i < categories.Length; i++)
+        {
+            var category = categories[i];
+            var id = Html.IdFor(m => m.Categories) + "_" + i;
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@id" name="@name" value="@category.Id" checked="@selected.Contains(category.Id)" />
+                <label class="form-check-label" for="@id">@category.Title</label>
+                <span class="hint dashed">@AIGuardrailCategories.Definitions[category.Id]</span>
+            </div>
+        }
+        <span asp-validation-for="Categories"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="OtherTopics">@T["Other topics to refuse"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="OtherTopics" rows="2"></textarea>
+        <span class="hint">@T["Described in a sentence or two, for example: competitors' prices, or anything about our pending lawsuit."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="PlaceholderReply">@T["Placeholder reply"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="PlaceholderReply" rows="2" placeholder="@AIGuardrailService.DefaultPlaceholderReply"></textarea>
+        <span asp-validation-for="PlaceholderReply"></span>
+        <span class="hint">@T["What the AI says instead. Leave empty for the default shown."]</span>
+    </div>
+</div>

@@ -750,3 +750,44 @@ keypad capture; switching profiles on a realtime session; live Telnyx tests of e
 - M2, M3, M4: not built. Calendars and CRMs are connected through workflows (HTTP Request with the Workflow tool
   source), documented in the user manual. Native Google, Microsoft 365, HubSpot and Salesforce connections, and Drive,
   SharePoint and Notion file sources, need OAuth apps and accounts to build and test against.
+
+### Phases 6 to 8: the parts that need no outside account or Core change
+
+Built:
+
+- V3: eight **speaking styles** as prompt templates in the AI module (`speaking-style-*.md`), chosen on the profile's
+  Instructions tab and added to the end of the system message on every channel. Verified live: AI disclosure.
+- V5: **guardrails** on the profile's Prompt Security tab: eight moderation categories and other topics described in
+  words, checked by the utility model on what the customer says, on the AI's replies, or both, with a placeholder reply
+  and the **AI Guardrail Triggered** workflow event. On web chat through the hub's prompt security and the output
+  filter, on SMS and on turn-based calls in their reply paths; built in Orchard rather than as Core guardrail
+  categories (AD10). Verified live on web chat: medical advice and a competitor question refused with the placeholder,
+  an order lookup still answered, the event logged the category and reason. Not covered: realtime voice; SMS and
+  turn-based calls are not live-tested (Telnyx).
+- D4: a **storage mode** per profile (everything, everything except personal details, or times, outcomes and scores
+  only) applied by a background task 15 minutes after a conversation's last activity, and **retention** in days that
+  deletes conversations with their extracted data and evaluations. Personal details are found by patterns (email,
+  phone, Luhn-valid cards, US social security numbers) and by the utility model (names, addresses, dates of birth,
+  identity numbers), and every part of a found name is replaced too. Verified live: two web chats had the name,
+  street address, card, email and phone replaced in the title, the customer's lines and the AI's replies. Live testing
+  found and fixed three bugs: the Chat Analytics store is registered without its table, the session manager deletes
+  only the signed-in user's sessions, and a full name was found but its first name alone was not. Not built: bleeping recordings, signed expiring recording URLs, retention of usage records (kept
+  for billing).
+- D1: the **AI conversations API** under `/api/ai/v1` on the AI Chat WebAPI feature: list, get (transcript, variables,
+  extracted fields, results, evaluations), delete, evaluate, analyze again, run a simulated test, list profile
+  versions, and read or replace contact memory. Bearer tokens from the tenant's OpenID server, permissions through
+  the client's roles; the endpoints are in the OpenAPI document. Verified live with a client-credentials token: every endpoint, 401 without a token, and the 400, 404 and 409 problems. Not
+  built: profile create, update and publish, starting or controlling calls and texts, batch calls, knowledge bases,
+  phone numbers, scoped API keys and browser keys.
+
+Not started, and why:
+
+- V1 voices, V2 turn-taking, V4 languages: need the TTS and speech recognition seams in CrestApps.Core (AD10) and
+  provider accounts (ElevenLabs, Cartesia) to test against.
+- V6 numbers, V7 caller trust, V8 other carriers: need Telnyx and Twilio accounts and real calls.
+- F1 to F3 conversation flows: the spike needs real calls to measure transitions, and must be built as activities
+  without changing the Orchard Core workflow designer or engine.
+- D2 SDKs: can be generated from the OpenAPI document once package names and publishing are decided.
+- D3 custom LLM WebSocket: on customer demand (AD12).
+- D5 copilot: the admin AI agent's tools over conversations, evaluations and contact memory; can now call the services
+  the API uses.

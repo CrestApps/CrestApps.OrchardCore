@@ -49,6 +49,35 @@ public sealed class YesSqlAIConversationEvaluationStore : IAIConversationEvaluat
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<AIConversationEvaluation>> ListBySessionAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            return [];
+        }
+
+        var evaluations = await _session
+            .Query<AIConversationEvaluation, AIConversationEvaluationIndex>(index => index.SessionId == sessionId, _collectionName)
+            .OrderBy(index => index.EvaluatedUtc)
+            .ListAsync(cancellationToken);
+
+        return evaluations.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> DeleteBySessionAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        var evaluations = await ListBySessionAsync(sessionId, cancellationToken);
+
+        foreach (var evaluation in evaluations)
+        {
+            _session.Delete(evaluation, _collectionName);
+        }
+
+        return evaluations.Count;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<AIConversationEvaluationIndex>> GetAsync(string profileId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
     {
         var query = _session.QueryIndex<AIConversationEvaluationIndex>(

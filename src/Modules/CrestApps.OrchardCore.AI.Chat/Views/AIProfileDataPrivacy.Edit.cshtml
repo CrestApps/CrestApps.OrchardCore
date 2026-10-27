@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core.Models
+
+@model EditAIProfileDataPrivacyViewModel
+
+<h5>@T["Privacy"]</h5>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="StorageMode">@T["What to keep"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="StorageMode">
+            <option value="@AIDataStorageMode.Everything">@T["Everything"]</option>
+            <option value="@AIDataStorageMode.RedactPersonalData">@T["Everything except personal details"]</option>
+            <option value="@AIDataStorageMode.MetadataOnly">@T["Times, outcomes and scores only"]</option>
+        </select>
+        <span asp-validation-for="StorageMode"></span>
+        <span class="hint">@T["Applied about 15 minutes after a conversation ends, once its workflows and analysis have read it, to conversations that end after this is chosen. Personal details are names, street addresses, dates of birth, phone numbers, email addresses, and card, account and identity numbers; they become placeholders such as [NAME] in the transcript, title, summaries, extracted fields and evaluations. The last option deletes the transcript and clears those texts. Contact memory is kept apart: turn off Save to contact memory if it should not hold personal details either."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="RetentionDays">@T["Delete conversations after"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input type="number" class="form-control" asp-for="RetentionDays" min="1" max="3650" step="1" />
+            <span class="input-group-text">@T["days"]</span>
+        </div>
+        <span asp-validation-for="RetentionDays"></span>
+        <span class="hint">@T["Days without activity before a conversation is deleted with its transcript, extracted data and evaluations. Leave empty to keep conversations. Usage records are kept for billing."]</span>
+    </div>
+</div>
