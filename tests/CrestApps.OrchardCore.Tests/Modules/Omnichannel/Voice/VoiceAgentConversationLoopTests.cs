@@ -1398,6 +1398,8 @@ public sealed partial class VoiceAgentConversationLoopTests
                 SessionTracker,
                 CallShutdown,
                 Mock.Of<ILiquidTemplateManager>(),
+                Mock.Of<CrestApps.Core.AI.Tooling.IToolRegistry>(),
+                new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(Mock.Of<IContentManager>(), Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
                 Mock.Of<IContentManager>(),
                 Clock,
                 NullLogger<VoiceAgentConversationLoop>.Instance,

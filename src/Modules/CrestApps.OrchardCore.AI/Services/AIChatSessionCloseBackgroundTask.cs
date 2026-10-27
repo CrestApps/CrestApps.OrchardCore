@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -180,6 +181,17 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             : ChatSessionStatus.Abandoned;
     }
 
+    // The transcript and variables every AI session workflow event carries.
+    private static async Task AddTranscriptAsync(IServiceProvider serviceProvider, Dictionary<string, object> input, AIChatSession chatSession)
+    {
+        var promptStore = serviceProvider.GetService<IAIChatSessionPromptStore>();
+
+        AIConversationTranscript.AddTo(
+            input,
+            chatSession,
+            promptStore is null ? null : await promptStore.GetPromptsAsync(chatSession.SessionId));
+    }
+
     private static async Task TriggerSessionClosedWorkflowAsync(
         IServiceProvider serviceProvider,
         AIProfile profile,
@@ -203,6 +215,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 { "Profile", profile },
                 { "ClosedAtUtc", chatSession.ClosedAtUtc },
             };
+
+            await AddTranscriptAsync(serviceProvider, input, chatSession);
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionClosedEvent),
@@ -238,6 +252,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 { "Profile", profile },
                 { "Results", chatSession.PostSessionResults },
             };
+
+            await AddTranscriptAsync(serviceProvider, input, chatSession);
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionPostProcessedEvent),

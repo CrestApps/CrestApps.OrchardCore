@@ -171,6 +171,37 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                         continue;
                     }
 
+                    // The AI Conversation Starting workflows run before the first message: they can set the
+                    // variables the conversation starts with, choose its AI profile, or decline it.
+                    var starting = await serviceProvider.GetRequiredService<IOmnichannelAIConversationStarting>()
+                        .StartingAsync(activity, cancellationToken);
+
+                    if (starting.Declined)
+                    {
+                        var reason = string.IsNullOrWhiteSpace(starting.DeclineReason)
+                            ? "The conversation was declined before it started."
+                            : starting.DeclineReason;
+
+                        activity.Status = ActivityStatus.Cancelled;
+                        activity.CompletedUtc ??= now;
+                        activity.Notes = string.IsNullOrWhiteSpace(activity.Notes)
+                            ? reason
+                            : activity.Notes + Environment.NewLine + reason;
+
+                        await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
+
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Activity '{ActivityId}' was declined before it started on '{Channel}': {Reason}",
+                                activity.ItemId.SanitizeLogValue(),
+                                activity.Channel.SanitizeLogValue(),
+                                reason.SanitizeLogValue());
+                        }
+
+                        continue;
+                    }
+
                     await processor.StartAsync(activity, cancellationToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)

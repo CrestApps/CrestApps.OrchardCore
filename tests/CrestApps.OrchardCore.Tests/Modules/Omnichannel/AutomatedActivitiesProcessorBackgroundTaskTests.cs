@@ -253,17 +253,68 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
     private static ServiceProvider BuildServiceProvider(ISession session, IOmnichannelProcessor processor)
         => BuildServiceProvider(session, processor, new NoOpSubjectFlowSettingsService());
 
+    [Fact]
+    public async Task DoWorkAsync_WhenAStartingWorkflowDeclines_CancelsTheActivityWithoutStartingIt()
+    {
+        var databasePath = DatabasePath("starting-declined");
+        var store = await CreateStoreAsync($"Data Source={databasePath};Pooling=False");
+
+        try
+        {
+            string itemId;
+
+            await using (var seedSession = store.CreateSession())
+            {
+                itemId = await SaveAutomatedSmsActivityAsync(seedSession);
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var processor = new RecordingSmsProcessor();
+            var declined = new CrestApps.OrchardCore.AI.Core.Conversations.AIConversationStartingResult
+            {
+                Declined = true,
+                DeclineReason = "The account is closed.",
+            };
+
+            await using (var workSession = store.CreateSession())
+            {
+                var serviceProvider = BuildServiceProvider(workSession, processor, new NoOpSubjectFlowSettingsService(), startingResult: declined);
+                await new AutomatedActivitiesProcessorBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+            }
+
+            Assert.Empty(processor.ProcessedItemIds);
+
+            await using var readSession = store.CreateSession();
+            var activity = await readSession.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.ItemId == itemId, collection: OmnichannelConstants.CollectionName)
+                .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+            Assert.Equal(ActivityStatus.Cancelled, activity.Status);
+            Assert.Contains("The account is closed.", activity.Notes);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static ServiceProvider BuildServiceProvider(
         ISession session,
         IOmnichannelProcessor processor,
         ISubjectFlowSettingsService subjectFlowSettingsService,
-        IContentManager contentManager = null)
+        IContentManager contentManager = null,
+        CrestApps.OrchardCore.AI.Core.Conversations.AIConversationStartingResult startingResult = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(session);
         services.AddSingleton<IClock>(new StubClock(_now));
         services.AddSingleton(processor);
         services.AddSingleton(subjectFlowSettingsService);
+
+        // No AI Conversation Starting workflows: every conversation starts as planned.
+        var starting = new Mock<IOmnichannelAIConversationStarting>();
+        starting.Setup(x => x.StartingAsync(It.IsAny<OmnichannelActivity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(startingResult ?? new CrestApps.OrchardCore.AI.Core.Conversations.AIConversationStartingResult());
+        services.AddSingleton(starting.Object);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddOptions<OmnichannelAutomationOptions>();
 

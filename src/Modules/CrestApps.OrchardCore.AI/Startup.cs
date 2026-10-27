@@ -2,18 +2,22 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.AI.Tooling.Instances.Documentation;
+using CrestApps.Core.AI.Tooling.Parameters;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Extensions;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -34,8 +38,11 @@ using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.AI.Workflows.Services;
+using CrestApps.OrchardCore.AI.Workflows.Tools;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Services;
+using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -124,6 +131,20 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
             .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
             .AddPermissionProvider<AIToolPermissionProvider>();
+
+        // Conversations: the system message rendered with the conversation's values, and tool parameters filled
+        // from the conversation, on every channel.
+        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationLiquidCompletionContextBuilderHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIToolParameterContextResolver, AIConversationToolParameterContextResolver>());
+        services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
+        services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
+        services.Configure<TemplateOptions>(options =>
+        {
+            options.MemberAccessStrategy.Register<AIConversationTemplateModel>();
+            options.MemberAccessStrategy.Register<AIConversationTurn>();
+            options.MemberAccessStrategy.Register<AIChatSession>();
+            options.MemberAccessStrategy.Register<AIProfile>();
+        });
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
@@ -231,6 +252,60 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
         services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
+
+        // AI conversations: workflows that run before a conversation starts, and the tasks they decide with.
+        services.AddActivity<AIConversationStartingEvent, AIConversationStartingEventDisplayDriver>();
+        services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
+        services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
+        services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
+        services.AddActivity<AIToolCalledEvent, AIToolCalledEventDisplayDriver>();
+        services.AddScoped<IAIConversationStartingHandler, WorkflowAIConversationStartingHandler>();
+    }
+}
+
+/// <summary>
+/// Registers the <c>Workflow</c> tool instance source: a tool the AI calls that runs a workflow and answers with the
+/// workflow's output.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class WorkflowToolInstancesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowToolInstancesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WorkflowToolInstancesStartup(IStringLocalizer<WorkflowToolInstancesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIToolInstanceSource<WorkflowToolInstanceSource>(WorkflowToolConstants.SourceName, entry =>
+        {
+            entry.DisplayName = S["Workflow"];
+            entry.Description = S["Runs a workflow that starts with the AI Tool Called event, and answers with the workflow's output."];
+            entry.Category = S["Automation"];
+            entry.Parameters = new AIToolInstanceParameterCapabilities
+            {
+                Bindings =
+                [
+                    new AIToolParameterBindingOption(WorkflowToolConstants.ArgumentBinding)
+                    {
+                        DisplayName = S["Workflow argument"],
+                        Hint = S["Passed to the workflow as Workflow.Input.Arguments, under the parameter's name."],
+                        SupportsTargetName = false,
+                    },
+                ],
+                Hint = S["Declare what the workflow needs. The model fills each one, or you fix it, or it comes from the conversation, such as the customer's number or a conversation variable."],
+            };
+        });
+
+        services.AddDisplayDriver<AIToolInstance, WorkflowToolInstanceDisplayDriver>();
     }
 }
 

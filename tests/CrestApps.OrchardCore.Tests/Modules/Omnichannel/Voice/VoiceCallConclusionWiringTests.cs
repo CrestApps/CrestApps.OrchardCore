@@ -686,6 +686,8 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IAIVoiceSessionTracker>(),
                 new FakeAIVoiceCallShutdown(),
                 Mock.Of<ILiquidTemplateManager>(),
+                Mock.Of<CrestApps.Core.AI.Tooling.IToolRegistry>(),
+                new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(ContentManager.Object, Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
                 ContentManager.Object,
                 new StubClock(_now),
                 NullLogger<VoiceAgentConversationLoop>.Instance,

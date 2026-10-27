@@ -6,9 +6,12 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -74,6 +77,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IAIVoiceSessionTracker _sessionTracker;
     private readonly IAIVoiceCallShutdown _callShutdown;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
+    private readonly IToolRegistry _toolRegistry;
+    private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -104,6 +109,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IAIVoiceSessionTracker sessionTracker,
         IAIVoiceCallShutdown callShutdown,
         ILiquidTemplateManager liquidTemplateManager,
+        IToolRegistry toolRegistry,
+        IOmnichannelConversationContextFactory conversationContextFactory,
         IContentManager contentManager,
         IClock clock,
         ILogger<VoiceAgentConversationLoop> logger,
@@ -132,6 +139,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _sessionTracker = sessionTracker;
         _callShutdown = callShutdown;
         _liquidTemplateManager = liquidTemplateManager;
+        _toolRegistry = toolRegistry;
+        _conversationContextFactory = conversationContextFactory;
         _contentManager = contentManager;
         _clock = clock;
         _logger = logger;
@@ -746,13 +755,22 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             transcript.Add(new ChatMessage(ChatRole.User, turnGuidance));
         }
 
+        // The conversation this turn belongs to, current while the request is built (the system message is rendered
+        // with its values) and while the model's tools run (they read the caller, the contact and the variables).
+        var conversation = await _conversationContextFactory.CreateAsync(activity, session, profile, cancellationToken);
+        using var conversationScope = AIConversationScope.Begin(conversation);
+        using var invocationScope = AIInvocationScope.Begin();
+        invocationScope.Context.ToolExecutionContext = new AIToolExecutionContext(profile);
+        invocationScope.Context.ChatSession = session;
+
         var context = await _contextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);
         context.AdditionalProperties["Session"] = session;
+        invocationScope.Context.CompletionContext = context;
 
-        // Attach the transfer tool to this completion once the context exists. The automated conversation calls the
-        // completion service directly rather than through the tool orchestrator, so the tool must be added here or
-        // the model never receives it. See the identical fix in the SMS handler.
-        AttachCallTools(context, offerTransfer: handoffService is not null);
+        // Attach the profile's tools and the call's own once the context exists. The automated conversation calls
+        // the completion service directly rather than through the tool orchestrator, so the tools must be added here
+        // or the model never receives them. The SMS handler does the same.
+        await AttachCallToolsAsync(context, offerTransfer: handoffService is not null, cancellationToken);
 
         var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 

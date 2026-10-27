@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -12,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -145,6 +147,17 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
 
         services.AddScoped<ISubjectFlowSettingsService, SubjectFlowSettingsService>();
+
+        // The conversation an activity's AI is having, as the system message, tools and workflows see it.
+        services.AddScoped<IOmnichannelConversationContextFactory, OmnichannelConversationContextFactory>();
+        services.AddScoped<IOmnichannelAIConversationStarting, OmnichannelAIConversationStarting>();
+        services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
+        services.Configure<TemplateOptions>(options =>
+        {
+            options.MemberAccessStrategy.Register<OmnichannelActivity>();
+            options.MemberAccessStrategy.Register<OmnichannelCampaign>();
+            options.MemberAccessStrategy.Register<OmnichannelChannelEndpoint>();
+        });
 
         services.Configure<SubjectActionOptions>(options =>
         {

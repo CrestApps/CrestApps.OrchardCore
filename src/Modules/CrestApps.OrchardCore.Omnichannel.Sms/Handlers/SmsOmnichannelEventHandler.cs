@@ -10,11 +10,14 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Resilience;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -88,6 +91,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly ILocalLock _localLock;
+    private readonly IToolRegistry _toolRegistry;
+    private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
     private readonly IEnumerable<IMessagingAIConversationStarter> _aiConversationStarters;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly Redactor _addressRedactor;
@@ -115,6 +120,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="jsonSerializerOptions">The json serializer options.</param>
     /// <param name="aiConversationStarters">Start an AI conversation for a text to a number routed to an AI agent.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
+    /// <param name="toolRegistry">The tool registry, which supplies the profile's tools for each reply.</param>
+    /// <param name="conversationContextFactory">Describes the thread as a conversation for the system message, tools and workflows.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelEventHandler(
@@ -140,6 +147,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IEnumerable<IMessagingAIConversationStarter> aiConversationStarters,
         IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
         IRedactorProvider redactorProvider,
+        IToolRegistry toolRegistry,
+        IOmnichannelConversationContextFactory conversationContextFactory,
         ILogger<SmsOmnichannelEventHandler> logger,
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
@@ -163,6 +172,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _handoffServices = handoffServices;
         _localLock = localLock;
         _aiConversationStarters = aiConversationStarters;
+        _toolRegistry = toolRegistry;
+        _conversationContextFactory = conversationContextFactory;
 
         _jsonSerializerOptions = jsonSerializerOptions.Value;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
@@ -460,16 +471,34 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     try
                     {
+                        // The conversation this reply belongs to, current while the request is built (the system
+                        // message is rendered with its values) and while the profile's tools run.
+                        var conversationContext = await _conversationContextFactory.CreateAsync(activity, chatSession, profile, generationToken);
+                        using var conversationScope = AIConversationScope.Begin(conversationContext);
+                        using var invocationScope = AIInvocationScope.Begin();
+                        invocationScope.Context.ToolExecutionContext = new AIToolExecutionContext(profile);
+                        invocationScope.Context.ChatSession = chatSession;
+
                         var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: generationToken);
                         context.AdditionalProperties["Session"] = chatSession;
+                        invocationScope.Context.CompletionContext = context;
 
-                        // When a live agent is available, enable the transfer tool for this turn and guide the model
-                        // on when to escalate. Guidance is injected as a leading system message so it never leaks into
-                        // the separate should-respond evaluation above, which runs on the un-augmented transcript.
+                        // The profile's tools, plus the transfer tool when a live agent is available. The completion
+                        // service is called directly rather than through the orchestrator, so they must be attached
+                        // here or the model sees no tools at all.
+                        await AIConversationTools.AttachAsync(
+                            _toolRegistry,
+                            context,
+                            handoffAvailable
+                                ? [AIConversationTools.SystemTool(OmnichannelHandoffHelper.TransferToAgentToolName, "Transfers the current conversation to a live human agent.")]
+                                : [],
+                            generationToken);
+
+                        // When a live agent is available, guide the model on when to escalate. Guidance is injected
+                        // as a leading system message so it never leaks into the separate should-respond evaluation
+                        // above, which runs on the un-augmented transcript.
                         if (handoffAvailable)
                         {
-                            AttachTransferToAgentTool(context);
-
                             var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
 
                             if (!string.IsNullOrEmpty(handoffInstructions))
@@ -1080,29 +1109,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             return null;
         }
-    }
-
-    // Attaches the transfer-to-agent tool to this single completion. The automated conversation calls the completion
-    // service directly rather than through the tool orchestrator, so the scoped-tool key the function-invocation
-    // service handler reads is otherwise never populated here and no tools reach the model at all. We register the
-    // transfer tool as a scoped system-tool entry for this turn only (the context is built per turn and never
-    // persisted), so the model can actually invoke it. Enabling it through the profile's tool-name list does not
-    // work: the profile tool provider reads the names snapshotted when the context was built and, either way, skips
-    // system tools — which the transfer tool is.
-    private static void AttachTransferToAgentTool(AICompletionContext context)
-    {
-        var entry = new ToolRegistryEntry
-        {
-            Id = OmnichannelHandoffHelper.TransferToAgentToolName,
-            Name = OmnichannelHandoffHelper.TransferToAgentToolName,
-            Description = "Transfers the current conversation to a live human agent.",
-            Source = ToolRegistryEntrySource.System,
-            CreateAsync = serviceProvider => ValueTask.FromResult(
-                serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
-        };
-
-        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] =
-            new List<ToolRegistryEntry> { entry };
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsAsync(

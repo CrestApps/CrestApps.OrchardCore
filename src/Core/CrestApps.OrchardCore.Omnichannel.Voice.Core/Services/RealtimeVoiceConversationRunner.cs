@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -29,6 +30,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly ISession _session;
+    private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -231,6 +233,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="promptStore">The transcript store.</param>
     /// <param name="chatSessionManager">The chat session manager.</param>
     /// <param name="session">The document session, flushed after each turn so the call does not hold a write transaction open.</param>
+    /// <param name="conversationContextFactory">Describes the call as a conversation for the system message, tools and workflows.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public RealtimeVoiceConversationRunner(
@@ -239,6 +242,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         IAIChatSessionPromptStore promptStore,
         IAIChatSessionManager chatSessionManager,
         ISession session,
+        IOmnichannelConversationContextFactory conversationContextFactory,
         IClock clock,
         ILogger<RealtimeVoiceConversationRunner> logger)
     {
@@ -247,6 +251,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         _promptStore = promptStore;
         _chatSessionManager = chatSessionManager;
         _session = session;
+        _conversationContextFactory = conversationContextFactory;
         _clock = clock;
         _logger = logger;
     }
@@ -266,6 +271,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // ending it and handing it to a person. Refused meant the call fell back to the turn-based loop, so the
         // symptom was not an error on the line but an assistant that could not hear the caller while it spoke.
         using var invocationScope = AIInvocationScope.Begin();
+
+        // The conversation, current for the whole call: the system message is rendered with its values and the
+        // profile's tools read the caller, the contact and the variables from it.
+        using var conversationScope = AIConversationScope.Begin(context.Activity is null
+            ? new AIConversationContext { Channel = AIConversationChannels.Phone, Session = context.Session, Profile = context.Profile }
+            : await _conversationContextFactory.CreateAsync(context.Activity, context.Session, context.Profile, cancellationToken));
 
         // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
         var answeredTicks = DateTime.UtcNow.Ticks;
