@@ -317,10 +317,23 @@ public sealed class PointOfSaleReportDataSourceTests : IAsyncLifetime
         var statuses = await ((IDataAggregateSource)source).AggregateAsync(byStatus, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(registers);
-        var counts = registers.ToDictionary(row => (string)row[0], row => Convert.ToInt64(row[1], CultureInfo.InvariantCulture));
-        Assert.Equal(2L, counts["register-1"]);
-        Assert.Equal(1L, counts["register-2"]);
+        // The database groups text by its own collation, so a group by the register is left to the report; a filter on
+        // it is still applied in the database.
+        Assert.Null(registers);
+
+        foreach (var (register, count) in new[] { ("register-1", 2L), ("REGISTER-2", 1L) })
+        {
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = CommerceReportDataSets.PointOfSaleSource.Shifts,
+                Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+                Conditions = [new DataCondition { Field = "RegisterId", Operator = DataFilterOperator.Equals, Values = [register] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+            Assert.Equal(count, Convert.ToInt64(Assert.Single(groups)[0], CultureInfo.InvariantCulture));
+        }
 
         // The index keeps the status as a number, so the grouping is left to the report.
         Assert.Null(statuses);

@@ -280,10 +280,21 @@ public sealed class SubscriptionReportDataSourceTests : IAsyncLifetime
         Assert.Equal(1L, counts["PastDue"]);
         Assert.Equal(1L, counts["Canceled"]);
 
-        Assert.NotNull(currencies);
-        var totals = currencies.ToDictionary(row => (string)row[0], row => Convert.ToDecimal(row[1], System.Globalization.CultureInfo.InvariantCulture));
-        Assert.Equal(66m, totals["USD"]);
-        Assert.Equal(33m, totals["EUR"]);
+        // The index keeps the currency as text, which the database groups by its own collation, so the grouping is left
+        // to the report; a filter on it is still applied in the database.
+        Assert.Null(currencies);
+
+        foreach (var (currency, total) in new[] { ("USD", 66m), ("eur", 33m) })
+        {
+            var query = Aggregate(CommerceReportDataSets.SubscriptionSource.Subscriptions, "Status", new DataAggregateMeasure { Function = DataAggregate.Sum, Field = "TotalAmount" });
+            query.Groups = [];
+            query.Conditions = [new DataCondition { Field = "Currency", Operator = DataFilterOperator.Equals, Values = [currency] }];
+
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+            Assert.Equal(total, Convert.ToDecimal(Assert.Single(groups)[0], System.Globalization.CultureInfo.InvariantCulture));
+        }
     }
 
     [Fact]

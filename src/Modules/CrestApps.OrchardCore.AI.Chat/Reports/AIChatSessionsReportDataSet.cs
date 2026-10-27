@@ -101,9 +101,13 @@ public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportReco
         var (from, to) = DataConditions.DateRange(query.Conditions, LastActivityUtcField);
         var keyFilters = new List<(string Field, string[] Values)>();
 
+        // Only the keys of a join are matched exactly. A viewer's filter on a key field is left to the consumer, which
+        // compares text without regard to case, as an exact match in the database could drop a row it keeps.
+        var joinKeys = query.Conditions?.Where(condition => condition is { IsJoinKey: true }).ToArray() ?? [];
+
         foreach (var field in _keyFields)
         {
-            if (DataConditions.Keys(query.Conditions, field) is not { } keys)
+            if (DataConditions.Keys(joinKeys, field) is not { } keys)
             {
                 continue;
             }

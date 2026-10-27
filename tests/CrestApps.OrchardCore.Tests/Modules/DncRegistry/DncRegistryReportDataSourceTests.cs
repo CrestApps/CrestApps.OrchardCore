@@ -287,12 +287,12 @@ public sealed class DncRegistryReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_DncEntries_CountsTheNumbersOfEachListInTheDatabase()
+    public async Task Aggregate_DncEntries_CountsTheNumbersOfAListInTheDatabase_AndLeavesAGroupByListToTheReport()
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var query = new DataAggregateQuery
+        var byList = new DataAggregateQuery
         {
             DataSet = DncRegistryReportDataSets.DncEntries,
             Groups = [new DataAggregateGroup { Field = DncRegistryReportDataSets.ListIdField }],
@@ -300,14 +300,29 @@ public sealed class DncRegistryReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        async Task<long> CountAsync(string listId)
+        {
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = DncRegistryReportDataSets.DncEntries,
+                Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+                Conditions = [new DataCondition { Field = DncRegistryReportDataSets.ListIdField, Operator = DataFilterOperator.Equals, Values = [listId] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+
+            return (long)Assert.Single(groups)[0];
+        }
+
         // Act
-        var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
+        var declined = await ((IDataAggregateSource)source).AggregateAsync(byList, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(groups);
-        var counts = groups.ToDictionary(row => (string)row[0], row => (long)row[1]);
-        Assert.Equal(3L, counts["list-1"]);
-        Assert.Equal(1L, counts["list-2"]);
+        // The database groups text by its own collation, so a group by a text column is left to the report.
+        Assert.Null(declined);
+        Assert.Equal(3L, await CountAsync("list-1"));
+        Assert.Equal(1L, await CountAsync("LIST-2"));
     }
 
     [Fact]

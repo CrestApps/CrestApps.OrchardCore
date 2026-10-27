@@ -255,10 +255,21 @@ public sealed class InstallmentPlanReportDataSourceTests : IAsyncLifetime
         Assert.Equal(1L, statuses["PastDue"]);
         Assert.Equal(1L, statuses["Canceled"]);
 
-        Assert.NotNull(byOwner);
-        var owners = byOwner.ToDictionary(row => (string)row[0], row => (long)row[1]);
-        Assert.Equal(2L, owners["user-1"]);
-        Assert.Equal(1L, owners["user-2"]);
+        // The database groups text by its own collation, so a group by the owner is left to the report; a filter on it is
+        // still applied in the database.
+        Assert.Null(byOwner);
+
+        foreach (var (owner, count) in new[] { ("user-1", 2L), ("USER-2", 1L) })
+        {
+            var query = Aggregate(CommerceReportDataSets.SubscriptionSource.InstallmentPlans, InstallmentPlansReportDataSet.OwnerIdField);
+            query.Groups = [];
+            query.Conditions = [new DataCondition { Field = InstallmentPlansReportDataSet.OwnerIdField, Operator = DataFilterOperator.Equals, Values = [owner] }];
+
+            var groups = await source.AggregateAsync(query, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+            Assert.Equal(count, (long)Assert.Single(groups)[0]);
+        }
 
         // The index cuts these texts, so the grouping is left to the report.
         Assert.Null(byTitle);

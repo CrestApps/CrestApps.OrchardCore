@@ -481,12 +481,12 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_CouponUses_CountsByStatusInTheDatabase()
+    public async Task Aggregate_CouponUses_CountsAStatusInTheDatabase_AndLeavesAGroupByStatusToTheReport()
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var query = new DataAggregateQuery
+        var byStatus = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.CheckoutSource.CouponRedemptions,
             Groups = [new DataAggregateGroup { Field = "Status" }],
@@ -494,14 +494,30 @@ public sealed class CheckoutReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        async Task<long> CountAsync(string status)
+        {
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = CommerceReportDataSets.CheckoutSource.CouponRedemptions,
+                Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+                Conditions = [new DataCondition { Field = "Status", Operator = DataFilterOperator.Equals, Values = [status] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+
+            return (long)Assert.Single(groups)[0];
+        }
+
         // Act
-        var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
+        var declined = await ((IDataAggregateSource)source).AggregateAsync(byStatus, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(groups);
-        var counts = groups.ToDictionary(row => (string)row[0], row => (long)row[1]);
-        Assert.Equal(1L, counts["Redeemed"]);
-        Assert.Equal(1L, counts["Held"]);
+        // The index keeps the status as text, which the database groups by its own collation, so the grouping is left
+        // to the report.
+        Assert.Null(declined);
+        Assert.Equal(1L, await CountAsync("Redeemed"));
+        Assert.Equal(1L, await CountAsync("held"));
     }
 
     [Fact]

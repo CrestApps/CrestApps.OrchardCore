@@ -369,12 +369,25 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
         var declined = await ((IDataAggregateSource)source).AggregateAsync(byProfileName, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(groups);
-        var counts = groups.ToDictionary(row => (string)row[0], row => (Count: (long)row[1], Input: Convert.ToInt64(row[2])));
-        Assert.Equal((2L, 130L), counts["gpt-4o-deployment"]);
-        Assert.Equal((1L, 400L), counts["embedding-deployment"]);
-        Assert.Equal((1L, 0L), counts["whisper-deployment"]);
+        // The database groups text by its own collation, so a group by the deployment is left to the report; a filter on
+        // it is still applied in the database.
+        Assert.Null(groups);
         Assert.Null(declined);
+
+        foreach (var (deployment, count, input) in new[] { ("gpt-4o-deployment", 2L, 130L), ("EMBEDDING-DEPLOYMENT", 1L, 400L), ("whisper-deployment", 1L, 0L) })
+        {
+            var totals = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = AIChatReportDataSource.CompletionUsageDataSet,
+                Measures = byDeployment.Measures,
+                Conditions = [new DataCondition { Field = "DeploymentName", Operator = DataFilterOperator.Equals, Values = [deployment] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(totals);
+            var row = Assert.Single(totals);
+            Assert.Equal((count, input), ((long)row[0], Convert.ToInt64(row[1])));
+        }
     }
 
     [Fact]
@@ -461,32 +474,49 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_VoiceUsage_GroupsByTheNameTheIndexKeeps()
+    public async Task Aggregate_VoiceUsage_FiltersOnTheNameTheIndexKeeps()
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var query = new DataAggregateQuery
+        var measures = new[]
+        {
+            new DataAggregateMeasure { Function = DataAggregate.Count },
+            new DataAggregateMeasure { Field = "AssistantSpeakingMs", Function = DataAggregate.Sum },
+        };
+        var byName = new DataAggregateQuery
         {
             DataSet = AIChatReportDataSource.VoiceUsageDataSet,
             Groups = [new DataAggregateGroup { Field = "AIProfileName" }],
-            Measures =
-            [
-                new DataAggregateMeasure { Function = DataAggregate.Count },
-                new DataAggregateMeasure { Field = "AssistantSpeakingMs", Function = DataAggregate.Sum },
-            ],
+            Measures = measures,
             Context = new DataSourceContext { User = _user },
         };
 
+        async Task<(long Count, long Speaking)> TotalsAsync(string name)
+        {
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = AIChatReportDataSource.VoiceUsageDataSet,
+                Measures = measures,
+                Conditions = [new DataCondition { Field = "AIProfileName", Operator = DataFilterOperator.Equals, Values = [name] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+            var row = Assert.Single(groups);
+
+            return ((long)row[0], Convert.ToInt64(row[1]));
+        }
+
         // Act
-        var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
+        var declined = await ((IDataAggregateSource)source).AggregateAsync(byName, TestContext.Current.CancellationToken);
         var rows = Rows(await ReportDesignerTestServices.ReadAsync(source, Query(AIChatReportDataSource.VoiceUsageDataSet, "AIProfileName"), TestContext.Current.CancellationToken));
 
         // Assert
-        Assert.NotNull(groups);
-        var counts = groups.ToDictionary(row => (string)row[0], row => (Count: (long)row[1], Speaking: Convert.ToInt64(row[2])));
-        Assert.Equal((2L, 120_000L), counts["Voice agent"]);
-        Assert.Equal((1L, 60_000L), counts[(string)rows[0]["AIProfileName"]]);
+        // The database groups text by its own collation, so a group by the name is left to the report.
+        Assert.Null(declined);
+        Assert.Equal((2L, 120_000L), await TotalsAsync("Voice agent"));
+        Assert.Equal((1L, 60_000L), await TotalsAsync((string)rows[0]["AIProfileName"]));
     }
 
     [Fact]

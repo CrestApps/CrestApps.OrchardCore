@@ -341,7 +341,7 @@ public sealed class BookingReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_CountsBookingsAndSumsWhatIsLeftByProduct_AndDeclinesTheTitle()
+    public async Task Aggregate_CountsBookingsAndSumsWhatIsLeftForAProduct_AndLeavesGroupsByTextToTheReport()
     {
         // Arrange
         await using var session = _store.CreateSession();
@@ -353,13 +353,6 @@ public sealed class BookingReportDataSourceTests : IAsyncLifetime
             Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
             Context = new DataSourceContext { User = _user },
         };
-        var leftByProduct = new DataAggregateQuery
-        {
-            DataSet = CommerceReportDataSets.BookingSource.Slots,
-            Groups = [new DataAggregateGroup { Field = BookingSlotsReportDataSet.ProductIdField }],
-            Measures = [new DataAggregateMeasure { Field = "Remaining", Function = DataAggregate.Sum }],
-            Context = new DataSourceContext { User = _user },
-        };
         var byTitle = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.BookingSource.Bookings,
@@ -368,23 +361,36 @@ public sealed class BookingReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        async Task<long> TotalAsync(string dataSet, string field, string productId, DataAggregateMeasure measure)
+        {
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = dataSet,
+                Measures = [measure],
+                Conditions = [new DataCondition { Field = field, Operator = DataFilterOperator.Equals, Values = [productId] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+
+            return Convert.ToInt64(Assert.Single(groups)[0], CultureInfo.InvariantCulture);
+        }
+
+        var count = new DataAggregateMeasure { Function = DataAggregate.Count };
+        var remaining = new DataAggregateMeasure { Field = "Remaining", Function = DataAggregate.Sum };
+
         // Act
         var bookings = await ((IDataAggregateSource)source).AggregateAsync(bookingsByProduct, TestContext.Current.CancellationToken);
-        var left = await ((IDataAggregateSource)source).AggregateAsync(leftByProduct, TestContext.Current.CancellationToken);
         var titles = await ((IDataAggregateSource)source).AggregateAsync(byTitle, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(bookings);
-        var counts = bookings.ToDictionary(row => (string)row[0], row => Convert.ToInt64(row[1], CultureInfo.InvariantCulture));
-        Assert.Equal(3L, counts["product-tour"]);
-        Assert.Equal(1L, counts["product-room"]);
+        Assert.Equal(3L, await TotalAsync(CommerceReportDataSets.BookingSource.Bookings, BookingsReportDataSet.ProductIdField, "product-tour", count));
+        Assert.Equal(1L, await TotalAsync(CommerceReportDataSets.BookingSource.Bookings, BookingsReportDataSet.ProductIdField, "PRODUCT-ROOM", count));
+        Assert.Equal(3L, await TotalAsync(CommerceReportDataSets.BookingSource.Slots, BookingSlotsReportDataSet.ProductIdField, "product-tour", remaining));
+        Assert.Equal(1L, await TotalAsync(CommerceReportDataSets.BookingSource.Slots, BookingSlotsReportDataSet.ProductIdField, "product-room", remaining));
 
-        Assert.NotNull(left);
-        var remaining = left.ToDictionary(row => (string)row[0], row => Convert.ToInt64(row[1], CultureInfo.InvariantCulture));
-        Assert.Equal(3L, remaining["product-tour"]);
-        Assert.Equal(1L, remaining["product-room"]);
-
-        // The index keeps a shortened title, so the grouping is left to the report.
+        // The database groups text by its own collation, so a group by a text column is left to the report.
+        Assert.Null(bookings);
         Assert.Null(titles);
     }
 

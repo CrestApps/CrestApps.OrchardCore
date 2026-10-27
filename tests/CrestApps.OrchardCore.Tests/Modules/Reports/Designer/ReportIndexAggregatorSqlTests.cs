@@ -11,7 +11,8 @@ using YesSqlConfiguration = YesSql.Configuration;
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 
 /// <summary>
-/// The grouping statement adds up whole-number columns without overflowing on every database.
+/// The grouping statement adds up whole-number columns without overflowing on every database, and leaves to the engine
+/// whatever a database would compare by its own collation.
 /// </summary>
 public sealed class ReportIndexAggregatorSqlTests
 {
@@ -31,7 +32,7 @@ public sealed class ReportIndexAggregatorSqlTests
         var query = new DataAggregateQuery
         {
             DataSet = "Usage",
-            Groups = [new DataAggregateGroup { Field = "Model" }],
+            Groups = [new DataAggregateGroup { Field = "Region" }],
             Measures =
             [
                 new DataAggregateMeasure { Function = DataAggregate.Sum, Field = "Tokens" },
@@ -41,7 +42,7 @@ public sealed class ReportIndexAggregatorSqlTests
 
         var columns = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["Model"] = nameof(UsageIndex.Model),
+            ["Region"] = nameof(UsageIndex.Region),
             ["Tokens"] = nameof(UsageIndex.Tokens),
             ["Cost"] = nameof(UsageIndex.Cost),
         };
@@ -53,6 +54,94 @@ public sealed class ReportIndexAggregatorSqlTests
         Assert.NotNull(statement);
         Assert.Equal(widened, statement.Sql.Contains("CAST(", StringComparison.Ordinal));
         Assert.DoesNotContain("CAST(" + configuration.SqlDialect.QuoteForColumnName(nameof(UsageIndex.Cost)), statement.Sql, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(DataAggregate.Min)]
+    [InlineData(DataAggregate.Max)]
+    public void Build_TheSmallestOrLargestTextValue_Declines(DataAggregate function)
+    {
+        // Arrange: the engine orders text without regard to case; a database orders it by its collation.
+        var query = new DataAggregateQuery
+        {
+            DataSet = "Usage",
+            Groups = [new DataAggregateGroup { Field = "Region" }],
+            Measures = [new DataAggregateMeasure { Function = function, Field = "Model" }],
+        };
+
+        // Act
+        var statement = ReportIndexAggregator.Build<UsageIndex>(Configuration(), null, query, Columns());
+
+        // Assert
+        Assert.Null(statement);
+    }
+
+    [Fact]
+    public void Build_AGroupByText_Declines()
+    {
+        // Arrange: the engine groups text by its exact value; a database with a case-insensitive collation would merge
+        // values that differ only in case.
+        var query = new DataAggregateQuery
+        {
+            DataSet = "Usage",
+            Groups = [new DataAggregateGroup { Field = "Model" }],
+            Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
+        };
+
+        // Act
+        var statement = ReportIndexAggregator.Build<UsageIndex>(Configuration(), null, query, Columns());
+
+        // Assert
+        Assert.Null(statement);
+    }
+
+    [Fact]
+    public void Build_GroupsByEnumsAndDates_AndCountsText_InTheDatabase()
+    {
+        // Arrange
+        var start = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+        var query = new DataAggregateQuery
+        {
+            DataSet = "Usage",
+            Groups =
+            [
+                new DataAggregateGroup { Field = "Region" },
+                new DataAggregateGroup { Field = "CreatedUtc", Boundaries = [start, start.AddDays(1), start.AddDays(2)] },
+            ],
+            Measures =
+            [
+                new DataAggregateMeasure { Function = DataAggregate.Count, Field = "Model" },
+                new DataAggregateMeasure { Function = DataAggregate.Max, Field = "Tokens" },
+            ],
+            Conditions = [new DataCondition { Field = "Model", Operator = DataFilterOperator.Equals, Values = ["gpt-4o"] }],
+        };
+
+        // Act
+        var statement = ReportIndexAggregator.Build<UsageIndex>(Configuration(), null, query, Columns());
+
+        // Assert
+        Assert.NotNull(statement);
+        Assert.Contains("GROUP BY", statement.Sql, StringComparison.Ordinal);
+    }
+
+    private static YesSqlConfiguration Configuration()
+    {
+        return new YesSqlConfiguration
+        {
+            SqlDialect = new SqliteDialect(),
+        };
+    }
+
+    private static Dictionary<string, string> Columns()
+    {
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Model"] = nameof(UsageIndex.Model),
+            ["Region"] = nameof(UsageIndex.Region),
+            ["Tokens"] = nameof(UsageIndex.Tokens),
+            ["Cost"] = nameof(UsageIndex.Cost),
+            ["CreatedUtc"] = nameof(UsageIndex.CreatedUtc),
+        };
     }
 
     private static ISqlDialect CreateDialect(string dialectName)
@@ -71,8 +160,18 @@ public sealed class ReportIndexAggregatorSqlTests
     {
         public string Model { get; set; }
 
+        public UsageRegion Region { get; set; }
+
         public int Tokens { get; set; }
 
         public decimal Cost { get; set; }
+
+        public DateTime CreatedUtc { get; set; }
+    }
+
+    private enum UsageRegion
+    {
+        East,
+        West,
     }
 }

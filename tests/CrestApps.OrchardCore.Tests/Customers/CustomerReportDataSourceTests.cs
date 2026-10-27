@@ -457,12 +457,12 @@ public sealed class CustomerReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_StoreCreditAccounts_SumsTheBalanceByCurrency()
+    public async Task Aggregate_StoreCreditAccounts_SumsTheBalanceOfACurrencyInTheDatabase_AndLeavesAGroupByCurrencyToTheReport()
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var query = new DataAggregateQuery
+        var byCurrency = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.CustomerSource.StoreCreditAccounts,
             Groups = [new DataAggregateGroup { Field = "Currency" }],
@@ -470,14 +470,29 @@ public sealed class CustomerReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
+        async Task<decimal> BalanceAsync(string currency)
+        {
+            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
+            {
+                DataSet = CommerceReportDataSets.CustomerSource.StoreCreditAccounts,
+                Measures = [new DataAggregateMeasure { Function = DataAggregate.Sum, Field = "Balance" }],
+                Conditions = [new DataCondition { Field = "Currency", Operator = DataFilterOperator.Equals, Values = [currency] }],
+                Context = new DataSourceContext { User = _user },
+            }, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(groups);
+
+            return Convert.ToDecimal(Assert.Single(groups)[0]);
+        }
+
         // Act
-        var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
+        var declined = await ((IDataAggregateSource)source).AggregateAsync(byCurrency, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(groups);
-        var balances = groups.ToDictionary(row => (string)row[0], row => Convert.ToDecimal(row[1]));
-        Assert.Equal(25m, balances["USD"]);
-        Assert.Equal(10m, balances["EUR"]);
+        // The database groups text by its own collation, so a group by a text column is left to the report.
+        Assert.Null(declined);
+        Assert.Equal(25m, await BalanceAsync("USD"));
+        Assert.Equal(10m, await BalanceAsync("eur"));
     }
 
     [Fact]

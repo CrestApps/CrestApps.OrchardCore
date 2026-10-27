@@ -216,61 +216,103 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var empty = Query("Activities");
         empty.Conditions = [new DataCondition { Field = "AssignedToId", Operator = DataFilterOperator.In, Values = [], IsJoinKey = true }];
 
+        // A viewer's filter on the same key in another case does not take away the join's keys.
+        var joinedAndFiltered = Query("Activities");
+        joinedAndFiltered.Conditions =
+        [
+            new DataCondition { Field = "ItemId", Operator = DataFilterOperator.In, Values = ["a3"], IsJoinKey = true },
+            new DataCondition { Field = "ItemId", Operator = DataFilterOperator.Equals, Values = ["A3"] },
+        ];
+
         // Act
         var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
         var none = await ReportDesignerTestServices.ReadAsync(source, empty, TestContext.Current.CancellationToken);
+        var both = await ReportDesignerTestServices.ReadAsync(source, joinedAndFiltered, TestContext.Current.CancellationToken);
         var schema = await source.GetSchemaAsync("Activities", query.Context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["a3", "a1"], Rows(table).Select(row => row["ItemId"]));
         Assert.Empty(none.Rows);
+        Assert.Equal(["a3"], Rows(both).Select(row => row["ItemId"]));
         Assert.True(schema.FindField("AssignedToId").IsKeyFilterable);
         Assert.False(schema.FindField("Channel").IsKeyFilterable);
         Assert.Equal("CreatedUtc", schema.DataSet.DefaultDateField);
     }
 
+    [Fact]
+    public async Task Activities_AViewerFilterOnAKeyInAnotherCase_KeepsTheRow()
+    {
+        // Arrange: PostgreSQL compares text case-sensitively, so an exact match in the database would find nothing there,
+        // while the report compares without regard to case. (The SQLite tables YesSql creates ignore case, so this
+        // guards the end-to-end behavior; the join test below fails on any database.)
+        await using var session = _store.CreateSession();
+        var query = Filtered(
+            Activities(Column("id", "A.ItemId")),
+            new ReportFilterDefinition { Id = "id", Field = "A.ItemId", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Equals, Values = ["A1"] });
+
+        // Act
+        var result = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, Source(session))).ExecuteAsync(query, LocalContext(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["a1"], result.Rows.Select(row => row[0]));
+    }
+
     public static TheoryData<string> GroupedReports => new(GroupedQueries.Keys);
 
-    private static Dictionary<string, Func<ReportQueryDefinition>> GroupedQueries { get; } = new(StringComparer.Ordinal)
+    // Each report, and whether the database groups it: a group by text, or the smallest or largest text value, is read
+    // row by row, since the database compares text by its own collation and the report by its exact value.
+    private static Dictionary<string, (Func<ReportQueryDefinition> Query, bool InDatabase)> GroupedQueries { get; } = new(StringComparer.Ordinal)
     {
-        ["Count by status and channel"] = () => Activities(Column("status", "A.Status"), Column("channel", "A.Channel"), Column("n", "$count")),
-        ["Attempts by local day"] = () => Activities(
+        ["Count by status"] = (() => Activities(Column("status", "A.Status"), Column("n", "$count")), true),
+        ["Count by status and channel"] = (() => Activities(Column("status", "A.Status"), Column("channel", "A.Channel"), Column("n", "$count")), false),
+        ["Attempts by local day"] = (() => Activities(
             Column("day", "A.CreatedUtc", transform: DataFieldTransform.Day),
             Column("attempts", "A.Attempts", DataAggregate.Sum),
             Column("average", "A.Attempts", DataAggregate.Average),
-            Column("first", "A.ScheduledUtc", DataAggregate.Min)),
-        ["By month, completed only"] = () => Filtered(
+            Column("first", "A.ScheduledUtc", DataAggregate.Min)), true),
+        ["By month, completed only"] = (() => Filtered(
             Activities(Column("month", "A.CreatedUtc", transform: DataFieldTransform.Month), Column("n", "$count")),
-            new ReportFilterDefinition { Id = "done", Field = "A.Status", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Equals, Values = ["completed"] }),
-        ["By agent, last days, not SMS"] = () => Filtered(
+            new ReportFilterDefinition { Id = "done", Field = "A.Status", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Equals, Values = ["completed"] }), true),
+        ["By status, not SMS"] = (() => Filtered(
+            Activities(Column("status", "A.Status"), Column("n", "$count"), Column("max", "A.Attempts", DataAggregate.Max), Column("agents", "A.AssignedToId", DataAggregate.Count)),
+            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["sms"] }), true),
+        ["By agent, last days, not SMS"] = (() => Filtered(
             Filtered(
                 Activities(Column("agent", "A.AssignedToId"), Column("n", "$count"), Column("max", "A.Attempts", DataAggregate.Max)),
                 new ReportFilterDefinition { Id = "recent", Field = "A.CreatedUtc", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Between, Values = ["2026-05-02", "2026-05-04"] }),
-            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["sms"] }),
+            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["sms"] }), false),
+        ["Smallest and largest channel by status"] = (() => Activities(
+            Column("status", "A.Status"),
+            Column("first", "A.Channel", DataAggregate.Min),
+            Column("last", "A.Channel", DataAggregate.Max)), false),
     };
 
     [Theory]
     [MemberData(nameof(GroupedReports))]
     public async Task Activities_GroupedInTheDatabase_GiveTheSameReportAsReadingRows(string report)
     {
-        // Arrange
+        // Arrange: channels and agents that differ only in case, and a channel in lower case, which a database that
+        // orders text by its code points puts after every upper-case one.
         await using (var seed = _store.CreateSession())
         {
             await seed.SaveAsync(new OmnichannelActivity { ItemId = "b1", Kind = ActivityKind.Sms, Channel = "Sms", Status = ActivityStatus.Completed, AssignedToId = "agent-2", Attempts = 7, CreatedUtc = _day.AddDays(2).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             await seed.SaveAsync(new OmnichannelActivity { ItemId = "b2", Kind = ActivityKind.Call, Channel = OmnichannelConstants.Channels.Phone, Status = ActivityStatus.Completed, Attempts = 2, CreatedUtc = _day.AddMonths(1).AddHours(2), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b3", Kind = ActivityKind.Sms, Channel = "SMS", Status = ActivityStatus.Completed, AssignedToId = "Agent-2", Attempts = 3, CreatedUtc = _day.AddDays(3).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b4", Kind = ActivityKind.Call, Channel = "chat", Status = ActivityStatus.Completed, AssignedToId = "agent-1", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using var session = _store.CreateSession();
         var grouping = Source(session);
         var rowsOnly = new RowsOnly(grouping);
+        var (query, inDatabase) = GroupedQueries[report];
 
         // Act
-        var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(GroupedQueries[report](), TotalledContext(), TestContext.Current.CancellationToken);
-        var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(GroupedQueries[report](), TotalledContext(), TestContext.Current.CancellationToken);
+        var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(query(), TotalledContext(), TestContext.Current.CancellationToken);
+        var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(query(), TotalledContext(), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(actual.GroupedBySource, "The database should have grouped the report.");
+        Assert.Equal(inDatabase, actual.GroupedBySource);
         Assert.Equal(expected.Rows, actual.Rows);
         Assert.Equal(expected.Regroup([]).Select(group => group.Values), actual.Regroup([]).Select(group => group.Values));
     }
