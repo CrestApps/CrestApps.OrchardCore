@@ -229,7 +229,7 @@
             id: design.id,
             displayText: design.displayText,
             description: design.description,
-            category: design.category,
+            groupId: design.groupId || null,
             query: design.query,
             visuals: design.visuals,
             showInAdminMenu: design.showInAdminMenu,

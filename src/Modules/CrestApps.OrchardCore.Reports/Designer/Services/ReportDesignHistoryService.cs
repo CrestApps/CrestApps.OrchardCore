@@ -574,7 +574,7 @@ public sealed class ReportDesignHistoryService
 
         snapshot.DisplayText = ReportDesignNormalizer.Truncate(content.DisplayText);
         snapshot.Description = content.Description?.Trim();
-        snapshot.Category = ReportDesignNormalizer.Truncate(content.Category);
+        snapshot.GroupId = ReportDesignNormalizer.NormalizeId(content.GroupId);
         snapshot.Query = ReportDesignNormalizer.Normalize(content.Query);
         snapshot.Visuals = ReportDesignNormalizer.Normalize(content.Visuals);
         snapshot.ShowInAdminMenu = content.ShowInAdminMenu;
@@ -591,7 +591,7 @@ public sealed class ReportDesignHistoryService
         {
             design.DisplayText,
             design.Description,
-            design.Category,
+            design.GroupId,
             design.Query,
             design.Visuals,
             design.ShowInAdminMenu,

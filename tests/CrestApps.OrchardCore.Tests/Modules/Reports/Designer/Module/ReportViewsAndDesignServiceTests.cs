@@ -160,6 +160,21 @@ public sealed class ReportViewsAndDesignServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_KeepsAGroupThatExists_AndPutsAReportWithAMissingGroupInNoGroup()
+    {
+        // Arrange
+        var (service, _) = DesignService(groups: [new ReportGroup { ItemId = "sales", DisplayText = "Sales" }]);
+
+        // Act
+        var grouped = await service.SaveAsync(new ReportDesign { DisplayText = "Grouped", GroupId = " sales " }, null, _designer, canSharePublicly: false);
+        var orphaned = await service.SaveAsync(new ReportDesign { DisplayText = "Orphaned", GroupId = "deleted" }, null, _designer, canSharePublicly: false);
+
+        // Assert
+        Assert.Equal("sales", grouped.Design.GroupId);
+        Assert.Null(orphaned.Design.GroupId);
+    }
+
+    [Fact]
     public async Task SaveAsync_SharingWithAnonymousVisitors_NeedsThePublicSharingPermission()
     {
         // Arrange
@@ -308,7 +323,7 @@ public sealed class ReportViewsAndDesignServiceTests
         return new ReportExecutionContextFactory(clock.Object, localClock.Object, Options.Create(new ReportQueryLimits()));
     }
 
-    private static (ReportDesignService Service, CrestApps.Core.Services.ICatalog<ReportDesign> Designs) DesignService(ReportDesign existing = null, ReportView[] views = null)
+    private static (ReportDesignService Service, CrestApps.Core.Services.ICatalog<ReportDesign> Designs) DesignService(ReportDesign existing = null, ReportView[] views = null, ReportGroup[] groups = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
@@ -317,6 +332,7 @@ public sealed class ReportViewsAndDesignServiceTests
         var service = new ReportDesignService(
             designs,
             Catalog(views ?? []),
+            Catalog(groups ?? []),
             new InMemorySharedLinkManager(),
             NoSnapshots(),
             Planner(SalesData()),

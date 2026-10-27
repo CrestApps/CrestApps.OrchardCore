@@ -240,7 +240,7 @@ Like the item's admin page, which shows only how many shoppers wait, the alerts 
 
 ## Reports to adapt
 
-The **Reports: inventory reports to adapt** recipe (`InventoryReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, under the **Store** category. They show the units of each item that the built-in stock reports show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+The **Reports: inventory reports to adapt** recipe (`InventoryReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, in the **Store** report group. They show the units of each item that the built-in stock reports show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
 
 | Report | Built from | Matches the built-in report |
 | --- | --- | --- |

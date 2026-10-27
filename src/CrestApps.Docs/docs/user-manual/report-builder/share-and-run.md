@@ -28,11 +28,31 @@ On the **Settings** tab:
 | --- | --- |
 | **Report title** | Shown at the top of the report and in the report list. |
 | **Description** | Shown above the report. |
-| **Category** | Groups the report in the admin menu and the report list. |
-| **Show in the admin menu** | Adds the report under **Reports** in the group you enter as **Category** (or *Custom Reports*), for everyone who can open it. |
+| **Group** | The [report group](#organize-reports-into-groups) the report is listed under, in the admin menu and the report list. Nested groups show their path, such as *Sales / Regional*. Choose **No group** to leave it out of any group. |
+| **Show in the admin menu** | Adds the report under **Reports**, inside its group, for everyone who can open it. A report in no group is added directly under **Reports**. |
 | **Let people the report is shared with export it** | Turn it off to let them view the report but not download it. |
 
 Publish the report to apply the settings.
+
+## Organize reports into groups
+
+Report groups arrange the reports in the admin menu, like folders. A group can be nested in another one, so **Sales** can hold **Regional**, which holds the regional reports. In the admin menu, each group is an item under **Reports**, with the groups nested in it first and then its reports. A group shows only when it holds a report in the menu that you may open, so people never see empty groups.
+
+To manage the groups, open **Reports > Report Groups**. You need the *Manage report groups* permission.
+
+1. Click **Add Group**, or choose **Add a group inside** from a group's actions to nest the new group in it.
+2. Enter the **Name**.
+3. Choose the **Parent group**, or **None (top level)**. A group cannot be placed in itself or in a group nested in it, so those groups are not offered.
+4. Set the **Display order**. Lower numbers come first among the groups that share a parent; groups with the same number are sorted by name.
+5. Click **Save**.
+
+Two groups in the same parent cannot have the same name. Anyone who builds reports can then pick a group on a report's **Settings** tab.
+
+A group that still holds groups or reports cannot be deleted: move its reports to another group (or to **No group**) and its groups to another parent first. If a group disappears anyway, for example on another site that imported only some groups, its reports are listed as reports in no group.
+
+:::note[Categories became groups]
+Reports saved before report groups existed had a free-text **Category**. When the site is upgraded, each category becomes a top-level group with that name, and its reports, drafts and versions are placed in it.
+:::
 
 ## Share a report
 
@@ -88,7 +108,7 @@ The links of every feature of the site, such as report links and the files of da
 
 ## Run and export a report
 
-**Reports > Report Builder** (or **Shared Reports**) lists every report you can open. Click **Run**, or the report's title, to open it. A report pinned to the menu also opens from **Reports** > *its category*.
+**Reports > Report Builder** (or **Shared Reports**) lists every report you can open. Click **Run**, or the report's title, to open it. A report pinned to the menu also opens from **Reports** > *its group* (or directly from **Reports** when it is in no group).
 
 1. Change the filters shown above the report, if any, and click **Show**.
 2. To download the report, click **Export CSV**. When the Reports (OpenXml) feature is on, an **Export** menu offers **Export CSV** and **Export Excel (.xlsx)**.

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -22,8 +23,17 @@ public sealed class ReportDesign : CatalogItem, IDisplayTextAwareModel, IModifie
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the category the report is listed under, in the admin menu and the report list.
+    /// Gets or sets the identifier of the <see cref="ReportGroup"/> the report is listed under, in the admin menu and
+    /// the report list, or <see langword="null"/> for a report in no group.
     /// </summary>
+    public string GroupId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the free-text category of a report saved before report groups existed. The upgrade step turns each
+    /// category into a group and clears it, and an imported report's category names its group.
+    /// </summary>
+    [Obsolete("Replaced by GroupId. Read only to turn a category saved before report groups into a group.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Category { get; set; }
 
     /// <summary>

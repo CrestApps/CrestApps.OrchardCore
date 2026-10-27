@@ -25,9 +25,9 @@ public class ReportDesignerPayload
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the report category.
+    /// Gets or sets the identifier of the report's group, or <see langword="null"/> for a report in no group.
     /// </summary>
-    public string Category { get; set; }
+    public string GroupId { get; set; }
 
     /// <summary>
     /// Gets or sets the query.
@@ -134,7 +134,7 @@ public class ReportDesignerPayload
             Id = design.ItemId,
             DisplayText = design.DisplayText,
             Description = design.Description,
-            Category = design.Category,
+            GroupId = design.GroupId,
             Query = design.Query,
             Visuals = design.Visuals,
             ShowInAdminMenu = design.ShowInAdminMenu,
@@ -174,7 +174,7 @@ public class ReportDesignerPayload
             ItemId = Id,
             DisplayText = DisplayText,
             Description = Description,
-            Category = Category,
+            GroupId = GroupId,
             Query = Query,
             Visuals = Visuals,
             ShowInAdminMenu = ShowInAdminMenu,

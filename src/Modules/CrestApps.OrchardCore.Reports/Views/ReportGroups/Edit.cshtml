@@ -1,0 +1,34 @@
+@model ReportGroupEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.IsNew ? "ReportGroupsCreate" : "ReportGroupsEdit")" title="@(Model.IsNew ? T["New Report Group"] : T["Edit Report Group '{0}'", Model.DisplayText ?? string.Empty])">
+        <breadcrumb-item id="ReportGroupsIndex" action="Index" controller="ReportGroups" area="@ReportsConstants.Feature" permission="@ReportDesignerPermissions.ManageReportGroups.Name">@T["Report Groups"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="DisplayText" class="form-label ocat-label-required">@T["Name"]</label>
+        <input asp-for="DisplayText" class="form-control" maxlength="200" required autofocus />
+        <span class="hint">@T["Shown in the admin menu, under Reports, with the reports placed in the group."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ParentId" class="form-label">@T["Parent group"]</label>
+        <select asp-for="ParentId" asp-items="Model.Parents" class="form-select"><option value="">@T["None (top level)"]</option></select>
+        <span class="hint">@T["Nests this group inside another one. A group cannot be placed in itself or in a group nested in it."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Order" class="form-label">@T["Display order"]</label>
+        <input asp-for="Order" type="number" class="form-control" style="max-width: 10rem;" />
+        <span class="hint">@T["Lower numbers come first among the groups that share a parent; groups with the same number are sorted by name."]</span>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-link">@T["Cancel"]</a>
+    </div>
+</form>

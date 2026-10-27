@@ -273,7 +273,7 @@ public sealed class ReviewReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(["reviews-by-stars", "reviews-by-product"], designs.Select(design => design.ItemId));
-        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+        Assert.All(ReportRecipeDesigns.GroupPaths("CrestApps.OrchardCore.Reviews", "reviews-report-builder-reports.recipe.json"), group => Assert.Equal("Store", group));
 
         // Each of the four reviews gave different stars.
         Assert.Equal(4, results["reviews-by-stars"].Rows.Count);

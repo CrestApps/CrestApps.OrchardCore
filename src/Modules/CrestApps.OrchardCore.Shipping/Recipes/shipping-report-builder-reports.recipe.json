@@ -30,7 +30,7 @@
           "itemId": "shipping-by-carrier",
           "displayText": "Shipments by carrier",
           "description": "The shipments sent in the period, by carrier: the orders and units they carried, how many were delivered or returned, and the average days from leaving to delivered.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "s", "source": "Shipping", "dataSet": "Shipments", "displayName": "Shipments" }
