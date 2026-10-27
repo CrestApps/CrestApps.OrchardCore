@@ -325,6 +325,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         public ContactCenterVoiceMediaLostException(string message) { }
         public ContactCenterVoiceMediaLostException(string message, System.Exception innerException) { }
     }
+    public interface IAgentPhoneStatusProvider
+    {
+        System.Threading.Tasks.Task<bool?> HasOpenPhoneAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IAutomatedVoiceCallObserver
     {
         System.Threading.Tasks.Task ObserveAsync(CrestApps.OrchardCore.ContactCenter.Models.AutomatedVoiceCallObservation observation, System.Threading.CancellationToken cancellationToken = default);

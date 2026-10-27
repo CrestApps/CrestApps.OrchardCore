@@ -33,6 +33,12 @@ public sealed class AgentWorkspaceStateViewModel
     public bool IsSignedIn { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a phone of the agent's is open for calls to ring, when the agent is signed in and the voice
+    /// provider can tell; <see langword="null"/> otherwise.
+    /// </summary>
+    public bool? PhoneOpen { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent's current presence.
     /// </summary>
     public WorkspacePresenceViewModel Presence { get; set; } = new();

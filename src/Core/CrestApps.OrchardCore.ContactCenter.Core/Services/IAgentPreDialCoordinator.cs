@@ -81,6 +81,19 @@ public interface IAgentPreDialCoordinator
     Task OnAgentLegEndedAsync(string providerName, string reservationId, string agentLegId, HangupCause? cause, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records that the agent's phone refused a pre-dialed leg as unavailable, with no other phone of theirs left to
+    /// ring. An offer still ringing is released at once and its caller handed on, rather than ringing nowhere until
+    /// its window runs out, and the agent is set Away; an accepted offer fails the call as
+    /// <see cref="OnAgentLegEndedAsync"/> does.
+    /// </summary>
+    /// <param name="providerName">The technical name of the provider that reported the refusal.</param>
+    /// <param name="reservationId">The offer (reservation) identifier the leg carries.</param>
+    /// <param name="agentLegId">The provider's identifier for the leg.</param>
+    /// <param name="cause">Why the leg ended, when the provider said.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task OnAgentPhoneUnreachableAsync(string providerName, string reservationId, string agentLegId, HangupCause? cause, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Rings the agent's device again at <paramref name="agentEndpoint"/>, in place of a pre-dialed leg the device
     /// refused as unavailable, while the offer is still the agent's and its ring window still open.
     /// </summary>

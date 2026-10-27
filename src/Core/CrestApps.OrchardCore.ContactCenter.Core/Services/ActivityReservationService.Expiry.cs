@@ -183,9 +183,9 @@ public sealed partial class ActivityReservationService
     /// <param name="status">The terminal status the reservation takes.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <param name="sendToVoicemail">Whether the agent chose voicemail for the caller, whatever the queue would do.</param>
-    /// <param name="agentUnreachable">Whether the agent accepted the offer but the leg rung to their phone failed: the
-    /// queue's unanswered-offer action applies as it does to an offer that rang out, and the agent is set Away rather
-    /// than returned to work.</param>
+    /// <param name="agentUnreachable">Whether the leg rung to the agent's phone failed, after they accepted the offer or
+    /// while it was still ringing: the queue's unanswered-offer action applies as it does to an offer that rang out, and
+    /// the agent is set Away rather than returned to work.</param>
     private async Task ReleaseAsync(
         ActivityReservation reservation,
         ReservationStatus status,
