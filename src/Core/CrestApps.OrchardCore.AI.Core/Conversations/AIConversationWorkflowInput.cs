@@ -42,6 +42,7 @@ public static class AIConversationWorkflowInput
         input["Contact"] = conversation.Contact;
         input["CustomerAddress"] = conversation.CustomerAddress;
         input["BusinessAddress"] = conversation.BusinessAddress;
+        input["Simulation"] = conversation.IsSimulation;
         input["Variables"] = new Dictionary<string, string>(conversation.GetVariables(), StringComparer.OrdinalIgnoreCase);
 
         return input;

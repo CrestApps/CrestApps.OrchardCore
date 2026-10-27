@@ -120,7 +120,7 @@ public sealed partial class VoiceAgentConversationLoop
     /// </summary>
     /// <param name="activity">The activity being handed off.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken, Action<OmnichannelActivity> mark = null)
     {
         // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
@@ -129,8 +129,9 @@ public sealed partial class VoiceAgentConversationLoop
         {
             var cleared = current.Properties.Remove(nameof(PendingVoiceHandoff));
 
-            if (cleared || !current.AiEscalated)
+            if (cleared || !current.AiEscalated || mark is not null)
             {
+                mark?.Invoke(current);
                 current.AiEscalated = true;
                 await _activityStore.UpdateAsync(current, cancellationToken);
             }
@@ -139,6 +140,7 @@ public sealed partial class VoiceAgentConversationLoop
         // Also on the in-memory copy the caller is still holding, so a second pass inside this same scope sees
         // the call as handed over rather than re-reading it from a row it has not reloaded.
         activity.Properties?.Remove(nameof(PendingVoiceHandoff));
+        mark?.Invoke(activity);
         activity.AiEscalated = true;
     }
 

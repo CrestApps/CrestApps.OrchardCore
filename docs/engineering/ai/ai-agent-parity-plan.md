@@ -695,3 +695,44 @@ Phases 2 and 3 can run in parallel with phase 4 once phase 1 is in; phases 5 and
 | AD10 | Core changes: system-message template values, realtime context injection, profile versions, TTS and recognition seams, guardrail categories | Do each in CrestApps.Core first |
 | AD11 | Usage billing per tenant (credits, per-minute pricing) | Out of scope; metering already exists |
 | AD12 | CLI and custom LLM WebSocket | Build only on customer demand |
+
+## Progress
+
+Built on branch `claude/retailai-feature-gap-analysis-43fdce`, one commit per phase.
+
+### Phase 1: built
+
+Conversation scope and variables, Liquid in the system message, the AI Conversation Starting event with Set
+Conversation Variables, Use AI Profile and Decline Conversation, the Workflow tool source, tools on turn-based calls
+and SMS, the AI Conversation Turn event, Create AI Activity, and the transcript and variables on the session events.
+Verified live on a test tenant with a website chat. Open: a spoken filler and a per-tool timeout on turn-based calls.
+
+### Phase 2: built
+
+Live AI calls on the supervisor dashboard with Follow, Listen, Message the AI, Take over and End call; the AI Call
+Action task. Open: a Redis relay for commands on multi-node hosts (AD3); Listen verified only without a real call.
+
+### Phase 3: built
+
+Press keys (T1), the caller's keys (T2), phone-menu and screening guidance (T3), transfers to an agent, a number or
+another profile (T4) and a cap on concurrent AI calls (T5). Open: warm, briefed and screened transfers; secure
+keypad capture; switching profiles on a realtime session; live Telnyx tests of every action.
+
+### Phase 4: built, with these differences from the plan
+
+- Q1: every save is a version (no draft and publish step). Versions page with Compare and Restore; conversations and
+  evaluations record the version. Built in Orchard as a snapshot store rather than in CrestApps.Core (AD10).
+- Q2: the **Split Traffic** task with a sticky key, used with **Use AI Profile**. Versions are compared by copying
+  the profile; a live split between two versions of one profile is not built.
+- Q3: the **Simulate AI Conversation** task, batched with For Each. Tool workflows read `Workflow.Input.Simulation`
+  instead of a mock table. Not built: a test case catalog, a page to run them and "create a test from this
+  conversation".
+- Q4: the **Evaluate AI Conversation** task and **AI Conversation Evaluated** event, sampled with Split Traffic, and
+  the **Conversation evaluations** report data set. Not built: a QA dashboard page and cohorts as records; the
+  hallucination check reads the transcript only, not the knowledge base.
+- Q5: the **Rerun AI Conversation Analysis** task. Not built: typed extraction fields (a Core change) and mapping
+  fields to the contact with a mode.
+- Q6: the **Check AI Conversation Metric** task with open and resolved alerts, notifying through the workflow (AD4
+  taken as workflow-first). Not built: alert rules as records and signed webhooks (M5).
+- Q7: the voice session summary already records the outcome, time to first audio, barge-ins and tokens per call;
+  `Transferred` was added to the outcomes. Not built: per-turn latency percentiles and cost per call in currency.

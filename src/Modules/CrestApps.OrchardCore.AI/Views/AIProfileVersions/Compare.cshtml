@@ -1,0 +1,93 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileVersionCompareViewModel
+
+@{
+    var profileName = Model.Profile.DisplayText ?? Model.Profile.Name;
+    var changed = Model.Rows.Count(row => row.Changed);
+}
+
+<zone Name="Title">
+    <breadcrumb name="AIProfileVersionsCompare" title="@T["Version {0}", Model.Version.Version]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+        <breadcrumb-item id="AIProfile" action="Edit" controller="Profiles" area="CrestApps.OrchardCore.AI" route-id="@Model.Profile.ItemId">@profileName</breadcrumb-item>
+        <breadcrumb-item id="AIProfileVersions" action="Index" controller="AIProfileVersions" area="CrestApps.OrchardCore.AI" route-profileId="@Model.Profile.ItemId">@T["Versions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                @if (changed == 0)
+                {
+                    <span>@T["Version {0} is the same as the profile now (version {1}).", Model.Version.Version, Model.CurrentVersion]</span>
+                }
+                else if (changed == 1)
+                {
+                    <span>@T["One setting differs between version {0} and the profile now (version {1}).", Model.Version.Version, Model.CurrentVersion]</span>
+                }
+                else
+                {
+                    <span>@T["{0} settings differ between version {1} and the profile now (version {2}).", changed, Model.Version.Version, Model.CurrentVersion]</span>
+                }
+            </div>
+            @if (Model.Version.Version != Model.CurrentVersion)
+            {
+                <div class="col-auto">
+                    <form asp-action="Restore" asp-route-id="@Model.Version.ItemId" method="post" class="no-multisubmit">
+                        <button type="submit" class="btn btn-primary">@T["Restore version {0}", Model.Version.Version]</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table align-top">
+        <thead>
+            <tr>
+                <th scope="col" class="w-25">@T["Setting"]</th>
+                <th scope="col">@T["Version {0}", Model.Version.Version]</th>
+                <th scope="col">@T["Now"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr class="@(row.Changed ? "table-warning" : null)">
+                    <th scope="row" class="fw-normal">
+                        @row.Label
+                        @if (row.Changed)
+                        {
+                            <span class="badge ta-badge fw-normal ms-1" title="@T["Changed"]"><i class="fa-solid fa-pen text-warning" aria-hidden="true"></i> @T["Changed"]</span>
+                        }
+                    </th>
+                    @foreach (var value in new[] { row.Then, row.Now })
+                    {
+                        <td>
+                            @if (string.IsNullOrEmpty(value))
+                            {
+                                <span class="text-muted">@T["(empty)"]</span>
+                            }
+                            else if (row.IsCode)
+                            {
+                                <pre class="mb-0 small text-wrap text-break"><code>@value</code></pre>
+                            }
+                            else if (row.Multiline)
+                            {
+                                <div class="text-break" style="white-space: pre-wrap">@value</div>
+                            }
+                            else
+                            {
+                                <span class="text-break">@value</span>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -215,7 +215,8 @@ public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
         services
             .AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>()
             .AddScoped<IAIChatReportDataSet, AICompletionUsageReportDataSet>()
-            .AddScoped<IAIChatReportDataSet, AIVoiceUsageReportDataSet>();
+            .AddScoped<IAIChatReportDataSet, AIVoiceUsageReportDataSet>()
+            .AddScoped<IAIChatReportDataSet, AIConversationEvaluationsReportDataSet>();
     }
 }
 

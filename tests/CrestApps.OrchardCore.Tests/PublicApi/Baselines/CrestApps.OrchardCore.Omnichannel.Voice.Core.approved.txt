@@ -2,6 +2,12 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
 {
+    public sealed class AICallTransfer
+    {
+        public AICallTransfer() { }
+        public string PhoneNumber { get; set; }
+        public System.DateTime TransferredUtc { get; set; }
+    }
     public sealed class AILiveCall
     {
         public AILiveCall() { }

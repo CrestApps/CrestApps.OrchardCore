@@ -157,7 +157,11 @@ public sealed partial class VoiceAgentConversationLoop
         }
 
         // From here the caller talks to whoever answers: the AI listens to nothing more on this call.
-        await RecordHandoffAsync(activity, cancellationToken);
+        await RecordHandoffAsync(activity, cancellationToken, current => current.Put(new AICallTransfer
+        {
+            PhoneNumber = phoneNumber,
+            TransferredUtc = _clock.UtcNow,
+        }));
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

@@ -56,6 +56,12 @@ public sealed class AIConversationContext
     public string BusinessAddress { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the conversation is a simulated test, where the customer is played by a model. Tool
+    /// workflows read it as <c>Workflow.Input.Simulation</c> to answer with test data instead of acting.
+    /// </summary>
+    public bool IsSimulation { get; set; }
+
+    /// <summary>
     /// Gets the other values a channel adds for templates and workflows, such as the activity, its campaign and
     /// its subject. Keys are the names Liquid templates use.
     /// </summary>

@@ -36,6 +36,7 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.Services;
@@ -138,11 +139,32 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIToolParameterContextResolver, AIConversationToolParameterContextResolver>());
         services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
         services.TryAddScoped<IAIConversationTurnNotifier, AIConversationTurnNotifier>();
+
+        // Quality: scoring conversations, simulated test conversations and the metrics alerts watch.
+        services
+            .AddScoped<IAIConversationEvaluator, AIConversationEvaluator>()
+            .AddScoped<IAIConversationEvaluationStore, YesSqlAIConversationEvaluationStore>()
+            .AddScoped<AIConversationEvaluationService>()
+            .AddScoped<AIConversationSimulator>()
+            .AddScoped<AIConversationMetrics>()
+            .AddDataMigration<AIConversationEvaluationIndexMigrations>()
+            .AddIndexProvider<AIConversationEvaluationIndexProvider>();
+
+        // Profile versions: every save of a profile is kept, numbered, and can be compared and restored.
+        services
+            .AddScoped<IAIProfileVersionStore, YesSqlAIProfileVersionStore>()
+            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileVersionHandler>()
+            .AddDisplayDriver<AIProfileVersionEntry, AIProfileVersionEntryDisplayDriver>()
+            .AddDataMigration<AIProfileVersionIndexMigrations>()
+            .AddIndexProvider<AIProfileVersionIndexProvider>();
         services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
         services.Configure<TemplateOptions>(options =>
         {
             options.MemberAccessStrategy.Register<AIConversationTemplateModel>();
             options.MemberAccessStrategy.Register<AIConversationTurn>();
+            options.MemberAccessStrategy.Register<AIConversationEvaluation>();
+            options.MemberAccessStrategy.Register<AIConversationCriterionResult>();
+            options.MemberAccessStrategy.Register<AIConversationIssue>();
             options.MemberAccessStrategy.Register<AIChatSession>();
             options.MemberAccessStrategy.Register<AIProfile>();
         });
@@ -263,6 +285,14 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddScoped<IAIConversationStartingHandler, WorkflowAIConversationStartingHandler>();
         services.AddActivity<AIConversationTurnEvent, AIConversationTurnEventDisplayDriver>();
         services.AddScoped<IAIConversationTurnHandler, WorkflowAIConversationTurnHandler>();
+
+        // Quality: A/B splits, QA evaluations, simulated tests, analysis reruns and metric alerts.
+        services.AddActivity<SplitTrafficTask, SplitTrafficTaskDisplayDriver>();
+        services.AddActivity<EvaluateConversationTask, EvaluateConversationTaskDisplayDriver>();
+        services.AddActivity<AIConversationEvaluatedEvent, AIConversationEvaluatedEventDisplayDriver>();
+        services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
+        services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
+        services.AddActivity<CheckConversationMetricTask, CheckConversationMetricTaskDisplayDriver>();
     }
 }
 
