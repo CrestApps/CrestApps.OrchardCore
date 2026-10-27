@@ -6,6 +6,8 @@
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<style asp-name="intl-tel-input" at="Head"></style>
+<script asp-name="intl-tel-input" at="Foot"></script>
 
 <zone Name="Title">
     <breadcrumb name="MessagingBroadcastsCreate" title="@T["New broadcast"]">
@@ -30,16 +32,31 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="ContactAddresses" class="form-label">@T["Recipients (contacts)"]</label>
-        <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" title="@T["Search contacts by name or address…"]"
-                data-messaging-contact-picker
-                data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
-                data-endpoint-select="#endpoint-select"
-                data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
-                data-new-address-text="@T["Not in your contacts"]"
-                data-phone-channels="@JsonSerializer.Serialize(ChannelResolver.GetAll().Where(channel => channel.Capabilities.AddressesArePhoneNumbers).Select(channel => channel.Name))"
-                data-phone-hint="@T["A number that is not in your contacts must be in international format, for example +12015550123."]"></select>
-        <span class="hint">@T["Type a name or address to search the contacts reachable on the selected channel, then select recipients."]</span>
+        <label asp-for="ContactAddresses" class="form-label">@T["Recipients"]</label>
+        <div class="d-flex align-items-start gap-2">
+            <div class="flex-grow-1" style="min-width: 0;">
+                <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" title="@T["Search contacts or leads by name or address…"]"
+                        data-messaging-contact-picker
+                        data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
+                        data-endpoint-select="#endpoint-select"
+                        data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
+                        data-new-address-text="@T["Not in your contacts"]"
+                        data-phone-channels="@JsonSerializer.Serialize(ChannelResolver.GetAll().Where(channel => channel.Capabilities.AddressesArePhoneNumbers).Select(channel => channel.Name))"
+                        data-phone-hint="@T["A number that is not in your contacts must be in international format, for example +12015550123."]"
+                        data-number-entry="#recipient-number-entry"></select>
+            </div>
+            <button type="button" class="btn btn-outline-secondary text-nowrap" id="recipient-number-toggle" hidden aria-controls="recipient-number-entry" aria-expanded="false">
+                <i class="fa-solid fa-hashtag me-1" aria-hidden="true"></i>@T["Enter a number"]
+            </button>
+        </div>
+        @* A number with its country picked from a flag, for someone who is not in the contacts. It is added to the
+           recipients above in E.164, so it is sent exactly as validated here. *@
+        <div class="mt-2" id="recipient-number-entry" hidden
+             data-number-toggle="#recipient-number-toggle"
+             data-invalid-text="@T["Enter a valid number for the selected country."]">
+            <partial name="_RecipientNumberEntry" />
+        </div>
+        <span class="hint">@T["Type a name or address to search the contacts and leads reachable on the selected channel, then select recipients. Use Enter a number for someone who is not in either."]</span>
     </div>
 
     <div class="mb-3">
