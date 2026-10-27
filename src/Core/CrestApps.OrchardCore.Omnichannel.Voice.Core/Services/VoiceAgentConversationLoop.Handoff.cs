@@ -331,6 +331,14 @@ public sealed partial class VoiceAgentConversationLoop
             ? takeOverRequest
             : null;
 
+        // A transfer to a phone number leaves the platform: the provider rings the number and connects the caller.
+        if (takeOverRequest is not null && string.IsNullOrEmpty(takeOverRequest.TargetAgentId) && !string.IsNullOrEmpty(takeOverRequest.TargetPhoneNumber))
+        {
+            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest.TargetPhoneNumber, cancellationToken);
+
+            return;
+        }
+
         if (takeOver is not null)
         {
             handoffService = _handoffServices?.FirstOrDefault(candidate => candidate.CanHandle(OmnichannelConstants.Channels.Phone));

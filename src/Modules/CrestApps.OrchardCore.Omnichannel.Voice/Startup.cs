@@ -72,6 +72,12 @@ public sealed class Startup : StartupBase
             .WithDescription(S["Lets an automated call hang up once the conversation is over."])
             .WithCategory(S["Omnichannel"]);
 
+        // Pressing keys is part of every automated call too: the AI may reach a phone menu on the other end.
+        services.AddCoreAITool<PressKeysTool>(PressKeysTool.ToolName)
+            .WithTitle(S["Press keys"])
+            .WithDescription(S["Lets an automated call press keys to get through a phone menu."])
+            .WithCategory(S["Omnichannel"]);
+
         // Speech-to-speech needs a bidirectional media path to the caller's leg, which only the Contact Center
         // Voice Media feature provides. This feature does not depend on it - automated calls run perfectly well
         // on speak and transcribe alone - so the capability is optional: without it, this reports that no

@@ -62,6 +62,7 @@ public sealed partial class VoiceAgentConversationLoop
 
         // The same thing the live session is told, because a turn-based call is the same call: somebody has to
         // hang up, and the model is the only one here who knows the conversation is over.
+        transcript.Insert(0, new ChatMessage(ChatRole.System, VoiceCallGuidance.PhoneMenusAndScreening));
         transcript.Insert(0, new ChatMessage(ChatRole.System, VoiceCallGuidance.EndingTheCall));
 
         // What this particular turn is for, when it is not a reply to the customer. Put to the model as the turn it

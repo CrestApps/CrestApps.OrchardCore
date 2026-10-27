@@ -43,6 +43,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             ActivityId = state.ActivityId,
             TranscriptionText = callEvent.TranscriptionText,
             TranscriptionIsFinal = callEvent.TranscriptionIsFinal,
+            Digits = callEvent.Digits,
             Answerer = ResolveAnswerer(callEvent.MachineDetectionResult),
 
             // When Telnyx says it happened, so the time between two events is not the time between two webhooks.
@@ -82,6 +83,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             "call.speak.ended" => VoiceAgentEventKind.SpeechEnded,
             "call.transcription" => VoiceAgentEventKind.Transcription,
             "call.hangup" => VoiceAgentEventKind.Hangup,
+            "call.dtmf.received" or "call.gather.ended" => VoiceAgentEventKind.DigitsReceived,
             "call.machine.detection.ended" or "call.machine.premium.detection.ended" => VoiceAgentEventKind.AnswererDetected,
             "call.machine.greeting.ended" or "call.machine.premium.greeting.ended" => VoiceAgentEventKind.MachineGreetingEnded,
             _ => VoiceAgentEventKind.Unknown,

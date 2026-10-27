@@ -52,6 +52,20 @@ internal static class VoiceCallGuidance
         "to them in your goodbye.";
 
     /// <summary>
+    /// How to get past a phone menu or a phone's call screening on a call the AI placed.
+    /// </summary>
+    /// <remarks>
+    /// A business often answers with a menu, and a phone may screen an unknown caller by asking who they are and why
+    /// they are calling before it rings. Neither is the customer, and neither is a voicemail.
+    /// </remarks>
+    public const string PhoneMenusAndScreening =
+        "If an automated phone menu answers, listen to the options, then use the " + PressKeysTool.ToolName + " tool " +
+        "to press the key that gets you to the person or department you need, or to enter an extension you were " +
+        "given, and wait for what the menu says next. If the phone asks who is calling and why before it connects " +
+        "you (call screening), say your name, the business you are calling for and the reason for the call in one " +
+        "short sentence, then wait: the person will usually pick up next.";
+
+    /// <summary>
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.
     /// </summary>
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;

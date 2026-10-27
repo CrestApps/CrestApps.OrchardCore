@@ -87,6 +87,20 @@ The tool works in website chats, text threads and on phone calls. A workflow tha
 **Set Conversation Variables** in a tool workflow changes the live conversation, so the AI's next answers see the new values.
 :::
 
+## Act on a live AI call
+
+The **AI Call Action** task (under **AI Conversations**) acts on a phone call the AI is holding. Choose an **Action**:
+
+| Action | **Value** |
+| --- | --- |
+| **Message the AI** | The note, for example *Offer the 10% retention discount*. The AI acts on it in its own words. |
+| **Hand the call to an agent** | The agent's user name. The AI stops and the call rings that agent. |
+| **Transfer the call to a phone number** | The number, with its country code. The AI stops and the caller is connected to whoever answers. |
+| **Answer with another AI profile** | The profile's identifier. It answers from the caller's next turn, with the same transcript and variables. Turn-based calls only. |
+| **End the call** | Nothing. |
+
+**Call** says which call, and defaults to `{{ Workflow.Input.ActivityId }}`: the call the AI conversation event or the AI tool was raised for. So a workflow the AI calls as a tool can transfer its own call, and an **AI Conversation Turn** workflow can hand a caller who says *lawyer* to a person.
+
 ## React while the conversation is going on
 
 The **AI Conversation Turn** event (under **AI Conversations**) starts a workflow after each turn is saved, on every channel, while the conversation is still going on. What was said is in `Workflow.Input.Text`, and who said it in `Workflow.Input.Role` (`Customer` or `Assistant`). Choose **What the customer says** to run only on the customer's turns.

@@ -1096,6 +1096,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public OmnichannelAutomationOptions() { }
         public int MaxActivitiesPerInvocation { get; set; }
+        public int MaxConcurrentAICalls { get; set; }
         public int MaxProcessingAttempts { get; set; }
         public int ProcessorBatchSize { get; set; }
         public int ProcessorLeaseMilliseconds { get; set; }

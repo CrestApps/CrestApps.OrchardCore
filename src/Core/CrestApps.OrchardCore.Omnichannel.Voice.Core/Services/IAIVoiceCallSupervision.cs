@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
 /// <summary>
-/// What a supervisor can do to a call the AI is holding.
+/// What a supervisor, or a workflow, can do to a call the AI is holding.
 /// </summary>
 public interface IAIVoiceCallSupervision
 {
@@ -24,6 +24,27 @@ public interface IAIVoiceCallSupervision
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>Whether the call is being handed over, and why not when it is not.</returns>
     Task<AIVoiceCallActionResult> TakeOverAsync(string activityId, string targetAgentId, string requestedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stops the AI and transfers the caller to a phone number.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <param name="phoneNumber">The number to ring, in E.164 form.</param>
+    /// <param name="requestedBy">Who asked: a user name, or the workflow.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether the call is being transferred, and why not when it is not.</returns>
+    Task<AIVoiceCallActionResult> TransferToNumberAsync(string activityId, string phoneNumber, string requestedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Hands the conversation to another AI profile, which answers from the caller's next turn with the same
+    /// transcript and variables. Only a turn-based call can change its profile; a live session keeps the one it
+    /// was opened with.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <param name="profileId">The AI profile to answer with.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether the profile changed, and why not when it did not.</returns>
+    Task<AIVoiceCallActionResult> SwitchProfileAsync(string activityId, string profileId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Ends the call.

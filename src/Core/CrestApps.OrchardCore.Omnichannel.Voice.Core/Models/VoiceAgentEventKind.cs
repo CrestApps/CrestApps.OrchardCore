@@ -46,4 +46,9 @@ public enum VoiceAgentEventKind
     /// time is known from the audio rather than guessed from the text.
     /// </summary>
     SpeechStarted,
+
+    /// <summary>
+    /// The caller pressed keys on their phone.
+    /// </summary>
+    DigitsReceived,
 }

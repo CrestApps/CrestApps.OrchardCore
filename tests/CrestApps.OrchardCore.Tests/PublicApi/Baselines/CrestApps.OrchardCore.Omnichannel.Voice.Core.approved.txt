@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string RequestedBy { get; set; }
         public System.DateTime RequestedUtc { get; set; }
         public string TargetAgentId { get; set; }
+        public string TargetPhoneNumber { get; set; }
     }
     public sealed class AIVoiceSessionDraft
     {
@@ -98,6 +99,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public VoiceAgentEvent() { }
         public string ActivityId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentAnswerer Answerer { get; set; }
+        public string Digits { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.HangupCause? HangupCause { get; set; }
         public string HangupDetail { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEventKind Kind { get; set; }
@@ -117,6 +119,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         AnswererDetected = 5,
         MachineGreetingEnded = 6,
         SpeechStarted = 7,
+        DigitsReceived = 8,
     }
     public sealed class VoicemailReached
     {
@@ -159,6 +162,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         Instruct = 0,
         TakeOver = 1,
+        KeysPressed = 2,
     }
     public sealed class AIVoiceCallCommands : CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommands
     {
@@ -168,10 +172,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     }
     public sealed class AIVoiceCallSupervision : CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallSupervision
     {
-        public AIVoiceCallSupervision(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore, CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommands commands, CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop loop, CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver mediaResolver, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallSupervision> logger) { }
+        public AIVoiceCallSupervision(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommands commands, CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop loop, CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver mediaResolver, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallSupervision> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> EndAsync(string activityId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> SendNoteAsync(string activityId, string note, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> SwitchProfileAsync(string activityId, string profileId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> TakeOverAsync(string activityId, string targetAgentId, string requestedBy, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> TransferToNumberAsync(string activityId, string phoneNumber, string requestedBy, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AnsweringMachineSignal
     {
@@ -201,7 +207,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> EndAsync(string activityId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SendNoteAsync(string activityId, string note, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> SwitchProfileAsync(string activityId, string profileId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> TakeOverAsync(string activityId, string targetAgentId, string requestedBy, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallActionResult> TransferToNumberAsync(string activityId, string phoneNumber, string requestedBy, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAIVoiceSessionTracker
     {
@@ -407,6 +415,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools
     {
         public const string ToolName = "endCall";
         public EndCallTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class PressKeysTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string ToolName = "pressKeys";
+        public PressKeysTool() { }
         public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
         public override string Description { get; }
         public override System.Text.Json.JsonElement JsonSchema { get; }

@@ -190,7 +190,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
         public ActivityDialerProfileIndexBackfillBackgroundTask() { }
         public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Processes omnichannel activities.", LockExpiration=600000, LockTimeout=5000, Schedule="*/5 * * * *", Title="Omnichannel Automated Activities Processor")]
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Processes omnichannel activities.", LockExpiration=600000, LockTimeout=5000, Schedule="* * * * *", Title="Omnichannel Automated Activities Processor")]
     public sealed class AutomatedActivitiesProcessorBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
     {
         public AutomatedActivitiesProcessorBackgroundTask() { }

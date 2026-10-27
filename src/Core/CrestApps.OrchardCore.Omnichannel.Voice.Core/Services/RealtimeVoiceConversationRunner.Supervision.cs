@@ -22,12 +22,18 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// <returns><see langword="true"/> when the command was a note this session will act on.</returns>
     private Task<bool> AcceptSupervisorNoteAsync(LiveConversation live, AIVoiceCallCommand command, CancellationToken callToken)
     {
-        if (command.Kind != AIVoiceCallCommandKind.Instruct || string.IsNullOrWhiteSpace(command.Text) || callToken.IsCancellationRequested)
+        if (command.Kind is not (AIVoiceCallCommandKind.Instruct or AIVoiceCallCommandKind.KeysPressed) ||
+            string.IsNullOrWhiteSpace(command.Text) ||
+            callToken.IsCancellationRequested)
         {
             return Task.FromResult(false);
         }
 
-        _ = Task.Run(() => DeliverSupervisorNoteAsync(live, command.Text.Trim(), callToken), CancellationToken.None);
+        var instructions = command.Kind == AIVoiceCallCommandKind.KeysPressed
+            ? VoiceAgentConversationLoop.KeysPressedTurn(command.Text.Trim()) + " Answer it as the caller's reply."
+            : VoiceAgentConversationLoop.SupervisorNoteGuidance(command.Text.Trim());
+
+        _ = Task.Run(() => DeliverSupervisorNoteAsync(live, instructions, callToken), CancellationToken.None);
 
         return Task.FromResult(true);
     }
@@ -45,7 +51,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 await Task.Delay(TimeSpan.FromMilliseconds(250), callToken);
             }
 
-            await live.Current.RequestUnpromptedResponseAsync(VoiceAgentConversationLoop.SupervisorNoteGuidance(note), callToken);
+            await live.Current.RequestUnpromptedResponseAsync(note, callToken);
         }
         catch (OperationCanceledException)
         {

@@ -2009,6 +2009,7 @@ public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<StartCallRecordingTaskSchema>()
             .AddWorkflowActivitySchema<StartOmnichannelActivityTaskSchema>()
             .AddWorkflowActivitySchema<CreateAIActivityTaskSchema>()
+            .AddWorkflowActivitySchema<AICallActionTaskSchema>()
             .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>()
             .AddWorkflowActivitySchema<TransferToAgentTaskSchema>();
     }

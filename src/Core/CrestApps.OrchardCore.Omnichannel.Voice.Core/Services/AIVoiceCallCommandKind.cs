@@ -14,4 +14,9 @@ public enum AIVoiceCallCommandKind
     /// Stop the AI and hand the caller to a person.
     /// </summary>
     TakeOver,
+
+    /// <summary>
+    /// The caller pressed keys on their phone.
+    /// </summary>
+    KeysPressed,
 }

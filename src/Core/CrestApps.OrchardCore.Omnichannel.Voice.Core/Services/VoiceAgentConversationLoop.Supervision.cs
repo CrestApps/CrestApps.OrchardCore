@@ -3,6 +3,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -82,7 +83,88 @@ public sealed partial class VoiceAgentConversationLoop
 
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
 
-        return current?.AiEscalated == true;
+        return current?.AiEscalated == true || current?.Status.IsTerminal() == true;
+    }
+
+    /// <summary>
+    /// What the AI hears when the caller presses keys: a line it answers like anything the caller said.
+    /// </summary>
+    /// <param name="digits">The keys.</param>
+    /// <returns>The caller's turn.</returns>
+    internal static string KeysPressedTurn(string digits)
+        => $"[The caller pressed these keys on their phone: {digits}]";
+
+    /// <summary>
+    /// The caller pressed keys: a live session hears about it through the session holding the call, and a turn-based
+    /// call takes it as the caller's turn.
+    /// </summary>
+    /// <param name="voiceEvent">The provider event.</param>
+    /// <param name="media">The media provider carrying the call.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    private async Task OnDigitsReceivedAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, CancellationToken cancellationToken)
+    {
+        var digits = voiceEvent.Digits?.Trim();
+
+        if (string.IsNullOrEmpty(digits))
+        {
+            return;
+        }
+
+        if (await _voiceCallCommands.SendAsync(voiceEvent.ActivityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, digits)))
+        {
+            return;
+        }
+
+        await OnTranscriptionAsync(
+            new VoiceAgentEvent
+            {
+                Kind = VoiceAgentEventKind.Transcription,
+                ActivityId = voiceEvent.ActivityId,
+                ProviderName = voiceEvent.ProviderName,
+                ProviderCallId = voiceEvent.ProviderCallId,
+                TranscriptionText = KeysPressedTurn(digits),
+                TranscriptionIsFinal = true,
+                OccurredUtc = voiceEvent.OccurredUtc,
+            },
+            media,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Transfers the caller to a phone number through the provider, and records that the AI is no longer on the call.
+    /// </summary>
+    /// <param name="voiceEvent">The call.</param>
+    /// <param name="media">The media provider carrying it.</param>
+    /// <param name="activity">The call's activity.</param>
+    /// <param name="phoneNumber">The number to ring.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    private async Task TransferToNumberAsync(
+        VoiceAgentEvent voiceEvent,
+        IVoiceAgentMediaProvider media,
+        OmnichannelActivity activity,
+        string phoneNumber,
+        CancellationToken cancellationToken)
+    {
+        if (!await media.TransferAsync(voiceEvent.ProviderCallId, phoneNumber, cancellationToken))
+        {
+            _logger.LogWarning(
+                "AI voice activity '{ActivityId}' could not be transferred to a phone number; the call is ended.",
+                activity.ItemId.SanitizeLogValue());
+
+            await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
+
+            return;
+        }
+
+        // From here the caller talks to whoever answers: the AI listens to nothing more on this call.
+        await RecordHandoffAsync(activity, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "AI voice activity '{ActivityId}' was transferred to a phone number.",
+                activity.ItemId.SanitizeLogValue());
+        }
     }
 
     /// <summary>

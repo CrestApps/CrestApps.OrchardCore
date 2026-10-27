@@ -49,6 +49,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         AttachTool(orchestration, EndCallTool.ToolName, "Ends the phone call once the conversation is over.");
 
+        // A call the AI placed may be answered by a phone menu, which only keys get through.
+        AttachTool(orchestration, PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu.");
+
         // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
         // a tool the model is never told about is not used, and guidance without a tool has the model promising
         // a transfer that nothing performs.
@@ -118,6 +121,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         orchestration.SystemMessageBuilder.AppendLine("## Ending the call");
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.EndingTheCall);
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.PhoneMenusAndScreening);
     }
 
     /// <summary>

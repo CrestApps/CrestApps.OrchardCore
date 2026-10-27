@@ -254,6 +254,71 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         => BuildServiceProvider(session, processor, new NoOpSubjectFlowSettingsService());
 
     [Fact]
+    public async Task DoWorkAsync_PlacesNoMoreAICallsThanTheConcurrencyCap()
+    {
+        var databasePath = DatabasePath("call-cap");
+        var store = await CreateStoreAsync($"Data Source={databasePath};Pooling=False");
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    var itemId = await SaveAutomatedSmsActivityAsync(seedSession);
+                    var activity = await seedSession.Query<OmnichannelActivity, OmnichannelActivityIndex>(x => x.ItemId == itemId, collection: OmnichannelConstants.CollectionName)
+                        .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+                    activity.Channel = OmnichannelConstants.Channels.Phone;
+                    await seedSession.SaveAsync(activity, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var processor = new RecordingPhoneProcessor();
+
+            await using (var workSession = store.CreateSession())
+            {
+                var services = new ServiceCollection();
+                services.AddSingleton<ISession>(workSession);
+                services.AddSingleton<IClock>(new StubClock(_now));
+                services.AddSingleton<IOmnichannelProcessor>(processor);
+                services.AddSingleton<ISubjectFlowSettingsService>(new NoOpSubjectFlowSettingsService());
+                var starting = new Mock<IOmnichannelAIConversationStarting>();
+                starting.Setup(x => x.StartingAsync(It.IsAny<OmnichannelActivity>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new CrestApps.OrchardCore.AI.Core.Conversations.AIConversationStartingResult());
+                services.AddSingleton(starting.Object);
+                services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+                services.AddOptions<OmnichannelAutomationOptions>().Configure(options => options.MaxConcurrentAICalls = 2);
+                services.AddSingleton(ContactsWhoHaveNotOptedOut());
+
+                await new AutomatedActivitiesProcessorBackgroundTask().DoWorkAsync(services.BuildServiceProvider(), TestContext.Current.CancellationToken);
+            }
+
+            Assert.Equal(2, processor.ProcessedItemIds.Count);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private sealed class RecordingPhoneProcessor : IOmnichannelProcessor
+    {
+        public string Channel => OmnichannelConstants.Channels.Phone;
+
+        public ConcurrentQueue<string> ProcessedItemIds { get; } = new();
+
+        public Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+        {
+            ProcessedItemIds.Enqueue(activity.ItemId);
+            activity.Status = ActivityStatus.AwaitingCustomerAnswer;
+
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
     public async Task DoWorkAsync_WhenAStartingWorkflowDeclines_CancelsTheActivityWithoutStartingIt()
     {
         var databasePath = DatabasePath("starting-declined");

@@ -12,6 +12,11 @@ public sealed class AITakeOverRequest
     public string TargetAgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the phone number to transfer the caller to, instead of an agent.
+    /// </summary>
+    public string TargetPhoneNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the user name of the person who asked.
     /// </summary>
     public string RequestedBy { get; set; }

@@ -24,6 +24,7 @@ public sealed partial class VoiceAgentConversationLoop
         var systemTools = new List<ToolRegistryEntry>
         {
             AIConversationTools.SystemTool(EndCallTool.ToolName, "Ends the phone call once the conversation has genuinely finished."),
+            AIConversationTools.SystemTool(PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu."),
         };
 
         if (offerTransfer)

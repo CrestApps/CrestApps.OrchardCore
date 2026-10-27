@@ -198,6 +198,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 case VoiceAgentEventKind.Hangup:
                     await OnHangupAsync(voiceEvent, cancellationToken);
                     break;
+                case VoiceAgentEventKind.DigitsReceived:
+                    await OnDigitsReceivedAsync(voiceEvent, media, cancellationToken);
+                    break;
                 case VoiceAgentEventKind.AnswererDetected:
                     await ObserveAsync(voiceEvent, AutomatedVoiceCallObservationKind.AnswererDetected, cancellationToken: cancellationToken);
                     await OnAnswererDetectedAsync(voiceEvent, cancellationToken);
