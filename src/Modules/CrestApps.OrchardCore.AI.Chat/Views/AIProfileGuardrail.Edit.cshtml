@@ -10,10 +10,9 @@
     var selected = new HashSet<string>(Model.Topics ?? [], StringComparer.OrdinalIgnoreCase);
     var name = Html.NameFor(m => m.Topics);
     var addUrl = Url.Action("Create", "AITemplates", new { area = "CrestApps.OrchardCore.AI", source = AITemplateSources.SystemPrompt, category = AIGuardrailTopics.Category });
-    var templatesUrl = Url.Action("Index", "AITemplates", new { area = "CrestApps.OrchardCore.AI" });
+    var templatesUrl = Url.Action("Index", "AITemplates", new { area = "CrestApps.OrchardCore.AI", category = AIGuardrailTopics.Category });
 }
 
-<h5 class="mt-4">@T["Guardrails"]</h5>
 <p class="text-muted">@T["The utility model checks each message against the topics below and the AI answers with the placeholder reply instead. This is on top of Prompt Security, on web chat, text messages and turn-based calls; realtime voice calls are not checked. Each check is one more utility model request, which adds a moment to every turn."]</p>
 
 <div class="ocat-wrapper">
@@ -54,7 +53,7 @@
             </div>
         }
         <span asp-validation-for="Topics"></span>
-        <span class="hint">@T["Topics are System Prompt templates in the <em>{0}</em> category, whose text tells the utility model what falls under the topic. <a href=\"{1}\" target=\"_blank\">Add a topic</a> to use on several profiles, or change your own under <a href=\"{2}\" target=\"_blank\">Templates</a>; they are exported with recipes and deployment plans.", AIGuardrailTopics.Category, addUrl, templatesUrl]</span>
+        <span class="hint">@T["<a href=\"{0}\" target=\"_blank\">Add a topic</a> to use on several profiles, or change your own under <a href=\"{1}\" target=\"_blank\">Artificial Intelligence &gt; Guardrail Topics</a>. They are exported with recipes and deployment plans.", addUrl, templatesUrl]</span>
     </div>
 </div>
 

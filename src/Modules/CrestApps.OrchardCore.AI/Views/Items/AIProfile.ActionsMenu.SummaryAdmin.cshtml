@@ -2,7 +2,6 @@
 
 @model ShapeViewModel<AIProfile>
 
-<a asp-action="Index" asp-controller="AIProfileVersions" asp-area="CrestApps.OrchardCore.AI" asp-route-profileId="@Model.Value.ItemId" class="dropdown-item">@T["Versions"]</a>
 <a asp-action="Delete"
    asp-route-id="@Model.Value.ItemId"
    class="dropdown-item text-danger"

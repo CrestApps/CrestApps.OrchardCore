@@ -34,7 +34,7 @@ public sealed class AIProfileSpeakingStyleDisplayDriver : DisplayDriver<AIProfil
                 ? AISpeakingStyles.Normalize(settings.Styles)
                 : [];
             model.AvailableStyles = await _templateService.ListOptionsByCategoryAsync(AISpeakingStyles.Category);
-        }).Location("Content:20%Instructions;4");
+        }).Location("Content:1%Speaking Style;4.5");
     }
 
     /// <inheritdoc/>

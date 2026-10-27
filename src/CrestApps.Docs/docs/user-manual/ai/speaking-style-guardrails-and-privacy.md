@@ -10,7 +10,7 @@ Three sets of options on each AI profile shape how the AI talks, what it refuses
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > AI Profiles |
+| **Menu** | Artificial Intelligence > AI Profiles, Speaking Styles and Guardrail Topics |
 | **Permission** | Manage AI profiles |
 | **Feature** | AI Services and AI Chat. Workflows for the AI Guardrail Triggered event. |
 
@@ -18,7 +18,7 @@ Three sets of options on each AI profile shape how the AI talks, what it refuses
 
 ## Speaking style
 
-On the **Instructions** tab, **Speaking style** lists sections you can add to the AI's instructions instead of writing them yourself. Each one adds a short, tested paragraph to the end of the system message, after the persona and the instructions, on every channel.
+On the profile's **Content** tab, the **Speaking Style** card lists sections you can add to the AI's instructions instead of writing them yourself. Each one adds a short, tested paragraph to the end of the system message, after the persona and the instructions, on every channel.
 
 | Style | What the AI does |
 | --- | --- |
@@ -37,16 +37,17 @@ Echo verification, NATO spelling, speech normalization and filler words are writ
 
 The styles are prompt templates in the **Speaking style** category, so you can add your own, such as your brand's tone of voice, and use it on as many profiles as you like.
 
-1. Open **Artificial Intelligence > Templates**, click **Add** on **System Prompt**, or click **Add a speaking style** under the list of styles on a profile, which fills in the category for you.
-2. Give it a **Title** and a **Description**: the profile editor shows them beside the checkbox.
-3. Set **Category** to **Speaking style**, and leave **Listable** off so it doesn't appear among the system prompt templates.
-4. Write the section in **System message**, the way you want the AI to read it, and click **Save**.
+1. Open **Artificial Intelligence > Speaking Styles** and click **Add Speaking Style**, or click **Add a speaking style** under the styles on a profile.
+2. Give it a **Title** and a **Description**: the profile editor shows them beside the checkbox. The category is already set to **Speaking style**.
+3. Write the section in **System message**, the way you want the AI to read it, and click **Save**.
 
-The style now appears on the **Instructions** tab of every profile. Templates travel with the **AI Profile Templates** recipe step and deployment step, so your styles move from one site to another with the profiles that use them. The styles that come with the site can't be edited; add your own instead.
+The **Speaking Styles** page lists your own styles to edit or delete, and names the built-in ones.
+
+The style now appears in the **Speaking Style** card of every profile. Templates travel with the **AI Profile Templates** recipe step and deployment step, so your styles move from one site to another with the profiles that use them. The styles that come with the site can't be edited; add your own instead.
 
 ## Guardrails
 
-Guardrails refuse topics the AI must not discuss. They are on the **Prompt Security** tab, below the Prompt Security settings, and work on top of them.
+Guardrails refuse topics the AI must not discuss. They are in the **Guardrails** card of the profile's **Content** tab, after the **Prompt Security** card, and work on top of it.
 
 1. Turn on **Check what the customer says**, **Check the AI's replies**, or both.
 2. Tick the **Topics to refuse**. The site comes with harassment and abuse, hate, self-harm, sexual content, violence and weapons, illegal activity, medical, legal or financial advice, and attempts to override the instructions, and lists your own topics with them.
@@ -68,10 +69,10 @@ If the utility model can't be reached, the conversation goes on unchecked rather
 
 Topics are prompt templates in the **Guardrail topic** category: the template's title names the topic, and its text tells the utility model what falls under it. Add one when several profiles must refuse the same thing, such as your competitors or a pending lawsuit.
 
-1. Open **Artificial Intelligence > Templates** and click **Add** on **System Prompt**, or click **Add a topic** under the topics on a profile.
-2. Give it a **Title**, such as "Competitors", and set **Category** to **Guardrail topic**. Leave **Listable** off.
+1. Open **Artificial Intelligence > Guardrail Topics** and click **Add Guardrail Topic**, or click **Add a topic** under the topics on a profile.
+2. Give it a **Title**, such as "Competitors". The category is already set to **Guardrail topic**.
 3. In **System message**, describe what is not allowed in a sentence or two, for example: "Questions about Acme or Globex, their prices or how we compare to them."
-4. Click **Save**. The topic appears on the **Prompt Security** tab of every profile.
+4. Click **Save**. The topic appears in the **Guardrails** card of every profile.
 
 Like speaking styles, topics travel with the **AI Profile Templates** recipe step and deployment step. A profile's guardrails, with every other setting, travel with the **AI Profile** recipe step and deployment step.
 
