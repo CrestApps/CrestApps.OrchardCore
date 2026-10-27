@@ -67,6 +67,7 @@ const sidebars = {
                 'user-manual/ai/memory',
                 'user-manual/ai/analytics',
                 'user-manual/ai/workflows',
+                'user-manual/ai/conversation-workflows',
             ],
         },
         {
@@ -253,6 +254,7 @@ const sidebars = {
                 'ai/realtime-voice',
                 'ai/file-sources',
                 'ai/workflows',
+                'ai/conversation-workflows',
                 {
                     type: 'category',
                     label: 'A2A (Agent-to-Agent)',

@@ -39,6 +39,14 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Managements
 {
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Workflows"})]
+    public sealed class AIActivityWorkflowsStartup : OrchardCore.Modules.StartupBase
+    {
+        public AIActivityWorkflowsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "CrestApps.OrchardCore.AI"})]
     public sealed class AISubjectFlowStartup : OrchardCore.Modules.StartupBase
@@ -2125,6 +2133,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers
         protected override System.Threading.Tasks.ValueTask EditActivityAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.ConvertLeadTaskViewModel model) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
+    public sealed class CreateAIActivityTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.CreateAIActivityTaskViewModel>
+    {
+        public CreateAIActivityTaskDisplayDriver(CrestApps.Core.AI.Profiles.IAIProfileStore profileStore, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore endpointStore, OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers.CreateAIActivityTaskDisplayDriver> stringLocalizer) { }
+        protected override System.Threading.Tasks.ValueTask EditActivityAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask activity, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.CreateAIActivityTaskViewModel model) { }
+        public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask activity, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
     public sealed class LeadConvertedEventDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.LeadConvertedEvent>
     {
         public LeadConvertedEventDisplayDriver() { }
@@ -2143,6 +2157,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
         public string LeadContentItemId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadOpenActivityMode OpenActivities { get; set; }
         public string OpportunityContentType { get; set; }
+        public override System.Threading.Tasks.Task<OrchardCore.Workflows.Activities.ActivityExecutionResult> ExecuteAsync(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+    }
+    public sealed class CreateAIActivityTask : OrchardCore.Workflows.Activities.TaskActivity<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask>
+    {
+        public CreateAIActivityTask(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask> stringLocalizer) { }
+        public string AIProfileId { get; set; }
+        public string CampaignId { get; set; }
+        public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string Destination { get; set; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
+        public string SubjectContentType { get; set; }
+        public string Variables { get; set; }
         public override System.Threading.Tasks.Task<OrchardCore.Workflows.Activities.ActivityExecutionResult> ExecuteAsync(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
         public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
     }
@@ -2169,5 +2199,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
         public string OpportunityContentType { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> OpportunityContentTypes { get; set; }
+    }
+    public class CreateAIActivityTaskViewModel
+    {
+        public CreateAIActivityTaskViewModel() { }
+        public string AIProfileId { get; set; }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string Destination { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Endpoints { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Profiles { get; set; }
+        public string SubjectContentType { get; set; }
+        public string Variables { get; set; }
     }
 }
