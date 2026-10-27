@@ -46,6 +46,51 @@ public class SmsInboundProcessorTests
     }
 
     [Fact]
+    public async Task NewInbound_RoutedToAnAgent_TellsTheAgentItWasAssignedToThem_BeforeTheMessage()
+    {
+        var routing = new MessagingInboundRouting { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-3" };
+        var harness = new Harness(routing: routing);
+        var events = new List<string>();
+        MessagingAssignmentNotification assignment = null;
+
+        harness.Notifier
+            .Setup(n => n.ConversationAssignedAsync(It.IsAny<MessagingAssignmentNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<MessagingAssignmentNotification, CancellationToken>((notification, _) =>
+            {
+                assignment = notification;
+                events.Add("assigned");
+            })
+            .Returns(Task.CompletedTask);
+        harness.Notifier
+            .Setup(n => n.NewInboundMessageAsync(It.IsAny<MessagingInboundNotification>(), It.IsAny<CancellationToken>()))
+            .Callback(() => events.Add("inbound"))
+            .Returns(Task.CompletedTask);
+
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("Hi there"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["assigned", "inbound"], events);
+        Assert.NotNull(assignment);
+        Assert.Equal(conversation.ItemId, assignment.ConversationId);
+        Assert.Equal("agent-3", assignment.AssignedAgentId);
+        Assert.Null(assignment.AssignedByAgentId);
+        Assert.Null(assignment.PreviousAgentId);
+        Assert.False(assignment.IsTransfer);
+        Assert.Equal("SMS", assignment.Channel);
+        Assert.Equal(conversation.ContactAddress, assignment.ContactAddress);
+        Assert.Equal("Hi there", assignment.Preview);
+    }
+
+    [Fact]
+    public async Task NewInbound_WithNoRoute_AnnouncesNoAssignment()
+    {
+        var harness = new Harness(routing: null);
+
+        await harness.Processor.ProcessAsync(Harness.InboundMessage("Hi"), TestContext.Current.CancellationToken);
+
+        harness.Notifier.Verify(n => n.ConversationAssignedAsync(It.IsAny<MessagingAssignmentNotification>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task NewInbound_AnnouncesItsChannelAndCustomer_SoTheWorkspaceCanBadgeThatChannelsTab()
     {
         var harness = new Harness(routing: null, contactContentItemId: "contact-9");
@@ -282,6 +327,8 @@ public class SmsInboundProcessorTests
         Assert.Equal("agent-owner", conversation.AssignedAgentId);
         Assert.Equal(3, conversation.UnreadCount);
         Assert.Null(harness.CreatedConversation);
+        // A message on a thread the agent already holds is news about the message, not an assignment.
+        harness.Notifier.Verify(n => n.ConversationAssignedAsync(It.IsAny<MessagingAssignmentNotification>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

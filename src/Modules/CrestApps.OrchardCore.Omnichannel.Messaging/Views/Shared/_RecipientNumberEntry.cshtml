@@ -1,0 +1,15 @@
+@*
+    The controls of the number entry that sits under a recipient picker: a phone input with a country picked from a flag,
+    and the button that adds the number to the picker in E.164. The page wraps it in the element that
+    data-number-entry points at, laid out to suit the page; messaging-contact-picker.js wires it up.
+*@
+
+<div class="d-flex align-items-center gap-2">
+    <div class="flex-grow-1" style="min-width: 0;">
+        <input type="tel" class="form-control form-control-sm" autocomplete="off" aria-label="@T["Phone number"]" data-number-input />
+    </div>
+    <button type="button" class="btn btn-sm btn-primary text-nowrap" data-number-add>
+        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add"]
+    </button>
+</div>
+<div class="small text-danger mt-1" data-number-error hidden></div>

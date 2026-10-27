@@ -93,6 +93,7 @@ public sealed partial class ActivityReservationServiceTests
         Assert.Equal(AgentPresenceStatus.Busy, presenceData!.PreviousStatus);
         Assert.Equal(AgentPresenceStatus.Away, presenceData.CurrentStatus);
         Assert.Equal(AgentPresenceReasons.PhoneUnreachable, presenceData.Reason);
+        Assert.DoesNotContain(fixture.PublishedEvents, e => e.EventType == ContactCenterConstants.Events.OfferRequeued);
         Assert.Empty(fixture.AuditRecorder.Offers);
         fixture.Session.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -134,6 +135,11 @@ public sealed partial class ActivityReservationServiceTests
         Assert.Contains(fixture.PublishedEvents, e => e.EventType == ContactCenterConstants.Events.AgentReleased);
         Assert.Contains(fixture.PublishedEvents, e => e.EventType == ContactCenterConstants.Events.AgentPresenceChanged);
         Assert.Empty(fixture.AuditRecorder.Offers);
+
+        // The next agent in line is offered the caller now, not at the minute's assignment pass.
+        var requeued = Assert.Single(fixture.PublishedEvents, e => e.EventType == ContactCenterConstants.Events.OfferRequeued);
+        Assert.Equal("r1", requeued.AggregateId);
+        Assert.Equal("q1", requeued.GetData<OfferDeclinedEventData>()?.QueueId);
     }
 
     [Fact]

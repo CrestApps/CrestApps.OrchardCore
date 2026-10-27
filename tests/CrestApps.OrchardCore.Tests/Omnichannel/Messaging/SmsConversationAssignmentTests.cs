@@ -41,6 +41,62 @@ public class SmsConversationAssignmentTests
     }
 
     [Fact]
+    public async Task ClaimAsync_CreditsTheClaimToTheClaimer_SoTheyAreNotToldOfTheirOwnClaim()
+    {
+        var conversation = new MessagingConversation
+        {
+            Channel = "SMS",
+            ItemId = "conv-1",
+            ContactAddress = "+15550100",
+            OwnerType = ConversationOwnerType.Queue,
+            OwnerId = "queue-1",
+            AssignmentStatus = ConversationAssignmentStatus.Pooled,
+        };
+
+        var (service, notifier) = CreateService(conversation);
+
+        await service.ClaimAsync("conv-1", "agent-9", cancellationToken: TestContext.Current.CancellationToken);
+
+        notifier.Verify(n => n.ConversationAssignedAsync(
+            It.Is<MessagingAssignmentNotification>(a =>
+                a.AssignedAgentId == "agent-9" &&
+                a.AssignedByAgentId == "agent-9" &&
+                a.PreviousAgentId == null &&
+                a.OwnerQueueId == "queue-1" &&
+                a.ContactAddress == "+15550100" &&
+                a.Channel == "SMS"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AssignAsync_TellsTheTargetAgent_AndTheAgentItWasTakenFrom()
+    {
+        var conversation = new MessagingConversation
+        {
+            Channel = "Email",
+            ItemId = "conv-1",
+            ContactAddress = "ann@example.com",
+            OwnerType = ConversationOwnerType.Queue,
+            OwnerId = "queue-1",
+            AssignedAgentId = "agent-1",
+            AssignmentStatus = ConversationAssignmentStatus.Assigned,
+        };
+
+        var (service, notifier) = CreateService(conversation);
+
+        await service.AssignAsync("conv-1", "agent-5", cancellationToken: TestContext.Current.CancellationToken);
+
+        notifier.Verify(n => n.ConversationAssignedAsync(
+            It.Is<MessagingAssignmentNotification>(a =>
+                a.AssignedAgentId == "agent-5" &&
+                a.AssignedByAgentId == null &&
+                a.PreviousAgentId == "agent-1" &&
+                a.ContactAddress == "ann@example.com" &&
+                a.Channel == "Email"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ClaimAsync_Fails_WhenAlreadyClaimedByAnotherAgent()
     {
         var conversation = new MessagingConversation

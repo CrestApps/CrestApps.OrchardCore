@@ -145,20 +145,30 @@ export function sameOriginUrl(value, baseUrl) {
 
 // Classifies a notification that a conversation changed hands against who is looking. A transfer reaches the
 // recipient, the queue whose pool it went to and whoever held it before, and each is told something different.
-//   'to-me'    - it was transferred to the viewing agent: say who sent it.
-//   'away'     - the conversation on screen was moved on by somebody else: say where it went.
-//   'to-queue' - it was sent back to a queue's shared pool the viewer serves: say so.
-//   'refresh'  - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
+//   'to-me'          - it was transferred to the viewing agent: say who sent it.
+//   'assigned-to-me' - routing or another person assigned it to the viewing agent: say who it is with.
+//   'away'           - the conversation on screen was moved on by somebody else: say where it went.
+//   'to-queue'       - it was sent back to a queue's shared pool the viewer serves: say so.
+//   'refresh'        - the viewer's own claim, reply or transfer, or a change that is not theirs to hear about:
+//                      only the list needs to catch up.
 export function classifyAssignment(notification, view) {
-    if (!notification || !notification.isTransfer) {
+    if (!notification) {
         return 'refresh';
     }
 
     var agentId = view && view.agentId;
+    var assignedBy = notification.assignedByAgentId || notification.transferredByAgentId;
 
-    // The sender already knows; their page is already on its way back to the list.
-    if (agentId && notification.transferredByAgentId === agentId) {
+    // Whoever made the assignment already knows: a claim, their own reply, or their transfer only refreshes their list.
+    if (agentId && assignedBy === agentId) {
         return 'refresh';
+    }
+
+    if (!notification.isTransfer) {
+        // Routing or someone else put a conversation in this agent's inbox that was not already there.
+        return agentId && notification.assignedAgentId === agentId && notification.previousAgentId !== agentId
+            ? 'assigned-to-me'
+            : 'refresh';
     }
 
     if (agentId && notification.assignedAgentId === agentId) {
@@ -189,7 +199,7 @@ export function formatText(template, values) {
 
 // The title of the toast a transfer raises, by what classifyAssignment made of it. The names were captured when the
 // transfer happened, and one that is missing reads as "Someone" rather than leaving a gap in the sentence.
-//   texts - the page's localized sentences: someone, toYou, toQueue, toYourQueue and away.
+//   texts - the page's localized sentences: someone, toYou, assigned, assignedFrom, toQueue, toYourQueue and away.
 // Returns null for a kind that raises no toast.
 export function assignmentToastTitle(kind, notification, texts) {
     var text = texts || {};
@@ -198,6 +208,11 @@ export function assignmentToastTitle(kind, notification, texts) {
     switch (kind) {
         case 'to-me':
             return formatText(text.toYou, [by]);
+
+        case 'assigned-to-me':
+            return notification && notification.contactAddress
+                ? formatText(text.assignedFrom, [notification.contactAddress])
+                : text.assigned || null;
 
         case 'to-queue':
             return notification && notification.transferredToName
@@ -210,6 +225,22 @@ export function assignmentToastTitle(kind, notification, texts) {
         default:
             return null;
     }
+}
+
+// The body of the toast an assignment raises: who the conversation is with and its latest message, so the agent knows
+// what landed in their inbox before opening it. A routed assignment already names the contact in its title.
+export function assignmentToastBody(kind, notification) {
+    if (!notification) {
+        return '';
+    }
+
+    var preview = notification.preview || '';
+
+    if (kind === 'assigned-to-me' || !notification.contactAddress) {
+        return preview;
+    }
+
+    return preview ? notification.contactAddress + ': ' + preview : notification.contactAddress;
 }
 
 // The transfer form carries a picker for a person and one for a queue; only the chosen one must hold a selection.

@@ -4,7 +4,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 /// <summary>
-/// Continues inbound routing after a declined offer through durable outbox delivery.
+/// Continues inbound routing through durable outbox delivery after an offer was declined, or its caller was put back
+/// into the queue for the next agent: a failed connect, an offer that rang out, or an agent who could not be reached.
 /// </summary>
 public sealed class ReofferVoiceWorkHandler : IContactCenterEventHandler
 {
