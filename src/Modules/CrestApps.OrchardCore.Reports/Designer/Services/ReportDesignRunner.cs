@@ -145,84 +145,206 @@ public sealed class ReportDesignRunner
             context.FilterValues[filterId] = values;
         }
 
-        try
-        {
-            var plan = await _planner.PlanAsync(design.Query ?? new ReportQueryDefinition(), context.DataSourceContext, cancellationToken);
+        var visuals = (design.Visuals ?? []).Where(visual => visual is not null).ToList();
+        var queries = design.GetQueries().ToList();
+        var sections = new List<ReportSection>();
 
-            if (!plan.IsValid)
+        foreach (var visual in visuals.Where(visual => !queries.Any(query => SameQuery(query.Id, visual.QueryId))))
+        {
+            result.Warnings.Add(S["The visual '{0}' shows a query the report no longer has.", visual.Title ?? visual.Id]);
+        }
+
+        foreach (var query in queries)
+        {
+            var isMain = string.IsNullOrEmpty(query.Id);
+            var queryVisuals = visuals.Where(visual => SameQuery(query.Id, visual.QueryId)).ToList();
+
+            // The main query always runs: its result is the report's rows, and it shows one table when the report has
+            // no visuals. Another query runs only for the visuals that show it.
+            if (!isMain && queryVisuals.Count == 0)
             {
-                foreach (var error in plan.Errors)
+                continue;
+            }
+
+            try
+            {
+                var queryResult = await RunQueryAsync(query, queryVisuals, isMain && visuals.Count == 0, context, period, result, sections, cancellationToken);
+
+                if (isMain)
+                {
+                    if (queryResult is null)
+                    {
+                        return result;
+                    }
+
+                    result.Columns = queryResult.Columns;
+                    result.RowCount = queryResult.Rows.Count;
+                    result.Rows = queryResult.Rows;
+                }
+            }
+            catch (ReportQueryException exception)
+            {
+                foreach (var error in exception.Errors)
+                {
+                    if (isMain)
+                    {
+                        result.Errors.Add(error);
+                    }
+                    else
+                    {
+                        result.Warnings.Add(S["{0}: {1}", query.Name ?? query.Id, error]);
+                    }
+                }
+
+                if (isMain)
+                {
+                    return result;
+                }
+            }
+        }
+
+        // The sections of every query, in the order of the report's visuals.
+        result.Document = new ReportDocument
+        {
+            Title = design.DisplayText,
+        };
+
+        if (visuals.Count == 0)
+        {
+            foreach (var section in sections)
+            {
+                result.Document.Add(section);
+            }
+        }
+        else
+        {
+            foreach (var visual in visuals)
+            {
+                result.Document.Add(sections.FirstOrDefault(section => string.Equals(section.Id, visual.Id, StringComparison.Ordinal)));
+            }
+        }
+
+        ReportDesignDocumentBuilder.AddContainers(result.Document, design.Containers);
+
+        return result;
+    }
+
+    // Runs one query of a report for the visuals that show it, or as one table, adding their sections, its warnings, and its viewer
+    // filters (a filter of an earlier query with the same identifier keeps its control). Returns null when the query
+    // cannot run: the main query's problems are errors, another query's are warnings that name it.
+    private async Task<ReportQueryResult> RunQueryAsync(
+        ReportNamedQuery query,
+        List<ReportVisualDefinition> visuals,
+        bool showAsTable,
+        ReportQueryExecutionContext context,
+        ReportRunPeriod period,
+        ReportRunResult result,
+        List<ReportSection> sections,
+        CancellationToken cancellationToken)
+    {
+        var isMain = string.IsNullOrEmpty(query.Id);
+        var plan = await _planner.PlanAsync(query.Query ?? new ReportQueryDefinition(), context.DataSourceContext, cancellationToken);
+
+        if (!plan.IsValid)
+        {
+            foreach (var error in plan.Errors)
+            {
+                if (isMain)
                 {
                     result.Errors.Add(error);
                 }
-
-                return result;
-            }
-
-            // The period overrides whatever was entered for the filter it is set on. A relative date filter ("in the
-            // last 30 days") covers the period as a date range: the plan is this run's own, so its copy of the filter
-            // changes and the saved report doesn't.
-            var periodFilter = period is null ? null : FindPeriodFilter(plan);
-
-            if (periodFilter is not null)
-            {
-                var values = period.ToFilterValues();
-
-                periodFilter.Definition = AsDateRange(periodFilter.Definition, values);
-                context.FilterValues[periodFilter.Definition.Id] = values;
-                result.PeriodFilterId = periodFilter.Definition.Id;
-            }
-
-            var visuals = design.Visuals ?? [];
-
-            // The rows behind a grouped result aren't kept, so the totals, subtotals, charts and pivots of the visuals
-            // are grouped while the query runs.
-            foreach (var grouping in ReportDesignDocumentBuilder.GetGroupings(visuals, ReportQueryEngine.DescribeColumns(plan)))
-            {
-                context.Groupings.Add(grouping);
-            }
-
-            var queryResult = await _engine.ExecuteAsync(plan, context, cancellationToken);
-
-            foreach (var error in _documentBuilder.Validate(visuals, queryResult.Columns))
-            {
-                result.Warnings.Add(error);
-            }
-
-            foreach (var warning in queryResult.Warnings)
-            {
-                result.Warnings.Add(warning);
-            }
-
-            result.Document = _documentBuilder.Build(design.DisplayText, visuals, queryResult);
-            ReportDesignDocumentBuilder.AddContainers(result.Document, design.Containers);
-            result.Columns = queryResult.Columns;
-            result.RowCount = queryResult.Rows.Count;
-            result.Rows = queryResult.Rows;
-
-            foreach (var filter in plan.Filters.Where(filter => filter.Definition.Exposed))
-            {
-                result.Filters.Add(new ReportExposedFilter
+                else
                 {
-                    Definition = filter.Definition,
-                    DataType = filter.DataType,
-                    Control = ResolveControl(filter.Definition, filter.DataType),
-                    Values = context.FilterValues.TryGetValue(filter.Definition.Id, out var values)
-                        ? values
-                        : filter.Definition.Values,
-                    Options = queryResult.FilterOptions.TryGetValue(filter.Definition.Id, out var options) ? options : [],
-                });
+                    result.Warnings.Add(S["{0}: {1}", query.Name ?? query.Id, error]);
+                }
             }
+
+            return null;
         }
-        catch (ReportQueryException exception)
+
+        // The period overrides whatever was entered for the filter it is set on. A relative date filter ("in the last
+        // 30 days") covers the period as a date range: the plan is this run's own, so its copy of the filter changes
+        // and the saved report doesn't. The main query picks the filter; the filters of the other queries that share
+        // its control cover the same period.
+        if (period is not null)
         {
-            foreach (var error in exception.Errors)
+            if (isMain)
             {
-                result.Errors.Add(error);
+                var periodFilter = FindPeriodFilter(plan);
+
+                if (periodFilter is not null)
+                {
+                    var values = period.ToFilterValues();
+
+                    periodFilter.Definition = AsDateRange(periodFilter.Definition, values);
+                    context.FilterValues[periodFilter.Definition.Id] = values;
+                    result.PeriodFilterId = periodFilter.Definition.Id;
+                }
+            }
+            else if (result.PeriodFilterId is not null)
+            {
+                foreach (var filter in plan.Filters.Where(filter => filter.Definition.Exposed && filter.Definition.Id == result.PeriodFilterId))
+                {
+                    filter.Definition = AsDateRange(filter.Definition, context.FilterValues[result.PeriodFilterId]);
+                }
             }
         }
 
-        return result;
+        // The rows behind a grouped result aren't kept, so the totals, subtotals, charts and pivots of the visuals are
+        // grouped while the query runs.
+        context.Groupings.Clear();
+
+        foreach (var grouping in ReportDesignDocumentBuilder.GetGroupings(visuals, ReportQueryEngine.DescribeColumns(plan)))
+        {
+            context.Groupings.Add(grouping);
+        }
+
+        var queryResult = await _engine.ExecuteAsync(plan, context, cancellationToken);
+
+        foreach (var error in _documentBuilder.Validate(visuals, queryResult.Columns))
+        {
+            result.Warnings.Add(isMain ? error : S["{0}: {1}", query.Name ?? query.Id, error]);
+        }
+
+        foreach (var warning in queryResult.Warnings)
+        {
+            result.Warnings.Add(warning);
+        }
+
+        // A report without visuals shows its main query's result as one table.
+        if (visuals.Count > 0 || showAsTable)
+        {
+            foreach (var section in _documentBuilder.Build(null, visuals, queryResult).Sections)
+            {
+                sections.Add(section);
+            }
+        }
+
+        foreach (var filter in plan.Filters.Where(filter => filter.Definition.Exposed))
+        {
+            if (result.Filters.Any(added => added.Definition.Id == filter.Definition.Id))
+            {
+                continue;
+            }
+
+            result.Filters.Add(new ReportExposedFilter
+            {
+                Definition = filter.Definition,
+                DataType = filter.DataType,
+                Control = ResolveControl(filter.Definition, filter.DataType),
+                Values = context.FilterValues.TryGetValue(filter.Definition.Id, out var values)
+                    ? values
+                    : filter.Definition.Values,
+                Options = queryResult.FilterOptions.TryGetValue(filter.Definition.Id, out var options) ? options : [],
+            });
+        }
+
+        return queryResult;
+    }
+
+    private static bool SameQuery(string queryId, string visualQueryId)
+    {
+        return string.Equals(queryId ?? string.Empty, visualQueryId ?? string.Empty, StringComparison.Ordinal);
     }
 
     /// <summary>

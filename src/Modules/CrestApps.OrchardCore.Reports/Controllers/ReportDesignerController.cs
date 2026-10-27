@@ -313,6 +313,7 @@ public sealed class ReportDesignerController : Controller
         design.Query = ReportDesignNormalizer.Normalize(design.Query);
         design.Visuals = view ? [] : ReportDesignNormalizer.Normalize(design.Visuals);
         design.Containers = view ? [] : ReportDesignNormalizer.Normalize(design.Containers);
+        design.Queries = view ? [] : ReportDesignNormalizer.Normalize(design.Queries);
 
         var filterValues = payload.FilterValues?.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
         var run = await _runner.RunAsync(design, User, filterValues, HttpContext.RequestAborted);

@@ -348,6 +348,50 @@ describe('containers', () => {
     });
 });
 
+describe('queries', () => {
+    it('adds a query that starts as a copy of another', () => {
+        const value = design();
+        value.query.filters.push({ id: 'f1', field: 'Order.PlacedUtc', exposed: true });
+
+        const added = designer.addQuery(value, value.query);
+
+        expect(added.id).toBe('q1');
+        expect(added.query).toEqual(value.query);
+        expect(added.query).not.toBe(value.query);
+        expect(added.query.filters[0].id).toBe('f1');
+    });
+
+    it('removes a query with its visuals and the clicks that filtered them', () => {
+        const value = design();
+        const added = designer.addQuery(value, value.query);
+
+        value.visuals = [
+            { id: 'v1', action: { columnId: 'c1', targets: [{ visualId: 'v2' }, { visualId: 'v3' }] } },
+            { id: 'v2', queryId: added.id },
+            { id: 'v3' },
+        ];
+        designer.removeQuery(value, added.id);
+
+        expect(value.queries).toEqual([]);
+        expect(value.visuals.map((visual) => visual.id)).toEqual(['v1', 'v3']);
+        expect(value.visuals[0].action.targets).toEqual([{ visualId: 'v3' }]);
+    });
+
+    it('removes a column only from the visuals of the query being edited', () => {
+        const value = design();
+        const column = designer.addColumn(value.query, field('Order.Total', 'Decimal'));
+
+        value.visuals = [
+            { id: 'v1', valueColumnIds: [column.id] },
+            { id: 'v2', queryId: 'q1', valueColumnIds: [column.id] },
+        ];
+        designer.removeColumn(value, column.id);
+
+        expect(value.visuals[0].valueColumnIds).toEqual([]);
+        expect(value.visuals[1].valueColumnIds).toEqual([column.id]);
+    });
+});
+
 describe('chart rendering', () => {
     it('draws horizontal bars along the y axis and areas filled', () => {
         const horizontal = charts.buildConfig({ type: 'horizontalbar', labels: ['A'], datasets: [{ label: 'Total', data: [1] }] }, '#000', '#ccc');

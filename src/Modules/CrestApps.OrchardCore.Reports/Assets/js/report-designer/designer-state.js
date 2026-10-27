@@ -412,6 +412,62 @@
         return list;
     };
 
+    // The visuals that read the query being edited: design.activeQueryId names it, and is empty for the main query.
+    designer.visualsOfQuery = function (design, queryId) {
+        var id = queryId == null ? (design.activeQueryId || '') : queryId;
+
+        return (design.visuals || []).filter(function (visual) {
+            return (visual.queryId || '') === id;
+        });
+    };
+
+    // Adds a query that starts as a copy of another, so it reads the same data sets and keeps the same viewer filters,
+    // which then share one control on the report. Returns the new entry.
+    designer.addQuery = function (design, source, name) {
+        design.queries = design.queries || [];
+
+        var entry = {
+            id: designer.newId('q', ids(design.queries)),
+            name: name || null,
+            query: JSON.parse(JSON.stringify(source || {}))
+        };
+
+        design.queries.push(entry);
+
+        return entry;
+    };
+
+    // Removes a query and the visuals that read it, with every reference to those visuals.
+    designer.removeQuery = function (design, queryId) {
+        var removed = {};
+
+        design.queries = (design.queries || []).filter(function (entry) {
+            return entry.id !== queryId;
+        });
+        design.visuals = (design.visuals || []).filter(function (visual) {
+            if (visual.queryId === queryId) {
+                removed[visual.id] = true;
+
+                return false;
+            }
+
+            return true;
+        });
+
+        designer.forgetVisuals(design, removed);
+    };
+
+    // Drops the click actions' references to visuals that no longer exist, by identifier.
+    designer.forgetVisuals = function (design, removed) {
+        (design.visuals || []).forEach(function (visual) {
+            if (visual.action && visual.action.targets) {
+                visual.action.targets = visual.action.targets.filter(function (target) {
+                    return !removed[target.visualId];
+                });
+            }
+        });
+    };
+
     // Removes a column and every sort, result filter, and visual reference to it.
     designer.removeColumn = function (design, columnId) {
         var query = design.query;
@@ -426,7 +482,7 @@
             return !(filter.stage === 'Result' && filter.field === columnId);
         });
 
-        (design.visuals || []).forEach(function (visual) {
+        designer.visualsOfQuery(design).forEach(function (visual) {
             visual.columnIds = (visual.columnIds || []).filter(function (id) {
                 return id !== columnId;
             });

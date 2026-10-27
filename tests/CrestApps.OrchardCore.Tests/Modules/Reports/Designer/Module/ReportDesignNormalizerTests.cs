@@ -76,6 +76,48 @@ public sealed class ReportDesignNormalizerTests
     }
 
     [Fact]
+    public void Normalize_Queries_DropsUnnamedAndRepeatedOnesAndNormalizesEachQuery()
+    {
+        // Arrange
+        List<ReportNamedQuery> queries =
+        [
+            null,
+            new() { Id = " q1 ", Name = "  By day ", Query = null },
+            new() { Id = "q1", Name = "Again" },
+            new() { Id = "", Name = "No id" },
+        ];
+
+        // Act
+        var normalized = ReportDesignNormalizer.Normalize(queries);
+
+        // Assert
+        var query = Assert.Single(normalized);
+        Assert.Equal("q1", query.Id);
+        Assert.Equal("By day", query.Name);
+        Assert.NotNull(query.Query);
+        Assert.Empty(query.Query.Columns);
+    }
+
+    [Fact]
+    public void Normalize_Visuals_GivesEachVisualItsOwnIdentifier()
+    {
+        // Arrange
+        List<ReportVisualDefinition> visuals =
+        [
+            new() { Id = "v1" },
+            new() { Id = null, QueryId = " " },
+            new() { Id = "v1", QueryId = " q1 " },
+        ];
+
+        // Act
+        var normalized = ReportDesignNormalizer.Normalize(visuals);
+
+        // Assert
+        Assert.Equal(["v1", "v2", "v3"], normalized.Select(visual => visual.Id));
+        Assert.Equal([null, null, "q1"], normalized.Select(visual => visual.QueryId));
+    }
+
+    [Fact]
     public void Normalize_Containers_DropsUnnamedAndRepeatedOnesAndClampsTheirSize()
     {
         // Arrange

@@ -35,6 +35,12 @@ public sealed class ReportVisualDefinition
     public string ContainerId { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the <see cref="ReportNamedQuery"/> whose result the visual shows, or
+    /// <see langword="null"/> for the report's main query.
+    /// </summary>
+    public string QueryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the chart type, when <see cref="Type"/> is <see cref="ReportVisualType.Chart"/>.
     /// </summary>
     public ReportChartType ChartType { get; set; }

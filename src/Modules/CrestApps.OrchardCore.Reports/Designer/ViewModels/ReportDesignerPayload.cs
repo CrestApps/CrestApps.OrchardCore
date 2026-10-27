@@ -45,6 +45,11 @@ public class ReportDesignerPayload
     public IList<ReportContainerDefinition> Containers { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the queries the report runs besides its main query.
+    /// </summary>
+    public IList<ReportNamedQuery> Queries { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the report is pinned to the admin menu.
     /// </summary>
     public bool ShowInAdminMenu { get; set; }
@@ -143,6 +148,7 @@ public class ReportDesignerPayload
             Query = design.Query,
             Visuals = design.Visuals,
             Containers = design.Containers,
+            Queries = design.Queries,
             ShowInAdminMenu = design.ShowInAdminMenu,
             AllowExport = design.AllowExport,
             SharedUserNames = design.SharedUserNames,
@@ -184,6 +190,7 @@ public class ReportDesignerPayload
             Query = Query,
             Visuals = Visuals,
             Containers = Containers,
+            Queries = Queries,
             ShowInAdminMenu = ShowInAdminMenu,
             AllowExport = AllowExport,
             SharedUserNames = SharedUserNames,

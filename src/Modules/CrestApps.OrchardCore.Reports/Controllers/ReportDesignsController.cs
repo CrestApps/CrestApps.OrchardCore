@@ -299,6 +299,7 @@ public sealed class ReportDesignsController : Controller
             Query = design.Query,
             Visuals = design.Visuals,
             Containers = design.Containers,
+            Queries = design.Queries,
             AllowExport = design.AllowExport,
         };
 

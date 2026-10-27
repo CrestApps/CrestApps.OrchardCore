@@ -68,7 +68,7 @@ public sealed class DesignedReportPresenter
     {
         ArgumentNullException.ThrowIfNull(design);
 
-        var filterValues = ReportFilterValueBinder.Bind(query, design.Query?.Filters);
+        var filterValues = ReportFilterValueBinder.Bind(query, design.GetFilters());
         var run = await _runner.RunAsync(design, filterValues, cancellationToken);
 
         if (run.Document is not null)
@@ -116,7 +116,7 @@ public sealed class DesignedReportPresenter
     {
         ArgumentNullException.ThrowIfNull(design);
 
-        var filterValues = ReportFilterValueBinder.Bind(query, design.Query?.Filters);
+        var filterValues = ReportFilterValueBinder.Bind(query, design.GetFilters());
         var file = await ExportAsync(design, filterValues, format, cancellationToken);
 
         if (file is not null && source.HasValue)

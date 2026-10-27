@@ -331,6 +331,16 @@ public static class ReportDesignerTexts
             ["Containers"] = S["Containers"].Value,
             ["Containers frame visuals under a title and scroll them within a height, so one page can show everything."] = S["Containers frame visuals under a title and scroll them within a height, so one page can show everything."].Value,
             ["Add container"] = S["Add container"].Value,
+            ["Main query"] = S["Main query"].Value,
+            ["Query"] = S["Query"].Value,
+            ["Query name"] = S["Query name"].Value,
+            ["A new query starts as a copy of this one. The viewer filters it copies stay linked: one control filters both."] = S["A new query starts as a copy of this one. The viewer filters it copies stay linked: one control filters both."].Value,
+            ["Add query"] = S["Add query"].Value,
+            ["Remove this query and the visuals that show it?"] = S["Remove this query and the visuals that show it?"].Value,
+            ["Remove query"] = S["Remove query"].Value,
+            ["Each query groups its own data; pick the query a visual shows in its properties."] = S["Each query groups its own data; pick the query a visual shows in its properties."].Value,
+            ["Add a query to show data grouped another way, such as by day next to a table by agent."] = S["Add a query to show data grouped another way, such as by day next to a table by agent."].Value,
+            ["The visual shows the columns of this query."] = S["The visual shows the columns of this query."].Value,
         };
     }
 

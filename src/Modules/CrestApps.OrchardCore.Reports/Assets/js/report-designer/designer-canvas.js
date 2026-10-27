@@ -676,6 +676,20 @@
                     app.changed({ render: false });
                 }
             })),
+            (app.design.queries || []).length ? labelled(app.t('Query'), ui.select(app.queries().map(function (entry) {
+                return { value: entry.id, text: app.queryName(entry.id) };
+            }), visual.queryId || '', {
+                onchange: function (event) {
+                    visual.queryId = event.target.value || null;
+                    visual.categoryColumnId = null;
+                    visual.seriesColumnId = null;
+                    visual.valueColumnIds = [];
+                    visual.columnIds = [];
+                    visual.action = null;
+                    app.useQuery(visual.queryId || '');
+                    app.changed({ render: false });
+                }
+            }), app.t('The visual shows the columns of this query.')) : null,
             app.design.containers.length ? labelled(app.t('Container'), ui.select([{ value: '', text: app.t('None') }].concat(app.design.containers.map(function (container, index) {
                 return { value: container.id, text: containerLabel(container, index) };
             })), visual.containerId || '', {
@@ -768,6 +782,18 @@
         return parts;
     }
 
+    // Selects a visual, editing its query when it shows another one, so its properties list that query's columns.
+    app.selectVisual = function (visual) {
+        if ((visual.queryId || '') !== app.activeQueryId) {
+            app.selection = { kind: 'visual', id: visual.id };
+            app.useQuery(visual.queryId || '');
+
+            return;
+        }
+
+        app.select('visual', visual.id);
+    };
+
     app.renderVisuals = function () {
         var target = app.elements.visuals;
 
@@ -796,6 +822,7 @@
                 id: designer.newId('v', visuals.map(function (item) {
                     return item.id;
                 })),
+                queryId: app.activeQueryId || null,
                 type: type,
                 title: null,
                 width: type === 'Table' || type === 'Metrics' ? 12 : 6,
@@ -824,14 +851,19 @@
             list.appendChild(h('div', { className: 'list-group-item d-flex align-items-center gap-2 py-1' + (selected ? ' active' : '') },
                 ui.icon(icons[visual.type] || 'fa-table'),
                 h('button', { type: 'button', className: 'btn btn-link btn-sm p-0 flex-grow-1 text-start text-reset text-decoration-none', onclick: function () {
-                    app.select('visual', visual.id);
-                } }, visual.title || app.config.visualLabels[visual.type] || visual.type),
+                    app.selectVisual(visual);
+                } }, visual.title || app.config.visualLabels[visual.type] || visual.type,
+                (app.design.queries || []).length ? h('span', { className: 'd-block small text-muted' }, app.queryName(visual.queryId)) : null),
                 h('button', { type: 'button', className: 'btn btn-link btn-sm p-0 text-reset', 'aria-label': app.t('Move up'), disabled: index === 0, onclick: function () {
                     designer.move(visuals, index, index - 1);
                     app.changed();
                 } }, ui.icon('fa-arrow-up')),
                 h('button', { type: 'button', className: 'btn btn-link btn-sm p-0 text-reset', 'aria-label': app.t('Remove'), onclick: function () {
+                    var removed = {};
+
+                    removed[visual.id] = true;
                     visuals.splice(index, 1);
+                    designer.forgetVisuals(app.design, removed);
                     app.selection = null;
                     app.changed();
                 } }, ui.icon('fa-xmark'))));
