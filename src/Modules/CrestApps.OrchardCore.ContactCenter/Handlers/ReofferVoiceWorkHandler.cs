@@ -1,10 +1,11 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 /// <summary>
-/// Continues inbound routing after a declined offer through durable outbox delivery.
+/// Continues inbound routing through durable outbox delivery after an offer was declined, requeued, or rang out back into its queue.
 /// </summary>
 public sealed class ReofferVoiceWorkHandler : IContactCenterEventHandler
 {
@@ -34,19 +35,33 @@ public sealed class ReofferVoiceWorkHandler : IContactCenterEventHandler
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
-        if (interactionEvent.EventType != ContactCenterConstants.Events.OfferDeclined &&
-            interactionEvent.EventType != ContactCenterConstants.Events.OfferRequeued)
+        var queueId = interactionEvent.EventType switch
+        {
+            ContactCenterConstants.Events.OfferDeclined or ContactCenterConstants.Events.OfferRequeued
+                => interactionEvent.GetData<OfferDeclinedEventData>()?.QueueId,
+            ContactCenterConstants.Events.OfferExpired => GetRequeuedQueueId(interactionEvent.GetData<OfferLifecycleEventData>()),
+            _ => null,
+        };
+
+        if (string.IsNullOrEmpty(queueId))
         {
             return;
         }
 
-        var data = interactionEvent.GetData<OfferDeclinedEventData>();
-
-        if (string.IsNullOrEmpty(data?.QueueId))
-        {
-            return;
-        }
-
-        await _inboundVoiceService.Value.OfferNextAsync(data.QueueId, cancellationToken);
+        await _inboundVoiceService.Value.OfferNextAsync(queueId, cancellationToken);
     }
+
+    /// <summary>
+    /// The queue an offer that rang out went back into, when it did. Without this the next agent in line was rung only at
+    /// the minute's assignment pass, and an unanswered caller often hung up before it ran. A direct line rings only the
+    /// agent it belongs to, and a campaign's virtual queue is paced by the dialer, so neither has a next agent to offer.
+    /// </summary>
+    private static string GetRequeuedQueueId(OfferLifecycleEventData data)
+        => data is not null &&
+            string.Equals(data.Reason, nameof(UnansweredOfferAction.Requeue), StringComparison.Ordinal) &&
+            !string.IsNullOrEmpty(data.QueueId) &&
+            !ContactCenterConstants.IsDirectRoutingQueue(data.QueueId) &&
+            !ContactCenterConstants.IsCampaignQueue(data.QueueId)
+                ? data.QueueId
+                : null;
 }
