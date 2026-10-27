@@ -736,3 +736,17 @@ keypad capture; switching profiles on a realtime session; live Telnyx tests of e
   taken as workflow-first). Not built: alert rules as records and signed webhooks (M5).
 - Q7: the voice session summary already records the outcome, time to first audio, barge-ins and tokens per call;
   `Transferred` was added to the outcomes. Not built: per-turn latency percentiles and cost per call in currency.
+
+### Phase 5: built in part
+
+- M1: contact memory as a record per contact in the AI collection (not a part on the contact, so rewrites do not
+  version the content item; AD5). Profile switches **Use contact memory** and **Save to contact memory**, the note on
+  the contact's editor, a rewrite when the session closes, and the **Update Contact Memory** task. Verified live: a
+  hand-edited note was merged with a chat and kept what was still true. Not built: an editable memory prompt and a
+  backfill from past conversations.
+- M5: the **Send Signed Webhook** task, signed like the commerce webhooks, with the secret encrypted and retries on
+  408, 429 and 5xx. Verified live against a local receiver that checked the signature. Not built: webhook
+  subscriptions with a delivery log; workflows on the existing events take their place.
+- M2, M3, M4: not built. Calendars and CRMs are connected through workflows (HTTP Request with the Workflow tool
+  source), documented in the user manual. Native Google, Microsoft 365, HubSpot and Salesforce connections, and Drive,
+  SharePoint and Notion file sources, need OAuth apps and accounts to build and test against.

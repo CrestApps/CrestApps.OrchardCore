@@ -1936,6 +1936,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public bool SkipNumbersOfExistingContacts { get; set; }
         public bool SkipNumbersOfOpenLeads { get; set; }
     }
+    public class OmnichannelContactMemoryViewModel
+    {
+        public OmnichannelContactMemoryViewModel() { }
+        public string AIMemory { get; set; }
+    }
     public class OmnichannelContactPartSettingsViewModel
     {
         public OmnichannelContactPartSettingsViewModel() { }

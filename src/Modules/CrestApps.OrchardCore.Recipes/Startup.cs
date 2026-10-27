@@ -393,6 +393,8 @@ public sealed class AIWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<SimulateConversationTaskSchema>()
             .AddWorkflowActivitySchema<RerunConversationAnalysisTaskSchema>()
             .AddWorkflowActivitySchema<CheckConversationMetricTaskSchema>()
+            .AddWorkflowActivitySchema<UpdateContactMemoryTaskSchema>()
+            .AddWorkflowActivitySchema<SendSignedWebhookTaskSchema>()
             .AddWorkflowActivitySchema<AIChatSessionFieldExtractedEventSchema>()
             .AddWorkflowActivitySchema<AIChatSessionPostProcessedEventSchema>()
             .AddWorkflowActivitySchema<AICompletionFromProfileTaskSchema>()

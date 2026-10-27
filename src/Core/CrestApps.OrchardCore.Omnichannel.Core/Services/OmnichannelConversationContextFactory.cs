@@ -1,6 +1,8 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -65,6 +67,17 @@ public sealed class OmnichannelConversationContextFactory : IOmnichannelConversa
         if (!string.IsNullOrWhiteSpace(activity.ContactContentItemId))
         {
             context.Contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+            // Kept on the session, which the caller saves with the turn, so work done after the conversation, such
+            // as rewriting the contact's memory, knows who it was with.
+            if (session is not null && !session.Has<AIConversationContactMetadata>())
+            {
+                session.Put(new AIConversationContactMetadata
+                {
+                    ContactId = activity.ContactContentItemId,
+                    ActivityId = activity.ItemId,
+                });
+            }
         }
 
         if (activity.Subject is not null)

@@ -52,4 +52,9 @@ public static class AIUsageFeaturePurposes
     /// Playing the customer in a simulated test conversation.
     /// </summary>
     public const string ConversationSimulation = "ConversationSimulation";
+
+    /// <summary>
+    /// Rewriting what the AI remembers about a contact after a conversation.
+    /// </summary>
+    public const string ContactMemory = "ContactMemory";
 }

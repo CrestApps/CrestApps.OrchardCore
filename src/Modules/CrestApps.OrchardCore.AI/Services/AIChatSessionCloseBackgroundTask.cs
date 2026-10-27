@@ -99,6 +99,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             await sessionStore.SaveAsync(chatSession, cancellationToken);
 
+            await RememberAsync(serviceProvider, profile, chatSession, prompts, logger, cancellationToken);
+
             await TriggerSessionClosedWorkflowAsync(serviceProvider, profile, chatSession, logger);
 
             if (logger.IsEnabled(LogLevel.Debug))
@@ -162,6 +164,25 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             {
                 await TriggerPostProcessedWorkflowAsync(serviceProvider, profile, chatSession, logger);
             }
+        }
+    }
+
+    // Rewrites the contact's memory note from the conversation that just ended, when the profile saves memory.
+    private static async Task RememberAsync(
+        IServiceProvider serviceProvider,
+        AIProfile profile,
+        AIChatSession chatSession,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await serviceProvider.GetRequiredService<AIContactMemoryService>().RememberSessionAsync(profile, chatSession, prompts, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Updating the contact memory from session '{SessionId}' failed.", chatSession.SessionId);
         }
     }
 

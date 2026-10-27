@@ -69,6 +69,7 @@ const sidebars = {
                 'user-manual/ai/workflows',
                 'user-manual/ai/conversation-workflows',
                 'user-manual/ai/conversation-quality',
+                'user-manual/ai/contact-memory-and-integrations',
             ],
         },
         {
@@ -257,6 +258,7 @@ const sidebars = {
                 'ai/workflows',
                 'ai/conversation-workflows',
                 'ai/conversation-quality',
+                'ai/contact-memory-and-integrations',
                 {
                     type: 'category',
                     label: 'A2A (Agent-to-Agent)',

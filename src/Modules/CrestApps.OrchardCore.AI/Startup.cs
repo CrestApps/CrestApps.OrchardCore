@@ -150,6 +150,14 @@ public sealed class Startup : StartupBase
             .AddDataMigration<AIConversationEvaluationIndexMigrations>()
             .AddIndexProvider<AIConversationEvaluationIndexProvider>();
 
+        // Contact memory: a note per contact the profile's instructions get and its conversations rewrite.
+        services
+            .AddScoped<IAIContactMemoryStore, YesSqlAIContactMemoryStore>()
+            .AddScoped<AIContactMemoryService>()
+            .AddScoped<IAICompletionContextBuilderHandler, AIContactMemoryCompletionContextBuilderHandler>()
+            .AddDataMigration<AIContactMemoryIndexMigrations>()
+            .AddIndexProvider<AIContactMemoryIndexProvider>();
+
         // Profile versions: every save of a profile is kept, numbered, and can be compared and restored.
         services
             .AddScoped<IAIProfileVersionStore, YesSqlAIProfileVersionStore>()
@@ -293,6 +301,11 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
         services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
         services.AddActivity<CheckConversationMetricTask, CheckConversationMetricTaskDisplayDriver>();
+
+        // Memory and integrations: rewriting a contact's memory, and signed webhooks to other systems.
+        services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
+        services.AddActivity<SendSignedWebhookTask, SendSignedWebhookTaskDisplayDriver>();
+        services.AddHttpClient(SendSignedWebhookTask.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
     }
 }
 
