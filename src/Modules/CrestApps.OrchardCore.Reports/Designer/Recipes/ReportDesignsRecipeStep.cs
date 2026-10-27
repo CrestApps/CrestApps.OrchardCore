@@ -111,6 +111,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 
             design.Query = ReportDesignNormalizer.Normalize(design.Query);
             design.Visuals = ReportDesignNormalizer.Normalize(design.Visuals);
+            design.Containers = ReportDesignNormalizer.Normalize(design.Containers);
             design.SharedUserNames ??= [];
             design.SharedRoles ??= [];
             design.OwnerId = await ResolveOwnerAsync(node, design.OwnerId);

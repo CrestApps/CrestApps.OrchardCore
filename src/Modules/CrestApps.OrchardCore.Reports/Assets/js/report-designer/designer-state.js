@@ -444,6 +444,37 @@
         });
     };
 
+    // The heights a container may have, in pixels; 0 grows with its visuals.
+    designer.CONTAINER_HEIGHTS = [0, 240, 320, 400, 480, 600, 800];
+
+    designer.addContainer = function (design) {
+        design.containers = design.containers || [];
+
+        var container = {
+            id: designer.newId('k', ids(design.containers)),
+            title: null,
+            width: 12,
+            height: 400
+        };
+
+        design.containers.push(container);
+
+        return container;
+    };
+
+    // Removes a container; its visuals are shown on their own again.
+    designer.removeContainer = function (design, containerId) {
+        design.containers = (design.containers || []).filter(function (container) {
+            return container.id !== containerId;
+        });
+
+        (design.visuals || []).forEach(function (visual) {
+            if (visual.containerId === containerId) {
+                visual.containerId = null;
+            }
+        });
+    };
+
     // Removes a data set with its join and every column and row filter that reads it. Calculated fields that read it
     // are kept so their formulas are not lost; the designer reports them as invalid.
     // The join that attaches a data set, or undefined. It never creates one, so rendering can use it freely.

@@ -17,6 +17,11 @@ public sealed class ReportDocument
     public IList<ReportSection> Sections { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the containers that frame sections on the report page. Exports ignore them.
+    /// </summary>
+    public IList<ReportContainer> Containers { get; set; } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the report has any content to display.
     /// </summary>
     public bool HasContent

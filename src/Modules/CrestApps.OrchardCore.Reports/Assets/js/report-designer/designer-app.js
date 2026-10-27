@@ -232,6 +232,7 @@
             category: design.category,
             query: design.query,
             visuals: design.visuals,
+            containers: design.containers,
             showInAdminMenu: design.showInAdminMenu,
             allowExport: design.allowExport,
             sharedUserNames: design.sharedUserNames,
@@ -600,6 +601,7 @@
         designer.mergeJoins(app.design.query);
 
         app.design.visuals = app.design.visuals || [];
+        app.design.containers = app.design.containers || [];
         app.design.sharedUserNames = app.design.sharedUserNames || [];
         app.design.sharedRoles = app.design.sharedRoles || [];
         app.schedulePlan = ui.debounce(app.refreshPlan, 350);

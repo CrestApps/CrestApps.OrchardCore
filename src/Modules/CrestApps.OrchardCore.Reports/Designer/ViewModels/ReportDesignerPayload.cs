@@ -40,6 +40,11 @@ public class ReportDesignerPayload
     public IList<ReportVisualDefinition> Visuals { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the containers that frame the visuals.
+    /// </summary>
+    public IList<ReportContainerDefinition> Containers { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the report is pinned to the admin menu.
     /// </summary>
     public bool ShowInAdminMenu { get; set; }
@@ -137,6 +142,7 @@ public class ReportDesignerPayload
             Category = design.Category,
             Query = design.Query,
             Visuals = design.Visuals,
+            Containers = design.Containers,
             ShowInAdminMenu = design.ShowInAdminMenu,
             AllowExport = design.AllowExport,
             SharedUserNames = design.SharedUserNames,
@@ -177,6 +183,7 @@ public class ReportDesignerPayload
             Category = Category,
             Query = Query,
             Visuals = Visuals,
+            Containers = Containers,
             ShowInAdminMenu = ShowInAdminMenu,
             AllowExport = AllowExport,
             SharedUserNames = SharedUserNames,

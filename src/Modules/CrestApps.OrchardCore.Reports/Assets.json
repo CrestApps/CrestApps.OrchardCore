@@ -7,6 +7,12 @@
   },
   {
     "action": "vite",
+    "name": "report-document.css",
+    "source": "Assets/css/report-document.css",
+    "dest": "wwwroot/styles/report-document.css"
+  },
+  {
+    "action": "vite",
     "name": "report-designer.js",
     "source": [
       "Assets/js/report-designer/designer-state.js",

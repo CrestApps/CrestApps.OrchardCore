@@ -37,6 +37,11 @@ public sealed class ReportDesign : CatalogItem, IDisplayTextAwareModel, IModifie
     public IList<ReportVisualDefinition> Visuals { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the containers that frame visuals on the report page.
+    /// </summary>
+    public IList<ReportContainerDefinition> Containers { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the report has its own item under Reports in the admin menu.
     /// </summary>
     public bool ShowInAdminMenu { get; set; }

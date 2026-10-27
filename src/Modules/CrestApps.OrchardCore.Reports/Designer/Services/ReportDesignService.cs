@@ -128,6 +128,7 @@ public sealed class ReportDesignService
         design.Category = ReportDesignNormalizer.Truncate(incoming.Category);
         design.Query = ReportDesignNormalizer.Normalize(incoming.Query);
         design.Visuals = ReportDesignNormalizer.Normalize(incoming.Visuals);
+        design.Containers = ReportDesignNormalizer.Normalize(incoming.Containers);
         design.ShowInAdminMenu = incoming.ShowInAdminMenu;
         design.AllowExport = incoming.AllowExport;
         design.SharedUserNames = Distinct(incoming.SharedUserNames);

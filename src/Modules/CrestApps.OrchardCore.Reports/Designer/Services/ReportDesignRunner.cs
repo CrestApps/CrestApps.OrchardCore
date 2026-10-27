@@ -195,6 +195,7 @@ public sealed class ReportDesignRunner
             }
 
             result.Document = _documentBuilder.Build(design.DisplayText, visuals, queryResult);
+            ReportDesignDocumentBuilder.AddContainers(result.Document, design.Containers);
             result.Columns = queryResult.Columns;
             result.RowCount = queryResult.Rows.Count;
             result.Rows = queryResult.Rows;

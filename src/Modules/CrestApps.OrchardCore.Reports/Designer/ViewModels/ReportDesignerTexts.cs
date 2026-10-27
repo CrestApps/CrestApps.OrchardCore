@@ -320,6 +320,17 @@ public static class ReportDesignerTexts
             ["Needs the Email feature. Otherwise, copy the link and send it yourself."] = S["Needs the Email feature. Otherwise, copy the link and send it yourself."].Value,
             ["Pick the people the link is for."] = S["Pick the people the link is for."].Value,
             ["A share link sends the report to users of the site, who open it once signed in, until it expires, is used as many times as allowed, or you revoke it."] = S["A share link sends the report to users of the site, who open it once signed in, until it expires, is used as many times as allowed, or you revoke it."].Value,
+            ["Container"] = S["Container"].Value,
+            ["Shown in the band across the top of the container."] = S["Shown in the band across the top of the container."].Value,
+            ["The widths of its visuals divide the width of the container."] = S["The widths of its visuals divide the width of the container."].Value,
+            ["Height"] = S["Height"].Value,
+            ["Grow with its visuals"] = S["Grow with its visuals"].Value,
+            ["Visuals taller than the container scroll inside it."] = S["Visuals taller than the container scroll inside it."].Value,
+            ["Frames the visual with the others in the container."] = S["Frames the visual with the others in the container."].Value,
+            ["Visuals in the container"] = S["Visuals in the container"].Value,
+            ["Containers"] = S["Containers"].Value,
+            ["Containers frame visuals under a title and scroll them within a height, so one page can show everything."] = S["Containers frame visuals under a title and scroll them within a height, so one page can show everything."].Value,
+            ["Add container"] = S["Add container"].Value,
         };
     }
 

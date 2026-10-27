@@ -52,6 +52,18 @@ public sealed class ReportSection
     public int Width { get; set; } = 12;
 
     /// <summary>
+    /// Gets or sets the identifier of the section within its report, such as the designed visual it shows. The report
+    /// page refreshes a section by this identifier.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the <see cref="ReportContainer"/> the section is shown in, or <see langword="null"/>
+    /// to show it on its own.
+    /// </summary>
+    public string ContainerId { get; set; }
+
+    /// <summary>
     /// Creates a metrics section.
     /// </summary>
     /// <param name="title">The section title.</param>

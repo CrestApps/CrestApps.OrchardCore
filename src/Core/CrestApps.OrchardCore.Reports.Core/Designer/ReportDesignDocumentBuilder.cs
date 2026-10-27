@@ -248,10 +248,53 @@ public sealed class ReportDesignDocumentBuilder
             }
 
             section.Width = Math.Clamp(visual.Width, 1, 12);
+            section.Id = visual.Id;
+            section.ContainerId = visual.ContainerId;
             document.Add(section);
         }
 
         return document;
+    }
+
+    /// <summary>
+    /// Adds to a document the containers its sections are placed in, in the order their first sections appear. A section
+    /// placed in a container the report doesn't have is shown on its own.
+    /// </summary>
+    /// <param name="document">The document.</param>
+    /// <param name="containers">The report's containers.</param>
+    public static void AddContainers(ReportDocument document, IEnumerable<ReportContainerDefinition> containers)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var byId = (containers ?? [])
+            .Where(container => !string.IsNullOrEmpty(container?.Id))
+            .DistinctBy(container => container.Id, StringComparer.Ordinal)
+            .ToDictionary(container => container.Id, StringComparer.Ordinal);
+
+        document.Containers.Clear();
+
+        foreach (var section in document.Sections)
+        {
+            if (string.IsNullOrEmpty(section.ContainerId) || document.Containers.Any(added => added.Id == section.ContainerId))
+            {
+                continue;
+            }
+
+            if (!byId.TryGetValue(section.ContainerId, out var container))
+            {
+                section.ContainerId = null;
+
+                continue;
+            }
+
+            document.Containers.Add(new ReportContainer
+            {
+                Id = container.Id,
+                Title = container.Title,
+                Width = Math.Clamp(container.Width, 1, 12),
+                Height = Math.Clamp(container.Height, 0, ReportContainerDefinition.MaxHeight),
+            });
+        }
     }
 
     // The dimension columns a table groups the result by, when it lists columns and leaves out some dimensions of an

@@ -24,6 +24,12 @@ internal sealed class ReportsResourceConfiguration : IConfigureOptions<ResourceM
     /// </summary>
     public const string DesignerStyle = "CrestApps.OrchardCore.Reports.Builder";
 
+    /// <summary>
+    /// The name of the style sheet of report pages: the containers that frame sections and the rows and marks people
+    /// can click to filter other visuals.
+    /// </summary>
+    public const string DocumentStyle = "CrestApps.OrchardCore.Reports.Document";
+
     private static readonly ResourceManifest _manifest;
 
     static ReportsResourceConfiguration()
@@ -44,6 +50,13 @@ internal sealed class ReportsResourceConfiguration : IConfigureOptions<ResourceM
                 "~/CrestApps.OrchardCore.Reports/scripts/report-designer.min.js",
                 "~/CrestApps.OrchardCore.Reports/scripts/report-designer.js")
             .SetDependencies(ChartsScript)
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle(DocumentStyle)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Reports/styles/report-document.min.css",
+                "~/CrestApps.OrchardCore.Reports/styles/report-document.css")
             .SetVersion("1.0.0");
 
         _manifest

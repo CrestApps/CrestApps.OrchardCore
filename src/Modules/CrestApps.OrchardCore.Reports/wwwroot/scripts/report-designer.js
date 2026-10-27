@@ -338,6 +338,34 @@
 				if (visual.seriesColumnId === columnId) visual.seriesColumnId = null;
 			});
 		};
+		designer.CONTAINER_HEIGHTS = [
+			0,
+			240,
+			320,
+			400,
+			480,
+			600,
+			800
+		];
+		designer.addContainer = function(design) {
+			design.containers = design.containers || [];
+			var container = {
+				id: designer.newId("k", ids(design.containers)),
+				title: null,
+				width: 12,
+				height: 400
+			};
+			design.containers.push(container);
+			return container;
+		};
+		designer.removeContainer = function(design, containerId) {
+			design.containers = (design.containers || []).filter(function(container) {
+				return container.id !== containerId;
+			});
+			(design.visuals || []).forEach(function(visual) {
+				if (visual.containerId === containerId) visual.containerId = null;
+			});
+		};
 		designer.findJoin = function(query, alias) {
 			return (query && query.joins || []).filter(function(candidate) {
 				return candidate && candidate.alias === alias;
@@ -855,6 +883,7 @@
 				category: design.category,
 				query: design.query,
 				visuals: design.visuals,
+				containers: design.containers,
 				showInAdminMenu: design.showInAdminMenu,
 				allowExport: design.allowExport,
 				sharedUserNames: design.sharedUserNames,
@@ -1187,6 +1216,7 @@
 			});
 			designer.mergeJoins(app.design.query);
 			app.design.visuals = app.design.visuals || [];
+			app.design.containers = app.design.containers || [];
 			app.design.sharedUserNames = app.design.sharedUserNames || [];
 			app.design.sharedRoles = app.design.sharedRoles || [];
 			app.schedulePlan = ui.debounce(app.refreshPlan, 350);
@@ -2392,6 +2422,54 @@
 			}, control, h("div", { className: "rd-well-hint" }, ui.icon("fa-arrow-down"), " ", app.t("Drop a field here")));
 			return labelled(label, zone);
 		}
+		function widthChoices() {
+			return [
+				{
+					value: "3",
+					text: app.t("Quarter")
+				},
+				{
+					value: "4",
+					text: app.t("Third")
+				},
+				{
+					value: "6",
+					text: app.t("Half")
+				},
+				{
+					value: "8",
+					text: app.t("Two thirds")
+				},
+				{
+					value: "12",
+					text: app.t("Full")
+				}
+			];
+		}
+		function containerLabel(container, index) {
+			return container.title || app.t("Container") + " " + (index + 1);
+		}
+		function containerProperties(container) {
+			return [
+				labelled(app.t("Title"), textInput(container.title, function(value) {
+					container.title = value;
+					app.changed();
+				}, { maxlength: "200" }), app.t("Shown in the band across the top of the container.")),
+				labelled(app.t("Width"), ui.select(widthChoices(), String(container.width || 12), { onchange: function(event) {
+					container.width = parseInt(event.target.value, 10);
+					app.changed({ render: false });
+				} }), app.t("The widths of its visuals divide the width of the container.")),
+				labelled(app.t("Height"), ui.select(designer.CONTAINER_HEIGHTS.map(function(height) {
+					return {
+						value: String(height),
+						text: height ? height + " px" : app.t("Grow with its visuals")
+					};
+				}), String(container.height || 0), { onchange: function(event) {
+					container.height = parseInt(event.target.value, 10) || 0;
+					app.changed({ render: false });
+				} }), app.t("Visuals taller than the container scroll inside it."))
+			];
+		}
 		function visualProperties(visual) {
 			var columns = app.columns();
 			var dimensions = columns.filter(function(column) {
@@ -2426,31 +2504,25 @@
 					app.changed({ render: render !== false });
 				};
 			};
-			var parts = [labelled(app.t("Title"), textInput(visual.title, set("title", false), { maxlength: "200" })), labelled(app.t("Width"), ui.select([
-				{
-					value: "3",
-					text: app.t("Quarter")
-				},
-				{
-					value: "4",
-					text: app.t("Third")
-				},
-				{
-					value: "6",
-					text: app.t("Half")
-				},
-				{
-					value: "8",
-					text: app.t("Two thirds")
-				},
-				{
-					value: "12",
-					text: app.t("Full")
-				}
-			], String(visual.width || 12), { onchange: function(event) {
-				visual.width = parseInt(event.target.value, 10);
-				app.changed({ render: false });
-			} }))];
+			var parts = [
+				labelled(app.t("Title"), textInput(visual.title, set("title", false), { maxlength: "200" })),
+				labelled(app.t("Width"), ui.select(widthChoices(), String(visual.width || 12), { onchange: function(event) {
+					visual.width = parseInt(event.target.value, 10);
+					app.changed({ render: false });
+				} })),
+				app.design.containers.length ? labelled(app.t("Container"), ui.select([{
+					value: "",
+					text: app.t("None")
+				}].concat(app.design.containers.map(function(container, index) {
+					return {
+						value: container.id,
+						text: containerLabel(container, index)
+					};
+				})), visual.containerId || "", { onchange: function(event) {
+					visual.containerId = event.target.value || null;
+					app.changed();
+				} }), app.t("Frames the visual with the others in the container.")) : null
+			];
 			switch (visual.type) {
 				case "Chart":
 					parts.push(labelled(app.t("Chart type"), ui.select([
@@ -2591,6 +2663,35 @@
 			var selectedVisual = selection.kind === "visual" ? visuals.filter(function(visual) {
 				return visual.id === selection.id;
 			})[0] : null;
+			var containers = app.design.containers;
+			var selectedContainer = selection.kind === "container" ? containers.filter(function(container) {
+				return container.id === selection.id;
+			})[0] : null;
+			var containerList = h("div", { className: "list-group list-group-flush" });
+			containers.forEach(function(container, index) {
+				var count = visuals.filter(function(visual) {
+					return visual.containerId === container.id;
+				}).length;
+				containerList.appendChild(h("div", { className: "list-group-item d-flex align-items-center gap-2 py-1" + (selectedContainer === container ? " active" : "") }, ui.icon("fa-window-maximize"), h("button", {
+					type: "button",
+					className: "btn btn-link btn-sm p-0 flex-grow-1 text-start text-reset text-decoration-none",
+					onclick: function() {
+						app.select("container", container.id);
+					}
+				}, containerLabel(container, index)), h("span", {
+					className: "badge text-bg-light",
+					title: app.t("Visuals in the container")
+				}, String(count)), h("button", {
+					type: "button",
+					className: "btn btn-link btn-sm p-0 text-reset",
+					"aria-label": app.t("Remove"),
+					onclick: function() {
+						designer.removeContainer(app.design, container.id);
+						app.selection = null;
+						app.changed();
+					}
+				}, ui.icon("fa-xmark"))));
+			});
 			ui.clear(target);
 			target.appendChild(h("div", { className: "card" }, h("div", { className: "card-header py-1 fw-semibold" }, app.t("Visuals")), visuals.length ? list : h("div", { className: "card-body p-2 small text-muted" }, app.t("Without visuals the report shows one table of the result.")), h("div", { className: "card-body p-2 d-flex flex-wrap gap-1" }, [
 				"Table",
@@ -2606,6 +2707,17 @@
 					}
 				}, ui.icon(icons[type]), " ", app.config.visualLabels[type] || type);
 			})), selectedVisual ? h("div", { className: "card-body p-2 border-top" }, visualProperties(selectedVisual)) : null));
+			target.appendChild(h("div", { className: "card mt-3" }, h("div", { className: "card-header py-1 fw-semibold" }, app.t("Containers")), containers.length ? containerList : h("div", { className: "card-body p-2 small text-muted" }, app.t("Containers frame visuals under a title and scroll them within a height, so one page can show everything.")), h("div", { className: "card-body p-2" }, h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-primary",
+				onclick: function() {
+					app.selection = {
+						kind: "container",
+						id: designer.addContainer(app.design).id
+					};
+					app.changed();
+				}
+			}, ui.icon("fa-plus"), " ", app.t("Add container"))), selectedContainer ? h("div", { className: "card-body p-2 border-top" }, containerProperties(selectedContainer)) : null));
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
 	//#endregion

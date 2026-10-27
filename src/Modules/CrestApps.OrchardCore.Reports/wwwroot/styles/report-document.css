@@ -1,0 +1,42 @@
+/*
+ * Report pages: the containers that frame sections under one title and scroll them within a set height.
+ */
+
+/* Two classes, so the band wins over the theme's card header. */
+.report-container .report-container-header {
+    background-color: var(--bs-primary);
+    color: var(--bs-white);
+    font-weight: 600;
+}
+
+.report-container-body {
+    padding: 0.75rem;
+}
+
+/* A container with a height scrolls its sections both ways, so tables scroll inside it instead of in their own box. */
+.report-container-body.is-scrolling {
+    overflow: auto;
+}
+
+.report-container-body.is-scrolling .table-responsive {
+    overflow: visible;
+}
+
+/* Column headers stay in view while the rows scroll under them. */
+.report-container-body.is-scrolling .table thead th {
+    position: sticky;
+    top: -0.75rem;
+    z-index: 1;
+    background-color: var(--bs-body-bg);
+    box-shadow: inset 0 -1px 0 var(--bs-border-color);
+}
+
+/* Sections in a container are compact: smaller titles and charts that fit the frame. */
+.report-container .report-section > h2 {
+    font-size: 1rem;
+}
+
+.report-container-body.is-scrolling .report-section .card {
+    box-shadow: none !important;
+}
+/*$vite$:1*/

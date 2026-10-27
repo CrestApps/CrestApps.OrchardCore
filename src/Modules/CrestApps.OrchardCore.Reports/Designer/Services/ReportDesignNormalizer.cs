@@ -90,6 +90,37 @@ public static class ReportDesignNormalizer
             visual.Width = Math.Clamp(visual.Width, 1, 12);
             visual.ColumnIds = (visual.ColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
             visual.ValueColumnIds = (visual.ValueColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            visual.ContainerId = string.IsNullOrWhiteSpace(visual.ContainerId) ? null : visual.ContainerId.Trim();
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Cleans the containers of a report: drops empty entries and those without an identifier or with one already
+    /// used, and keeps widths and heights in range.
+    /// </summary>
+    /// <param name="containers">The containers received.</param>
+    /// <returns>The cleaned containers.</returns>
+    public static IList<ReportContainerDefinition> Normalize(IList<ReportContainerDefinition> containers)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var list = new List<ReportContainerDefinition>();
+
+        foreach (var container in containers ?? [])
+        {
+            var id = container?.Id?.Trim();
+
+            if (string.IsNullOrEmpty(id) || !ids.Add(id))
+            {
+                continue;
+            }
+
+            container.Id = id;
+            container.Title = Truncate(container.Title);
+            container.Width = Math.Clamp(container.Width, 1, 12);
+            container.Height = Math.Clamp(container.Height, 0, ReportContainerDefinition.MaxHeight);
+            list.Add(container);
         }
 
         return list;

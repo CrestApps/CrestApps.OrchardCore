@@ -74,4 +74,29 @@ public sealed class ReportDesignNormalizerTests
         // Assert
         Assert.Equal("Users.UserId", Assert.Single(Assert.Single(normalized.Joins).Conditions).LeftField);
     }
+
+    [Fact]
+    public void Normalize_Containers_DropsUnnamedAndRepeatedOnesAndClampsTheirSize()
+    {
+        // Arrange
+        List<ReportContainerDefinition> containers =
+        [
+            null,
+            new() { Id = " scorecard ", Title = "  Scorecard ", Width = 40, Height = -5 },
+            new() { Id = "scorecard", Title = "Again" },
+            new() { Id = " ", Title = "No id" },
+            new() { Id = "calls", Width = 0, Height = 5000 },
+        ];
+
+        // Act
+        var normalized = ReportDesignNormalizer.Normalize(containers);
+
+        // Assert
+        Assert.Equal(["scorecard", "calls"], normalized.Select(container => container.Id));
+        Assert.Equal("Scorecard", normalized[0].Title);
+        Assert.Equal(12, normalized[0].Width);
+        Assert.Equal(0, normalized[0].Height);
+        Assert.Equal(1, normalized[1].Width);
+        Assert.Equal(ReportContainerDefinition.MaxHeight, normalized[1].Height);
+    }
 }

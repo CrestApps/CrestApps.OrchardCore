@@ -29,6 +29,12 @@ public sealed class ReportVisualDefinition
     public int Width { get; set; } = 12;
 
     /// <summary>
+    /// Gets or sets the identifier of the container the visual is shown in, or <see langword="null"/> to show it on its
+    /// own. A container is placed where its first visual is, and holds its visuals in their order.
+    /// </summary>
+    public string ContainerId { get; set; }
+
+    /// <summary>
     /// Gets or sets the chart type, when <see cref="Type"/> is <see cref="ReportVisualType.Chart"/>.
     /// </summary>
     public ReportChartType ChartType { get; set; }

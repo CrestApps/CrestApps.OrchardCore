@@ -324,6 +324,30 @@ describe('filter form values', () => {
     });
 });
 
+describe('containers', () => {
+    it('adds containers with unused identifiers', () => {
+        const value = design();
+
+        const first = designer.addContainer(value);
+        const second = designer.addContainer(value);
+
+        expect(first).toMatchObject({ id: 'k1', width: 12, height: 400 });
+        expect(second.id).toBe('k2');
+        expect(value.containers).toHaveLength(2);
+    });
+
+    it('shows the visuals of a removed container on their own', () => {
+        const value = design();
+        const container = designer.addContainer(value);
+
+        value.visuals = [{ id: 'v1', containerId: container.id }, { id: 'v2', containerId: 'other' }];
+        designer.removeContainer(value, container.id);
+
+        expect(value.containers).toEqual([]);
+        expect(value.visuals.map((visual) => visual.containerId)).toEqual([null, 'other']);
+    });
+});
+
 describe('chart rendering', () => {
     it('draws horizontal bars along the y axis and areas filled', () => {
         const horizontal = charts.buildConfig({ type: 'horizontalbar', labels: ['A'], datasets: [{ label: 'Total', data: [1] }] }, '#000', '#ccc');
