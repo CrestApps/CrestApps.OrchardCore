@@ -314,6 +314,33 @@ public class SmsAgentHandoffServiceTests
                 It.Is<MessagingInboundNotification>(notification => notification.AssignedAgentId == "agent-7" && notification.OwnerQueueId == "queue-1"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+        harness.Notifier.Verify(
+            notifier => notifier.ConversationAssignedAsync(
+                It.Is<MessagingAssignmentNotification>(notification =>
+                    notification.AssignedAgentId == "agent-7" &&
+                    notification.AssignedByAgentId == null &&
+                    notification.OwnerQueueId == null &&
+                    notification.ContactAddress == "+16502530001"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RequestHandoff_ToTheSharedPool_AnnouncesNoAssignment()
+    {
+        var harness = new Harness(distributionMode: ConversationDistributionMode.Routed, selectedAgentId: null);
+
+        await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { Channel = "SMS", ItemId = "act1" },
+            TargetQueueId = "queue-1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+        }, TestContext.Current.CancellationToken);
+
+        harness.Notifier.Verify(
+            notifier => notifier.ConversationAssignedAsync(It.IsAny<MessagingAssignmentNotification>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private sealed class Harness

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
+    assignmentToastBody,
     assignmentToastTitle,
     classifyAssignment,
     formatText,
@@ -33,9 +34,34 @@ describe('classifyAssignment', () => {
         expect(classifyAssignment({ isTransfer: true, ownerQueueId: 'q-1', transferredByAgentId: 'agent-s', conversationId: 'c-open' }, view)).toBe('away');
     });
 
-    it('only refreshes the list for a claim or a routed assignment', () => {
-        expect(classifyAssignment({ assignedAgentId: 'agent-b', conversationId: 'c-9' }, view)).toBe('refresh');
+    it("only refreshes the list for the viewer's own claim or reply", () => {
+        expect(classifyAssignment({ assignedAgentId: 'agent-b', assignedByAgentId: 'agent-b', conversationId: 'c-9' }, view)).toBe('refresh');
         expect(classifyAssignment(null, view)).toBe('refresh');
+    });
+
+    it('tells the agent routing pushed a conversation to', () => {
+        expect(classifyAssignment({ assignedAgentId: 'agent-b', conversationId: 'c-9' }, view)).toBe('assigned-to-me');
+    });
+
+    it('tells the agent someone else assigned a conversation to', () => {
+        expect(classifyAssignment({ assignedAgentId: 'agent-b', assignedByAgentId: 'agent-s', conversationId: 'c-9' }, view)).toBe('assigned-to-me');
+    });
+
+    it("stays quiet when the conversation was already the viewer's", () => {
+        expect(classifyAssignment({ assignedAgentId: 'agent-b', previousAgentId: 'agent-b', conversationId: 'c-9' }, view)).toBe('refresh');
+    });
+
+    it('only refreshes the list for an assignment to a colleague or a claim from the pool', () => {
+        expect(classifyAssignment({ assignedAgentId: 'agent-c', assignedByAgentId: 'agent-c', ownerQueueId: 'q-1', conversationId: 'c-9' }, view)).toBe('refresh');
+        expect(classifyAssignment({ assignedAgentId: 'agent-c', previousAgentId: 'agent-b', conversationId: 'c-9' }, view)).toBe('refresh');
+    });
+
+    it('stays quiet for the person who made a transfer even when it is credited as an assignment', () => {
+        expect(classifyAssignment({ isTransfer: true, assignedAgentId: 'agent-b', assignedByAgentId: 'agent-b', conversationId: 'c-9' }, view)).toBe('refresh');
+    });
+
+    it('tells nobody about a routed assignment when the viewer has no agent profile', () => {
+        expect(classifyAssignment({ assignedAgentId: 'agent-b', conversationId: 'c-9' }, {})).toBe('refresh');
     });
 
     it('does not mistake a transfer to a colleague for one to the viewer when the viewer has no agent profile', () => {
@@ -76,6 +102,8 @@ const texts = {
     toQueue: '{0} sent a conversation to the {1} queue',
     toYourQueue: '{0} sent a conversation to one of your queues',
     away: 'This conversation was transferred to {0}',
+    assigned: 'A conversation was assigned to you',
+    assignedFrom: 'Assigned to you: {0}',
 };
 
 describe('assignmentToastTitle', () => {
@@ -101,8 +129,16 @@ describe('assignmentToastTitle', () => {
         expect(assignmentToastTitle('away', {}, texts)).toBe('This conversation was transferred to Someone');
     });
 
-    it('raises no toast for a claim or a routed assignment', () => {
+    it("raises no toast for the viewer's own claim", () => {
         expect(assignmentToastTitle('refresh', { transferredByName: 'Ann' }, texts)).toBeNull();
+    });
+
+    it('names who an assigned conversation is with', () => {
+        expect(assignmentToastTitle('assigned-to-me', { contactAddress: '+15550100' }, texts)).toBe('Assigned to you: +15550100');
+    });
+
+    it('still tells the agent when the contact is unknown', () => {
+        expect(assignmentToastTitle('assigned-to-me', {}, texts)).toBe('A conversation was assigned to you');
     });
 
     // Both pages raise these toasts, so both must take their titles from the one tested choice.
@@ -140,5 +176,43 @@ describe('the transfer picker search', () => {
         const controller = readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Controllers/AdminController.cs', 'utf8');
 
         expect(controller).toContain(`public async Task<IActionResult> ${action}(string id, string query)`);
+    });
+});
+
+describe('assignmentToastBody', () => {
+    it('shows the latest message under a title that already names the contact', () => {
+        expect(assignmentToastBody('assigned-to-me', { contactAddress: '+15550100', preview: 'Hi there' })).toBe('Hi there');
+    });
+
+    it('names the contact of a transferred conversation with its latest message', () => {
+        expect(assignmentToastBody('to-me', { contactAddress: 'ann@example.com', preview: 'Hi there' })).toBe('ann@example.com: Hi there');
+        expect(assignmentToastBody('to-me', { contactAddress: 'ann@example.com' })).toBe('ann@example.com');
+    });
+
+    it('is empty when there is nothing to show', () => {
+        expect(assignmentToastBody('to-me', {})).toBe('');
+        expect(assignmentToastBody('to-me', null)).toBe('');
+    });
+
+    // A routed push sends the assignment and then the message; both pages announce it once, as an assignment.
+    it.each([
+        'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-notifications.js',
+        'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-workspace.js',
+    ])('is what %s fills its assignment toasts with, and it swallows the message that follows', path => {
+        const source = readFileSync(path, 'utf8');
+
+        expect(source).toContain('assignmentToastBody(kind, notification)');
+        expect(source).toContain("recent.isNew(notificationKey('inbound', notification));");
+        expect(source).toContain("'assigned-to-me'");
+    });
+
+    it.each([
+        'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Views/MessagingNotifications.cshtml',
+        'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Views/Admin/Workspace.cshtml',
+    ])('has %s carry the assignment sentences', path => {
+        const view = readFileSync(path, 'utf8');
+
+        expect(view).toContain('data-assigned-to-you-text=');
+        expect(view).toContain('data-assigned-from-to-you-text=');
     });
 });
