@@ -158,6 +158,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
         conversation.ModifiedUtc = _clock.UtcNow;
         _slaService.MarkResponded(conversation);
 
+        var previousAgentId = conversation.GetHolderAgentId();
+
         if (claims)
         {
             ApplyAssignment(conversation, request.ActingAgentId);
@@ -167,7 +169,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (claims)
         {
-            await NotifyAssignedAsync(conversation, cancellationToken);
+            await NotifyAssignedAsync(conversation, previousAgentId, request.ActingAgentId, cancellationToken);
         }
 
         return new MessagingSendResult
@@ -406,7 +408,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed("The conversation has already been claimed by another agent.");
         }
 
-        return await AssignInternalAsync(conversation, actingAgentId, cancellationToken);
+        return await AssignInternalAsync(conversation, actingAgentId, actingAgentId, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -429,7 +431,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed("You are not allowed to transfer this conversation.");
         }
 
-        return await AssignInternalAsync(conversation, targetAgentId, cancellationToken);
+        // The caller passes no agent of its own, so the assignment is credited to nobody and the target is always told.
+        return await AssignInternalAsync(conversation, targetAgentId, assignedByAgentId: null, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -515,13 +518,15 @@ public sealed class MessagingConversationService : IMessagingConversationService
         return message;
     }
 
-    private async Task<MessagingSendResult> AssignInternalAsync(MessagingConversation conversation, string agentId, CancellationToken cancellationToken)
+    private async Task<MessagingSendResult> AssignInternalAsync(MessagingConversation conversation, string agentId, string assignedByAgentId, CancellationToken cancellationToken)
     {
+        var previousAgentId = conversation.GetHolderAgentId();
+
         ApplyAssignment(conversation, agentId);
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
 
-        await NotifyAssignedAsync(conversation, cancellationToken);
+        await NotifyAssignedAsync(conversation, previousAgentId, assignedByAgentId, cancellationToken);
 
         return new MessagingSendResult { Succeeded = true };
     }
@@ -541,13 +546,10 @@ public sealed class MessagingConversationService : IMessagingConversationService
         conversation.ModifiedUtc = _clock.UtcNow;
     }
 
-    private Task NotifyAssignedAsync(MessagingConversation conversation, CancellationToken cancellationToken)
-        => _notifier.ConversationAssignedAsync(new MessagingAssignmentNotification
-        {
-            ConversationId = conversation.ItemId,
-            AssignedAgentId = conversation.AssignedAgentId,
-            OwnerQueueId = conversation.OwnerType == ConversationOwnerType.Queue ? conversation.OwnerId : null,
-        }, cancellationToken);
+    private Task NotifyAssignedAsync(MessagingConversation conversation, string previousAgentId, string assignedByAgentId, CancellationToken cancellationToken)
+        => _notifier.ConversationAssignedAsync(
+            MessagingAssignmentNotifications.Create(conversation, previousAgentId, assignedByAgentId),
+            cancellationToken);
 
     // A reply claims the thread only when nobody holds it: no agent is assigned, and a personal thread has no
     // other owner. Taking it from whoever holds it is a transfer, a separate action the holder or a supervisor takes.

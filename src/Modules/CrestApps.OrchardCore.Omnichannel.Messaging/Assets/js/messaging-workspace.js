@@ -6,6 +6,7 @@
  * poll backs the connection up, and the connection doubles as the agent's presence heartbeat.
  */
 import {
+    assignmentToastBody,
     assignmentToastTitle,
     classifyAssignment,
     classifyInbound,
@@ -57,6 +58,8 @@ import {
     var transferTexts = {
         someone: workspace.getAttribute('data-someone-text'),
         toYou: workspace.getAttribute('data-transferred-to-you-text'),
+        assigned: workspace.getAttribute('data-assigned-to-you-text'),
+        assignedFrom: workspace.getAttribute('data-assigned-from-to-you-text'),
         toQueue: workspace.getAttribute('data-transferred-to-queue-text'),
         toYourQueue: workspace.getAttribute('data-transferred-to-your-queue-text'),
         away: workspace.getAttribute('data-transferred-away-text'),
@@ -826,15 +829,26 @@ import {
             : null;
     }
 
-    // A conversation changed hands: the list always catches up, and a transfer also says who moved it where.
+    // A conversation changed hands: the list always catches up, a transfer also says who moved it where, and a
+    // conversation assigned to this agent says who it is with.
     function onAssigned(notification) {
         var kind = classifyAssignment(notification, view);
         var announce = kind !== 'refresh' && recent.isNew(notificationKey(kind, notification));
 
+        if (announce && (kind === 'to-me' || kind === 'assigned-to-me')) {
+            // Routing announces the thread it pushed to this agent just before its message; that message is not
+            // announced a second time.
+            recent.isNew(notificationKey('inbound', notification));
+        }
+
         switch (announce ? kind : 'refresh') {
             case 'to-me':
+            case 'assigned-to-me':
             case 'to-queue':
-                showToast(assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
+                showToast(
+                    assignmentToastTitle(kind, notification, transferTexts),
+                    assignmentToastBody(kind, notification),
+                    conversationHref(notification.conversationId));
                 break;
 
             case 'away':

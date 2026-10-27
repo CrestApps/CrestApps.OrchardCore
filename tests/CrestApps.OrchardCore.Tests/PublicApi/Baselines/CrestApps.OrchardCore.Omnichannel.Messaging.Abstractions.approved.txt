@@ -77,9 +77,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Notifications
     {
         public MessagingAssignmentNotification() { }
         public string AssignedAgentId { get; set; }
+        public string AssignedByAgentId { get; set; }
+        public string Channel { get; set; }
+        public string ContactAddress { get; set; }
         public string ConversationId { get; set; }
         public bool IsTransfer { get; set; }
         public string OwnerQueueId { get; set; }
+        public string Preview { get; set; }
         public string PreviousAgentId { get; set; }
         public string TransferredByAgentId { get; set; }
         public string TransferredByName { get; set; }

@@ -80,6 +80,7 @@ public sealed class MessagingRoutedReassignmentService : IMessagingRoutedReassig
             }
 
             var queueId = conversation.OwnerId;
+            var previousAgentId = conversation.AssignedAgentId;
 
             // The placement decision belongs to the router, told that this pass is a reassignment. This service
             // owns when a thread is stale, persisting the outcome, and re-lighting the right inbox.
@@ -94,6 +95,9 @@ public sealed class MessagingRoutedReassignmentService : IMessagingRoutedReassig
                 cancellationToken);
 
             await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+            // Tell the next agent it is theirs now, and drop it from the inbox of the one who did not pick it up.
+            await MessagingAssignmentNotifications.NotifyRoutedAsync(_notifier, conversation, previousAgentId, cancellationToken);
 
             // Light the inbox the thread just landed in: the newly-assigned agent, or the queue when it was
             // returned to the shared pool.

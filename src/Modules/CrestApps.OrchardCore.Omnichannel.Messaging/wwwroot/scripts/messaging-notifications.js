@@ -13,9 +13,11 @@
 		return null;
 	}
 	function classifyAssignment(notification, view) {
-		if (!notification || !notification.isTransfer) return "refresh";
+		if (!notification) return "refresh";
 		var agentId = view && view.agentId;
-		if (agentId && notification.transferredByAgentId === agentId) return "refresh";
+		var assignedBy = notification.assignedByAgentId || notification.transferredByAgentId;
+		if (agentId && assignedBy === agentId) return "refresh";
+		if (!notification.isTransfer) return agentId && notification.assignedAgentId === agentId && notification.previousAgentId !== agentId ? "assigned-to-me" : "refresh";
 		if (agentId && notification.assignedAgentId === agentId) return "to-me";
 		if (view && view.conversationId && notification.conversationId === view.conversationId) return "away";
 		if (!notification.assignedAgentId && notification.ownerQueueId) return "to-queue";
@@ -33,10 +35,17 @@
 		var by = notification && notification.transferredByName || text.someone;
 		switch (kind) {
 			case "to-me": return formatText(text.toYou, [by]);
+			case "assigned-to-me": return notification && notification.contactAddress ? formatText(text.assignedFrom, [notification.contactAddress]) : text.assigned || null;
 			case "to-queue": return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
 			case "away": return formatText(text.away, [notification && notification.transferredToName || text.someone]);
 			default: return null;
 		}
+	}
+	function assignmentToastBody(kind, notification) {
+		if (!notification) return "";
+		var preview = notification.preview || "";
+		if (kind === "assigned-to-me" || !notification.contactAddress) return preview;
+		return preview ? notification.contactAddress + ": " + preview : notification.contactAddress;
 	}
 	function createRecentNotifications(windowMs, now) {
 		var seen = {};
@@ -158,6 +167,8 @@
 		var transferTexts = {
 			someone: host.getAttribute("data-someone-text"),
 			toYou: host.getAttribute("data-transferred-to-you-text"),
+			assigned: host.getAttribute("data-assigned-to-you-text"),
+			assignedFrom: host.getAttribute("data-assigned-from-to-you-text"),
 			toQueue: host.getAttribute("data-transferred-to-queue-text"),
 			toYourQueue: host.getAttribute("data-transferred-to-your-queue-text")
 		};
@@ -241,8 +252,9 @@
 		function onAssigned(notification) {
 			badge.schedule();
 			var kind = classifyAssignment(notification, view);
-			if (kind !== "to-me" && kind !== "to-queue" || !recent.isNew(notificationKey(kind, notification))) return;
-			showToast(assignmentToastTitle(kind, notification, transferTexts), "", conversationHref(notification.conversationId));
+			if (kind !== "to-me" && kind !== "assigned-to-me" && kind !== "to-queue" || !recent.isNew(notificationKey(kind, notification))) return;
+			if (kind !== "to-queue") recent.isNew(notificationKey("inbound", notification));
+			showToast(assignmentToastTitle(kind, notification, transferTexts), assignmentToastBody(kind, notification), conversationHref(notification.conversationId));
 		}
 		badge.start();
 		if (!root.signalR || !hubUrl) return;

@@ -70,9 +70,11 @@
 		return null;
 	}
 	function classifyAssignment(notification, view) {
-		if (!notification || !notification.isTransfer) return "refresh";
+		if (!notification) return "refresh";
 		var agentId = view && view.agentId;
-		if (agentId && notification.transferredByAgentId === agentId) return "refresh";
+		var assignedBy = notification.assignedByAgentId || notification.transferredByAgentId;
+		if (agentId && assignedBy === agentId) return "refresh";
+		if (!notification.isTransfer) return agentId && notification.assignedAgentId === agentId && notification.previousAgentId !== agentId ? "assigned-to-me" : "refresh";
 		if (agentId && notification.assignedAgentId === agentId) return "to-me";
 		if (view && view.conversationId && notification.conversationId === view.conversationId) return "away";
 		if (!notification.assignedAgentId && notification.ownerQueueId) return "to-queue";
@@ -90,10 +92,17 @@
 		var by = notification && notification.transferredByName || text.someone;
 		switch (kind) {
 			case "to-me": return formatText(text.toYou, [by]);
+			case "assigned-to-me": return notification && notification.contactAddress ? formatText(text.assignedFrom, [notification.contactAddress]) : text.assigned || null;
 			case "to-queue": return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
 			case "away": return formatText(text.away, [notification && notification.transferredToName || text.someone]);
 			default: return null;
 		}
+	}
+	function assignmentToastBody(kind, notification) {
+		if (!notification) return "";
+		var preview = notification.preview || "";
+		if (kind === "assigned-to-me" || !notification.contactAddress) return preview;
+		return preview ? notification.contactAddress + ": " + preview : notification.contactAddress;
 	}
 	function transferTargetInputName(targetType) {
 		return targetType === "Queue" ? "targetQueueId" : "targetAgentId";
@@ -305,6 +314,8 @@
 		var transferTexts = {
 			someone: workspace.getAttribute("data-someone-text"),
 			toYou: workspace.getAttribute("data-transferred-to-you-text"),
+			assigned: workspace.getAttribute("data-assigned-to-you-text"),
+			assignedFrom: workspace.getAttribute("data-assigned-from-to-you-text"),
 			toQueue: workspace.getAttribute("data-transferred-to-queue-text"),
 			toYourQueue: workspace.getAttribute("data-transferred-to-your-queue-text"),
 			away: workspace.getAttribute("data-transferred-away-text")
@@ -828,10 +839,13 @@
 		}
 		function onAssigned(notification) {
 			var kind = classifyAssignment(notification, view);
-			switch (kind !== "refresh" && recent.isNew(notificationKey(kind, notification)) ? kind : "refresh") {
+			var announce = kind !== "refresh" && recent.isNew(notificationKey(kind, notification));
+			if (announce && (kind === "to-me" || kind === "assigned-to-me")) recent.isNew(notificationKey("inbound", notification));
+			switch (announce ? kind : "refresh") {
 				case "to-me":
+				case "assigned-to-me":
 				case "to-queue":
-					showToast(assignmentToastTitle(kind, notification, transferTexts), "", conversationHref(notification.conversationId));
+					showToast(assignmentToastTitle(kind, notification, transferTexts), assignmentToastBody(kind, notification), conversationHref(notification.conversationId));
 					break;
 				case "away": showToast(assignmentToastTitle(kind, notification, transferTexts), "", null);
 			}
