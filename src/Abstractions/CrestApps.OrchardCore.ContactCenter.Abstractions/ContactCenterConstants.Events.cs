@@ -303,7 +303,9 @@ public static partial class ContactCenterConstants
         public const string OfferDeclined = "OfferDeclined";
 
         /// <summary>
-        /// Raised when a failed delivery attempt returns offered work to inbound routing.
+        /// Raised when offered work goes back to inbound routing for the next agent in line: after a failed delivery
+        /// attempt, an offer that rang out on a queue that requeues it, or an accepted offer whose agent could not be
+        /// reached.
         /// </summary>
         public const string OfferRequeued = "OfferRequeued";
 

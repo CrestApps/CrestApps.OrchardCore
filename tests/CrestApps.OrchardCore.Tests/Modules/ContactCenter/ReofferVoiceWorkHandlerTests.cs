@@ -38,14 +38,25 @@ public sealed class ReofferVoiceWorkHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenOfferRangOutBackIntoItsQueue_OffersNextQueuedWork()
+    public async Task HandleAsync_WhenTheReleaseRequeuedAnOfferThatRangOut_OffersNextQueuedWork()
     {
         // Arrange
+        // The release publishes the requeue with the offer's own payload, not the decline payload.
         var inboundVoiceService = new Mock<IInboundVoiceService>();
         var handler = new ReofferVoiceWorkHandler(new Lazy<IInboundVoiceService>(inboundVoiceService.Object));
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.OfferRequeued,
+        };
+
+        interactionEvent.SetData(new OfferLifecycleEventData
+        {
+            ReservationId = "r1",
+            QueueId = "q1",
+        });
 
         // Act
-        await handler.HandleAsync(CreateExpiredOffer("q1", nameof(UnansweredOfferAction.Requeue)), TestContext.Current.CancellationToken);
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
 
         // Assert
         inboundVoiceService.Verify(
@@ -54,56 +65,32 @@ public sealed class ReofferVoiceWorkHandlerTests
     }
 
     [Theory]
-    [InlineData("q1", nameof(UnansweredOfferAction.Voicemail))]
-    [InlineData("q1", nameof(UnansweredOfferAction.Reject))]
-    [InlineData(ContactCenterConstants.DirectRouting.QueueId, nameof(UnansweredOfferAction.Requeue))]
-    [InlineData(ContactCenterConstants.CampaignQueue.Prefix + "c1", nameof(UnansweredOfferAction.Requeue))]
-    public async Task HandleAsync_WhenOfferRangOutButNoNextAgentIsDue_DoesNotOfferWork(string queueId, string reason)
+    [InlineData(ContactCenterConstants.Events.OfferAccepted)]
+    [InlineData(ContactCenterConstants.Events.OfferExpired)]
+    public async Task HandleAsync_WhenEventIsUnrelated_DoesNotOfferWork(string eventType)
     {
         // Arrange
+        // An offer that rang out is re-offered through the requeue its release publishes, which knows what became of
+        // the caller; the expiry's reason names the queue's configured action, which a fallback can override.
         var inboundVoiceService = new Mock<IInboundVoiceService>();
         var handler = new ReofferVoiceWorkHandler(new Lazy<IInboundVoiceService>(inboundVoiceService.Object));
-
-        // Act
-        await handler.HandleAsync(CreateExpiredOffer(queueId, reason), TestContext.Current.CancellationToken);
-
-        // Assert
-        inboundVoiceService.Verify(
-            service => service.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenEventIsUnrelated_DoesNotOfferWork()
-    {
-        // Arrange
-        var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var handler = new ReofferVoiceWorkHandler(new Lazy<IInboundVoiceService>(inboundVoiceService.Object));
-
-        // Act
-        await handler.HandleAsync(
-            new InteractionEvent { EventType = ContactCenterConstants.Events.OfferAccepted },
-            TestContext.Current.CancellationToken);
-
-        // Assert
-        inboundVoiceService.Verify(
-            service => service.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    private static InteractionEvent CreateExpiredOffer(string queueId, string reason)
-    {
         var interactionEvent = new InteractionEvent
         {
-            EventType = ContactCenterConstants.Events.OfferExpired,
+            EventType = eventType,
         };
 
         interactionEvent.SetData(new OfferLifecycleEventData
         {
-            QueueId = queueId,
-            Reason = reason,
+            QueueId = "q1",
+            Reason = nameof(UnansweredOfferAction.Requeue),
         });
 
-        return interactionEvent;
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        inboundVoiceService.Verify(
+            service => service.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }
