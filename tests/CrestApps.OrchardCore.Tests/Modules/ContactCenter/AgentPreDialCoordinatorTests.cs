@@ -392,7 +392,86 @@ public sealed class AgentPreDialCoordinatorTests
         harness.AgentLegFailureService.Verify(
             service => service.FailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        harness.ReservationService.Verify(
+            service => service.ReleaseUnreachableOfferAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         Assert.Null(await harness.Coordinator.GetForAcceptAsync("r1", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task OnAgentPhoneUnreachableAsync_WhileTheOfferIsStillRinging_ReleasesItForTheAgent()
+    {
+        // Arrange
+        // No phone of the agent's took the leg and there was nowhere else to ring it: the offer on their screen can no
+        // longer be answered, so the caller is handed on instead of ringing out to nobody.
+        var harness = await Harness.WithPreDialedLegAsync();
+
+        // Act
+        await harness.Coordinator.OnAgentPhoneUnreachableAsync("Telnyx", "r1", "leg-1", HangupCause.NoAnswer, TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.ReservationService.Verify(
+            service => service.ReleaseUnreachableOfferAsync("r1", "a1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.AgentLegFailureService.Verify(
+            service => service.FailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.Null(await harness.Coordinator.GetForAcceptAsync("r1", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task OnAgentPhoneUnreachableAsync_ReleasesTheOfferOnlyOnceItsLockIsLetGo()
+    {
+        // Arrange
+        // The release publishes the agent's release, whose handler asks the coordinator to release the same offer under
+        // the same lock: run under it, that handler waited out the lock's timeout (10 s on a real call) before giving up.
+        var harness = await Harness.WithPreDialedLegAsync();
+        var heldDuringRelease = -1;
+        harness.ReservationService
+            .Setup(service => service.ReleaseUnreachableOfferAsync("r1", "a1", It.IsAny<CancellationToken>()))
+            .Callback(() => heldDuringRelease = harness.HeldLocks)
+            .ReturnsAsync(harness.Reservation);
+
+        // Act
+        await harness.Coordinator.OnAgentPhoneUnreachableAsync("Telnyx", "r1", "leg-1", HangupCause.NoAnswer, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, heldDuringRelease);
+        Assert.Equal(0, harness.HeldLocks);
+    }
+
+    [Fact]
+    public async Task OnAgentPhoneUnreachableAsync_WhenTheOfferWasAccepted_FailsTheCallInstead()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+        harness.Reservation.RestorePersistedStatus(ReservationStatus.Accepted);
+
+        // Act
+        await harness.Coordinator.OnAgentPhoneUnreachableAsync("Telnyx", "r1", "leg-1", HangupCause.NoAnswer, TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.AgentLegFailureService.Verify(
+            service => service.FailAsync("Telnyx", "call-1", HangupCause.NoAnswer, It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ReservationService.Verify(
+            service => service.ReleaseUnreachableOfferAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnAgentPhoneUnreachableAsync_ForALegTheOfferNoLongerTracks_DoesNothing()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+
+        // Act
+        await harness.Coordinator.OnAgentPhoneUnreachableAsync("Telnyx", "r1", "leg-old", HangupCause.NoAnswer, TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.ReservationService.Verify(
+            service => service.ReleaseUnreachableOfferAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -600,7 +679,12 @@ public sealed class AgentPreDialCoordinatorTests
             var distributedLock = new Mock<IDistributedLock>();
             distributedLock
                 .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-                .ReturnsAsync(() => (new Mock<ILocker>().Object, true));
+                .ReturnsAsync(() =>
+                {
+                    HeldLocks++;
+
+                    return (new CountingLocker(this), true);
+                });
 
             var options = new ContactCenterCoordinationOptions();
             configure?.Invoke(options);
@@ -611,7 +695,7 @@ public sealed class AgentPreDialCoordinatorTests
                 InteractionManager.Object,
                 AgentManager.Object,
                 AgentLegFailureService.Object,
-                new StubScopeExecutor(ReservationManager.Object, AgentLegFailureService.Object),
+                new StubScopeExecutor(ReservationManager.Object, AgentLegFailureService.Object, ReservationService.Object),
                 distributedLock.Object,
                 clock.Object,
                 Options.Create(options),
@@ -630,6 +714,10 @@ public sealed class AgentPreDialCoordinatorTests
         public DistributedCacheAgentPreDialLegStore Store { get; }
 
         public Mock<IActivityReservationManager> ReservationManager { get; } = new();
+
+        public Mock<IActivityReservationService> ReservationService { get; } = new();
+
+        public int HeldLocks { get; set; }
 
         public Mock<IInteractionManager> InteractionManager { get; } = new();
 
@@ -655,6 +743,37 @@ public sealed class AgentPreDialCoordinatorTests
             Assert.True(await harness.Coordinator.PreDialAsync("r1", TestContext.Current.CancellationToken));
 
             return harness;
+        }
+    }
+
+    // A lock that counts itself held until it is disposed, so a test can tell what ran while the offer's lock was held.
+    private sealed class CountingLocker : ILocker
+    {
+        private readonly Harness _harness;
+        private bool _released;
+
+        public CountingLocker(Harness harness)
+        {
+            _harness = harness;
+        }
+
+        public void Dispose()
+            => Release();
+
+        public ValueTask DisposeAsync()
+        {
+            Release();
+
+            return ValueTask.CompletedTask;
+        }
+
+        private void Release()
+        {
+            if (!_released)
+            {
+                _released = true;
+                _harness.HeldLocks--;
+            }
         }
     }
 
