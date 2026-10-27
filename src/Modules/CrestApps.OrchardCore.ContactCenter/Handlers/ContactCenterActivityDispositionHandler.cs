@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -100,11 +101,12 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         }
 
         // A disposition can land on an activity the agent finished earlier (an outcome recorded after the call, a
-        // supervisor's, the recovery's) while the agent is already on their next call. Busy then belongs to that call:
-        // completing the work here would make the agent available mid-call and offer them queued work.
-        var liveInteraction = await _interactionManager.FindActiveByAgentAsync(agent.ItemId, cancellationToken);
+        // supervisor's, the recovery's) while the agent is already on their next call, or wrapping it up. Busy or wrap-up
+        // then belongs to that call: completing the work here would end it early, make the agent available and offer
+        // them queued work.
+        var newerWork = await FindNewerWorkAsync(agent.ItemId, activity.ItemId, interaction, cancellationToken);
 
-        if (liveInteraction is not null && liveInteraction.ActivityItemId != activity.ItemId)
+        if (newerWork is not null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -112,7 +114,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
                     "Skipped Contact Center completion reconciliation for activity '{ActivityId}' because agent '{AgentId}' is on interaction '{InteractionId}' for another activity.",
                     activity.ItemId.SanitizeLogValue(),
                     agent.ItemId.SanitizeLogValue(),
-                    liveInteraction.ItemId.SanitizeLogValue());
+                    newerWork.ItemId.SanitizeLogValue());
             }
 
             return;
@@ -133,5 +135,36 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
                     offered);
             }
         }
+    }
+
+    // The agent's work that is not this activity's: their live call when it is another activity's, or else their newest
+    // interaction when it is another activity's and came after this one's (the call they are wrapping up). A wrap-up is
+    // not always stamped on its interaction (a transfer's, a take-over's), so the newest interaction is what tells the
+    // two apart. A call the agent transferred away is no longer theirs, so it never counts as newer work.
+    private async Task<Interaction> FindNewerWorkAsync(
+        string agentId,
+        string activityId,
+        Interaction interaction,
+        CancellationToken cancellationToken)
+    {
+        var liveInteraction = await _interactionManager.FindActiveByAgentAsync(agentId, cancellationToken);
+
+        if (liveInteraction is not null)
+        {
+            return liveInteraction.ActivityItemId != activityId ? liveInteraction : null;
+        }
+
+        if (interaction is null)
+        {
+            return null;
+        }
+
+        var newest = (await _interactionManager.GetRecentByAgentAsync(agentId, 1, cancellationToken))?.FirstOrDefault();
+
+        return newest is not null &&
+            newest.ActivityItemId != activityId &&
+            newest.CreatedUtc > interaction.CreatedUtc
+            ? newest
+            : null;
     }
 }
