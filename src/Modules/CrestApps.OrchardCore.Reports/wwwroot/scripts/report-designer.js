@@ -762,6 +762,7 @@
 			selection: null,
 			dirty: false,
 			filterValues: null,
+			previewSelections: {},
 			elements: {}
 		};
 		app.t = function(key) {
@@ -955,6 +956,7 @@
 			target.classList.add("is-loading");
 			var payload = app.payload();
 			payload.filterValues = app.filterValues;
+			payload.selections = app.previewSelections;
 			ui.request(app.url("preview") + (app.isView() ? "?view=true" : ""), {
 				body: payload,
 				html: true
@@ -971,6 +973,14 @@
 			});
 		};
 		app.bindPreview = function(target) {
+			if (!target.dataset.selectionBound) {
+				target.dataset.selectionBound = "true";
+				target.addEventListener("report-selection-change", function(event) {
+					if (event.detail.keys.length) app.previewSelections[event.detail.visualId] = event.detail.keys;
+					else delete app.previewSelections[event.detail.visualId];
+					app.refreshPreview();
+				});
+			}
 			var form = target.querySelector("form[data-preview-filters]");
 			if (!form) return;
 			form.addEventListener("submit", function(event) {

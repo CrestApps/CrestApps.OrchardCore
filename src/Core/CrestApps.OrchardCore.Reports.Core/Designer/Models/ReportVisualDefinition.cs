@@ -41,6 +41,11 @@ public sealed class ReportVisualDefinition
     public string QueryId { get; set; }
 
     /// <summary>
+    /// Gets or sets what clicking the visual does, or <see langword="null"/> when clicking it does nothing.
+    /// </summary>
+    public ReportVisualAction Action { get; set; }
+
+    /// <summary>
     /// Gets or sets the chart type, when <see cref="Type"/> is <see cref="ReportVisualType.Chart"/>.
     /// </summary>
     public ReportChartType ChartType { get; set; }

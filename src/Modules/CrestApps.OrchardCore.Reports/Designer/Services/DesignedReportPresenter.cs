@@ -69,13 +69,15 @@ public sealed class DesignedReportPresenter
         ArgumentNullException.ThrowIfNull(design);
 
         var filterValues = ReportFilterValueBinder.Bind(query, design.GetFilters());
-        var run = await _runner.RunAsync(design, filterValues, cancellationToken);
+        var options = ReportFilterValueBinder.BindSelections(query);
+        var run = await _runner.RunAsync(design, filterValues, period: null, options, cancellationToken);
 
         if (run.Document is not null)
         {
             await _displayValueResolver.ResolveNonTableValuesAsync(run.Document);
 
-            if (source.HasValue)
+            // Refreshing the visuals a click filters is the same run of the report, not another one.
+            if (source.HasValue && options.VisualIds is null)
             {
                 await _eventHandlers.InvokeAsync((handler, context) => handler.RanAsync(context), new ReportEventContext
                 {
@@ -95,6 +97,7 @@ public sealed class DesignedReportPresenter
             ExportFormats = canExport ? _exportManager.GetFormats() : [],
             ExportUrl = exportUrl,
             FormAction = formAction,
+            Selections = options.Selections,
         };
     }
 
@@ -117,7 +120,12 @@ public sealed class DesignedReportPresenter
         ArgumentNullException.ThrowIfNull(design);
 
         var filterValues = ReportFilterValueBinder.Bind(query, design.GetFilters());
-        var file = await ExportAsync(design, filterValues, format, cancellationToken);
+        var options = ReportFilterValueBinder.BindSelections(query);
+
+        // An export holds every visual, filtered by the values picked on the page it was exported from.
+        options.VisualIds = null;
+
+        var file = await ExportAsync(design, filterValues, format, options, cancellationToken);
 
         if (file is not null && source.HasValue)
         {
@@ -144,10 +152,20 @@ public sealed class DesignedReportPresenter
     /// <param name="format">The export format, such as <c>csv</c>; CSV when empty.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The file, or <see langword="null"/> when the format is unknown or the report cannot run.</returns>
-    public async Task<ReportExportFile> ExportAsync(
+    public Task<ReportExportFile> ExportAsync(
         ReportDesign design,
         IDictionary<string, IList<string>> filterValues,
         string format,
+        CancellationToken cancellationToken)
+    {
+        return ExportAsync(design, filterValues, format, options: null, cancellationToken);
+    }
+
+    private async Task<ReportExportFile> ExportAsync(
+        ReportDesign design,
+        IDictionary<string, IList<string>> filterValues,
+        string format,
+        ReportRunOptions options,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(design);
@@ -157,7 +175,7 @@ public sealed class DesignedReportPresenter
             return null;
         }
 
-        var run = await _runner.RunAsync(design, filterValues, cancellationToken);
+        var run = await _runner.RunAsync(design, filterValues, period: null, options, cancellationToken);
 
         if (run.Document is null)
         {

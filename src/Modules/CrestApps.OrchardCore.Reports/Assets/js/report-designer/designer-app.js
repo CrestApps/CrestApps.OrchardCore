@@ -23,6 +23,7 @@
         selection: null,
         dirty: false,
         filterValues: null,
+        previewSelections: {},
         elements: {}
     };
 
@@ -267,6 +268,7 @@
         var payload = app.payload();
 
         payload.filterValues = app.filterValues;
+        payload.selections = app.previewSelections;
 
         ui.request(app.url('preview') + (app.isView() ? '?view=true' : ''), { body: payload, html: true }).then(function (html) {
             target.classList.remove('is-loading');
@@ -284,8 +286,22 @@
         });
     };
 
-    // The preview renders the exposed filters as a form; submitting it re-runs the preview with those values.
+    // The preview renders the exposed filters as a form; submitting it re-runs the preview with those values. Clicking a
+    // row or a chart of a visual that filters others re-runs it with the values picked.
     app.bindPreview = function (target) {
+        if (!target.dataset.selectionBound) {
+            target.dataset.selectionBound = 'true';
+            target.addEventListener('report-selection-change', function (event) {
+                if (event.detail.keys.length) {
+                    app.previewSelections[event.detail.visualId] = event.detail.keys;
+                } else {
+                    delete app.previewSelections[event.detail.visualId];
+                }
+
+                app.refreshPreview();
+            });
+        }
+
         var form = target.querySelector('form[data-preview-filters]');
 
         if (!form) {

@@ -6,6 +6,8 @@
 @{
     var reportSection = Model.Section;
     var sectionWidth = Math.Clamp(reportSection.Width, 1, 12);
+    var selection = reportSection.Selection;
+    var selectedKeys = selection?.SelectedKeys ?? [];
     var chartData = reportSection.Chart is null
         ? null
         : JsonSerializer.Serialize(new
@@ -20,11 +22,19 @@
             stacked = reportSection.Chart.Stacked,
             showLegend = reportSection.Chart.ShowLegend,
             percentageScale = reportSection.Chart.PercentageScale,
+            keys = selection is null ? null : reportSection.Chart.Keys,
+            seriesKeys = selection is null ? null : reportSection.Chart.SeriesKeys,
+            selectedKeys,
         });
 }
 
 @* A column of the title and its content; a chart card fills what the title leaves, so sections side by side line up without spilling into the next row. *@
-<section class="report-section col-12 col-xl-@sectionWidth d-flex flex-column" data-report-visual="@reportSection.Id">
+<section class="report-section col-12 col-xl-@sectionWidth d-flex flex-column@(selectedKeys.Count > 0 ? " has-selection" : null)"
+         data-report-visual="@reportSection.Id"
+         data-report-selectable="@(selection is null ? null : "true")"
+         data-report-targets="@(selection is null ? null : string.Join(' ', selection.TargetIds))"
+         data-report-selected="@(selection is null ? null : JsonSerializer.Serialize(selectedKeys))"
+         data-report-clear-text="@(selection is null ? null : T["Clear selection"].Value)">
 @if (Model.ShowTitle && !string.IsNullOrEmpty(reportSection.Title))
 {
     <h2 class="h5">@reportSection.Title</h2>
@@ -84,8 +94,14 @@
                                 ReportRowKind.GrandTotal => "fw-semibold border-top table-primary",
                                 _ => null,
                             };
+                            var rowKey = selection is null ? null : row.Key;
 
-                            <tr class="@rowClass">
+                            if (rowKey is not null && selectedKeys.Contains(rowKey))
+                            {
+                                rowClass = "is-selected";
+                            }
+
+                            <tr class="@rowClass" data-report-key="@rowKey" tabindex="@(rowKey is null ? null : "0")">
                                 @for (var i = 0; i < row.Cells.Count; i++)
                                 {
                                     var cell = row.Cells[i];

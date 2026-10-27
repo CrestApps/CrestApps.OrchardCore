@@ -31,6 +31,36 @@
     box-shadow: inset 0 -1px 0 var(--bs-border-color);
 }
 
+/* Rows and charts people can click to filter the visuals they are linked to. */
+.report-section[data-report-selectable] tr[data-report-key] {
+    cursor: pointer;
+}
+
+.report-section[data-report-selectable] tr[data-report-key]:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+}
+
+.report-section[data-report-selectable] tr.is-selected > td {
+    background-color: var(--bs-primary-bg-subtle);
+    font-weight: 600;
+}
+
+.report-section.has-selection tr[data-report-key]:not(.is-selected) > td {
+    color: var(--bs-secondary-color);
+}
+
+.report-section .report-selection-clear {
+    align-self: flex-start;
+}
+
+/* A visual being filtered again by a click. */
+.report-section.is-refreshing {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in;
+}
+
 /* Sections in a container are compact: smaller titles and charts that fit the frame. */
 .report-container .report-section > h2 {
     font-size: 1rem;

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-state.js';
 import '../../../src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-charts.js';
+import '../../../src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-interactions.js';
 
 const designer = globalThis.CrestAppsReportDesigner;
 const charts = globalThis.CrestAppsReportCharts;
+const interactions = globalThis.CrestAppsReportInteractions;
 
 const field = (key, dataType, extra = {}) => ({ key, label: key, dataType, ...extra });
 
@@ -389,6 +391,44 @@ describe('queries', () => {
 
         expect(value.visuals[0].valueColumnIds).toEqual([]);
         expect(value.visuals[1].valueColumnIds).toEqual([column.id]);
+    });
+});
+
+describe('picking values', () => {
+    it('picks only the value clicked, and clears it when clicked again', () => {
+        expect(interactions.nextKeys([], 'a', false)).toEqual(['a']);
+        expect(interactions.nextKeys(['a', 'b'], 'c', false)).toEqual(['c']);
+        expect(interactions.nextKeys(['a'], 'a', false)).toEqual([]);
+        expect(interactions.nextKeys(['a', 'b'], 'a', false)).toEqual(['a']);
+    });
+
+    it('adds or removes the value clicked with Ctrl', () => {
+        expect(interactions.nextKeys(['a'], 'b', true)).toEqual(['a', 'b']);
+        expect(interactions.nextKeys(['a', 'b'], 'a', true)).toEqual(['b']);
+    });
+
+    it('finds the key of the category or series clicked', () => {
+        expect(charts.keyAt({ keys: ['x', 'y'] }, { index: 1, datasetIndex: 0 })).toBe('y');
+        expect(charts.keyAt({ seriesKeys: ['s1', 's2'] }, { index: 0, datasetIndex: 1 })).toBe('s2');
+        expect(charts.keyAt({}, { index: 0, datasetIndex: 0 })).toBeUndefined();
+    });
+
+    it('fades the categories a pick leaves out', () => {
+        const model = { type: 'bar', labels: ['A', 'B'], keys: ['a', 'b'], selectedKeys: ['b'], datasets: [{ label: 'Total', data: [1, 2] }] };
+        const config = charts.buildConfig(model, '#000', '#ccc');
+        const colors = config.data.datasets[0].backgroundColor;
+
+        expect(colors).toHaveLength(2);
+        expect(colors[0]).not.toBe(colors[1]);
+        expect(colors[0].startsWith(colors[1])).toBe(true);
+        expect(typeof config.options.onClick).toBe('function');
+    });
+
+    it('leaves a chart nobody can click as it was', () => {
+        const config = charts.buildConfig({ type: 'bar', labels: ['A'], datasets: [{ label: 'Total', data: [1] }] }, '#000', '#ccc');
+
+        expect(config.options.onClick).toBeUndefined();
+        expect(typeof config.data.datasets[0].backgroundColor).toBe('string');
     });
 });
 

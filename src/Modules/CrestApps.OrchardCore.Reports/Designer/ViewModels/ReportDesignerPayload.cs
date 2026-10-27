@@ -80,6 +80,11 @@ public class ReportDesignerPayload
     public Dictionary<string, IList<string>> FilterValues { get; set; }
 
     /// <summary>
+    /// Gets or sets the values picked by clicking the preview's visuals, as keys by visual identifier.
+    /// </summary>
+    public Dictionary<string, IList<string>> Selections { get; set; }
+
+    /// <summary>
     /// Gets or sets the revision of the report the builder's changes are based on.
     /// </summary>
     public long Revision { get; set; }

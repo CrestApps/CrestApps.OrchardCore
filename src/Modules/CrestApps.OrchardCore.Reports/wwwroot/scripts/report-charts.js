@@ -58,21 +58,57 @@
 				};
 			}
 		}
+		function faint(color) {
+			return color.length === 7 ? color + "33" : color;
+		}
+		function colorsOf(model, kind, index, count, keys) {
+			var color = palette[index % palette.length];
+			var picked = keys || [];
+			var categoryKeys = model.keys || null;
+			var seriesKey = model.seriesKeys ? model.seriesKeys[index] : void 0;
+			var fadedSeries = picked.length > 0 && seriesKey !== void 0 && picked.indexOf(seriesKey) < 0;
+			var marks = [];
+			for (var position = 0; position < count; position++) {
+				var base = kind.circular ? palette[position % palette.length] : kind.fill ? color + "55" : color;
+				var fadedCategory = picked.length > 0 && categoryKeys && picked.indexOf(categoryKeys[position]) < 0;
+				marks.push(fadedSeries || fadedCategory ? faint(kind.circular ? palette[position % palette.length] : color) : base);
+			}
+			return {
+				background: kind.circular || picked.length && categoryKeys ? marks : fadedSeries ? faint(color) : kind.fill ? color + "55" : color,
+				border: kind.circular ? "#ffffff" : fadedSeries ? faint(color) : color,
+				points: picked.length && categoryKeys ? marks : color
+			};
+		}
+		function applySelection(datasets, model, kind, keys) {
+			datasets.forEach(function(dataset, index) {
+				var colors = colorsOf(model, kind, index, (dataset.data || []).length, keys);
+				dataset.backgroundColor = colors.background;
+				dataset.borderColor = colors.border;
+				if (kind.type === "line") {
+					dataset.pointBackgroundColor = colors.points;
+					dataset.pointBorderColor = colors.points;
+				}
+			});
+		}
+		function keyAt(model, hit) {
+			if (!hit) return;
+			if (model.keys) return model.keys[hit.index];
+			return model.seriesKeys ? model.seriesKeys[hit.datasetIndex] : void 0;
+		}
 		function buildConfig(model, textColor, gridColor) {
 			var kind = chartKind(model.type);
-			var datasets = (model.datasets || []).map(function(dataset, index) {
-				var color = palette[index % palette.length];
+			var selectable = !!(model.keys || model.seriesKeys);
+			var datasets = (model.datasets || []).map(function(dataset) {
 				return {
 					label: dataset.label,
 					data: dataset.data,
-					backgroundColor: kind.circular ? palette.slice(0, (dataset.data || []).length) : kind.fill ? color + "55" : color,
-					borderColor: kind.circular ? "#ffffff" : color,
 					borderWidth: 2,
 					borderRadius: kind.type === "bar" ? 6 : 0,
 					fill: kind.fill,
 					tension: kind.type === "line" ? .3 : 0
 				};
 			});
+			applySelection(datasets, model, kind, model.selectedKeys);
 			var valueAxis = {
 				beginAtZero: true,
 				stacked: !!model.stacked,
@@ -119,9 +155,31 @@
 					} : {
 						x: categoryAxis,
 						y: valueAxis
-					}
+					},
+					onHover: selectable ? function(event, elements, chart) {
+						chart.canvas.style.cursor = elements.length ? "pointer" : "default";
+					} : void 0,
+					onClick: selectable ? function(event, elements, chart) {
+						var key = keyAt(model, chart.getElementsAtEventForMode(event.native || event, "nearest", { intersect: true }, false)[0] || elements[0]);
+						if (key === void 0) return;
+						chart.canvas.dispatchEvent(new root.CustomEvent("report-chart-select", {
+							bubbles: true,
+							detail: {
+								key,
+								additive: !!(event.native && (event.native.ctrlKey || event.native.metaKey))
+							}
+						}));
+					} : void 0
 				}
 			};
+		}
+		function select(canvas, keys) {
+			var chart = canvas && canvas.reportChart;
+			var model = canvas && canvas.reportChartModel;
+			if (!chart || !model) return;
+			model.selectedKeys = keys || [];
+			applySelection(chart.data.datasets, model, chartKind(model.type), model.selectedKeys);
+			chart.update();
 		}
 		function render(container) {
 			if (typeof root.Chart === "undefined" || !root.document) return;
@@ -138,13 +196,16 @@
 					return;
 				}
 				canvas.dataset.reportChartRendered = "true";
-				new root.Chart(canvas, buildConfig(model, textColor, gridColor));
+				canvas.reportChartModel = model;
+				canvas.reportChart = new root.Chart(canvas, buildConfig(model, textColor, gridColor));
 			});
 		}
 		root.CrestAppsReportCharts = {
 			buildConfig,
 			chartKind,
-			render
+			keyAt,
+			render,
+			select
 		};
 		if (root.document) {
 			if (root.document.readyState === "complete") render();

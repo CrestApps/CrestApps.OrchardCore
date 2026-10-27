@@ -231,6 +231,12 @@ public class DesignedReportViewModel
     /// Gets or sets a value indicating whether the page is shown outside the admin.
     /// </summary>
     public bool IsPublic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the values picked by clicking the report's visuals, as keys by visual identifier. The filter form
+    /// carries them, so changing a filter or exporting keeps them.
+    /// </summary>
+    public IDictionary<string, IList<string>> Selections { get; set; } = new Dictionary<string, IList<string>>(StringComparer.Ordinal);
 }
 
 /// <summary>

@@ -30,6 +30,12 @@ internal sealed class ReportsResourceConfiguration : IConfigureOptions<ResourceM
     /// </summary>
     public const string DocumentStyle = "CrestApps.OrchardCore.Reports.Document";
 
+    /// <summary>
+    /// The name of the script that lets people click the rows and charts of a report to filter the visuals they are
+    /// linked to.
+    /// </summary>
+    public const string InteractionsScript = "CrestApps.OrchardCore.Reports.Interactions";
+
     private static readonly ResourceManifest _manifest;
 
     static ReportsResourceConfiguration()
@@ -45,11 +51,18 @@ internal sealed class ReportsResourceConfiguration : IConfigureOptions<ResourceM
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript(InteractionsScript)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Reports/scripts/report-interactions.min.js",
+                "~/CrestApps.OrchardCore.Reports/scripts/report-interactions.js")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript(DesignerScript)
             .SetUrl(
                 "~/CrestApps.OrchardCore.Reports/scripts/report-designer.min.js",
                 "~/CrestApps.OrchardCore.Reports/scripts/report-designer.js")
-            .SetDependencies(ChartsScript)
+            .SetDependencies(ChartsScript, InteractionsScript)
             .SetVersion("1.0.0");
 
         _manifest

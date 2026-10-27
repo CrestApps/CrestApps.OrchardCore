@@ -1,9 +1,11 @@
 using System.Security.Claims;
+using System.Text.Json;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -75,10 +77,29 @@ public sealed class ReportDesignRunner
     /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The run outcome.</returns>
+    public Task<ReportRunResult> RunAsync(
+        ReportDesign design,
+        IDictionary<string, IList<string>> filterValues,
+        ReportRunPeriod period,
+        CancellationToken cancellationToken = default)
+    {
+        return RunAsync(design, filterValues, period, options: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a saved report with its owner's access, with the values picked by clicking its visuals.
+    /// </summary>
+    /// <param name="design">The report.</param>
+    /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
+    /// <param name="period">The days the report covers, or <see langword="null"/> to keep its filters' values.</param>
+    /// <param name="options">The picked values and the visuals to show, or <see langword="null"/> for none and all.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The run outcome.</returns>
     public async Task<ReportRunResult> RunAsync(
         ReportDesign design,
         IDictionary<string, IList<string>> filterValues,
         ReportRunPeriod period,
+        ReportRunOptions options,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(design);
@@ -95,7 +116,7 @@ public sealed class ReportDesignRunner
             return result;
         }
 
-        return await RunAsync(design, owner, filterValues, period, cancellationToken);
+        return await RunAsync(design, owner, filterValues, period, options, cancellationToken);
     }
 
     /// <summary>
@@ -128,11 +149,34 @@ public sealed class ReportDesignRunner
     /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The run outcome.</returns>
+    public Task<ReportRunResult> RunAsync(
+        ReportDesign design,
+        ClaimsPrincipal dataUser,
+        IDictionary<string, IList<string>> filterValues,
+        ReportRunPeriod period,
+        CancellationToken cancellationToken = default)
+    {
+        return RunAsync(design, dataUser, filterValues, period, options: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a report with the access of a given principal, with the values picked by clicking its visuals. A visual that
+    /// a click filters runs its query again with the picked values; the visual clicked keeps all of its rows and
+    /// highlights the picked ones.
+    /// </summary>
+    /// <param name="design">The report, saved or not.</param>
+    /// <param name="dataUser">The principal whose access reads the data.</param>
+    /// <param name="filterValues">The values entered for exposed filters, or <see langword="null"/> for the defaults.</param>
+    /// <param name="period">The days the report covers, or <see langword="null"/> to keep its filters' values.</param>
+    /// <param name="options">The picked values and the visuals to show, or <see langword="null"/> for none and all.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The run outcome.</returns>
     public async Task<ReportRunResult> RunAsync(
         ReportDesign design,
         ClaimsPrincipal dataUser,
         IDictionary<string, IList<string>> filterValues,
         ReportRunPeriod period,
+        ReportRunOptions options,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(design);
@@ -148,6 +192,10 @@ public sealed class ReportDesignRunner
         var visuals = (design.Visuals ?? []).Where(visual => visual is not null).ToList();
         var queries = design.GetQueries().ToList();
         var sections = new List<ReportSection>();
+        var selections = options?.Selections ?? new Dictionary<string, IList<string>>(StringComparer.Ordinal);
+        var only = options?.VisualIds;
+        var shown = only is null ? visuals : visuals.Where(visual => only.Contains(visual.Id)).ToList();
+        var selectionFilters = GetSelectionFilters(queries, visuals, selections, result);
 
         foreach (var visual in visuals.Where(visual => !queries.Any(query => SameQuery(query.Id, visual.QueryId))))
         {
@@ -157,29 +205,47 @@ public sealed class ReportDesignRunner
         foreach (var query in queries)
         {
             var isMain = string.IsNullOrEmpty(query.Id);
-            var queryVisuals = visuals.Where(visual => SameQuery(query.Id, visual.QueryId)).ToList();
+            var queryVisuals = shown.Where(visual => SameQuery(query.Id, visual.QueryId)).ToList();
 
-            // The main query always runs: its result is the report's rows, and it shows one table when the report has
-            // no visuals. Another query runs only for the visuals that show it.
-            if (!isMain && queryVisuals.Count == 0)
+            // The main query always runs for the whole report: its result is the report's rows, and it shows one table
+            // when the report has no visuals. Another query runs only for the visuals that show it.
+            if (queryVisuals.Count == 0 && (!isMain || only is not null))
             {
                 continue;
             }
 
+            // The visuals a click filters run the query again with the picked values, once for each set of values; the
+            // visuals no click filters run it as it is, first, so its filter choices and rows are the unfiltered ones.
+            var runs = queryVisuals
+                .GroupBy(visual => SelectionKey(selectionFilters.GetValueOrDefault(visual.Id)), StringComparer.Ordinal)
+                .OrderBy(group => group.Key.Length > 0)
+                .Select(group => (Filters: selectionFilters.GetValueOrDefault(group.First().Id), Visuals: group.ToList()))
+                .ToList();
+
+            if (runs.Count == 0)
+            {
+                runs.Add((null, []));
+            }
+
             try
             {
-                var queryResult = await RunQueryAsync(query, queryVisuals, isMain && visuals.Count == 0, context, period, result, sections, cancellationToken);
-
-                if (isMain)
+                foreach (var (filters, runVisuals) in runs)
                 {
-                    if (queryResult is null)
-                    {
-                        return result;
-                    }
+                    var run = filters is null ? query : WithFilters(query, filters);
+                    var queryResult = await RunQueryAsync(run, runVisuals, isMain && visuals.Count == 0, context, period, result, sections, selections, cancellationToken);
 
-                    result.Columns = queryResult.Columns;
-                    result.RowCount = queryResult.Rows.Count;
-                    result.Rows = queryResult.Rows;
+                    // The report's rows are those of the main query's first run: the unfiltered one, when it has one.
+                    if (isMain && runVisuals == runs[0].Visuals)
+                    {
+                        if (queryResult is null)
+                        {
+                            return result;
+                        }
+
+                        result.Columns = queryResult.Columns;
+                        result.RowCount = queryResult.Rows.Count;
+                        result.Rows = queryResult.Rows;
+                    }
                 }
             }
             catch (ReportQueryException exception)
@@ -218,7 +284,7 @@ public sealed class ReportDesignRunner
         }
         else
         {
-            foreach (var visual in visuals)
+            foreach (var visual in shown)
             {
                 result.Document.Add(sections.FirstOrDefault(section => string.Equals(section.Id, visual.Id, StringComparison.Ordinal)));
             }
@@ -240,6 +306,7 @@ public sealed class ReportDesignRunner
         ReportRunPeriod period,
         ReportRunResult result,
         List<ReportSection> sections,
+        IDictionary<string, IList<string>> selections,
         CancellationToken cancellationToken)
     {
         var isMain = string.IsNullOrEmpty(query.Id);
@@ -314,7 +381,7 @@ public sealed class ReportDesignRunner
         // A report without visuals shows its main query's result as one table.
         if (visuals.Count > 0 || showAsTable)
         {
-            foreach (var section in _documentBuilder.Build(null, visuals, queryResult).Sections)
+            foreach (var section in _documentBuilder.Build(null, visuals, queryResult, selections.AsReadOnly()).Sections)
             {
                 sections.Add(section);
             }
@@ -340,6 +407,115 @@ public sealed class ReportDesignRunner
         }
 
         return queryResult;
+    }
+
+    // The filters the values picked in the visuals people clicked set on the visuals their clicks filter, by the
+    // identifier of the visual filtered. A visual is never filtered by its own click.
+    private Dictionary<string, List<ReportFilterDefinition>> GetSelectionFilters(
+        IList<ReportNamedQuery> queries,
+        IList<ReportVisualDefinition> visuals,
+        IDictionary<string, IList<string>> selections,
+        ReportRunResult result)
+    {
+        var filters = new Dictionary<string, List<ReportFilterDefinition>>(StringComparer.Ordinal);
+
+        foreach (var source in visuals)
+        {
+            if (string.IsNullOrEmpty(source.Action?.ColumnId) ||
+                !selections.TryGetValue(source.Id ?? string.Empty, out var keys) ||
+                keys is null ||
+                keys.Count == 0)
+            {
+                continue;
+            }
+
+            var column = queries.FirstOrDefault(query => SameQuery(query.Id, source.QueryId))?.Query?.Columns?
+                .FirstOrDefault(candidate => candidate?.Id == source.Action.ColumnId);
+
+            if (column is null || column.Aggregate != DataAggregate.None)
+            {
+                continue;
+            }
+
+            var name = source.Title ?? source.Id;
+
+            foreach (var target in source.Action.Targets ?? [])
+            {
+                var visual = visuals.FirstOrDefault(candidate => candidate.Id == target?.VisualId);
+
+                if (visual is null || visual == source)
+                {
+                    continue;
+                }
+
+                var query = queries.FirstOrDefault(candidate => SameQuery(candidate.Id, visual.QueryId))?.Query;
+                var field = string.IsNullOrWhiteSpace(target.Field) ? column.Field : target.Field.Trim();
+
+                if (query is null || !Reads(query, field))
+                {
+                    result.Warnings.Add(S["Clicking '{0}' cannot filter '{1}': its query doesn't read the field '{2}'.", name, visual.Title ?? visual.Id, field]);
+
+                    continue;
+                }
+
+                var filter = ReportSelectionKeys.ToFilter(ReportSelectionKeys.FieldPrefix + source.Id, field, column.Transform, keys);
+
+                if (filter is null)
+                {
+                    continue;
+                }
+
+                if (!filters.TryGetValue(visual.Id, out var list))
+                {
+                    filters[visual.Id] = list = [];
+                }
+
+                list.Add(filter);
+            }
+        }
+
+        return filters;
+    }
+
+    // Whether a query reads a field: a field of one of its data sets, or a calculated field of its own.
+    private static bool Reads(ReportQueryDefinition query, string field)
+    {
+        if (string.IsNullOrEmpty(field))
+        {
+            return false;
+        }
+
+        var dot = field.IndexOf('.', StringComparison.Ordinal);
+
+        if (dot > 0 && (query.DataSets ?? []).Any(dataSet => string.Equals(dataSet?.Alias, field[..dot], StringComparison.Ordinal)))
+        {
+            return true;
+        }
+
+        return (query.CalculatedFields ?? []).Any(calculated => string.Equals(calculated?.Name, field, StringComparison.Ordinal));
+    }
+
+    // The text that tells apart the sets of filters picked values set, so the visuals filtered alike run together.
+    private static string SelectionKey(IList<ReportFilterDefinition> filters)
+    {
+        return filters is null
+            ? string.Empty
+            : string.Join('\u001F', filters.Select(filter => $"{filter.Id}\u001E{filter.Field}\u001E{filter.Operator}\u001E{string.Join('\u001E', filter.Values)}"));
+    }
+
+    // A copy of a query that also keeps the rows the picked values filter, so the saved report never changes.
+    private static ReportNamedQuery WithFilters(ReportNamedQuery query, IEnumerable<ReportFilterDefinition> filters)
+    {
+        var copy = JsonSerializer.Deserialize<ReportQueryDefinition>(JsonSerializer.SerializeToUtf8Bytes(query.Query ?? new ReportQueryDefinition()));
+
+        copy.Filters = [.. copy.Filters ?? [], .. filters];
+
+        return new ReportNamedQuery
+        {
+            Id = query.Id,
+            Name = query.Name,
+            Query = copy,
+        };
     }
 
     private static bool SameQuery(string queryId, string visualQueryId)

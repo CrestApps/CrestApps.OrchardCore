@@ -62,6 +62,12 @@ public sealed class ReportRow
     public IList<ReportStyle> CellStyles { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the key of the value a click on the row picks, or <see langword="null"/> when the row cannot be
+    /// clicked, like a totals row.
+    /// </summary>
+    public string Key { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the row should be visually emphasized.
     /// </summary>
     public bool Emphasize

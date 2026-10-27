@@ -101,9 +101,31 @@ public sealed class ReportDesignDocumentBuilder
                     errors.Add(S["The visual '{0}' plots the column '{1}', which is not a number.", name, byId[columnId].Label]);
                 }
             }
+
+            if (!string.IsNullOrEmpty(visual.Action?.ColumnId) && !IsClickable(visual, byId.GetValueOrDefault(visual.Action.ColumnId)))
+            {
+                errors.Add(S["Clicking the visual '{0}' cannot filter other visuals: pick a column it shows that groups its data, such as a table column or a chart's categories.", name]);
+            }
         }
 
         return errors;
+    }
+
+    // Whether clicking a visual can pick a value of a column: a table that shows the column, or a chart whose categories
+    // or series it is. The column must group the data rather than sum it.
+    private static bool IsClickable(ReportVisualDefinition visual, ReportResultColumn column)
+    {
+        if (column is null || column.IsMeasure)
+        {
+            return false;
+        }
+
+        return visual.Type switch
+        {
+            ReportVisualType.Table => visual.ColumnIds.Count == 0 ? !column.Hidden : visual.ColumnIds.Contains(column.Id, StringComparer.Ordinal),
+            ReportVisualType.Chart => column.Id == visual.CategoryColumnId || column.Id == visual.SeriesColumnId,
+            _ => false,
+        };
     }
 
     /// <summary>
@@ -210,8 +232,15 @@ public sealed class ReportDesignDocumentBuilder
     /// <param name="title">The report title.</param>
     /// <param name="visuals">The visuals, in display order. When empty, a single table of the result is shown.</param>
     /// <param name="result">The query result.</param>
+    /// <param name="selections">
+    /// The values picked in the visuals people can click, as keys by visual identifier, highlighted in those visuals.
+    /// </param>
     /// <returns>The document.</returns>
-    public ReportDocument Build(string title, IEnumerable<ReportVisualDefinition> visuals, ReportQueryResult result)
+    public ReportDocument Build(
+        string title,
+        IEnumerable<ReportVisualDefinition> visuals,
+        ReportQueryResult result,
+        IReadOnlyDictionary<string, IList<string>> selections = null)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -250,10 +279,56 @@ public sealed class ReportDesignDocumentBuilder
             section.Width = Math.Clamp(visual.Width, 1, 12);
             section.Id = visual.Id;
             section.ContainerId = visual.ContainerId;
+            section.Selection = Selection(visual, section, selections);
             document.Add(section);
         }
 
         return document;
+    }
+
+    // What picking a value in a visual filters, when the section built for it carries the keys of the values it shows.
+    private static ReportSectionSelection Selection(ReportVisualDefinition visual, ReportSection section, IReadOnlyDictionary<string, IList<string>> selections)
+    {
+        var targets = (visual.Action?.Targets ?? [])
+            .Select(target => target?.VisualId)
+            .Where(id => !string.IsNullOrEmpty(id) && id != visual.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var hasKeys = section.Rows.Any(row => row.Key is not null) || section.Chart?.Keys is not null || section.Chart?.SeriesKeys is not null;
+
+        if (targets.Count == 0 || !hasKeys)
+        {
+            return null;
+        }
+
+        return new ReportSectionSelection
+        {
+            TargetIds = targets,
+            SelectedKeys = selections is not null && selections.TryGetValue(visual.Id ?? string.Empty, out var keys) ? [.. keys] : [],
+        };
+    }
+
+    // The position of the column clicking a visual picks, or -1 when clicking it picks nothing.
+    private static int ActionIndex(ReportVisualDefinition visual, ReportQueryResult result)
+    {
+        var columnId = visual.Action?.ColumnId;
+
+        if (string.IsNullOrEmpty(columnId) || (visual.Action.Targets?.Count ?? 0) == 0)
+        {
+            return -1;
+        }
+
+        var index = result.IndexOf(columnId);
+
+        return index >= 0 && IsClickable(visual, result.Columns[index]) ? index : -1;
+    }
+
+    private ReportRow DetailRow(object[] values, ReportQueryResult result, int[] indexes, int keyIndex)
+    {
+        return new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList())
+        {
+            Key = keyIndex >= 0 ? ReportSelectionKeys.ToKey(values[keyIndex]) : null,
+        };
     }
 
     /// <summary>
@@ -344,13 +419,15 @@ public sealed class ReportDesignDocumentBuilder
             return null;
         }
 
+        var keyIndex = ActionIndex(visual, result);
+
         var columns = indexes
             .Select(index => new ReportColumn(result.Columns[index].Label, Align(result.Columns[index])))
             .ToList();
         var rows = visual.ShowSubtotals && result.IsAggregated
-            ? BuildRowsWithSubtotals(result, indexes)
+            ? BuildRowsWithSubtotals(result, indexes, keyIndex)
             : result.Rows
-                .Select(values => new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()))
+                .Select(values => DetailRow(values, result, indexes, keyIndex))
                 .ToList();
 
         if (visual.ShowTotals && indexes.Any(index => IsTotalled(result, index)))
@@ -374,7 +451,7 @@ public sealed class ReportDesignDocumentBuilder
     // The rows of a grouped table with a subtotal after each group of its leading dimensions (every shown dimension but
     // the last). Rows are kept together by those dimensions, keeping their order within each group. Each subtotal is
     // the result regrouped by the dimensions up to its level, so averages and distinct counts stay correct.
-    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, int[] indexes)
+    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, int[] indexes, int keyIndex)
     {
         var dimensions = indexes.Where(index => !result.Columns[index].IsMeasure).ToArray();
         var levels = dimensions.Length - 1;
@@ -382,7 +459,7 @@ public sealed class ReportDesignDocumentBuilder
         if (levels < 1)
         {
             return result.Rows
-                .Select(values => new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()))
+                .Select(values => DetailRow(values, result, indexes, keyIndex))
                 .ToList();
         }
 
@@ -468,7 +545,7 @@ public sealed class ReportDesignDocumentBuilder
                 }
             }
 
-            rows.Add(new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()));
+            rows.Add(DetailRow(values, result, indexes, keyIndex));
             previous = values;
         }
 
@@ -504,6 +581,7 @@ public sealed class ReportDesignDocumentBuilder
 
         var categoryColumn = result.Columns[categoryIndex];
         var seriesIndex = result.IndexOf(visual.SeriesColumnId);
+        var keyIndex = ActionIndex(visual, result);
         var chart = new ReportChart
         {
             Type = visual.ChartType,
@@ -525,6 +603,15 @@ public sealed class ReportDesignDocumentBuilder
 
             chart.Labels = categories.Select(category => _formatter.Format(category, categoryColumn)).ToList();
 
+            if (keyIndex == categoryIndex)
+            {
+                chart.Keys = categories.Select(ReportSelectionKeys.ToKey).ToList();
+            }
+            else if (keyIndex == seriesIndex)
+            {
+                chart.SeriesKeys = series.Select(ReportSelectionKeys.ToKey).ToList();
+            }
+
             foreach (var seriesValue in series)
             {
                 var values = categories.Select(category => ToDouble(cells.GetValueOrDefault(Key(category) + "\u001F" + Key(seriesValue))));
@@ -537,6 +624,11 @@ public sealed class ReportDesignDocumentBuilder
             var groups = result.Regroup([categoryColumn.Id]);
 
             chart.Labels = groups.Select(group => _formatter.Format(group.Values[categoryIndex], categoryColumn)).ToList();
+
+            if (keyIndex == categoryIndex)
+            {
+                chart.Keys = groups.Select(group => ReportSelectionKeys.ToKey(group.Values[categoryIndex])).ToList();
+            }
 
             foreach (var valueIndex in valueIndexes)
             {
