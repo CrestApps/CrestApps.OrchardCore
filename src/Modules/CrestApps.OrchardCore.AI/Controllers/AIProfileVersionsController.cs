@@ -1,11 +1,11 @@
-using System.Globalization;
-using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,11 +20,12 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.AI.Controllers;
 
 /// <summary>
-/// Lists the saved versions of an AI profile, compares a version with the profile as it is now, and restores one.
+/// Lists the saved versions of an AI profile, compares a version with the profile as it is now or with another
+/// version, and restores one.
 /// </summary>
 public sealed class AIProfileVersionsController : Controller
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerOptions.Web) { WriteIndented = true };
+    private const int MaxComparableVersions = 100;
 
     private readonly IAIProfileManager _profileManager;
     private readonly IAIProfileVersionStore _versionStore;
@@ -102,11 +103,14 @@ public sealed class AIProfileVersionsController : Controller
     }
 
     /// <summary>
-    /// Shows a version beside the profile as it is now.
+    /// Shows a version beside the profile as it is now, or beside another version of it.
     /// </summary>
     /// <param name="id">The version.</param>
+    /// <param name="with">Another version of the same profile to show on the right, or <see langword="null"/> for the
+    /// profile as it is now.</param>
+    /// <param name="templateService">The template service, for the titles of the templates a profile uses.</param>
     [Admin("ai/profiles/versions/{id}", "AIProfileVersionsCompare")]
-    public async Task<IActionResult> Compare(string id)
+    public async Task<IActionResult> Compare(string id, string with, [FromServices] ITemplateService templateService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -121,12 +125,29 @@ public sealed class AIProfileVersionsController : Controller
             return NotFound();
         }
 
+        var other = string.IsNullOrEmpty(with) || with == id ? null : await _versionStore.FindByIdAsync(with);
+
+        if (other is not null && (other.ProfileId != profile.ItemId || other.Snapshot is null))
+        {
+            other = null;
+        }
+
+        var templates = await templateService.ListAsync(HttpContext.RequestAborted) ?? [];
+        var titles = templates
+            .Where(template => !string.IsNullOrEmpty(template.Id))
+            .DistinctBy(template => template.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(template => template.Id, AITemplateCategoryExtensions.GetTitle, StringComparer.OrdinalIgnoreCase);
+
+        var (versions, _) = await _versionStore.PageAsync(profile.ItemId, 1, MaxComparableVersions);
+
         return View(new AIProfileVersionCompareViewModel
         {
             Profile = profile,
             Version = version,
+            Other = other,
             CurrentVersion = CurrentVersion(profile),
-            Rows = Compare(version.Snapshot, profile),
+            Versions = versions,
+            Rows = AIProfileVersionComparer.Compare(version.Snapshot, other?.Snapshot ?? profile, titles),
         });
     }
 
@@ -185,92 +206,6 @@ public sealed class AIProfileVersionsController : Controller
         profile.PromptTemplate = copy.PromptTemplate;
         profile.Properties = copy.Properties;
         profile.Settings = copy.Settings;
-    }
-
-    /// <summary>
-    /// Lists what a version and the profile hold, side by side: the main fields first, then every other setting
-    /// that differs.
-    /// </summary>
-    /// <param name="then">The version's copy of the profile.</param>
-    /// <param name="now">The profile as it is now.</param>
-    internal List<AIProfileVersionCompareRow> Compare(AIProfile then, AIProfile now)
-    {
-        var thenMetadata = then.TryGet<AIProfileMetadata>(out var thenSettings) ? thenSettings : new AIProfileMetadata();
-        var nowMetadata = now.TryGet<AIProfileMetadata>(out var nowSettings) ? nowSettings : new AIProfileMetadata();
-
-        var rows = new List<AIProfileVersionCompareRow>
-        {
-            Row(S["Name"], then.DisplayText, now.DisplayText),
-            Row(S["Description"], then.Description, now.Description),
-            Row(S["Chat deployment"], then.ChatDeploymentName, now.ChatDeploymentName),
-            Row(S["Utility deployment"], then.UtilityDeploymentName, now.UtilityDeploymentName),
-            Row(S["Orchestrator"], then.OrchestratorName, now.OrchestratorName),
-            Row(S["Welcome message"], then.WelcomeMessage, now.WelcomeMessage),
-            Row(S["System message"], thenMetadata.SystemMessage, nowMetadata.SystemMessage, true),
-            Row(S["Initial prompt"], thenMetadata.InitialPrompt, nowMetadata.InitialPrompt, true),
-            Row(S["Temperature"], Format(thenMetadata.Temperature), Format(nowMetadata.Temperature)),
-            Row(S["Top P"], Format(thenMetadata.TopP), Format(nowMetadata.TopP)),
-            Row(S["Max tokens"], Format(thenMetadata.MaxTokens), Format(nowMetadata.MaxTokens)),
-            Row(S["Past messages"], Format(thenMetadata.PastMessagesCount), Format(nowMetadata.PastMessagesCount)),
-        };
-
-        AddOtherSettings(rows, then.Properties, now.Properties);
-        AddOtherSettings(rows, then.Settings, now.Settings);
-
-        return rows;
-    }
-
-    private static void AddOtherSettings(List<AIProfileVersionCompareRow> rows, IDictionary<string, object> then, IDictionary<string, object> now)
-    {
-        then ??= new Dictionary<string, object>();
-        now ??= new Dictionary<string, object>();
-
-        foreach (var key in then.Keys.Union(now.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(key => key, StringComparer.OrdinalIgnoreCase))
-        {
-            // Shown above, or changes on every save.
-            if (key is nameof(AIProfileMetadata) or nameof(AIProfileVersionMetadata))
-            {
-                continue;
-            }
-
-            var thenJson = then.TryGetValue(key, out var thenValue) ? ToJson(thenValue) : null;
-            var nowJson = now.TryGetValue(key, out var nowValue) ? ToJson(nowValue) : null;
-
-            if (!string.Equals(thenJson, nowJson, StringComparison.Ordinal))
-            {
-                rows.Add(new AIProfileVersionCompareRow(Humanize(key), thenJson, nowJson, true, IsCode: true));
-            }
-        }
-    }
-
-    private static AIProfileVersionCompareRow Row(string label, string then, string now, bool multiline = false)
-        => new(label, then, now, multiline);
-
-    private static string Format(float? value)
-        => value?.ToString(CultureInfo.InvariantCulture);
-
-    private static string Format(int? value)
-        => value?.ToString(CultureInfo.InvariantCulture);
-
-    private static string ToJson(object value)
-        => value is null ? null : JsonSerializer.Serialize(value, _jsonOptions);
-
-    // "AIProfileDataExtractionSettings" reads better as "AI Profile Data Extraction Settings".
-    private static string Humanize(string key)
-    {
-        var builder = new System.Text.StringBuilder(key.Length + 8);
-
-        for (var i = 0; i < key.Length; i++)
-        {
-            if (i > 0 && char.IsUpper(key[i]) && (char.IsLower(key[i - 1]) || (i + 1 < key.Length && char.IsLower(key[i + 1]) && char.IsUpper(key[i - 1]))))
-            {
-                builder.Append(' ');
-            }
-
-            builder.Append(key[i]);
-        }
-
-        return builder.ToString();
     }
 
     private static int CurrentVersion(AIProfile profile)

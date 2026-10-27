@@ -168,7 +168,7 @@ internal sealed class WorkflowToolFunction : AIFunction
             : JsonSerializer.Serialize(new { status = "done", result = workflowContext.LastResult });
     }
 
-    private Dictionary<string, object> BuildArguments(AIFunctionArguments arguments, AIToolParameterResolution resolution)
+    private static Dictionary<string, object> BuildArguments(AIFunctionArguments arguments, AIToolParameterResolution resolution)
     {
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 

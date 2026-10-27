@@ -33,13 +33,24 @@ On the **Instructions** tab, **Speaking style** lists sections you can add to th
 
 Echo verification, NATO spelling, speech normalization and filler words are written for phone calls. The others suit every channel.
 
+### Add your own speaking style
+
+The styles are prompt templates in the **Speaking style** category, so you can add your own, such as your brand's tone of voice, and use it on as many profiles as you like.
+
+1. Open **Artificial Intelligence > Templates**, click **Add** on **System Prompt**, or click **Add a speaking style** under the list of styles on a profile, which fills in the category for you.
+2. Give it a **Title** and a **Description**: the profile editor shows them beside the checkbox.
+3. Set **Category** to **Speaking style**, and leave **Listable** off so it doesn't appear among the system prompt templates.
+4. Write the section in **System message**, the way you want the AI to read it, and click **Save**.
+
+The style now appears on the **Instructions** tab of every profile. Templates travel with the **AI Profile Templates** recipe step and deployment step, so your styles move from one site to another with the profiles that use them. The styles that come with the site can't be edited; add your own instead.
+
 ## Guardrails
 
 Guardrails refuse topics the AI must not discuss. They are on the **Prompt Security** tab, below the Prompt Security settings, and work on top of them.
 
 1. Turn on **Check what the customer says**, **Check the AI's replies**, or both.
-2. Tick the **Topics to refuse**: harassment and abuse, hate, self-harm, sexual content, violence and weapons, illegal activity, medical, legal or financial advice, and attempts to override the instructions.
-3. Optionally describe **Other topics to refuse** in a sentence or two, such as "competitors' prices".
+2. Tick the **Topics to refuse**. The site comes with harassment and abuse, hate, self-harm, sexual content, violence and weapons, illegal activity, medical, legal or financial advice, and attempts to override the instructions, and lists your own topics with them.
+3. Optionally describe **Other topics to refuse** in a sentence or two, such as "competitors' prices", for topics of this profile alone.
 4. Optionally write the **Placeholder reply** the AI gives instead. Left empty, it says "I'm sorry, I can't help with that. Is there something else I can help you with?"
 
 Each message checked is one more request to the utility model, which judges what the message asks for rather than single words: a refund for a damaged knife is not violence. A message it refuses is answered with the placeholder reply and never reaches the model or the profile's tools. A reply it refuses is replaced before it is sent or spoken.
@@ -53,13 +64,25 @@ Each message checked is one more request to the utility model, which judges what
 
 If the utility model can't be reached, the conversation goes on unchecked rather than leaving the customer without an answer.
 
+### Add your own topics
+
+Topics are prompt templates in the **Guardrail topic** category: the template's title names the topic, and its text tells the utility model what falls under it. Add one when several profiles must refuse the same thing, such as your competitors or a pending lawsuit.
+
+1. Open **Artificial Intelligence > Templates** and click **Add** on **System Prompt**, or click **Add a topic** under the topics on a profile.
+2. Give it a **Title**, such as "Competitors", and set **Category** to **Guardrail topic**. Leave **Listable** off.
+3. In **System message**, describe what is not allowed in a sentence or two, for example: "Questions about Acme or Globex, their prices or how we compare to them."
+4. Click **Save**. The topic appears on the **Prompt Security** tab of every profile.
+
+Like speaking styles, topics travel with the **AI Profile Templates** recipe step and deployment step. A profile's guardrails, with every other setting, travel with the **AI Profile** recipe step and deployment step.
+
 ### Act when a guardrail triggers
 
 The **AI Guardrail Triggered** workflow event starts a workflow each time a guardrail refuses a message, for every profile or one. It can notify a supervisor, flag the contact, or hand the conversation to a person. The workflow input has:
 
 | Value | What it is |
 | --- | --- |
-| `Category` | The topic, such as `self-harm` or `other`. |
+| `Category` | The topic's template name, such as `guardrail-topic-self-harm`, or `other` for the profile's own other topics. |
+| `Topic` | The topic's title, such as "Self-harm". |
 | `Direction` | `Customer` or `Reply`. |
 | `Reason` | The utility model's one-sentence reason. |
 | `Text` | The refused message. |

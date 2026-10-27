@@ -780,6 +780,23 @@ Built:
   built: profile create, update and publish, starting or controlling calls and texts, batch calls, knowledge bases,
   phone numbers, scoped API keys and browser keys.
 
+Changed after review:
+
+- Speaking styles and guardrail topics are prompt templates in the "Speaking style" and "Guardrail topic"
+  categories, so admins add their own under Templates, with the template recipe and deployment steps; the profile
+  stores template identifiers. The eight moderation categories ship as `guardrail-topic-*.md`.
+- Version compare lists every field and setting of the profile, grouped like the editor's tabs, with template titles,
+  and compares a version with the profile now or with another version.
+- A converted lead's contact memory moves to the contact it became (merged into an existing contact's note).
+- The older AI chat endpoints are tagged and named in the OpenAPI document like the conversations API; neither has
+  documentation or authentication of its own beside Orchard Core's OpenApi and `Api` scheme.
+- The Profile Builder has a **Simulate** tab: a customer model plays up to five scenarios against the session's
+  instructions, a judge model scores each, and the coach rewrites the instructions from failures, round by round.
+  The Simulate AI Conversation task and the simulations endpoint choose the customer and judge deployments too. The
+  judge's criteria are numbered and matched by number or position, since it rewords their names. Verified live: a
+  custom guardrail topic refused a competitor question; a two-round simulation failed on a criterion, the coach's
+  revision passed it.
+
 Not started, and why:
 
 - V1 voices, V2 turn-taking, V4 languages: need the TTS and speech recognition seams in CrestApps.Core (AD10) and

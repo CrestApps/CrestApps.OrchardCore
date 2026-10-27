@@ -35,5 +35,7 @@ public sealed class SimulateConversationTaskSchema : WorkflowActivitySchemaDefin
         yield return ("MaxTurns", WorkflowActivitySchemaBuilders.Integer("The most customer turns, from 1 to 50. Defaults to 8."));
         yield return ("PassingScore", WorkflowActivitySchemaBuilders.Integer("The lowest score out of 100 that passes. Defaults to 70."));
         yield return ("Label", WorkflowActivitySchemaBuilders.LiquidExpression("Optionally, a label that groups the results, such as the test suite."));
+        yield return ("CustomerDeploymentName", WorkflowActivitySchemaBuilders.String("Optionally, the deployment that plays the customer. Defaults to the utility deployment."));
+        yield return ("JudgeDeploymentName", WorkflowActivitySchemaBuilders.String("Optionally, the deployment that judges the conversation. Defaults to the utility deployment."));
     }
 }

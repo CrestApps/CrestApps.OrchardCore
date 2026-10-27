@@ -29,6 +29,8 @@ Turn it on for each AI profile, on the **Data Processing & Metrics** tab:
 
 The note is rewritten when the conversation is closed, which happens after the profile's session inactivity timeout (30 minutes by default). Website chats with anonymous visitors have no contact, so they neither read nor write memory.
 
+Memory works the same for leads: a call or text with a lead reads and writes the lead's note. When the lead is converted, its note moves to the contact it became, or is added to the note of the contact it was merged into.
+
 To see or correct a note, open the contact. **What the AI remembers** shows the note: edit it, or empty it to make the AI forget.
 
 :::note[Payment details and secrets]

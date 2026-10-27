@@ -6,7 +6,8 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 public sealed class AIProfileSpeakingStyleSettings
 {
     /// <summary>
-    /// Gets or sets the identifiers of the chosen styles, from <see cref="AISpeakingStyles"/>.
+    /// Gets or sets the prompt templates of the chosen styles, in the <see cref="AISpeakingStyles.Category"/>
+    /// category, in the order their sections are added.
     /// </summary>
     public string[] Styles { get; set; } = [];
 }

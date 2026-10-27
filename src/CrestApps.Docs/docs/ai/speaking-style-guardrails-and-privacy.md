@@ -12,15 +12,17 @@ How to use these in the admin is in the User Manual under [Speaking style, guard
 
 ## Speaking styles
 
-`AIProfileSpeakingStyleSettings.Styles` holds the chosen styles from `AISpeakingStyles`. Each style is a prompt template in the AI module's `Templates/Prompts` folder named `speaking-style-` and the style, such as `speaking-style-echo-verification.md`, so the wording is read and changed without editing code. The templates are not listable, so they don't show in the prompt template picker.
+A speaking style is a prompt template whose category is `AISpeakingStyles.Category` ("Speaking style"). The AI module ships eight in its `Templates/Prompts` folder (`AISpeakingStyles.BuiltIn`, such as `speaking-style-echo-verification.md`); more are saved as System Prompt templates (`AIProfileTemplate` with the `SystemPrompt` source) in that category, which `ITemplateService` lists with the module's under their technical name. So styles get the template admin, the **AIProfileTemplate** recipe step and the AI profile template deployment step for free. None are listable, so they stay out of the prompt template picker.
 
-`AISpeakingStyleCompletionContextBuilderHandler` renders the chosen templates with `ITemplateService` in `BuiltAsync` and appends them to the system message in the order of `AISpeakingStyles.All`. A template that fails to render is left out and logged.
+`AIProfileSpeakingStyleSettings.Styles` holds the chosen template identifiers, in the order the editor lists them. `ITemplateService.ListOptionsByCategoryAsync` (in `AITemplateCategoryExtensions`) lists a category's templates by title for an editor.
+
+`AISpeakingStyleCompletionContextBuilderHandler` renders the chosen templates with `ITemplateService` in `BuiltAsync` and appends them to the system message in that order. A template that is gone or fails to render is left out and logged.
 
 ## Guardrails
 
-`AIProfileGuardrailSettings` holds `CheckCustomer`, `CheckReplies`, `Categories` (from `AIGuardrailCategories`), `OtherTopics` and `PlaceholderReply`.
+`AIProfileGuardrailSettings` holds `CheckCustomer`, `CheckReplies`, `Topics`, `OtherTopics` and `PlaceholderReply`. A topic is a prompt template whose category is `AIGuardrailTopics.Category` ("Guardrail topic"): its title names the topic and its rendered text is the definition. The AI module ships eight (`AIGuardrailTopics.BuiltIn`, such as `guardrail-topic-violence.md`), and saved System Prompt templates in the category join them, with their recipe and deployment steps.
 
-`AIGuardrailService.CheckAsync(profile, text, direction, sessionId)` asks the utility deployment, with the usage purpose `Guardrail`, whether the text falls under one of the profile's topics, and returns an `AIGuardrailVerdict` or `null`. A topic the profile did not choose is allowed unless the profile has `OtherTopics`. A failure to reach the model is logged and allows the text. A verdict is passed to every `IAIGuardrailHandler`; the workflow handler starts the **AI Guardrail Triggered** event with the verdict as `Guardrail` and its fields, plus the conversation input when an `AIConversationScope` is current.
+`AIGuardrailService.CheckAsync(profile, text, direction, sessionId)` reads the chosen topics with `LoadTopicsAsync` (a template that is gone or no longer in the category is skipped), asks the utility deployment, with the usage purpose `Guardrail`, whether the text falls under one of them, and returns an `AIGuardrailVerdict` or `null`. The verdict's `Category` is the topic's template identifier, or `other`, and `Topic` its title. A topic the profile did not choose is allowed unless the profile has `OtherTopics`. A failure to reach the model is logged and allows the text. A verdict is passed to every `IAIGuardrailHandler`; the workflow handler starts the **AI Guardrail Triggered** event with the verdict as `Guardrail` and its fields, plus the conversation input when an `AIConversationScope` is current.
 
 Where the checks run:
 

@@ -129,6 +129,16 @@ public sealed class ApiAISimulationRequest
     /// Gets or sets a label for the evaluation, such as the name of the test.
     /// </summary>
     public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment that plays the customer. Empty uses the utility deployment.
+    /// </summary>
+    public string CustomerDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment that judges the conversation. Empty uses the utility deployment.
+    /// </summary>
+    public string JudgeDeploymentName { get; set; }
 }
 
 /// <summary>

@@ -86,7 +86,7 @@ public sealed class AIConversationEvaluationService
 
         var turns = AIConversationTranscript.GetTurns(await _promptStore.GetPromptsAsync(session.SessionId));
 
-        return await EvaluateTurnsAsync(profile, session, turns, criteria, passingScore, label, null, cancellationToken);
+        return await EvaluateTurnsAsync(profile, session, turns, criteria, passingScore, label, null, null, cancellationToken);
     }
 
     /// <summary>
@@ -99,6 +99,8 @@ public sealed class AIConversationEvaluationService
     /// <param name="passingScore">The lowest score that passes.</param>
     /// <param name="label">A label that groups the evaluation.</param>
     /// <param name="instructions">The instructions the AI had, or <see langword="null"/> to read the profile's.</param>
+    /// <param name="judgeDeploymentName">The deployment that judges, or <see langword="null"/> for the utility
+    /// deployment.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public async Task<AIConversationEvaluation> EvaluateTurnsAsync(
         AIProfile profile,
@@ -108,6 +110,7 @@ public sealed class AIConversationEvaluationService
         int passingScore,
         string label,
         string instructions,
+        string judgeDeploymentName,
         CancellationToken cancellationToken = default)
     {
         instructions ??= await GetInstructionsAsync(profile, cancellationToken);
@@ -118,6 +121,7 @@ public sealed class AIConversationEvaluationService
             Criteria = criteria ?? [],
             PassingScore = passingScore,
             Instructions = instructions,
+            DeploymentName = string.IsNullOrWhiteSpace(judgeDeploymentName) ? null : judgeDeploymentName.Trim(),
         }, cancellationToken);
 
         if (evaluation is null)

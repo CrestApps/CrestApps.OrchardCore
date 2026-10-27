@@ -1,23 +1,16 @@
+@using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Conversations
 @using CrestApps.OrchardCore.AI.Core.Models
 
 @model EditAIProfileGuardrailViewModel
 
 @{
-    var categories = new (string Id, string Title)[]
-    {
-        (AIGuardrailCategories.Harassment, T["Harassment and abuse"].Value),
-        (AIGuardrailCategories.Hate, T["Hate"].Value),
-        (AIGuardrailCategories.SelfHarm, T["Self-harm"].Value),
-        (AIGuardrailCategories.Sexual, T["Sexual content"].Value),
-        (AIGuardrailCategories.Violence, T["Violence and weapons"].Value),
-        (AIGuardrailCategories.IllegalActivity, T["Illegal activity"].Value),
-        (AIGuardrailCategories.RegulatedAdvice, T["Medical, legal or financial advice"].Value),
-        (AIGuardrailCategories.Jailbreak, T["Attempts to override the instructions"].Value),
-    };
-    var selected = new HashSet<string>(Model.Categories ?? [], StringComparer.OrdinalIgnoreCase);
-    var name = Html.NameFor(m => m.Categories);
+    var selected = new HashSet<string>(Model.Topics ?? [], StringComparer.OrdinalIgnoreCase);
+    var name = Html.NameFor(m => m.Topics);
+    var addUrl = Url.Action("Create", "AITemplates", new { area = "CrestApps.OrchardCore.AI", source = AITemplateSources.SystemPrompt, category = AIGuardrailTopics.Category });
+    var templatesUrl = Url.Action("Index", "AITemplates", new { area = "CrestApps.OrchardCore.AI" });
 }
 
 <h5 class="mt-4">@T["Guardrails"]</h5>
@@ -46,18 +39,22 @@
 <div class="ocat-wrapper">
     <label class="ocat-label">@T["Topics to refuse"]</label>
     <div class="ocat-end">
-        @for (var i = 0; i < categories.Length; i++)
+        @for (var i = 0; i < Model.AvailableTopics.Count; i++)
         {
-            var category = categories[i];
-            var id = Html.IdFor(m => m.Categories) + "_" + i;
+            var topic = Model.AvailableTopics[i];
+            var id = Html.IdFor(m => m.Topics) + "_" + i;
 
             <div class="form-check">
-                <input type="checkbox" class="form-check-input" id="@id" name="@name" value="@category.Id" checked="@selected.Contains(category.Id)" />
-                <label class="form-check-label" for="@id">@category.Title</label>
-                <span class="hint dashed">@AIGuardrailCategories.Definitions[category.Id]</span>
+                <input type="checkbox" class="form-check-input" id="@id" name="@name" value="@topic.Id" checked="@selected.Contains(topic.Id)" />
+                <label class="form-check-label" for="@id">@topic.Title</label>
+                @if (!string.IsNullOrWhiteSpace(topic.Description))
+                {
+                    <span class="hint dashed">@topic.Description</span>
+                }
             </div>
         }
-        <span asp-validation-for="Categories"></span>
+        <span asp-validation-for="Topics"></span>
+        <span class="hint">@T["Topics are System Prompt templates in the <em>{0}</em> category, whose text tells the utility model what falls under the topic. <a href=\"{1}\" target=\"_blank\">Add a topic</a> to use on several profiles, or change your own under <a href=\"{2}\" target=\"_blank\">Templates</a>; they are exported with recipes and deployment plans.", AIGuardrailTopics.Category, addUrl, templatesUrl]</span>
     </div>
 </div>
 
@@ -65,7 +62,7 @@
     <label class="ocat-label" asp-for="OtherTopics">@T["Other topics to refuse"]</label>
     <div class="ocat-end">
         <textarea class="form-control" asp-for="OtherTopics" rows="2"></textarea>
-        <span class="hint">@T["Described in a sentence or two, for example: competitors' prices, or anything about our pending lawsuit."]</span>
+        <span class="hint">@T["Topics for this profile alone, described in a sentence or two, for example: competitors' prices, or anything about our pending lawsuit."]</span>
     </div>
 </div>
 

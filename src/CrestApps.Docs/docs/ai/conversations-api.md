@@ -6,7 +6,7 @@ description: Read, evaluate, analyze again and delete AI conversations, run test
 
 # AI Conversations API
 
-The **AI Chat WebAPI** feature (`CrestApps.OrchardCore.AI.Chat.Api`) maps a JSON API under `/api/ai/v1` for back-office systems: a CRM that shows AI conversations, a test pipeline that runs simulated conversations before a profile change ships, or a privacy tool that deletes a customer's conversations. The endpoints are described in the tenant's OpenAPI document under the **AI Conversations** tag when Orchard Core's OpenAPI feature is on.
+The **AI Chat WebAPI** feature (`CrestApps.OrchardCore.AI.Chat.Api`) maps a JSON API under `/api/ai/v1` for back-office systems: a CRM that shows AI conversations, a test pipeline that runs simulated conversations before a profile change ships, or a privacy tool that deletes a customer's conversations. The endpoints are minimal API endpoints on Orchard Core's `Api` authentication scheme, so Orchard Core's **OpenApi** feature describes them in the tenant's OpenAPI document (`/swagger/v1/swagger.json`) under the **AI Conversations** tag, with an operation name and summary each, and its **Swagger UI**, **ReDoc** and **Scalar** features show them; nothing about the API is documented or authenticated separately. The older chat endpoints of the same feature (`api/ai/chat/session`, `api/ai/completion/chat` and `api/ai/completion/utility`) are under the **AI Chat** tag. To try the endpoints in Swagger UI or Scalar, run Orchard Core's **OpenApiPkce** recipe, which lets the documentation pages sign in with your admin session.
 
 ## Authentication
 
@@ -37,7 +37,7 @@ A call without a token answers `401`, and one whose application lacks the permis
 | `DELETE conversations/{sessionId}` | Deletes a conversation with its transcript, extracted data and evaluations. Answers `204`. |
 | `POST conversations/{sessionId}/evaluations` | Scores the conversation against criteria with the utility model and saves the evaluation. Body: `criteria` (list), `passingScore` (0 to 100, default 70), `label`. Answers `409` when there is nothing the customer said or no utility model. |
 | `POST conversations/{sessionId}/analysis` | Runs the profile's post-session analysis again with its current tasks, and returns the results by task. Answers `409` when the profile has no analysis. |
-| `POST profiles/{profileId}/simulations` | Runs a test conversation with a customer the utility model plays, and evaluates it when criteria are given. Body: `scenario`, `variables`, `maxTurns` (1 to 20, default 8), `criteria`, `passingScore`, `label`. The profile's tools run, with `Simulation` set in their workflow input. |
+| `POST profiles/{profileId}/simulations` | Runs a test conversation with a customer another model plays, and has a model judge it when criteria are given. Body: `scenario`, `variables`, `maxTurns` (1 to 20, default 8), `criteria`, `passingScore`, `label`, and optionally `customerDeploymentName` and `judgeDeploymentName` (both default to the utility deployment). The profile's tools run, with `Simulation` set in their workflow input. |
 | `GET profiles/{profileId}/versions` | Lists the saved versions of a profile, newest first. Query: `skip`, `take`. |
 | `GET contacts/{contactId}/memory` | Gets what the AI remembers about a contact. |
 | `PUT contacts/{contactId}/memory` | Replaces it. Body: `text`, at most 2,000 characters; empty forgets the contact. |

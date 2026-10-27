@@ -35,6 +35,8 @@ internal static class AIConversationsApiEndpoints
 
     public const string Tag = "AI Conversations";
 
+    public const string ChatTag = "AI Chat";
+
     public static IEndpointRouteBuilder MapAIConversationsApi(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup(RoutePrefix)
@@ -75,7 +77,7 @@ internal static class AIConversationsApiEndpoints
             .WithName("SimulateAIConversation")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Runs a test conversation between the profile and a customer the utility model plays, and evaluates it when criteria are given. The profile's tools run, told it is a simulation.");
+            .WithSummary("Runs a test conversation between the profile and a customer another model plays, and has a model judge it when criteria are given. The profile's tools run, told it is a simulation.");
 
         group.MapGet("profiles/{profileId}/versions", ListVersionsAsync)
             .WithName("ListAIProfileVersions")
@@ -330,12 +332,13 @@ internal static class AIConversationsApiEndpoints
             Scenario = request.Scenario.Trim(),
             Variables = request.Variables ?? [],
             MaxTurns = request.MaxTurns ?? AIConversationSimulator.DefaultMaxTurns,
+            CustomerDeploymentName = string.IsNullOrWhiteSpace(request.CustomerDeploymentName) ? null : request.CustomerDeploymentName.Trim(),
         }, httpContext.RequestAborted);
 
         var criteria = Clean(request.Criteria);
         var evaluation = criteria.Count == 0
             ? null
-            : await evaluationService.EvaluateTurnsAsync(profile, null, simulation.Turns, criteria, request.PassingScore ?? AIConversationEvaluator.DefaultPassingScore, request.Label?.Trim(), simulation.Instructions, httpContext.RequestAborted);
+            : await evaluationService.EvaluateTurnsAsync(profile, null, simulation.Turns, criteria, request.PassingScore ?? AIConversationEvaluator.DefaultPassingScore, request.Label?.Trim(), simulation.Instructions, request.JudgeDeploymentName, httpContext.RequestAborted);
 
         return TypedResults.Ok(new ApiAISimulation(
             simulation.Turns.Select(turn => new ApiAIConversationTurn(turn.Role, turn.Text, turn.CreatedUtc)).ToList(),

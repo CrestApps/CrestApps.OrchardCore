@@ -153,9 +153,11 @@ public sealed class AITemplatesController : Controller
     /// Displays the form for creating a new AI profile template.
     /// </summary>
     /// <param name="source">The template source identifier.</param>
+    /// <param name="category">A category to start the template in, such as a speaking style or a guardrail topic,
+    /// which also keeps it out of the system prompt picker.</param>
     /// <returns>The create view with the editor form.</returns>
     [Admin("ai/template/create/{source}", "AITemplatesCreate")]
-    public async Task<ActionResult> Create(string source)
+    public async Task<ActionResult> Create(string source, string category = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
         {
@@ -176,6 +178,12 @@ public sealed class AITemplatesController : Controller
             await _notifier.ErrorAsync(H["Unable to create a new template."]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            template.Category = category.Trim();
+            template.IsListable = false;
         }
 
         var model = new EditCatalogEntryViewModel

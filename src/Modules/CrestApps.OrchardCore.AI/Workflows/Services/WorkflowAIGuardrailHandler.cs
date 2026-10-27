@@ -33,6 +33,7 @@ internal sealed class WorkflowAIGuardrailHandler : IAIGuardrailHandler
         input["SessionId"] = verdict.SessionId;
         input["Direction"] = verdict.Direction.ToString();
         input["Category"] = verdict.Category;
+        input["Topic"] = verdict.Topic;
         input["Reason"] = verdict.Reason;
         input["Text"] = verdict.Text;
 

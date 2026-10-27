@@ -22,7 +22,7 @@ Every time an AI profile is saved, the profile as it was saved is kept as a new 
 
 To see them, open **Artificial Intelligence > AI Profiles**, open the profile's actions menu and click **Versions**.
 
-- **Compare** shows a version beside the profile as it is now: the instructions, the deployments, the model settings, and every other setting that differs. Changed settings are highlighted.
+- **Compare** shows a version beside the profile as it is now, or beside another version: pick it in **Compare with**. Every field and setting is listed, grouped like the tabs of the profile editor: General, Instructions (with prompt templates and speaking styles), Parameters, Capabilities (tools, tool instances, agents, knowledge), Prompt Security (with guardrails) and Data Processing & Metrics (extraction, analysis, contact memory, privacy). Templates are shown by their titles. Changed settings are highlighted, and **Only differences** hides the rest.
 - **Restore** gives the profile that version's settings back. The restore is saved as a new version, so the version you replaced is kept too.
 
 The profile's name, its technical name and its owner are not changed by a restore.
@@ -43,12 +43,18 @@ The **Simulate AI Conversation** task (under **AI Conversations**) plays an AI p
 | **Most customer turns** | Where the test stops if the customer has not finished. |
 | **Passing score** | The lowest score out of 100 that passes. |
 | **Label** | A name for the test run, such as *Release tests*, so you can find the results in a report. |
+| **Customer model** | The deployment that plays the customer. Empty uses the utility deployment. |
+| **Judge model** | The deployment that scores the conversation. Empty uses the utility deployment. |
 
 3. Connect **Failed** and **Error** to a **Notify** task or an email.
 
-The task runs the conversation in text, with the profile's instructions, knowledge and tools. Tools that run a workflow get `Workflow.Input.Simulation` set to true, so the workflow can answer with test data instead of booking, charging or texting for real. Add an **If/Else** on `{{ Workflow.Input.Simulation }}` at the start of each tool workflow that acts on the outside world.
+The task runs the conversation in text, with the profile's instructions, knowledge and tools. The profile answers with its own deployment, so up to three models take part: the profile's, the customer's and the judge's. A customer and a judge that are not the profile's own model give a fairer test. Tools that run a workflow get `Workflow.Input.Simulation` set to true, so the workflow can answer with test data instead of booking, charging or texting for real. Add an **If/Else** on `{{ Workflow.Input.Simulation }}` at the start of each tool workflow that acts on the outside world.
 
 The transcript is in `Workflow.Output.Transcript` and the score in `Workflow.Output.Evaluation`.
+
+:::tip[Improve the instructions automatically]
+To have the AI rewrite a profile's instructions until simulated customers pass, use **Simulate** in the [Profile Builder](profile-builder.md#improve-it-with-simulated-customers).
+:::
 
 :::tip[Run a batch of tests]
 Put the test cases in a **For Each** loop: a list of customers, each with their own criteria, and use the loop's current item, `{{ Workflow.Output.Current }}` unless you renamed it, in **Customer** and **Criteria**. Every result is kept, so the **Conversation evaluations** report shows the pass rate of the whole run.

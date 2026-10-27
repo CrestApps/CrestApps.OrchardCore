@@ -1062,6 +1062,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Schemas
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
 {
+    public sealed class AIContactMemoryLeadConversionRepointer : CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionRepointer
+    {
+        public AIContactMemoryLeadConversionRepointer(CrestApps.OrchardCore.AI.Core.Services.IAIContactMemoryStore store, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.AIContactMemoryLeadConversionRepointer> logger) { }
+        public System.Threading.Tasks.Task RepointAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ActivityBatchLoadPreview
     {
         public ActivityBatchLoadPreview() { }

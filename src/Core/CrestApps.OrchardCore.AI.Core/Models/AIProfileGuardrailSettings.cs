@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.OrchardCore.AI.Core.Models;
 
 /// <summary>
@@ -17,12 +19,13 @@ public sealed class AIProfileGuardrailSettings
     public bool CheckReplies { get; set; }
 
     /// <summary>
-    /// Gets or sets the categories refused, from <see cref="AIGuardrailCategories"/>.
+    /// Gets or sets the prompt templates of the topics refused, in the <see cref="AIGuardrailTopics.Category"/>
+    /// category.
     /// </summary>
-    public string[] Categories { get; set; } = [];
+    public string[] Topics { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets other topics refused, described in a sentence or two.
+    /// Gets or sets other topics refused, described in a sentence or two, for topics of this profile alone.
     /// </summary>
     public string OtherTopics { get; set; }
 
@@ -34,6 +37,7 @@ public sealed class AIProfileGuardrailSettings
     /// <summary>
     /// Gets whether anything is refused.
     /// </summary>
+    [JsonIgnore]
     public bool HasTopics
-        => (Categories?.Length ?? 0) > 0 || !string.IsNullOrWhiteSpace(OtherTopics);
+        => (Topics?.Length ?? 0) > 0 || !string.IsNullOrWhiteSpace(OtherTopics);
 }

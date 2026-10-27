@@ -16,7 +16,7 @@ public sealed partial class VoiceAgentConversationLoop
     // the profile's tools, tool instances, MCP connections and agents come from the same registry the orchestrator
     // reads (see AIConversationTools), and the call's system tools are added after them. The profile's own tool list
     // skips system tools, which these are, so they could never be enabled through it.
-    private Task AttachCallToolsAsync(AICompletionContext context, bool offerTransfer, CancellationToken cancellationToken)
+    private Task<IReadOnlyList<ToolRegistryEntry>> AttachCallToolsAsync(AICompletionContext context, bool offerTransfer, CancellationToken cancellationToken)
     {
         // The end-call tool is offered on every turn, and the transfer tool only when this call has somewhere to
         // transfer to. Ending the call needs no such condition: the model can always be finished talking, and a

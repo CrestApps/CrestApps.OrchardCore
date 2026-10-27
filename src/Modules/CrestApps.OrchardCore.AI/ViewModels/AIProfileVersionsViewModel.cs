@@ -53,7 +53,7 @@ public class AIProfileVersionEntry
 }
 
 /// <summary>
-/// A version of an AI profile beside the profile as it is now.
+/// Two copies of an AI profile side by side: a version and the profile as it is now, or two versions.
 /// </summary>
 public class AIProfileVersionCompareViewModel
 {
@@ -63,14 +63,24 @@ public class AIProfileVersionCompareViewModel
     public AIProfile Profile { get; set; }
 
     /// <summary>
-    /// Gets or sets the version.
+    /// Gets or sets the version on the left.
     /// </summary>
     public AIProfileVersion Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version on the right, or <see langword="null"/> for the profile as it is now.
+    /// </summary>
+    public AIProfileVersion Other { get; set; }
 
     /// <summary>
     /// Gets or sets the version the profile is at.
     /// </summary>
     public int CurrentVersion { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profile's recent versions, to pick what the version is compared with.
+    /// </summary>
+    public IReadOnlyList<AIProfileVersion> Versions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets what each holds.
@@ -79,17 +89,22 @@ public class AIProfileVersionCompareViewModel
 }
 
 /// <summary>
-/// One setting of a version beside the same setting now.
+/// One setting of a version beside the same setting in the other copy.
 /// </summary>
 /// <param name="Label">The setting.</param>
-/// <param name="Then">The version's value.</param>
-/// <param name="Now">The value now.</param>
+/// <param name="Then">The value on the left.</param>
+/// <param name="Now">The value on the right.</param>
 /// <param name="Multiline">Whether the values are long text.</param>
 /// <param name="IsCode">Whether the values are JSON.</param>
 public sealed record AIProfileVersionCompareRow(string Label, string Then, string Now, bool Multiline = false, bool IsCode = false)
 {
     /// <summary>
-    /// Gets whether the version and now differ.
+    /// Gets the group of the profile editor the setting is on, such as General or Prompt Security.
+    /// </summary>
+    public string Section { get; init; }
+
+    /// <summary>
+    /// Gets whether the two differ.
     /// </summary>
     public bool Changed => !string.Equals(Then ?? string.Empty, Now ?? string.Empty, StringComparison.Ordinal);
 }

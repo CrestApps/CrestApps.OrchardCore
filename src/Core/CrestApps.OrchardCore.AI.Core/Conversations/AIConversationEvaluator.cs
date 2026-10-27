@@ -153,11 +153,11 @@ public sealed class AIConversationEvaluator : IAIConversationEvaluator
 
         if (criteria.Count > 0)
         {
-            builder.AppendLine("Criteria:");
+            builder.AppendLine("Criteria (judge every one, in this order, and copy its text exactly as the name):");
 
-            foreach (var criterion in criteria)
+            for (var index = 0; index < criteria.Count; index++)
             {
-                builder.Append("- ").AppendLine(criterion.Trim());
+                builder.Append(index + 1).Append(". ").AppendLine(criteria[index].Trim());
             }
 
             builder.AppendLine();
@@ -167,6 +167,15 @@ public sealed class AIConversationEvaluator : IAIConversationEvaluator
         builder.AppendLine(AIConversationTranscript.Format(request.Turns));
 
         return builder.ToString();
+    }
+
+    // The judge sometimes keeps the number a criterion was listed with: "1. Confirms the order number".
+    private static string CriterionName(string name)
+    {
+        name = name.Trim();
+        var dot = name.IndexOf(". ", StringComparison.Ordinal);
+
+        return dot is > 0 and < 4 && name[..dot].All(char.IsDigit) ? name[(dot + 2)..].Trim() : name;
     }
 
     /// <summary>
@@ -193,13 +202,17 @@ public sealed class AIConversationEvaluator : IAIConversationEvaluator
         var judged = (verdict.Criteria ?? [])
             .Where(result => !string.IsNullOrWhiteSpace(result?.Name))
             .ToList();
+        var asked = (request.Criteria ?? []).Where(criterion => !string.IsNullOrWhiteSpace(criterion)).ToList();
 
-        foreach (var criterion in (request.Criteria ?? []).Where(criterion => !string.IsNullOrWhiteSpace(criterion)))
+        for (var index = 0; index < asked.Count; index++)
         {
-            var name = criterion.Trim();
-            var result = judged.FirstOrDefault(result => string.Equals(result.Name.Trim(), name, StringComparison.OrdinalIgnoreCase))
-                ?? judged.FirstOrDefault(result => name.Contains(result.Name.Trim(), StringComparison.OrdinalIgnoreCase)
-                    || result.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+            var name = asked[index].Trim();
+            var result = judged.FirstOrDefault(result => string.Equals(CriterionName(result.Name), name, StringComparison.OrdinalIgnoreCase))
+                ?? judged.FirstOrDefault(result => name.Contains(CriterionName(result.Name), StringComparison.OrdinalIgnoreCase)
+                    || result.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                ?? judged.FirstOrDefault(result => result.Name.TrimStart().StartsWith((index + 1) + ".", StringComparison.Ordinal))
+                // A judge that reworded every name but answered each criterion in order is matched by position.
+                ?? (judged.Count == asked.Count ? judged[index] : null);
 
             evaluation.Criteria.Add(new AIConversationCriterionResult
             {

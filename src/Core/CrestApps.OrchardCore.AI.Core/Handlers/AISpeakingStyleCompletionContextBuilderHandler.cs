@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 /// <summary>
 /// Adds the sections of the profile's speaking styles to the end of its system message, after the persona and
-/// instructions they refine.
+/// instructions they refine. Each style is a prompt template, rendered in the order the profile lists them.
 /// </summary>
 public sealed class AISpeakingStyleCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
@@ -50,7 +50,7 @@ public sealed class AISpeakingStyleCompletionContextBuilderHandler : IAICompleti
         {
             try
             {
-                var section = await _templateService.RenderAsync(AISpeakingStyles.GetTemplateId(style));
+                var section = await _templateService.RenderAsync(style);
 
                 if (!string.IsNullOrWhiteSpace(section))
                 {

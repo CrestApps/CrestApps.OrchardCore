@@ -1,30 +1,23 @@
+@using CrestApps.Core.AI
+@using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.ViewModels
 
 @model EditAIProfileSpeakingStyleViewModel
 
 @{
-    var styles = new (string Id, string Title, string Hint)[]
-    {
-        (AISpeakingStyles.AIDisclosure, T["AI disclosure"].Value, T["Says it is an AI assistant when asked, and never claims to be a person."].Value),
-        (AISpeakingStyles.ScopeLimits, T["Scope limits"].Value, T["Helps only with what its instructions cover and steers other questions back."].Value),
-        (AISpeakingStyles.HighEmpathy, T["High empathy"].Value, T["Acknowledges how an upset customer feels in a sentence before solving the problem."].Value),
-        (AISpeakingStyles.EchoVerification, T["Echo verification"].Value, T["Reads back names, numbers, addresses, dates and amounts and asks the customer to confirm before using them."].Value),
-        (AISpeakingStyles.NatoSpelling, T["NATO spelling"].Value, T["Spells letters that matter with the NATO alphabet: \"B as in Bravo\"."].Value),
-        (AISpeakingStyles.SpeechNormalization, T["Speech normalization"].Value, T["Writes numbers, dates, times and money the way they are said, for replies that are read aloud."].Value),
-        (AISpeakingStyles.FuzzyNameMatching, T["Fuzzy name matching"].Value, T["Treats names that sound alike as possible matches before saying a record can't be found."].Value),
-        (AISpeakingStyles.FillerWords, T["Filler words"].Value, T["Sounds natural on calls, with contractions and an occasional \"so\" or \"let me see\"."].Value),
-    };
     var selected = new HashSet<string>(Model.Styles ?? [], StringComparer.OrdinalIgnoreCase);
     var name = Html.NameFor(m => m.Styles);
+    var addUrl = Url.Action("Create", "AITemplates", new { area = "CrestApps.OrchardCore.AI", source = AITemplateSources.SystemPrompt, category = AISpeakingStyles.Category });
+    var templatesUrl = Url.Action("Index", "AITemplates", new { area = "CrestApps.OrchardCore.AI" });
 }
 
 <h5>@T["Speaking style"]</h5>
 <p class="text-muted">@T["Each style adds a tested section to the end of the system message, after the persona and instructions, on every channel."]</p>
 
-@for (var i = 0; i < styles.Length; i++)
+@for (var i = 0; i < Model.AvailableStyles.Count; i++)
 {
-    var style = styles[i];
+    var style = Model.AvailableStyles[i];
     var id = Html.IdFor(m => m.Styles) + "_" + i;
 
     <div class="ocat-wrapper">
@@ -32,8 +25,17 @@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" id="@id" name="@name" value="@style.Id" checked="@selected.Contains(style.Id)" />
                 <label class="form-check-label" for="@id">@style.Title</label>
-                <span class="hint dashed">@style.Hint</span>
+                @if (!string.IsNullOrWhiteSpace(style.Description))
+                {
+                    <span class="hint dashed">@style.Description</span>
+                }
             </div>
         </div>
     </div>
 }
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <span class="hint">@T["Speaking styles are System Prompt templates in the <em>{0}</em> category. <a href=\"{1}\" target=\"_blank\">Add a speaking style</a> or change your own under <a href=\"{2}\" target=\"_blank\">Templates</a>; they are exported with recipes and deployment plans.", AISpeakingStyles.Category, addUrl, templatesUrl]</span>
+    </div>
+</div>

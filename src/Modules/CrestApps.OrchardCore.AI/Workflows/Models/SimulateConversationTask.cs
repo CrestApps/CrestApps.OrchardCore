@@ -113,6 +113,25 @@ public sealed class SimulateConversationTask : TaskActivity<SimulateConversation
     }
 
     /// <summary>
+    /// Gets or sets the deployment that plays the customer, or <see langword="null"/> for the utility deployment.
+    /// </summary>
+    public string CustomerDeploymentName
+    {
+        get => GetProperty<string>();
+        set => SetProperty(value);
+    }
+
+    /// <summary>
+    /// Gets or sets the deployment that judges the conversation, or <see langword="null"/> for the utility
+    /// deployment.
+    /// </summary>
+    public string JudgeDeploymentName
+    {
+        get => GetProperty<string>();
+        set => SetProperty(value);
+    }
+
+    /// <summary>
     /// Gets or sets a Liquid expression for the label the result is kept under, such as the test suite's name.
     /// </summary>
     public string Label
@@ -153,12 +172,13 @@ public sealed class SimulateConversationTask : TaskActivity<SimulateConversation
                 Scenario = scenario,
                 Variables = variables,
                 MaxTurns = MaxTurns,
+                CustomerDeploymentName = CustomerDeploymentName,
             });
 
             workflowContext.Output["Transcript"] = AIConversationTranscript.Format(simulation.Turns);
             workflowContext.Output["Turns"] = simulation.Turns;
 
-            var evaluation = await _evaluationService.EvaluateTurnsAsync(profile, null, simulation.Turns, criteria, PassingScore, label, simulation.Instructions);
+            var evaluation = await _evaluationService.EvaluateTurnsAsync(profile, null, simulation.Turns, criteria, PassingScore, label, simulation.Instructions, JudgeDeploymentName);
 
             if (evaluation is null)
             {

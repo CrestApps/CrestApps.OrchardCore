@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
@@ -19,6 +20,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 public sealed class SimulateConversationTaskDisplayDriver : ActivityDisplayDriver<SimulateConversationTask, SimulateConversationTaskViewModel>
 {
     private readonly IAIProfileStore _profileStore;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
@@ -29,9 +31,10 @@ public sealed class SimulateConversationTaskDisplayDriver : ActivityDisplayDrive
     /// <param name="profileStore">The AI profile store.</param>
     /// <param name="liquidTemplateManager">The Liquid template manager, which validates the templates.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public SimulateConversationTaskDisplayDriver(IAIProfileStore profileStore, ILiquidTemplateManager liquidTemplateManager, IStringLocalizer<SimulateConversationTaskDisplayDriver> stringLocalizer)
+    public SimulateConversationTaskDisplayDriver(IAIProfileStore profileStore, IAIDeploymentManager deploymentManager, ILiquidTemplateManager liquidTemplateManager, IStringLocalizer<SimulateConversationTaskDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
+        _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
@@ -47,7 +50,14 @@ public sealed class SimulateConversationTaskDisplayDriver : ActivityDisplayDrive
         model.MaxTurns = activity.MaxTurns;
         model.PassingScore = activity.PassingScore;
         model.Label = activity.Label;
+        model.CustomerDeploymentName = activity.CustomerDeploymentName;
+        model.JudgeDeploymentName = activity.JudgeDeploymentName;
         model.Profiles = await GetProfilesAsync();
+        model.Deployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat))
+            .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+            .OrderBy(deployment => deployment.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
+            .ToList();
     }
 
     /// <inheritdoc/>
@@ -97,6 +107,8 @@ public sealed class SimulateConversationTaskDisplayDriver : ActivityDisplayDrive
         activity.MaxTurns = model.MaxTurns;
         activity.PassingScore = model.PassingScore;
         activity.Label = model.Label?.Trim();
+        activity.CustomerDeploymentName = string.IsNullOrWhiteSpace(model.CustomerDeploymentName) ? null : model.CustomerDeploymentName;
+        activity.JudgeDeploymentName = string.IsNullOrWhiteSpace(model.JudgeDeploymentName) ? null : model.JudgeDeploymentName;
 
         return Edit(activity, context);
     }

@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.AI.Core.Services;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 
 /// <summary>
@@ -16,9 +19,15 @@ public class EditAIProfileGuardrailViewModel
     public bool CheckReplies { get; set; }
 
     /// <summary>
-    /// Gets or sets the categories refused.
+    /// Gets or sets the prompt templates of the topics refused.
     /// </summary>
-    public string[] Categories { get; set; } = [];
+    public string[] Topics { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the topics that can be chosen.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<AITemplateOption> AvailableTopics { get; set; } = [];
 
     /// <summary>
     /// Gets or sets other topics refused.

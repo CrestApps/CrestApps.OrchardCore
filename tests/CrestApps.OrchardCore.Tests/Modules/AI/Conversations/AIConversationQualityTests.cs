@@ -89,6 +89,44 @@ public sealed class AIConversationQualityTests
     }
 
     [Fact]
+    public void Evaluator_MatchesRewordedCriteriaByNumberOrPosition()
+    {
+        var request = new AIConversationEvaluationRequest
+        {
+            Criteria = ["Confirms the order number back.", "Ends by offering more help."],
+            PassingScore = 70,
+        };
+
+        // Numbered as the request listed them.
+        var numbered = AIConversationEvaluator.ToEvaluation(new AIConversationJudgeVerdict
+        {
+            Score = 90,
+            Criteria =
+            [
+                new AIConversationCriterionResult { Name = "2. Offers more help at the end", Met = true, Reason = "Asked." },
+                new AIConversationCriterionResult { Name = "1. Confirms the order number back.", Met = true, Reason = "Read it back." },
+            ],
+        }, request, _now);
+
+        Assert.Equal(["Read it back.", "Asked."], numbered.Criteria.Select(criterion => criterion.Reason));
+        Assert.True(numbered.Passed);
+
+        // Every name reworded, but one answer per criterion in order.
+        var reworded = AIConversationEvaluator.ToEvaluation(new AIConversationJudgeVerdict
+        {
+            Score = 90,
+            Criteria =
+            [
+                new AIConversationCriterionResult { Name = "Order number confirmation", Met = true, Reason = "Yes." },
+                new AIConversationCriterionResult { Name = "Closing offer of help", Met = false, Reason = "No." },
+            ],
+        }, request, _now);
+
+        Assert.Equal([true, false], reworded.Criteria.Select(criterion => criterion.Met));
+        Assert.Equal("Ends by offering more help.", reworded.Criteria[1].Name);
+    }
+
+    [Fact]
     public void Evaluator_PassesOnTheScore_WhenThereAreNoCriteria()
     {
         var request = new AIConversationEvaluationRequest { PassingScore = 70 };
@@ -113,8 +151,8 @@ public sealed class AIConversationQualityTests
         });
 
         Assert.Contains("Never promise refunds.", text);
-        Assert.Contains("- Confirmed the date", text);
-        Assert.Contains("- Was polite", text);
+        Assert.Contains("1. Confirmed the date", text);
+        Assert.Contains("2. Was polite", text);
         Assert.Contains("Customer: Can I move it?", text);
         Assert.Contains("Assistant: Sure, to when?", text);
     }

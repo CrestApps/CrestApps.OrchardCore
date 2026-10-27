@@ -6,7 +6,9 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Resilience;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -49,9 +51,15 @@ public sealed class AIGuardrailVerdict
     public AIGuardrailDirection Direction { get; set; }
 
     /// <summary>
-    /// Gets or sets the category, from <see cref="AIGuardrailCategories"/>.
+    /// Gets or sets the topic's template identifier, or <see cref="AIGuardrailTopics.Other"/> for the profile's own
+    /// description of other topics.
     /// </summary>
     public string Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the topic's title.
+    /// </summary>
+    public string Topic { get; set; }
 
     /// <summary>
     /// Gets or sets the utility model's one-sentence reason.
@@ -100,6 +108,7 @@ public sealed class AIGuardrailService
 
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _clientFactory;
+    private readonly ITemplateService _templateService;
     private readonly IEnumerable<IAIGuardrailHandler> _handlers;
     private readonly ILogger _logger;
 
@@ -108,16 +117,19 @@ public sealed class AIGuardrailService
     /// </summary>
     /// <param name="deploymentManager">The deployment manager the utility model is resolved from.</param>
     /// <param name="clientFactory">The AI client factory.</param>
+    /// <param name="templateService">The template service the topics are read from.</param>
     /// <param name="handlers">The handlers told when a guardrail triggers.</param>
     /// <param name="logger">The logger.</param>
     public AIGuardrailService(
         IAIDeploymentManager deploymentManager,
         IAIClientFactory clientFactory,
+        ITemplateService templateService,
         IEnumerable<IAIGuardrailHandler> handlers,
         ILogger<AIGuardrailService> logger)
     {
         _deploymentManager = deploymentManager;
         _clientFactory = clientFactory;
+        _templateService = templateService;
         _handlers = handlers;
         _logger = logger;
     }
@@ -165,10 +177,18 @@ public sealed class AIGuardrailService
         }
 
         var settings = profile.GetSettings<AIProfileGuardrailSettings>();
+        IReadOnlyList<AIGuardrailTopic> topics;
         AIGuardrailJudgement judgement;
 
         try
         {
+            topics = await LoadTopicsAsync(settings.Topics, cancellationToken);
+
+            if (topics.Count == 0 && string.IsNullOrWhiteSpace(settings.OtherTopics))
+            {
+                return null;
+            }
+
             var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync();
 
             if (deployment is null)
@@ -183,7 +203,7 @@ public sealed class AIGuardrailService
             var response = await client.GetResponseAsync<AIGuardrailJudgement>(
                 [
                     new ChatMessage(ChatRole.System, SystemPrompt),
-                    new ChatMessage(ChatRole.User, BuildRequest(settings, text, direction)),
+                    new ChatMessage(ChatRole.User, BuildRequest(topics, settings.OtherTopics, text, direction)),
                 ],
                 _jsonOptions,
                 cancellationToken: cancellationToken);
@@ -199,7 +219,7 @@ public sealed class AIGuardrailService
             return null;
         }
 
-        var verdict = ToVerdict(judgement, settings, profile, text, direction, sessionId);
+        var verdict = ToVerdict(judgement, topics, settings.OtherTopics, profile, text, direction, sessionId);
 
         if (verdict is null)
         {
@@ -242,19 +262,59 @@ public sealed class AIGuardrailService
         the topic shown in brackets and reason is one short sentence.
         """;
 
-    internal static string BuildRequest(AIProfileGuardrailSettings settings, string text, AIGuardrailDirection direction)
+    /// <summary>
+    /// Reads the definitions of the chosen topics from their templates. A topic whose template was deleted, or moved
+    /// out of the guardrail topic category, is left out.
+    /// </summary>
+    /// <param name="ids">The chosen topics.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The topics, in the order chosen.</returns>
+    public async Task<IReadOnlyList<AIGuardrailTopic>> LoadTopicsAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+    {
+        var chosen = AIGuardrailTopics.Normalize(ids);
+
+        if (chosen.Length == 0)
+        {
+            return [];
+        }
+
+        var templates = (await _templateService.ListByCategoryAsync(AIGuardrailTopics.Category, cancellationToken))
+            .ToDictionary(template => template.Id, StringComparer.OrdinalIgnoreCase);
+        var topics = new List<AIGuardrailTopic>();
+
+        foreach (var id in chosen)
+        {
+            if (!templates.TryGetValue(id, out var template))
+            {
+                _logger.LogWarning("The guardrail topic '{Topic}' has no template in the '{Category}' category and is skipped.", id, AIGuardrailTopics.Category);
+
+                continue;
+            }
+
+            var definition = await _templateService.RenderAsync(template.Id, cancellationToken: cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(definition))
+            {
+                topics.Add(new AIGuardrailTopic(template.Id, AITemplateCategoryExtensions.GetTitle(template), definition.Trim()));
+            }
+        }
+
+        return topics;
+    }
+
+    internal static string BuildRequest(IReadOnlyList<AIGuardrailTopic> topics, string otherTopics, string text, AIGuardrailDirection direction)
     {
         var builder = new StringBuilder();
         builder.AppendLine("Topics not allowed:");
 
-        foreach (var category in AIGuardrailCategories.Normalize(settings.Categories))
+        foreach (var topic in topics ?? [])
         {
-            builder.Append("- [").Append(category).Append("] ").AppendLine(AIGuardrailCategories.Definitions[category]);
+            builder.Append("- [").Append(topic.Id).Append("] ").Append(topic.Title).Append(": ").AppendLine(topic.Definition.ReplaceLineEndings(" "));
         }
 
-        if (!string.IsNullOrWhiteSpace(settings.OtherTopics))
+        if (!string.IsNullOrWhiteSpace(otherTopics))
         {
-            builder.Append("- [").Append(AIGuardrailCategories.Other).Append("] ").AppendLine(settings.OtherTopics.Trim());
+            builder.Append("- [").Append(AIGuardrailTopics.Other).Append("] ").AppendLine(otherTopics.Trim().ReplaceLineEndings(" "));
         }
 
         builder.AppendLine();
@@ -267,27 +327,34 @@ public sealed class AIGuardrailService
         return builder.ToString();
     }
 
-    internal static AIGuardrailVerdict ToVerdict(AIGuardrailJudgement judgement, AIProfileGuardrailSettings settings, AIProfile profile, string text, AIGuardrailDirection direction, string sessionId)
+    internal static AIGuardrailVerdict ToVerdict(AIGuardrailJudgement judgement, IReadOnlyList<AIGuardrailTopic> topics, string otherTopics, AIProfile profile, string text, AIGuardrailDirection direction, string sessionId)
     {
         if (judgement is null || !judgement.Violates)
         {
             return null;
         }
 
-        var chosen = AIGuardrailCategories.Normalize(settings.Categories);
-        var category = chosen.FirstOrDefault(category => string.Equals(category, judgement.Category?.Trim().Trim('[', ']'), StringComparison.OrdinalIgnoreCase));
+        var named = judgement.Category?.Trim().Trim('[', ']');
+        var topic = (topics ?? []).FirstOrDefault(topic => string.Equals(topic.Id, named, StringComparison.OrdinalIgnoreCase));
+        string category, title;
 
-        if (category is null)
+        if (topic is not null)
+        {
+            category = topic.Id;
+            title = topic.Title;
+        }
+        else
         {
             // The model named a topic the profile does not refuse. Only the profile's own description of other
             // topics can account for that; without one the message is allowed, so a guardrail never refuses more
             // than it was set to.
-            if (string.IsNullOrWhiteSpace(settings.OtherTopics))
+            if (string.IsNullOrWhiteSpace(otherTopics))
             {
                 return null;
             }
 
-            category = AIGuardrailCategories.Other;
+            category = AIGuardrailTopics.Other;
+            title = "Other topics";
         }
 
         return new AIGuardrailVerdict
@@ -296,6 +363,7 @@ public sealed class AIGuardrailService
             SessionId = sessionId,
             Direction = direction,
             Category = category,
+            Topic = title,
             Reason = judgement.Reason?.Trim(),
             Text = text,
             Reply = GetPlaceholderReply(profile),

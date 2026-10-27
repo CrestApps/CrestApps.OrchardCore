@@ -46,6 +46,22 @@ public class SimulateConversationTaskViewModel
     /// <summary>
     /// Gets or sets the AI profiles to choose from.
     /// </summary>
+    /// <summary>
+    /// Gets or sets the deployment that plays the customer.
+    /// </summary>
+    public string CustomerDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment that judges the conversation.
+    /// </summary>
+    public string JudgeDeploymentName { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the deployments that can play the customer or judge.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Deployments { get; set; } = [];
 }

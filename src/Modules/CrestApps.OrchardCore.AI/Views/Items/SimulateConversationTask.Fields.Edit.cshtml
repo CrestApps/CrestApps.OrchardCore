@@ -68,4 +68,28 @@
         </div>
     </div>
 </div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="ocat-wrapper">
+            <label class="ocat-label" asp-for="CustomerDeploymentName">@T["Customer model"]</label>
+            <div class="ocat-end">
+                <select class="form-select" asp-for="CustomerDeploymentName" asp-items="Model.Deployments">
+                    <option value="">@T["Utility deployment"]</option>
+                </select>
+                <span class="hint">@T["The model that plays the customer."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="ocat-wrapper">
+            <label class="ocat-label" asp-for="JudgeDeploymentName">@T["Judge model"]</label>
+            <div class="ocat-end">
+                <select class="form-select" asp-for="JudgeDeploymentName" asp-items="Model.Deployments">
+                    <option value="">@T["Utility deployment"]</option>
+                </select>
+                <span class="hint">@T["The model that scores the conversation. The profile answers with its own deployment, so a different customer and judge give a fairer test."]</span>
+            </div>
+        </div>
+    </div>
+</div>
 <span class="hint">@T["The transcript is in <code>Workflow.Output.Transcript</code> and the score in <code>Workflow.Output.Evaluation</code>."]</span>
