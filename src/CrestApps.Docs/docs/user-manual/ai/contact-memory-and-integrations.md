@@ -27,7 +27,7 @@ Turn it on for each AI profile, on the **Data Processing & Metrics** tab:
 | **Use contact memory** | When a call or a text is with a known contact, the AI starts with what it remembers about them. |
 | **Save to contact memory** | When a conversation with a known contact ends, the note is rewritten from it. Resolved matters are dropped and new ones added. |
 
-The note is rewritten when the conversation is closed, which happens after the profile's session inactivity timeout (30 minutes by default). Website chats with anonymous visitors have no contact, so they neither read nor write memory.
+The note is rewritten when the conversation is closed: a phone call's as soon as the call ends, and a text or chat conversation's after the profile's session inactivity timeout (30 minutes by default). The post-session analysis and the **AI Chat Session Closed** workflow event run at the same moment. Website chats with anonymous visitors have no contact, so they neither read nor write memory.
 
 Memory works the same for leads: a call or text with a lead reads and writes the lead's note. When the lead is converted, its note moves to the contact it became, or is added to the note of the contact it was merged into.
 

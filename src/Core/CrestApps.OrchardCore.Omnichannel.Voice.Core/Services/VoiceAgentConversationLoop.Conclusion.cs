@@ -13,6 +13,7 @@ using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -457,6 +458,35 @@ public sealed partial class VoiceAgentConversationLoop
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("Concluded AI voice activity '{ActivityId}' with disposition '{Disposition}'.", activityId.SanitizeLogValue(), disposition?.Name.SanitizeLogValue());
+        }
+
+        await CloseConversationAsync(services, concluded.AISessionId, activityId);
+    }
+
+    /// <summary>
+    /// Closes the call's AI conversation now that the call is over, so its analysis, the contact's memory and the
+    /// session-closed workflows run straight away rather than after the profile's inactivity timeout.
+    /// </summary>
+    /// <param name="services">The services of the conclusion's scope.</param>
+    /// <param name="sessionId">The call's AI session.</param>
+    /// <param name="activityId">The call's activity, for the log.</param>
+    private async Task CloseConversationAsync(IServiceProvider services, string sessionId, string activityId)
+    {
+        var closer = services.GetService<IAIChatSessionCloser>();
+
+        if (closer is null || string.IsNullOrWhiteSpace(sessionId))
+        {
+            return;
+        }
+
+        try
+        {
+            await closer.CloseAsync(sessionId);
+        }
+        catch (Exception ex)
+        {
+            // The inactivity close picks the conversation up later; the call itself is already concluded.
+            _logger.LogError(ex, "Closing the AI conversation of voice activity '{ActivityId}' failed.", activityId.SanitizeLogValue());
         }
     }
 

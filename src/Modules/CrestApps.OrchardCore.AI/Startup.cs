@@ -432,6 +432,9 @@ public sealed class ChatCoreStartup : StartupBase
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>();
 
+        // Closing a session, after inactivity or as soon as its call ends.
+        services.AddScoped<AIChatSessionCloser>();
+        services.AddScoped<IAIChatSessionCloser>(sp => sp.GetRequiredService<AIChatSessionCloser>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
         // Privacy: redacting or stripping ended conversations, and deleting those past the profile's retention.
