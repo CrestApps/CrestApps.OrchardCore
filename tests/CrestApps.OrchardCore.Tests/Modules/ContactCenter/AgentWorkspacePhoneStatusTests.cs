@@ -147,6 +147,7 @@ public sealed class AgentWorkspacePhoneStatusTests
                 new Mock<UserManager<IUser>>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null).Object,
                 Mock.Of<IDisplayNameProvider>(),
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
+                new NullDialerProfileReader(),
                 new StubClock(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
                 new ServiceCollection().AddLogging().AddRouting().BuildServiceProvider().GetRequiredService<LinkGenerator>(),
