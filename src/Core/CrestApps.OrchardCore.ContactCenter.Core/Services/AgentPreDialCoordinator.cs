@@ -369,23 +369,61 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
     }
 
     /// <inheritdoc/>
-    public async Task OnAgentLegEndedAsync(
+    public Task OnAgentLegEndedAsync(
         string providerName,
         string reservationId,
         string agentLegId,
         HangupCause? cause,
         CancellationToken cancellationToken = default)
+        => EndAgentLegAsync(reservationId, agentLegId, cause, phoneUnreachable: false, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task OnAgentPhoneUnreachableAsync(
+        string providerName,
+        string reservationId,
+        string agentLegId,
+        HangupCause? cause,
+        CancellationToken cancellationToken = default)
+        => EndAgentLegAsync(reservationId, agentLegId, cause, phoneUnreachable: true, cancellationToken);
+
+    private async Task EndAgentLegAsync(
+        string reservationId,
+        string agentLegId,
+        HangupCause? cause,
+        bool phoneUnreachable,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(reservationId) || string.IsNullOrEmpty(agentLegId))
         {
             return;
         }
 
+        var unreachableAgentId = await ForgetAgentLegAsync(reservationId, agentLegId, cause, phoneUnreachable, cancellationToken);
+
+        // Released only once the offer's lock is let go: the release publishes the agent's release, whose handler asks
+        // this coordinator to release the same offer under that lock, and would otherwise wait out its timeout behind the
+        // caller holding it. The leg is already forgotten, so that release finds nothing left to do.
+        if (unreachableAgentId is not null)
+        {
+            await ReleaseUnreachableOfferAsync(reservationId, unreachableAgentId, cancellationToken);
+        }
+    }
+
+    // Forgets the ended leg under the offer's lock and settles what it leaves behind. Returns the agent whose ringing offer
+    // is to be released because their phone refused its leg, or null when there is nothing more to do.
+    private async Task<string> ForgetAgentLegAsync(
+        string reservationId,
+        string agentLegId,
+        HangupCause? cause,
+        bool phoneUnreachable,
+        CancellationToken cancellationToken)
+    {
+
         (var locker, var locked) = await AcquireAsync(reservationId);
 
         if (!locked)
         {
-            return;
+            return null;
         }
 
         await using var acquiredLock = locker;
@@ -394,7 +432,7 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 
         if (leg is null || !string.Equals(leg.AgentLegId, agentLegId, StringComparison.Ordinal))
         {
-            return;
+            return null;
         }
 
         await _store.RemoveAsync(leg, cancellationToken);
@@ -402,7 +440,7 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
         if (leg.BridgedUtc.HasValue)
         {
             // The agent's leg of a conversation that took place; its end is the call's own business.
-            return;
+            return null;
         }
 
         if (leg.ParkedForDialedCall && !leg.CallerReadyUtc.HasValue)
@@ -418,10 +456,20 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
                     cause);
             }
 
-            return;
+            return null;
         }
 
         var reservation = await ReadReservationAsync(reservationId);
+
+        if (phoneUnreachable &&
+            reservation?.Status == ReservationStatus.Pending &&
+            string.Equals(reservation.AgentId, leg.AgentId, StringComparison.Ordinal))
+        {
+            // The offer is still on the agent's screen, but no phone of theirs is there to take it: the leg was refused
+            // as unavailable and the provider had nowhere else to ring. Left alone, the caller would hear nothing until
+            // the ring window ran out. The offer is released now and the caller handed on.
+            return leg.AgentId;
+        }
 
         if (reservation?.Status == ReservationStatus.Accepted &&
             string.Equals(reservation.AgentId, leg.AgentId, StringComparison.Ordinal))
@@ -438,6 +486,8 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
                 cause ?? HangupCause.NoAnswer,
                 cancellationToken);
         }
+
+        return null;
     }
 
     /// <inheritdoc/>
@@ -694,6 +744,27 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
         {
             // The leg still ends on its own when its ring window runs out.
             _logger.LogWarning(ex, "Could not hang up the pre-dialed agent leg '{AgentLegId}'.", agentLegId.SanitizeLogValue());
+        }
+    }
+
+    private async Task ReleaseUnreachableOfferAsync(string reservationId, string agentId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // A fresh scope, as the reservation's own transitions run: the release commits its unit of work.
+            await _scopeExecutor.ExecuteAsync<IActivityReservationService>(service =>
+                service.ReleaseUnreachableOfferAsync(reservationId, agentId, cancellationToken));
+        }
+        catch (ConcurrencyException)
+        {
+            // An accept, a decline or the ring window's own deadline settled the offer first, and decided it.
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Another transition settled offer '{ReservationId}' before it could be released for agent '{AgentId}', whose phone refused it.",
+                    reservationId.SanitizeLogValue(),
+                    agentId.SanitizeLogValue());
+            }
         }
     }
 
