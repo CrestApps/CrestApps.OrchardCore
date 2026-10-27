@@ -341,6 +341,17 @@ public static class ReportDesignerTexts
             ["Each query groups its own data; pick the query a visual shows in its properties."] = S["Each query groups its own data; pick the query a visual shows in its properties."].Value,
             ["Add a query to show data grouped another way, such as by day next to a table by agent."] = S["Add a query to show data grouped another way, such as by day next to a table by agent."].Value,
             ["The visual shows the columns of this query."] = S["The visual shows the columns of this query."].Value,
+            ["When clicked"] = S["When clicked"].Value,
+            ["Pick the value of"] = S["Pick the value of"].Value,
+            ["Nothing, clicks do nothing"] = S["Nothing, clicks do nothing"].Value,
+            ["Clicking a bar, point or slice picks its category or series."] = S["Clicking a bar, point or slice picks its category or series."].Value,
+            ["Clicking a row picks its value in this column."] = S["Clicking a row picks its value in this column."].Value,
+            ["Add another visual for this one to filter."] = S["Add another visual for this one to filter."].Value,
+            ["The same field"] = S["The same field"].Value,
+            ["Field filtered in"] = S["Field filtered in"].Value,
+            ["Its query doesn't read this field. Pick the field to filter."] = S["Its query doesn't read this field. Pick the field to filter."].Value,
+            ["Filter these visuals"] = S["Filter these visuals"].Value,
+            ["They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear."] = S["They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear."].Value,
         };
     }
 

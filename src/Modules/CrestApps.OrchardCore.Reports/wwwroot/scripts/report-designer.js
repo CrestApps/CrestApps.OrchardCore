@@ -346,6 +346,52 @@
 			});
 			designer.forgetVisuals(design, removed);
 		};
+		designer.SELECTABLE_TRANSFORMS = [
+			"None",
+			"Upper",
+			"Lower",
+			"Day",
+			"Week",
+			"Month",
+			"Year",
+			"Hour"
+		];
+		designer.clickableColumns = function(visual, columns, definitions) {
+			var transforms = {};
+			(definitions || []).forEach(function(column) {
+				transforms[column.id] = column.transform || "None";
+			});
+			return (columns || []).filter(function(column) {
+				if (column.isMeasure || designer.SELECTABLE_TRANSFORMS.indexOf(transforms[column.id] || "None") < 0) return false;
+				if (visual.type === "Chart") return column.id === visual.categoryColumnId || column.id === visual.seriesColumnId;
+				if (visual.type === "Table") return (visual.columnIds || []).length ? visual.columnIds.indexOf(column.id) >= 0 : !column.hidden;
+				return false;
+			});
+		};
+		designer.setActionColumn = function(visual, columnId) {
+			if (!columnId) {
+				visual.action = null;
+				return visual;
+			}
+			visual.action = visual.action || {
+				columnId: null,
+				targets: []
+			};
+			visual.action.columnId = columnId;
+			visual.action.targets = visual.action.targets || [];
+			return visual;
+		};
+		designer.toggleActionTarget = function(visual, targetId, on) {
+			if (!visual.action) return visual;
+			visual.action.targets = (visual.action.targets || []).filter(function(target) {
+				return target.visualId !== targetId;
+			});
+			if (on && targetId !== visual.id) visual.action.targets.push({
+				visualId: targetId,
+				field: null
+			});
+			return visual;
+		};
 		designer.forgetVisuals = function(design, removed) {
 			(design.visuals || []).forEach(function(visual) {
 				if (visual.action && visual.action.targets) visual.action.targets = visual.action.targets.filter(function(target) {
@@ -373,6 +419,7 @@
 				});
 				if (visual.categoryColumnId === columnId) visual.categoryColumnId = null;
 				if (visual.seriesColumnId === columnId) visual.seriesColumnId = null;
+				if (visual.action && visual.action.columnId === columnId) visual.action = null;
 			});
 		};
 		designer.CONTAINER_HEIGHTS = [
@@ -827,6 +874,7 @@
 				var known = described[column.id];
 				return {
 					id: column.id,
+					hidden: !!column.hidden,
 					label: known ? known.label : designer.columnLabel(column, field, app.config.aggregateLabels),
 					dataType: known ? known.dataType : field ? field.dataType : "Text",
 					isMeasure: known ? known.isMeasure : designer.isMeasure(column, field)
@@ -852,23 +900,37 @@
 		function schemaKey(dataSet) {
 			return dataSet.source + "|" + dataSet.dataSet;
 		}
-		app.loadSchema = function(dataSet) {
+		app.fetchSchema = function(dataSet) {
 			var url = app.url("schema") + "?source=" + encodeURIComponent(dataSet.source) + "&dataSet=" + encodeURIComponent(dataSet.dataSet);
 			var keep = function(schema) {
 				app.schemaCache[schemaKey(dataSet)] = schema;
-				app.schemas[dataSet.alias] = schema;
+				return schema;
 			};
 			return ui.request(url).then(function(schema) {
-				keep(schema && schema.errors ? {
+				return keep(schema && schema.errors ? {
 					fields: [],
 					errors: schema.errors
 				} : schema || { fields: [] });
 			}).catch(function() {
-				keep({
+				return keep({
 					fields: [],
 					errors: [app.t("This data set is not available to you.")]
 				});
 			});
+		};
+		app.loadSchema = function(dataSet) {
+			return app.fetchSchema(dataSet).then(function(schema) {
+				app.schemas[dataSet.alias] = schema;
+			});
+		};
+		app.ensureSchemas = function(query) {
+			var missing = (query.dataSets || []).filter(function(dataSet) {
+				var key = schemaKey(dataSet);
+				if (app.schemaCache[key] || app.schemaCache[key] === null) return false;
+				app.schemaCache[key] = null;
+				return true;
+			});
+			if (missing.length) Promise.all(missing.map(app.fetchSchema)).then(app.renderVisuals);
 		};
 		app.queries = function() {
 			return [{
@@ -2658,6 +2720,93 @@
 				} }), app.t("Visuals taller than the container scroll inside it."))
 			];
 		}
+		function queryFields(query) {
+			var options = [];
+			(query.dataSets || []).forEach(function(dataSet) {
+				((app.schemaCache[dataSet.source + "|" + dataSet.dataSet] || {}).fields || []).forEach(function(field) {
+					options.push({
+						value: dataSet.alias + "." + field.name,
+						text: (dataSet.displayName || dataSet.alias) + " › " + (field.displayName || field.name)
+					});
+				});
+			});
+			(query.calculatedFields || []).forEach(function(field) {
+				options.push({
+					value: field.name,
+					text: field.label || field.name
+				});
+			});
+			return options;
+		}
+		function readsField(query, field) {
+			var alias = designer.aliasOf(field);
+			return alias ? (query.dataSets || []).some(function(dataSet) {
+				return dataSet.alias === alias;
+			}) : (query.calculatedFields || []).some(function(calculated) {
+				return calculated.name === field;
+			});
+		}
+		function actionProperties(visual, columns) {
+			var clickable = designer.clickableColumns(visual, columns, app.design.query.columns);
+			var action = visual.action || null;
+			var parts = [h("div", { className: "small fw-semibold text-muted text-uppercase mt-3 mb-1 border-top pt-2" }, app.t("When clicked")), labelled(app.t("Pick the value of"), ui.select([{
+				value: "",
+				text: app.t("Nothing, clicks do nothing")
+			}].concat(clickable.map(function(column) {
+				return {
+					value: column.id,
+					text: column.label
+				};
+			})), action ? action.columnId || "" : "", { onchange: function(event) {
+				designer.setActionColumn(visual, event.target.value);
+				app.changed();
+			} }), visual.type === "Chart" ? app.t("Clicking a bar, point or slice picks its category or series.") : app.t("Clicking a row picks its value in this column."))];
+			if (!action || !action.columnId) return parts;
+			var column = (app.design.query.columns || []).filter(function(candidate) {
+				return candidate.id === action.columnId;
+			})[0];
+			var sourceField = column ? column.field : null;
+			var others = app.design.visuals.filter(function(other) {
+				return other.id !== visual.id;
+			});
+			if (!others.length) {
+				parts.push(h("p", { className: "small text-muted" }, app.t("Add another visual for this one to filter.")));
+				return parts;
+			}
+			var list = h("div", { className: "report-designer-checklist" });
+			others.forEach(function(other) {
+				var target = (action.targets || []).filter(function(candidate) {
+					return candidate.visualId === other.id;
+				})[0];
+				var entry = app.queries().filter(function(candidate) {
+					return candidate.id === (other.queryId || "");
+				})[0];
+				var query = entry ? entry.query : app.mainQuery;
+				app.ensureSchemas(query);
+				var label = (other.title || app.config.visualLabels[other.type] || other.type) + ((app.design.queries || []).length ? " (" + app.queryName(other.queryId) + ")" : "");
+				list.appendChild(check(label, !!target, function(on) {
+					designer.toggleActionTarget(visual, other.id, on);
+					app.changed();
+				}));
+				if (!target) return;
+				var field = target.field || sourceField;
+				var readable = !!field && readsField(query, field);
+				var choices = queryFields(query);
+				if (!readable || target.field || (other.queryId || "") !== (visual.queryId || "")) list.appendChild(h("div", { className: "ms-4 mb-2" }, ui.select([{
+					value: "",
+					text: app.t("The same field") + (sourceField ? " (" + sourceField + ")" : "")
+				}].concat(choices), target.field || "", {
+					className: "form-select form-select-sm",
+					"aria-label": app.t("Field filtered in") + " " + label,
+					onchange: function(event) {
+						target.field = event.target.value || null;
+						app.changed();
+					}
+				}), readable ? null : h("div", { className: "form-text text-danger" }, app.t("Its query doesn't read this field. Pick the field to filter."))));
+			});
+			parts.push(labelled(app.t("Filter these visuals"), list, app.t("They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear.")));
+			return parts;
+		}
 		function visualProperties(visual) {
 			var columns = app.columns();
 			var dimensions = columns.filter(function(column) {
@@ -2758,6 +2907,7 @@
 					} }), function(column) {
 						visual.seriesColumnId = column.id;
 					}), h("div", { className: "form-text mb-2" }, app.t("Draws one series per value of this column, using the first value column.")), check(app.t("Stack series"), visual.stacked, set("stacked", false)), check(app.t("Show legend"), visual.showLegend !== false, set("showLegend", false)));
+					parts.push.apply(parts, actionProperties(visual, columns));
 					break;
 				case "Metrics":
 					parts.push(well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], set("valueColumnIds")), function(column) {
@@ -2783,7 +2933,9 @@
 						visual.valueColumnIds = [column.id];
 					}), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)));
 					break;
-				default: parts.push(labelled(app.t("Columns shown"), checkboxList(all, visual.columnIds || [], set("columnIds")), app.t("Leave all unchecked to show every visible column.")), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)), check(app.t("Show subtotals"), visual.showSubtotals, set("showSubtotals", false), app.t("Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.")));
+				default:
+					parts.push(labelled(app.t("Columns shown"), checkboxList(all, visual.columnIds || [], set("columnIds")), app.t("Leave all unchecked to show every visible column.")), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)), check(app.t("Show subtotals"), visual.showSubtotals, set("showSubtotals", false), app.t("Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.")));
+					parts.push.apply(parts, actionProperties(visual, columns));
 			}
 			return parts;
 		}

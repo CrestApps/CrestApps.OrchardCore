@@ -114,6 +114,7 @@
 
             return {
                 id: column.id,
+                hidden: !!column.hidden,
                 label: known ? known.label : designer.columnLabel(column, field, app.config.aggregateLabels),
                 dataType: known ? known.dataType : (field ? field.dataType : 'Text'),
                 isMeasure: known ? known.isMeasure : designer.isMeasure(column, field)
@@ -152,19 +153,46 @@
         return dataSet.source + '|' + dataSet.dataSet;
     }
 
-    // Loads the fields of a data set. Every query of the report that reads the data set shares them.
-    app.loadSchema = function (dataSet) {
+    // Loads the fields of a data set into the cache every query of the report shares.
+    app.fetchSchema = function (dataSet) {
         var url = app.url('schema') + '?source=' + encodeURIComponent(dataSet.source) + '&dataSet=' + encodeURIComponent(dataSet.dataSet);
         var keep = function (schema) {
             app.schemaCache[schemaKey(dataSet)] = schema;
-            app.schemas[dataSet.alias] = schema;
+
+            return schema;
         };
 
         return ui.request(url).then(function (schema) {
-            keep(schema && schema.errors ? { fields: [], errors: schema.errors } : (schema || { fields: [] }));
+            return keep(schema && schema.errors ? { fields: [], errors: schema.errors } : (schema || { fields: [] }));
         }).catch(function () {
-            keep({ fields: [], errors: [app.t('This data set is not available to you.')] });
+            return keep({ fields: [], errors: [app.t('This data set is not available to you.')] });
         });
+    };
+
+    // Loads the fields of a data set of the query being edited.
+    app.loadSchema = function (dataSet) {
+        return app.fetchSchema(dataSet).then(function (schema) {
+            app.schemas[dataSet.alias] = schema;
+        });
+    };
+
+    // Loads the fields of the data sets of another query once, then redraws the visuals that list them.
+    app.ensureSchemas = function (query) {
+        var missing = (query.dataSets || []).filter(function (dataSet) {
+            var key = schemaKey(dataSet);
+
+            if (app.schemaCache[key] || app.schemaCache[key] === null) {
+                return false;
+            }
+
+            app.schemaCache[key] = null;
+
+            return true;
+        });
+
+        if (missing.length) {
+            Promise.all(missing.map(app.fetchSchema)).then(app.renderVisuals);
+        }
     };
 
     // The queries of the report: the main query first, then the ones added to it.
@@ -219,6 +247,8 @@
 
         entry.query.dataSets.forEach(function (dataSet) {
             var cached = app.schemaCache[schemaKey(dataSet)];
+
+            // A schema still loading for another query is loaded again for this one.
 
             if (cached) {
                 app.schemas[dataSet.alias] = cached;

@@ -394,6 +394,64 @@ describe('queries', () => {
     });
 });
 
+describe('click actions', () => {
+    const columns = [
+        { id: 'agent', isMeasure: false },
+        { id: 'day', isMeasure: false },
+        { id: 'weekday', isMeasure: false },
+        { id: 'secret', isMeasure: false, hidden: true },
+        { id: 'score', isMeasure: true },
+    ];
+    const definitions = [
+        { id: 'agent', transform: 'None' },
+        { id: 'day', transform: 'Day' },
+        { id: 'weekday', transform: 'DayOfWeek' },
+        { id: 'secret', transform: 'None' },
+        { id: 'score', transform: 'None' },
+    ];
+
+    it('offers the dimensions a table shows whose values filter their field', () => {
+        const all = designer.clickableColumns({ type: 'Table', columnIds: [] }, columns, definitions);
+        const some = designer.clickableColumns({ type: 'Table', columnIds: ['day', 'score'] }, columns, definitions);
+
+        expect(all.map((column) => column.id)).toEqual(['agent', 'day']);
+        expect(some.map((column) => column.id)).toEqual(['day']);
+    });
+
+    it('offers the categories and series of a chart, and nothing for metrics', () => {
+        const chart = designer.clickableColumns({ type: 'Chart', categoryColumnId: 'day', seriesColumnId: 'agent' }, columns, definitions);
+        const metrics = designer.clickableColumns({ type: 'Metrics' }, columns, definitions);
+
+        expect(chart.map((column) => column.id)).toEqual(['agent', 'day']);
+        expect(metrics).toEqual([]);
+    });
+
+    it('sets the column a click picks and the visuals it filters', () => {
+        const visual = { id: 'v1' };
+
+        designer.setActionColumn(visual, 'agent');
+        designer.toggleActionTarget(visual, 'v2', true);
+        designer.toggleActionTarget(visual, 'v3', true);
+        designer.toggleActionTarget(visual, 'v1', true);
+        designer.toggleActionTarget(visual, 'v2', false);
+
+        expect(visual.action).toEqual({ columnId: 'agent', targets: [{ visualId: 'v3', field: null }] });
+
+        designer.setActionColumn(visual, '');
+        expect(visual.action).toBeNull();
+    });
+
+    it('drops a click action when its column is removed', () => {
+        const value = design();
+        const column = designer.addColumn(value.query, field('Order.Channel', 'Text'));
+
+        value.visuals = [{ id: 'v1', action: { columnId: column.id, targets: [{ visualId: 'v2' }] } }];
+        designer.removeColumn(value, column.id);
+
+        expect(value.visuals[0].action).toBeNull();
+    });
+});
+
 describe('picking values', () => {
     it('picks only the value clicked, and clears it when clicked again', () => {
         expect(interactions.nextKeys([], 'a', false)).toEqual(['a']);

@@ -457,6 +457,67 @@
         designer.forgetVisuals(design, removed);
     };
 
+    // The transforms whose values still filter their field: text in another case, and dates kept to a period.
+    designer.SELECTABLE_TRANSFORMS = ['None', 'Upper', 'Lower', 'Day', 'Week', 'Month', 'Year', 'Hour'];
+
+    // The columns clicking a visual can pick a value of: the dimensions a table shows, or a chart's categories and
+    // series. `columns` are the query's columns as described ({ id, isMeasure }) and `definitions` the design's columns.
+    designer.clickableColumns = function (visual, columns, definitions) {
+        var transforms = {};
+
+        (definitions || []).forEach(function (column) {
+            transforms[column.id] = column.transform || 'None';
+        });
+
+        return (columns || []).filter(function (column) {
+            if (column.isMeasure || designer.SELECTABLE_TRANSFORMS.indexOf(transforms[column.id] || 'None') < 0) {
+                return false;
+            }
+
+            if (visual.type === 'Chart') {
+                return column.id === visual.categoryColumnId || column.id === visual.seriesColumnId;
+            }
+
+            if (visual.type === 'Table') {
+                return (visual.columnIds || []).length ? visual.columnIds.indexOf(column.id) >= 0 : !column.hidden;
+            }
+
+            return false;
+        });
+    };
+
+    // Sets the column clicking a visual picks; clicking it does nothing once the column is cleared.
+    designer.setActionColumn = function (visual, columnId) {
+        if (!columnId) {
+            visual.action = null;
+
+            return visual;
+        }
+
+        visual.action = visual.action || { columnId: null, targets: [] };
+        visual.action.columnId = columnId;
+        visual.action.targets = visual.action.targets || [];
+
+        return visual;
+    };
+
+    // Adds or removes a visual from those a click filters.
+    designer.toggleActionTarget = function (visual, targetId, on) {
+        if (!visual.action) {
+            return visual;
+        }
+
+        visual.action.targets = (visual.action.targets || []).filter(function (target) {
+            return target.visualId !== targetId;
+        });
+
+        if (on && targetId !== visual.id) {
+            visual.action.targets.push({ visualId: targetId, field: null });
+        }
+
+        return visual;
+    };
+
     // Drops the click actions' references to visuals that no longer exist, by identifier.
     designer.forgetVisuals = function (design, removed) {
         (design.visuals || []).forEach(function (visual) {
@@ -496,6 +557,10 @@
 
             if (visual.seriesColumnId === columnId) {
                 visual.seriesColumnId = null;
+            }
+
+            if (visual.action && visual.action.columnId === columnId) {
+                visual.action = null;
             }
         });
     };

@@ -32,6 +32,7 @@ People who only run reports that were shared with them need no permission: they 
 | Add up numbers, group by month, format values, and work out new values with formulas | [Columns and formulas](columns-and-formulas.md) |
 | Narrow the data, and let the people who run the report pick their own period or values | [Filters](filters.md) |
 | Show tables with totals and subtotals, charts, headline numbers and pivot tables | [Visuals](visuals.md) |
+| Build a dashboard: data grouped several ways on one page, framed in scrolling containers, filtered by clicking a row or a chart | [Interactive dashboards](dashboards.md) |
 | Report on two kinds of data together, such as customers and their orders | [Join data sets](joins.md) |
 | See examples of common reports and how they are built | [Kinds of reports](kinds-of-reports.md) |
 | Know which data you can report on | [Data sources](data-sources.md) |
@@ -67,6 +68,8 @@ Your administrator gives these permissions to roles. Administrators have all of 
 | **Calculated field** | A field you work out with a formula, like a spreadsheet formula. |
 | **Join** | How two data sets are matched, such as an order to its customer. |
 | **Visual** | A table, chart, set of headline numbers or pivot table that shows the result. |
+| **Query** | The data sets, columns and filters a visual shows. A report has one, and can add more to show the data grouped other ways. |
+| **Container** | A framed block with a title that holds visuals, and scrolls them when it has a height. |
 | **View** | A saved, reusable data set: it joins, filters, and calculates once, and other reports can use its columns as fields. |
 | **Draft** | Your saved changes that nobody else sees until you publish them. |
 | **Version** | A copy of the report kept each time you publish a change. |

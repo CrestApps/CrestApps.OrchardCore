@@ -646,6 +646,120 @@
         ];
     }
 
+    // The fields a visual a click filters can be filtered on: those of its query's data sets and calculated fields.
+    function queryFields(query) {
+        var options = [];
+
+        (query.dataSets || []).forEach(function (dataSet) {
+            var schema = app.schemaCache[dataSet.source + '|' + dataSet.dataSet] || {};
+
+            (schema.fields || []).forEach(function (field) {
+                options.push({ value: dataSet.alias + '.' + field.name, text: (dataSet.displayName || dataSet.alias) + ' › ' + (field.displayName || field.name) });
+            });
+        });
+
+        (query.calculatedFields || []).forEach(function (field) {
+            options.push({ value: field.name, text: field.label || field.name });
+        });
+
+        return options;
+    }
+
+    function readsField(query, field) {
+        var alias = designer.aliasOf(field);
+
+        return alias
+            ? (query.dataSets || []).some(function (dataSet) {
+                return dataSet.alias === alias;
+            })
+            : (query.calculatedFields || []).some(function (calculated) {
+                return calculated.name === field;
+            });
+    }
+
+    // The When clicked part of a table or chart: the column whose value a click picks, and the visuals it filters.
+    function actionProperties(visual, columns) {
+        var clickable = designer.clickableColumns(visual, columns, app.design.query.columns);
+        var action = visual.action || null;
+        var parts = [
+            h('div', { className: 'small fw-semibold text-muted text-uppercase mt-3 mb-1 border-top pt-2' }, app.t('When clicked')),
+            labelled(app.t('Pick the value of'), ui.select([{ value: '', text: app.t('Nothing, clicks do nothing') }].concat(clickable.map(function (column) {
+                return { value: column.id, text: column.label };
+            })), action ? action.columnId || '' : '', {
+                onchange: function (event) {
+                    designer.setActionColumn(visual, event.target.value);
+                    app.changed();
+                }
+            }), visual.type === 'Chart'
+                ? app.t('Clicking a bar, point or slice picks its category or series.')
+                : app.t('Clicking a row picks its value in this column.'))
+        ];
+
+        if (!action || !action.columnId) {
+            return parts;
+        }
+
+        var column = (app.design.query.columns || []).filter(function (candidate) {
+            return candidate.id === action.columnId;
+        })[0];
+        var sourceField = column ? column.field : null;
+        var others = app.design.visuals.filter(function (other) {
+            return other.id !== visual.id;
+        });
+
+        if (!others.length) {
+            parts.push(h('p', { className: 'small text-muted' }, app.t('Add another visual for this one to filter.')));
+
+            return parts;
+        }
+
+        var list = h('div', { className: 'report-designer-checklist' });
+
+        others.forEach(function (other) {
+            var target = (action.targets || []).filter(function (candidate) {
+                return candidate.visualId === other.id;
+            })[0];
+            var entry = app.queries().filter(function (candidate) {
+                return candidate.id === (other.queryId || '');
+            })[0];
+            var query = entry ? entry.query : app.mainQuery;
+
+            app.ensureSchemas(query);
+            var label = (other.title || app.config.visualLabels[other.type] || other.type) +
+                ((app.design.queries || []).length ? ' (' + app.queryName(other.queryId) + ')' : '');
+
+            list.appendChild(check(label, !!target, function (on) {
+                designer.toggleActionTarget(visual, other.id, on);
+                app.changed();
+            }));
+
+            if (!target) {
+                return;
+            }
+
+            var field = target.field || sourceField;
+            var readable = !!field && readsField(query, field);
+            var choices = queryFields(query);
+
+            if (!readable || target.field || (other.queryId || '') !== (visual.queryId || '')) {
+                list.appendChild(h('div', { className: 'ms-4 mb-2' },
+                    ui.select([{ value: '', text: app.t('The same field') + (sourceField ? ' (' + sourceField + ')' : '') }].concat(choices), target.field || '', {
+                        className: 'form-select form-select-sm',
+                        'aria-label': app.t('Field filtered in') + ' ' + label,
+                        onchange: function (event) {
+                            target.field = event.target.value || null;
+                            app.changed();
+                        }
+                    }),
+                    readable ? null : h('div', { className: 'form-text text-danger' }, app.t('Its query doesn\'t read this field. Pick the field to filter.'))));
+            }
+        });
+
+        parts.push(labelled(app.t('Filter these visuals'), list, app.t('They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear.')));
+
+        return parts;
+    }
+
     function visualProperties(visual) {
         var columns = app.columns();
         var dimensions = columns.filter(function (column) {
@@ -735,6 +849,7 @@
                     h('div', { className: 'form-text mb-2' }, app.t('Draws one series per value of this column, using the first value column.')),
                     check(app.t('Stack series'), visual.stacked, set('stacked', false)),
                     check(app.t('Show legend'), visual.showLegend !== false, set('showLegend', false)));
+                parts.push.apply(parts, actionProperties(visual, columns));
                 break;
 
             case 'Metrics':
@@ -776,6 +891,7 @@
                     labelled(app.t('Columns shown'), checkboxList(all, visual.columnIds || [], set('columnIds')), app.t('Leave all unchecked to show every visible column.')),
                     check(app.t('Show totals'), visual.showTotals, set('showTotals', false)),
                     check(app.t('Show subtotals'), visual.showSubtotals, set('showSubtotals', false), app.t('Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.')));
+                parts.push.apply(parts, actionProperties(visual, columns));
                 break;
         }
 
