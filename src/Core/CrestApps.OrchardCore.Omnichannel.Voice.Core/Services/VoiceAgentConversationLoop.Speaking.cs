@@ -28,6 +28,10 @@ public sealed partial class VoiceAgentConversationLoop
     private CallSpeech _callSpeech;
     private string _callSpeechActivityId;
 
+    // Whether the persona the call speaks for holds it in English, kept apart from _callSpeech: a refused line turns
+    // that into an English choice without a persona, and the call is not in English because of it.
+    private bool _callHeldInEnglish = true;
+
     private async Task<string> RenderInitialPromptAsync(OmnichannelActivity activity, AIProfile profile, AIChatSession session, CancellationToken cancellationToken)
     {
         var metadata = profile.GetOrCreate<AIProfileMetadata>();
@@ -110,6 +114,7 @@ public sealed partial class VoiceAgentConversationLoop
 
         _callSpeech = await SelectCallSpeechAsync(ShellScope.Services, activity, flowSettings, profile, media.DefaultVoice, cancellationToken);
         _callSpeechActivityId = activity?.ItemId;
+        _callHeldInEnglish = _callSpeech.IsEnglish;
 
         return _callSpeech;
     }
@@ -212,6 +217,11 @@ public sealed partial class VoiceAgentConversationLoop
         public string ListenLanguage => PersonaLanguage is null
             ? DefaultListenLanguage
             : PersonaLanguage.Split('-', '_')[0].ToLowerInvariant();
+
+        /// <summary>
+        /// Gets a value indicating whether the call is held in English: the persona names no language, or an English one.
+        /// </summary>
+        public bool IsEnglish => string.Equals(ListenLanguage, DefaultListenLanguage, StringComparison.Ordinal);
 
         /// <summary>
         /// Gets a value indicating whether anything about how the call speaks came from the persona.

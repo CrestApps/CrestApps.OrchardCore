@@ -127,3 +127,5 @@ If the AI's live voice connection drops in the middle of a call, the platform fi
 ### Live agent handoff
 
 If the subject allows **live agent handoff**, the AI can pass the customer to the handoff queue when they ask for a person, look like a qualified lead, or are frustrated. SMS conversations appear in the [Messaging workspace](messaging.md); calls ring an agent in the queue.
+
+On a call, the AI tells the caller in its own words that it is connecting them. When nobody in the queue is free, the caller then hears that they are in the queue; when the queue is closed and a callback is booked instead, they hear that someone will call them back, and the call ends. Those two lines are English, read by the telephony provider's voice, so they are said only when the profile's [AI persona](../ai/personas.md) speaks English or names no language; on a call held in another language the caller hears only the AI's own words.
