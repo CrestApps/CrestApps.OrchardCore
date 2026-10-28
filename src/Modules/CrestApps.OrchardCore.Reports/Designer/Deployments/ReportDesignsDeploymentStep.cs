@@ -124,7 +124,7 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
 
         foreach (var design in designs)
         {
-            foreach (var viewId in ViewsReadBy(design.Query))
+            foreach (var viewId in design.GetQueries().SelectMany(query => ViewsReadBy(query.Query)))
             {
                 pending.Enqueue(viewId);
             }

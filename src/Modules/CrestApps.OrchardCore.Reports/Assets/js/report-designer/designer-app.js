@@ -14,12 +14,16 @@
         config: null,
         design: null,
         schemas: {},
+        schemaCache: {},
+        activeQueryId: '',
+        mainQuery: null,
         plan: { fields: [], columns: [], errors: [] },
         functions: [],
         sources: [],
         selection: null,
         dirty: false,
         filterValues: null,
+        previewSelections: {},
         elements: {}
     };
 
@@ -110,6 +114,7 @@
 
             return {
                 id: column.id,
+                hidden: !!column.hidden,
                 label: known ? known.label : designer.columnLabel(column, field, app.config.aggregateLabels),
                 dataType: known ? known.dataType : (field ? field.dataType : 'Text'),
                 isMeasure: known ? known.isMeasure : designer.isMeasure(column, field)
@@ -144,17 +149,120 @@
         }
     };
 
-    app.loadSchema = function (dataSet) {
+    function schemaKey(dataSet) {
+        return dataSet.source + '|' + dataSet.dataSet;
+    }
+
+    // Loads the fields of a data set into the cache every query of the report shares.
+    app.fetchSchema = function (dataSet) {
         var url = app.url('schema') + '?source=' + encodeURIComponent(dataSet.source) + '&dataSet=' + encodeURIComponent(dataSet.dataSet);
+        var keep = function (schema) {
+            app.schemaCache[schemaKey(dataSet)] = schema;
+
+            return schema;
+        };
 
         return ui.request(url).then(function (schema) {
-            if (schema && schema.errors) {
-                app.schemas[dataSet.alias] = { fields: [], errors: schema.errors };
-            } else {
-                app.schemas[dataSet.alias] = schema || { fields: [] };
-            }
+            return keep(schema && schema.errors ? { fields: [], errors: schema.errors } : (schema || { fields: [] }));
         }).catch(function () {
-            app.schemas[dataSet.alias] = { fields: [], errors: [app.t('This data set is not available to you.')] };
+            return keep({ fields: [], errors: [app.t('This data set is not available to you.')] });
+        });
+    };
+
+    // Loads the fields of a data set of the query being edited.
+    app.loadSchema = function (dataSet) {
+        return app.fetchSchema(dataSet).then(function (schema) {
+            app.schemas[dataSet.alias] = schema;
+        });
+    };
+
+    // Loads the fields of the data sets of another query once, then redraws the visuals that list them.
+    app.ensureSchemas = function (query) {
+        var missing = (query.dataSets || []).filter(function (dataSet) {
+            var key = schemaKey(dataSet);
+
+            if (app.schemaCache[key] || app.schemaCache[key] === null) {
+                return false;
+            }
+
+            app.schemaCache[key] = null;
+
+            return true;
+        });
+
+        if (missing.length) {
+            Promise.all(missing.map(app.fetchSchema)).then(app.renderVisuals);
+        }
+    };
+
+    // The queries of the report: the main query first, then the ones added to it.
+    app.queries = function () {
+        return [{ id: '', name: app.t('Main query'), query: app.mainQuery }].concat(app.design.queries || []);
+    };
+
+    app.queryName = function (queryId) {
+        var index = -1;
+        var entry = app.queries().filter(function (candidate, position) {
+            if (candidate.id === (queryId || '')) {
+                index = position;
+
+                return true;
+            }
+
+            return false;
+        })[0];
+
+        return entry ? (entry.name || (app.t('Query') + ' ' + (index + 1))) : app.t('Main query');
+    };
+
+    function prepareQuery(query) {
+        ['dataSets', 'joins', 'calculatedFields', 'filters', 'columns', 'sorts'].forEach(function (name) {
+            query[name] = query[name] || [];
+        });
+
+        // A design saved with two joins for one data set cannot run; merge them.
+        designer.mergeJoins(query);
+
+        return query;
+    }
+
+    // Edits another query of the report: the Design and Data model tabs then show its data sets, columns and filters.
+    app.useQuery = function (queryId) {
+        var entry = app.queries().filter(function (candidate) {
+            return candidate.id === (queryId || '');
+        })[0];
+
+        if (!entry) {
+            return null;
+        }
+
+        entry.query = prepareQuery(entry.query || {});
+        app.activeQueryId = entry.id;
+        app.design.activeQueryId = entry.id;
+        app.design.query = entry.query;
+        app.plan = { fields: [], columns: [], errors: [] };
+        app.schemas = {};
+
+        var pending = [];
+
+        entry.query.dataSets.forEach(function (dataSet) {
+            var cached = app.schemaCache[schemaKey(dataSet)];
+
+            // A schema still loading for another query is loaded again for this one.
+
+            if (cached) {
+                app.schemas[dataSet.alias] = cached;
+            } else {
+                pending.push(app.loadSchema(dataSet));
+            }
+        });
+
+        app.render();
+
+        return Promise.all(pending).then(function () {
+            app.render();
+
+            return app.refreshPlan();
         });
     };
 
@@ -190,6 +298,7 @@
         var payload = app.payload();
 
         payload.filterValues = app.filterValues;
+        payload.selections = app.previewSelections;
 
         ui.request(app.url('preview') + (app.isView() ? '?view=true' : ''), { body: payload, html: true }).then(function (html) {
             target.classList.remove('is-loading');
@@ -207,8 +316,22 @@
         });
     };
 
-    // The preview renders the exposed filters as a form; submitting it re-runs the preview with those values.
+    // The preview renders the exposed filters as a form; submitting it re-runs the preview with those values. Clicking a
+    // row or a chart of a visual that filters others re-runs it with the values picked.
     app.bindPreview = function (target) {
+        if (!target.dataset.selectionBound) {
+            target.dataset.selectionBound = 'true';
+            target.addEventListener('report-selection-change', function (event) {
+                if (event.detail.keys.length) {
+                    app.previewSelections[event.detail.visualId] = event.detail.keys;
+                } else {
+                    delete app.previewSelections[event.detail.visualId];
+                }
+
+                app.refreshPreview();
+            });
+        }
+
         var form = target.querySelector('form[data-preview-filters]');
 
         if (!form) {
@@ -230,8 +353,12 @@
             displayText: design.displayText,
             description: design.description,
             category: design.category,
-            query: design.query,
+            query: app.mainQuery,
+            queries: (design.queries || []).map(function (entry) {
+                return { id: entry.id, name: entry.name, query: entry.query };
+            }),
             visuals: design.visuals,
+            containers: design.containers,
             showInAdminMenu: design.showInAdminMenu,
             allowExport: design.allowExport,
             sharedUserNames: design.sharedUserNames,
@@ -358,7 +485,81 @@
         app.render();
     };
 
+    // The bar above the Design and Data model tabs that picks the query being edited, adds one, renames and removes it.
+    app.renderQueryBar = function () {
+        var target = app.elements.queryBar;
+
+        if (!target) {
+            return;
+        }
+
+        var active = app.activeQueryId;
+        var entry = (app.design.queries || []).filter(function (candidate) {
+            return candidate.id === active;
+        })[0];
+        var visualCount = designer.visualsOfQuery(app.design, active).length;
+
+        ui.clear(target);
+        ui.append(target, [
+            h('label', { className: 'small fw-semibold text-muted text-uppercase text-nowrap', for: 'rd-query-pick' }, app.t('Query')),
+            ui.select(app.queries().map(function (candidate) {
+                return { value: candidate.id, text: app.queryName(candidate.id) };
+            }), active, {
+                id: 'rd-query-pick',
+                className: 'form-select form-select-sm w-auto',
+                onchange: function (event) {
+                    app.selection = null;
+                    app.useQuery(event.target.value);
+                }
+            }),
+            entry ? h('input', {
+                type: 'text',
+                className: 'form-control form-control-sm w-auto',
+                value: entry.name || '',
+                placeholder: app.queryName(entry.id),
+                maxlength: '200',
+                'aria-label': app.t('Query name'),
+                onchange: function (event) {
+                    entry.name = event.target.value.trim() || null;
+                    app.renderQueryBar();
+                    app.renderVisuals();
+                    app.touched();
+                }
+            }) : null,
+            h('button', {
+                type: 'button',
+                className: 'btn btn-sm btn-outline-primary text-nowrap',
+                title: app.t('A new query starts as a copy of this one. The viewer filters it copies stay linked: one control filters both.'),
+                onclick: function () {
+                    var added = designer.addQuery(app.design, app.design.query);
+
+                    app.selection = null;
+                    app.useQuery(added.id);
+                    app.changed({ render: false });
+                }
+            }, ui.icon('fa-plus'), ' ', app.t('Add query')),
+            entry ? h('button', {
+                type: 'button',
+                className: 'btn btn-sm btn-outline-danger text-nowrap',
+                onclick: function () {
+                    if (visualCount && !root.confirm(app.t('Remove this query and the visuals that show it?'))) {
+                        return;
+                    }
+
+                    designer.removeQuery(app.design, entry.id);
+                    app.selection = null;
+                    app.useQuery('');
+                    app.changed({ render: false });
+                }
+            }, ui.icon('fa-trash'), ' ', app.t('Remove query')) : null,
+            h('span', { className: 'small text-muted' }, (app.design.queries || []).length
+                ? app.t('Each query groups its own data; pick the query a visual shows in its properties.')
+                : app.t('Add a query to show data grouped another way, such as by day next to a table by agent.'))
+        ]);
+    };
+
     app.render = function () {
+        app.renderQueryBar();
         app.renderModel();
         app.renderDataPane();
         app.renderShelves();
@@ -486,6 +687,7 @@
         e.runLink = h('a', { className: 'btn btn-sm btn-outline-secondary text-nowrap d-none', href: '#' }, ui.icon('fa-play'), ' ', app.t('Run report'));
         e.messages = h('div', { className: 'report-designer-messages' });
         e.issues = h('div');
+        e.queryBar = app.isView() ? null : h('div', { className: 'rd-query-bar' });
         e.dataPane = h('div', { className: 'report-designer-data' });
         e.shelves = h('div', { className: 'report-designer-shelves' });
         e.properties = h('div', { className: 'report-designer-properties' });
@@ -566,7 +768,7 @@
             h('div', { className: 'card-header rd-header' },
                 nav,
                 h('div', { className: 'rd-header-tools' }, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)),
-            h('div', { className: 'card-body p-0 rd-body' }, e.historyBar, e.messages, panes)
+            h('div', { className: 'card-body p-0 rd-body' }, e.historyBar, e.messages, e.queryBar, panes)
         ]);
 
         var saved = readLayout();
@@ -590,21 +792,24 @@
 
         app.config = JSON.parse(configElement.textContent);
         app.design = app.config.payload;
-        app.design.query = app.design.query || {};
-
-        ['dataSets', 'joins', 'calculatedFields', 'filters', 'columns', 'sorts'].forEach(function (name) {
-            app.design.query[name] = app.design.query[name] || [];
+        app.design.query = prepareQuery(app.design.query || {});
+        app.mainQuery = app.design.query;
+        app.design.queries = (app.design.queries || []).filter(function (entry) {
+            return entry && entry.id;
+        });
+        app.design.queries.forEach(function (entry) {
+            entry.query = prepareQuery(entry.query || {});
         });
 
-        // A design saved with two joins for one data set cannot run; merge them.
-        designer.mergeJoins(app.design.query);
-
         app.design.visuals = app.design.visuals || [];
+        app.design.containers = app.design.containers || [];
         app.design.sharedUserNames = app.design.sharedUserNames || [];
         app.design.sharedRoles = app.design.sharedRoles || [];
         app.schedulePlan = ui.debounce(app.refreshPlan, 350);
         app.schedulePreview = ui.debounce(app.refreshPreview, 900);
 
+        app.mainQuery = app.design.query;
+        app.design.activeQueryId = '';
         app.buildLayout(container);
         app.render();
 

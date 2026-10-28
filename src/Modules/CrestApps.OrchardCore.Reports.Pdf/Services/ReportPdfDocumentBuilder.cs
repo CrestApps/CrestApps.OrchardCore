@@ -10,7 +10,8 @@ using PdfSharp.Drawing;
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
-/// Lays a report document out as a MigraDoc document. Sections are stacked at the full width of the page, in order.
+/// Lays a report document out as a MigraDoc document. Sections are stacked at the full width of the page, in order, and
+/// the sections of a container follow its title band, as on the page.
 /// </summary>
 internal sealed class ReportPdfDocumentBuilder
 {
@@ -33,6 +34,7 @@ internal sealed class ReportPdfDocumentBuilder
     private static readonly Color _grandTotalFill = Color.FromRgb(0xCF, 0xE2, 0xFF);
     private static readonly Color _barTrack = Color.FromRgb(0xE9, 0xEC, 0xEF);
     private static readonly Color _white = Color.FromRgb(0xFF, 0xFF, 0xFF);
+    private static readonly Color _primary = Color.FromRgb(0x0D, 0x6E, 0xFD);
 
     private static readonly Color[] _palette =
     [
@@ -92,45 +94,63 @@ internal sealed class ReportPdfDocumentBuilder
             AddText(section.AddParagraph(), _report.Title).Style = "ReportTitle";
         }
 
-        for (var index = 0; index < _report.Sections.Count; index++)
+        var first = true;
+
+        foreach (var group in _report.GetSectionGroups())
         {
-            var reportSection = _report.Sections[index];
-
-            if (reportSection is null)
+            if (!string.IsNullOrWhiteSpace(group.Container?.Title))
             {
-                continue;
+                AddText(section.AddParagraph(), group.Container.Title).Style = "ContainerTitle";
             }
 
-            // The first section is often named like the report; its title is not repeated under the report's.
-            if (!string.IsNullOrWhiteSpace(reportSection.Title) &&
-                !(index == 0 && string.Equals(reportSection.Title, _report.Title, StringComparison.OrdinalIgnoreCase)))
+            foreach (var reportSection in group.Sections)
             {
-                AddText(section.AddParagraph(), reportSection.Title).Style = "SectionTitle";
-            }
-
-            if (!string.IsNullOrWhiteSpace(reportSection.Description))
-            {
-                AddText(section.AddParagraph(), reportSection.Description).Style = "SectionDescription";
-            }
-
-            switch (reportSection.Kind)
-            {
-                case ReportSectionKind.Metrics:
-                    AddMetrics(section, reportSection.Metrics);
-                    break;
-                case ReportSectionKind.Table:
-                    AddTable(section, reportSection);
-                    break;
-                case ReportSectionKind.Bars:
-                    AddBars(section, reportSection.Bars);
-                    break;
-                case ReportSectionKind.Chart:
-                    AddChart(section, reportSection.Chart);
-                    break;
+                AddSection(section, reportSection, first);
+                first = false;
             }
         }
 
         return document;
+    }
+
+    private void AddSection(Section section, ReportSection reportSection, bool first)
+    {
+        // The first section is often named like the report; its title is not repeated under the report's.
+        if (!string.IsNullOrWhiteSpace(reportSection.Title) &&
+            !(first && string.Equals(reportSection.Title, _report.Title, StringComparison.OrdinalIgnoreCase)))
+        {
+            AddText(section.AddParagraph(), reportSection.Title).Style = "SectionTitle";
+        }
+
+        // Which values picked in other sections filter this one, as those sections show them.
+        foreach (var filter in _report.GetFilteringSections(reportSection))
+        {
+            var values = string.Join(", ", filter.Selection.GetPickedValues());
+            var text = string.IsNullOrWhiteSpace(filter.Title) ? $"Filtered by: {values}" : $"Filtered by {filter.Title}: {values}";
+
+            AddText(section.AddParagraph(), text).Style = "SectionDescription";
+        }
+
+        if (!string.IsNullOrWhiteSpace(reportSection.Description))
+        {
+            AddText(section.AddParagraph(), reportSection.Description).Style = "SectionDescription";
+        }
+
+        switch (reportSection.Kind)
+        {
+            case ReportSectionKind.Metrics:
+                AddMetrics(section, reportSection.Metrics);
+                break;
+            case ReportSectionKind.Table:
+                AddTable(section, reportSection);
+                break;
+            case ReportSectionKind.Bars:
+                AddBars(section, reportSection.Bars);
+                break;
+            case ReportSectionKind.Chart:
+                AddChart(section, reportSection.Chart);
+                break;
+        }
     }
 
     private static void DefineStyles(Document document)
@@ -144,6 +164,18 @@ internal sealed class ReportPdfDocumentBuilder
         title.Font.Size = 18;
         title.Font.Bold = true;
         title.ParagraphFormat.SpaceAfter = 8;
+
+        // A container's title band, colored as on the page.
+        var containerTitle = document.Styles.AddStyle("ContainerTitle", StyleNames.Normal);
+        containerTitle.Font.Size = 11;
+        containerTitle.Font.Bold = true;
+        containerTitle.Font.Color = _white;
+        containerTitle.ParagraphFormat.Shading.Color = _primary;
+        containerTitle.ParagraphFormat.Borders.Distance = 5;
+        containerTitle.ParagraphFormat.Borders.Color = _primary;
+        containerTitle.ParagraphFormat.SpaceBefore = 18;
+        containerTitle.ParagraphFormat.SpaceAfter = 6;
+        containerTitle.ParagraphFormat.KeepWithNext = true;
 
         var sectionTitle = document.Styles.AddStyle("SectionTitle", StyleNames.Normal);
         sectionTitle.Font.Size = 12;
@@ -553,7 +585,8 @@ internal sealed class ReportPdfDocumentBuilder
         if (!isPie)
         {
             var values = datasets.SelectMany(dataset => dataset.Values).Where(double.IsFinite).ToList();
-            var format = values.All(value => Math.Abs(value - Math.Round(value)) < 1e-9) ? "#,##0" : "#,##0.##";
+            var whole = values.All(value => Math.Abs(value - Math.Round(value)) < 1e-9);
+            var format = whole ? "#,##0" : "#,##0.##";
 
             chart.XAxis.MajorTickMark = TickMarkType.Outside;
             chart.XAxis.LineFormat.Color = _border;
@@ -572,6 +605,29 @@ internal sealed class ReportPdfDocumentBuilder
                 chart.YAxis.MinimumScale = 0;
                 chart.YAxis.MaximumScale = 100;
                 chart.YAxis.MajorTick = 10;
+            }
+            else if (whole && values.Count > 0)
+            {
+                // Whole numbers are read on whole steps: MigraDoc picks half steps for small values, which the format
+                // rounds into repeated labels.
+                // Stacked marks reach the sums of their category's values.
+                var stacked = type is ChartType.ColumnStacked2D or ChartType.BarStacked2D;
+                var reach = stacked
+                    ? Enumerable.Range(0, categoryCount)
+                        .SelectMany(index => new[]
+                        {
+                            datasets.Sum(dataset => index < dataset.Values.Count && double.IsFinite(dataset.Values[index]) ? Math.Max(0, dataset.Values[index]) : 0),
+                            datasets.Sum(dataset => index < dataset.Values.Count && double.IsFinite(dataset.Values[index]) ? Math.Min(0, dataset.Values[index]) : 0),
+                        })
+                        .ToList()
+                    : values;
+                var low = Math.Min(0, reach.Min());
+                var high = Math.Max(0, reach.Max());
+                var step = WholeStep(high - low);
+
+                chart.YAxis.MinimumScale = Math.Floor(low / step) * step;
+                chart.YAxis.MaximumScale = Math.Max(Math.Ceiling(high / step) * step, chart.YAxis.MinimumScale + step);
+                chart.YAxis.MajorTick = step;
             }
         }
 
@@ -599,6 +655,27 @@ internal sealed class ReportPdfDocumentBuilder
         section.Add(chart);
 
         AddSpacer(section);
+    }
+
+    // A whole step of 1, 2 or 5 times a power of ten that splits a range into at most ten ticks.
+    private static double WholeStep(double range)
+    {
+        if (range <= 10)
+        {
+            return 1;
+        }
+
+        var magnitude = Math.Pow(10, Math.Floor(Math.Log10(range / 10)));
+
+        foreach (var factor in (double[])[1, 2, 5, 10])
+        {
+            if (range / (factor * magnitude) <= 10)
+            {
+                return factor * magnitude;
+            }
+        }
+
+        return 10 * magnitude;
     }
 
     private static ChartType ToChartType(ReportChart chart)

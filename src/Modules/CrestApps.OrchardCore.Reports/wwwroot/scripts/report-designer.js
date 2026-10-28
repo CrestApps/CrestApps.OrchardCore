@@ -316,6 +316,89 @@
 			list.splice(target, 0, item);
 			return list;
 		};
+		designer.visualsOfQuery = function(design, queryId) {
+			var id = queryId == null ? design.activeQueryId || "" : queryId;
+			return (design.visuals || []).filter(function(visual) {
+				return (visual.queryId || "") === id;
+			});
+		};
+		designer.addQuery = function(design, source, name) {
+			design.queries = design.queries || [];
+			var entry = {
+				id: designer.newId("q", ids(design.queries)),
+				name: name || null,
+				query: JSON.parse(JSON.stringify(source || {}))
+			};
+			design.queries.push(entry);
+			return entry;
+		};
+		designer.removeQuery = function(design, queryId) {
+			var removed = {};
+			design.queries = (design.queries || []).filter(function(entry) {
+				return entry.id !== queryId;
+			});
+			design.visuals = (design.visuals || []).filter(function(visual) {
+				if (visual.queryId === queryId) {
+					removed[visual.id] = true;
+					return false;
+				}
+				return true;
+			});
+			designer.forgetVisuals(design, removed);
+		};
+		designer.SELECTABLE_TRANSFORMS = [
+			"None",
+			"Upper",
+			"Lower",
+			"Day",
+			"Week",
+			"Month",
+			"Year",
+			"Hour"
+		];
+		designer.clickableColumns = function(visual, columns, definitions) {
+			var transforms = {};
+			(definitions || []).forEach(function(column) {
+				transforms[column.id] = column.transform || "None";
+			});
+			return (columns || []).filter(function(column) {
+				if (column.isMeasure || designer.SELECTABLE_TRANSFORMS.indexOf(transforms[column.id] || "None") < 0) return false;
+				if (visual.type === "Chart") return column.id === visual.categoryColumnId || column.id === visual.seriesColumnId;
+				if (visual.type === "Table") return (visual.columnIds || []).length ? visual.columnIds.indexOf(column.id) >= 0 : !column.hidden;
+				return false;
+			});
+		};
+		designer.setActionColumn = function(visual, columnId) {
+			if (!columnId) {
+				visual.action = null;
+				return visual;
+			}
+			visual.action = visual.action || {
+				columnId: null,
+				targets: []
+			};
+			visual.action.columnId = columnId;
+			visual.action.targets = visual.action.targets || [];
+			return visual;
+		};
+		designer.toggleActionTarget = function(visual, targetId, on) {
+			if (!visual.action) return visual;
+			visual.action.targets = (visual.action.targets || []).filter(function(target) {
+				return target.visualId !== targetId;
+			});
+			if (on && targetId !== visual.id) visual.action.targets.push({
+				visualId: targetId,
+				field: null
+			});
+			return visual;
+		};
+		designer.forgetVisuals = function(design, removed) {
+			(design.visuals || []).forEach(function(visual) {
+				if (visual.action && visual.action.targets) visual.action.targets = visual.action.targets.filter(function(target) {
+					return !removed[target.visualId];
+				});
+			});
+		};
 		designer.removeColumn = function(design, columnId) {
 			var query = design.query;
 			query.columns = (query.columns || []).filter(function(column) {
@@ -327,7 +410,7 @@
 			query.filters = (query.filters || []).filter(function(filter) {
 				return !(filter.stage === "Result" && filter.field === columnId);
 			});
-			(design.visuals || []).forEach(function(visual) {
+			designer.visualsOfQuery(design).forEach(function(visual) {
 				visual.columnIds = (visual.columnIds || []).filter(function(id) {
 					return id !== columnId;
 				});
@@ -336,6 +419,35 @@
 				});
 				if (visual.categoryColumnId === columnId) visual.categoryColumnId = null;
 				if (visual.seriesColumnId === columnId) visual.seriesColumnId = null;
+				if (visual.action && visual.action.columnId === columnId) visual.action = null;
+			});
+		};
+		designer.CONTAINER_HEIGHTS = [
+			0,
+			240,
+			320,
+			400,
+			480,
+			600,
+			800
+		];
+		designer.addContainer = function(design) {
+			design.containers = design.containers || [];
+			var container = {
+				id: designer.newId("k", ids(design.containers)),
+				title: null,
+				width: 12,
+				height: 400
+			};
+			design.containers.push(container);
+			return container;
+		};
+		designer.removeContainer = function(design, containerId) {
+			design.containers = (design.containers || []).filter(function(container) {
+				return container.id !== containerId;
+			});
+			(design.visuals || []).forEach(function(visual) {
+				if (visual.containerId === containerId) visual.containerId = null;
 			});
 		};
 		designer.findJoin = function(query, alias) {
@@ -684,6 +796,9 @@
 			config: null,
 			design: null,
 			schemas: {},
+			schemaCache: {},
+			activeQueryId: "",
+			mainQuery: null,
 			plan: {
 				fields: [],
 				columns: [],
@@ -694,6 +809,7 @@
 			selection: null,
 			dirty: false,
 			filterValues: null,
+			previewSelections: {},
 			elements: {}
 		};
 		app.t = function(key) {
@@ -758,6 +874,7 @@
 				var known = described[column.id];
 				return {
 					id: column.id,
+					hidden: !!column.hidden,
 					label: known ? known.label : designer.columnLabel(column, field, app.config.aggregateLabels),
 					dataType: known ? known.dataType : field ? field.dataType : "Text",
 					isMeasure: known ? known.isMeasure : designer.isMeasure(column, field)
@@ -780,19 +897,98 @@
 		app.queueAutosave = function() {
 			if (app.scheduleAutosave && app.canAutosave && app.canAutosave()) app.scheduleAutosave();
 		};
-		app.loadSchema = function(dataSet) {
+		function schemaKey(dataSet) {
+			return dataSet.source + "|" + dataSet.dataSet;
+		}
+		app.fetchSchema = function(dataSet) {
 			var url = app.url("schema") + "?source=" + encodeURIComponent(dataSet.source) + "&dataSet=" + encodeURIComponent(dataSet.dataSet);
+			var keep = function(schema) {
+				app.schemaCache[schemaKey(dataSet)] = schema;
+				return schema;
+			};
 			return ui.request(url).then(function(schema) {
-				if (schema && schema.errors) app.schemas[dataSet.alias] = {
+				return keep(schema && schema.errors ? {
 					fields: [],
 					errors: schema.errors
-				};
-				else app.schemas[dataSet.alias] = schema || { fields: [] };
+				} : schema || { fields: [] });
 			}).catch(function() {
-				app.schemas[dataSet.alias] = {
+				return keep({
 					fields: [],
 					errors: [app.t("This data set is not available to you.")]
-				};
+				});
+			});
+		};
+		app.loadSchema = function(dataSet) {
+			return app.fetchSchema(dataSet).then(function(schema) {
+				app.schemas[dataSet.alias] = schema;
+			});
+		};
+		app.ensureSchemas = function(query) {
+			var missing = (query.dataSets || []).filter(function(dataSet) {
+				var key = schemaKey(dataSet);
+				if (app.schemaCache[key] || app.schemaCache[key] === null) return false;
+				app.schemaCache[key] = null;
+				return true;
+			});
+			if (missing.length) Promise.all(missing.map(app.fetchSchema)).then(app.renderVisuals);
+		};
+		app.queries = function() {
+			return [{
+				id: "",
+				name: app.t("Main query"),
+				query: app.mainQuery
+			}].concat(app.design.queries || []);
+		};
+		app.queryName = function(queryId) {
+			var index = -1;
+			var entry = app.queries().filter(function(candidate, position) {
+				if (candidate.id === (queryId || "")) {
+					index = position;
+					return true;
+				}
+				return false;
+			})[0];
+			return entry ? entry.name || app.t("Query") + " " + (index + 1) : app.t("Main query");
+		};
+		function prepareQuery(query) {
+			[
+				"dataSets",
+				"joins",
+				"calculatedFields",
+				"filters",
+				"columns",
+				"sorts"
+			].forEach(function(name) {
+				query[name] = query[name] || [];
+			});
+			designer.mergeJoins(query);
+			return query;
+		}
+		app.useQuery = function(queryId) {
+			var entry = app.queries().filter(function(candidate) {
+				return candidate.id === (queryId || "");
+			})[0];
+			if (!entry) return null;
+			entry.query = prepareQuery(entry.query || {});
+			app.activeQueryId = entry.id;
+			app.design.activeQueryId = entry.id;
+			app.design.query = entry.query;
+			app.plan = {
+				fields: [],
+				columns: [],
+				errors: []
+			};
+			app.schemas = {};
+			var pending = [];
+			entry.query.dataSets.forEach(function(dataSet) {
+				var cached = app.schemaCache[schemaKey(dataSet)];
+				if (cached) app.schemas[dataSet.alias] = cached;
+				else pending.push(app.loadSchema(dataSet));
+			});
+			app.render();
+			return Promise.all(pending).then(function() {
+				app.render();
+				return app.refreshPlan();
 			});
 		};
 		app.refreshPlan = function() {
@@ -822,6 +1018,7 @@
 			target.classList.add("is-loading");
 			var payload = app.payload();
 			payload.filterValues = app.filterValues;
+			payload.selections = app.previewSelections;
 			ui.request(app.url("preview") + (app.isView() ? "?view=true" : ""), {
 				body: payload,
 				html: true
@@ -838,6 +1035,14 @@
 			});
 		};
 		app.bindPreview = function(target) {
+			if (!target.dataset.selectionBound) {
+				target.dataset.selectionBound = "true";
+				target.addEventListener("report-selection-change", function(event) {
+					if (event.detail.keys.length) app.previewSelections[event.detail.visualId] = event.detail.keys;
+					else delete app.previewSelections[event.detail.visualId];
+					app.refreshPreview();
+				});
+			}
 			var form = target.querySelector("form[data-preview-filters]");
 			if (!form) return;
 			form.addEventListener("submit", function(event) {
@@ -853,8 +1058,16 @@
 				displayText: design.displayText,
 				description: design.description,
 				category: design.category,
-				query: design.query,
+				query: app.mainQuery,
+				queries: (design.queries || []).map(function(entry) {
+					return {
+						id: entry.id,
+						name: entry.name,
+						query: entry.query
+					};
+				}),
 				visuals: design.visuals,
+				containers: design.containers,
 				showInAdminMenu: design.showInAdminMenu,
 				allowExport: design.allowExport,
 				sharedUserNames: design.sharedUserNames,
@@ -947,7 +1160,74 @@
 			} : null;
 			app.render();
 		};
+		app.renderQueryBar = function() {
+			var target = app.elements.queryBar;
+			if (!target) return;
+			var active = app.activeQueryId;
+			var entry = (app.design.queries || []).filter(function(candidate) {
+				return candidate.id === active;
+			})[0];
+			var visualCount = designer.visualsOfQuery(app.design, active).length;
+			ui.clear(target);
+			ui.append(target, [
+				h("label", {
+					className: "small fw-semibold text-muted text-uppercase text-nowrap",
+					for: "rd-query-pick"
+				}, app.t("Query")),
+				ui.select(app.queries().map(function(candidate) {
+					return {
+						value: candidate.id,
+						text: app.queryName(candidate.id)
+					};
+				}), active, {
+					id: "rd-query-pick",
+					className: "form-select form-select-sm w-auto",
+					onchange: function(event) {
+						app.selection = null;
+						app.useQuery(event.target.value);
+					}
+				}),
+				entry ? h("input", {
+					type: "text",
+					className: "form-control form-control-sm w-auto",
+					value: entry.name || "",
+					placeholder: app.queryName(entry.id),
+					maxlength: "200",
+					"aria-label": app.t("Query name"),
+					onchange: function(event) {
+						entry.name = event.target.value.trim() || null;
+						app.renderQueryBar();
+						app.renderVisuals();
+						app.touched();
+					}
+				}) : null,
+				h("button", {
+					type: "button",
+					className: "btn btn-sm btn-outline-primary text-nowrap",
+					title: app.t("A new query starts as a copy of this one. The viewer filters it copies stay linked: one control filters both."),
+					onclick: function() {
+						var added = designer.addQuery(app.design, app.design.query);
+						app.selection = null;
+						app.useQuery(added.id);
+						app.changed({ render: false });
+					}
+				}, ui.icon("fa-plus"), " ", app.t("Add query")),
+				entry ? h("button", {
+					type: "button",
+					className: "btn btn-sm btn-outline-danger text-nowrap",
+					onclick: function() {
+						if (visualCount && !root.confirm(app.t("Remove this query and the visuals that show it?"))) return;
+						designer.removeQuery(app.design, entry.id);
+						app.selection = null;
+						app.useQuery("");
+						app.changed({ render: false });
+					}
+				}, ui.icon("fa-trash"), " ", app.t("Remove query")) : null,
+				h("span", { className: "small text-muted" }, (app.design.queries || []).length ? app.t("Each query groups its own data; pick the query a visual shows in its properties.") : app.t("Add a query to show data grouped another way, such as by day next to a table by agent."))
+			]);
+		};
 		app.render = function() {
+			app.renderQueryBar();
 			app.renderModel();
 			app.renderDataPane();
 			app.renderShelves();
@@ -1066,6 +1346,7 @@
 			}, ui.icon("fa-play"), " ", app.t("Run report"));
 			e.messages = h("div", { className: "report-designer-messages" });
 			e.issues = h("div");
+			e.queryBar = app.isView() ? null : h("div", { className: "rd-query-bar" });
 			e.dataPane = h("div", { className: "report-designer-data" });
 			e.shelves = h("div", { className: "report-designer-shelves" });
 			e.properties = h("div", { className: "report-designer-properties" });
@@ -1155,7 +1436,7 @@
 				}, tab.body));
 			});
 			container.classList.add("card");
-			ui.append(container, [h("div", { className: "card-header rd-header" }, nav, h("div", { className: "rd-header-tools" }, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)), h("div", { className: "card-body p-0 rd-body" }, e.historyBar, e.messages, panes)]);
+			ui.append(container, [h("div", { className: "card-header rd-header" }, nav, h("div", { className: "rd-header-tools" }, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)), h("div", { className: "card-body p-0 rd-body" }, e.historyBar, e.messages, e.queryBar, panes)]);
 			var saved = readLayout();
 			app.layout.data = !!saved.data;
 			app.layout.side = !!saved.side;
@@ -1174,23 +1455,22 @@
 			var configElement = root.document.getElementById(container.dataset.config);
 			app.config = JSON.parse(configElement.textContent);
 			app.design = app.config.payload;
-			app.design.query = app.design.query || {};
-			[
-				"dataSets",
-				"joins",
-				"calculatedFields",
-				"filters",
-				"columns",
-				"sorts"
-			].forEach(function(name) {
-				app.design.query[name] = app.design.query[name] || [];
+			app.design.query = prepareQuery(app.design.query || {});
+			app.mainQuery = app.design.query;
+			app.design.queries = (app.design.queries || []).filter(function(entry) {
+				return entry && entry.id;
 			});
-			designer.mergeJoins(app.design.query);
+			app.design.queries.forEach(function(entry) {
+				entry.query = prepareQuery(entry.query || {});
+			});
 			app.design.visuals = app.design.visuals || [];
+			app.design.containers = app.design.containers || [];
 			app.design.sharedUserNames = app.design.sharedUserNames || [];
 			app.design.sharedRoles = app.design.sharedRoles || [];
 			app.schedulePlan = ui.debounce(app.refreshPlan, 350);
 			app.schedulePreview = ui.debounce(app.refreshPreview, 900);
+			app.mainQuery = app.design.query;
+			app.design.activeQueryId = "";
 			app.buildLayout(container);
 			app.render();
 			if (app.startHistory) app.startHistory();
@@ -2392,6 +2672,141 @@
 			}, control, h("div", { className: "rd-well-hint" }, ui.icon("fa-arrow-down"), " ", app.t("Drop a field here")));
 			return labelled(label, zone);
 		}
+		function widthChoices() {
+			return [
+				{
+					value: "3",
+					text: app.t("Quarter")
+				},
+				{
+					value: "4",
+					text: app.t("Third")
+				},
+				{
+					value: "6",
+					text: app.t("Half")
+				},
+				{
+					value: "8",
+					text: app.t("Two thirds")
+				},
+				{
+					value: "12",
+					text: app.t("Full")
+				}
+			];
+		}
+		function containerLabel(container, index) {
+			return container.title || app.t("Container") + " " + (index + 1);
+		}
+		function containerProperties(container) {
+			return [
+				labelled(app.t("Title"), textInput(container.title, function(value) {
+					container.title = value;
+					app.changed();
+				}, { maxlength: "200" }), app.t("Shown in the band across the top of the container.")),
+				labelled(app.t("Width"), ui.select(widthChoices(), String(container.width || 12), { onchange: function(event) {
+					container.width = parseInt(event.target.value, 10);
+					app.changed({ render: false });
+				} }), app.t("The widths of its visuals divide the width of the container.")),
+				labelled(app.t("Height"), ui.select(designer.CONTAINER_HEIGHTS.map(function(height) {
+					return {
+						value: String(height),
+						text: height ? height + " px" : app.t("Grow with its visuals")
+					};
+				}), String(container.height || 0), { onchange: function(event) {
+					container.height = parseInt(event.target.value, 10) || 0;
+					app.changed({ render: false });
+				} }), app.t("Visuals taller than the container scroll inside it."))
+			];
+		}
+		function queryFields(query) {
+			var options = [];
+			(query.dataSets || []).forEach(function(dataSet) {
+				((app.schemaCache[dataSet.source + "|" + dataSet.dataSet] || {}).fields || []).forEach(function(field) {
+					options.push({
+						value: dataSet.alias + "." + field.name,
+						text: (dataSet.displayName || dataSet.alias) + " › " + (field.displayName || field.name)
+					});
+				});
+			});
+			(query.calculatedFields || []).forEach(function(field) {
+				options.push({
+					value: field.name,
+					text: field.label || field.name
+				});
+			});
+			return options;
+		}
+		function readsField(query, field) {
+			var alias = designer.aliasOf(field);
+			return alias ? (query.dataSets || []).some(function(dataSet) {
+				return dataSet.alias === alias;
+			}) : (query.calculatedFields || []).some(function(calculated) {
+				return calculated.name === field;
+			});
+		}
+		function actionProperties(visual, columns) {
+			var clickable = designer.clickableColumns(visual, columns, app.design.query.columns);
+			var action = visual.action || null;
+			var parts = [h("div", { className: "small fw-semibold text-muted text-uppercase mt-3 mb-1 border-top pt-2" }, app.t("When clicked")), labelled(app.t("Pick the value of"), ui.select([{
+				value: "",
+				text: app.t("Nothing, clicks do nothing")
+			}].concat(clickable.map(function(column) {
+				return {
+					value: column.id,
+					text: column.label
+				};
+			})), action ? action.columnId || "" : "", { onchange: function(event) {
+				designer.setActionColumn(visual, event.target.value);
+				app.changed();
+			} }), visual.type === "Chart" ? app.t("Clicking a bar, point or slice picks its category or series.") : app.t("Clicking a row picks its value in this column."))];
+			if (!action || !action.columnId) return parts;
+			var column = (app.design.query.columns || []).filter(function(candidate) {
+				return candidate.id === action.columnId;
+			})[0];
+			var sourceField = column ? column.field : null;
+			var others = app.design.visuals.filter(function(other) {
+				return other.id !== visual.id;
+			});
+			if (!others.length) {
+				parts.push(h("p", { className: "small text-muted" }, app.t("Add another visual for this one to filter.")));
+				return parts;
+			}
+			var list = h("div", { className: "report-designer-checklist" });
+			others.forEach(function(other) {
+				var target = (action.targets || []).filter(function(candidate) {
+					return candidate.visualId === other.id;
+				})[0];
+				var entry = app.queries().filter(function(candidate) {
+					return candidate.id === (other.queryId || "");
+				})[0];
+				var query = entry ? entry.query : app.mainQuery;
+				app.ensureSchemas(query);
+				var label = (other.title || app.config.visualLabels[other.type] || other.type) + ((app.design.queries || []).length ? " (" + app.queryName(other.queryId) + ")" : "");
+				list.appendChild(check(label, !!target, function(on) {
+					designer.toggleActionTarget(visual, other.id, on);
+					app.changed();
+				}));
+				if (!target) return;
+				var field = target.field || sourceField;
+				var readable = !!field && readsField(query, field);
+				var choices = queryFields(query);
+				if (!readable || target.field || (other.queryId || "") !== (visual.queryId || "")) list.appendChild(h("div", { className: "ms-4 mb-2" }, ui.select([{
+					value: "",
+					text: app.t("The same field") + (sourceField ? " (" + sourceField + ")" : "")
+				}].concat(choices), target.field || "", {
+					className: "form-select form-select-sm",
+					"aria-label": app.t("Field filtered in") + " " + label,
+					onchange: function(event) {
+						target.field = event.target.value || null;
+						app.changed();
+					}
+				}), readable ? null : h("div", { className: "form-text text-danger" }, app.t("Its query doesn't read this field. Pick the field to filter."))));
+			});
+			parts.push(labelled(app.t("Filter these visuals"), list, app.t("They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear.")));
+			return parts;
+		}
 		function visualProperties(visual) {
 			var columns = app.columns();
 			var dimensions = columns.filter(function(column) {
@@ -2426,31 +2841,40 @@
 					app.changed({ render: render !== false });
 				};
 			};
-			var parts = [labelled(app.t("Title"), textInput(visual.title, set("title", false), { maxlength: "200" })), labelled(app.t("Width"), ui.select([
-				{
-					value: "3",
-					text: app.t("Quarter")
-				},
-				{
-					value: "4",
-					text: app.t("Third")
-				},
-				{
-					value: "6",
-					text: app.t("Half")
-				},
-				{
-					value: "8",
-					text: app.t("Two thirds")
-				},
-				{
-					value: "12",
-					text: app.t("Full")
-				}
-			], String(visual.width || 12), { onchange: function(event) {
-				visual.width = parseInt(event.target.value, 10);
-				app.changed({ render: false });
-			} }))];
+			var parts = [
+				labelled(app.t("Title"), textInput(visual.title, set("title", false), { maxlength: "200" })),
+				labelled(app.t("Width"), ui.select(widthChoices(), String(visual.width || 12), { onchange: function(event) {
+					visual.width = parseInt(event.target.value, 10);
+					app.changed({ render: false });
+				} })),
+				(app.design.queries || []).length ? labelled(app.t("Query"), ui.select(app.queries().map(function(entry) {
+					return {
+						value: entry.id,
+						text: app.queryName(entry.id)
+					};
+				}), visual.queryId || "", { onchange: function(event) {
+					visual.queryId = event.target.value || null;
+					visual.categoryColumnId = null;
+					visual.seriesColumnId = null;
+					visual.valueColumnIds = [];
+					visual.columnIds = [];
+					visual.action = null;
+					app.useQuery(visual.queryId || "");
+					app.changed({ render: false });
+				} }), app.t("The visual shows the columns of this query.")) : null,
+				app.design.containers.length ? labelled(app.t("Container"), ui.select([{
+					value: "",
+					text: app.t("None")
+				}].concat(app.design.containers.map(function(container, index) {
+					return {
+						value: container.id,
+						text: containerLabel(container, index)
+					};
+				})), visual.containerId || "", { onchange: function(event) {
+					visual.containerId = event.target.value || null;
+					app.changed();
+				} }), app.t("Frames the visual with the others in the container.")) : null
+			];
 			switch (visual.type) {
 				case "Chart":
 					parts.push(labelled(app.t("Chart type"), ui.select([
@@ -2483,6 +2907,7 @@
 					} }), function(column) {
 						visual.seriesColumnId = column.id;
 					}), h("div", { className: "form-text mb-2" }, app.t("Draws one series per value of this column, using the first value column.")), check(app.t("Stack series"), visual.stacked, set("stacked", false)), check(app.t("Show legend"), visual.showLegend !== false, set("showLegend", false)));
+					parts.push.apply(parts, actionProperties(visual, columns));
 					break;
 				case "Metrics":
 					parts.push(well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], set("valueColumnIds")), function(column) {
@@ -2508,10 +2933,23 @@
 						visual.valueColumnIds = [column.id];
 					}), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)));
 					break;
-				default: parts.push(labelled(app.t("Columns shown"), checkboxList(all, visual.columnIds || [], set("columnIds")), app.t("Leave all unchecked to show every visible column.")), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)), check(app.t("Show subtotals"), visual.showSubtotals, set("showSubtotals", false), app.t("Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.")));
+				default:
+					parts.push(labelled(app.t("Columns shown"), checkboxList(all, visual.columnIds || [], set("columnIds")), app.t("Leave all unchecked to show every visible column.")), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)), check(app.t("Show subtotals"), visual.showSubtotals, set("showSubtotals", false), app.t("Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.")));
+					parts.push.apply(parts, actionProperties(visual, columns));
 			}
 			return parts;
 		}
+		app.selectVisual = function(visual) {
+			if ((visual.queryId || "") !== app.activeQueryId) {
+				app.selection = {
+					kind: "visual",
+					id: visual.id
+				};
+				app.useQuery(visual.queryId || "");
+				return;
+			}
+			app.select("visual", visual.id);
+		};
 		app.renderVisuals = function() {
 			var target = app.elements.visuals;
 			if (!target || app.isView()) return;
@@ -2532,6 +2970,7 @@
 					id: designer.newId("v", visuals.map(function(item) {
 						return item.id;
 					})),
+					queryId: app.activeQueryId || null,
 					type,
 					title: null,
 					width: type === "Table" || type === "Metrics" ? 12 : 6,
@@ -2566,9 +3005,9 @@
 					type: "button",
 					className: "btn btn-link btn-sm p-0 flex-grow-1 text-start text-reset text-decoration-none",
 					onclick: function() {
-						app.select("visual", visual.id);
+						app.selectVisual(visual);
 					}
-				}, visual.title || app.config.visualLabels[visual.type] || visual.type), h("button", {
+				}, visual.title || app.config.visualLabels[visual.type] || visual.type, (app.design.queries || []).length ? h("span", { className: "d-block small text-muted" }, app.queryName(visual.queryId)) : null), h("button", {
 					type: "button",
 					className: "btn btn-link btn-sm p-0 text-reset",
 					"aria-label": app.t("Move up"),
@@ -2582,7 +3021,10 @@
 					className: "btn btn-link btn-sm p-0 text-reset",
 					"aria-label": app.t("Remove"),
 					onclick: function() {
+						var removed = {};
+						removed[visual.id] = true;
 						visuals.splice(index, 1);
+						designer.forgetVisuals(app.design, removed);
 						app.selection = null;
 						app.changed();
 					}
@@ -2591,6 +3033,35 @@
 			var selectedVisual = selection.kind === "visual" ? visuals.filter(function(visual) {
 				return visual.id === selection.id;
 			})[0] : null;
+			var containers = app.design.containers;
+			var selectedContainer = selection.kind === "container" ? containers.filter(function(container) {
+				return container.id === selection.id;
+			})[0] : null;
+			var containerList = h("div", { className: "list-group list-group-flush" });
+			containers.forEach(function(container, index) {
+				var count = visuals.filter(function(visual) {
+					return visual.containerId === container.id;
+				}).length;
+				containerList.appendChild(h("div", { className: "list-group-item d-flex align-items-center gap-2 py-1" + (selectedContainer === container ? " active" : "") }, ui.icon("fa-window-maximize"), h("button", {
+					type: "button",
+					className: "btn btn-link btn-sm p-0 flex-grow-1 text-start text-reset text-decoration-none",
+					onclick: function() {
+						app.select("container", container.id);
+					}
+				}, containerLabel(container, index)), h("span", {
+					className: "badge text-bg-light",
+					title: app.t("Visuals in the container")
+				}, String(count)), h("button", {
+					type: "button",
+					className: "btn btn-link btn-sm p-0 text-reset",
+					"aria-label": app.t("Remove"),
+					onclick: function() {
+						designer.removeContainer(app.design, container.id);
+						app.selection = null;
+						app.changed();
+					}
+				}, ui.icon("fa-xmark"))));
+			});
 			ui.clear(target);
 			target.appendChild(h("div", { className: "card" }, h("div", { className: "card-header py-1 fw-semibold" }, app.t("Visuals")), visuals.length ? list : h("div", { className: "card-body p-2 small text-muted" }, app.t("Without visuals the report shows one table of the result.")), h("div", { className: "card-body p-2 d-flex flex-wrap gap-1" }, [
 				"Table",
@@ -2606,6 +3077,17 @@
 					}
 				}, ui.icon(icons[type]), " ", app.config.visualLabels[type] || type);
 			})), selectedVisual ? h("div", { className: "card-body p-2 border-top" }, visualProperties(selectedVisual)) : null));
+			target.appendChild(h("div", { className: "card mt-3" }, h("div", { className: "card-header py-1 fw-semibold" }, app.t("Containers")), containers.length ? containerList : h("div", { className: "card-body p-2 small text-muted" }, app.t("Containers frame visuals under a title and scroll them within a height, so one page can show everything.")), h("div", { className: "card-body p-2" }, h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-primary",
+				onclick: function() {
+					app.selection = {
+						kind: "container",
+						id: designer.addContainer(app.design).id
+					};
+					app.changed();
+				}
+			}, ui.icon("fa-plus"), " ", app.t("Add container"))), selectedContainer ? h("div", { className: "card-body p-2 border-top" }, containerProperties(selectedContainer)) : null));
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
 	//#endregion

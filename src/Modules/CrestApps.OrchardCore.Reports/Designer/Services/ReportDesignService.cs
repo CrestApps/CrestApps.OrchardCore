@@ -128,6 +128,8 @@ public sealed class ReportDesignService
         design.Category = ReportDesignNormalizer.Truncate(incoming.Category);
         design.Query = ReportDesignNormalizer.Normalize(incoming.Query);
         design.Visuals = ReportDesignNormalizer.Normalize(incoming.Visuals);
+        design.Containers = ReportDesignNormalizer.Normalize(incoming.Containers);
+        design.Queries = ReportDesignNormalizer.Normalize(incoming.Queries);
         design.ShowInAdminMenu = incoming.ShowInAdminMenu;
         design.AllowExport = incoming.AllowExport;
         design.SharedUserNames = Distinct(incoming.SharedUserNames);
@@ -150,7 +152,12 @@ public sealed class ReportDesignService
             return result;
         }
 
-        await CheckAsync(design.Query, design.Visuals, user, result);
+        foreach (var query in design.GetQueries())
+        {
+            var visuals = design.Visuals.Where(visual => string.Equals(visual.QueryId ?? string.Empty, query.Id ?? string.Empty, StringComparison.Ordinal)).ToList();
+
+            await CheckAsync(query.Query, visuals, user, result, query.Name);
+        }
 
         design.ModifiedUtc = existing is null ? null : _clock.UtcNow;
 
@@ -279,14 +286,16 @@ public sealed class ReportDesignService
             return query?.DataSets?.Any(dataSet => dataSet.Source == ReportsConstants.ViewsDataSource && dataSet.DataSet == viewId) == true;
         }
 
-        var designs = (await _designs.GetAllAsync()).Where(design => Uses(design.Query)).Select(design => design.DisplayText);
+        var designs = (await _designs.GetAllAsync()).Where(design => design.GetQueries().Any(query => Uses(query.Query))).Select(design => design.DisplayText);
         var views = (await _views.GetAllAsync()).Where(view => view.ItemId != viewId && Uses(view.Query)).Select(view => view.DisplayText);
 
         return designs.Concat(views).ToArray();
     }
 
-    private async Task CheckAsync(ReportQueryDefinition query, IList<ReportVisualDefinition> visuals, ClaimsPrincipal user, ReportSaveResult result)
+    private async Task CheckAsync(ReportQueryDefinition query, IList<ReportVisualDefinition> visuals, ClaimsPrincipal user, ReportSaveResult result, string queryName = null)
     {
+        var start = result.Warnings.Count;
+
         try
         {
             var plan = await _planner.PlanAsync(query, new DataSourceContext { User = user });
@@ -319,6 +328,15 @@ public sealed class ReportDesignService
             foreach (var error in exception.Errors)
             {
                 result.Warnings.Add(error);
+            }
+        }
+
+        // The problems of another query than the main one name it, so the designer knows where to look.
+        if (!string.IsNullOrEmpty(queryName))
+        {
+            for (var index = start; index < result.Warnings.Count; index++)
+            {
+                result.Warnings[index] = S["{0}: {1}", queryName, result.Warnings[index]];
             }
         }
     }
