@@ -30,7 +30,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="Secret">
     <label class="ocat-label@(Model.HasSecret ? null : " ocat-label-required")" asp-for="Secret">@T["Signing secret"]</label>
     <div class="ocat-end">
-        <input type="password" class="form-control" asp-for="Secret" autocomplete="new-password" placeholder="@(Model.HasSecret ? T["Saved. Leave empty to keep it."].Value : null)" />
+        <input type="password" class="form-control" asp-for="Secret" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasSecret ? T["Saved. Leave empty to keep it."].Value : null)" />
         <span asp-validation-for="Secret"></span>
         <span class="hint">@T["Shared with the receiver and kept encrypted. Each request carries <code>X-Webhook-Timestamp</code> and <code>X-Webhook-Signature</code>: <code>v1=</code> and the hex HMAC-SHA256 of the timestamp, a dot and the body, keyed with this secret."]</span>
     </div>
