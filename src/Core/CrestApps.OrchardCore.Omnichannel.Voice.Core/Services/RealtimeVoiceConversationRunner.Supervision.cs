@@ -1,3 +1,4 @@
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -49,7 +50,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         var note = VoiceAgentConversationLoop.SupervisorNoteGuidance(command.Text.Trim());
 
-        _ = Task.Run(() => DeliverSupervisorNoteAsync(live, note, callToken), CancellationToken.None);
+        _ = Task.Run(() => DeliverSupervisorNoteAsync(live, ChatRole.System, note, callToken), CancellationToken.None);
 
         return Task.FromResult(true);
     }
@@ -60,7 +61,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         {
             var keys = await _callerKeys.TakeWhenSettledAsync(CallerKeysSettle, callToken);
 
-            await DeliverSupervisorNoteAsync(live, VoiceAgentConversationLoop.KeysPressedTurn(keys) + " Answer it as the caller's reply.", callToken);
+            await DeliverSupervisorNoteAsync(live, ChatRole.User, VoiceAgentConversationLoop.KeysPressedTurn(keys), callToken);
         }
         catch (OperationCanceledException)
         {
@@ -68,7 +69,16 @@ public sealed partial class RealtimeVoiceConversationRunner
         }
     }
 
-    private async Task DeliverSupervisorNoteAsync(LiveConversation live, string note, CancellationToken callToken)
+    /// <summary>
+    /// Adds a message to the live conversation and asks the model to answer it.
+    /// </summary>
+    /// <remarks>
+    /// The message goes into the conversation rather than into the reply's instructions. Instructions given with
+    /// one response replace the session's for it: keys sent that way were answered without the profile's persona
+    /// or language (in Spanish, on an English call), and were gone by the next turn, so the AI could not say later
+    /// which keys had been pressed.
+    /// </remarks>
+    private async Task DeliverSupervisorNoteAsync(LiveConversation live, ChatRole role, string message, CancellationToken callToken)
     {
         try
         {
@@ -81,10 +91,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                 await Task.Delay(TimeSpan.FromMilliseconds(250), callToken);
             }
 
-            // Instructions given with one response replace the session's for it: a note given on its own was
-            // answered by a model that had lost the profile's persona and language (a caller's keys were answered
-            // in Spanish on an English call).
-            await live.Current.RequestUnpromptedResponseAsync(WithSessionInstructions(note), callToken);
+            await live.Current.AddMessageAsync(role, message, callToken);
+            await live.Current.RequestUnpromptedResponseAsync(cancellationToken: callToken);
         }
         catch (OperationCanceledException)
         {
