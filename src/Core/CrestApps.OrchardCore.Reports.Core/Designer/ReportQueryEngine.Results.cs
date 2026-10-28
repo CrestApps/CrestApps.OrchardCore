@@ -223,7 +223,8 @@ public sealed partial class ReportQueryEngine
             .ToArray();
     }
 
-    // Groups the rows of a result that isn't grouped, adding up the numbers of the other columns.
+    // Groups the rows of a result that isn't grouped, adding up the numbers of the other columns. Text that differs only
+    // in case is one group, shown with its first spelling.
     private static ReportResultGroup[] RegroupRows(ReportQueryPlan plan, IReadOnlyList<object[]> rows, IReadOnlyList<int> dimensionIndexes)
     {
         var dimensions = dimensionIndexes
@@ -234,7 +235,7 @@ public sealed partial class ReportQueryEngine
 
         foreach (var row in rows)
         {
-            var key = DataKeys.Build(row, dimensions, ignoreCase: false);
+            var key = DataKeys.Build(row, dimensions, ignoreCase: true);
 
             if (!groups.TryGetValue(key, out var values))
             {
@@ -291,12 +292,15 @@ public sealed partial class ReportQueryEngine
     }
 
     // How a grouped result reduces a row to what its groups need: the values of its dimensions, then what each measure
-    // aggregates, and how a group of these reduced rows gives the values of the columns.
+    // aggregates, and how a group of these reduced rows gives the values of the columns. Text that differs only in case
+    // groups and counts as one value, like filters and joins compare it: each dimension and distinct count takes the
+    // first spelling it reads, since Orchard Core's aggregator compares text exactly.
     private sealed class Aggregation
     {
         private readonly ReportQueryPlan _plan;
         private readonly int? _weightSlot;
         private readonly MeasureColumn[] _measureColumns;
+        private readonly Dictionary<string, string>[] _spellings;
 
         public Aggregation(ReportQueryPlan plan, bool weighted)
         {
@@ -348,6 +352,7 @@ public sealed partial class ReportQueryEngine
             Measures = measures;
             _measureColumns = [.. measureColumns];
             Width = position;
+            _spellings = new Dictionary<string, string>[plan.Columns.Count];
         }
 
         public int[] DimensionColumns { get; }
@@ -362,7 +367,7 @@ public sealed partial class ReportQueryEngine
 
             for (var index = 0; index < DimensionColumns.Length; index++)
             {
-                reduced[index] = ColumnValue(_plan.Columns[DimensionColumns[index]], row);
+                reduced[index] = Spelling(DimensionColumns[index], ColumnValue(_plan.Columns[DimensionColumns[index]], row));
             }
 
             var position = DimensionColumns.Length;
@@ -389,12 +394,32 @@ public sealed partial class ReportQueryEngine
                         break;
 
                     default:
-                        reduced[position++] = ColumnValue(column, row);
+                        var value = ColumnValue(column, row);
+
+                        reduced[position++] = column.Definition.Aggregate == DataAggregate.CountDistinct ? Spelling(measure.ColumnIndex, value) : value;
                         break;
                 }
             }
 
             return reduced;
+        }
+
+        // The first spelling read of a text value, ignoring case.
+        private object Spelling(int columnIndex, object value)
+        {
+            if (value is not string text)
+            {
+                return value;
+            }
+
+            var spellings = _spellings[columnIndex] ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!spellings.TryGetValue(text, out var spelling))
+            {
+                spellings[text] = spelling = text;
+            }
+
+            return spelling;
         }
 
         // The values of the columns of a group: its dimensions, then the value of each measure.

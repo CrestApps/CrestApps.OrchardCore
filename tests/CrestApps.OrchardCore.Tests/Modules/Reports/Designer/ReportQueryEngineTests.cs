@@ -71,6 +71,40 @@ public sealed class ReportQueryEngineTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_TextThatDiffersOnlyInCase_GroupsAndCountsAsOneValue_WithTheFirstSpelling()
+    {
+        // Arrange
+        var query = Companies();
+        query.Columns = [Column("name", "c.Name"), Column("count", ReportQueryPlanner.RowCountField), Column("regions", "c.Region", DataAggregate.CountDistinct)];
+        var context = Context();
+        context.Groupings.Add([]);
+
+        // Act
+        var result = await Engine(CompaniesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, result.Rows.Count);
+        Assert.Equal(["Acme Corp", 2L, 1L], result.Rows[0]);
+        Assert.Equal(["Globex", 1L, 1L], result.Rows[1]);
+        Assert.Equal([null, 3L, 2L], Assert.Single(result.Regroup([])).Values);
+    }
+
+    [Fact]
+    public async Task Regroup_OfRowsThatAreNotGrouped_MergesTextThatDiffersOnlyInCase()
+    {
+        // Arrange
+        var query = Companies();
+        query.Columns = [Column("name", "c.Name"), Column("employees", "c.Employees")];
+
+        // Act
+        var result = await Engine(CompaniesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsAggregated);
+        Assert.Equal([["Acme Corp", 15L], ["Globex", 7L]], result.Regroup(["name"]).Select(group => group.Values));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_CalculatedFields_EvaluatePerRowAndPerGroup()
     {
         // Arrange
@@ -493,5 +527,28 @@ public sealed class ReportQueryEngineTests
 
         // Assert
         Assert.Contains("Enable the feature", Assert.Single(plan.Errors), StringComparison.Ordinal);
+    }
+
+    private static ReportQueryDefinition Companies()
+    {
+        return new ReportQueryDefinition
+        {
+            DataSets = [new ReportDataSetReference { Alias = "c", Source = "Memory", DataSet = "Companies" }],
+        };
+    }
+
+    private static InMemoryReportDataSource CompaniesData()
+    {
+        return new InMemoryReportDataSource()
+            .Add(
+                "Companies",
+                [
+                    new DataField("Name", "Name", DataFieldType.Text),
+                    new DataField("Region", "Region", DataFieldType.Text),
+                    new DataField("Employees", "Employees", DataFieldType.Integer),
+                ],
+                ["Acme Corp", "East", 10L],
+                ["Globex", "West", 7L],
+                ["ACME CORP", "EAST", 5L]);
     }
 }

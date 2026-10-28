@@ -259,12 +259,12 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
 
     public static TheoryData<string> GroupedReports => new(GroupedQueries.Keys);
 
-    // Each report, and whether the database groups it: a group by text, or the smallest or largest text value, is read
-    // row by row, since the database compares text by its own collation and the report by its exact value.
+    // Each report, and whether the database groups it: the smallest or largest text value is read row by row, since the
+    // report orders text without regard to case and the database by its own collation.
     private static Dictionary<string, (Func<ReportQueryDefinition> Query, bool InDatabase)> GroupedQueries { get; } = new(StringComparer.Ordinal)
     {
         ["Count by status"] = (() => Activities(Column("status", "A.Status"), Column("n", "$count")), true),
-        ["Count by status and channel"] = (() => Activities(Column("status", "A.Status"), Column("channel", "A.Channel"), Column("n", "$count")), false),
+        ["Count by status and channel"] = (() => Activities(Column("status", "A.Status"), Column("channel", "A.Channel"), Column("n", "$count")), true),
         ["Attempts by local day"] = (() => Activities(
             Column("day", "A.CreatedUtc", transform: DataFieldTransform.Day),
             Column("attempts", "A.Attempts", DataAggregate.Sum),
@@ -280,7 +280,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
             Filtered(
                 Activities(Column("agent", "A.AssignedToId"), Column("n", "$count"), Column("max", "A.Attempts", DataAggregate.Max)),
                 new ReportFilterDefinition { Id = "recent", Field = "A.CreatedUtc", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Between, Values = ["2026-05-02", "2026-05-04"] }),
-            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["sms"] }), false),
+            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["sms"] }), true),
         ["Smallest and largest channel by status"] = (() => Activities(
             Column("status", "A.Status"),
             Column("first", "A.Channel", DataAggregate.Min),
@@ -291,14 +291,17 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
     [MemberData(nameof(GroupedReports))]
     public async Task Activities_GroupedInTheDatabase_GiveTheSameReportAsReadingRows(string report)
     {
-        // Arrange: channels and agents that differ only in case, and a channel in lower case, which a database that
-        // orders text by its code points puts after every upper-case one.
+        // Arrange: channels and agents that differ only in case, which the report counts as one; a pair that differs
+        // only in the case of a non-ASCII letter, which SQLite keeps apart and the report merges; and a channel in lower
+        // case, which a database that orders text by its code points puts after every upper-case one.
         await using (var seed = _store.CreateSession())
         {
             await seed.SaveAsync(new OmnichannelActivity { ItemId = "b1", Kind = ActivityKind.Sms, Channel = "Sms", Status = ActivityStatus.Completed, AssignedToId = "agent-2", Attempts = 7, CreatedUtc = _day.AddDays(2).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             await seed.SaveAsync(new OmnichannelActivity { ItemId = "b2", Kind = ActivityKind.Call, Channel = OmnichannelConstants.Channels.Phone, Status = ActivityStatus.Completed, Attempts = 2, CreatedUtc = _day.AddMonths(1).AddHours(2), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             await seed.SaveAsync(new OmnichannelActivity { ItemId = "b3", Kind = ActivityKind.Sms, Channel = "SMS", Status = ActivityStatus.Completed, AssignedToId = "Agent-2", Attempts = 3, CreatedUtc = _day.AddDays(3).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             await seed.SaveAsync(new OmnichannelActivity { ItemId = "b4", Kind = ActivityKind.Call, Channel = "chat", Status = ActivityStatus.Completed, AssignedToId = "agent-1", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b5", Kind = ActivityKind.Call, Channel = "Émail", Status = ActivityStatus.Completed, AssignedToId = "agent-3", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b6", Kind = ActivityKind.Call, Channel = "émail", Status = ActivityStatus.Completed, AssignedToId = "agent-3", Attempts = 4, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
             await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
@@ -311,10 +314,18 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(query(), TotalledContext(), TestContext.Current.CancellationToken);
         var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(query(), TotalledContext(), TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: each path shows a merged group with the first spelling it reads, so text is compared without regard to
+        // case.
         Assert.Equal(inDatabase, actual.GroupedBySource);
-        Assert.Equal(expected.Rows, actual.Rows);
-        Assert.Equal(expected.Regroup([]).Select(group => group.Values), actual.Regroup([]).Select(group => group.Values));
+        Assert.Equal(IgnoringCase(expected.Rows), IgnoringCase(actual.Rows));
+        Assert.Equal(IgnoringCase(expected.Regroup([]).Select(group => group.Values)), IgnoringCase(actual.Regroup([]).Select(group => group.Values)));
+        var dimensions = Enumerable.Range(0, actual.Columns.Count).Where(index => !actual.Columns[index].IsMeasure).ToArray();
+        Assert.Equal(actual.Rows.Count, IgnoringCase(actual.Rows).Select(row => string.Join('|', dimensions.Select(index => row[index]))).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    private static List<object[]> IgnoringCase(IEnumerable<object[]> rows)
+    {
+        return rows.Select(row => row.Select(value => value is string text ? text.ToUpperInvariant() : value).ToArray()).ToList();
     }
 
     [Fact]

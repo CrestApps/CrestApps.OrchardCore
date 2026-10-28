@@ -455,26 +455,13 @@ public sealed class TransactionReportDataSourceTests : IAsyncLifetime
         var filtered = await ((IDataAggregateSource)source).AggregateAsync(unindexed, TestContext.Current.CancellationToken);
 
         // Assert
-        // The database groups text by its own collation, so a group by the currency or the parent is left to the report;
-        // a filter on the currency is still applied in the database.
-        Assert.Null(groups);
+        Assert.NotNull(groups);
+        var byCurrency = groups.ToDictionary(row => (string)row[0], row => (Count: (long)row[1], Outstanding: Convert.ToDecimal(row[2], System.Globalization.CultureInfo.InvariantCulture)));
+        Assert.Equal(2L, byCurrency["USD"].Count);
+        Assert.Equal(110m, byCurrency["USD"].Outstanding);
+        Assert.Equal(1L, byCurrency["EUR"].Count);
+        Assert.Equal(30m, byCurrency["EUR"].Outstanding);
         Assert.Null(declined);
-
-        foreach (var (currency, count, outstanding) in new[] { ("USD", 2L, 110m), ("eur", 1L, 30m) })
-        {
-            var totals = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
-            {
-                DataSet = CommerceReportDataSets.TransactionSource.Transactions,
-                Measures = query.Measures,
-                Conditions = [Condition("Currency", DataFilterOperator.Equals, currency)],
-                Context = new DataSourceContext { User = _user },
-            }, TestContext.Current.CancellationToken);
-
-            Assert.NotNull(totals);
-            var row = Assert.Single(totals);
-            Assert.Equal(count, (long)row[0]);
-            Assert.Equal(outstanding, Convert.ToDecimal(row[1], System.Globalization.CultureInfo.InvariantCulture));
-        }
 
         // A condition on a field the index doesn't hold can't be answered in the database.
         Assert.Null(filtered);

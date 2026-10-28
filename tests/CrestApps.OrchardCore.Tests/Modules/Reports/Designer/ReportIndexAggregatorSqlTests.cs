@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 
 /// <summary>
 /// The grouping statement adds up whole-number columns without overflowing on every database, and leaves to the engine
-/// whatever a database would compare by its own collation.
+/// whatever a database's collation would merge or order differently.
 /// </summary>
 public sealed class ReportIndexAggregatorSqlTests
 {
@@ -76,11 +76,19 @@ public sealed class ReportIndexAggregatorSqlTests
         Assert.Null(statement);
     }
 
-    [Fact]
-    public void Build_AGroupByText_Declines()
+    [Theory]
+    [InlineData(nameof(SqlServerDialect), true)]
+    [InlineData(nameof(SqliteDialect), true)]
+    [InlineData(nameof(PostgreSqlDialect), true)]
+    [InlineData(nameof(MySqlDialect), false)]
+    public void Build_AGroupByText_IsLeftToTheEngineOnlyOnMySql(string dialectName, bool inDatabase)
     {
-        // Arrange: the engine groups text by its exact value; a database with a case-insensitive collation would merge
-        // values that differ only in case.
+        // Arrange: the engine groups the database's groups again ignoring case, so a database may keep values that differ
+        // only in case apart; MySQL's default collation also ignores accents, merging values the engine keeps apart.
+        var configuration = new YesSqlConfiguration
+        {
+            SqlDialect = CreateDialect(dialectName),
+        };
         var query = new DataAggregateQuery
         {
             DataSet = "Usage",
@@ -89,14 +97,14 @@ public sealed class ReportIndexAggregatorSqlTests
         };
 
         // Act
-        var statement = ReportIndexAggregator.Build<UsageIndex>(Configuration(), null, query, Columns());
+        var statement = ReportIndexAggregator.Build<UsageIndex>(configuration, null, query, Columns());
 
         // Assert
-        Assert.Null(statement);
+        Assert.Equal(inDatabase, statement is not null);
     }
 
     [Fact]
-    public void Build_GroupsByEnumsAndDates_AndCountsText_InTheDatabase()
+    public void Build_GroupsByEnumsAndDates_AndCountsAndFiltersText_InTheDatabase()
     {
         // Arrange
         var start = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc);

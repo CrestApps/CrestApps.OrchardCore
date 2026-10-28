@@ -503,18 +503,11 @@ public sealed class InventoryReportDataSourceTests : IAsyncLifetime
         Assert.Equal(1L, kindCounts["Adjusted"]);
         Assert.Equal(1L, kindCounts["Transferred"]);
 
-        // The database groups text by its own collation, so a group by a text column is left to the report; a filter on
-        // one is still applied in the database.
-        Assert.Null(products);
-        var mugs = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
-        {
-            DataSet = CommerceReportDataSets.InventorySource.StockItems,
-            Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
-            Conditions = [new DataCondition { Field = StockItemsReportDataSet.ProductIdField, Operator = DataFilterOperator.Equals, Values = ["PRODUCT-MUG"] }],
-            Context = new DataSourceContext { User = _user },
-        }, TestContext.Current.CancellationToken);
-        Assert.NotNull(mugs);
-        Assert.Equal(1L, (long)Assert.Single(mugs)[0]);
+        Assert.NotNull(products);
+        var productCounts = products.ToDictionary(row => (string)row[0], row => (long)row[1]);
+        Assert.Equal(1L, productCounts["product-mug"]);
+        Assert.Equal(1L, productCounts["product-cap"]);
+        Assert.Equal(1L, productCounts["product-old"]);
 
         // The levels are entries of the items, so the index can't group them.
         Assert.Null(levelGroups);

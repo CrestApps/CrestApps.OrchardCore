@@ -224,7 +224,7 @@ public sealed class ReviewReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_CountsByStatus_AndSumsTheStarsOfAProduct_InTheDatabase()
+    public async Task Aggregate_CountsByStatus_AndSumsStarsByProduct_InTheDatabase()
     {
         // Arrange
         await using var session = _store.CreateSession();
@@ -255,23 +255,10 @@ public sealed class ReviewReportDataSourceTests : IAsyncLifetime
         Assert.Equal(1L, counts["Pending"]);
         Assert.Equal(1L, counts["Rejected"]);
 
-        // The database groups text by its own collation, so a group by the product is left to the report; a filter on it
-        // is still applied in the database.
-        Assert.Null(products);
-
-        foreach (var (product, total) in new[] { ("product-mug", 8L), ("PRODUCT-CAP", 5L) })
-        {
-            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
-            {
-                DataSet = CommerceReportDataSets.ReviewSource.Reviews,
-                Measures = [new DataAggregateMeasure { Field = "Rating", Function = DataAggregate.Sum }],
-                Conditions = [new DataCondition { Field = "ProductId", Operator = DataFilterOperator.Equals, Values = [product] }],
-                Context = new DataSourceContext { User = _user },
-            }, TestContext.Current.CancellationToken);
-
-            Assert.NotNull(groups);
-            Assert.Equal(total, Convert.ToInt64(Assert.Single(groups)[0], CultureInfo.InvariantCulture));
-        }
+        Assert.NotNull(products);
+        var stars = products.ToDictionary(row => (string)row[0], row => Convert.ToInt64(row[1], CultureInfo.InvariantCulture));
+        Assert.Equal(8L, stars["product-mug"]);
+        Assert.Equal(5L, stars["product-cap"]);
     }
 
     [Fact]

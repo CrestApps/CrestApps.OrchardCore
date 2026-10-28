@@ -324,39 +324,23 @@ public sealed class ContactCenterLogReportDataSetTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DialerDecisions_AreCountedInTheDatabase_AsReadingTheRowsWould()
+    public async Task DialerDecisions_AreGroupedInTheDatabase_AsReadingTheRowsWould()
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var byType = CountBy(ContactCenterReportDataSets.DialerDecisions, "EventType");
-
-        async Task<object[]> TotalsAsync(string eventType)
-        {
-            var query = CountBy(ContactCenterReportDataSets.DialerDecisions, "EventType");
-            query.Groups = [];
-            query.Measures = [.. query.Measures, new DataAggregateMeasure { Function = DataAggregate.Sum, Field = "OccurrenceCount" }];
-            query.Conditions.Add(new DataCondition { Field = "EventType", Operator = DataFilterOperator.Equals, Values = [eventType] });
-
-            var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
-
-            Assert.NotNull(groups);
-
-            return Assert.Single(groups);
-        }
+        var query = CountBy(ContactCenterReportDataSets.DialerDecisions, "EventType");
+        query.Measures = [.. query.Measures, new DataAggregateMeasure { Function = DataAggregate.Sum, Field = "OccurrenceCount" }];
 
         // Act
-        var declined = await ((IDataAggregateSource)source).AggregateAsync(byType, TestContext.Current.CancellationToken);
-        var routing = await TotalsAsync(ContactCenterConstants.Events.RoutingDecisionMade);
-        var suppressed = await TotalsAsync(ContactCenterConstants.Events.DialSuppressed.ToUpperInvariant());
+        var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
 
         // Assert
-        // The database groups text by its own collation, so a group by the event type is left to the report; a filter on
-        // it is still applied in the database.
-        Assert.Null(declined);
-        Assert.Equal(2L, routing[0]);
-        Assert.Equal(6L, Convert.ToInt64(routing[1]));
-        Assert.Equal(1L, suppressed[0]);
+        Assert.NotNull(groups);
+        var byType = groups.ToDictionary(row => (string)row[0], StringComparer.Ordinal);
+        Assert.Equal(2L, byType[ContactCenterConstants.Events.RoutingDecisionMade][1]);
+        Assert.Equal(6L, Convert.ToInt64(byType[ContactCenterConstants.Events.RoutingDecisionMade][2]));
+        Assert.Equal(1L, byType[ContactCenterConstants.Events.DialSuppressed][1]);
     }
 
     [Fact]

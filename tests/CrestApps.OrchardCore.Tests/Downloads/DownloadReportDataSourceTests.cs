@@ -215,12 +215,12 @@ public sealed class DownloadReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Aggregate_CountsAnOrdersEntitlementsInTheDatabase_AndLeavesAGroupByOrderToTheReport()
+    public async Task Aggregate_CountsByOrder_InTheDatabase()
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var byOrder = new DataAggregateQuery
+        var query = new DataAggregateQuery
         {
             DataSet = CommerceReportDataSets.DownloadSource.Entitlements,
             Groups = [new DataAggregateGroup { Field = "OrderId" }],
@@ -228,30 +228,15 @@ public sealed class DownloadReportDataSourceTests : IAsyncLifetime
             Context = new DataSourceContext { User = _user },
         };
 
-        async Task<long> CountAsync(string orderId)
-        {
-            var groups = await ((IDataAggregateSource)source).AggregateAsync(new DataAggregateQuery
-            {
-                DataSet = CommerceReportDataSets.DownloadSource.Entitlements,
-                Measures = [new DataAggregateMeasure { Function = DataAggregate.Count }],
-                Conditions = [new DataCondition { Field = "OrderId", Operator = DataFilterOperator.Equals, Values = [orderId] }],
-                Context = new DataSourceContext { User = _user },
-            }, TestContext.Current.CancellationToken);
-
-            Assert.NotNull(groups);
-
-            return Convert.ToInt64(Assert.Single(groups)[0], CultureInfo.InvariantCulture);
-        }
-
         // Act
-        var declined = await ((IDataAggregateSource)source).AggregateAsync(byOrder, TestContext.Current.CancellationToken);
+        var groups = await ((IDataAggregateSource)source).AggregateAsync(query, TestContext.Current.CancellationToken);
 
         // Assert
-        // The database groups text by its own collation, so a group by a text column is left to the report.
-        Assert.Null(declined);
-        Assert.Equal(2L, await CountAsync("order-1"));
-        Assert.Equal(1L, await CountAsync("ORDER-2"));
-        Assert.Equal(1L, await CountAsync("order-3"));
+        Assert.NotNull(groups);
+        var counts = groups.ToDictionary(row => (string)row[0], row => Convert.ToInt64(row[1], CultureInfo.InvariantCulture));
+        Assert.Equal(2L, counts["order-1"]);
+        Assert.Equal(1L, counts["order-2"]);
+        Assert.Equal(1L, counts["order-3"]);
     }
 
     [Fact]

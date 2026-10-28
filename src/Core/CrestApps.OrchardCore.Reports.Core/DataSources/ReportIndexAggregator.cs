@@ -15,11 +15,15 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// <item><description>a text comparison other than equality, or equality on non-ASCII text (the engine ignores case,
 /// and databases only fold the case of ASCII letters alike);</description></item>
 /// <item><description>an empty-text test on a text column (the engine treats blank text as empty);</description></item>
-/// <item><description>a group by a text column, or the smallest or largest value of one (the engine groups text by its
-/// exact value and orders it without regard to case, while a database groups and orders text by its own collation, so
-/// values that differ only in case could be merged or ordered differently);</description></item>
+/// <item><description>a group by a text column on MySQL, whose default collation also ignores accents and would merge
+/// values the engine keeps apart;</description></item>
+/// <item><description>the smallest or largest value of a text column (the engine orders text without regard to case,
+/// which no database collation matches);</description></item>
 /// <item><description>more groups than <see cref="DataAggregateQuery.MaxGroups"/>.</description></item>
 /// </list>
+/// Text is grouped by the column itself. The engine groups the rows it gets back again, ignoring case, so a database
+/// may keep values that differ only in case apart (PostgreSQL, or non-ASCII letters on SQLite) but must not merge
+/// values that differ otherwise.
 /// Enum columns, which YesSql stores as numbers, are compared and grouped by name. Date buckets are written as a
 /// <c>CASE</c> expression over UTC boundaries, which every database understands. The statement runs in the session's
 /// own transaction.
@@ -162,7 +166,7 @@ public static class ReportIndexAggregator
         foreach (var group in query.Groups)
         {
             if (!TryColumn(group.Field, out var column, out var type) ||
-                (type == typeof(string) && group.Boundaries is null))
+                (type == typeof(string) && group.Boundaries is null && string.Equals(dialect.Name, "MySql", StringComparison.OrdinalIgnoreCase)))
             {
                 return null;
             }
