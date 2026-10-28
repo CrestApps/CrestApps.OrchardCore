@@ -481,6 +481,38 @@ public sealed class VoiceCallConclusionWiringTests
     /// subject's actions are wired to, a model that answers on request, and a recording executor standing in for
     /// the subject's workflow.
     /// </summary>
+    [Fact]
+    public async Task ACallWhosePersonaSpeaksGreek_IsReviewedWithTheSummaryAskedForInGreek()
+    {
+        // Arrange
+        // The review is asked for in English, and an English prompt is answered in English: live, a call held in
+        // Greek was summarized in English for an office that works in Greek.
+        var harness = new ConclusionHarness(personaLanguage: "el-GR");
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "Ο πελάτης θέλει προσφορά.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal("Greek", harness.ReviewPromptArguments["Language"]);
+    }
+
+    [Fact]
+    public async Task ACallWhosePersonaNamesNoLanguage_IsReviewedAsBefore()
+    {
+        // Arrange
+        var harness = new ConclusionHarness();
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote by Friday.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Null(harness.ReviewPromptArguments["Language"]);
+    }
+
     private sealed class ConclusionHarness
     {
         private readonly List<AIChatSessionPrompt> _prompts;
@@ -488,7 +520,8 @@ public sealed class VoiceCallConclusionWiringTests
         private readonly VoiceAgentConversationLoop _loop;
         private readonly IServiceProvider _services;
 
-        public ConclusionHarness()
+        /// <param name="personaLanguage">The language of the persona the call's profile speaks as; none by default.</param>
+        public ConclusionHarness(string personaLanguage = null)
         {
             Activity = new OmnichannelActivity
             {
@@ -626,7 +659,13 @@ public sealed class VoiceCallConclusionWiringTests
                     VoiceTemplateIds.ConclusionAnalysis,
                     It.IsAny<IDictionary<string, object>>(),
                     It.IsAny<CancellationToken>()))
+                .Callback<string, IDictionary<string, object>, CancellationToken>((_, arguments, _) => ReviewPromptArguments = arguments)
                 .ReturnsAsync("Review the call and choose one of the dispositions offered.");
+
+            var personaResolver = new Mock<IAIPersonaResolver>();
+            personaResolver
+                .Setup(resolver => resolver.ResolveAsync(It.IsAny<ExtensibleEntity>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ResolvedAIPersona { Id = "receptionist", Language = personaLanguage });
 
             // The conclusion runs in a deferred shell scope and resolves everything it needs from that scope's
             // service provider rather than from the loop's own constructor, so this provider -- not the
@@ -649,6 +688,7 @@ public sealed class VoiceCallConclusionWiringTests
                 .AddSingleton(dispositionCatalog.Object)
                 .AddSingleton(actionCatalog.Object)
                 .AddSingleton(templateService.Object)
+                .AddSingleton(personaResolver.Object)
                 .AddSingleton<ISubjectActionExecutor>(Executor)
                 .AddSingleton(Options.Create(_documentJsonOptions))
                 .AddSingleton<IClock>(new StubClock(_now))
@@ -693,6 +733,11 @@ public sealed class VoiceCallConclusionWiringTests
         }
 
         public OmnichannelActivity Activity { get; }
+
+        /// <summary>
+        /// What the review's prompt was rendered with.
+        /// </summary>
+        public IDictionary<string, object> ReviewPromptArguments { get; private set; }
 
         public ContentItem Contact { get; }
 
