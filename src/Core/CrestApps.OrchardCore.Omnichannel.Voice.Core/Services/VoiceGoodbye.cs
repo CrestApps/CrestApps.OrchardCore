@@ -12,8 +12,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// waiting to hear. So the line before has to have been a goodbye for the next to count as a repeat.
 /// </para>
 /// <para>
-/// English phrases only. A line in another language is never taken for a goodbye, which at worst lets a repeated
-/// goodbye be heard -- the older, lesser problem -- and never mutes what the assistant still had to say.
+/// English and Greek phrases. A line in another language is never taken for a goodbye, which at worst lets a repeated
+/// goodbye be heard -- the older, lesser problem -- and never mutes what the assistant still had to say. Greek was added
+/// when a call held in it ended with «γεια σας» said twice: the first was not recognised, so the end-call tool asked for
+/// a goodbye that had already been said.
 /// </para>
 /// </remarks>
 internal static class VoiceGoodbye
@@ -36,7 +38,26 @@ internal static class VoiceGoodbye
         "all the best",
         "thanks for your time",
         "thank you for your time",
+        "αντίο",
+        "καλή συνέχεια",
+        "να είστε καλά",
+        "να είσαι καλά",
+        "καλή σας μέρα",
+        "καλή σας ημέρα",
+        "καλό σας απόγευμα",
+        "καλό σας βράδυ",
+        "καληνύχτα",
+        "τα λέμε",
     ];
+
+    // «Γεια σας» opens a call as well as closing one, so it is a goodbye only as the line's last words.
+    private static readonly string[] _finalClosings =
+    [
+        "γεια σας",
+        "γεια σου",
+    ];
+
+    private static readonly char[] _trailing = [' ', '.', '!', '?', ',', ';', ':', '…', '"', '»', ')', '\u037E'];
 
     /// <summary>
     /// Whether the line is a goodbye.
@@ -52,6 +73,16 @@ internal static class VoiceGoodbye
         foreach (var closing in _closings)
         {
             if (line.Contains(closing, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        var ending = line.TrimEnd(_trailing);
+
+        foreach (var closing in _finalClosings)
+        {
+            if (ending.EndsWith(closing, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
