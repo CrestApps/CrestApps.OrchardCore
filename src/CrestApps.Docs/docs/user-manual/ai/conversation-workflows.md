@@ -24,12 +24,9 @@ An AI conversation can be a website chat, a text thread or a phone call. Workflo
 
 Every AI conversation keeps a set of named values, called **conversation variables**. A workflow can set them before the conversation starts or while it runs, and the AI captures some of them itself when the profile collects information (see **Enable data extraction** on the AI profile).
 
-The AI profile's instructions can use them. Write a variable's name in the **System message** like this, and the AI sees the value instead:
+The AI profile's instructions can use them. Write a variable's name between double braces in the **System message**, such as `{{ Variables.first_name }}`, and the AI sees the value instead. For example, `You are talking to {{ Variables.first_name }}, a {{ Variables.tier }} customer.`
 
-```liquid
-You are talking to {{ Variables.first_name }}, a {{ Variables.tier }} customer.
-{% if Variables.balance_due %}They owe {{ Variables.balance_due }}. Offer a payment plan.{% endif %}
-```
+To include a sentence only when a value is set, put it between `{% if Variables.balance_due %}` and `{% endif %}`.
 
 The instructions can also read the conversation itself:
 
