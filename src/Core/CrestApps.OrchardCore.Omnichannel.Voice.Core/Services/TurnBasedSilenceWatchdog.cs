@@ -65,11 +65,7 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
 
         // Not awaited: the request that armed this has to be answered now, and the wait must not depend on
         // whether that request lives long enough to see it through.
-        var armed = string.IsNullOrEmpty(silence.ActivityId)
-            ? 0
-            : _armed.AddOrUpdate(silence.ActivityId, 1, static (_, count) => count + 1);
-
-        _ = WatchAsync(silence, HeardCount(silence.ActivityId), armed);
+        _ = WatchAsync(silence, Begin(silence.ActivityId));
 
         return Task.CompletedTask;
     }
@@ -96,28 +92,54 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     public long HeardCount(string activityId)
         => string.IsNullOrEmpty(activityId) ? 0 : _heard.GetValueOrDefault(activityId);
 
-    private async Task WatchAsync(TurnBasedSilence silence, long heardWhenArmed, long armed)
+    /// <summary>
+    /// Starts a watch on a call, replacing any watch already running on it.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <returns>What the watch was started with, for <see cref="IsStillSilent"/>.</returns>
+    internal (long Heard, long Armed) Begin(string activityId)
+        => string.IsNullOrEmpty(activityId)
+            ? (0, 0)
+            : (HeardCount(activityId), _armed.AddOrUpdate(activityId, 1, static (_, count) => count + 1));
+
+    /// <summary>
+    /// Whether a watch that has waited its time should speak up: it is still the call's latest watch, and the
+    /// caller has not been heard since it began.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <param name="watch">What the watch was started with.</param>
+    internal bool IsStillSilent(string activityId, (long Heard, long Armed) watch)
+    {
+        if (string.IsNullOrEmpty(activityId))
+        {
+            return true;
+        }
+
+        // The assistant said another line after this watch began, and that line's watch counts from its end.
+        // Live, a watch begun when "are you still there?" ended fired 1.3 seconds after the reply queued behind it,
+        // while the caller was answering, and cut their sentence off.
+        if (_armed.GetValueOrDefault(activityId) != watch.Armed)
+        {
+            return false;
+        }
+
+        // The caller spoke during the wait. The turn answering them listens again, and watches again, when it is
+        // done.
+        return HeardCount(activityId) == watch.Heard;
+    }
+
+    private async Task WatchAsync(TurnBasedSilence silence, (long Heard, long Armed) watch)
     {
         try
         {
             await Task.Delay(silence.Wait ?? SilenceBeforeSpeakingUp);
 
-            // The assistant said another line after this watch began, and that line's watch counts from its end.
-            // Live, a watch begun when "are you still there?" ended fired 1.3 seconds after the reply queued behind
-            // it, while the caller was answering, and cut their sentence off.
-            if (!string.IsNullOrEmpty(silence.ActivityId) && _armed.GetValueOrDefault(silence.ActivityId) != armed)
-            {
-                return;
-            }
-
-            // The caller spoke during the wait. The turn answering them listens again, and watches again, when it
-            // is done.
-            if (HeardCount(silence.ActivityId) != heardWhenArmed)
+            if (!IsStillSilent(silence.ActivityId, watch))
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
                     _logger.LogDebug(
-                        "The caller on automated call activity '{ActivityId}' spoke during the listening turn, so it is not treated as silent.",
+                        "The listening turn on automated call activity '{ActivityId}' was not silent: the caller spoke, or the assistant said something after it began.",
                         silence.ActivityId.SanitizeLogValue());
                 }
 

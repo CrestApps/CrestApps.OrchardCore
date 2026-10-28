@@ -21,6 +21,32 @@ public sealed class CallerKeyBufferTests
     }
 
     [Fact]
+    public async Task KeysReceivedOutOfOrder_AreAnsweredInTheOrderPressed()
+    {
+        // Each key's webhook is handled on its own request, and those do not always finish in the order the keys
+        // were pressed.
+        var buffer = new CallerKeyBuffer();
+        var pressed = new DateTime(2026, 10, 28, 20, 41, 11, DateTimeKind.Utc);
+
+        buffer.Add("9", pressed.AddMilliseconds(300));
+        buffer.Add("8", pressed);
+        buffer.Add("1", pressed.AddMilliseconds(600));
+
+        Assert.Equal("891", await buffer.TakeWhenSettledAsync(_settle, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task KeysWithoutATime_KeepTheOrderTheyArrivedIn()
+    {
+        var buffer = new CallerKeyBuffer();
+
+        buffer.Add("9", new DateTime(2026, 10, 28, 20, 41, 12, DateTimeKind.Utc));
+        buffer.Add("8");
+
+        Assert.Equal("98", await buffer.TakeWhenSettledAsync(_settle, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task KeysPressedWhileWaiting_JoinTheSameEntry()
     {
         var buffer = new CallerKeyBuffer();

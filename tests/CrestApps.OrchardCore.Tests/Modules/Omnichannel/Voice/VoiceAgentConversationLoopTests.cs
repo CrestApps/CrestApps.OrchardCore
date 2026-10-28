@@ -260,6 +260,78 @@ public sealed partial class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task WhenThePersonSpeaks_TheSilenceWatchdogHearsThemBeforeTheReplyIsWritten()
+    {
+        // Arrange
+        // The caller's line is saved when the webhook that heard it ends, after the reply has been written. Live, a
+        // silence watch that fired in between found nothing from the caller, took the call for a voicemail and hung
+        // up on them.
+        var harness = new LoopHarness();
+        harness.Reply = "We have a few that would suit you.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        long heardWhileReplying = 0;
+        harness.DuringCompletion = () => heardWhileReplying = harness.SilenceWatchdog.HeardCount(harness.Activity.ItemId);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, heardWhileReplying);
+    }
+
+    [Fact]
+    public async Task AReply_OvertakenByANewerCallerLine_IsNotSpoken()
+    {
+        // Arrange
+        // Live, replies to lines the caller had already moved on from were queued one behind another, and the
+        // assistant talked over itself for half a minute.
+        var harness = new LoopHarness();
+        harness.Reply = "We have a few that would suit you.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        harness.DuringCompletion = () => harness.SilenceWatchdog.CallerHeard(harness.Activity.ItemId);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.DoesNotContain("We have a few that would suit you.", harness.Media.Spoken);
+    }
+
+    [Fact]
+    public async Task AKeyPressed_OnATurnBasedCall_IsCollectedRatherThanAnswered()
+    {
+        // Arrange
+        // Live, five keys were five turns, and the caller heard five replies in a row about one zip code.
+        var harness = new LoopHarness();
+        harness.Reply = "Got it.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        var spokenBefore = harness.Media.Spoken.Count;
+
+        // Act
+        await harness.Loop.HandleAsync(KeyPressed(harness, "8"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("8", Assert.Single(harness.CallerKeys.Collected).Digits);
+        Assert.Contains(harness.Activity.ItemId, harness.SilenceWatchdog.Heard);
+        Assert.Equal(spokenBefore, harness.Media.Spoken.Count);
+    }
+
+    [Fact]
+    public async Task CollectedKeys_AreAnsweredAsOneTurn()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        harness.Reply = "Got it, 89147.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.Loop.OnCallerKeysAsync(KeyPressed(harness, "8"), "89147", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Got it, 89147.", harness.Media.Spoken[^1]);
+    }
+
+    [Fact]
     public async Task TheEndCallTool_IsOfferedOnATurnBasedCall()
     {
         // Arrange
@@ -1191,6 +1263,16 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Assert
         Assert.Empty(harness.Media.Spoken);
     }
+
+    private static VoiceAgentEvent KeyPressed(LoopHarness harness, string digits)
+        => new()
+        {
+            Kind = VoiceAgentEventKind.DigitsReceived,
+            ProviderCallId = "call-1",
+            ProviderName = "Fake",
+            ActivityId = harness.Activity.ItemId,
+            Digits = digits,
+        };
 
     /// <summary>
     /// A realtime runner that records the session it was asked for instead of opening one.
