@@ -15,8 +15,15 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// <item><description>a text comparison other than equality, or equality on non-ASCII text (the engine ignores case,
 /// and databases only fold the case of ASCII letters alike);</description></item>
 /// <item><description>an empty-text test on a text column (the engine treats blank text as empty);</description></item>
+/// <item><description>a group by a text column on MySQL, whose default collation also ignores accents and would merge
+/// values the engine keeps apart;</description></item>
+/// <item><description>the smallest or largest value of a text column (the engine orders text without regard to case,
+/// which no database collation matches);</description></item>
 /// <item><description>more groups than <see cref="DataAggregateQuery.MaxGroups"/>.</description></item>
 /// </list>
+/// Text is grouped by the column itself. The engine groups the rows it gets back again, ignoring case, so a database
+/// may keep values that differ only in case apart (PostgreSQL, or non-ASCII letters on SQLite) but must not merge
+/// values that differ otherwise. Each text group returns its smallest spelling in ordinal order, which the engine shows.
 /// Enum columns, which YesSql stores as numbers, are compared and grouped by name. Date buckets are written as a
 /// <c>CASE</c> expression over UTC boundaries, which every database understands. The statement runs in the session's
 /// own transaction.
@@ -158,7 +165,8 @@ public static class ReportIndexAggregator
 
         foreach (var group in query.Groups)
         {
-            if (!TryColumn(group.Field, out var column, out var type))
+            if (!TryColumn(group.Field, out var column, out var type) ||
+                (type == typeof(string) && group.Boundaries is null && string.Equals(dialect.Name, "MySql", StringComparison.OrdinalIgnoreCase)))
             {
                 return null;
             }
@@ -185,7 +193,7 @@ public static class ReportIndexAggregator
                 statement.Columns.Add(typeof(long));
             }
 
-            selects.Add(expression);
+            selects.Add(type == typeof(string) && group.Boundaries is null ? SmallestSpelling(dialect, column) : expression);
             groups.Add(expression);
         }
 
@@ -206,7 +214,7 @@ public static class ReportIndexAggregator
 
             if (!TryColumn(measure.Field, out var column, out var type) ||
                 (type.IsEnum && measure.Function != DataAggregate.Count) ||
-                (type == typeof(string) && measure.Function is DataAggregate.Sum))
+                (type == typeof(string) && measure.Function is DataAggregate.Sum or DataAggregate.Min or DataAggregate.Max))
             {
                 return null;
             }
@@ -402,6 +410,19 @@ public static class ReportIndexAggregator
         }
 
         return false;
+    }
+
+    // The spelling a text group shows: the smallest in ordinal order, as the engine shows it. A database whose collation
+    // merges values that differ only in case returns one spelling of each group, so it is asked for the smallest under a
+    // binary collation; PostgreSQL keeps the spellings apart and the engine picks among them.
+    private static string SmallestSpelling(ISqlDialect dialect, string column)
+    {
+        return dialect.Name switch
+        {
+            "Sqlite" => $"MIN({column} COLLATE BINARY)",
+            "SqlServer" => $"MIN({column} COLLATE Latin1_General_100_BIN2)",
+            _ => column,
+        };
     }
 
     // SQL Server adds up an int or smallint column as an int, which overflows past about two billion, such as the tokens
