@@ -38,6 +38,10 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     // has changed by the time it fires.
     private readonly ConcurrentDictionary<string, long> _heard = new(StringComparer.Ordinal);
 
+    // How many watches each call has armed. Only the latest may fire: the assistant can say two lines back to back,
+    // and the silence is counted from the end of the last one.
+    private readonly ConcurrentDictionary<string, long> _armed = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TurnBasedSilenceWatchdog"/> class.
     /// </summary>
@@ -61,7 +65,11 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
 
         // Not awaited: the request that armed this has to be answered now, and the wait must not depend on
         // whether that request lives long enough to see it through.
-        _ = WatchAsync(silence, HeardCount(silence.ActivityId));
+        var armed = string.IsNullOrEmpty(silence.ActivityId)
+            ? 0
+            : _armed.AddOrUpdate(silence.ActivityId, 1, static (_, count) => count + 1);
+
+        _ = WatchAsync(silence, HeardCount(silence.ActivityId), armed);
 
         return Task.CompletedTask;
     }
@@ -80,6 +88,7 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
         if (!string.IsNullOrEmpty(activityId))
         {
             _heard.TryRemove(activityId, out _);
+            _armed.TryRemove(activityId, out _);
         }
     }
 
@@ -87,11 +96,19 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     public long HeardCount(string activityId)
         => string.IsNullOrEmpty(activityId) ? 0 : _heard.GetValueOrDefault(activityId);
 
-    private async Task WatchAsync(TurnBasedSilence silence, long heardWhenArmed)
+    private async Task WatchAsync(TurnBasedSilence silence, long heardWhenArmed, long armed)
     {
         try
         {
             await Task.Delay(silence.Wait ?? SilenceBeforeSpeakingUp);
+
+            // The assistant said another line after this watch began, and that line's watch counts from its end.
+            // Live, a watch begun when "are you still there?" ended fired 1.3 seconds after the reply queued behind
+            // it, while the caller was answering, and cut their sentence off.
+            if (!string.IsNullOrEmpty(silence.ActivityId) && _armed.GetValueOrDefault(silence.ActivityId) != armed)
+            {
+                return;
+            }
 
             // The caller spoke during the wait. The turn answering them listens again, and watches again, when it
             // is done.
