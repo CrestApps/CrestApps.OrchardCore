@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
 /// <summary>
@@ -9,26 +7,31 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// Providers report each key as its own event, and a caller typing "1234" sends four of them within a fraction of a
 /// second. Answered one at a time, that was four replies asked for at once, each about a single digit. So keys are
 /// collected until the caller stops pressing, and answered together.
+/// <para>
+/// Each key's webhook can be handled on its own request, and those do not always finish in the order the keys were
+/// pressed. So a key's time, when the provider reports it, decides its place.
+/// </para>
 /// </remarks>
 internal sealed class CallerKeyBuffer
 {
     private readonly Lock _lock = new();
-    private readonly StringBuilder _keys = new();
+    private readonly List<(DateTime? PressedUtc, string Keys)> _keys = [];
     private bool _collecting;
 
     /// <summary>
     /// Adds keys the caller pressed.
     /// </summary>
     /// <param name="keys">The keys.</param>
+    /// <param name="pressedUtc">When the provider says they were pressed, if it says.</param>
     /// <returns>
     /// <see langword="true"/> when these keys start a new entry, so the caller is the one to take it with
     /// <see cref="TakeWhenSettledAsync"/>; <see langword="false"/> when they joined an entry already being collected.
     /// </returns>
-    public bool Add(string keys)
+    public bool Add(string keys, DateTime? pressedUtc = null)
     {
         lock (_lock)
         {
-            _keys.Append(keys);
+            _keys.Add((pressedUtc, keys));
 
             if (_collecting)
             {
@@ -57,21 +60,26 @@ internal sealed class CallerKeyBuffer
         {
             lock (_lock)
             {
-                seen = _keys.Length;
+                seen = _keys.Count;
             }
 
             await Task.Delay(settle, cancellationToken);
 
             lock (_lock)
             {
-                now = _keys.Length;
+                now = _keys.Count;
             }
         }
         while (now != seen);
 
         lock (_lock)
         {
-            var keys = _keys.ToString();
+            // Ordered by time only when every key has one; otherwise the order they arrived in is the best there is.
+            var ordered = _keys.TrueForAll(key => key.PressedUtc.HasValue)
+                ? _keys.OrderBy(key => key.PressedUtc.Value)
+                : _keys.AsEnumerable();
+
+            var keys = string.Concat(ordered.Select(key => key.Keys));
             _keys.Clear();
             _collecting = false;
 

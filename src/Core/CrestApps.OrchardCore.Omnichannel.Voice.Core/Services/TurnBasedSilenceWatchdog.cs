@@ -67,11 +67,11 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     }
 
     /// <inheritdoc/>
-    public void CallerHeard(string activityId)
+    public long CallerHeard(string activityId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(activityId);
 
-        _heard.AddOrUpdate(activityId, 1, static (_, count) => count + 1);
+        return _heard.AddOrUpdate(activityId, 1, static (_, count) => count + 1);
     }
 
     /// <inheritdoc/>
@@ -83,7 +83,8 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
         }
     }
 
-    internal long HeardCount(string activityId)
+    /// <inheritdoc/>
+    public long HeardCount(string activityId)
         => string.IsNullOrEmpty(activityId) ? 0 : _heard.GetValueOrDefault(activityId);
 
     private async Task WatchAsync(TurnBasedSilence silence, long heardWhenArmed)

@@ -75,6 +75,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IVoiceAgentMediaProviderResolver _mediaResolver;
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ITurnBasedSilenceWatchdog _silenceWatchdog;
+    private readonly ITurnBasedCallerKeys _callerKeys;
     private readonly IAIVoiceSessionTracker _sessionTracker;
     private readonly IAIVoiceCallShutdown _callShutdown;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
@@ -110,6 +111,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IVoiceAgentMediaProviderResolver mediaResolver,
         IRealtimeVoiceConversationRunner realtimeRunner,
         ITurnBasedSilenceWatchdog silenceWatchdog,
+        ITurnBasedCallerKeys callerKeys,
         IAIVoiceSessionTracker sessionTracker,
         IAIVoiceCallShutdown callShutdown,
         ILiquidTemplateManager liquidTemplateManager,
@@ -143,6 +145,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _mediaResolver = mediaResolver;
         _realtimeRunner = realtimeRunner;
         _silenceWatchdog = silenceWatchdog;
+        _callerKeys = callerKeys;
         _sessionTracker = sessionTracker;
         _callShutdown = callShutdown;
         _liquidTemplateManager = liquidTemplateManager;
@@ -203,7 +206,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     await OnHangupAsync(voiceEvent, cancellationToken);
                     break;
                 case VoiceAgentEventKind.DigitsReceived:
-                    await OnDigitsReceivedAsync(voiceEvent, media, cancellationToken);
+                    await OnDigitsReceivedAsync(voiceEvent);
                     break;
                 case VoiceAgentEventKind.AnswererDetected:
                     await ObserveAsync(voiceEvent, AutomatedVoiceCallObservationKind.AnswererDetected, cancellationToken: cancellationToken);
@@ -589,7 +592,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         // Before anything slow: the line is stored with this request, and a silence watch that fired while the reply
         // was still being written would find nothing from the caller.
-        _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
+        var heard = _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
 
         // Read before this turn is stored, so the turn being judged is not mistaken for somebody having already spoken.
         var turnsBefore = prompts.Count;
@@ -613,6 +616,11 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         }
 
         await stopListening;
+
+        if (!handoffRequested && ReplyWasOvertaken(voiceEvent, heard))
+        {
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(reply) && !handoffRequested)
         {
@@ -663,6 +671,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         ReleaseVoicemailClaim(voiceEvent.ActivityId);
         _answeringMachineSignals.Forget(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
         _silenceWatchdog.Forget(voiceEvent.ActivityId);
+        _callerKeys.Forget(voiceEvent.ActivityId);
 
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 

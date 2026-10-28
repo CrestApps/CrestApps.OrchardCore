@@ -1208,8 +1208,27 @@ public sealed partial class VoiceAgentConversationLoopTests
             return Task.CompletedTask;
         }
 
-        public void CallerHeard(string activityId)
-            => Heard.Add(activityId);
+        public long CallerHeard(string activityId)
+        {
+            Heard.Add(activityId);
+
+            return HeardCount(activityId);
+        }
+
+        public long HeardCount(string activityId)
+            => Heard.Count(heard => heard == activityId);
+
+        public void Forget(string activityId)
+        {
+        }
+    }
+
+    private sealed class RecordingCallerKeys : ITurnBasedCallerKeys
+    {
+        public List<VoiceAgentEvent> Collected { get; } = [];
+
+        public void Collect(VoiceAgentEvent voiceEvent)
+            => Collected.Add(voiceEvent);
 
         public void Forget(string activityId)
         {
@@ -1404,6 +1423,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 new VoiceAgentMediaProviderResolver([Media, new FakeVoiceAgentMediaProvider("OtherFake")]),
                 Realtime,
                 SilenceWatchdog,
+                CallerKeys,
                 SessionTracker,
                 CallShutdown,
                 Mock.Of<ILiquidTemplateManager>(),
@@ -1448,6 +1468,8 @@ public sealed partial class VoiceAgentConversationLoopTests
         /// Every listening turn the loop asked to have watched for silence.
         /// </summary>
         public RecordingSilenceWatchdog SilenceWatchdog { get; } = new();
+
+        public RecordingCallerKeys CallerKeys { get; } = new();
 
         public VoiceAgentConversationLoop Loop { get; }
 

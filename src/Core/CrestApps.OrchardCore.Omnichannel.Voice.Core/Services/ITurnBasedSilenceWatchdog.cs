@@ -34,7 +34,15 @@ public interface ITurnBasedSilenceWatchdog
     /// saved, was left a message and was hung up on.
     /// </remarks>
     /// <param name="activityId">The call's activity.</param>
-    void CallerHeard(string activityId);
+    /// <returns>How many caller lines the call has heard, this one included.</returns>
+    long CallerHeard(string activityId);
+
+    /// <summary>
+    /// Gets how many caller lines the call has heard, so a turn can tell whether the caller has said something since.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <returns>The count, or zero for a call nothing has been heard on.</returns>
+    long HeardCount(string activityId);
 
     /// <summary>
     /// Forgets what was heard on a call that has ended.

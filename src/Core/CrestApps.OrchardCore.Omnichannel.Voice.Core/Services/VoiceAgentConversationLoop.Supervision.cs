@@ -96,12 +96,10 @@ public sealed partial class VoiceAgentConversationLoop
 
     /// <summary>
     /// The caller pressed keys: a live session hears about it through the session holding the call, and a turn-based
-    /// call takes it as the caller's turn.
+    /// call collects them until the caller stops, then takes them as one turn.
     /// </summary>
     /// <param name="voiceEvent">The provider event.</param>
-    /// <param name="media">The media provider carrying the call.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    private async Task OnDigitsReceivedAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, CancellationToken cancellationToken)
+    private async Task OnDigitsReceivedAsync(VoiceAgentEvent voiceEvent)
     {
         var digits = voiceEvent.Digits?.Trim();
 
@@ -115,16 +113,37 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        await OnTranscriptionAsync(
+        // Pressing keys is the caller taking their turn: the line is not silent, and a reply still being written to
+        // what they said before is overtaken.
+        _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
+        _callerKeys.Collect(voiceEvent);
+    }
+
+    /// <summary>
+    /// Answers the keys the caller pressed on a turn-based call, once they have stopped pressing, as one turn.
+    /// </summary>
+    /// <param name="firstKey">The event of the first key, which names the call.</param>
+    /// <param name="digits">Every key pressed, in order.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    internal Task OnCallerKeysAsync(VoiceAgentEvent firstKey, string digits, CancellationToken cancellationToken)
+    {
+        var media = _mediaResolver.Get(firstKey.ProviderName) ?? _mediaResolver.GetDefault();
+
+        if (media is null || string.IsNullOrEmpty(digits))
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnTranscriptionAsync(
             new VoiceAgentEvent
             {
                 Kind = VoiceAgentEventKind.Transcription,
-                ActivityId = voiceEvent.ActivityId,
-                ProviderName = voiceEvent.ProviderName,
-                ProviderCallId = voiceEvent.ProviderCallId,
+                ActivityId = firstKey.ActivityId,
+                ProviderName = firstKey.ProviderName,
+                ProviderCallId = firstKey.ProviderCallId,
                 TranscriptionText = KeysPressedTurn(digits),
                 TranscriptionIsFinal = true,
-                OccurredUtc = voiceEvent.OccurredUtc,
+                OccurredUtc = firstKey.OccurredUtc,
             },
             media,
             cancellationToken);
