@@ -83,13 +83,90 @@ public static class ReportDesignNormalizer
     public static IList<ReportVisualDefinition> Normalize(IList<ReportVisualDefinition> visuals)
     {
         var list = (visuals ?? []).Where(visual => visual is not null).ToList();
+        var ids = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var visual in list)
         {
+            // Sections, containers and click actions find a visual by its identifier, so each has its own.
+            visual.Id = visual.Id?.Trim();
+
+            if (string.IsNullOrEmpty(visual.Id) || !ids.Add(visual.Id))
+            {
+                var next = 1;
+
+                while (!ids.Add("v" + next))
+                {
+                    next++;
+                }
+
+                visual.Id = "v" + next;
+            }
+
+            visual.QueryId = string.IsNullOrWhiteSpace(visual.QueryId) ? null : visual.QueryId.Trim();
             visual.Title = Truncate(visual.Title);
             visual.Width = Math.Clamp(visual.Width, 1, 12);
             visual.ColumnIds = (visual.ColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
             visual.ValueColumnIds = (visual.ValueColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            visual.ContainerId = string.IsNullOrWhiteSpace(visual.ContainerId) ? null : visual.ContainerId.Trim();
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Cleans the queries a report runs besides its main one: drops empty entries and those without an identifier or
+    /// with one already used, and normalizes each query.
+    /// </summary>
+    /// <param name="queries">The queries received.</param>
+    /// <returns>The cleaned queries.</returns>
+    public static IList<ReportNamedQuery> Normalize(IList<ReportNamedQuery> queries)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var list = new List<ReportNamedQuery>();
+
+        foreach (var query in queries ?? [])
+        {
+            var id = query?.Id?.Trim();
+
+            if (string.IsNullOrEmpty(id) || !ids.Add(id))
+            {
+                continue;
+            }
+
+            query.Id = id;
+            query.Name = Truncate(query.Name);
+            query.Query = Normalize(query.Query);
+            list.Add(query);
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Cleans the containers of a report: drops empty entries and those without an identifier or with one already
+    /// used, and keeps widths and heights in range.
+    /// </summary>
+    /// <param name="containers">The containers received.</param>
+    /// <returns>The cleaned containers.</returns>
+    public static IList<ReportContainerDefinition> Normalize(IList<ReportContainerDefinition> containers)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var list = new List<ReportContainerDefinition>();
+
+        foreach (var container in containers ?? [])
+        {
+            var id = container?.Id?.Trim();
+
+            if (string.IsNullOrEmpty(id) || !ids.Add(id))
+            {
+                continue;
+            }
+
+            container.Id = id;
+            container.Title = Truncate(container.Title);
+            container.Width = Math.Clamp(container.Width, 1, 12);
+            container.Height = Math.Clamp(container.Height, 0, ReportContainerDefinition.MaxHeight);
+            list.Add(container);
         }
 
         return list;

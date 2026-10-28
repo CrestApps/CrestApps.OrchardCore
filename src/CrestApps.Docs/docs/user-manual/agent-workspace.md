@@ -149,6 +149,8 @@ The bar sits as a small tab at the bottom of every admin page while you are sign
 
 During the call the bar shows the direction, contact, number, queue, status and a talk timer, plus **Open activity** or **Complete activity** and **Open customer record**. The headset icon opens **My workspace**. Your presence shows on the bar but is changed from the soft phone. The bar has no disposition controls; you pick the disposition on the activity's **Complete activity** page.
 
+If the bar says *You are signed in to take calls, but no phone of yours is open, so calls cannot reach you.*, click **Open the phone**: the phone opens in its own tab. Click once on it so it can ring, keep that one tab open, and carry on in your other tabs. The warning goes away by itself once the phone is open.
+
 ## After the call: wrap-up
 
 A call that came from a queue or a campaign puts you in **Wrap-up** when it ends, so you can finish your notes. Wrap-up does not end on a timer; you end it by completing the activity:

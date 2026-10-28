@@ -577,6 +577,8 @@ public sealed class ReportDesignHistoryService
         snapshot.GroupId = ReportDesignNormalizer.NormalizeId(content.GroupId);
         snapshot.Query = ReportDesignNormalizer.Normalize(content.Query);
         snapshot.Visuals = ReportDesignNormalizer.Normalize(content.Visuals);
+        snapshot.Containers = ReportDesignNormalizer.Normalize(content.Containers);
+        snapshot.Queries = ReportDesignNormalizer.Normalize(content.Queries);
         snapshot.ShowInAdminMenu = content.ShowInAdminMenu;
         snapshot.AllowExport = content.AllowExport;
         snapshot.SharedUserNames = (content.SharedUserNames ?? []).Where(name => !string.IsNullOrWhiteSpace(name)).Take(500).ToList();
@@ -594,6 +596,8 @@ public sealed class ReportDesignHistoryService
             design.GroupId,
             design.Query,
             design.Visuals,
+            design.Containers,
+            design.Queries,
             design.ShowInAdminMenu,
             design.AllowExport,
             design.SharedUserNames,

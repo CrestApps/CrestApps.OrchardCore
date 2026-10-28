@@ -303,6 +303,8 @@ public sealed class ReportDesignsController : Controller
             GroupId = design.GroupId,
             Query = design.Query,
             Visuals = design.Visuals,
+            Containers = design.Containers,
+            Queries = design.Queries,
             AllowExport = design.AllowExport,
         };
 

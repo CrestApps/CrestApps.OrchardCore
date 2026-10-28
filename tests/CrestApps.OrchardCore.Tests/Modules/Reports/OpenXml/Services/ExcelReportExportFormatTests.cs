@@ -43,10 +43,10 @@ public sealed class ExcelReportExportFormatTests
 
         var sheets = workbookPart.Workbook.Sheets.Elements<Sheet>().ToArray();
         Assert.Equal(4, sheets.Length);
-        Assert.Equal("Agent performance 1", sheets[0].Name);
-        Assert.Equal("Agent performance 2", sheets[1].Name);
-        Assert.Equal("Agent performance 3", sheets[2].Name);
-        Assert.Equal("Agent performance 4", sheets[3].Name);
+        Assert.Equal("Summary", sheets[0].Name);
+        Assert.Equal("Queues", sheets[1].Name);
+        Assert.Equal("Channel mix", sheets[2].Name);
+        Assert.Equal("Daily trend", sheets[3].Name);
 
         var summaryRows = GetSheetRows(workbookPart, sheets[0]);
         Assert.Equal(["Metric", "Value", "Hint"], GetCellValues(summaryRows[0]));
@@ -64,6 +64,75 @@ public sealed class ExcelReportExportFormatTests
         Assert.Equal(["Label", "Offered", "Answered"], GetCellValues(chartRows[0]));
         Assert.Equal(["Monday", "12", "10"], GetCellValues(chartRows[1]));
         Assert.Equal(["Tuesday", "18", "15"], GetCellValues(chartRows[2]));
+        Assert.Equal(CellValues.Number, chartRows[1].Elements<Cell>().ElementAt(1).DataType.Value);
+    }
+
+    [Fact]
+    public void Serialize_WhenSectionsAreInContainers_ShouldWriteEachContainerToAWorksheetNamedAfterIt()
+    {
+        // Arrange
+        var authors = ReportSection.ForTable("Authors", [new ReportColumn("Author")], [new ReportRow(["Alice"]) { Key = "alice" }, new ReportRow(["Bob"]) { Key = "bob" }]);
+        authors.Id = "v1";
+        authors.ContainerId = "k1";
+        authors.Selection = new ReportSectionSelection { TargetIds = ["v2", "v3"], SelectedKeys = ["alice"], SelectedLabels = ["Alice"] };
+
+        var posts = ReportSection.ForTable("Posts", [new ReportColumn("Title")], [new ReportRow(["Post 1"])]);
+        posts.Id = "v2";
+        posts.ContainerId = "k2";
+
+        var trend = ReportSection.ForChart("Trend", new ReportChart { Labels = ["Monday"], Datasets = [new ReportChartDataset("Posts", [3])] });
+        trend.Id = "v3";
+        trend.ContainerId = "k2";
+
+        var notes = ReportSection.ForMetrics("Notes", [new ReportMetric("Drafts", "2")]);
+        notes.Id = "v4";
+
+        var document = new ReportDocument
+        {
+            Title = "Posts dashboard",
+            Containers =
+            [
+                new ReportContainer { Id = "k1", Title = "Author scorecard" },
+                new ReportContainer { Id = "k2", Title = "Selection" },
+            ],
+        }
+            .Add(authors)
+            .Add(notes)
+            .Add(posts)
+            .Add(trend);
+
+        // Act
+        var content = new ExcelReportExportFormat().Serialize(document);
+
+        // Assert
+        using var stream = new MemoryStream(content);
+        using var spreadsheetDocument = SpreadsheetDocument.Open(stream, false);
+        var workbookPart = spreadsheetDocument.WorkbookPart;
+        var sheets = workbookPart.Workbook.Sheets.Elements<Sheet>().ToArray();
+
+        // A container is placed where its first section is, as on the page.
+        Assert.Equal(["Author scorecard", "Notes", "Selection"], sheets.Select(sheet => sheet.Name.Value));
+
+        var scorecard = GetSheetRows(workbookPart, sheets[0]).Select(GetCellValues).ToArray();
+        Assert.Equal([["Authors"], ["Author"], ["Alice"], ["Bob"]], scorecard);
+
+        // The sections of a container follow one another under their titles, each saying what filters it.
+        var selection = GetSheetRows(workbookPart, sheets[2]).Select(GetCellValues).ToArray();
+        Assert.Equal(
+            [
+                ["Posts"],
+                ["Filtered by Authors: Alice"],
+                [],
+                ["Title"],
+                ["Post 1"],
+                [],
+                ["Trend"],
+                ["Filtered by Authors: Alice"],
+                [],
+                ["Label", "Posts"],
+                ["Monday", "3"],
+            ],
+            selection);
     }
 
     [Fact]

@@ -74,6 +74,62 @@ public static class ReportFilterValueBinder
     /// </summary>
     /// <param name="value">The upper bound.</param>
     /// <returns>The adjusted bound.</returns>
+    /// <summary>
+    /// The name of the query string field that lists the visuals to refresh, separated by commas, when only the visuals
+    /// a click filters change.
+    /// </summary>
+    public const string RefreshField = "rv";
+
+    /// <summary>
+    /// Reads the values picked by clicking a report's visuals (<c>sel.{visualId}</c>, possibly several times; an empty
+    /// value picks a missing value) and the visuals to refresh.
+    /// </summary>
+    /// <param name="query">The request query string.</param>
+    /// <returns>The run options.</returns>
+    public static ReportRunOptions BindSelections(IQueryCollection query)
+    {
+        var options = new ReportRunOptions();
+
+        if (query is null)
+        {
+            return options;
+        }
+
+        foreach (var (name, values) in query)
+        {
+            if (!name.StartsWith(ReportSelectionKeys.FieldPrefix, StringComparison.Ordinal) || options.Selections.Count >= 50)
+            {
+                continue;
+            }
+
+            var visualId = name[ReportSelectionKeys.FieldPrefix.Length..];
+
+            if (visualId.Length == 0 || visualId.Length > 100)
+            {
+                continue;
+            }
+
+            options.Selections[visualId] = values
+                .Where(value => value is not null)
+                .Select(value => value.Length > ReportSelectionKeys.MaxKeyLength ? value[..ReportSelectionKeys.MaxKeyLength] : value)
+                .Distinct(StringComparer.Ordinal)
+                .Take(ReportSelectionKeys.MaxKeys)
+                .ToList();
+        }
+
+        var refresh = query[RefreshField].ToString();
+
+        if (!string.IsNullOrWhiteSpace(refresh))
+        {
+            options.VisualIds = refresh
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Take(100)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        return options;
+    }
+
     public static string NormalizeUpperBound(string value)
     {
         if (!string.IsNullOrEmpty(value) && value.EndsWith("T23:59", StringComparison.Ordinal))

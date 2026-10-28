@@ -30,6 +30,7 @@ How people use the builder is described in the User Manual, starting at [Report 
 | [Add your own data source](custom-data-sources.md) | Extending the builder with an Orchard Core data source: `IDataSource`, `RecordDataSource` and `RecordDataSet<T>`, grouping in the source, join keys, relationships, and more content parts and fields. |
 | [Formula reference](formulas.md) | The formula language of Orchard Core as reports use it: syntax, operators, types, aggregate formulas, and every built-in function. |
 | [Large data](large-data.md) | Row limits, date push-down, grouping in the source, join key narrowing, and scheduled views. |
+| [Interactive dashboards](interactive-dashboards.md) | Several queries in one report, containers that frame and scroll visuals, and click actions that filter visuals. |
 | [Drafts, versions and real time](drafts-versions-and-real-time.md) | Autosave, revisions and conflicts, publishing, versions, and SignalR presence. |
 | [Workflows and report events](workflows.md) | The workflow events and tasks, and `IReportEventHandler`. |
 | [Recipes and deployment](recipes-and-deployment.md) | The deployment step and the `ReportDesigns` recipe step. |

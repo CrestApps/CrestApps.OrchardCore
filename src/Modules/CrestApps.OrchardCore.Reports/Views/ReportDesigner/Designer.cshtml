@@ -68,6 +68,8 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <style asp-name="CrestApps.OrchardCore.Reports.Builder"></style>
+@* The preview is loaded into the page later, so the styles of report pages are added up front. *@
+<style asp-name="CrestApps.OrchardCore.Reports.Document"></style>
 @if (realTime)
 {
     <script asp-name="signalr" at="Foot"></script>

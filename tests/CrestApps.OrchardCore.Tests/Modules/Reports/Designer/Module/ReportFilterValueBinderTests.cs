@@ -113,6 +113,37 @@ public sealed class ReportFilterValueBinderTests
         Assert.Empty(normalized[0].ValueColumnIds);
     }
 
+    [Fact]
+    public void BindSelections_ReadsThePickedValuesAndTheVisualsToRefresh()
+    {
+        // Act
+        var options = ReportFilterValueBinder.BindSelections(Query(
+            ("applied", "1"),
+            ("sel.agents", "Alexis Romero"),
+            ("sel.agents", "Cesar Leon"),
+            ("sel.agents", "Alexis Romero"),
+            ("sel.trend", string.Empty),
+            ("sel.", "ignored"),
+            ("rv", " calls, trend ,,")));
+
+        // Assert
+        Assert.Equal(["agents", "trend"], options.Selections.Keys.Order());
+        Assert.Equal(["Alexis Romero", "Cesar Leon"], options.Selections["agents"]);
+        Assert.Equal([string.Empty], options.Selections["trend"]);
+        Assert.Equal(["calls", "trend"], options.VisualIds.Order());
+    }
+
+    [Fact]
+    public void BindSelections_WithoutVisualsToRefresh_ShowsEveryVisual()
+    {
+        // Act
+        var options = ReportFilterValueBinder.BindSelections(Query(("applied", "1")));
+
+        // Assert
+        Assert.Empty(options.Selections);
+        Assert.Null(options.VisualIds);
+    }
+
     private static QueryCollection Query(params (string Key, string Value)[] entries)
     {
         return new QueryCollection(entries

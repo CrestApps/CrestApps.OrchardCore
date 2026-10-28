@@ -131,6 +131,12 @@ internal static partial class AgentWorkspaceEndpoints
         }
 
         model.IsSignedIn = profile.QueueIds.Count > 0 || profile.CampaignIds.Count > 0;
+
+        // Only an agent who can be offered calls is told that no phone of theirs is open to ring.
+        if (model.IsSignedIn)
+        {
+            model.PhoneOpen = await ResolvePhoneOpenAsync(profile.UserId, httpContext.RequestServices, httpContext.RequestAborted);
+        }
         model.Presence = new WorkspacePresenceViewModel
         {
             Status = profile.PresenceStatus.ToString(),
@@ -174,6 +180,27 @@ internal static partial class AgentWorkspaceEndpoints
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);
+    }
+
+    // Whether a phone of the agent's is open, by whichever voice provider can tell: open when any says so, closed when
+    // one says none is and none says otherwise, unknown when no provider knows.
+    private static async Task<bool?> ResolvePhoneOpenAsync(string userId, IServiceProvider services, CancellationToken cancellationToken)
+    {
+        bool? open = null;
+
+        foreach (var provider in services.GetServices<IAgentPhoneStatusProvider>())
+        {
+            var status = await provider.HasOpenPhoneAsync(userId, cancellationToken);
+
+            if (status == true)
+            {
+                return true;
+            }
+
+            open ??= status;
+        }
+
+        return open;
     }
 
     // The campaigns the agent is signed in to, by name, whether sign-in recorded them among their campaigns or only as

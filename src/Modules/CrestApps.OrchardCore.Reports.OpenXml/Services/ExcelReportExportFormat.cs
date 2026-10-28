@@ -9,8 +9,9 @@ using OrchardCore.Localization;
 namespace CrestApps.OrchardCore.Reports.OpenXml.Services;
 
 /// <summary>
-/// Serializes a report document to an Excel workbook where each report section is written to its own
-/// worksheet using the Open XML SDK.
+/// Serializes a report document to an Excel workbook using the Open XML SDK. Each container is written to its own
+/// worksheet named after it, with its sections one under the other, and each section outside a container to a worksheet
+/// of its own.
 /// </summary>
 public sealed class ExcelReportExportFormat : IReportExportFormat
 {
@@ -46,29 +47,47 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
             var styleRegistry = new ExcelStyleRegistry();
             uint sheetId = 1;
 
-            if (document.Sections.Count == 0)
+            var groups = document.GetSectionGroups();
+
+            if (groups.Count == 0)
             {
                 AddWorksheet(workbookPart, sheets, usedSheetNames, DefaultSheetName, sheetId++, 0);
             }
             else
             {
-                for (var i = 0; i < document.Sections.Count; i++)
+                for (var i = 0; i < groups.Count; i++)
                 {
-                    var section = document.Sections[i];
-                    var sheetTitle = string.IsNullOrWhiteSpace(document.Title)
-                        ? section.Title
-                        : document.Sections.Count == 1
-                            ? document.Title
-                            : $"{document.Title} {i + 1}";
+                    var group = groups[i];
                     var sheetData = AddWorksheet(
                         workbookPart,
                         sheets,
                         usedSheetNames,
-                        sheetTitle,
+                        GetSheetTitle(document, groups, i),
                         sheetId,
                         i + 1);
 
-                    WriteSection(sheetData, section, styleRegistry);
+                    // A container's sections share its worksheet, each under its title; a section on a worksheet of its
+                    // own is named by the worksheet.
+                    for (var j = 0; j < group.Sections.Count; j++)
+                    {
+                        var section = group.Sections[j];
+
+                        if (group.Container is not null)
+                        {
+                            if (j > 0)
+                            {
+                                AppendEmptyRow(sheetData);
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(section.Title))
+                            {
+                                sheetData.Append(new Row(CreateCell(section.Title, styleRegistry.GetCellFormatIndex(ReportStyle.Create(bold: true)))));
+                            }
+                        }
+
+                        WriteSection(sheetData, document, section, styleRegistry);
+                    }
+
                     sheetId++;
                 }
             }
@@ -81,6 +100,30 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
         }
 
         return stream.ToArray();
+    }
+
+    // A container's worksheet is named after it and a section's after the section; a report with one section on its own
+    // names it after the report, and worksheets without a title are numbered after the report.
+    private static string GetSheetTitle(ReportDocument document, IReadOnlyList<ReportSectionGroup> groups, int index)
+    {
+        var group = groups[index];
+
+        if (!string.IsNullOrWhiteSpace(group.Container?.Title))
+        {
+            return group.Container.Title;
+        }
+
+        if (group.Container is null && groups.Count == 1 && !string.IsNullOrWhiteSpace(document.Title))
+        {
+            return document.Title;
+        }
+
+        if (group.Container is null && !string.IsNullOrWhiteSpace(group.Sections[0].Title))
+        {
+            return group.Sections[0].Title;
+        }
+
+        return string.IsNullOrWhiteSpace(document.Title) ? null : $"{document.Title} {index + 1}";
     }
 
     private static SheetData AddWorksheet(
@@ -152,8 +195,20 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
         return sanitized;
     }
 
-    private static void WriteSection(SheetData sheetData, ReportSection section, ExcelStyleRegistry styleRegistry)
+    private static void WriteSection(SheetData sheetData, ReportDocument document, ReportSection section, ExcelStyleRegistry styleRegistry)
     {
+        var filters = document.GetFilteringSections(section);
+
+        foreach (var filter in filters)
+        {
+            AppendTextRow(sheetData, FilterText(filter));
+        }
+
+        if (filters.Count > 0 && string.IsNullOrWhiteSpace(section.Description))
+        {
+            AppendEmptyRow(sheetData);
+        }
+
         if (!string.IsNullOrWhiteSpace(section.Description))
         {
             AppendTextRow(sheetData, section.Description);
@@ -175,6 +230,14 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
                 WriteChartSection(sheetData, section.Chart);
                 break;
         }
+    }
+
+    // Says which values picked in another section filter this one, as that section shows them.
+    private static string FilterText(ReportSection filter)
+    {
+        var values = string.Join(", ", filter.Selection.GetPickedValues());
+
+        return string.IsNullOrWhiteSpace(filter.Title) ? $"Filtered by: {values}" : $"Filtered by {filter.Title}: {values}";
     }
 
     private static void WriteMetricsSection(SheetData sheetData, ReportSection section)
@@ -276,20 +339,23 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
 
         AppendTextRow(sheetData, ["Label", .. chart.Datasets.Select(dataset => dataset.Label)]);
 
+        // The values are written as numbers, so the sheet can chart, add up and sort them.
         for (var labelIndex = 0; labelIndex < chart.Labels.Count; labelIndex++)
         {
-            var values = new string[chart.Datasets.Count + 1];
-            values[0] = chart.Labels[labelIndex];
+            var row = new Row(CreateCell(chart.Labels[labelIndex], 0));
 
-            for (var datasetIndex = 0; datasetIndex < chart.Datasets.Count; datasetIndex++)
+            foreach (var dataset in chart.Datasets)
             {
-                var dataset = chart.Datasets[datasetIndex];
-                values[datasetIndex + 1] = labelIndex < dataset.Values.Count
-                    ? dataset.Values[labelIndex].ToString(CultureInfo.InvariantCulture)
-                    : string.Empty;
+                row.Append(labelIndex < dataset.Values.Count && double.IsFinite(dataset.Values[labelIndex])
+                    ? new Cell
+                    {
+                        DataType = CellValues.Number,
+                        CellValue = new CellValue(dataset.Values[labelIndex].ToString("R", CultureInfo.InvariantCulture)),
+                    }
+                    : CreateCell(string.Empty, 0));
             }
 
-            AppendTextRow(sheetData, values);
+            sheetData.Append(row);
         }
     }
 

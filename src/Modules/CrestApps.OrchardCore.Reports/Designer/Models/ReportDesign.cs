@@ -47,6 +47,16 @@ public sealed class ReportDesign : CatalogItem, IDisplayTextAwareModel, IModifie
     public IList<ReportVisualDefinition> Visuals { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the containers that frame visuals on the report page.
+    /// </summary>
+    public IList<ReportContainerDefinition> Containers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the queries the report runs besides <see cref="Query"/>.
+    /// </summary>
+    public IList<ReportNamedQuery> Queries { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the report has its own item under Reports in the admin menu.
     /// </summary>
     public bool ShowInAdminMenu { get; set; }
@@ -87,6 +97,33 @@ public sealed class ReportDesign : CatalogItem, IDisplayTextAwareModel, IModifie
     /// Gets or sets the UTC time the report was last changed.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Lists the queries of the report: the main query first, with no identifier, then the others.
+    /// </summary>
+    /// <returns>The queries.</returns>
+    public IEnumerable<ReportNamedQuery> GetQueries()
+    {
+        yield return new ReportNamedQuery { Query = Query ?? new ReportQueryDefinition() };
+
+        foreach (var query in Queries ?? [])
+        {
+            if (query is not null && !string.IsNullOrEmpty(query.Id))
+            {
+                yield return query;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Lists the filters of every query of the report. Viewer filters with the same identifier in several queries share
+    /// one control.
+    /// </summary>
+    /// <returns>The filters.</returns>
+    public IEnumerable<ReportFilterDefinition> GetFilters()
+    {
+        return GetQueries().SelectMany(query => query.Query?.Filters ?? []).Where(filter => filter is not null);
+    }
 
     /// <summary>
     /// Creates a deep copy of the report so a cached instance is never changed by the code that reads it.

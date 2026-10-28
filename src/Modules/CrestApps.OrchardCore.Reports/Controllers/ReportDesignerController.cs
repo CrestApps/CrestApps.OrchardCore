@@ -312,9 +312,21 @@ public sealed class ReportDesignerController : Controller
         design.DisplayText ??= S["Preview"];
         design.Query = ReportDesignNormalizer.Normalize(design.Query);
         design.Visuals = view ? [] : ReportDesignNormalizer.Normalize(design.Visuals);
+        design.Containers = view ? [] : ReportDesignNormalizer.Normalize(design.Containers);
+        design.Queries = view ? [] : ReportDesignNormalizer.Normalize(design.Queries);
 
         var filterValues = payload.FilterValues?.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
-        var run = await _runner.RunAsync(design, User, filterValues, HttpContext.RequestAborted);
+        var options = new ReportRunOptions();
+
+        foreach (var (visualId, keys) in payload.Selections ?? [])
+        {
+            if (!string.IsNullOrEmpty(visualId) && keys is not null)
+            {
+                options.Selections[visualId] = keys.Where(key => key is not null).Take(ReportSelectionKeys.MaxKeys).ToList();
+            }
+        }
+
+        var run = await _runner.RunAsync(design, User, filterValues, period: null, options, HttpContext.RequestAborted);
 
         return PartialView("_DesignerPreview", new ReportDesignerPreviewViewModel
         {
