@@ -5,6 +5,7 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
+using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
@@ -18,8 +19,8 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.Reports.Designer.Deployments;
 
 /// <summary>
-/// A deployment step that exports designed reports and views: every one of them, or the ones picked. Share links are
-/// never exported, because a link's token cannot be recovered from what is stored and must not leave the site.
+/// A deployment step that exports designed reports and views: every one of them, or the ones picked, with the report
+/// groups they are listed under. Share links are never exported, because a link's token cannot be recovered from what is stored and must not leave the site.
 /// </summary>
 public sealed class ReportDesignsDeploymentStep : DeploymentStep
 {
@@ -55,21 +56,25 @@ public sealed class ReportDesignsDeploymentStep : DeploymentStep
 
 /// <summary>
 /// Writes designed reports and views into a deployment plan as a <c>ReportDesigns</c> recipe step, with each owner's
-/// user name so the import can match the owner on another site.
+/// user name so the import can match the owner on another site. Every report group is exported with all the reports;
+/// with picked reports, the groups they are in and the groups those are nested in.
 /// </summary>
 internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<ReportDesignsDeploymentStep>
 {
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
+    private readonly ICatalog<ReportGroup> _groups;
     private readonly UserManager<IUser> _userManager;
 
     public ReportDesignsDeploymentSource(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
+        ICatalog<ReportGroup> groups,
         UserManager<IUser> userManager)
     {
         _designs = designs;
         _views = views;
+        _groups = groups;
         _userManager = userManager;
     }
 
@@ -79,10 +84,19 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
         var allViews = await _views.GetAllAsync();
         var designs = step.IncludeAll ? allDesigns : Pick(allDesigns, step.ReportIds);
         var views = step.IncludeAll ? allViews : WithDependencies(designs, Pick(allViews, step.ViewIds), allViews);
+        var allGroups = await _groups.GetAllAsync();
+        var groups = step.IncludeAll ? allGroups : GroupsOf(designs, allGroups);
 
         var owners = new Dictionary<string, string>(StringComparer.Ordinal);
         var reportNodes = new JsonArray();
         var viewNodes = new JsonArray();
+        var groupNodes = new JsonArray();
+
+        // Parents first, so each group is written after the group it is nested in.
+        foreach (var node in new ReportGroupTree(groups).Flatten())
+        {
+            groupNodes.Add(JsonSerializer.SerializeToNode(node.Group, ReportDesignerJson.Options));
+        }
 
         foreach (var design in designs.OrderBy(design => design.DisplayText, StringComparer.OrdinalIgnoreCase))
         {
@@ -97,6 +111,7 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
         result.Steps.Add(new JsonObject
         {
             ["name"] = step.Name,
+            ["Groups"] = groupNodes,
             ["Views"] = viewNodes,
             ["Reports"] = reportNodes,
         });
@@ -108,6 +123,16 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
         var picked = new HashSet<string>(ids ?? [], StringComparer.Ordinal);
 
         return [.. items.Where(item => picked.Contains(item.ItemId))];
+    }
+
+    // The groups the reports are in, and the groups those are nested in, so each report keeps its place.
+    private static List<ReportGroup> GroupsOf(IEnumerable<ReportDesign> designs, IEnumerable<ReportGroup> allGroups)
+    {
+        var tree = new ReportGroupTree(allGroups);
+
+        return [.. designs
+            .SelectMany(design => tree.GetPath(design.GroupId))
+            .DistinctBy(group => group.ItemId)];
     }
 
     // The picked views, and every view the exported reports and views read, so each one runs on the other site.
@@ -124,7 +149,7 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
 
         foreach (var design in designs)
         {
-            foreach (var viewId in ViewsReadBy(design.Query))
+            foreach (var viewId in design.GetQueries().SelectMany(query => ViewsReadBy(query.Query)))
             {
                 pending.Enqueue(viewId);
             }

@@ -47,6 +47,68 @@ public sealed class PdfReportExportFormatTests
     }
 
     [Fact]
+    public void Serialize_WhenSectionsAreInContainersAndFilteredByPicks_ShouldWriteContainerTitlesAndWhatFiltersEachSection()
+    {
+        // Arrange
+        var authors = ReportSection.ForTable("Authors", [new ReportColumn("Author")], [new ReportRow(["Alice"]) { Key = "alice" }]);
+        authors.Id = "v1";
+        authors.ContainerId = "k1";
+        authors.Selection = new ReportSectionSelection { TargetIds = ["v3"], SelectedKeys = ["alice"], SelectedLabels = ["Alice"] };
+
+        var notes = ReportSection.ForMetrics("Notes", [new ReportMetric("Drafts", "2")]);
+        notes.Id = "v2";
+
+        var posts = ReportSection.ForTable("Posts", [new ReportColumn("Title")], [new ReportRow(["Post 1"])]);
+        posts.Id = "v3";
+        posts.ContainerId = "k1";
+
+        var document = new ReportDocument
+        {
+            Title = "Posts dashboard",
+            Containers = [new ReportContainer { Id = "k1", Title = "Author scorecard" }],
+        }
+            .Add(authors)
+            .Add(notes)
+            .Add(posts);
+
+        // Act
+        var content = CreateFormat().Serialize(document);
+
+        // Assert
+        using var pdf = PdfDocument.Open(content);
+        var text = string.Join(' ', pdf.GetPages().Select(GetText));
+
+        AssertInOrder(text, "Posts dashboard", "Author scorecard", "Authors", "Alice", "Posts", "Filtered by Authors: Alice", "Post 1", "Notes", "DRAFTS");
+    }
+
+    [Fact]
+    public void Serialize_WhenAChartShowsSmallWholeNumbers_ShouldLabelItsScaleWithoutRepeats()
+    {
+        // Arrange
+        var document = new ReportDocument { Title = "Chart" }
+            .Add(ReportSection.ForChart("Trend", new ReportChart
+            {
+                Type = ReportChartType.Line,
+                Labels = ["Monday", "Tuesday"],
+                Datasets = [new ReportChartDataset("Posts", [3, 3])],
+            }));
+
+        // Act
+        var content = CreateFormat().Serialize(document);
+
+        // Assert: the numbers above the footer are the scale's.
+        using var pdf = PdfDocument.Open(content);
+        var numbers = pdf.GetPage(1).GetWords()
+            .Where(word => word.BoundingBox.Bottom > 60)
+            .Select(word => word.Text)
+            .Where(text => int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+            .ToList();
+
+        Assert.Equal(["0", "1", "2", "3"], numbers.Distinct().Order(StringComparer.Ordinal));
+        Assert.Equal(numbers.Count, numbers.Distinct().Count());
+    }
+
+    [Fact]
     public void Serialize_WhenTableSpansPages_ShouldRepeatItsHeaderAndNumberEveryPage()
     {
         // Arrange

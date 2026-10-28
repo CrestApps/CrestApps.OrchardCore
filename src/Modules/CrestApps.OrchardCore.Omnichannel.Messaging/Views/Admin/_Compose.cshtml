@@ -38,7 +38,7 @@
         <label asp-for="ContactAddresses" class="messaging-compose-label">@T["To"]</label>
         <div class="flex-grow-1" style="min-width: 0;">
             <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-style="btn-theme border-0 bg-transparent px-0"
-                    title="@T["Search contacts, or type an address…"]"
+                    title="@T["Search contacts or leads, or type an address…"]"
                     data-messaging-contact-picker
                     data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
                     data-endpoint-select="#endpoint-select"
@@ -65,15 +65,7 @@
          data-invalid-text="@T["Enter a valid number for the selected country."]">
         <span class="messaging-compose-label" aria-hidden="true"></span>
         <div class="flex-grow-1" style="min-width: 0;">
-            <div class="d-flex align-items-center gap-2">
-                <div class="flex-grow-1" style="min-width: 0;">
-                    <input type="tel" class="form-control form-control-sm" autocomplete="off" aria-label="@T["Phone number"]" data-number-input />
-                </div>
-                <button type="button" class="btn btn-sm btn-primary text-nowrap" data-number-add>
-                    <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add"]
-                </button>
-            </div>
-            <div class="small text-danger mt-1" data-number-error hidden></div>
+            <partial name="_RecipientNumberEntry" />
         </div>
     </div>
 

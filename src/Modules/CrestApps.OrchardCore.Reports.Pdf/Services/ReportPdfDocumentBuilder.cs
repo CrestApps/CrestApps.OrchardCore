@@ -6,13 +6,16 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
 /// Lays a report document out as a PDF, written with PdfPig. Sections are stacked at the full width of the page, in
-/// order, and the title of a section stays on the page of its first content.
+/// order, the sections of a container follow its title band, as on the page, and the title of a section stays on the
+/// page of its first content.
 /// </summary>
 internal sealed class ReportPdfDocumentBuilder
 {
     private const double BaseFontSize = ReportPdfTheme.BaseFontSize;
     private const double TitleSize = 18;
     private const double SectionTitleSize = 12;
+    private const double ContainerTitleSize = 11;
+    private const double ContainerTitlePadding = 5;
     private const double DescriptionSize = BaseFontSize - 0.5;
     private const double SmallSize = BaseFontSize - 1.5;
     private const int MetricsPerRow = 4;
@@ -83,17 +86,23 @@ internal sealed class ReportPdfDocumentBuilder
             _flow.Advance(8);
         }
 
-        for (var index = 0; index < _report.Sections.Count; index++)
-        {
-            var section = _report.Sections[index];
+        var first = true;
 
-            if (section is not null)
+        foreach (var group in _report.GetSectionGroups())
+        {
+            if (!string.IsNullOrWhiteSpace(group.Container?.Title))
+            {
+                WriteContainerTitle(group.Container.Title);
+            }
+
+            foreach (var section in group.Sections)
             {
                 // The first section is often named like the report; its title is not repeated under the report's.
                 var showTitle = !string.IsNullOrWhiteSpace(section.Title) &&
-                    !(index == 0 && string.Equals(section.Title, _report.Title, StringComparison.OrdinalIgnoreCase));
+                    !(first && string.Equals(section.Title, _report.Title, StringComparison.OrdinalIgnoreCase));
 
                 WriteSection(section, showTitle);
+                first = false;
             }
         }
 
@@ -131,9 +140,22 @@ internal sealed class ReportPdfDocumentBuilder
             _ => 0,
         };
 
-        var description = string.IsNullOrWhiteSpace(section.Description)
-            ? []
-            : ReportPdfText.Wrap(_flow.Regular.Prepare(section.Description), _flow.Regular, DescriptionSize, _flow.Width);
+        // Which values picked in other sections filter this one, as those sections show them, then the description.
+        var description = new List<string>();
+
+        foreach (var filter in _report.GetFilteringSections(section))
+        {
+            var values = string.Join(", ", filter.Selection.GetPickedValues());
+            var text = string.IsNullOrWhiteSpace(filter.Title) ? $"Filtered by: {values}" : $"Filtered by {filter.Title}: {values}";
+
+            description.AddRange(ReportPdfText.Wrap(_flow.Regular.Prepare(text), _flow.Regular, DescriptionSize, _flow.Width));
+        }
+
+        if (!string.IsNullOrWhiteSpace(section.Description))
+        {
+            description.AddRange(ReportPdfText.Wrap(_flow.Regular.Prepare(section.Description), _flow.Regular, DescriptionSize, _flow.Width));
+        }
+
         var descriptionHeight = description.Count == 0 ? 0 : ReportPdfFlow.GetHeight(description, _flow.Regular, DescriptionSize) + 6;
 
         if (showTitle)
@@ -179,6 +201,26 @@ internal sealed class ReportPdfDocumentBuilder
 
                 break;
         }
+    }
+
+    // A container's title band, colored as on the page. It stays with the title of the container's first section.
+    private void WriteContainerTitle(string title)
+    {
+        var bold = _flow.Bold;
+        var lines = ReportPdfText.Wrap(bold.Prepare(title), bold, ContainerTitleSize, _flow.Width - (2 * ContainerTitlePadding));
+        var height = ReportPdfFlow.GetHeight(lines, bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
+        var lineHeight = bold.LineHeight * ContainerTitleSize;
+
+        _flow.AddSpace(18);
+        _flow.EnsureSpace(height + 6 + 14 + (bold.LineHeight * SectionTitleSize));
+        _flow.Page.FillRectangle(_flow.Left, _flow.Top, _flow.Width, height, ReportPdfTheme.Primary);
+
+        for (var index = 0; index < lines.Count; index++)
+        {
+            _flow.Page.DrawText(lines[index], bold, ContainerTitleSize, _flow.Left + ContainerTitlePadding, _flow.Top + ContainerTitlePadding + (index * lineHeight), ReportPdfTheme.White);
+        }
+
+        _flow.Advance(height + 6);
     }
 
     private void WriteParagraph(string value, ReportPdfFont font, double size, ReportPdfColor color, double keepWith)

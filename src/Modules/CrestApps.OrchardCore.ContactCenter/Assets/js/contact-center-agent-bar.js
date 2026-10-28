@@ -478,7 +478,8 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                 reason || '',
                 offer ? offer.reservationId : '',
                 active ? active.interactionId + ':' + active.status : '',
-                pendingDial ? pendingDial.interactionId + ':' + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : 'Waiting') : ''
+                pendingDial ? pendingDial.interactionId + ':' + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : 'Waiting') : '',
+                isPhoneMissing() ? 'no-phone' : ''
             ].join('|');
 
             if (signature === activeSignature) {
@@ -498,9 +499,34 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                     renderPresence(status) +
                     renderTail() +
                 '</div>' +
+                renderPhoneMissing() +
                 '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active, pendingDial) + '</div>';
 
             bindEvents();
+        }
+
+        // Signed in to take calls, and the voice provider says no phone of the agent's is open: every call offered to
+        // them would ring nowhere until its window ran out. Unknown (no provider can tell) says nothing.
+        function isPhoneMissing() {
+            return !!(state && state.isSignedIn && state.phoneOpen === false);
+        }
+
+        // The phone page opens in its own tab from the agent's click, so no pop-up blocker stands in the way and the
+        // page the agent is working on stays where it is.
+        function renderPhoneMissing() {
+            if (!isPhoneMissing()) {
+                return '';
+            }
+
+            var link = config.softPhoneUrl
+                ? ' <a class="cc-bar__open-phone" href="' + escapeHtml(config.softPhoneUrl) + '" target="_blank" rel="noopener">' +
+                    '<i class="fa-solid fa-phone" aria-hidden="true"></i> ' + escapeHtml(label('openPhone', 'Open the phone')) + '</a>'
+                : '';
+
+            return '<div class="cc-bar__no-phone" role="alert" data-cc-no-phone>' +
+                escapeHtml(label('noPhoneOpen', 'You are signed in to take calls, but no phone of yours is open, so calls cannot reach you.')) +
+                link +
+            '</div>';
         }
 
         // Presence is read-only here: the soft phone is the single place an agent changes their status, so the
@@ -930,7 +956,8 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
         // the bar clears itself shortly after the activity is completed or the call ends, and a call whose push was
         // missed still appears, with no polling cost the rest of the time.
         window.setInterval(function () {
-            if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === 'Busy' || presenceStatus() === 'Reserved')) {
+            // Also while the agent is told no phone is open, so the warning clears once they open one.
+            if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === 'Busy' || presenceStatus() === 'Reserved' || isPhoneMissing())) {
                 refresh();
             }
         }, 12000);

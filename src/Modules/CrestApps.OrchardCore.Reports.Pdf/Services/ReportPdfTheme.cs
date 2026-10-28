@@ -34,6 +34,8 @@ internal static class ReportPdfTheme
 
     public static readonly ReportPdfColor White = new(0xFF, 0xFF, 0xFF);
 
+    public static readonly ReportPdfColor Primary = new(0x0D, 0x6E, 0xFD);
+
     public static readonly ReportPdfColor[] Palette =
     [
         new(0x25, 0x63, 0xEB),

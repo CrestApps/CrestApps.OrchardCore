@@ -29,7 +29,7 @@
           "itemId": "store-sales-by-day",
           "displayText": "Sales by day",
           "description": "Orders paid each day and what they came to, in each currency: gross sales, discounts, shipping, tax, total charged, refunded and net.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "o", "source": "Orders", "dataSet": "Orders", "displayName": "Orders" }
@@ -64,7 +64,7 @@
           "itemId": "store-sales-by-product",
           "displayText": "Sales by product",
           "description": "Units and sales of each product and variant on the orders paid in the period, top sellers first.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "l", "source": "Orders", "dataSet": "OrderLines", "displayName": "Order lines" }
@@ -94,7 +94,7 @@
           "itemId": "store-sales-by-country",
           "displayText": "Sales by country",
           "description": "Orders paid in the period, their tax and total, by the country they ship to.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "o", "source": "Orders", "dataSet": "Orders", "displayName": "Orders" }
@@ -122,7 +122,7 @@
           "itemId": "store-tax-by-jurisdiction",
           "displayText": "Tax by jurisdiction",
           "description": "The tax charged on the orders paid in the period, by jurisdiction, tax and rate, with what it was charged on.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "t", "source": "Orders", "dataSet": "OrderTaxes", "displayName": "Order taxes" }
@@ -152,7 +152,7 @@
           "itemId": "store-discounts",
           "displayText": "Discounts on orders",
           "description": "The orders paid in the period that used each discount code, and what the discounts took off.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "d", "source": "Orders", "dataSet": "OrderDiscounts", "displayName": "Order discounts" }
@@ -179,7 +179,7 @@
           "itemId": "store-refunds",
           "displayText": "Refunds",
           "description": "Each refund given in the period: when, for which order, how much and why.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "r", "source": "Orders", "dataSet": "OrderRefunds", "displayName": "Order refunds" }
@@ -206,7 +206,7 @@
           "itemId": "store-disputes",
           "displayText": "Disputes",
           "description": "The disputes, or chargebacks, opened in the period, open ones first, with why, their status and the amount.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "x", "source": "Orders", "dataSet": "OrderDisputes", "displayName": "Order disputes" }
@@ -237,7 +237,7 @@
           "itemId": "store-orders-to-ship",
           "displayText": "Orders to ship",
           "description": "Paid orders with something to ship that is not shipped in full, oldest first.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "o", "source": "Orders", "dataSet": "Orders", "displayName": "Orders" }

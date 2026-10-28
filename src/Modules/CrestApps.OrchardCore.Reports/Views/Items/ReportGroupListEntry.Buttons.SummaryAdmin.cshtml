@@ -1,0 +1,5 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportGroupListEntry>
+
+<a asp-route="ReportGroupsEdit" asp-route-id="@Model.Value.Group.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>

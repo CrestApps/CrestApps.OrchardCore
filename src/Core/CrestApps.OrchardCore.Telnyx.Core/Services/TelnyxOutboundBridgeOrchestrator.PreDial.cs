@@ -64,15 +64,30 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
 
         if (_preDialCoordinator is not null)
         {
-            // Unlike the accept-time agent leg, a pre-dialed leg ending is not by itself a failed connect: the offer
-            // may simply have been declined or expired. The coordinator knows which, and fails the call only when the
-            // offer was accepted and this leg was what was to carry the agent to the caller.
-            await _preDialCoordinator.OnAgentLegEndedAsync(
-                TelnyxConstants.ProviderTechnicalName,
-                state.ReservationId,
-                callEvent.CallControlId,
-                ResolveAgentLegFailureCause(callEvent),
-                cancellationToken);
+            if (IsRefusedAsUnavailable(callEvent))
+            {
+                // No phone of the agent's took the leg, and there was nowhere else to ring it: the offer still on their
+                // screen can no longer be answered, so the coordinator hands the caller on instead of letting it ring
+                // out to nobody.
+                await _preDialCoordinator.OnAgentPhoneUnreachableAsync(
+                    TelnyxConstants.ProviderTechnicalName,
+                    state.ReservationId,
+                    callEvent.CallControlId,
+                    ResolveAgentLegFailureCause(callEvent),
+                    cancellationToken);
+            }
+            else
+            {
+                // Unlike the accept-time agent leg, a pre-dialed leg ending is not by itself a failed connect: the offer
+                // may simply have been declined or expired. The coordinator knows which, and fails the call only when
+                // the offer was accepted and this leg was what was to carry the agent to the caller.
+                await _preDialCoordinator.OnAgentLegEndedAsync(
+                    TelnyxConstants.ProviderTechnicalName,
+                    state.ReservationId,
+                    callEvent.CallControlId,
+                    ResolveAgentLegFailureCause(callEvent),
+                    cancellationToken);
+            }
         }
 
         // A leg that was joined to the caller carried the call, and its end is the call's end. The coordinator's record

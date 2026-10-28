@@ -145,13 +145,16 @@ public sealed class ReportDesignWidgetPartDisplayDriver : ContentPartDisplayDriv
         var reports = new SelectListGroup { Name = S["Reports"] };
         var views = new SelectListGroup { Name = S["Views (shown as a table)"] };
 
-        foreach (var design in (await _designService.GetAllAsync())
-            .OrderBy(design => design.Category, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(design => design.DisplayText, StringComparer.CurrentCultureIgnoreCase))
+        var groups = await _designService.GetGroupTreeAsync();
+
+        foreach (var (design, groupPath) in (await _designService.GetAllAsync())
+            .Select(design => (design, groups.GetPathText(design.GroupId)))
+            .OrderBy(entry => entry.Item2, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(entry => entry.design.DisplayText, StringComparer.CurrentCultureIgnoreCase))
         {
             if (await _authorizationService.AuthorizeAsync(user, ReportDesignerPermissions.ViewAllReportDesigns, design))
             {
-                items.Add(new SelectListItem(string.IsNullOrEmpty(design.Category) ? design.DisplayText : $"{design.Category}: {design.DisplayText}", ReportPrefix + design.ItemId)
+                items.Add(new SelectListItem(string.IsNullOrEmpty(groupPath) ? design.DisplayText : $"{groupPath}: {design.DisplayText}", ReportPrefix + design.ItemId)
                 {
                     Group = reports,
                 });
