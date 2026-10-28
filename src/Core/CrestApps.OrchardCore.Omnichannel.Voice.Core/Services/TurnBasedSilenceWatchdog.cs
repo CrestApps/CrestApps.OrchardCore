@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// The same shape as <see cref="RealtimeCallCompletionRunner"/>, for the same reason: the webhook that began
 /// listening is answered long before the wait is over, and anything attached to that request is gone by then.
 /// A scope taken from the shell host belongs to the tenant and outlives it.
+/// <para>
+/// A tenant singleton, so a watch sees the caller lines every request on this node has heard. A call's later
+/// webhooks reach the node that holds it, as they must for its media to work at all.
+/// </para>
 /// </remarks>
 public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
 {
@@ -28,6 +33,10 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
     private readonly ILogger _logger;
+
+    // How many caller lines each call has heard. A watch notes the count when it is armed and stands down if it
+    // has changed by the time it fires.
+    private readonly ConcurrentDictionary<string, long> _heard = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TurnBasedSilenceWatchdog"/> class.
@@ -52,16 +61,50 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
 
         // Not awaited: the request that armed this has to be answered now, and the wait must not depend on
         // whether that request lives long enough to see it through.
-        _ = WatchAsync(silence);
+        _ = WatchAsync(silence, HeardCount(silence.ActivityId));
 
         return Task.CompletedTask;
     }
 
-    private async Task WatchAsync(TurnBasedSilence silence)
+    /// <inheritdoc/>
+    public void CallerHeard(string activityId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(activityId);
+
+        _heard.AddOrUpdate(activityId, 1, static (_, count) => count + 1);
+    }
+
+    /// <inheritdoc/>
+    public void Forget(string activityId)
+    {
+        if (!string.IsNullOrEmpty(activityId))
+        {
+            _heard.TryRemove(activityId, out _);
+        }
+    }
+
+    internal long HeardCount(string activityId)
+        => string.IsNullOrEmpty(activityId) ? 0 : _heard.GetValueOrDefault(activityId);
+
+    private async Task WatchAsync(TurnBasedSilence silence, long heardWhenArmed)
     {
         try
         {
             await Task.Delay(silence.Wait ?? SilenceBeforeSpeakingUp);
+
+            // The caller spoke during the wait. The turn answering them listens again, and watches again, when it
+            // is done.
+            if (HeardCount(silence.ActivityId) != heardWhenArmed)
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "The caller on automated call activity '{ActivityId}' spoke during the listening turn, so it is not treated as silent.",
+                        silence.ActivityId.SanitizeLogValue());
+                }
+
+                return;
+            }
 
             var scope = await _shellHost.GetScopeAsync(_shellSettings);
 

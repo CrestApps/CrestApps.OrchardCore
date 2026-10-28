@@ -1199,11 +1199,20 @@ public sealed partial class VoiceAgentConversationLoopTests
     {
         public List<TurnBasedSilence> Armed { get; } = [];
 
+        public List<string> Heard { get; } = [];
+
         public Task ArmAsync(TurnBasedSilence silence)
         {
             Armed.Add(silence);
 
             return Task.CompletedTask;
+        }
+
+        public void CallerHeard(string activityId)
+            => Heard.Add(activityId);
+
+        public void Forget(string activityId)
+        {
         }
     }
 

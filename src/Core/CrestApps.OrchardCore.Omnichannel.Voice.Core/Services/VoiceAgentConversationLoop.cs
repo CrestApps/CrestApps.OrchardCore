@@ -587,6 +587,10 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             return;
         }
 
+        // Before anything slow: the line is stored with this request, and a silence watch that fired while the reply
+        // was still being written would find nothing from the caller.
+        _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
+
         // Read before this turn is stored, so the turn being judged is not mistaken for somebody having already spoken.
         var turnsBefore = prompts.Count;
         var customerHadSpoken = prompts.Any(prompt => prompt.Role == ChatRole.User && !prompt.IsGeneratedPrompt && !string.IsNullOrWhiteSpace(prompt.Content));
@@ -658,6 +662,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     {
         ReleaseVoicemailClaim(voiceEvent.ActivityId);
         _answeringMachineSignals.Forget(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
+        _silenceWatchdog.Forget(voiceEvent.ActivityId);
 
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
