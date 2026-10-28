@@ -211,6 +211,52 @@ public sealed class AgentPreDialCoordinatorTests
     }
 
     [Fact]
+    public async Task OnCallerReadyAsync_RecordsTheJoinOnlyAfterReleasingTheOffersLock()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+        await harness.Coordinator.OnAgentLegAnsweredAsync("Telnyx", "r1", "leg-1", TestContext.Current.CancellationToken);
+        harness.Reservation.RestorePersistedStatus(ReservationStatus.Accepted);
+
+        int? locksHeldWhileRecording = null;
+        harness.AgentLegFailureService
+            .Setup(service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", It.IsAny<CancellationToken>()))
+            .Callback(() => locksHeldWhileRecording = harness.HeldLocks)
+            .ReturnsAsync(true);
+
+        // Act
+        var bridged = await harness.Coordinator.OnCallerReadyAsync("r1", TestContext.Current.CancellationToken);
+
+        // Assert: the customer's answer webhook writes the same call and then waits on this lock for the parked leg.
+        // Recording the join under it stalled both until the lock timed out, and the agent stayed Reserved with no record
+        // until the customer hung up.
+        Assert.True(bridged);
+        Assert.Equal(0, locksHeldWhileRecording);
+    }
+
+    [Fact]
+    public async Task OnAgentLegAnsweredAsync_RecordsTheJoinOnlyAfterReleasingTheOffersLock()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+        harness.Reservation.RestorePersistedStatus(ReservationStatus.Accepted);
+        Assert.False(await harness.Coordinator.OnCallerReadyAsync("r1", TestContext.Current.CancellationToken));
+
+        int? locksHeldWhileRecording = null;
+        harness.AgentLegFailureService
+            .Setup(service => service.RecordAnsweredAsync("Telnyx", "call-1", "leg-1", It.IsAny<CancellationToken>()))
+            .Callback(() => locksHeldWhileRecording = harness.HeldLocks)
+            .ReturnsAsync(true);
+
+        // Act
+        await harness.Coordinator.OnAgentLegAnsweredAsync("Telnyx", "r1", "leg-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.PreDialProvider.Verify(provider => provider.BridgePreDialedAgentAsync("call-1", "leg-1", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(0, locksHeldWhileRecording);
+    }
+
+    [Fact]
     public async Task TheLegIsJoined_WhenTheAcceptReadiesTheCallerBeforeTheAgentAnswers()
     {
         // Arrange
@@ -712,6 +758,7 @@ public sealed class AgentPreDialCoordinatorTests
         }.RestorePersistedStatus(ReservationStatus.Pending);
 
         public DistributedCacheAgentPreDialLegStore Store { get; }
+
 
         public Mock<IActivityReservationManager> ReservationManager { get; } = new();
 
