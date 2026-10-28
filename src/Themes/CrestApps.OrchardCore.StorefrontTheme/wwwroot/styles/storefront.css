@@ -134,3 +134,9 @@ html .storefront {
 .storefront-footer a {
     color: inherit;
 }
+
+/* The same required-field marker as the admin theme. */
+.ocat-label-required::after {
+    color: var(--bs-danger-text-emphasis);
+    content: " *";
+}

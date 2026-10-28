@@ -18,7 +18,7 @@ This video shows a data source added by a module and how its data sets appear in
 
 | You want to report on | Build | Reference |
 | --- | --- | --- |
-| Records your module stores, such as YesSql documents or catalog entries | A `RecordDataSource` with one `RecordDataSet<T>` per record type | `OrchardCore.DataSources.Abstractions`, and `CrestApps.OrchardCore.Reports.Abstractions` for the helpers |
+| Records your module stores, such as YesSql documents or catalog entries | A `RecordDataSource` with one `RecordDataSet<T>` per record type, or one `IndexedReportDataSet<TRecord, TIndex>` per record type read through a map index | `OrchardCore.DataSources.Abstractions`, and `CrestApps.OrchardCore.Reports.Abstractions` and `CrestApps.OrchardCore.Reports.Core` for the helpers |
 | Such records, grouped in the database for large data | The same, with `IAggregateRecordDataSet` and `ReportIndexAggregator` | Also `CrestApps.OrchardCore.Reports.Core` |
 | An external system whose data sets or fields are found at run time, such as a database, a search index or a REST API | `IDataSource` | `OrchardCore.DataSources.Abstractions` |
 | A content part or content field type that the **Content items** source does not read the way you want | `ContentDataSourceOptions` | Orchard Core's Data Pipelines module |
@@ -28,7 +28,7 @@ The data source contract (`IDataSource`, `RecordDataSource`, `RecordDataSet<T>`,
 
 ## Where the code goes
 
-- **A module exposing its own records** (activities, interactions, chat sessions...) keeps the source in that module, in a startup marked with the module's feature and `[RequireFeatures("OrchardCore.DataPipelines.Core")]`. The Reports module never depends on it, and the source is registered whenever Data Pipelines Core is on with that feature: with the Report Builder, which depends on Data Pipelines Core, or with Orchard Core's Data Pipelines. The Omnichannel, Contact Center, AI chat and Messaging sources are built this way.
+- **A module exposing its own records** (activities, interactions, chat sessions...) keeps the source in that module, in a startup marked with the module's feature and `[RequireFeatures("OrchardCore.DataPipelines.Core")]`. The Reports module never depends on it, and the source is registered whenever Data Pipelines Core is on with that feature: with the Report Builder, which depends on Data Pipelines Core, or with Orchard Core's Data Pipelines. The Omnichannel, Contact Center, AI chat, Messaging and store sources (Orders, Inventory, Customers and the others) are built this way.
 - **A source for an external system** goes in its own module, whose feature depends on `OrchardCore.DataPipelines.Core`. Connection settings belong in configuration (for example `CrestApps:Reports:{Source}`), never in a design.
 
 Register a source with `services.AddDataSource<TDataSource>()`, from the `OrchardCore.DataSources.Core` package. Data sources are scoped services resolved by name through `IDataSourceManager`, which lists them with their name, display name and description without creating them. Two data sources cannot share a name.
@@ -99,9 +99,12 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
 
     protected override async IAsyncEnumerable<Invoice> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // Join keys: read only the invoices a joined report can match. An empty list means none can match.
-        var invoiceIds = DataConditions.Keys(query.Conditions, "InvoiceId")?.Select(key => key?.ToString()).ToArray();
-        var customerIds = DataConditions.Keys(query.Conditions, "CustomerId")?.Select(key => key?.ToString()).ToArray();
+        // Join keys: read only the invoices a joined report can match. An empty list means none can match. Only the
+        // conditions of a join are matched exactly; the engine compares a viewer's filter on the same field without
+        // regard to case, so that one is left to the engine.
+        var joinKeys = query.Conditions.Where(condition => condition.IsJoinKey).ToArray();
+        var invoiceIds = DataConditions.Keys(joinKeys, "InvoiceId")?.Select(key => key?.ToString()).ToArray();
+        var customerIds = DataConditions.Keys(joinKeys, "CustomerId")?.Select(key => key?.ToString()).ToArray();
 
         // A viewer's filter that limits the status to a list of values is applied by the database, without regard to
         // case like the engine's own filter.
@@ -210,6 +213,61 @@ public sealed class DataSourcesStartup : StartupBase
 | `ReportIndexPages.ReadPagesAsync(...)` | The same, one page at a time, such as to look up what the records of a page refer to in one call. |
 | `ReportIndexConditions<TIndex>` | Applies the conditions that limit a field to a list of values, such as a viewer's status or channel filter, to the index rows: `.Text(field, column)` compares in upper case and leaves text that isn't ASCII to the engine, `.Enum(field, index => index.Column)` compares enumeration values by name, and `MatchesNothing` tells when no value can match. Pass `Apply` to the filter of `ReportIndexPages`. |
 | `ReportIndexAggregator` | Answers an aggregate query with one `GROUP BY` over a map index; see [Grouping in the data source](#grouping-in-the-data-source). |
+| `IndexedReportDataSet<TRecord, TIndex>` | A `RecordDataSet<TRecord>` that does all of the above for YesSql records read through a map index: it checks the permissions you pass (the principal needs every one), reads with `ReportIndexPages` newest first by `DateColumn`, pushes the date range, the join keys of `KeyColumns` and the columns `DescribeColumns` declares down to the index, and groups in the database through `ReportIndexAggregator` (`GetAggregateColumns` leaves out a column the index changes, such as an email kept in upper case). Pass the records' collection to the constructor, add the fields, and call `CompleteDescription()`. See [A data set over an index](#a-data-set-over-an-index). |
+| `IndexedReportDataSet<TDocument, TIndex, TRow>` and `ReportChildRow<TParent, TChild>` | The same for a data set whose rows are the entries a record holds, such as the lines of an order: `GetRows` turns each record read into rows, usually with `ReportChildRow<TParent, TChild>.For(record, record.Lines)`, so a row reads both the entry and its record. Such a data set never groups in the database, since the index holds one row per record. |
+| `ReportDataReferences` | `User()` and `ContentItem(contentType)`: the references to Orchard Core's users and content items data sets. |
+| `CommerceReportDataSets` | The stable names of the store's data sources and data sets, and `Reference(source, dataSet)`, `ProductReference()` and `VariantReference()`, so a module refers to another module's data set without depending on it. |
+
+### A data set over an index
+
+Most modules store records in YesSql with a map index, and `IndexedReportDataSet<TRecord, TIndex>` (`CrestApps.OrchardCore.Reports.Core`) does the reading for them. The invoices data set above becomes fields and a few overrides; this is how the Orders, Inventory and other store data sources are built:
+
+```csharp
+public sealed class InvoicesReportDataSet : IndexedReportDataSet<Invoice, InvoiceIndex>, IBillingReportDataSet
+{
+    public InvoicesReportDataSet(
+        ISession session,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<InvoicesReportDataSet> S)
+        : base(
+            new DataSetDescriptor("Invoices", S["Invoices"], S["One row per invoice."]),
+            session,
+            authorizationService,
+            BillingConstants.CollectionName,
+            BillingPermissions.ViewInvoiceReports)
+    {
+        AddField("InvoiceId", S["Invoice ID"], DataFieldType.Text, record => record.InvoiceId).Identifier();
+        AddField("Status", S["Status"], DataFieldType.Text, record => record.Status);
+        AddField("Currency", S["Currency"], DataFieldType.Text, record => record.Currency);
+        AddField("Amount", S["Amount"], DataFieldType.Decimal, record => record.Amount).Description = S["In the invoice's currency."];
+        AddField("IssuedUtc", S["Issued"], DataFieldType.DateTime, record => record.IssuedUtc);
+        AddField("CustomerId", S["Customer ID"], DataFieldType.Text, record => record.CustomerId)
+            .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.CustomerSource.Name, CommerceReportDataSets.CustomerSource.Customers));
+
+        CompleteDescription();
+    }
+
+    // The main date: the index column must hold exactly the field's value.
+    protected override (string Field, Expression<Func<InvoiceIndex, DateTime>> Column)? DateColumn
+        => ("IssuedUtc", index => index.IssuedUtc);
+
+    // The fields a join narrows the read on, each an index column that holds exactly its value.
+    protected override IReadOnlyDictionary<string, Expression<Func<InvoiceIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<InvoiceIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["InvoiceId"] = index => index.InvoiceId,
+            ["CustomerId"] = index => index.CustomerId,
+        };
+
+    // The fields a viewer's filter limits to a list of values, applied to the index rows.
+    protected override void DescribeColumns(ReportIndexConditions<InvoiceIndex> columns)
+    {
+        columns.Text("Status", nameof(InvoiceIndex.Status));
+    }
+}
+```
+
+Give the money fields a `Currency` field beside them, and say in their description which currency they are in. A module with several features registers its data sets as a marker interface, such as `IOrderReportDataSet`, in the startup of the feature that stores each record, so the data source lists only the data sets of the features that are on.
 
 ## Sources for external systems
 
@@ -420,7 +478,7 @@ Without it the database sorts the whole index table for every page.
 When a report joins a data set with an inner or left join, the engine can send the distinct keys of the rows before it, so the joined data set reads only the records that can match instead of its newest records up to the row limit. To take part:
 
 1. Mark the field `IsKeyFilterable` (with the helper, `Fields.MarkKeyFilterable(names)`). Only `Text` and `Integer` fields joined to a field of the same type are narrowed.
-2. Read the keys with `DataConditions.Keys(query.Conditions, field)`: `null` when no condition limits the field to a list of values, an empty list when no record can match, or the values.
+2. Read the keys from the conditions of the join only, those with `IsJoinKey` set: `DataConditions.Keys(query.Conditions.Where(condition => condition.IsJoinKey), field)` gives `null` when no condition limits the field to a list of values, an empty list when no record can match, or the values. `DataConditions.Keys` also returns the values of a viewer's `Equals` or `In` filter on the field. The engine compares those without regard to case, so an exact match in the database could drop a row the engine keeps: leave them to the engine, or apply them with `ReportIndexConditions.Text`, which compares in upper case. `IndexedReportDataSet` does this for you.
 3. Apply them **exactly**: return every record whose value is one of the keys, and no other. A source that cannot must not set the flag.
 
 The keys arrive as an `In` condition with `IsJoinKey` set, in batches of `JoinKeyBatchSize`, up to `MaxJoinKeys` keys; with more keys, the joined data set is read in full (see [Configuration](index.md#configuration)).

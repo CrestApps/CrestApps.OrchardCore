@@ -11,7 +11,7 @@
 </div>
 
 <div class="ocat-wrapper" data-auth-section="ApiKey">
-    <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+    <label asp-for="ApiKey" class="ocat-label @(!Model.HasApiKey ? "ocat-label-required" : "")">@T["API key"]</label>
     <div class="ocat-end">
         <input asp-for="ApiKey" class="form-control" autocomplete="off" placeholder="@(Model.HasApiKey ? T["Leave blank to keep the current API key."] : T["Enter an API key."])" />
         <span class="hint">@T["The API key MCP clients must send in the Authorization header. Required when the API key authentication type is selected."]</span>

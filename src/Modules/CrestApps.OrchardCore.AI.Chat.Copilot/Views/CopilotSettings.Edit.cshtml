@@ -49,7 +49,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="ClientId">
-        <label asp-for="ClientId" class="ocat-label">@T["Client ID"]</label>
+        <label asp-for="ClientId" class="ocat-label ocat-label-required">@T["Client ID"]</label>
         <div class="ocat-end">
             <input asp-for="ClientId" class="form-control" />
             <span asp-validation-for="ClientId" class="text-danger"></span>
@@ -58,7 +58,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="ClientSecret">
-        <label asp-for="ClientSecret" class="ocat-label">@T["Client secret"]</label>
+        <label asp-for="ClientSecret" class="ocat-label @(!Model.HasSecret ? "ocat-label-required" : "")">@T["Client secret"]</label>
         <div class="ocat-end">
             <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter a new secret to update"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="ClientSecret" class="text-danger"></span>
@@ -85,7 +85,7 @@
     </div>
 
     <div class="ocat-limited-wrapper" asp-validation-class-for="ProviderType">
-        <label asp-for="ProviderType" class="ocat-label">@T["Provider type"]</label>
+        <label asp-for="ProviderType" class="ocat-label ocat-label-required">@T["Provider type"]</label>
         <div class="ocat-limited">
             <select asp-for="ProviderType" asp-items="Model.ProviderTypes" class="form-select" id="copilot-provider-type">
             </select>
@@ -124,7 +124,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="BaseUrl">
-        <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+        <label asp-for="BaseUrl" class="ocat-label ocat-label-required">@T["Base URL"]</label>
         <div class="ocat-end">
             <input asp-for="BaseUrl" class="form-control" id="copilot-base-url" placeholder="https://api.openai.com/v1" />
             <span asp-validation-for="BaseUrl" class="text-danger"></span>
@@ -149,7 +149,7 @@
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="DefaultModel">
-        <label asp-for="DefaultModel" class="ocat-label">@T["Default model"]</label>
+        <label asp-for="DefaultModel" class="ocat-label ocat-label-required">@T["Default model"]</label>
         <div class="ocat-end">
             <input asp-for="DefaultModel" class="form-control" placeholder="gpt-4o" />
             <span asp-validation-for="DefaultModel" class="text-danger"></span>
@@ -167,7 +167,7 @@
     </div>
 
     <div class="ocat-limited-wrapper @(Model.ProviderType != "azure" ? "d-none" : "")" id="copilot-azure-version-group" asp-validation-class-for="AzureApiVersion">
-        <label asp-for="AzureApiVersion" class="ocat-label">@T["Azure API version"]</label>
+        <label asp-for="AzureApiVersion" class="ocat-label ocat-label-required">@T["Azure API version"]</label>
         <div class="ocat-limited">
             <input asp-for="AzureApiVersion" class="form-control" placeholder="2024-10-21" />
             <span asp-validation-for="AzureApiVersion" class="text-danger"></span>

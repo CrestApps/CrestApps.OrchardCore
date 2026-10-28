@@ -3,7 +3,7 @@
 @model McpResourceFieldsViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Display Text"]</label>
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Display Text"]</label>
     <div class="ocat-end">
         <input type="text" asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
@@ -12,7 +12,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
     <div class="ocat-end">
         <input type="text" asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger"></span>

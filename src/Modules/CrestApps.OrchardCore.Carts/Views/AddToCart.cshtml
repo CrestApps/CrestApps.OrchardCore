@@ -57,7 +57,7 @@
         }
 
         <div class="mb-2" data-product-variant-fallback>
-            <label class="form-label small text-muted" for="@(formId)-variant">@T["Choose"]</label>
+            <label class="form-label small text-muted ocat-label-required" for="@(formId)-variant">@T["Choose"]</label>
             <select name="variantId" id="@(formId)-variant" class="form-select form-select-sm" data-product-variant>
                 @foreach (var variant in Model.Variants)
                 {
@@ -147,7 +147,7 @@
                 {
                     <div class="form-check mb-2">
                         <input type="checkbox" class="form-check-input" id="@inputId" name="addOns[@addOn.AddOnId]" value="true" required="@addOn.Required" />
-                        <label class="form-check-label" for="@inputId">
+                        <label class="form-check-label @(addOn.Required ? "ocat-label-required" : "")" for="@inputId">
                             @addOn.Label
                             @if (extra is not null)
                             {
@@ -159,7 +159,7 @@
                 else
                 {
                     <div class="mb-2">
-                        <label class="form-label small mb-1" for="@inputId">
+                        <label class="form-label small mb-1 @(addOn.Required ? "ocat-label-required" : "")" for="@inputId">
                             @addOn.Label
                             @if (extra is not null)
                             {

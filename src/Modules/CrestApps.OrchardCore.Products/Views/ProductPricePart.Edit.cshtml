@@ -39,12 +39,12 @@
 
                     <div class="row g-2 mt-1 @(price.Kind == PriceKind.Recurring ? string.Empty : "d-none")" data-recurring-fields>
                         <div class="col-md-3">
-                            <label asp-for="Prices[i].BillingDuration" class="form-label">@T["Every"]</label>
+                            <label asp-for="Prices[i].BillingDuration" class="form-label ocat-label-required">@T["Every"]</label>
                             <input type="number" min="1" asp-for="Prices[i].BillingDuration" class="form-control" />
                             <span asp-validation-for="Prices[i].BillingDuration"></span>
                         </div>
                         <div class="col-md-3">
-                            <label asp-for="Prices[i].Interval" class="form-label">@T["Interval"]</label>
+                            <label asp-for="Prices[i].Interval" class="form-label ocat-label-required">@T["Interval"]</label>
                             <select asp-for="Prices[i].Interval" asp-items="Model.Intervals" class="form-select">
                                 <option value="">@T["Choose…"]</option>
                             </select>

@@ -4,7 +4,7 @@
 @model AIProfileTemplateProfileFieldsViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="ProfileType" class="ocat-label">@T["Profile type"]</label>
+    <label asp-for="ProfileType" class="ocat-label ocat-label-required">@T["Profile type"]</label>
     <div class="ocat-end">
         <select asp-for="ProfileType" class="form-select">
             <option value="">@T["Select a type"]</option>

@@ -128,6 +128,7 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
         // Ownership is decided by the one router every path goes through, told that this pass is an
         // escalation. Deciding it here as well is how the three paths drifted apart in the first place.
         var endpoint = await _endpointManager.GetByServiceAddressAsync(channel.Name, serviceAddress, cancellationToken);
+        var previousAgentId = conversation.AssignedAgentId;
 
         await _router.RouteAsync(
             new MessagingRoutingContext
@@ -175,6 +176,8 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
         {
             await _conversationStore.UpdateAsync(conversation, cancellationToken);
         }
+
+        await MessagingAssignmentNotifications.NotifyRoutedAsync(_notifier, conversation, previousAgentId, cancellationToken);
 
         await _notifier.NewInboundMessageAsync(new MessagingInboundNotification
         {

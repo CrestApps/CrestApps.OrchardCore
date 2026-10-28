@@ -2,7 +2,7 @@
 
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
-        <label class="form-label" asp-for="File" id="FilenameLabel" data-placeholder="@T["Click browser to select file"]">@T["Click browser to select file"]</label>
+        <label class="form-label ocat-label-required" asp-for="File" id="FilenameLabel" data-placeholder="@T["Click browser to select file"]">@T["Click browser to select file"]</label>
         <input type="file" class="form-control" asp-for="File" required accept="@Model.AcceptedFileTypes">
         <span asp-validation-for="File"></span>
     </div>

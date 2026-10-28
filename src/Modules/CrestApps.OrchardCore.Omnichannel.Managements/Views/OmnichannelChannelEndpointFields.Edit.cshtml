@@ -14,7 +14,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
     <div class="ocat-end">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
@@ -22,7 +22,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Value" class="ocat-label">@valueLabel</label>
+    <label asp-for="Value" class="ocat-label ocat-label-required">@valueLabel</label>
     <div class="ocat-end">
         <input asp-for="Value" class="form-control" />
         <span asp-validation-for="Value" class="text-danger"></span>
@@ -34,7 +34,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Capabilities">
-    <span class="ocat-label">@T["Used for"]</span>
+    <span class="ocat-label ocat-label-required">@T["Used for"]</span>
     <div class="ocat-end" data-address-capabilities>
         @if (Model.AvailableCapabilities.Count == 0)
         {

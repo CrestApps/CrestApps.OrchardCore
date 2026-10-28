@@ -12,7 +12,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
     <div class="ocat-end">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
@@ -21,7 +21,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="AIDataSourceId" class="ocat-label">@T["Target File data source"]</label>
+    <label asp-for="AIDataSourceId" class="ocat-label ocat-label-required">@T["Target File data source"]</label>
     <div class="ocat-end">
         @if (Model.HasDataSources)
         {

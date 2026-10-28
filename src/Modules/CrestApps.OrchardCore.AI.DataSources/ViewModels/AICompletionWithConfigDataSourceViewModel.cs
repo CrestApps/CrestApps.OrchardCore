@@ -15,14 +15,14 @@ public class AICompletionWithConfigDataSourceViewModel
     public string DataSourceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the strictness.
+    /// Gets or sets the strictness, or <see langword="null"/> when the field is left blank to use the site default.
     /// </summary>
-    public int Strictness { get; set; }
+    public int? Strictness { get; set; }
 
     /// <summary>
-    /// Gets or sets the top n documents.
+    /// Gets or sets the top n documents, or <see langword="null"/> when the field is left blank to use the site default.
     /// </summary>
-    public int TopNDocuments { get; set; }
+    public int? TopNDocuments { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether answers are restricted to retrieved data only.

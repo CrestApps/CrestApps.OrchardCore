@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Marketplace.Indexes;
 using CrestApps.OrchardCore.Marketplace.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -81,6 +82,35 @@ internal sealed class MarketplaceMigrations : DataMigration
             .WithDescription("Names the marketplace vendor a product is sold for, who's paid for its sales less the store's commission.")
         );
 
-        return 1;
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the indexes reports read earnings and payouts through, newest first by <c>CreatedUtc</c> a page at a time,
+    /// so each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    private async Task CreateReportIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<VendorEarningIndex>(
+            SchemaBuilder,
+            "IDX_VendorEarningIndex_Report",
+            MarketplaceConstants.CollectionName,
+            "CreatedUtc", "Id");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<VendorPayoutIndex>(
+            SchemaBuilder,
+            "IDX_VendorPayoutIndex_Report",
+            MarketplaceConstants.CollectionName,
+            "CreatedUtc", "Id");
     }
 }

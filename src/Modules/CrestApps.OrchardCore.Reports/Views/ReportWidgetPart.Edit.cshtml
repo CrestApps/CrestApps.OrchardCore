@@ -1,9 +1,5 @@
 @model ReportWidgetEditViewModel
 
-@{
-    var customId = Html.IdFor(model => model.From).Replace("_From", string.Empty) + "-custom";
-}
-
 @if (Model.ReportIsFixed)
 {
     <div class="mb-3">
@@ -15,7 +11,7 @@
 else
 {
     <div class="mb-3">
-        <label asp-for="ReportName" class="form-label">@T["Report"]</label>
+        <label asp-for="ReportName" class="form-label ocat-label-required">@T["Report"]</label>
         <select asp-for="ReportName" asp-items="Model.Reports" class="form-select">
             <option value="">@T["Choose a report"]</option>
         </select>
@@ -24,54 +20,4 @@ else
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="Period" class="form-label">@T["Period"]</label>
-    <select asp-for="Period" asp-items="Model.Periods" class="form-select" data-report-widget-period></select>
-    <span class="hint">@T["Every period except custom dates moves with the clock: last 30 days is always the 30 days up to now."]</span>
-</div>
-
-<div class="row g-2 mb-3" id="@customId">
-    <div class="col-6">
-        <label asp-for="From" class="form-label">@T["From"]</label>
-        <input asp-for="From" type="date" class="form-control" />
-        <span asp-validation-for="From" class="text-danger"></span>
-    </div>
-    <div class="col-6">
-        <label asp-for="To" class="form-label">@T["To"]</label>
-        <input asp-for="To" type="date" class="form-control" />
-    </div>
-</div>
-
-<div class="row g-2 mb-3">
-    <div class="col-12 col-md-6">
-        <label asp-for="Content" class="form-label">@T["Show"]</label>
-        <select asp-for="Content" asp-items="Model.Contents" class="form-select"></select>
-    </div>
-    <div class="col-6 col-md-3">
-        <label asp-for="MaxRows" class="form-label">@T["Rows per table"]</label>
-        <input asp-for="MaxRows" type="number" min="0" max="100" class="form-control" />
-        <span asp-validation-for="MaxRows" class="text-danger"></span>
-    </div>
-    <div class="col-6 col-md-3">
-        <label asp-for="CacheMinutes" class="form-label">@T["Keep for (minutes)"]</label>
-        <input asp-for="CacheMinutes" type="number" min="0" max="1440" class="form-control" />
-        <span asp-validation-for="CacheMinutes" class="text-danger"></span>
-    </div>
-</div>
-<span class="hint d-block mb-3">@T["The widget keeps what it shows for these minutes instead of running the report on every visit to the dashboard. 0 runs it every time. Saving the widget starts over."]</span>
-
-<script at="Foot">
-    (() => {
-        const custom = document.getElementById('@customId');
-        const period = custom?.closest('form')?.querySelector('[data-report-widget-period]');
-
-        if (!custom || !period) {
-            return;
-        }
-
-        const sync = () => custom.classList.toggle('d-none', period.value !== 'Custom');
-
-        period.addEventListener('change', sync);
-        sync();
-    })();
-</script>
+<partial name="_ReportWidgetOptions" model="Model" />

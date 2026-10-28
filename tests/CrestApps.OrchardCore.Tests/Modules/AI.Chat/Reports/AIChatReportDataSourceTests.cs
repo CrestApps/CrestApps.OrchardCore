@@ -369,7 +369,14 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         // Assert
         Assert.Equal([AIChatReportDataSource.ChatSessionsDataSet], withoutAnalyticsDataSets.Select(dataSet => dataSet.Name));
         Assert.Null(hiddenSchema);
-        Assert.Equal([AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.ChatSessionMetricsDataSet], withAnalyticsDataSets.Select(dataSet => dataSet.Name));
+        Assert.Equal(
+            [
+                AIChatReportDataSource.ChatSessionsDataSet,
+                AIChatReportDataSource.ChatSessionMetricsDataSet,
+                AIChatReportDataSource.CompletionUsageDataSet,
+                AIChatReportDataSource.VoiceUsageDataSet,
+            ],
+            withAnalyticsDataSets.Select(dataSet => dataSet.Name));
     }
 
     private static ServiceProvider Services(ISession session, bool analytics)

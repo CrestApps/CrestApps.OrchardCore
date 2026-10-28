@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
@@ -54,7 +55,6 @@ public sealed class Startup : StartupBase
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
-            .AddNavigationProvider<AIUsageAnalyticsAdminMenu>()
             .AddScoped<AIChatProfileAccessEvaluator>()
             .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
@@ -96,6 +96,9 @@ public sealed class Startup : StartupBase
         // The usage report asks for voice session summaries whether or not the analytics feature that keeps them
         // is on; until it is, there are none.
         services.TryAddScoped<IAIVoiceSessionSummaryStore, NullAIVoiceSessionSummaryStore>();
+
+        // Lives in AI Chat, not in the AI Usage Analytics feature, because it is what enables that feature.
+        services.AddDataMigration<AIUsageAnalyticsFeatureMigrations>();
 
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();
@@ -171,6 +174,20 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the AI Usage Analytics feature. Usage is recorded only while this
+/// feature is enabled.
+/// </summary>
+[Feature(AIConstants.Feature.UsageAnalytics)]
+public sealed class UsageAnalyticsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<AIUsageAnalyticsAdminMenu>();
+        services.AddCoreAIUsageTracking();
+    }
+}
+
+/// <summary>
 /// Exposes AI chat sessions as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
 [RequireFeatures("OrchardCore.DataPipelines.Core")]
@@ -185,7 +202,9 @@ public sealed class DataSourcesStartup : StartupBase
 }
 
 /// <summary>
-/// Adds the chat session metrics data set to the AI chat data source.
+/// Adds the data sets of the records the analytics feature keeps to the AI chat data source: the chat session
+/// metrics, and the AI usage (every metered AI request and every AI voice session summary). The feature indexes the
+/// usage records, so their data sets are listed only while it is on.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
 [RequireFeatures("OrchardCore.DataPipelines.Core")]
@@ -193,7 +212,10 @@ public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>();
+        services
+            .AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>()
+            .AddScoped<IAIChatReportDataSet, AICompletionUsageReportDataSet>()
+            .AddScoped<IAIChatReportDataSet, AIVoiceUsageReportDataSet>();
     }
 }
 

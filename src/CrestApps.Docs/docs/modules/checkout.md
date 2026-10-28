@@ -648,6 +648,85 @@ To use the framework in your own module:
 8. To let buyers pay with a balance they hold, such as a voucher or a wallet, implement **`ICheckoutTenderProvider`**; see [Adding a kind of balance](#adding-a-kind-of-balance).
 9. To let apps collect a gateway's payment over the commerce API, implement **`ICheckoutPaymentClientConfigurationProvider`** for it; see [The commerce API](#the-commerce-api).
 
+## Report Builder data source
+
+When **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) is enabled, as it is with the [Report Builder](report-builder/index.md), the **Checkout** feature registers the **Checkout** data source (`Checkout`), so reports and data pipelines can read the checkouts buyers started, the coupons and their uses, and the payment methods customers kept. Each data set reads its newest records first, a page at a time, through its index. The date range a report puts on the main date, the keys of a join and a status filter narrow the read in the database. Money is in each record's own currency, which the **Currency** field next to it names. Identifier fields reference the data sets they point to, so orders, users and transactions join automatically.
+
+| Data set | One row per | Permission |
+| --- | --- | --- |
+| **Checkout sessions** (`CheckoutSessions`) | Checkout a buyer started, abandoned ones included | **Manage orders** (`ManageOrders`), the permission of the Orders feature's **Checkouts** report |
+| **Coupons** (`Coupons`) | Coupon | **Manage coupons** (`ManageCoupons`) |
+| **Coupon uses** (`CouponRedemptions`) | Use of a coupon code at a checkout | **Manage coupons** (`ManageCoupons`) |
+| **Saved payment methods** (`SavedPaymentMethods`) | Payment method a customer kept for later charges | **Manage payments and refunds** (`ManageRefunds`), from [Transactions](transactions.md#permissions) |
+
+An abandoned checkout is one with the status `Expired`: the sweep expires a checkout nobody finished after the session lifetime, and its **Expired** field holds when. The buyer's name, email, phone, street address, IP address, browser, guest token and what they typed into the steps are never exposed; the billing country and region stay, as they do when a checkout is anonymized. A coupon's customer limit is never exposed, and a kept payment method never exposes its digits or the references the provider charges it by.
+
+### Checkout sessions
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Checkout session ID | The session ID. An order's checkout session ID joins it. |
+| `Status` | Status | `Pending`, `AwaitingProvider`, `PaymentPending`, `Completed`, `Failed`, `Canceled` or `Expired`. |
+| `CurrentStep` | Step reached | The key of the step the buyer was on. |
+| `ReferenceType` | Bought for | `Order` for a store order, or the kind of thing another module sells. |
+| `ReferenceId` | Reference ID | |
+| `OrderId` | Order ID | The reference when it is an order. Joins **Orders**. |
+| `SettlesExistingBalance` | Pays a balance owed | |
+| `SavePaymentMethod` | Keeps the payment method | |
+| `LineCount`, `ItemCount` | Lines, Units | Empty while the invoice was never built. |
+| `Currency` | Currency | |
+| `Total`, `DueNow`, `TaxAmount`, `DiscountTotal`, `TenderedAmount`, `AmountDue` | Total, Due now, Tax, Discounts, Paid from balances, Left to pay | In the checkout's currency. Empty while the invoice was never built. |
+| `CreatedUtc` | Started | The main date. |
+| `ModifiedUtc`, `CompletedUtc`, `ExpiredUtc` | Last changed, Completed, Expired | |
+| `IsAnonymized` | Anonymized | |
+| `UserId` | User ID | The account the checkout belongs to. Joins **Users**. Empty for a guest and once anonymized. |
+| `BillingCountry`, `BillingRegion` | Billing country, Billing region | |
+
+### Coupons
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Coupon ID | |
+| `Code`, `Description` | Code, Description | |
+| `IsEnabled`, `IsAutomatic`, `OnlyGeneratedCodes` | Enabled, Applies by itself, Only generated codes | |
+| `IsLimited` | Limited to some buyers | Limited to sources, kinds of purchase or one customer. |
+| `Kind`, `Target` | Kind, Applies to | |
+| `Percentage` | Percentage off | |
+| `Currency`, `Amount` | Currency, Amount off | A fixed amount off, in the coupon's currency. |
+| `MinimumAmount` | Minimum spend | In the currency of the checkout the coupon is used on. |
+| `MinimumQuantity`, `MaxRedemptions`, `MaxRedemptionsPerCustomer`, `RedemptionCount` | Minimum quantity, Most uses, Most uses per customer, Times used | |
+| `StartsUtc`, `EndsUtc`, `UpdatedUtc` | Starts, Ends, Last changed | |
+| `CreatedUtc` | Created | The main date. |
+
+### Coupon uses
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Use ID | |
+| `Code` | Code | |
+| `Status` | Status | `Held`, `Redeemed`, `Released` or `Returned`. |
+| `IsCounted` | Counts toward the limits | |
+| `Currency`, `Amount` | Currency, Discount | In the checkout's currency. |
+| `SessionId` | Checkout session ID | Joins **Checkout sessions**. |
+| `ReferenceType`, `ReferenceId` | Used for, Reference ID | |
+| `OrderId` | Order ID | Joins **Orders**. |
+| `UserId` | User ID | Joins **Users**. Empty for a guest. |
+| `CreatedUtc` | Put on the checkout | The main date. |
+| `ExpiresUtc`, `RedeemedUtc`, `EndedUtc` | Hold expires, Used, Let go or given back | |
+
+### Saved payment methods
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Saved payment method ID | |
+| `ProviderKey` | Payment method | The provider that keeps it. |
+| `IsExpired` | Expired | Whether the card's expiry has passed when the report runs. No card detail, such as the brand, expiry or digits, is exposed. |
+| `IsDefault` | Default | |
+| `UserId` | User ID | Joins **Users**. |
+| `CreatedUtc` | Kept | The main date. |
+
+The payment attempts and refunds Checkout records are in the [Transactions](transactions.md#report-builder-data-source) data source.
+
 ## Related
 
 - [Payments](payments) — the lower-level provider-agnostic payment contracts and the Stripe provider.

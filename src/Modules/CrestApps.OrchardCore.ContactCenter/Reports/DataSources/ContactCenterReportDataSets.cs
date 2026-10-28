@@ -85,6 +85,21 @@ public static class ContactCenterReportDataSets
     public const string SharedVoicemails = "SharedVoicemails";
 
     /// <summary>
+    /// The agent state changes data set: the log of every state an agent entered.
+    /// </summary>
+    public const string AgentStateChanges = "AgentStateChanges";
+
+    /// <summary>
+    /// The dialer decisions data set: the routing decisions and dial suppressions of the dialer decision log.
+    /// </summary>
+    public const string DialerDecisions = "DialerDecisions";
+
+    /// <summary>
+    /// The dialer pacing cycles data set.
+    /// </summary>
+    public const string DialerPacingCycles = "DialerPacingCycles";
+
+    /// <summary>
     /// The technical name of the Omnichannel data source.
     /// </summary>
     public const string OmnichannelSource = "Omnichannel";
@@ -93,6 +108,26 @@ public static class ContactCenterReportDataSets
     /// The technical name of the Omnichannel activities data set.
     /// </summary>
     public const string OmnichannelActivities = "Activities";
+
+    /// <summary>
+    /// The technical name of the Omnichannel campaigns data set.
+    /// </summary>
+    public const string OmnichannelCampaigns = "Campaigns";
+
+    /// <summary>
+    /// The technical name of the AI chat data source.
+    /// </summary>
+    public const string AIChatSource = "AIChat";
+
+    /// <summary>
+    /// The technical name of the AI chat sessions data set.
+    /// </summary>
+    public const string AIChatSessions = "ChatSessions";
+
+    /// <summary>
+    /// The technical name of the identifier field of the AI chat sessions data set.
+    /// </summary>
+    public const string AIChatSessionIdField = "SessionId";
 
     /// <summary>
     /// Creates a reference to the identifier of a Contact Center data set.
@@ -108,6 +143,20 @@ public static class ContactCenterReportDataSets
     /// <returns>The reference.</returns>
     public static DataFieldReference ActivityReference()
         => new(OmnichannelSource, OmnichannelActivities, ItemIdField);
+
+    /// <summary>
+    /// Creates a reference to the identifier of an Omnichannel campaign.
+    /// </summary>
+    /// <returns>The reference.</returns>
+    public static DataFieldReference CampaignReference()
+        => new(OmnichannelSource, OmnichannelCampaigns, ItemIdField);
+
+    /// <summary>
+    /// Creates a reference to the identifier of an AI chat session.
+    /// </summary>
+    /// <returns>The reference.</returns>
+    public static DataFieldReference ChatSessionReference()
+        => new(AIChatSource, AIChatSessions, AIChatSessionIdField);
 
     /// <summary>
     /// Creates a reference to the identifier of a user.

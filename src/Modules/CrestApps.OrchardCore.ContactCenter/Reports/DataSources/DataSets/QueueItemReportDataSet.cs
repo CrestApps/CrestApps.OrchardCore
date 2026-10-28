@@ -11,7 +11,8 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
 
 /// <summary>
-/// One row per piece of work that entered a queue: where it waited, who it went to, and how long it waited.
+/// One row per piece of work that entered a queue: where it waited, who it went to, and how long it waited. Work a
+/// campaign routes waits in the campaign's own queue, whose campaign the row names.
 /// </summary>
 public sealed class QueueItemReportDataSet : ContactCenterReportDataSet<QueueItem, QueueItemIndex>
 {
@@ -39,6 +40,7 @@ public sealed class QueueItemReportDataSet : ContactCenterReportDataSet<QueueIte
 
         AddField(ContactCenterReportDataSets.ItemIdField, S["Queue item ID"], DataFieldType.Text, record => record.ItemId, item).Identifier();
         AddField(nameof(QueueItem.QueueId), S["Queue ID"], DataFieldType.Text, record => record.QueueId, item).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
+        AddField("CampaignId", S["Campaign ID"], DataFieldType.Text, record => ContactCenterConstants.CampaignQueue.GetCampaignId(record.QueueId), item).Identifier(ContactCenterReportDataSets.CampaignReference());
         AddField(nameof(QueueItem.ActivityItemId), S["Activity ID"], DataFieldType.Text, record => record.ActivityItemId, item).Identifier(ContactCenterReportDataSets.ActivityReference());
         AddField(nameof(QueueItem.DialerProfileId), S["Dialer profile ID"], DataFieldType.Text, record => record.DialerProfileId, item).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.DialerProfiles));
         AddField(nameof(QueueItem.Status), S["Status"], DataFieldType.Text, record => record.Status, item);

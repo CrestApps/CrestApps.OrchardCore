@@ -385,6 +385,11 @@ public sealed partial class ActivityReservationService
         // lifecycle, and this path runs from a background sweep that releases every due reservation, so letting
         // that refusal escape would abandon the rest of the sweep over one call that had already hung up. The
         // reservation, queue item, agent and work state are still released; only the re-offer is skipped.
+        var reofferNow = requeue &&
+            interaction is not null &&
+            !interaction.IsSettled &&
+            IsWaitingForTheNextAgent(status, agentUnreachable, reservation.QueueId);
+
         if (interaction is not null && !interaction.IsSettled)
         {
             if (requeue)
@@ -413,6 +418,15 @@ public sealed partial class ActivityReservationService
         if (agentUnreachable && agent is not null)
         {
             await PublishPresenceChangedAsync(agent, agentPreviousStatus, now, cancellationToken);
+        }
+
+        // The caller is back in the queue for the next agent in line, who is offered them now rather than at the
+        // minute's assignment pass: an unanswered caller is often gone by then. This is published here, where the
+        // action actually taken is known, so a queue set to voicemail or reject that fell back to requeueing is
+        // re-offered too. It follows the release, so the leg rung for this offer is hung up before the next rings.
+        if (reofferNow)
+        {
+            await PublishAsync(ContactCenterConstants.Events.OfferRequeued, reservation, agent, ContactCenterActor.System, now, cancellationToken);
         }
 
         // A decline is recorded by whoever took it, with the agent as the actor; an expiry names what became of the
@@ -500,6 +514,21 @@ public sealed partial class ActivityReservationService
             !string.IsNullOrEmpty(reservation.AgentId) &&
             !ContactCenterConstants.IsDirectRoutingQueue(reservation.QueueId) &&
             !ContactCenterConstants.IsCampaignQueue(reservation.QueueId);
+
+    /// <summary>
+    /// Whether a caller put back into the queue is waiting for the next agent in line: after an offer that rang out,
+    /// or one the agent accepted but could not be reached for.
+    /// </summary>
+    /// <remarks>
+    /// A decline re-offers the caller itself, and a cancel (the caller hanging up, the platform withdrawing the offer)
+    /// leaves nobody waiting. A direct line rings only the agent it belongs to, and a campaign's virtual queue is
+    /// paced by the dialer, so neither has a next agent in line.
+    /// </remarks>
+    private static bool IsWaitingForTheNextAgent(ReservationStatus status, bool agentUnreachable, string queueId)
+        => (status == ReservationStatus.Expired || agentUnreachable) &&
+            !string.IsNullOrEmpty(queueId) &&
+            !ContactCenterConstants.IsDirectRoutingQueue(queueId) &&
+            !ContactCenterConstants.IsCampaignQueue(queueId);
 
     private static bool IsDirectVoicemailEnabled(Interaction interaction)
     {

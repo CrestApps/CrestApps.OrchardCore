@@ -70,7 +70,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
 
         if (string.IsNullOrEmpty(message.To))
         {
-            return Failed("The recipient (To) is required.");
+            return Failed(S["The recipient (To) is required."]);
         }
 
         var options = _options.CurrentValue;
@@ -79,7 +79,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
         {
             _logger.LogError("Unable to send a Telnyx SMS because the Telnyx SMS provider is not configured or enabled.");
 
-            return Failed("The Telnyx SMS provider is not configured.");
+            return Failed(S["The Telnyx SMS provider is not configured."]);
         }
 
         // A from-number is optional when a messaging profile is configured: Telnyx selects the sender from the
@@ -87,7 +87,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
         // messaging profile, an explicit From is required because Telnyx has no pool to choose from.
         if (string.IsNullOrEmpty(message.From) && string.IsNullOrEmpty(options.MessagingProfileId))
         {
-            return Failed("A sending number (From) is required unless a Telnyx messaging profile is configured.");
+            return Failed(S["A sending number (From) is required unless a Telnyx messaging profile is configured."]);
         }
 
         var payload = new Dictionary<string, object>
@@ -141,7 +141,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
                         _logger.LogInformation("Telnyx refused the SMS with error {TelnyxErrorCode} because the recipient has opted out; Telnyx already confirmed the opt-out to them.", StopBlockedErrorCode);
                     }
 
-                    var optedOut = Failed("The recipient has opted out of messages from this number.");
+                    var optedOut = Failed(S["The recipient has opted out of messages from this number."]);
                     optedOut.ErrorCode = OmnichannelConstants.SmsErrorCodes.RecipientOptedOut;
 
                     return optedOut;
@@ -149,7 +149,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
 
                 _logger.LogWarning("Telnyx SMS send failed with status {StatusCode}. Response: {Response}", (int)response.StatusCode, Truncate(errorBody));
 
-                return Failed($"The Telnyx messaging API returned {(int)response.StatusCode}: {Truncate(errorBody)}");
+                return Failed(S["The Telnyx messaging API returned {0}: {1}", (int)response.StatusCode, Truncate(errorBody)]);
             }
 
             var providerMessageId = await TryReadMessageIdAsync(response, cancellationToken);
@@ -165,7 +165,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
         {
             _logger.LogError(ex, "The Telnyx messaging API request failed.");
 
-            return Failed("The Telnyx messaging API request failed.");
+            return Failed(S["The Telnyx messaging API request failed."]);
         }
     }
 
@@ -217,5 +217,5 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISms
     private static string Truncate(string value)
         => string.IsNullOrEmpty(value) || value.Length <= 500 ? value : value[..500];
 
-    private MessageDispatchResult Failed(string message) => MessageDispatchResult.Failed(S[message]);
+    private static MessageDispatchResult Failed(LocalizedString message) => MessageDispatchResult.Failed(message);
 }

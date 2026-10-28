@@ -231,7 +231,7 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        IQuery<MessagingConversation> results = Build(query).OrderByDescending(index => index.LastMessageUtc);
+        IQuery<MessagingConversation> results = Build(query).OrderByDescending(index => index.LastActivityUtc);
 
         if (query.Skip > 0)
         {

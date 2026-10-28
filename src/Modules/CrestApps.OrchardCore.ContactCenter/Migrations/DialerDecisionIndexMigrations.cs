@@ -98,6 +98,29 @@ internal sealed class DialerDecisionIndexMigrations : DataMigration
             ContactCenterStorage.CollectionName,
             "AgentId", "LastSeenUtc", "DocumentId");
 
-        return 1;
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the decisions through, newest first by <c>LastSeenUtc</c> a page at a time, so each
+    /// page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 2;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<DialerDecisionIndex>(
+            SchemaBuilder,
+            "IDX_DialerDecisionIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "LastSeenUtc", "Id");
     }
 }

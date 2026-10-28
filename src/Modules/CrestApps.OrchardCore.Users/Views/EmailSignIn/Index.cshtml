@@ -12,7 +12,7 @@
         @Html.AntiForgeryToken()
         <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
         <div class="card-body">
-            <label for="email-sign-in-email" class="form-label">@T["Email"]</label>
+            <label for="email-sign-in-email" class="form-label ocat-label-required">@T["Email"]</label>
             <input id="email-sign-in-email" name="Email" type="email" value="@Model.Email" class="form-control" autocomplete="email" autofocus required />
             <span asp-validation-for="Email" class="text-danger small"></span>
         </div>

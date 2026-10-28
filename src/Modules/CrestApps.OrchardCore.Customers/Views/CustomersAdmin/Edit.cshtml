@@ -65,7 +65,7 @@
         </div>
 
         <div class="ocat-wrapper" data-customer-business asp-validation-class-for="CompanyName">
-            <label asp-for="CompanyName" class="ocat-label">@T["Company"]</label>
+            <label asp-for="CompanyName" class="ocat-label ocat-label-required">@T["Company"]</label>
             <div class="ocat-end">
                 <input asp-for="CompanyName" class="form-control" autocomplete="off" />
                 <span asp-validation-for="CompanyName"></span>

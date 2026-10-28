@@ -78,6 +78,13 @@ public sealed class MessagingConversation : CatalogItem, IModifiedUtcAwareModel
     public DateTime? LastMessageUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time of the most recent hand-over of the thread, such as a transfer. The inbox orders by
+    /// the later of this and <see cref="LastMessageUtc"/>, so a thread handed to someone surfaces at the top of their
+    /// list instead of where its last message left it.
+    /// </summary>
+    public DateTime? LastActivityUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets a short preview of the most recent message body.
     /// </summary>
     public string LastMessagePreview { get; set; }

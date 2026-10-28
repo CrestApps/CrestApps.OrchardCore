@@ -5,7 +5,7 @@
 @if (Model.HasModelName)
 {
     <div class="ocat-wrapper">
-        <label asp-for="ModelName" class="ocat-label">@T["Model name"]</label>
+        <label asp-for="ModelName" class="ocat-label ocat-label-required">@T["Model name"]</label>
         <div class="ocat-end">
             <input asp-for="ModelName" class="form-control" />
             <span asp-validation-for="ModelName" class="text-danger"></span>
@@ -15,7 +15,7 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <label asp-for="Name" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Technical name"]</label>
     <div class="ocat-end">
         <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
         <span asp-validation-for="Name" class="text-danger"></span>

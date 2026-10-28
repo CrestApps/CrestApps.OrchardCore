@@ -523,7 +523,7 @@ public sealed class DialerDecisionLogPersistenceTests
 
         if (withDecisionLog)
         {
-            Assert.Equal(1, await new DialerDecisionIndexMigrations { SchemaBuilder = schemaBuilder }.CreateAsync());
+            Assert.Equal(2, await new DialerDecisionIndexMigrations { SchemaBuilder = schemaBuilder }.CreateAsync());
         }
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
@@ -536,7 +536,7 @@ public sealed class DialerDecisionLogPersistenceTests
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, await new DialerDecisionIndexMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) }.CreateAsync());
+        Assert.Equal(2, await new DialerDecisionIndexMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) }.CreateAsync());
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }

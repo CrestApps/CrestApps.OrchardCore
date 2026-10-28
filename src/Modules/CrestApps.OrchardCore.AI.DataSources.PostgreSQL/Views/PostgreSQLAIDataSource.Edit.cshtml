@@ -20,13 +20,13 @@
             }
 
             <div class="mb-3" data-ai-data-source-postgresql-connection-string-settings>
-                <label asp-for="ConnectionString" class="form-label">@T["Connection string"]</label>
+                <label asp-for="ConnectionString" class="form-label @(Model.HasConnectionString ? "" : "ocat-label-required")">@T["Connection string"]</label>
                 <input asp-for="ConnectionString" class="form-control" type="password" placeholder="@(Model.HasConnectionString ? T["Leave empty to keep the saved connection string"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ConnectionString" class="text-danger"></span>
             </div>
 
             <div class="mb-0">
-                <label asp-for="TableName" class="form-label">@T["Table name"]</label>
+                <label asp-for="TableName" class="form-label ocat-label-required">@T["Table name"]</label>
                 <input asp-for="TableName" class="form-control" />
                 <span asp-validation-for="TableName" class="text-danger"></span>
                 <span class="hint">@T["The PostgreSQL table to read rows from."]</span>

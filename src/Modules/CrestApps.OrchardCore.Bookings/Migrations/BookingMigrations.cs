@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Bookings.Indexes;
 using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -100,6 +101,41 @@ internal sealed class BookingMigrations : DataMigration
             )
         );
 
-        return 1;
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the indexes reports read bookings, dates and balances through a page at a time, newest first by when a
+    /// booking was made, a date starts and a balance is due, so each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReportIndexesAsync();
+
+        return 2;
+    }
+
+    private async Task CreateReportIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<BookingIndex>(
+            SchemaBuilder,
+            "IDX_BookingIndex_Report",
+            BookingsConstants.CollectionName,
+            "CreatedUtc", "Id");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<BookingSlotIndex>(
+            SchemaBuilder,
+            "IDX_BookingSlotIndex_Report",
+            BookingsConstants.CollectionName,
+            "StartsUtc", "Id");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<BookingBalanceIndex>(
+            SchemaBuilder,
+            "IDX_BookingBalanceIndex_Report",
+            BookingsConstants.CollectionName,
+            "DueUtc", "Id");
     }
 }

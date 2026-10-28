@@ -3,7 +3,7 @@
 @model SftpConnectionViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Host" class="ocat-label">@T["Host"]</label>
+    <label asp-for="Host" class="ocat-label ocat-label-required">@T["Host"]</label>
     <div class="ocat-end">
         <input asp-for="Host" class="form-control" />
         <span asp-validation-for="Host" class="text-danger"></span>
@@ -21,7 +21,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Username" class="ocat-label">@T["Username"]</label>
+    <label asp-for="Username" class="ocat-label ocat-label-required">@T["Username"]</label>
     <div class="ocat-end">
         <input asp-for="Username" class="form-control" />
         <span asp-validation-for="Username" class="text-danger"></span>

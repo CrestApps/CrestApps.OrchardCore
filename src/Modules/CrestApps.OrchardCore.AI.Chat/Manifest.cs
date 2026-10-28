@@ -47,3 +47,14 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.ChatCore,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.UsageAnalytics,
+    Name = "AI Usage Analytics",
+    Description = "Records the usage of every request sent to an AI provider (tokens, audio, images and automated voice call summaries) and provides the AI Usage Analytics report.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Chat,
+    ]
+)]

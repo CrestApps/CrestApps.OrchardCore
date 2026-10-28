@@ -3,7 +3,7 @@
 @model SendTextMessageTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="From">
-    <label class="ocat-label" asp-for="From">@T["From"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="From">@T["From"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="From" />
         <span asp-validation-for="From"></span>
@@ -12,7 +12,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="To">
-    <label class="ocat-label" asp-for="To">@T["To"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="To">@T["To"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="To" />
         <span asp-validation-for="To"></span>
@@ -21,7 +21,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Body">
-    <label class="ocat-label" asp-for="Body">@T["Message"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="Body">@T["Message"]</label>
     <div class="ocat-end">
         <textarea class="form-control" asp-for="Body" rows="3"></textarea>
         <span asp-validation-for="Body"></span>

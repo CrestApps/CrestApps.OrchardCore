@@ -60,7 +60,7 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
+            <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Title"]</label>
             <div class="ocat-end">
                 <input asp-for="DisplayText" class="form-control" />
                 <span asp-validation-for="DisplayText" class="text-danger"></span>
@@ -68,7 +68,7 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
+            <label asp-for="SubjectContentType" class="ocat-label ocat-label-required">@T["Subject content type"]</label>
             <div class="ocat-end">
                 <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
                     <option value="">@T["Select a subject content type"]</option>
@@ -187,7 +187,7 @@
         @if (!string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {
             <div class="ocat-wrapper">
-                <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+                <label asp-for="Channel" class="ocat-label ocat-label-required">@T["Channel"]</label>
                 <div class="ocat-end">
                     <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
                         <option value="">@T["Select a channel"]</option>
@@ -247,7 +247,7 @@
         @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {
             <div class="ocat-wrapper">
-                <label asp-for="DialerProfileId" class="ocat-label">@T["Dialer profile"]</label>
+                <label asp-for="DialerProfileId" class="ocat-label ocat-label-required">@T["Dialer profile"]</label>
                 <div class="ocat-end">
                     <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select">
                     </select>
@@ -267,7 +267,7 @@
         }
 
         <div class="ocat-wrapper">
-            <label asp-for="ScheduleAt" class="ocat-label">@T["Schedule at"]</label>
+            <label asp-for="ScheduleAt" class="ocat-label ocat-label-required">@T["Schedule at"]</label>
             <div class="ocat-end">
                 <input type="text"
                        id="@Html.IdFor(m => m.ScheduleAt)"
@@ -282,7 +282,7 @@
         @if (Model.RequiresUserAssignment)
         {
             <div class="ocat-wrapper">
-                <label asp-for="UserIds" class="ocat-label">@T["User(s) to assign activities to"]</label>
+                <label asp-for="UserIds" class="ocat-label ocat-label-required">@T["User(s) to assign activities to"]</label>
                 <div class="ocat-end">
                     @await Component.InvokeAsync("ItemSelector", new
                     {
@@ -347,7 +347,7 @@
     </div>
     <div class="card-body">
         <div class="ocat-wrapper">
-            <label asp-for="ContactContentType" class="ocat-label">@T["Record type"]</label>
+            <label asp-for="ContactContentType" class="ocat-label ocat-label-required">@T["Record type"]</label>
             <div class="ocat-end">
                 <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
                     <option value="">@T["Select a contact or lead type"]</option>

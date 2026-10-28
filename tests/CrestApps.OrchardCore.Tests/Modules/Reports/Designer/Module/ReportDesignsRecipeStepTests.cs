@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using OrchardCore.Modules;
@@ -87,18 +88,76 @@ public sealed class ReportDesignsRecipeStepTests
         Assert.Empty(context.Errors);
     }
 
-    private static ReportDesignsRecipeStep Step(CrestApps.Core.Services.ICatalog<ReportDesign> designs, CrestApps.Core.Services.ICatalog<ReportView> views)
+    [Fact]
+    public async Task ExecuteAsync_GivesTheItemsThatNameNoOwnerToThePersonWhoRunsTheRecipe()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var importer = User("importer-id", "importer");
+        var step = Step(designs, Catalog<ReportView>(), importer);
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            ["Reports"] = new JsonArray(
+                new JsonObject { ["itemId"] = "ready-made", ["displayText"] = "Ready-made" },
+                new JsonObject { ["itemId"] = "unknown-owner", ["displayText"] = "Unknown owner", ["OwnerUserName"] = "nobody" },
+                new JsonObject { ["itemId"] = "owned", ["displayText"] = "Owned", ["OwnerUserName"] = "alice" },
+                new JsonObject { ["itemId"] = "kept", ["displayText"] = "Kept", ["ownerId"] = "kept-id" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Equal("importer-id", (await designs.FindByIdAsync("ready-made", TestContext.Current.CancellationToken)).OwnerId);
+        Assert.Equal("importer-id", (await designs.FindByIdAsync("unknown-owner", TestContext.Current.CancellationToken)).OwnerId);
+        Assert.Equal("alice-id", (await designs.FindByIdAsync("owned", TestContext.Current.CancellationToken)).OwnerId);
+        Assert.Equal("kept-id", (await designs.FindByIdAsync("kept", TestContext.Current.CancellationToken)).OwnerId);
+        Assert.Empty(context.Errors);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutASignedInPerson_LeavesTheItemsThatNameNoOwnerWithoutOne()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var step = Step(designs, Catalog<ReportView>());
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            ["Reports"] = new JsonArray(new JsonObject { ["itemId"] = "ready-made", ["displayText"] = "Ready-made" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Null((await designs.FindByIdAsync("ready-made", TestContext.Current.CancellationToken)).OwnerId);
+    }
+
+    private static ReportDesignsRecipeStep Step(
+        CrestApps.Core.Services.ICatalog<ReportDesign> designs,
+        CrestApps.Core.Services.ICatalog<ReportView> views,
+        System.Security.Claims.ClaimsPrincipal importer = null)
     {
         var alice = Mock.Of<IUser>();
+        var importerUser = Mock.Of<IUser>();
         var userManager = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);
 
         userManager.Setup(manager => manager.FindByNameAsync("alice")).ReturnsAsync(alice);
         userManager.Setup(manager => manager.GetUserIdAsync(alice)).ReturnsAsync("alice-id");
+        userManager.Setup(manager => manager.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>())).ReturnsAsync(importerUser);
+        userManager.Setup(manager => manager.GetUserIdAsync(importerUser)).ReturnsAsync("importer-id");
 
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc));
 
-        return new ReportDesignsRecipeStep(designs, views, NoSnapshots(), userManager.Object, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
+        var httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = importer is null ? null : new DefaultHttpContext { User = importer },
+        };
+
+        return new ReportDesignsRecipeStep(designs, views, NoSnapshots(), userManager.Object, httpContextAccessor, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
     }
 
     private static RecipeExecutionContext Context(JsonObject step)

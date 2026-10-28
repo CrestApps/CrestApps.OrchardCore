@@ -21,8 +21,8 @@ public interface IMessagingHubClient
     Task MessageDeliveryUpdated(MessagingDeliveryNotification notification);
 
     /// <summary>
-    /// Notifies the client that a conversation was claimed or assigned, so a claimed pooled message can
-    /// disappear from other inboxes.
+    /// Notifies the client that a conversation was claimed, routed, transferred or assigned, so a claimed pooled
+    /// message can disappear from other inboxes and the agent it was assigned to is told.
     /// </summary>
     /// <param name="notification">The assignment change.</param>
     Task ConversationAssigned(MessagingAssignmentNotification notification);

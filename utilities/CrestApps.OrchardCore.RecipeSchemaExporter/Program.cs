@@ -625,7 +625,7 @@ internal sealed class Program
     private static IPermissionService CreatePermissionService()
     {
         var permissions = _permissionNames
-            .Select(name => new Permission(name, name))
+            .Select(name => new Permission(name))
             .ToArray();
 
         var permissionService = new Mock<IPermissionService>();

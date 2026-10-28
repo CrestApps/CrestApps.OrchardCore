@@ -70,9 +70,14 @@ public sealed class MessagingConversationIndex : CatalogItemIndex
     public bool IsRead { get; set; }
 
     /// <summary>
-    /// Gets or sets the UTC time of the most recent message, used to order the inbox.
+    /// Gets or sets the UTC time of the most recent message.
     /// </summary>
     public DateTime? LastMessageUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time of the most recent message or hand-over, used to order the inbox.
+    /// </summary>
+    public DateTime? LastActivityUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the number of unread inbound messages, so the inbox badge is read from the index rather than

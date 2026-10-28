@@ -174,6 +174,25 @@ var registered = await registry.GetRegisteredNumbersAsync(phoneNumbers, context)
 
 When no `CountryCode` is specified (or the context is `null`), the local registry checks against all uploaded lists regardless of country.
 
+## Report Builder data source
+
+The local lists and the numbers imported into them are also a data source of Orchard Core, so the [Report Builder](report-builder/index.md) and Orchard Core's data pipelines can read them, for example to follow the imports of each list or to find the contacts whose phone number is on a list.
+
+| | |
+| --- | --- |
+| **Data source** | **DNC registry** (`DncRegistry`) |
+| **Registered when** | **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) and **Local Do Not Call Registry** (`CrestApps.OrchardCore.DncRegistry.Local`) are enabled. Only the local registry stores records; the USA FTC and Canada registries are checked online and store nothing to report on. |
+| **Permission** | **Manage DNC registry settings** (`ManageDncRegistrySettings`), the permission of the **Local DNC Registry** page. |
+
+| Data set | Technical name | Rows | Main date | Fields |
+| --- | --- | --- | --- | --- |
+| **DNC lists** | `DncLists` | One row for each local list. | `CreatedUtc` | `ListId` (identifier), `Name`, `UploadedFileName`, `CountryCode`, `PhoneNumberCount`, `CreatedUtc` (when the list was uploaded), `Status` (`Pending`, `Processing`, `Completed`, `Failed`, `Paused` or `Deleting`), `TotalRecords`, `TotalProcessed`, `ImportedCount`, `ErrorCount` (the rejected rows), `FailedAttempts`, `Error`, `ProcessSaveUtc`, `CompletedUtc` |
+| **DNC entries** | `DncEntries` | One row for each phone number imported into a local list. | None | `EntryId` (identifier), `ListId` (identifier, references `DncRegistry.DncLists.ListId`), `CountryCode`. The numbers themselves are not exposed, since the registry's pages show the lists, not the numbers on them |
+
+Where the uploaded file is stored and the text of the rejected rows are not exposed; download the rejected rows from the **Local DNC Registry** page. An entry has no date, so **DNC entries** has no main date. Both data sets read their rows a page at a time, newest first. **DNC lists** narrows the read to the date range of a report's filters on `CreatedUtc` and to the statuses and countries they allow. **DNC entries** narrows the read to the join keys of `EntryId` and `ListId`, and to the countries a report's filters allow. A report that only groups and counts the fields the index holds, such as the numbers of each list, is calculated in the database.
+
+The entries of a list being deleted stay in **DNC entries** until the deletion ends, and the entries of a list that is still importing are already there. Only the entries of **Completed** lists are used to screen numbers, so join **DNC lists** and filter its `Status` to report on the numbers in use.
+
 ## Provider-specific configuration
 
 Each national registry is configured on its own page under **Settings** -> **DNC Registries**. The field-by-field

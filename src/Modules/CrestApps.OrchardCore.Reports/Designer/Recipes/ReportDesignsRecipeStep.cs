@@ -6,6 +6,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -18,7 +19,8 @@ namespace CrestApps.OrchardCore.Reports.Designer.Recipes;
 /// <summary>
 /// Imports designed reports and views from the <c>ReportDesigns</c> recipe step. Items are matched by
 /// <c>ItemId</c> and replaced, or created with that identifier. An item's owner is matched by the
-/// <c>OwnerUserName</c> the export wrote, so a report keeps running on a site where its owner has another user id.
+/// <c>OwnerUserName</c> the export wrote, so a report keeps running on a site where its owner has another user id; an
+/// item that names no owner the site knows, and has no owner id, is owned by the person who runs the recipe.
 /// Share links are never imported.
 /// </summary>
 public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
@@ -32,6 +34,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     private readonly ICatalog<ReportView> _views;
     private readonly ReportViewSnapshotStore _snapshots;
     private readonly UserManager<IUser> _userManager;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
     private readonly IStringLocalizer S;
 
@@ -42,6 +45,8 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// <param name="views">The view catalog.</param>
     /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="userManager">The user manager used to match owners by user name.</param>
+    /// <param name="httpContextAccessor">The accessor of the request that runs the recipe, whose user owns the items
+    /// that name no owner.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportDesignsRecipeStep(
@@ -49,6 +54,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         ICatalog<ReportView> views,
         ReportViewSnapshotStore snapshots,
         UserManager<IUser> userManager,
+        IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<ReportDesignsRecipeStep> stringLocalizer)
         : base(Name)
@@ -57,6 +63,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         _views = views;
         _snapshots = snapshots;
         _userManager = userManager;
+        _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -147,6 +154,22 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
             {
                 return await _userManager.GetUserIdAsync(user);
             }
+        }
+
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            return ownerId;
+        }
+
+        // A report a recipe ships for any site, such as a module's ready-made reports, names no owner: the person who
+        // runs the recipe owns it, so it runs with their access. A recipe run without a signed-in person, such as at
+        // setup, leaves it without an owner.
+        var principal = _httpContextAccessor.HttpContext?.User;
+
+        if (principal?.Identity?.IsAuthenticated == true &&
+            await _userManager.GetUserAsync(principal) is { } importer)
+        {
+            return await _userManager.GetUserIdAsync(importer);
         }
 
         return ownerId;

@@ -168,11 +168,17 @@ internal sealed class ActivitiesDataSet : RecordDataSet<OmnichannelActivity>, IA
         AddField("HandleMinutes", S["Minutes to complete"], DataFieldType.Decimal, record => record.CompletedUtc.HasValue && record.CompletedUtc.Value >= record.CreatedUtc
             ? Math.Round((decimal)(record.CompletedUtc.Value - record.CreatedUtc).TotalMinutes, 2)
             : null, dates);
+        AddField("HandoffSummaryUtc", S["Handed off by AI"], DataFieldType.DateTime, record => record.HandoffSummaryUtc, dates);
 
         AddField("CampaignId", S["Campaign ID"], DataFieldType.Text, record => record.CampaignId, links).Identifier(OmnichannelReportDataSource.Own(CampaignsDataSet.Name));
         AddField("Campaign", S["Campaign"], DataFieldType.Text, record => Lookup(Campaigns, record.CampaignId), links);
         AddField("ContactContentItemId", S["Contact ID"], DataFieldType.Text, record => record.ContactContentItemId, links).Identifier();
         AddField("ContactContentType", S["Contact type"], DataFieldType.Text, record => record.ContactContentType, links);
+        AddField("ContactResolutionStatus", S["Contact match"], DataFieldType.Text, record => record.ContactResolutionStatus, links);
+
+        // Contacts and leads are content items of the types the site defines, so their identifiers join the Contents
+        // data source on the content type a report picks, not on a reference declared here.
+        AddField("ConvertedFromLeadItemId", S["Converted from lead ID"], DataFieldType.Text, record => record.ConvertedFromLeadItemId, links).Identifier();
 
         // The dialer and chat data sets live in other modules; these references join to them when they are enabled.
         AddField("DialerProfileId", S["Dialer profile ID"], DataFieldType.Text, record => record.DialerProfileId, links).Identifier(new DataFieldReference("ContactCenter", "DialerProfiles", "ItemId"));

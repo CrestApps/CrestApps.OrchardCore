@@ -56,7 +56,7 @@
 
     <div class="collapse mb-3" id="inventory-import">
         <form asp-action="Import" method="post" enctype="multipart/form-data" class="card card-body no-multisubmit">
-            <label for="inventory-import-file" class="form-label">@T["CSV file"]</label>
+            <label for="inventory-import-file" class="form-label ocat-label-required">@T["CSV file"]</label>
             <div class="input-group">
                 <input type="file" name="file" id="inventory-import-file" class="form-control" accept=".csv,text/csv" required />
                 <button type="submit" class="btn btn-primary">@T["Import"]</button>

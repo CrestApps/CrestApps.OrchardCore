@@ -13,6 +13,7 @@ using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Reports.Subscriptions;
@@ -41,7 +42,7 @@ public static class ReportSubscriptionPermissions
     /// <summary>
     /// Adds and changes report subscriptions. Each report also needs its own permission to choose it.
     /// </summary>
-    public static readonly Permission ManageReportSubscriptions = new("ManageReportSubscriptions", "Manage report subscriptions");
+    public static readonly Permission ManageReportSubscriptions = new("ManageReportSubscriptions", LocalizationSource.Create("Manage report subscriptions", typeof(ReportSubscriptionPermissions)));
 }
 
 internal sealed class ReportSubscriptionPermissionProvider : IPermissionProvider

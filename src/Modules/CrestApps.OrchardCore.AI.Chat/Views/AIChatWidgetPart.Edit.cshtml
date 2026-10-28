@@ -3,7 +3,7 @@
 @model AIChatWidgetViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="ProfileId" class="ocat-label">@T["Profile"]</label>
+    <label asp-for="ProfileId" class="ocat-label ocat-label-required">@T["Profile"]</label>
     <div class="ocat-end">
         <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
             <option value="">@T["Select a profile"]</option>

@@ -3,7 +3,7 @@
 @model TimeZoneMapViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
     <div class="ocat-end">
         @if (Model.IsNew)
         {
@@ -20,7 +20,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <label asp-for="TimeZoneId" class="ocat-label ocat-label-required">@T["Time zone"]</label>
     <div class="ocat-end">
         <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select">
             <option value="">@T["Select a time zone"]</option>

@@ -91,7 +91,7 @@
                 </div>
 
                 <div class="ocat-wrapper" data-account-panel="@LeadConversionAccountMode.UseExisting">
-                    <label class="ocat-label">@T["Existing account"]</label>
+                    <label class="ocat-label ocat-label-required">@T["Existing account"]</label>
                     <div class="ocat-end">
                         @await Component.InvokeAsync("ItemSelector", new
                         {
@@ -113,7 +113,7 @@
                 </div>
 
                 <div class="ocat-wrapper" data-account-panel="@LeadConversionAccountMode.CreateNew">
-                    <label asp-for="AccountName" class="ocat-label">@T["Account name"]</label>
+                    <label asp-for="AccountName" class="ocat-label @(string.IsNullOrWhiteSpace(Model.Company) ? "ocat-label-required" : "")">@T["Account name"]</label>
                     <div class="ocat-end">
                         <input asp-for="AccountName" class="form-control" />
                         <span class="hint">@T["Starts from the lead's company."]</span>

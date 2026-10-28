@@ -17,6 +17,7 @@ internal sealed class MessagingMigrations : DataMigration
 {
     internal const string AgentAttentionIndexName = "IDX_MessagingConversationIndex_AgentAttention";
     internal const string OwnerAttentionIndexName = "IDX_MessagingConversationIndex_OwnerAttention";
+    internal const string ActivityIndexName = "IDX_MessagingConversationIndex_Activity";
 
     private readonly IStore _store;
     private readonly ILogger _logger;
@@ -54,6 +55,7 @@ internal sealed class MessagingMigrations : DataMigration
             .Column<string>("Status", column => column.WithLength(32))
             .Column<bool>("IsRead")
             .Column<DateTime>("LastMessageUtc")
+            .Column<DateTime>("LastActivityUtc", column => column.Nullable())
             .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
             .Column<DateTime>("AssignedUtc", column => column.Nullable())
             .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
@@ -161,8 +163,9 @@ internal sealed class MessagingMigrations : DataMigration
 
         await CreateReportIndexAsync();
         await CreateAttentionIndexesAsync();
+        await CreateActivityIndexAsync();
 
-        return 4;
+        return 5;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -240,6 +243,39 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateAttentionIndexesAsync();
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the time the inbox is ordered by: the later of a thread's last message and its last hand-over, so a
+    /// transferred thread is listed at the top of its recipient's inbox instead of below every newer message. Existing
+    /// threads start from their last message, which is what the inbox was ordered by until now.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
+            .AddColumn<DateTime>("LastActivityUtc", column => column.Nullable()),
+            collection: MessagingStorage.CollectionName);
+
+        await MessagingMigrationSql.CopyColumnAsync(
+            SchemaBuilder,
+            _store,
+            typeof(MessagingConversationIndex),
+            "LastMessageUtc",
+            "LastActivityUtc");
+
+        await CreateActivityIndexAsync();
+
+        return 5;
+    }
+
+    private Task<bool> CreateActivityIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            ActivityIndexName,
+            MessagingStorage.CollectionName,
+            "LastActivityUtc", "DocumentId");
     }
 
     private async Task CreateAttentionIndexesAsync()

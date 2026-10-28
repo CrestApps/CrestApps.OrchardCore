@@ -166,6 +166,10 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         conversation.IsRead = false;
         conversation.ModifiedUtc = _clock.UtcNow;
 
+        // The hand-over is the newest thing on the thread for its recipient, so it is listed at the top of their inbox
+        // rather than below every conversation with a newer message.
+        conversation.LastActivityUtc = conversation.ModifiedUtc;
+
         var entry = new MessagingConversationEvent
         {
             Kind = MessagingConversationEventKind.Transferred,
@@ -192,17 +196,13 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
 
-        await _notifier.ConversationAssignedAsync(new MessagingAssignmentNotification
-        {
-            ConversationId = conversation.ItemId,
-            AssignedAgentId = conversation.AssignedAgentId,
-            OwnerQueueId = conversation.OwnerType == ConversationOwnerType.Queue ? conversation.OwnerId : null,
-            IsTransfer = true,
-            PreviousAgentId = previousAgentId,
-            TransferredByAgentId = request.ActingAgentId,
-            TransferredByName = entry.ActorName,
-            TransferredToName = entry.ToName,
-        }, cancellationToken);
+        var notification = MessagingAssignmentNotifications.Create(conversation, previousAgentId, request.ActingAgentId);
+        notification.IsTransfer = true;
+        notification.TransferredByAgentId = request.ActingAgentId;
+        notification.TransferredByName = entry.ActorName;
+        notification.TransferredToName = entry.ToName;
+
+        await _notifier.ConversationAssignedAsync(notification, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

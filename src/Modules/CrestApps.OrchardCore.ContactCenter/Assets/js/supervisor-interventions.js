@@ -292,14 +292,14 @@ export function createSupervisorInterventions(options) {
                 confirm = label('freeAgentButton', 'Free agent');
                 break;
             case 'transfer':
-                body = '<label class="form-label" for="ccTransferTarget">' + escape(label('transferTo', 'Transfer to')) + '</label>' +
+                body = '<label class="form-label ocat-label-required" for="ccTransferTarget">' + escape(label('transferTo', 'Transfer to')) + '</label>' +
                     '<select class="form-select form-select-sm mb-2" id="ccTransferTarget" data-cc-transfer-target>' + transferOptions() + '</select>' +
                     '<label class="form-label" for="ccTransferNumber">' + escape(label('transferNumber', 'Number (for a phone number)')) + '</label>' +
                     '<input type="tel" class="form-control form-control-sm mb-2" id="ccTransferNumber" data-cc-transfer-number autocomplete="off" />';
                 confirm = label('transferButton', 'Transfer');
                 break;
             case 'message':
-                body = '<label class="form-label" for="ccAgentMessage">' + escape(format(label('messageTo', 'Message to {0}'), name)) + '</label>' +
+                body = '<label class="form-label ocat-label-required" for="ccAgentMessage">' + escape(format(label('messageTo', 'Message to {0}'), name)) + '</label>' +
                     '<textarea class="form-control form-control-sm mb-2" id="ccAgentMessage" rows="2" maxlength="500" data-cc-message-text></textarea>';
                 confirm = label('sendButton', 'Send');
                 break;

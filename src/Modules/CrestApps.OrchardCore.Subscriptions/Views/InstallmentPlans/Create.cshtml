@@ -47,7 +47,7 @@
 
             <div id="customer-new-fields" class="@(Model.NewCustomer ? string.Empty : "d-none")">
                 <div class="ocat-wrapper" asp-validation-class-for="NewCustomerName">
-                    <label asp-for="NewCustomerName" class="ocat-label">@T["Name"]</label>
+                    <label asp-for="NewCustomerName" class="ocat-label ocat-label-required">@T["Name"]</label>
                     <div class="ocat-end">
                         <input asp-for="NewCustomerName" class="form-control" autocomplete="off" />
                         <span asp-validation-for="NewCustomerName" class="text-danger"></span>
@@ -55,7 +55,7 @@
                 </div>
 
                 <div class="ocat-wrapper" asp-validation-class-for="NewCustomerEmail">
-                    <label asp-for="NewCustomerEmail" class="ocat-label">@T["Email"]</label>
+                    <label asp-for="NewCustomerEmail" class="ocat-label ocat-label-required">@T["Email"]</label>
                     <div class="ocat-end">
                         <input asp-for="NewCustomerEmail" type="email" class="form-control" autocomplete="off" />
                         <span asp-validation-for="NewCustomerEmail" class="text-danger"></span>
@@ -70,7 +70,7 @@
         <div class="card-header">@T["Plan"]</div>
         <div class="card-body">
             <div class="ocat-wrapper" asp-validation-class-for="Title">
-                <label asp-for="Title" class="ocat-label">@T["What the plan is for"]</label>
+                <label asp-for="Title" class="ocat-label ocat-label-required">@T["What the plan is for"]</label>
                 <div class="ocat-end">
                     <input asp-for="Title" class="form-control" />
                     <span asp-validation-for="Title" class="text-danger"></span>
@@ -79,7 +79,7 @@
             </div>
 
             <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
-                <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+                <label asp-for="Currency" class="ocat-label ocat-label-required">@T["Currency"]</label>
                 <div class="ocat-limited">
                     @if (Model.Currencies.Count > 0)
                     {
@@ -95,7 +95,7 @@
             </div>
 
             <div class="ocat-limited-wrapper" asp-validation-class-for="TotalAmount">
-                <label asp-for="TotalAmount" class="ocat-label">@T["Total"]</label>
+                <label asp-for="TotalAmount" class="ocat-label ocat-label-required">@T["Total"]</label>
                 <div class="ocat-limited">
                     <input asp-for="TotalAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
                     <span asp-validation-for="TotalAmount" class="text-danger"></span>
@@ -104,7 +104,7 @@
             </div>
 
             <div class="ocat-limited-wrapper" asp-validation-class-for="DownPaymentAmount">
-                <label asp-for="DownPaymentAmount" class="ocat-label">@T["Down payment today"]</label>
+                <label asp-for="DownPaymentAmount" class="ocat-label ocat-label-required">@T["Down payment today"]</label>
                 <div class="ocat-limited">
                     <input asp-for="DownPaymentAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
                     <span asp-validation-for="DownPaymentAmount" class="text-danger"></span>
@@ -113,7 +113,7 @@
             </div>
 
             <div class="ocat-limited-wrapper" asp-validation-class-for="InstallmentCount">
-                <label asp-for="InstallmentCount" class="ocat-label">@T["Number of payments after it"]</label>
+                <label asp-for="InstallmentCount" class="ocat-label ocat-label-required">@T["Number of payments after it"]</label>
                 <div class="ocat-limited">
                     <input asp-for="InstallmentCount" type="number" min="1" max="120" step="1" class="form-control" data-installment-input />
                     <span asp-validation-for="InstallmentCount" class="text-danger"></span>
@@ -133,7 +133,7 @@
             </div>
 
             <div class="ocat-limited-wrapper" asp-validation-class-for="FirstDueDate">
-                <label asp-for="FirstDueDate" class="ocat-label">@T["First payment due"]</label>
+                <label asp-for="FirstDueDate" class="ocat-label ocat-label-required">@T["First payment due"]</label>
                 <div class="ocat-limited">
                     <input asp-for="FirstDueDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" data-installment-input />
                     <span asp-validation-for="FirstDueDate" class="text-danger"></span>

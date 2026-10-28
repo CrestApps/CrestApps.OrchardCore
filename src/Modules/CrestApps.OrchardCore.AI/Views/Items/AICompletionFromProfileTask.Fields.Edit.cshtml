@@ -4,7 +4,7 @@
 @model AICompletionFromProfileTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="ProfileId">
-    <label asp-for="ProfileId" class="ocat-label">@T["Profiles"]</label>
+    <label asp-for="ProfileId" class="ocat-label ocat-label-required">@T["Profiles"]</label>
     <div class="ocat-end">
         <select asp-for="ProfileId" class="form-select" asp-items="Model.Profiles">
             <option value="">@T["Select a profile"]</option>
@@ -15,7 +15,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="ResultPropertyName">
-    <label asp-for="ResultPropertyName" class="ocat-label">@T["Result property name"]</label>
+    <label asp-for="ResultPropertyName" class="ocat-label ocat-label-required">@T["Result property name"]</label>
     <div class="ocat-end">
         <input asp-for="ResultPropertyName" class="form-control" autofocus="autofocus" />
         <span asp-validation-for="ResultPropertyName"></span>
@@ -24,7 +24,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="PromptTemplate">
-    <label asp-for="PromptTemplate" class="ocat-label">@T["Prompt template"]</label>
+    <label asp-for="PromptTemplate" class="ocat-label ocat-label-required">@T["Prompt template"]</label>
     <div class="ocat-end">
         <input type="text" asp-for="PromptTemplate" class="form-control code" />
         <span asp-validation-for="PromptTemplate"></span>

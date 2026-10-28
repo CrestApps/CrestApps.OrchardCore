@@ -3,7 +3,7 @@
 @model EnqueueActivityTaskViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="ActivityItemId">
-    <label class="ocat-label" asp-for="ActivityItemId">@T["Activity"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="ActivityItemId">@T["Activity"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="ActivityItemId" />
         <span asp-validation-for="ActivityItemId"></span>
@@ -12,7 +12,7 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="QueueId">
-    <label class="ocat-label" asp-for="QueueId">@T["Queue"]</label>
+    <label class="ocat-label ocat-label-required" asp-for="QueueId">@T["Queue"]</label>
     <div class="ocat-end">
         <input class="form-control" asp-for="QueueId" />
         <span asp-validation-for="QueueId"></span>

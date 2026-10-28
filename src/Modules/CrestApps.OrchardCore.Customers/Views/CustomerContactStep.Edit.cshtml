@@ -3,12 +3,12 @@
 <div class="customer-contact-step">
     <div class="row g-3 mb-3">
         <div class="col-md-6">
-            <label asp-for="Name" class="form-label">@T["Full name"]</label>
+            <label asp-for="Name" class="form-label ocat-label-required">@T["Full name"]</label>
             <input asp-for="Name" class="form-control" autocomplete="name" />
             <span asp-validation-for="Name" class="text-danger"></span>
         </div>
         <div class="col-md-6">
-            <label asp-for="Email" class="form-label">@T["Email"]</label>
+            <label asp-for="Email" class="form-label ocat-label-required">@T["Email"]</label>
             <input asp-for="Email" type="email" class="form-control" autocomplete="email" />
             <span asp-validation-for="Email" class="text-danger"></span>
             @if (!Model.IsSignedIn)

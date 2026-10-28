@@ -123,6 +123,7 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | **AI Chat Admin Widget** | A floating AI assistant on every admin page. | [Chat widgets](../ai/chat-widgets.md) |
 | **AI Chat Interactions** | Ad-hoc AI chats without a profile. | [Chat interactions](../ai/chat-interactions.md) |
 | **AI Chat Session Analytics** | AI chat reports. | [AI analytics](../ai/analytics.md) |
+| **AI Usage Analytics** | Records what the AI services are used for, and the AI usage report. | [AI analytics](../ai/analytics.md#ai-usage-analytics) |
 | **AI Prompt Templates** | Reusable instructions for AI profiles. | [Prompt templates](../ai/prompt-templates.md) |
 | **AI Documents for Profiles**, **AI Documents for Chat Interactions**, **AI Documents for Chat Sessions**, **AI Documents (PDF)**, **AI Documents (OpenXml)** | Documents the AI answers from. | [Knowledge](../ai/knowledge.md) |
 | **AI Data Sources - Elasticsearch**, **AI Data Sources - Azure AI Search**, **AI Data Sources - PostgreSQL**, **AI Web Crawlers**, **AI File Sources** | Company data and websites the AI answers from. | [Knowledge](../ai/knowledge.md) |
