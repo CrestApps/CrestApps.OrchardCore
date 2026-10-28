@@ -57,14 +57,4 @@ public static class AIUsageFeaturePurposes
     /// Rewriting what the AI remembers about a contact after a conversation.
     /// </summary>
     public const string ContactMemory = "ContactMemory";
-
-    /// <summary>
-    /// Checking what the customer says, or the AI's reply, against the profile's guardrails.
-    /// </summary>
-    public const string Guardrail = "Guardrail";
-
-    /// <summary>
-    /// Finding names, addresses and other personal details in a transcript to redact them.
-    /// </summary>
-    public const string PersonalDataRedaction = "PersonalDataRedaction";
 }

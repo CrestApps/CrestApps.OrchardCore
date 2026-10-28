@@ -1,6 +1,5 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
@@ -13,74 +12,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Conversations;
 
-public sealed class AIProfileVersionCompareAndLeadMemoryTests
+public sealed class AIContactMemoryLeadConversionTests
 {
     private static readonly DateTime _now = new(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc);
-
-    [Fact]
-    public void Compare_ListsEverySettingGroupedLikeTheEditor()
-    {
-        var then = NewProfile();
-        var now = NewProfile();
-        now.AlterSettings<AIProfileGuardrailSettings>(settings =>
-        {
-            settings.Topics = [AIGuardrailTopics.Violence, AIGuardrailTopics.Hate];
-            settings.PlaceholderReply = "Let's keep to your order.";
-        });
-        now.AlterSettings<AIProfileSpeakingStyleSettings>(settings => settings.Styles = [AISpeakingStyles.AIDisclosure]);
-        now.Put(new AIProfileMetadata { SystemMessage = "Be brief.", Temperature = 0.2f });
-
-        var titles = new Dictionary<string, string>
-        {
-            [AIGuardrailTopics.Violence] = "Violence and weapons",
-            [AISpeakingStyles.AIDisclosure] = "AI disclosure",
-        };
-
-        var rows = AIProfileVersionComparer.Compare(then, now, titles);
-
-        // Unchanged settings are listed too, so a compare shows the whole profile.
-        var title = Assert.Single(rows, row => row.Label == "Title");
-        Assert.Equal(AIProfileVersionComparer.General, title.Section);
-        Assert.False(title.Changed);
-
-        var memory = Assert.Single(rows, row => row.Label == "Contact Memory › Use memory");
-        Assert.Equal(AIProfileVersionComparer.DataProcessing, memory.Section);
-        Assert.Equal("Yes", memory.Then);
-        Assert.False(memory.Changed);
-
-        var topics = Assert.Single(rows, row => row.Label == "Guardrail › Topics");
-        Assert.Equal(AIProfileVersionComparer.PromptSecurity, topics.Section);
-        Assert.True(topics.Changed);
-        Assert.Null(topics.Then);
-        Assert.Equal("Violence and weapons (guardrail-topic-violence), guardrail-topic-hate", topics.Now);
-
-        var styles = Assert.Single(rows, row => row.Label == "Speaking Style › Styles");
-        Assert.Equal(AIProfileVersionComparer.Instructions, styles.Section);
-        Assert.Equal("AI disclosure (speaking-style-ai-disclosure)", styles.Now);
-
-        var systemMessage = Assert.Single(rows, row => row.Label == "System message");
-        Assert.Equal(AIProfileVersionComparer.Instructions, systemMessage.Section);
-        Assert.Equal("Be careful.", systemMessage.Then);
-        Assert.Equal("Be brief.", systemMessage.Now);
-
-        Assert.Equal(AIProfileVersionComparer.Parameters, Assert.Single(rows, row => row.Label == "Temperature").Section);
-        Assert.Equal(AIProfileVersionComparer.Capabilities, Assert.Single(rows, row => row.Label == "AI Tool Instance › Tool instance names").Section);
-
-        // What identifies the profile, or changes on every save, is left out.
-        Assert.DoesNotContain(rows, row => row.Label is "Item id" or "Owner id" or "Created utc" || row.Label.StartsWith("Version", StringComparison.Ordinal));
-
-        // Rows follow the editor's tabs.
-        var order = rows.Select(row => Array.IndexOf(AIProfileVersionComparer.Sections, row.Section)).ToList();
-        Assert.Equal(order.OrderBy(index => index), order);
-    }
-
-    [Theory]
-    [InlineData("AIProfileGuardrailSettings", "Guardrail")]
-    [InlineData("FunctionInvocationMetadata", "Function Invocation")]
-    [InlineData("PromptSecurityProfileSettings", "Prompt Security")]
-    [InlineData("AIProfileDataExtractionSettings", "Data Extraction")]
-    public void Compare_NamesGroupsAfterTheirSettings(string key, string expected)
-        => Assert.Equal(expected, AIProfileVersionComparer.GroupOf(key));
 
     [Fact]
     public async Task LeadConversion_MovesTheLeadsMemoryToTheNewContact()
@@ -132,25 +66,6 @@ public sealed class AIProfileVersionCompareAndLeadMemoryTests
     [Fact]
     public void LeadConversion_MergeKeepsWithinTheLongestNote()
         => Assert.Equal(AIContactMemory.MaxLength, AIContactMemoryLeadConversionRepointer.Merge(new string('a', 1500), new string('b', 1500)).Length);
-
-    private static AIProfile NewProfile()
-    {
-        var profile = new AIProfile
-        {
-            ItemId = "p1",
-            Name = "support",
-            DisplayText = "Support",
-            OwnerId = "u1",
-            ChatDeploymentName = "gpt-4.1-mini",
-        };
-
-        profile.Put(new AIProfileMetadata { SystemMessage = "Be careful.", Temperature = 0.7f });
-        profile.Put(new AIProfileVersionMetadata { Version = 3 });
-        profile.Put(new AIToolInstanceMetadata { ToolInstanceNames = ["OrderStatus"] });
-        profile.AlterSettings<AIProfileContactMemorySettings>(settings => settings.UseMemory = true);
-
-        return profile;
-    }
 
     private static AIContactMemoryLeadConversionRepointer NewRepointer(IAIContactMemoryStore store)
     {

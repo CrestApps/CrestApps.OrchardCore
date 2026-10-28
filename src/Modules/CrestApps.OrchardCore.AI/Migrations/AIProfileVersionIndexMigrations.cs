@@ -1,5 +1,5 @@
 using CrestApps.Core.Data.YesSql;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Indexes.AI;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
@@ -26,7 +26,7 @@ internal sealed class AIProfileVersionIndexMigrations : DataMigration
     /// </summary>
     public async Task<int> CreateAsync()
     {
-        await AIProfileVersionIndexSchema.CreateAsync(SchemaBuilder, _options);
+        await SchemaBuilder.CreateAIProfileVersionIndexSchemaAsync(_options);
 
         return 1;
     }

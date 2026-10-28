@@ -1,14 +1,12 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.AI.Controllers;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Moq;
 using OrchardCore.Modules;
@@ -278,72 +276,5 @@ public sealed class AIConversationQualityTests
         Assert.True(session.IsAnalyticsRecorded);
         Assert.Equal(0, session.PostSessionProcessingAttempts);
         Assert.Null(session.PostSessionProcessingLastAttemptUtc);
-    }
-
-    [Fact]
-    public async Task ProfileVersions_NumberEachSave_AndKeepTheRestoreNoteOffTheProfile()
-    {
-        var store = new InMemoryVersionStore();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var handler = new AIProfileVersionHandler(store, new HttpContextAccessor(), clock.Object);
-        var profile = new AIProfile { ItemId = "profile1", DisplayText = "Support" };
-
-        await handler.CreatingAsync(new CreatingContext<AIProfile>(profile), TestContext.Current.CancellationToken);
-        await handler.CreatedAsync(new CreatedContext<AIProfile>(profile), TestContext.Current.CancellationToken);
-
-        var metadata = profile.GetOrCreate<AIProfileVersionMetadata>();
-        metadata.PendingNote = "Restored from version 1";
-        profile.Put(metadata);
-
-        await handler.UpdatingAsync(new UpdatingContext<AIProfile>(profile, null), TestContext.Current.CancellationToken);
-        await handler.UpdatedAsync(new UpdatedContext<AIProfile>(profile), TestContext.Current.CancellationToken);
-
-        Assert.Equal([1, 2], store.Versions.Select(version => version.Version));
-        Assert.Null(store.Versions[0].Note);
-        Assert.Equal("Restored from version 1", store.Versions[1].Note);
-        Assert.Equal(2, profile.GetOrCreate<AIProfileVersionMetadata>().Version);
-        Assert.Null(profile.GetOrCreate<AIProfileVersionMetadata>().PendingNote);
-        Assert.Null(store.Versions[1].Snapshot.GetOrCreate<AIProfileVersionMetadata>().PendingNote);
-    }
-
-    [Fact]
-    public void ProfileVersions_RestoreKeepsWhatIdentifiesTheProfile()
-    {
-        var profile = new AIProfile { ItemId = "p1", Name = "support", DisplayText = "Support", ChatDeploymentName = "gpt-new", OwnerId = "owner", CreatedUtc = _now };
-        var snapshot = new AIProfile { ItemId = "other", Name = "old-name", DisplayText = "Support (old)", ChatDeploymentName = "gpt-old", OwnerId = "someone", WelcomeMessage = "Hi!" };
-        snapshot.Put(new AIProfileMetadata { SystemMessage = "Be brief." });
-
-        AIProfileVersionsController.Restore(profile, snapshot);
-
-        Assert.Equal("p1", profile.ItemId);
-        Assert.Equal("support", profile.Name);
-        Assert.Equal("owner", profile.OwnerId);
-        Assert.Equal(_now, profile.CreatedUtc);
-        Assert.Equal("Support (old)", profile.DisplayText);
-        Assert.Equal("gpt-old", profile.ChatDeploymentName);
-        Assert.Equal("Hi!", profile.WelcomeMessage);
-        Assert.Equal("Be brief.", profile.GetOrCreate<AIProfileMetadata>().SystemMessage);
-    }
-
-    private sealed class InMemoryVersionStore : IAIProfileVersionStore
-    {
-        public List<AIProfileVersion> Versions { get; } = [];
-
-        public Task SaveAsync(AIProfileVersion version, CancellationToken cancellationToken = default)
-        {
-            Versions.Add(version);
-
-            return Task.CompletedTask;
-        }
-
-        public Task<AIProfileVersion> FindByIdAsync(string itemId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Versions.FirstOrDefault(version => version.ItemId == itemId));
-
-        public Task<int> GetLatestVersionAsync(string profileId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Versions.Where(version => version.ProfileId == profileId).Select(version => version.Version).DefaultIfEmpty().Max());
-
-        public Task<(IReadOnlyList<AIProfileVersion> Versions, int Count)> PageAsync(string profileId, int page, int pageSize, CancellationToken cancellationToken = default)
-            => Task.FromResult<(IReadOnlyList<AIProfileVersion>, int)>((Versions, Versions.Count));
     }
 }

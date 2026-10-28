@@ -796,6 +796,12 @@ Changed after review:
   judge's criteria are numbered and matched by number or position, since it rewords their names. Verified live: a
   custom guardrail topic refused a competitor question; a two-round simulation failed on a criterion, the coach's
   revision passed it.
+- A call's AI conversation is closed when the call ends, so its memory and analysis run at once.
+- Speaking styles, guardrails, conversation privacy and profile versions moved to CrestApps.Core (#293, preview
+  342). This branch keeps the editors, admin pages, workflow activities, the privacy task's scheduling and cursors,
+  and two privacy handlers for evaluations and Chat Analytics extracted data. The default styles and topics are
+  seeded once per tenant by a migration as editable System Prompt templates. Versions saved before the move do not
+  load (no upgrade path before release).
 
 Not started, and why:
 

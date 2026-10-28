@@ -1,8 +1,10 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Privacy;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Guardrails;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
@@ -159,18 +161,18 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<AIContactMemoryIndexProvider>();
 
         // Speaking styles (tested prompt sections a profile turns on) and guardrails (topics a profile refuses).
+        // Their default templates are seeded by a migration as editable System Prompt templates.
         services
-            .AddScoped<IAICompletionContextBuilderHandler, AISpeakingStyleCompletionContextBuilderHandler>()
-            .AddDisplayDriver<AIProfile, AIProfileSpeakingStyleDisplayDriver>()
-            .AddScoped<AIGuardrailService>();
+            .AddCoreAISpeakingStyles()
+            .AddCoreAIGuardrails()
+            .AddDisplayDriver<AIProfile, AIProfileSpeakingStyleDisplayDriver>();
 
         // Profile versions: every save of a profile is kept, numbered, and can be compared and restored.
         services
-            .AddScoped<IAIProfileVersionStore, YesSqlAIProfileVersionStore>()
-            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileVersionHandler>()
+            .AddCoreAIProfileVersions()
+            .AddCoreAIProfileVersionStoresYesSql()
             .AddDisplayDriver<AIProfileVersionEntry, AIProfileVersionEntryDisplayDriver>()
-            .AddDataMigration<AIProfileVersionIndexMigrations>()
-            .AddIndexProvider<AIProfileVersionIndexProvider>();
+            .AddDataMigration<AIProfileVersionIndexMigrations>();
         services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
         services.Configure<TemplateOptions>(options =>
         {
@@ -192,6 +194,7 @@ public sealed class Startup : StartupBase
         services
             .AddCoreAIProfileTemplateStoresYesSql()
             .AddDataMigration<AIProfileTemplateIndexMigrations>()
+            .AddDataMigration<AISystemPromptTemplateDefaultsMigrations>()
             .AddScoped<DefaultAIProfileTemplateManager>()
             .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
@@ -438,7 +441,8 @@ public sealed class ChatCoreStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
         // Privacy: redacting or stripping ended conversations, and deleting those past the profile's retention.
-        services.AddScoped<AIConversationPrivacyService>();
+        services.AddCoreAIConversationPrivacy();
+        services.AddScoped<IAIConversationPrivacyHandler, AIConversationEvaluationPrivacyHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIConversationPrivacyBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();

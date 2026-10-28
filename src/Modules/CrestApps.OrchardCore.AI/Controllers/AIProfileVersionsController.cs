@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
 using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -172,7 +173,7 @@ public sealed class AIProfileVersionsController : Controller
             return NotFound();
         }
 
-        Restore(profile, version.Snapshot);
+        AIProfileVersionRestorer.Restore(profile, version.Snapshot);
 
         var metadata = profile.GetOrCreate<AIProfileVersionMetadata>();
         metadata.PendingNote = S["Restored from version {0}", version.Version];
@@ -183,29 +184,6 @@ public sealed class AIProfileVersionsController : Controller
         await _notifier.SuccessAsync(H["Version {0} was restored as version {1}.", version.Version, CurrentVersion(profile)]);
 
         return RedirectToAction(nameof(Index), new { profileId = profile.ItemId });
-    }
-
-    /// <summary>
-    /// Copies a version's settings onto the profile, keeping what identifies the profile: its identifier, its
-    /// technical name, its type, its owner and when it was created.
-    /// </summary>
-    /// <param name="profile">The profile.</param>
-    /// <param name="snapshot">The version's copy of the profile.</param>
-    internal static void Restore(AIProfile profile, AIProfile snapshot)
-    {
-        var copy = snapshot.Clone();
-
-        profile.DisplayText = copy.DisplayText;
-        profile.Description = copy.Description;
-        profile.OrchestratorName = copy.OrchestratorName;
-        profile.ChatDeploymentName = copy.ChatDeploymentName;
-        profile.UtilityDeploymentName = copy.UtilityDeploymentName;
-        profile.TitleType = copy.TitleType;
-        profile.WelcomeMessage = copy.WelcomeMessage;
-        profile.PromptSubject = copy.PromptSubject;
-        profile.PromptTemplate = copy.PromptTemplate;
-        profile.Properties = copy.Properties;
-        profile.Settings = copy.Settings;
     }
 
     private static int CurrentVersion(AIProfile profile)

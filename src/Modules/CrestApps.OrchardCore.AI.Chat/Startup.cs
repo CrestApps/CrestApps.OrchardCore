@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat.Privacy;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
@@ -78,7 +79,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfilePromptSecurityDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePromptSecurityDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileGuardrailDisplayDriver>()
-            .AddScoped<IOutputSecurityFilter, AIGuardrailOutputSecurityFilter>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddSiteDisplayDriver<PromptSecurityOptionsDisplayDriver>()
             .AddSiteDisplayDriver<AIVisitorIdentityOptionsDisplayDriver>()
@@ -164,7 +164,7 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
         services
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
-            .Configure<AIConversationPrivacyOptions>(options => options.IncludeExtractedDataRecords = true)
+            .AddScoped<IAIConversationPrivacyHandler, AIChatSessionExtractedDataPrivacyHandler>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()

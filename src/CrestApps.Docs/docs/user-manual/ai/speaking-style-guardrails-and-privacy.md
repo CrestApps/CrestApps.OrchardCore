@@ -41,16 +41,16 @@ The styles are prompt templates in the **Speaking style** category, so you can a
 2. Give it a **Title** and a **Description**: the profile editor shows them beside the checkbox. The category is already set to **Speaking style**.
 3. Write the section in **System message**, the way you want the AI to read it, and click **Save**.
 
-The **Speaking Styles** page lists your own styles to edit or delete, and names the built-in ones.
+The **Speaking Styles** page lists every style, the ones the site comes with included, to edit or delete.
 
-The style now appears in the **Speaking Style** card of every profile. Templates travel with the **AI Profile Templates** recipe step and deployment step, so your styles move from one site to another with the profiles that use them. The styles that come with the site can't be edited; add your own instead.
+The style now appears in the **Speaking Style** card of every profile. Templates travel with the **AI Profile Templates** recipe step and deployment step, so your styles move from one site to another with the profiles that use them. The styles and topics the site comes with are added once, when the AI feature is enabled, so you can reword them or delete the ones you don't use; a deleted one doesn't come back.
 
 ## Guardrails
 
 Guardrails refuse topics the AI must not discuss. They are in the **Guardrails** card of the profile's **Content** tab, after the **Prompt Security** card, and work on top of it.
 
 1. Turn on **Check what the customer says**, **Check the AI's replies**, or both.
-2. Tick the **Topics to refuse**. The site comes with harassment and abuse, hate, self-harm, sexual content, violence and weapons, illegal activity, medical, legal or financial advice, and attempts to override the instructions, and lists your own topics with them.
+2. Tick the **Topics to refuse**. The site comes with editable topics for harassment and abuse, hate, self-harm, sexual content, violence and weapons, illegal activity, medical, legal or financial advice, and attempts to override the instructions, and lists your own topics with them.
 3. Optionally describe **Other topics to refuse** in a sentence or two, such as "competitors' prices", for topics of this profile alone.
 4. Optionally write the **Placeholder reply** the AI gives instead. Left empty, it says "I'm sorry, I can't help with that. Is there something else I can help you with?"
 

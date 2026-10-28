@@ -16,7 +16,6 @@ using CrestApps.Core.AI.Security;
 using CrestApps.Core.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Cysharp.Text;
 using Fluid;
@@ -55,9 +54,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
     private readonly IStringLocalizer S;
 
-    private AIProfile _guardrailProfile;
-    private string _guardrailReply;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="AIChatHub"/> class.
     /// </summary>
@@ -91,44 +87,13 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         return await accessEvaluator.CanAccessProfileAsync(httpContext?.User ?? Context.User, profile);
     }
 
-    /// <summary>
-    /// Runs Prompt Security, then the profile's guardrails on what the customer typed. A message a guardrail
-    /// refuses is blocked like one Prompt Security refuses, and the caller is shown the profile's placeholder reply.
-    /// </summary>
-    protected override async Task<PromptSecurityResult> ValidatePromptSecurityAsync(IServiceProvider services, AIProfile profile, string sessionId, string prompt, CancellationToken cancellationToken)
-    {
-        // A hub instance serves one invocation, so the profile is kept for the reply check that follows.
-        _guardrailProfile = profile;
-
-        var result = await base.ValidatePromptSecurityAsync(services, profile, sessionId, prompt, cancellationToken);
-
-        if (result.IsBlocked || !AIGuardrailService.IsOn(profile, AIGuardrailDirection.Customer))
-        {
-            return result;
-        }
-
-        var verdict = await services.GetRequiredService<AIGuardrailService>()
-            .CheckAsync(profile, prompt, AIGuardrailDirection.Customer, sessionId, cancellationToken);
-
-        if (verdict is null)
-        {
-            return result;
-        }
-
-        _guardrailReply = verdict.Reply;
-
-        return PromptSecurityResult.Blocked(verdict.Reason, PromptRiskLevel.High, "guardrail:" + verdict.Category);
-    }
-
     /// <inheritdoc/>
     protected override string GetPromptBlockedMessage()
-        => _guardrailReply ?? S["Your message could not be processed. Please rephrase and try again."].Value;
+        => S["Your message could not be processed. Please rephrase and try again."].Value;
 
     /// <inheritdoc/>
     protected override string GetOutputBlockedMessage()
-        => AIGuardrailService.IsOn(_guardrailProfile, AIGuardrailDirection.Reply)
-            ? AIGuardrailService.GetPlaceholderReply(_guardrailProfile)
-            : S["I'm unable to provide a response to that request. Please try a different question."].Value;
+        => S["I'm unable to provide a response to that request. Please try a different question."].Value;
 
     /// <summary>
     /// Loads one of the caller's sessions and sends its messages to the caller, logging why a session could not be
