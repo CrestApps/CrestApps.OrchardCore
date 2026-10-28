@@ -369,6 +369,8 @@ public sealed class MessagingConversationTransferServiceTests
                 notification.TransferredByAgentId == SenderId &&
                 notification.TransferredByName == "Ann Sender" &&
                 notification.TransferredToName == "Bea Recipient" &&
+                notification.AssignedByAgentId == SenderId &&
+                notification.Channel == "SMS" &&
                 notification.OwnerQueueId == null),
             It.IsAny<CancellationToken>()), Times.Once);
     }

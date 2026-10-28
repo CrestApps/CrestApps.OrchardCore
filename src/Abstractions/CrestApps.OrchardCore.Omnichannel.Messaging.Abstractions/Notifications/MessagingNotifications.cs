@@ -63,7 +63,8 @@ public sealed class MessagingInboundNotification
 
 /// <summary>
 /// Notifies the workspace that a conversation's assignment changed — so a claimed pooled message disappears from
-/// the other queue members' inboxes, and an assigned conversation appears in the target agent's inbox.
+/// the other queue members' inboxes, and an assigned conversation appears in the target agent's inbox, who is told it
+/// was assigned to them unless they made the assignment themselves.
 /// </summary>
 public sealed class MessagingAssignmentNotification
 {
@@ -107,6 +108,27 @@ public sealed class MessagingAssignmentNotification
     /// Gets or sets the display name of the person or queue a transfer went to.
     /// </summary>
     public string TransferredToName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent who made the assignment: the claimer, the person transferring, or
+    /// <see langword="null"/> when routing placed it. The recipient is told unless they made it themselves.
+    /// </summary>
+    public string AssignedByAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the technical name of the channel the conversation is on.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact address of the conversation, so the recipient is told who it is with.
+    /// </summary>
+    public string ContactAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short preview of the conversation's latest message.
+    /// </summary>
+    public string Preview { get; set; }
 }
 
 /// <summary>

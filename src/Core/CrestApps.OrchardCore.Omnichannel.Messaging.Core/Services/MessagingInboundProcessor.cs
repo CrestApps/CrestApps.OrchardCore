@@ -235,6 +235,8 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
             await handler.ReceivingAsync(inboundContext, cancellationToken);
         }
 
+        var previousAgentId = conversation.AssignedAgentId;
+
         await _router.RouteAsync(
             new MessagingRoutingContext
             {
@@ -278,6 +280,10 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         message.ConversationId = conversation.ItemId;
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+
+        // A thread routing pushed to an agent is announced as theirs before its message is, so the agent hears it was
+        // assigned to them rather than only that someone wrote.
+        await MessagingAssignmentNotifications.NotifyRoutedAsync(_notifier, conversation, previousAgentId, cancellationToken);
 
         await _notifier.NewInboundMessageAsync(new MessagingInboundNotification
         {
