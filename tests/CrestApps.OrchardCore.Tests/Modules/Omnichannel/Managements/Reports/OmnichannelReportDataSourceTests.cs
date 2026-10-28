@@ -257,7 +257,21 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         Assert.Equal(["a1"], result.Rows.Select(row => row[0]));
     }
 
-    public static TheoryData<string> GroupedReports => new(GroupedQueries.Keys);
+    public static TheoryData<string, bool> GroupedReports
+    {
+        get
+        {
+            var data = new TheoryData<string, bool>();
+
+            foreach (var report in GroupedQueries.Keys)
+            {
+                data.Add(report, false);
+                data.Add(report, true);
+            }
+
+            return data;
+        }
+    }
 
     // Each report, and whether the database groups it: the smallest or largest text value is read row by row, since the
     // report orders text without regard to case and the database by its own collation.
@@ -289,19 +303,28 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
 
     [Theory]
     [MemberData(nameof(GroupedReports))]
-    public async Task Activities_GroupedInTheDatabase_GiveTheSameReportAsReadingRows(string report)
+    public async Task Activities_GroupedInTheDatabase_GiveTheSameReportAsReadingRows(string report, bool reversed)
     {
-        // Arrange: channels and agents that differ only in case, which the report counts as one; a pair that differs
-        // only in the case of a non-ASCII letter, which SQLite keeps apart and the report merges; and a channel in lower
-        // case, which a database that orders text by its code points puts after every upper-case one.
+        // Arrange: channels and agents that differ only in case, which the report counts as one, saved in either order;
+        // a pair that differs only in the case of a non-ASCII letter, which SQLite keeps apart and the report merges; and
+        // a channel in lower case, which a database that orders text by its code points puts after every upper-case one.
+        OmnichannelActivity[] activities =
+        [
+            new OmnichannelActivity { ItemId = "b1", Kind = ActivityKind.Sms, Channel = "Sms", Status = ActivityStatus.Completed, AssignedToId = "agent-2", Attempts = 7, CreatedUtc = _day.AddDays(2).AddHours(3), ScheduledUtc = _day },
+            new OmnichannelActivity { ItemId = "b2", Kind = ActivityKind.Call, Channel = OmnichannelConstants.Channels.Phone, Status = ActivityStatus.Completed, Attempts = 2, CreatedUtc = _day.AddMonths(1).AddHours(2), ScheduledUtc = _day },
+            new OmnichannelActivity { ItemId = "b3", Kind = ActivityKind.Sms, Channel = "SMS", Status = ActivityStatus.Completed, AssignedToId = "Agent-2", Attempts = 3, CreatedUtc = _day.AddDays(3).AddHours(3), ScheduledUtc = _day },
+            new OmnichannelActivity { ItemId = "b4", Kind = ActivityKind.Call, Channel = "chat", Status = ActivityStatus.Completed, AssignedToId = "agent-1", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day },
+            new OmnichannelActivity { ItemId = "b5", Kind = ActivityKind.Call, Channel = "Émail", Status = ActivityStatus.Completed, AssignedToId = "agent-3", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day },
+            new OmnichannelActivity { ItemId = "b6", Kind = ActivityKind.Call, Channel = "émail", Status = ActivityStatus.Completed, AssignedToId = "agent-3", Attempts = 4, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day },
+        ];
+
         await using (var seed = _store.CreateSession())
         {
-            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b1", Kind = ActivityKind.Sms, Channel = "Sms", Status = ActivityStatus.Completed, AssignedToId = "agent-2", Attempts = 7, CreatedUtc = _day.AddDays(2).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
-            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b2", Kind = ActivityKind.Call, Channel = OmnichannelConstants.Channels.Phone, Status = ActivityStatus.Completed, Attempts = 2, CreatedUtc = _day.AddMonths(1).AddHours(2), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
-            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b3", Kind = ActivityKind.Sms, Channel = "SMS", Status = ActivityStatus.Completed, AssignedToId = "Agent-2", Attempts = 3, CreatedUtc = _day.AddDays(3).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
-            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b4", Kind = ActivityKind.Call, Channel = "chat", Status = ActivityStatus.Completed, AssignedToId = "agent-1", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
-            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b5", Kind = ActivityKind.Call, Channel = "Émail", Status = ActivityStatus.Completed, AssignedToId = "agent-3", Attempts = 1, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
-            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b6", Kind = ActivityKind.Call, Channel = "émail", Status = ActivityStatus.Completed, AssignedToId = "agent-3", Attempts = 4, CreatedUtc = _day.AddDays(3).AddHours(4), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            foreach (var activity in reversed ? activities.AsEnumerable().Reverse() : activities)
+            {
+                await seed.SaveAsync(activity, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            }
+
             await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
@@ -314,18 +337,11 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(query(), TotalledContext(), TestContext.Current.CancellationToken);
         var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(query(), TotalledContext(), TestContext.Current.CancellationToken);
 
-        // Assert: each path shows a merged group with the first spelling it reads, so text is compared without regard to
-        // case.
+        // Assert: both paths show each merged value with its smallest spelling, whatever order the rows were saved in.
         Assert.Equal(inDatabase, actual.GroupedBySource);
-        Assert.Equal(IgnoringCase(expected.Rows), IgnoringCase(actual.Rows));
-        Assert.Equal(IgnoringCase(expected.Regroup([]).Select(group => group.Values)), IgnoringCase(actual.Regroup([]).Select(group => group.Values)));
-        var dimensions = Enumerable.Range(0, actual.Columns.Count).Where(index => !actual.Columns[index].IsMeasure).ToArray();
-        Assert.Equal(actual.Rows.Count, IgnoringCase(actual.Rows).Select(row => string.Join('|', dimensions.Select(index => row[index]))).Distinct(StringComparer.Ordinal).Count());
-    }
-
-    private static List<object[]> IgnoringCase(IEnumerable<object[]> rows)
-    {
-        return rows.Select(row => row.Select(value => value is string text ? text.ToUpperInvariant() : value).ToArray()).ToList();
+        Assert.Equal(expected.Rows, actual.Rows);
+        Assert.Equal(expected.Regroup([]).Select(group => group.Values), actual.Regroup([]).Select(group => group.Values));
+        Assert.DoesNotContain(actual.Rows.SelectMany(row => row), value => value is "Sms" or "agent-2" or "émail");
     }
 
     [Fact]

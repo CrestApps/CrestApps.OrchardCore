@@ -77,14 +77,15 @@ public sealed class ReportIndexAggregatorSqlTests
     }
 
     [Theory]
-    [InlineData(nameof(SqlServerDialect), true)]
-    [InlineData(nameof(SqliteDialect), true)]
-    [InlineData(nameof(PostgreSqlDialect), true)]
-    [InlineData(nameof(MySqlDialect), false)]
-    public void Build_AGroupByText_IsLeftToTheEngineOnlyOnMySql(string dialectName, bool inDatabase)
+    [InlineData(nameof(SqlServerDialect), true, "MIN([Model] COLLATE Latin1_General_100_BIN2)")]
+    [InlineData(nameof(SqliteDialect), true, "MIN([Model] COLLATE BINARY)")]
+    [InlineData(nameof(PostgreSqlDialect), true, "SELECT \"Model\"")]
+    [InlineData(nameof(MySqlDialect), false, null)]
+    public void Build_AGroupByText_IsLeftToTheEngineOnlyOnMySql(string dialectName, bool inDatabase, string spelling)
     {
         // Arrange: the engine groups the database's groups again ignoring case, so a database may keep values that differ
-        // only in case apart; MySQL's default collation also ignores accents, merging values the engine keeps apart.
+        // only in case apart; MySQL's default collation also ignores accents, merging values the engine keeps apart. A
+        // database that merges case variants returns the smallest spelling under a binary collation.
         var configuration = new YesSqlConfiguration
         {
             SqlDialect = CreateDialect(dialectName),
@@ -101,6 +102,11 @@ public sealed class ReportIndexAggregatorSqlTests
 
         // Assert
         Assert.Equal(inDatabase, statement is not null);
+
+        if (spelling is not null)
+        {
+            Assert.Contains(spelling, statement.Sql, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

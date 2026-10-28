@@ -70,38 +70,44 @@ public sealed class ReportQueryEngineTests
         Assert.Equal("seven", Assert.Single(result.Rows)[0]);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_TextThatDiffersOnlyInCase_GroupsAndCountsAsOneValue_WithTheFirstSpelling()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_TextThatDiffersOnlyInCase_GroupsAndCountsAsOneValue_WithTheSmallestSpelling(bool reversed)
     {
-        // Arrange
+        // Arrange: the same rows in either order show the same spelling.
         var query = Companies();
         query.Columns = [Column("name", "c.Name"), Column("count", ReportQueryPlanner.RowCountField), Column("regions", "c.Region", DataAggregate.CountDistinct)];
         var context = Context();
+        context.Groupings.Add(["name"]);
         context.Groupings.Add([]);
 
         // Act
-        var result = await Engine(CompaniesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+        var result = await Engine(CompaniesData(reversed)).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Rows.Count);
-        Assert.Equal(["Acme Corp", 2L, 1L], result.Rows[0]);
+        Assert.Equal(["ACME CORP", 2L, 1L], result.Rows[0]);
         Assert.Equal(["Globex", 1L, 1L], result.Rows[1]);
+        Assert.Equal([["ACME CORP", 2L, 1L], ["Globex", 1L, 1L]], result.Regroup(["name"]).Select(group => group.Values));
         Assert.Equal([null, 3L, 2L], Assert.Single(result.Regroup([])).Values);
     }
 
-    [Fact]
-    public async Task Regroup_OfRowsThatAreNotGrouped_MergesTextThatDiffersOnlyInCase()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Regroup_OfRowsThatAreNotGrouped_MergesTextThatDiffersOnlyInCase_WithTheSmallestSpelling(bool reversed)
     {
         // Arrange
         var query = Companies();
         query.Columns = [Column("name", "c.Name"), Column("employees", "c.Employees")];
 
         // Act
-        var result = await Engine(CompaniesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        var result = await Engine(CompaniesData(reversed)).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsAggregated);
-        Assert.Equal([["Acme Corp", 15L], ["Globex", 7L]], result.Regroup(["name"]).Select(group => group.Values));
+        Assert.Equal(["ACME CORP", 15L], result.Regroup(["name"]).Single(group => (string)group.Values[0] != "Globex").Values);
     }
 
     [Fact]
@@ -537,8 +543,15 @@ public sealed class ReportQueryEngineTests
         };
     }
 
-    private static InMemoryReportDataSource CompaniesData()
+    private static InMemoryReportDataSource CompaniesData(bool reversed)
     {
+        object[][] rows =
+        [
+            ["Acme Corp", "East", 10L],
+            ["Globex", "West", 7L],
+            ["ACME CORP", "EAST", 5L],
+        ];
+
         return new InMemoryReportDataSource()
             .Add(
                 "Companies",
@@ -547,8 +560,6 @@ public sealed class ReportQueryEngineTests
                     new DataField("Region", "Region", DataFieldType.Text),
                     new DataField("Employees", "Employees", DataFieldType.Integer),
                 ],
-                ["Acme Corp", "East", 10L],
-                ["Globex", "West", 7L],
-                ["ACME CORP", "EAST", 5L]);
+                reversed ? [.. Enumerable.Reverse(rows)] : rows);
     }
 }

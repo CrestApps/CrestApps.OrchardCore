@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// </list>
 /// Text is grouped by the column itself. The engine groups the rows it gets back again, ignoring case, so a database
 /// may keep values that differ only in case apart (PostgreSQL, or non-ASCII letters on SQLite) but must not merge
-/// values that differ otherwise.
+/// values that differ otherwise. Each text group returns its smallest spelling in ordinal order, which the engine shows.
 /// Enum columns, which YesSql stores as numbers, are compared and grouped by name. Date buckets are written as a
 /// <c>CASE</c> expression over UTC boundaries, which every database understands. The statement runs in the session's
 /// own transaction.
@@ -193,7 +193,7 @@ public static class ReportIndexAggregator
                 statement.Columns.Add(typeof(long));
             }
 
-            selects.Add(expression);
+            selects.Add(type == typeof(string) && group.Boundaries is null ? SmallestSpelling(dialect, column) : expression);
             groups.Add(expression);
         }
 
@@ -410,6 +410,19 @@ public static class ReportIndexAggregator
         }
 
         return false;
+    }
+
+    // The spelling a text group shows: the smallest in ordinal order, as the engine shows it. A database whose collation
+    // merges values that differ only in case returns one spelling of each group, so it is asked for the smallest under a
+    // binary collation; PostgreSQL keeps the spellings apart and the engine picks among them.
+    private static string SmallestSpelling(ISqlDialect dialect, string column)
+    {
+        return dialect.Name switch
+        {
+            "Sqlite" => $"MIN({column} COLLATE BINARY)",
+            "SqlServer" => $"MIN({column} COLLATE Latin1_General_100_BIN2)",
+            _ => column,
+        };
     }
 
     // SQL Server adds up an int or smallint column as an int, which overflows past about two billion, such as the tokens
