@@ -377,9 +377,16 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </remarks>
     /// <param name="prompt">What this response is for.</param>
     private string WithSessionInstructions(string prompt)
-    {
-        var sessionInstructions = _sessionInstructions?.ToString();
+        => WithSessionInstructions(_sessionInstructions?.ToString(), prompt);
 
+    /// <summary>
+    /// The instructions for one prompted response: <paramref name="sessionInstructions"/>, followed by what this
+    /// response is for.
+    /// </summary>
+    /// <param name="sessionInstructions">The instructions the session was opened with.</param>
+    /// <param name="prompt">What this response is for.</param>
+    internal static string WithSessionInstructions(string sessionInstructions, string prompt)
+    {
         if (string.IsNullOrWhiteSpace(sessionInstructions))
         {
             return prompt;
