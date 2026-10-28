@@ -53,6 +53,7 @@ Your administrator gives these permissions to roles. Administrators have all of 
 | **Build reports and manage own custom reports and views** | Design reports and views, change and delete your own, use any view in your reports, and clone a report you can run. |
 | **View all custom reports** | Run every report, whoever owns it and whoever it is shared with. |
 | **Manage all custom reports and views** | Change and delete every report and view, whoever owns it. It includes the two permissions above. |
+| **Manage report groups** | Create, change and delete the [groups](share-and-run.md#organize-reports-into-groups) reports are listed under. Anyone who builds reports can put a report in a group. It is included in **Manage all custom reports and views**. |
 | **Share custom reports publicly and through share links** | Share a report with the **Anonymous** role (everyone, even visitors who are not signed in), and create share links. |
 
 ## Words you will see

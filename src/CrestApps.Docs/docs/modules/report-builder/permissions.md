@@ -18,9 +18,10 @@ The permissions are declared in `ReportDesignerPermissions` (`CrestApps.OrchardC
 | `ManageAllReportDesigns` | Manage all custom reports and views | | Yes |
 | `ManageOwnReportDesigns` | Build reports and manage own custom reports and views | `ManageAllReportDesigns` | No |
 | `ViewAllReportDesigns` | View all custom reports | `ManageAllReportDesigns` | No |
+| `ManageReportGroups` | Manage report groups | `ManageAllReportDesigns` | No |
 | `ShareReportsPublicly` | Share custom reports publicly and through share links | | Yes |
 
-The `Administrator` stereotype gets all four. No other role gets any by default.
+The `Administrator` stereotype gets all five. No other role gets any by default.
 
 ## How a report or view is authorized
 
@@ -54,8 +55,9 @@ Actions that do not concern one existing item check `ManageOwnReportDesigns` wit
 | List, revoke or delete every shared link of the site (**Tools > Shared Links**) | Orchard Core's `ManageSharedLinks` (**Manage shared links**). |
 | Edit, save, delete or refresh a view | `ManageAllReportDesigns` on the view. |
 | Use a view as a data set | `ViewAllReportDesigns` on the view. |
+| List, create, change or delete report groups (`/Admin/reports/groups`) | `ManageReportGroups`. Placing a report in a group needs only the right to change the report. |
 
-The admin menu follows the same rules: **Report Builder** for people who hold `ManageOwnReportDesigns`, **Shared Reports** for people who can run at least one report, **Report Views** for designers, and each report pinned to the menu for the people who pass `ViewAllReportDesigns` on it.
+The admin menu follows the same rules: **Report Builder** for people who hold `ManageOwnReportDesigns`, **Shared Reports** for people who can run at least one report, **Report Views** for designers, **Report Groups** for people who hold `ManageReportGroups`, and each report pinned to the menu for the people who pass `ViewAllReportDesigns` on it. A pinned report is listed under the item of its group, nested like the groups, or directly under **Reports** when it is in no group; a group is added only when it leads to a pinned report the user passes `ViewAllReportDesigns` on.
 
 To check a permission for a report in your own code, authorize with the report as the resource:
 

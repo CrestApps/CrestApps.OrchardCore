@@ -1057,7 +1057,7 @@
 				id: design.id,
 				displayText: design.displayText,
 				description: design.description,
-				category: design.category,
+				groupId: design.groupId || null,
 				query: app.mainQuery,
 				queries: (design.queries || []).map(function(entry) {
 					return {
@@ -3416,22 +3416,11 @@
 						touch();
 					}
 				}, design.description || ""), app.isView() ? app.t("Tells other report builders what the view prepares.") : app.t("Shown above the report.")),
-				app.isView() ? null : field(app.t("Category"), h("input", {
-					id: newId(),
-					type: "text",
-					className: "form-control",
-					value: design.category || "",
-					maxlength: "200",
-					list: "report-designer-categories",
-					oninput: function(event) {
-						design.category = event.target.value;
-						touch();
-					}
-				}), app.t("Groups the report in the admin menu and the report list.")),
+				app.isView() ? null : groupField(design, touch),
 				app.isView() ? null : checkbox(app.t("Show in the admin menu"), design.showInAdminMenu, function(value) {
 					design.showInAdminMenu = value;
 					touch();
-				}, app.t("Adds the report under Reports in the admin menu for everyone who can open it.")),
+				}, app.t("Adds the report under Reports in the admin menu, inside its group, for everyone who can open it.")),
 				app.isView() ? null : checkbox(app.t("Let people the report is shared with export it"), design.allowExport !== false, function(value) {
 					design.allowExport = value;
 					touch();
@@ -3439,6 +3428,30 @@
 				app.isView() && app.renderRefresh ? app.renderRefresh() : null
 			]);
 		};
+		function groupField(design, touch) {
+			var options = [{
+				value: "",
+				text: app.t("No group")
+			}].concat(app.config.groups || []);
+			var manageUrl = app.url("groups");
+			var select = ui.select(options, design.groupId || "", {
+				id: newId(),
+				className: "form-select",
+				onchange: function(event) {
+					design.groupId = event.target.value || null;
+					touch();
+				}
+			});
+			return field(app.t("Group"), select, [
+				app.t("Lists the report under this group in the admin menu and the report list."),
+				manageUrl ? " " : null,
+				manageUrl ? h("a", {
+					href: manageUrl,
+					target: "_blank",
+					rel: "noopener"
+				}, app.t("Manage groups")) : null
+			]);
+		}
 		function userPicker(userNames, onChange) {
 			var chips = h("div", { className: "d-flex flex-wrap gap-1 mb-2" });
 			var results = h("div", { className: "list-group position-absolute w-100 shadow report-designer-user-results" });

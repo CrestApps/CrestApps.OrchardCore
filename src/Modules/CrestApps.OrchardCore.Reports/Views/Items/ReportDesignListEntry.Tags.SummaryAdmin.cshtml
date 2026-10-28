@@ -14,10 +14,10 @@
 }
 else
 {
-    if (!string.IsNullOrWhiteSpace(design.Category))
+    if (!string.IsNullOrEmpty(Model.Value.GroupPath))
     {
-        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Category"]">
-            <i class="fa-solid fa-folder text-secondary me-1" aria-hidden="true"></i>@design.Category
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Group"]">
+            <i class="fa-solid fa-folder text-secondary me-1" aria-hidden="true"></i>@Model.Value.GroupPath
         </span>
     }
 

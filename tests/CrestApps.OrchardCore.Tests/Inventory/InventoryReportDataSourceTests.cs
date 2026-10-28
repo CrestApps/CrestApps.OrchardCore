@@ -656,7 +656,7 @@ public sealed class InventoryReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(["inventory-stock-on-hand", "inventory-stock-movements"], designs.Select(design => design.ItemId));
-        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+        Assert.All(ReportRecipeDesigns.GroupPaths("CrestApps.OrchardCore.Inventory", "inventory-report-builder-reports.recipe.json"), group => Assert.Equal("Store", group));
 
         // The archived item is left out, and the cap, with the fewest units available, comes first.
         var stock = results["inventory-stock-on-hand"];

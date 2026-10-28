@@ -352,7 +352,7 @@
             id: design.id,
             displayText: design.displayText,
             description: design.description,
-            category: design.category,
+            groupId: design.groupId || null,
             query: app.mainQuery,
             queries: (design.queries || []).map(function (entry) {
                 return { id: entry.id, name: entry.name, query: entry.query };

@@ -366,11 +366,13 @@ public sealed class ReportDesignerController : Controller
             }
         }
 
-        var categories = (await _designService.GetAllAsync())
-            .Select(design => design.Category)
-            .Where(category => !string.IsNullOrWhiteSpace(category))
-            .Distinct(StringComparer.CurrentCultureIgnoreCase)
-            .Order(StringComparer.CurrentCultureIgnoreCase)
+        var groups = (await _designService.GetGroupTreeAsync())
+            .Flatten()
+            .Select(node => new ReportGroupOption
+            {
+                Value = node.Group.ItemId,
+                Text = node.PathText,
+            })
             .ToList();
 
         return new ReportDesignerViewModel
@@ -379,7 +381,8 @@ public sealed class ReportDesignerController : Controller
             Payload = payload,
             CanSharePublicly = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ShareReportsPublicly),
             Roles = roles.Order(StringComparer.OrdinalIgnoreCase).ToList(),
-            Categories = categories,
+            Groups = groups,
+            CanManageGroups = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageReportGroups),
             Labels = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["text"] = ReportDesignerTexts.Build(S),

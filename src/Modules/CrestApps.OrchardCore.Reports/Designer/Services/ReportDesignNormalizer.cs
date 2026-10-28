@@ -218,4 +218,16 @@ public static class ReportDesignNormalizer
 
         return trimmed.Length > MaxNameLength ? trimmed[..MaxNameLength] : trimmed;
     }
+
+    /// <summary>
+    /// Trims an identifier, such as a report's group, so an empty one means none.
+    /// </summary>
+    /// <param name="value">The identifier.</param>
+    /// <returns>The trimmed identifier, or <see langword="null"/> when it is empty.</returns>
+    public static string NormalizeId(string value)
+    {
+        var trimmed = value?.Trim();
+
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+    }
 }

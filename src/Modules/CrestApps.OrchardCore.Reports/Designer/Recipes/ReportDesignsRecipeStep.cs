@@ -21,7 +21,10 @@ namespace CrestApps.OrchardCore.Reports.Designer.Recipes;
 /// <c>ItemId</c> and replaced, or created with that identifier. An item's owner is matched by the
 /// <c>OwnerUserName</c> the export wrote, so a report keeps running on a site where its owner has another user id; an
 /// item that names no owner the site knows, and has no owner id, is owned by the person who runs the recipe.
-/// Share links are never imported.
+/// Share links are never imported. Report groups are imported first, from <c>Groups</c>, matched by <c>ItemId</c> the
+/// same way. A report names its group by <c>GroupId</c>, or by <c>Group</c>, a path of names such as
+/// <c>Sales / Regional</c> whose missing groups are created; a <c>Category</c> written before report groups names a
+/// top-level group the same way.
 /// </summary>
 public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 {
@@ -32,6 +35,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
+    private readonly ReportGroupService _groupService;
     private readonly ReportViewSnapshotStore _snapshots;
     private readonly UserManager<IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -43,6 +47,8 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// </summary>
     /// <param name="designs">The report catalog.</param>
     /// <param name="views">The view catalog.</param>
+    /// <param name="groupService">The report group service, which saves the groups and finds or creates the group a
+    /// report names.</param>
     /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="userManager">The user manager used to match owners by user name.</param>
     /// <param name="httpContextAccessor">The accessor of the request that runs the recipe, whose user owns the items
@@ -52,6 +58,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     public ReportDesignsRecipeStep(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
+        ReportGroupService groupService,
         ReportViewSnapshotStore snapshots,
         UserManager<IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
@@ -61,6 +68,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     {
         _designs = designs;
         _views = views;
+        _groupService = groupService;
         _snapshots = snapshots;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
@@ -71,6 +79,8 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// <inheritdoc/>
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
+        await ImportGroupsAsync(context);
+
         foreach (var node in context.Step["Views"]?.AsArray() ?? [])
         {
             var view = Read<ReportView>(node, context);
@@ -116,8 +126,98 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
             design.SharedUserNames ??= [];
             design.SharedRoles ??= [];
             design.OwnerId = await ResolveOwnerAsync(node, design.OwnerId);
+            design.GroupId = await ResolveGroupAsync(node, design);
             await SaveAsync(_designs, design, design.DisplayText, context);
         }
+    }
+
+    private async Task ImportGroupsAsync(RecipeExecutionContext context)
+    {
+        var imported = new List<ReportGroup>();
+
+        foreach (var node in context.Step["Groups"]?.AsArray() ?? [])
+        {
+            var group = Read<ReportGroup>(node, context);
+
+            if (group is null)
+            {
+                continue;
+            }
+
+            group.DisplayText = ReportDesignNormalizer.Truncate(group.DisplayText);
+            group.ParentId = ReportDesignNormalizer.NormalizeId(group.ParentId);
+
+            if (string.IsNullOrEmpty(group.DisplayText))
+            {
+                context.Errors.Add(S["The report group '{0}' in the recipe has no name.", group.ItemId]);
+
+                continue;
+            }
+
+            await _groupService.ImportAsync(group);
+            imported.Add(group);
+        }
+
+        if (imported.Count == 0)
+        {
+            return;
+        }
+
+        // A parent can come later in the step, so parents are checked once every group is in. A group whose parent is
+        // missing, or whose parents lead back to itself, is moved to the top level.
+        var tree = await _groupService.GetTreeAsync();
+
+        foreach (var group in imported)
+        {
+            if (group.ParentId is not null && tree.GetParentId(group.ItemId) is null)
+            {
+                group.ParentId = null;
+                await _groupService.ImportAsync(group);
+            }
+        }
+    }
+
+    // The report's group: the one its GroupId names when it exists, otherwise the group its Group path (or the Category
+    // of a report written before report groups) leads to, created when missing.
+    private async Task<string> ResolveGroupAsync(JsonNode node, ReportDesign design)
+    {
+        var groupId = ReportDesignNormalizer.NormalizeId(design.GroupId);
+
+        if (groupId is not null && await _groupService.FindAsync(groupId) is not null)
+        {
+            return groupId;
+        }
+
+#pragma warning disable CS0618 // Category is read only to place a report written before report groups.
+        var category = design.Category;
+        design.Category = null;
+#pragma warning restore CS0618
+
+        if (ReadString(node, "group") is { } path)
+        {
+            return await _groupService.FindOrCreatePathAsync(ReportGroupService.SplitPath(path));
+        }
+
+        return string.IsNullOrWhiteSpace(category) ? null : await _groupService.FindOrCreatePathAsync([category]);
+    }
+
+    // A string property of a recipe item, whichever case its name is written in.
+    private static string ReadString(JsonNode node, string name)
+    {
+        if (node is not JsonObject item)
+        {
+            return null;
+        }
+
+        foreach (var (key, value) in item)
+        {
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase) && value is JsonValue text && text.TryGetValue<string>(out var result))
+            {
+                return string.IsNullOrWhiteSpace(result) ? null : result;
+            }
+        }
+
+        return null;
     }
 
     private T Read<T>(JsonNode node, RecipeExecutionContext context)

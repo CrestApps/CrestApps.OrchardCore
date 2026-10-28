@@ -22,6 +22,7 @@
         ["payload"] = Model.Payload,
         ["canSharePublicly"] = Model.CanSharePublicly,
         ["roles"] = Model.Roles,
+        ["groups"] = Model.Groups,
         ["snapshot"] = Model.Snapshot,
         ["urls"] = new Dictionary<string, string>
         {
@@ -42,6 +43,7 @@
             ["draft"] = Url.RouteUrl("ReportDesignerDraftSave", new { id = "__id__" }),
             ["newDraft"] = Url.RouteUrl("ReportDesignerDraftCreate"),
             ["list"] = Url.RouteUrl("ReportDesignsIndex"),
+            ["groups"] = Model.CanManageGroups ? Url.RouteUrl("ReportGroupsIndex") : null,
             ["discardDraft"] = Url.RouteUrl("ReportDesignerDraftDiscard", new { id = "__id__" }),
             ["versions"] = Url.RouteUrl("ReportDesignerVersions", new { id = "__id__" }),
             ["version"] = Url.RouteUrl("ReportDesignerVersion", new { id = "__id__", number = int.MaxValue })?.Replace(numberPlaceholder, "__number__"),
@@ -88,11 +90,4 @@
     <option value="d">@T["Short date"]</option>
     <option value="MMM yyyy">@T["Month and year"]</option>
     <option value="yyyy-MM-dd">@T["Year-month-day"]</option>
-</datalist>
-
-<datalist id="report-designer-categories">
-    @foreach (var category in Model.Categories)
-    {
-        <option value="@category"></option>
-    }
 </datalist>

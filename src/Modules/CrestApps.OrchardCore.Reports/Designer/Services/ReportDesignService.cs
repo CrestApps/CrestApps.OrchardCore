@@ -20,6 +20,7 @@ public sealed class ReportDesignService
 {
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
+    private readonly ICatalog<ReportGroup> _groups;
     private readonly ISharedLinkManager _sharedLinks;
     private readonly ReportViewSnapshotStore _snapshots;
     private readonly ReportQueryPlanner _planner;
@@ -32,6 +33,7 @@ public sealed class ReportDesignService
     /// </summary>
     /// <param name="designs">The report catalog.</param>
     /// <param name="views">The view catalog.</param>
+    /// <param name="groups">The report group catalog.</param>
     /// <param name="sharedLinks">The shared links of Orchard Core.</param>
     /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="planner">The query planner.</param>
@@ -41,6 +43,7 @@ public sealed class ReportDesignService
     public ReportDesignService(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
+        ICatalog<ReportGroup> groups,
         ISharedLinkManager sharedLinks,
         ReportViewSnapshotStore snapshots,
         ReportQueryPlanner planner,
@@ -50,6 +53,7 @@ public sealed class ReportDesignService
     {
         _designs = designs;
         _views = views;
+        _groups = groups;
         _sharedLinks = sharedLinks;
         _snapshots = snapshots;
         _planner = planner;
@@ -67,6 +71,15 @@ public sealed class ReportDesignService
         return (await _designs.GetAllAsync())
             .OrderBy(design => design.DisplayText, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
+    }
+
+    /// <summary>
+    /// Builds the tree of the groups reports are listed under.
+    /// </summary>
+    /// <returns>The tree.</returns>
+    public async Task<ReportGroupTree> GetGroupTreeAsync()
+    {
+        return new ReportGroupTree(await _groups.GetAllAsync());
     }
 
     /// <summary>
@@ -125,7 +138,7 @@ public sealed class ReportDesignService
 
         design.DisplayText = ReportDesignNormalizer.Truncate(incoming.DisplayText);
         design.Description = incoming.Description?.Trim();
-        design.Category = ReportDesignNormalizer.Truncate(incoming.Category);
+        design.GroupId = await ResolveGroupIdAsync(incoming.GroupId);
         design.Query = ReportDesignNormalizer.Normalize(incoming.Query);
         design.Visuals = ReportDesignNormalizer.Normalize(incoming.Visuals);
         design.Containers = ReportDesignNormalizer.Normalize(incoming.Containers);
@@ -290,6 +303,14 @@ public sealed class ReportDesignService
         var views = (await _views.GetAllAsync()).Where(view => view.ItemId != viewId && Uses(view.Query)).Select(view => view.DisplayText);
 
         return designs.Concat(views).ToArray();
+    }
+
+    // A report keeps its group only while the group exists; a group deleted meanwhile leaves the report in no group.
+    private async Task<string> ResolveGroupIdAsync(string groupId)
+    {
+        groupId = ReportDesignNormalizer.NormalizeId(groupId);
+
+        return groupId is not null && await _groups.FindByIdAsync(groupId) is not null ? groupId : null;
     }
 
     private async Task CheckAsync(ReportQueryDefinition query, IList<ReportVisualDefinition> visuals, ClaimsPrincipal user, ReportSaveResult result, string queryName = null)
