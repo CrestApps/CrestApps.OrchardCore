@@ -508,6 +508,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
     private async Task OnSpeakEndedAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, CancellationToken cancellationToken)
     {
+        // A filler line spoken while a tool was running ended; the reply that follows ends the turn.
+        if (TurnBasedToolFillers.TryClaim(voiceEvent.ProviderCallId, _clock.UtcNow))
+        {
+            return;
+        }
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         if (activity is null || string.IsNullOrWhiteSpace(activity.AISessionId))

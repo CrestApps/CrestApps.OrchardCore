@@ -110,6 +110,10 @@ public sealed partial class VoiceAgentConversationLoop
         // or the model never receives them. The SMS handler does the same.
         await AttachCallToolsAsync(context, offerTransfer: handoffService is not null, cancellationToken);
 
+        // A slow tool must not leave the caller in silence: each tool has a time limit, and the caller hears a short
+        // filler line when one runs long.
+        using var toolFiller = await LimitCallToolsAsync(context, activity, cancellationToken);
+
         var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
         if (deployment is null)

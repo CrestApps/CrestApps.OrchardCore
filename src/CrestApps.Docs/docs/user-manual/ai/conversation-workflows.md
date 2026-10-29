@@ -75,10 +75,11 @@ Then create the tool:
 1. Open **Artificial Intelligence > Tool Instances**, click **Add Tool Instance** and choose **Workflow**.
 2. Give it a **Name** and a **Description**. The description is what the AI reads to decide when to call it, so say what it does and when to use it, for example *Finds free appointment times on a date the customer asks for*.
 3. Choose the **Workflow**.
-4. Under **Parameters**, declare what the workflow needs, such as a `date`. For each one choose who fills it: the AI, a value you fix, or the conversation, such as **Customer phone or email** or a conversation variable (type `variables.` followed by its name). Without parameters, the AI sends a short description of what it needs as `request`.
-5. Click **Save**, then add the tool instance to the AI profile under **Capabilities**.
+4. Optionally, set a **Time limit on calls**. On a phone call the AI waits this many seconds for the workflow, then tells the caller it could not get an answer. Leave it empty for 8 seconds, or set 0 to wait as long as the workflow takes.
+5. Under **Parameters**, declare what the workflow needs, such as a `date`. For each one choose who fills it: the AI, a value you fix, or the conversation, such as **Customer phone or email** or a conversation variable (type `variables.` followed by its name). Without parameters, the AI sends a short description of what it needs as `request`.
+6. Click **Save**, then add the tool instance to the AI profile under **Capabilities**.
 
-The tool works in website chats, text threads and on phone calls. A workflow that has to wait for something, such as a timer or someone's approval, keeps running after the AI moves on, and the AI tells the customer the request is in hand.
+The tool works in website chats, text threads and on phone calls. On a phone call, when any tool takes longer than a second and a half, the caller hears a short "One moment, please." so the silence is not taken for a dropped call, and a tool that takes longer than its time limit (8 seconds unless you set one) is stopped. A workflow that has to wait for something, such as a timer or someone's approval, keeps running after the AI moves on, and the AI tells the customer the request is in hand.
 
 :::note[Inside a tool workflow]
 **Set Conversation Variables** in a tool workflow changes the live conversation, so the AI's next answers see the new values.

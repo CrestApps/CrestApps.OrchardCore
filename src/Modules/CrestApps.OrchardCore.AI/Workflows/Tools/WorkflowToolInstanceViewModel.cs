@@ -14,6 +14,11 @@ public class WorkflowToolInstanceViewModel
     public string WorkflowTypeId { get; set; }
 
     /// <summary>
+    /// Gets or sets how many seconds a phone call waits for the workflow; empty uses the default.
+    /// </summary>
+    public int? TimeoutSeconds { get; set; }
+
+    /// <summary>
     /// Gets or sets the workflows that start with the <c>AI Tool Called</c> event.
     /// </summary>
     [BindNever]
