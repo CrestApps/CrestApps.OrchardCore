@@ -52,7 +52,7 @@ Numbers that were typed on an entry point before entry points picked them from t
 | **Route to** | **Queue** (the default), **Specific agent**, or an AI: **AI voice agent** for calls, offered when the Telnyx AI Voice Agent feature is on, and **AI agent** for texts, offered when SMS Omnichannel Automation is on. A specific-agent line rings one person and never falls back to a queue. |
 | **AI agent** | The AI chat profile that answers the calls (AI voice agent routing). See [AI voice agent](#ai-voice-agent). |
 | **Target queue** | The queue that receives the calls (queue routing). |
-| **Priority** | Calls only. Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
+| **Priority** | Calls only. Lowest to Highest, **Normal** by default. Calls from this number start at this priority and jump ahead of lower-priority work in the queue; it replaces the queue's **Default priority**. A caller who rings again within four hours of their last call is raised to **High**, and a customer who returns one of your callbacks within 24 hours to **Highest**; priority is only ever raised. These raises apply to calls that go straight to the queue: a call that first plays a welcome message, a recording notice or a menu is queued at the entry point's priority. |
 | **Target agent** | The person to ring (specific-agent routing). |
 | **Send unanswered calls to voicemail** | Specific-agent lines only. When off, the caller keeps ringing until the agent answers or the caller hangs up. |
 | **Ring window (seconds)** | How long to ring the agent before voicemail. 5 to 300, default 30. |

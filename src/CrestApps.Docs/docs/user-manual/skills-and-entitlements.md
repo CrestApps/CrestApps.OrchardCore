@@ -32,9 +32,11 @@ A disabled skill stays on the agents and queues that already use it, but it can 
 1. Open **Interaction Center > Management > Agent entitlements** and click **Add agent entitlements**.
 2. Click **Browse users**, search for the person and pick them as the **User**. Each user has one entitlement record; the screen tells you if one already exists.
 3. Under **Allowed queues**, pick every queue the agent may sign in to. Removing a queue later also signs the agent out of it.
-4. Under **Queue preferences**, set a **Priority** for each allowed queue (a lower number is served first) and an optional **Delay (s)**, which makes a caller wait that many seconds before this agent is offered work from that queue. Use delays to make an agent a backup for a queue.
+4. Under **Queue preferences**, set a **Priority** for each allowed queue (a lower number is served first) and an optional **Delay (seconds)**, which makes a caller wait that many seconds before this agent is offered work from that queue. Use delays to make an agent a backup for a queue. Both apply when an agent who has just become free chooses which queue to take work from; they do not change which idle agent a new call is offered to, which the queue's routing strategy decides.
 5. Under **Allowed campaigns**, pick the dialer campaigns the agent may work.
 6. Under **Skills**, add each skill with a **Proficiency** from 1 (basic) to 5 (expert).
+
+An agent holds one interaction at a time by default, and an agent on a voice call is never offered another call. How many interactions an agent may hold (their capacity) has no field on this screen: it is set by the entitlement recipe or a deployment step.
 7. Click **Save**.
 
 The list shows how many queues and campaigns each agent is allowed. Entitlement records cannot be deleted; remove the queues and campaigns instead.
