@@ -137,7 +137,7 @@ together in either order.
 ### Deployment plan
 
 Enable **OrchardCore.Deployment** together with **AI Personas**. The **AI Personas** deployment step then becomes
-available when you build a deployment plan under **Configuration → Deployment Plans**. It exports either every saved
+available when you build a deployment plan under **Tools > Deployments > Plans**. It exports either every saved
 persona (**Include all saved personas**) or only the ones you select. Each exported persona keeps its technical name,
 title, description, instructions, assistant name, language, voice, avatar, owner and properties.
 
