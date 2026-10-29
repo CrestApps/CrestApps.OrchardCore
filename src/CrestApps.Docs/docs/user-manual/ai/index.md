@@ -29,7 +29,24 @@ This section explains each feature in plain words. For installation, configurati
 | **Analytics** | Reports on how chats go, how many tokens they use, and what they cost. | See how many questions the assistant resolves, and which days are busiest. |
 | **Workflows** | Use AI inside automated workflows, and start a workflow when a chat ends or collects information. | Summarize a form submission; send the details a visitor gave to your sales team. |
 
+## AI permissions at a glance
+
+Give each role only what it needs, under **Access Control > Roles**. The permissions are grouped by feature on the role page; use **Search permissions** to find one.
+
+| For | Permissions |
+| --- | --- |
+| Building assistants | **Manage AI profiles**, **Manage AI deployments**, **Manage AI profile templates**, **Manage AI data sources**, **Manage file sources**, **Manage web crawlers**, **Manage AI tool instances**, **Manage MCP Connections**, **Manage Agent-to-Agent Connections** |
+| Changing the connections to AI services | **Manage AI Provider Connections** (give it with care) |
+| Chatting | **Query any AI profile**, or **Query AI profile** for one profile only; **Delete chat session**, **Delete all chat sessions**, **Clear AI memory**; the chat interaction permissions, such as **List chat interactions** |
+| Reports | **View AI Chat Analytics**, **Export AI Chat Analytics** |
+| Tools | **Access any AI tool** (marked Security Critical) opens every tool; each tool also has its own **Access AI tool** permission |
+| Public assistants | Give the **Anonymous** role only **Query AI profile** for the public profile |
+
+A feature that works for the administrator and for nobody else is almost always a missing permission: the administrator has them all. Check the role of the person, the **Query** permission of the profile, the tool permissions, and, for a public chat, the **Anonymous** role.
+
 ## Who does what
+
+<YouTube video="ai-roles-permissions" title="Video overview of AI roles and permissions" />
 
 Most people only chat. Setting things up is done by a few people with extra permissions.
 
