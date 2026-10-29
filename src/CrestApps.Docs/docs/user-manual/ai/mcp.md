@@ -131,7 +131,7 @@ The video shows what resources are, the types below, and how to add a File, a Me
 
 ### The resource types
 
-<YouTube video="ai-mcp-resources" title="Video of the resource types" start={51} end={93} />
+<YouTube video="ai-mcp-resources" title="Video of the resource types" start={57} end={99} />
 
 Open **Artificial Intelligence > Model Context Protocol > Resources** and click **Add Resource**. **Available Resource Types** lists:
 
@@ -142,7 +142,7 @@ Open **Artificial Intelligence > Model Context Protocol > Resources** and click 
 
 ### Share a file
 
-<YouTube video="ai-mcp-resources" title="Video of adding a File resource" start={93} end={136} />
+<YouTube video="ai-mcp-resources" title="Video of adding a File resource" start={99} end={142} />
 
 1. Click **Add** on **File**.
 2. Enter a **Display Text** (the name in the list) and a **Name** (how apps identify the resource).
@@ -153,13 +153,13 @@ Open **Artificial Intelligence > Model Context Protocol > Resources** and click 
 
 ### Share media
 
-<YouTube video="ai-mcp-resources" title="Video of adding a Media resource" start={136} end={166} />
+<YouTube video="ai-mcp-resources" title="Video of adding a Media resource" start={142} end={172} />
 
 Click **Add** on **Media** and fill in the same fields. In the **Path**, the placeholder `{path}` stands for the location of a file in the media library, so an app can ask for any file. To share a single file instead, replace the placeholder with its location. Click **Save**.
 
 ### Share files from a file server
 
-<YouTube video="ai-mcp-resources" title="Video of adding SFTP and FTP resources" start={166} end={228} />
+<YouTube video="ai-mcp-resources" title="Video of adding SFTP and FTP resources" start={172} end={234} />
 
 1. Click **Add** on **SFTP**, then enter a **Display Text**, a **Name** and a **Description**.
 2. Enter the **Host**, the **Port** (22 by default) and the **Username** of the file server.
