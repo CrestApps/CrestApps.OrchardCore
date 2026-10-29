@@ -16,6 +16,10 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 <AskYourAdmin />
 
+This video shows the buyer's account, checking out as a guest, how a guest finds an order, and how a guest order becomes an account:
+
+<YouTube video="buyer-account-guest-orders" title="Narrated video overview of the buyer account and guest orders" />
+
 ## What buyers see
 
 - **Add to cart** appears on each product that can be bought online, on its listing card and its page. Buyers choose how many, and the option when a product has several prices. Products that are only listed, and subscription plans, do not show it; plans have their own **Sign up** button.
@@ -199,6 +203,8 @@ With the **Admin Dashboard** feature on, add the **Sales Summary** widget under 
 
 ## Wishlists
 
+<YouTube video="buyer-account-guest-orders" title="Video of the buyer's account, with the wishlist" start={81} end={144} />
+
 With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a product's page, and find what they saved under **Wishlist** in their account, each with its **Add to cart**. A product you stop selling drops off their wishlist.
 
 ## The buyer's account
@@ -232,14 +238,20 @@ Under **Settings > Commerce > Orders**, turn on **Email buyers who leave a check
 
 ## Guests and their orders
 
+<YouTube video="buyer-account-guest-orders" title="Video of checking out as a guest, and the order link" start={144} end={204} />
+
 A guest has no account to sign in to, so they reach their order through a **link**:
 
 - The confirmation page and the confirmation email give a guest a link that opens their order: what they bought, the total, the billing address, and a **Pay now** button when something is still owed. A link works for 60 days. A changed or expired link shows *This order link no longer works* and nothing about any order.
 - **Track your order** (`/orders/track` on your site) asks for the order number and the email the order was placed with, and opens the paid order's page, with its shipments and where each parcel is. Both must match, and tries are limited, so a number alone shows nothing. **Find my order** links to it.
 - **Find my order** (`/orders/find` on your site) asks for an email and emails a link to each order placed with it in the last year. It always answers the same way, whether or not there are orders, so it never tells anyone who has bought from you. It is limited to a few requests per visitor and per email.
-- When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+- A guest's order page ends with *Create an account with the same email to see this order and future ones in your account*, with a **Create an account** link, when your site lets visitors register. When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+
+<YouTube video="buyer-account-guest-orders" title="Video of turning a guest order into an account" start={248} end={281} />
 
 Link to **Track your order** and **Find my order** from your site's footer or help page so guests can find them.
+
+<YouTube video="buyer-account-guest-orders" title="Video of Track your order and Find my order" start={204} end={248} />
 
 ## Order confirmations
 

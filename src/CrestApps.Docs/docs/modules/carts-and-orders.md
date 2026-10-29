@@ -14,6 +14,8 @@ user_manual:
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
+<YouTube video="buyer-account-guest-orders" title="Narrated video overview of the buyer account and guest orders" />
+
 **Carts** lets visitors put products sold online in a cart from a listing card or a product page. **Orders** checks the cart out through the [Checkout](checkout) framework and records what was bought. Together they sell goods the way [Subscriptions](subscriptions) sells plans: through the same checkout, payment providers, coupons and taxes.
 
 ## Carts
