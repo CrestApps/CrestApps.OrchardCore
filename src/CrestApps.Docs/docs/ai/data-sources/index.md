@@ -40,6 +40,10 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 
 ### End-to-End Screencast
 
+<YouTube video="ai-data-sources" title="Video overview of data sources in the admin" />
+
+The video above shows an administrator indexing content, creating the knowledge base index and a data source, choosing it on a profile, and asking a question.
+
 The User Manual page [Knowledge](../../user-manual/ai/knowledge.md) has a screencast of the full Elasticsearch-backed RAG flow: reviewing the **Articles** content index and the **AI RAG Knowledge Base** index, creating an **AI Data Source** that maps the Articles index to the knowledge base, syncing the embeddings, creating an AI profile that is **restricted to the indexed data**, and asking a question that is answered strictly from the indexed articles with the source article as a linked reference. The same page describes every field of the data source editor and of the profile's **Knowledge** tab.
 
 The data source list now follows the deployments-style creation flow. **Add Data Source** opens a modal that lists the available source types. Built-in options include:
