@@ -34,6 +34,11 @@ public static class AIPermissions
     public static readonly Permission ManageAIQuality = new("ManageAIQuality", LocalizationSource.Create("Manage AI tests, QA cohorts and alert rules", typeof(AIPermissions)));
 
     /// <summary>
+    /// Gets the permission to manage the webhooks that receive AI and contact center events, and read what was sent.
+    /// </summary>
+    public static readonly Permission ManageAIWebhooks = new("ManageAIWebhooks", LocalizationSource.Create("Manage AI webhooks", typeof(AIPermissions)));
+
+    /// <summary>
     /// Gets the permission to manage AI deployments.
     /// </summary>
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", LocalizationSource.Create("Manage AI deployments", typeof(AIPermissions)));

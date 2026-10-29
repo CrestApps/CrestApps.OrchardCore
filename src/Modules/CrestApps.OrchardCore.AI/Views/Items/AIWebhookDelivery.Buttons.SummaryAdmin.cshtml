@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Core.Webhooks
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIWebhookDelivery>
+
+<button type="submit" class="btn btn-sm btn-secondary" formaction="@Url.Action("Redeliver", "AIWebhooks", new { area = "CrestApps.OrchardCore.AI", deliveryId = Model.Value.ItemId })">@T["Send again"]</button>

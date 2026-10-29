@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -167,6 +168,14 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
 
     private async Task TriggerSessionClosedWorkflowAsync(AIProfile profile, AIChatSession chatSession)
     {
+        await AIWebhookPublisher.TryPublishAsync(_serviceProvider, AIWebhookEvents.ConversationEnded, new
+        {
+            sessionId = chatSession.SessionId,
+            profileId = profile.ItemId,
+            closedUtc = chatSession.ClosedAtUtc,
+            variables = chatSession.GetConversationVariables(),
+        });
+
         var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
 
         if (workflowManager is null)

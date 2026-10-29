@@ -64,6 +64,8 @@ public static class AIConstants
         public const string UsageAnalytics = "CrestApps.OrchardCore.AI.UsageAnalytics";
 
         public const string Quality = "CrestApps.OrchardCore.AI.Quality";
+
+        public const string Webhooks = "CrestApps.OrchardCore.AI.Webhooks";
     }
 
     /// <summary>

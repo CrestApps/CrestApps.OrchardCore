@@ -91,3 +91,14 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.Webhooks,
+    Name = "AI Webhooks",
+    Description = "Posts signed AI events (a conversation starting, ending, analyzed, transferred or scored, an alert triggering or resolving) to outside addresses, with retries and a delivery log.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
