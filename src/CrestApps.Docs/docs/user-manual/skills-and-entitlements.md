@@ -21,6 +21,9 @@ technical_manual:
 
 ## Create a skill
 
+<YouTube video="contact-center-routing-explained" title="Video of skill requirements, Relax after, agent skills, capacity and queue preferences" start={137} end={210} />
+
+
 1. Open **Interaction Center > Management > Skills** and click **Add Skill**.
 2. Enter a **Name** (for example *Spanish*) and an optional **Description**.
 3. Leave **Enabled** ticked and click **Save**.
