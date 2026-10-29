@@ -19,6 +19,10 @@ At each store you set up one or more **registers**. A member of staff opens a **
 
 <AskYourAdmin />
 
+This video shows why a store sells at the counter with the same system, the registers and shifts screens, a day at the till, and register sales in your orders:
+
+<YouTube video="point-of-sale" title="Narrated video overview of Point of sale" />
+
 ## Before you start
 
 1. Turn on **Point of Sale**, and **Receipts** if you'll print or email receipts.
@@ -29,6 +33,8 @@ At each store you set up one or more **registers**. A member of staff opens a **
 Staff sign in to the till app with their own accounts, so every shift, sale and cash movement says who made it.
 
 ## Set up registers
+
+<YouTube video="point-of-sale" title="Video of setting up a register" start={135} end={206} />
 
 1. Open **Commerce > Point of sale > Registers** and click **Add register**.
 2. Fill in the fields (below), and click **Save**.
@@ -62,6 +68,8 @@ With Stripe in test mode, pair a simulated reader with the registration code *si
 Your developers find the requests the till app sends in [Point of Sale](../../modules/point-of-sale.md#pair-a-reader), in the Technical Manual.
 
 ## A day at the till
+
+<YouTube video="point-of-sale" title="Video of a day at the till, in the till app" start={206} end={279} />
 
 Here is a shift as staff work it in the till app. Each step is a call the till app makes to your site; the Technical Manual walks through the same day [call by call](../../modules/point-of-sale.md#a-shift-call-by-call). A till app built as the Technical Manual describes never rings a sale up, or takes a payment, twice, even when its connection drops.
 
@@ -134,6 +142,8 @@ That's the **expected** cash. At the close, the counted cash less the expected c
 
 ## Shifts
 
+<YouTube video="point-of-sale" title="Video of reading a shift" start={279} end={342} />
+
 **Commerce > Point of sale > Shifts** lists every shift, newest first, each **Open** or **Closed**, with when it opened and who opened it, and for a closed one its difference. The **Filter by register** list in the header shows one register's shifts. **Shifts**, on a register in the registers list, opens the same.
 
 Click **View** to open a shift:
@@ -154,6 +164,8 @@ Click **View** to open a shift:
 The note given at the close is shown with it.
 
 ## What a register sale does differently
+
+<YouTube video="point-of-sale" title="Video of register sales in the orders list" start={342} end={381} />
 
 A register sale is an order, like an online one, so it's under **Commerce > Orders**, in your reports, and in the buyer's account when you named a customer with an account. It differs in these ways:
 
