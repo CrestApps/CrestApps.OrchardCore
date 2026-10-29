@@ -78,6 +78,8 @@ The **Commerce starter** recipe sets all of this up, with a **Plans** page at */
 
 ### Give subscribers access
 
+<YouTube video="subscriptions-lifecycle" title="Plans and the roles they give" start={88} end={110} />
+
 Add the **Subscription Entitlements** part to a plan type, then on each plan tick the roles under **Member access**. A subscriber holds these roles for as long as their subscription is current. They keep them through the period they have paid for, even after cancelling, and lose them once it lapses. Because roles control what people can see and do across the site, this is how you make content or features members-only.
 
 What a plan grants is copied onto each subscription when it is bought, so changing a plan later does not change what existing subscribers were sold.
@@ -97,6 +99,8 @@ This video shows a visitor signing up to a plan, then the Agreements screen:
 <YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
 ## Manage subscriptions
+
+<YouTube video="subscriptions-lifecycle" title="Managing a subscription" start={110} end={154} />
 
 | | |
 | --- | --- |
@@ -157,6 +161,8 @@ Each action is written to the subscription's **History**.
 
 ## Subscription statuses
 
+<YouTube video="subscriptions-lifecycle" title="The subscription statuses" start={51} end={88} />
+
 | Status | What it means |
 | --- | --- |
 | **Active** | Paid and current. |
@@ -168,6 +174,8 @@ Each action is written to the subscription's **History**.
 | **Incomplete** | The subscription was created, but its first payment never went through, so nothing is owed to the subscriber yet. |
 
 ## My Plans (for subscribers)
+
+<YouTube video="subscriptions-lifecycle" title="My Plans for subscribers" start={154} end={174} />
 
 | | |
 | --- | --- |
