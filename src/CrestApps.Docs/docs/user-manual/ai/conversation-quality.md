@@ -71,6 +71,15 @@ The **Split Traffic** task sends each run of a workflow down one of several outc
 
 Compare the two in the reports by profile, or by the `variant` variable.
 
+### Compare two versions of one profile
+
+Every save of an AI profile is a version. To compare the version you just saved with an earlier one, without copying the profile yourself, set **Version** on **Use AI Profile**:
+
+1. Open the profile's **Versions** page and note the number of the version to compare against, for example 3.
+2. In the starting workflow, connect one **Split Traffic** outcome to **Use AI Profile** with the same profile and **Version** `3`, and leave the other outcome alone, so it answers with the profile as it is now.
+
+The first time version 3 is used, it is copied to a profile named after it, such as *Support (version 3)*, with a **Version 3 copy** badge in the AI Profiles list. Later conversations reuse the copy. Conversations on the copy report as version 3 of the original profile, so the **Profile version** column of the **AI chat sessions** and **Conversation evaluations** reports compares the two directly. Don't edit the copy: delete it, and the next conversation that needs version 3 makes it again.
+
 ## Score conversations for quality
 
 The **Evaluate AI Conversation** task scores a finished conversation with the utility model. It reads the transcript and the profile's instructions and gives:

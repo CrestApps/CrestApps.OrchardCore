@@ -297,6 +297,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AIConversationStartingEvent, AIConversationStartingEventDisplayDriver>();
         services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
         services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
+        services.AddScoped<AIProfileVersionCopies>();
         services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
         services.AddActivity<AIToolCalledEvent, AIToolCalledEventDisplayDriver>();
         services.AddScoped<IAIConversationStartingHandler, WorkflowAIConversationStartingHandler>();
