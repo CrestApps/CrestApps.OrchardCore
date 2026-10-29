@@ -21,7 +21,9 @@ Reports show what happened in your contact center over a period you choose: call
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a report, changing the date range and filters, and exporting it" start={802} end={833} />
+<YouTube video="contact-center-reports" title="Video overview of Contact Center reports: running, filtering, reading and exporting a report" />
+
+<YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />
 
 You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 
@@ -29,11 +31,15 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 
 ## Run a report
 
+<YouTube video="contact-center-reports" title="Video of running a report and choosing the date range" start={108} end={161} />
+
 1. Open **Reports** and pick a category, then a report.
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
 3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status**, **Interaction type**, **Dialer profile**, **Queue state**, **Disposition**, **Activity ID** or **Reason**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
+
+<YouTube video="contact-center-reports" title="Video of filtering a report" start={161} end={192} />
 
 How the filters work:
 
@@ -43,7 +49,33 @@ How the filters work:
 - An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown.
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows a notice naming that feature instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
-Reports cannot be scheduled or emailed yet; run and export them when you need them.
+<YouTube video="contact-center-reports" title="Video of exporting a report to CSV, Excel and PDF" start={257} end={289} />
+
+Any report in this list can also be emailed on a schedule, see [Email a report on a schedule](#email-a-report-on-a-schedule). Reports built with the [Report Builder](report-builder/index.md) cannot be subscribed to; to send one by email, use a workflow with the **Email Report** task.
+
+## What the main numbers mean
+
+The cards at the top of **Executive performance dashboard**, **Call insights** and many other reports use the same definitions everywhere, so a number means the same thing in every report. Every percentage is worked out from counts, never by averaging other percentages.
+
+<YouTube video="contact-center-reports" title="Video of the main numbers on the executive dashboard" start={192} end={257} />
+
+| Number | What it means |
+| --- | --- |
+| **Interactions** | Every call or message in the period. A transfer, consult, conference or callback stays part of the same interaction. |
+| **Inbound offered** | The inbound interactions. |
+| **Inbound answered** and the answer rate | Inbound interactions an agent took, and that count divided by *Inbound offered*. A caller the platform only answered to play the queue or to record a voicemail is not answered. |
+| **Abandoned** and the abandonment rate | Inbound callers who hung up while waiting in a queue or while an agent was being offered the call, before anybody answered. The rate is *Abandoned* divided by *Inbound offered*. Every abandon counts, however short. |
+| **Voicemail** | Inbound calls the platform sent to voicemail instead of connecting: the offer rang out, the queue's maximum wait passed, the entry point was closed, or the queue was full. |
+| **Callback requested** | Inbound callers who accepted the queue's offer of a callback instead of waiting. |
+| **Failed** | Calls that failed for a technical reason: the provider reported an error, or the call could not be placed or bridged. A caller who hangs up before anyone answers is an abandon, never a failure. |
+| **Avg speed of answer** | How long inbound callers waited, from the moment the call was created to the moment an agent answered, averaged over answered inbound calls. |
+| **Avg handle time** | The talk, hold and wrap-up time of a handled call, averaged over answered calls. Abandoned, voicemail and failed calls are left out. |
+| **Transfer rate** | The share of answered calls that were transferred at least once. |
+| **Recording coverage** | The share of answered voice calls that have a recording. |
+| **Service level** (per queue) | Inbound calls answered within the queue's service-level threshold, divided by inbound answered plus abandoned. Voicemail, callback and failed calls are left out. A queue with no threshold shows none. |
+| **Utilization** and **Occupancy** (per agent) | Utilization is busy plus wrap-up time divided by all signed-in time. Occupancy is busy plus wrap-up time divided by the time the agent was available, reserved, busy or in wrap-up. Neither says how well an agent works. |
+
+*Voicemail* and *Callback requested* are neither answered nor abandoned. They count toward *Inbound offered* but not toward the abandonment rate or the service level, and each has its own column.
 
 ## Email a report on a schedule
 
@@ -58,6 +90,8 @@ With **Report Subscriptions** on, any report can be emailed every day, week or m
 The email shows the report's numbers and tables. If one doesn't go out, such as when your site's email isn't set up, the list shows why. Untick **On** to pause a subscription.
 
 ## Agent time over long periods
+
+<YouTube video="contact-center-reports" title="Video of the 31-day limit on reports about agents' time" start={289} end={343} />
 
 The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:
 
@@ -79,6 +113,135 @@ Reports of agents' time over many days are quick because the site keeps a summar
 | **On or after** | Everything from a date and time, with no end. |
 
 The button always shows the range you picked in words, for example *From Jan 1, 2026 to Jan 31, 2026*. Weeks start on the first day of the week for your language settings.
+
+## The reports by category
+
+<YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />
+
+The **Reports** page and the **Reports** menu group the Contact Center reports into the categories below. Each category answers a different kind of question: *Executive* for the whole center at a glance, *Operations* and *Queue & Routing* for how calls and queues performed, *Agent Performance* for people, *Workforce & Payroll* for the time agents spend in each state, *Billing & Usage* for what was used, *Compliance & Audit* for the records behind the totals, and *Technical & IT* for providers and failures. *CRM & Campaigns* holds the campaign and lead reports of the CRM, and the CRM's activity reports sit in *Operations*, *Queue & Routing*, *Agent Performance* and *Compliance & Audit* beside these. The CRM reports are described in [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#reports) and the Omnichannel pages.
+
+### Executive
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Executive reports" start={49} end={78} />
+
+| Report | What it shows |
+| --- | --- |
+| **Executive performance dashboard** | Enterprise KPI cards and interactive charts for interaction demand, accessibility, channel mix, queue service level, agent workload, and operating efficiency. |
+
+### Operations
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Operations reports" start={78} end={121} />
+
+| Report | What it shows |
+| --- | --- |
+| **Call insights** | Inbound and outbound call volume, answered, abandoned, and failed calls, handle time, and a daily trend. |
+| **Call quality** | How calls rated, the agents and network paths poor calls cluster on, their likely cause, and each poor call's measurements. |
+| **Channel performance** | Interaction performance grouped by voice, chat, email, SMS, and other supported channels. |
+| **Day-of-week performance** | Interaction demand, outcomes, and response metrics grouped by weekday. |
+| **Dialer activity and health** | Whether the dialer is dialing, idle, holding back, has nothing to call or has stalled; its last pacing cycle and call per campaign and dialer profile; calls and routing decisions per hour; and suppressed attempts by reason. |
+| **Direction performance** | Inbound and outbound interaction performance with consistent outcome and duration metrics. |
+| **Hour-of-day performance** | Interaction demand, outcomes, and response metrics grouped by UTC hour. |
+| **Interaction lifecycle duration** | Average wait, connected, wrap-up, and end-to-end duration by interaction status. |
+| **Interaction outcome summary** | Interaction volume and response metrics grouped by normalized lifecycle outcome. |
+| **Interaction volume trend** | Daily offered, answered, abandoned, and failed interaction volume. |
+| **Interval performance** | Daily interaction outcomes, answer and abandonment rates, speed of answer, and handle time. |
+
+### Queue & Routing
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Queue & Routing reports" start={121} end={171} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent availability and wait time** | Live, per agent: how long each has waited for a call, today's calls, session health, stale states, and why each queue or campaign is or is not giving them work. |
+| **Dialer decision log** | Every routing decision and dial suppression: the activity, queue, campaign and agents it was about, the outcome and the reason, counts by reason, and queues with work due now that routing has gone quiet on. |
+| **High-wait interaction detail** | Interaction-level audit of customers who waited at least 60 seconds. |
+| **Queue abandonment analysis** | Inbound queue offered, answered, abandoned, abandonment rate, and wait before abandonment. |
+| **Queue handle time analysis** | Total, average, and maximum connected plus wrap-up time by queue. |
+| **Queue performance summary** | Interaction volume, outcomes, answer rate, abandonment, ASA, and AHT by queue. |
+| **Queue service level** | Queue service level calculated from answered-within-threshold interactions and eligible offered interactions. |
+| **Queue transfer performance** | Handled interactions, transferred interactions, transfer events, and transfer rate by queue. |
+| **Queue usage** | Per-queue handled, answered, and abandoned volume, handle time, and current waiting depth. |
+| **Queue wait time analysis** | Total, average, and maximum customer wait time by queue. |
+| **Transfer analysis** | Transfer volume, completion, destination type, result, and completion time. |
+
+### Agent Performance
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Agent Performance reports" start={171} end={213} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent handle time analysis** | Per-agent handled volume, connected time, wrap-up time, and total handle time. |
+| **Agent inbound performance** | Inbound handled volume, outcomes, transfers, recording count, and handle time by agent. |
+| **Agent interaction volume** | Handled, answered, failed, transferred, recorded, and average handle time by agent. |
+| **Agent occupancy** | Busy plus wrap-up time divided by available, reserved, busy, and wrap-up time. |
+| **Agent outbound performance** | Outbound handled volume, outcomes, transfers, recording count, and handle time by agent. |
+| **Agent outcome performance** | Interaction outcomes and average handle time by agent, ordered by failed volume. |
+| **Agent productivity** | Per-agent handled volume, talk time, average handle time, and completed activities. |
+| **Agent transfer performance** | Transfer volume and supporting interaction metrics by agent. |
+| **Agent utilization** | Busy plus wrap-up time divided by total observed signed-in time. |
+| **Agent wrap-up performance** | Per-agent wrap-up starts, completions, completion rate, average duration, and total duration. |
+| **Talk, hold, ring and queue wait** | Talk time with hold taken out, hold, ring time and missed offers by agent, and the real queue wait and abandons by queue, from the calls' recorded changes. |
+
+### Workforce & Payroll
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Workforce & Payroll reports" start={213} end={262} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent break and away analysis** | Break count, total time, average duration, and longest duration by agent. |
+| **Agent time summary** | Observed signed-in, available, busy, wrap-up, break, and other not-ready time by agent. |
+| **Campaign signed-in hours** | Observed signed-in agent time attributed to campaign memberships. |
+| **Daily agent timecard** | Daily observed on-duty, productive presence, working, and break time by agent. |
+| **Payroll timecard inputs** | Observed on-duty, productive presence, break, meeting, training, and other not-ready time for payroll review; pay rates and schedules are not applied. |
+| **Presence reason breakdown** | Observed presence duration and interval count by status and reason. |
+| **Presence status duration** | Total observed duration and share of signed-in time for every presence status. |
+| **Queue signed-in hours** | Observed signed-in agent time attributed to queue memberships. |
+| **Ready versus not-ready time** | Ready, actively working, and not-ready time by agent. |
+| **Reconciled payroll timecard** | Per agent per day, signed-in time beside the time in each state to the second, with a check that flags every day that does not add up. |
+
+### Billing & Usage
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Billing & Usage reports" start={262} end={293} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent usage for billing** | Interaction counts and measured service time by agent for staffing, payroll, and chargeback support. |
+| **Channel usage for billing** | Interaction counts and measured service time by channel for service allocation and chargeback. |
+| **Daily usage for billing** | Daily interaction counts and measured service time for invoice period reconciliation. |
+| **Provider usage for billing** | Interaction counts and measured service time by communications provider for vendor invoice reconciliation. |
+| **Queue usage for billing** | Interaction counts, connected time, wrap-up, queue wait, transfers, and recordings by queue for invoice support. |
+
+### Compliance & Audit
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Compliance & Audit reports" start={293} end={333} />
+
+| Report | What it shows |
+| --- | --- |
+| **Abandoned interaction detail** | Interaction-level audit of inbound customers who left before answer. |
+| **Agent activity timeline** | Every agent state, offer, connection and call change in order, with start, end, duration and who made each change. |
+| **Agent presence audit** | Detailed auditable presence transitions with status, reason, and membership counts. |
+| **Agent recording coverage** | Recorded interaction volume and supporting performance metrics by agent. |
+| **Interaction detail** | One row per interaction with routing, agent, provider, timing, and transfer details. |
+| **Long interaction detail** | Interaction-level audit of connected sessions lasting at least 15 minutes. |
+| **Recording coverage** | Answered voice interaction recording coverage grouped by provider. |
+
+### Technical & IT
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Technical & IT reports" start={333} end={355} />
+
+| Report | What it shows |
+| --- | --- |
+| **Call leg performance** | Provider call-leg volume, answer state, status, and average duration for technical operations. |
+| **Failed interaction detail** | Interaction-level audit of failed communications. |
+| **Provider performance** | Interaction outcomes and duration metrics grouped by executing communications provider. |
+
+### CRM & Campaigns
+
+| Report | What it shows |
+| --- | --- |
+| **Campaign summary** | Per-campaign completed-versus-pending progress across the activity inventory, with the pending records split by what the dialer can do with them right now. |
+| **Dialer queue inventory** | What each campaign queue holds right now, by the dialer profile its items are stamped with, and why the records that are not being dialed are held back. |
+| **Subject inventory** | Per-subject completed-versus-pending progress across the activity inventory. |
 
 ## Which report answers which question
 
