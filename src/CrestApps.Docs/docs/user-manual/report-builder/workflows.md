@@ -16,7 +16,11 @@ Workflows let a report work for you without anyone opening it. Email a report to
 
 <AskYourAdmin />
 
+<YouTube video="report-builder-workflows" title="Video overview of Report Builder workflows" />
+
 ## What you can use
+
+<YouTube video="report-builder-workflows" title="Video of the report events and the report tasks" start={56} end={132} />
 
 The report activities are in the **Reports** category of the activity picker.
 
@@ -51,6 +55,10 @@ To find a filter's ID, run the report, set the filter and click **Show**: the ad
 
 ## Email a report every morning
 
+<YouTube video="report-builder-workflows" title="Video of the Email Report task" start={181} end={211} />
+
+This is the way to email a report you built in the Report Builder. **Report Subscriptions** (see [Reports](../reports.md#email-a-report-on-a-schedule)) cover the reports under **Reports** that modules provide, and cannot be used for a Report Builder report.
+
 1. Go to **Design > Workflows** and click **Create Workflow**. Name it, for example *Daily sales*, and save.
 2. Add the **Timer Event** from the **Background** category as the start activity. Set its schedule, such as `0 7 * * *` for 7:00 every day.
 3. Add **Email Report**. Choose the report, and enter the recipients in **To**. Leave **Subject** empty to use the report's title.
@@ -60,6 +68,8 @@ To find a filter's ID, run the report, set the filter and click **Show**: the ad
 The recipients get your message, the report's headline numbers and tables, and the file attached. Charts are left out of the email; they are in the attached file's data and in the report itself.
 
 ## Email someone a link to a report
+
+<YouTube video="report-builder-workflows" title="Video of publishing a report and the workflow that shares a link" start={132} end={157} />
 
 A link is better than an attachment when the report is large or the reader wants to change its filters. A link is for users of the site: they open it once signed in.
 
@@ -102,7 +112,7 @@ The event gives the workflow these values, read in Liquid as `{{ Workflow.Input.
 | `UserName` | Who ran, exported or published it. Empty for a visitor who is not signed in. |
 | `Source` | Where it was run or exported: `Admin` (the report's page), `Shared` (the shared reports page) or `Link` (a share link). |
 | `RowCount` | **Report Run** only: the number of rows. |
-| `Format` | **Report Exported** only: `csv` or `xlsx`. |
+| `Format` | **Report Exported** only: `csv`, `xlsx` or `pdf`. |
 | `VersionNumber` | **Report Published** only: the version that was published. |
 | `FilterValues` | The filters that were used. |
 
@@ -119,6 +129,8 @@ Runs made by the report tasks of a workflow do not start these events, so a work
 | `Columns` | The column labels. |
 | `Rows` | The first 1,000 rows, each with its values by column label. |
 | `Errors` | The reasons the report could not run, if any. |
+
+<YouTube video="report-builder-workflows" title="Video of saving an Excel copy in the media library" start={157} end={181} />
 
 **Export Report** stores `FileName`, `Format`, `RowCount` and `Size`. With a **Media folder**, such as `reports/weekly`, it saves the file in the media library and stores its `Path` and `Url`; the folder can use Liquid. Without one, the file is kept in the workflow as `Base64` for a custom activity to use.
 
