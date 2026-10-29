@@ -26,7 +26,7 @@ The report activities are in the **Reports** category of the activity picker.
 | **Report Exported** | Event | Starts the workflow when someone exports a report. |
 | **Report Published** | Event | Starts the workflow when someone publishes a report. |
 | **Run Report** | Task | Runs a report and keeps its rows for the next activities. |
-| **Export Report** | Task | Exports a report to CSV, or to Excel when the Reports (OpenXml) feature is on, and saves the file in the media library. |
+| **Export Report** | Task | Exports a report to CSV, to Excel when the Reports (OpenXml) feature is on, or to PDF when the Reports (PDF) feature is on, and saves the file in the media library. |
 | **Email Report** | Task | Emails a report: your message, the report's headline numbers and tables, and the report attached as a file. |
 | **Create Report Share Link** | Task | Creates a share link to a report for users of the site, and emails it to them. |
 
@@ -54,7 +54,7 @@ To find a filter's ID, run the report, set the filter and click **Show**: the ad
 1. Go to **Design > Workflows** and click **Create Workflow**. Name it, for example *Daily sales*, and save.
 2. Add the **Timer Event** from the **Background** category as the start activity. Set its schedule, such as `0 7 * * *` for 7:00 every day.
 3. Add **Email Report**. Choose the report, and enter the recipients in **To**. Leave **Subject** empty to use the report's title.
-4. Write a **Message** if you want one. Keep **Attachment** on **CSV**, or choose **Excel (.xlsx)**, or **No attachment** to send only the tables.
+4. Write a **Message** if you want one. Keep **Attachment** on **CSV**, or choose **Excel (.xlsx)** or **PDF** (each when its feature is on), or **No attachment** to send only the tables.
 5. Connect **Done** of the timer to the email task, and save the workflow.
 
 The recipients get your message, the report's headline numbers and tables, and the file attached. Charts are left out of the email; they are in the attached file's data and in the report itself.
