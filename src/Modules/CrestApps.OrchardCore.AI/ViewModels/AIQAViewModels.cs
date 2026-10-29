@@ -154,3 +154,29 @@ public class AIAlertRuleViewModel
     [BindNever]
     public IList<SelectListItem> Profiles { get; set; } = [];
 }
+
+/// <summary>
+/// The editor of the AI cost settings.
+/// </summary>
+public class AICostSettingsViewModel
+{
+    /// <summary>
+    /// Gets or sets the currency.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the carrier's price of a call minute.
+    /// </summary>
+    public decimal TelephonyPerMinute { get; set; }
+
+    /// <summary>
+    /// Gets or sets the carrier's price of a text message.
+    /// </summary>
+    public decimal SmsPerMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment prices, one per line.
+    /// </summary>
+    public string DeploymentPrices { get; set; }
+}

@@ -127,7 +127,15 @@ public sealed partial class VoiceAgentConversationLoop
         _endCallTurn.Reset();
 
         using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
+        var lineUtc = _clock.UtcNow;
+        var modelTime = System.Diagnostics.Stopwatch.StartNew();
         var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
+
+        // A reply to the caller, timed for the call's latency figures; a voicemail message or a briefing is not one.
+        if (string.IsNullOrEmpty(turnGuidance) && activity is not null)
+        {
+            _sessionTracker.TurnBasedAnswer(activity.ItemId, lineUtc, (int)modelTime.ElapsedMilliseconds);
+        }
 
         var reply = completion?.Messages?.FirstOrDefault()?.Text;
         var handoffRequested = handoffService is not null && _handoffTurn.HandoffRequested;

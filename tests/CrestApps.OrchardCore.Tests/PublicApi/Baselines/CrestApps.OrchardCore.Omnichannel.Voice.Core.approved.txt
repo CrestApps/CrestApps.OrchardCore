@@ -73,10 +73,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public long? AssistantSpeakingMs { get; set; }
         public int BargeIns { get; set; }
         public long? CallerSpeakingMs { get; set; }
+        public System.Collections.Generic.List<int> DetectorWaitsMs { get; set; }
         public long? EchoHeldMs { get; set; }
         public System.DateTime EndedUtc { get; set; }
         public int IdlePrompts { get; set; }
+        public System.Collections.Generic.List<int> ModelLatenciesMs { get; set; }
         public long? MutualSilenceMs { get; set; }
+        public System.Collections.Generic.List<int> ResponseLatenciesMs { get; set; }
         public long SessionDurationMs { get; set; }
         public System.DateTime StartedUtc { get; set; }
         public long? TimeToFirstAssistantAudioMs { get; set; }
@@ -291,6 +294,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         void BeginTurnBased(string activityId, System.DateTime answeredUtc);
         CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionMeasurements EndTurnBased(string activityId, System.DateTime endedUtc);
         System.Threading.Tasks.Task RecordAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionDraft draft);
+        void TurnBasedAnswer(string activityId, System.DateTime lineUtc, int modelMs);
         void TurnBasedSpeech(string activityId, bool started, System.DateTime occurredUtc);
     }
     public interface IAnsweringMachineSignals
