@@ -94,6 +94,10 @@ Tick the instance under **Tool Instances** on the **Capabilities** tab of a prof
 
 ## Agents
 
+<YouTube video="ai-agents" title="Video overview of AI agents" />
+
+The video creates an agent, lets an assistant use it, tours the site tools and tries the agent on its own.
+
 An agent is a profile of type **Agent**: a specialist with its own instructions and tools, such as a *Research Agent* or a *Writer Agent*. Another assistant can hand a job to it and use its answer. The **New AI Profile** picker has ready-made agents to start from.
 
 1. Create a profile, choose **Profile type** **Agent**, and fill in its **Description**. Other assistants read the description to decide when to call the agent, so say exactly what it does.
@@ -101,6 +105,10 @@ An agent is a profile of type **Agent**: a specialist with its own instructions 
    - **On demand**: the agent is only included when it fits the user's request, and only for assistants that pick it.
    - **Always available**: the agent is included in every AI request. This uses more tokens and costs more; use it only for agents every assistant must be able to reach.
 3. In the assistant that should call the agent, open the **Capabilities** tab, tick the agent under **Agents**, and save.
+
+<YouTube video="ai-agents" title="Video of creating an agent and ticking it on an assistant" start={51} end={109} />
+
+<YouTube video="ai-agents" title="Video of trying an agent with Invoke Profile" start={140} end={167} />
 
 To try an agent on its own, use **Invoke Profile** from its **Actions** menu (see [Chat with an AI assistant](chat.md#try-out-a-utility-or-agent-profile)).
 
