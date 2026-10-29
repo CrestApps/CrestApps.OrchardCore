@@ -11,23 +11,31 @@ technical_manual:
   - omnichannel/crm
 ---
 
-Reports show what happened in your contact center over a period you choose: calls, queues, agents' time, campaigns, leads and AI conversations. Every report lives under the **Reports** menu, grouped by category: *Executive*, *Operations*, *Queue & Routing*, *Agent Performance*, *Workforce & Payroll*, *Billing & Usage*, *CRM & Campaigns*, *Compliance & Audit*, and *Technical & IT*. Reports from other modules can appear under *General*.
+Reports show what happened in your contact center over a period you choose: calls, queues, agents' time, campaigns, leads and AI conversations. Every report lives under the **Reports** menu, grouped by category: *Executive*, *Operations*, *Queue & Routing*, *Agent Performance*, *Workforce & Payroll*, *Billing & Usage*, *CRM & Campaigns*, *Compliance & Audit*, and *Technical & IT*. Reports from other modules can appear under *General*. The menu lists the categories in alphabetical order, and the **Reports** page shows the reports with no category first, without a heading.
 
 | | |
 | --- | --- |
 | **Menu** | Reports > *category* > *report* |
-| **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators have it by default) |
+| **Permissions** | Each report has the permission of the module that provides it. **View Contact Center reports** opens the Contact Center reports (supervisors and administrators have it by default). **View Omnichannel reports** opens the CRM and campaign reports (administrators have it by default, and so does anyone who may manage activities). A report with its own permission, such as **Run 'Phone Number Verifications' Report**, needs that one. **Manage report subscriptions** opens **Reports > Subscriptions** (administrators have it by default). |
 | **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export, and Reports (PDF) adds PDF export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a report, changing the date range and filters, and exporting it" start={802} end={833} />
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
 
-You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
+<YouTube video="reports-run-and-export" title="Video of finding a report in the Reports menu" start={47} end={79} />
+
+You only see the reports your permissions allow.
+
+<YouTube video="reports-run-and-export" title="Video of the permissions that decide which reports you see" start={79} end={121} />
+
+If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 
 To build your own reports with drag and drop, see [Report Builder](report-builder/index.md).
 
 ## Run a report
+
+<YouTube video="reports-run-and-export" title="Video of running a report and choosing its date range" start={121} end={190} />
 
 1. Open **Reports** and pick a category, then a report.
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
@@ -35,29 +43,42 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
 
+<YouTube video="reports-run-and-export" title="Video of filtering a report" start={190} end={237} />
+
 How the filters work:
 
 - A filter left on *All* (for example *All queues*) does not narrow the report.
 - Filters combine: picking a queue, an agent, the Voice channel and the Inbound direction shows only what matches all four.
 - Every number, total, percentage and average is worked out again from the filtered records, so it always matches what you picked.
-- An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown.
-- If a report needs a feature your site does not use (for example call transfers or recording), it shows a notice naming that feature instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
+- An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`.
+- If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
-Reports cannot be scheduled or emailed yet; run and export them when you need them.
+<YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
+
+Reports of the modules above can be emailed on a schedule (see [Email a report on a schedule](#email-a-report-on-a-schedule)). Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to; to email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
 
 ## Email a report on a schedule
 
-With **Report Subscriptions** on, any report can be emailed every day, week or month, such as your sales every Monday morning.
+With **Report Subscriptions** on, a report can be emailed every day, week or month, such as your queue service level every Monday morning. It is a feature under **Tools > Features**, in the *Reporting* category, and it needs the **Reports** feature and the **Email** feature, which it turns on with it. Report Subscriptions adds **Reports > Subscriptions**, and **Manage report subscriptions** is the permission that opens it (administrators have it by default). A person can only choose a report they may open.
+
+<YouTube video="report-subscriptions" title="Video overview of report subscriptions" />
+
+**Email must be set up first.** A subscription goes out through your site's email provider. Under **Settings > Email**, the site says *No email providers are currently enabled* until you enable a provider feature, such as the SMTP provider, and enter its settings (sender address, host name, port and, when the server asks for them, credentials). Until then a subscription can be saved, but each send fails, and the list tells you why.
 
 1. On **Reports > Subscriptions**, click **Add subscription**.
-2. Choose the **Report**, and when to **Send** it: every day for the day before, every week for the 7 days before, or every month for the month before.
-3. Choose the **Day of the week** or **Day of the month**, and the **Hour**, in your site's time zone.
-4. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** to get the report as a file too.
-5. Click **Save**, or **Save and send now** to get one straight away.
+2. Choose the **Report**, listed by category. **Name** is optional; the report's name is used when it is blank.
+3. Choose when to **Send** it: *Every day, for the day before*, *Every week, for the 7 days before*, or *Every month, for the month before*.
+4. Choose the **Day of the week** (for a weekly report) or the **Day of the month**, from 1 to 28 (for a monthly one), and the **Hour**, from 0 to 23, in your site's time zone.
+5. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** (*CSV*, *Excel (.xlsx)* or *PDF*) to get the report as a file too, or leave *No file*. The email shows the report's numbers and tables either way.
+6. Leave **On** ticked, and click **Save**, or **Save and send now** to send it straight away for the period before.
 
-The email shows the report's numbers and tables. If one doesn't go out, such as when your site's email isn't set up, the list shows why. Untick **On** to pause a subscription.
+The list shows each subscription with its schedule, its recipients and when it goes out next, and you can search it by name. A background task checks every five minutes for subscriptions that are due and sends them. If a send fails, such as when the site's email is not set up, the row says *Last run didn't go out* with the reason, and the subscription's page shows when it goes out next and what happened last time. Fix the cause, and save it again with **Save and send now**. Untick **On** to pause a subscription: it stays in the list with an *Off* badge and is not sent. **Delete** removes it.
+
+Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to. To email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
 
 ## Agent time over long periods
+
+<YouTube video="reports-run-and-export" title="Video of a period that is too long and of a report whose feature is off" start={313} end={354} />
 
 The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:
 
