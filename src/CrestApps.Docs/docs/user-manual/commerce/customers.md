@@ -17,6 +17,10 @@ Everyone who buys from your store is a **customer**: a person or a business, wit
 
 <AskYourAdmin />
 
+This video shows the Customers and Companies modules from the customer list to price lists and punchout:
+
+<YouTube video="customers-companies" title="Narrated video overview of the Customers and Companies modules" />
+
 ## Customers and accounts
 
 A customer's sign-in, password and email stay on their **account**, which is managed under **Security > Users** like any other user. The customer record keeps what your store needs on top of that: how to address them, their company and tax id, and whether they want news and offers.
@@ -45,6 +49,8 @@ Each customer shows their email and when they were last active, with badges for 
 
 ## Add a customer
 
+<YouTube video="customers-companies" title="Video of finding a customer" start={109} end={148} />
+
 For a customer you deal with outside the site, for example someone who orders by phone:
 
 1. Open **Commerce > Customers** and click **Add customer**.
@@ -52,6 +58,8 @@ For a customer you deal with outside the site, for example someone who orders by
 3. Click **Save**.
 
 ## Edit a customer
+
+<YouTube video="customers-companies" title="Video of adding and editing a customer" start={148} end={211} />
 
 Click a customer to open them, change their details, and click **Save**.
 
@@ -83,6 +91,8 @@ With the **Store Credit** and **Loyalty Points** features on, a customer's page 
 Both need **Manage customers** to change, and a reason for every change. Only customers with an account have them: a guest's page says so instead of showing the form. See [Store credit, loyalty points and referrals](store-credit-and-rewards.md).
 
 ## Addresses
+
+<YouTube video="customers-companies" title="Video of a customer's address book" start={211} end={268} />
 
 A customer keeps an address book of up to 20 addresses, such as a home and an office. One can be the **default billing** address and one the **default shipping** address; they're the ones offered first when the customer buys.
 
@@ -136,6 +146,8 @@ Google charges your account for the searches. To keep a visitor from running up 
 
 ## Privacy requests
 
+<YouTube video="customers-companies" title="Video of a privacy request: download or erase" start={401} end={448} />
+
 People can ask what you hold on them, or ask you to erase it. Open the customer; the **Privacy** section at the bottom has both, for those with **Manage customers**:
 
 - **Download data** gives you a JSON file with everything the store holds on the customer: their details, addresses, and their orders with the payments for them, and, under *commerce*, their checkouts, transactions, payments, refunds, subscriptions, installment plans, coupons used and the customer record Stripe keeps for them. Send it to the person who asked.
@@ -147,7 +159,9 @@ Each download and erasure is listed under **Privacy** with when it happened and 
 
 ## How long guest data is kept
 
-Under **Settings > Commerce > Customers**, **Privacy** sets how long you keep guests' personal data. Once a day the store applies it:
+<YouTube video="customers-companies" title="Video of the Customers, address suggestions, rewards and referrals settings" start={319} end={401} />
+
+Under **Settings > Commerce > Customers**, **Billing address at checkout** decides whether an order's Contact step asks for a billing address: **Optional**, **Required** or **Off**. **Privacy** sets how long you keep guests' personal data. Once a day the store applies it:
 
 | Setting | What happens | Default |
 | --- | --- | --- |
@@ -158,9 +172,11 @@ Enter **0** to keep the data. Customers with an account are kept while the accou
 
 ## My Account
 
+<YouTube video="customers-companies" title="Video of what a signed-in customer sees in their account" start={448} end={497} />
+
 A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default.
 
-- The top of the page edits how the store addresses them: whether they buy for **Myself** or **A business**, their name, company, tax id, phone and marketing consent. Their email is shown but is changed on their account.
+- The top of the page edits how the store addresses them: **I buy for** (**Myself** or **A business**), their name, **Name we call you by**, company, tax id, phone and **Send me news and offers**. Their email is shown but is changed on their account.
 - **Addresses** lists their address book, where they add, edit and delete addresses the same way as above.
 
 The first time a user opens **My Account**, their customer record is made from their account, just as it is on their first order.
@@ -170,6 +186,10 @@ On the storefront the same details are on **Account details** and **Addresses** 
 ## Try it with the sample store
 
 The **Product listing: online store sample** recipe (**Configuration > Recipes**) enables Customers and adds two sample customers: *Sam Carter*, a person with a home and a work address, and *Contoso Supplies*, a business in Canada with a tax id. Open them under **Commerce > Customers** to see the details, address book and privacy actions.
+
+:::note[A site set up with the Online store recipe]
+That setup recipe already made a **Shop** page at `/shop`, and so does the sample, so the sample stops with *Your permalink is already in use.* Delete the **Shop** listing under **Commerce > Product Listings** first.
+:::
 
 ## Related pages
 

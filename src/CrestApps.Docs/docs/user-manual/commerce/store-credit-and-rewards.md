@@ -23,6 +23,8 @@ Store credit and points belong to a customer's account, so only signed-in buyers
 
 <AskYourAdmin />
 
+<YouTube video="customers-companies" title="Video of giving store credit and loyalty points, and setting up rewards and referrals" start={268} end={319} />
+
 ## Store credit
 
 A customer's store credit is kept per currency: credit in US dollars pays only toward orders in US dollars. Each customer's page shows it, and every change is kept with its reason.

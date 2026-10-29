@@ -17,6 +17,8 @@ user_manual:
 
 The **Customers** feature keeps a record of everyone who buys from the store: a person or a business, with an account or as a guest. Orders, transactions and subscriptions can point at one customer, whatever later happens to the account.
 
+<YouTube video="customers-companies" title="Narrated video overview of the Customers and Companies modules" />
+
 ## Customers and users
 
 A customer is not a user. Accounts stay with Orchard Core Users, which handles registration, sign-in, password resets, email confirmation and external logins. A customer with an account is linked to its user by `Customer.UserId`. The customer record keeps only what the store needs: how to address the customer, their company and tax id, and how they want to be contacted.
