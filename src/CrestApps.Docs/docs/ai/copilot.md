@@ -41,8 +41,12 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 
 Depending on which authentication mode you choose:
 
-- **GitHub Signed-in User (GitHub OAuth)**: a valid **GitHub Copilot subscription** and a **GitHub OAuth App**
+- **GitHub Signed-in User (GitHub OAuth)**: a valid **GitHub Copilot subscription** and a **GitHub app** (the settings screen walks you through creating one)
 - **API Key (Bring your own key)**: an API key (and endpoint) for a supported model provider
+
+<YouTube video="ai-orchestrators" title="Video overview of the Default, Copilot and Claude orchestrators" />
+
+The video shows the **Copilot** and **Claude** cards, and how a profile chooses its orchestrator.
 
 ## Configuration
 
@@ -51,7 +55,7 @@ Configure the Copilot orchestrator at **Settings → Artificial Intelligence →
 | Authentication type | When to use | What you configure |
 |---|---|---|
 | **Not configured** (`NotConfigured`) | You want to disable Copilot for the tenant without deleting previously entered settings | Nothing else is required; Copilot stays disabled until you select and save another authentication mode |
-| **GitHub OAuth (GitHub Signed-in User)** (`GitHubOAuth`) | You want to use GitHub Copilot entitlements and user-scoped access | GitHub OAuth app (client ID/secret) and user/profile sign-in |
+| **GitHub OAuth (GitHub Signed-in User)** (`GitHubOAuth`) | You want to use GitHub Copilot entitlements and user-scoped access | GitHub app (client ID/secret) and user/profile sign-in |
 | **API Key (Bring your own key)** (`ApiKey`) | You want to use your own model provider credentials (no Copilot subscription required) | Provider type, base URL, API key, default model, wire format |
 
 When **Authentication type** is set to **Not configured**, the Copilot orchestrator is disabled for the tenant. The GitHub OAuth client ID and client secret are only required when **GitHub signed-in user** is selected, and an existing stored client secret stays in place until you explicitly replace it with a new value.
@@ -62,16 +66,21 @@ Use this mode when you want the orchestrator to authenticate to Copilot via GitH
 
 #### Settings (site/tenant)
 
-- **GitHub OAuth App Client ID**
-- **GitHub OAuth App Client Secret** (stored encrypted)
+- **Client ID** of your GitHub app
+- **Client secret** of your GitHub app (stored encrypted)
 
-#### GitHub OAuth App setup
+#### GitHub app setup
 
-1. Create a GitHub OAuth App:
-   - GitHub Settings → Developer settings → OAuth Apps → **New OAuth App**
-   - **Authorization callback URL**: `https://your-domain.com/copilot/OAuthCallback`
-   - Copy the **Client ID** and **Client Secret**
-2. In Orchard Core: go to **Settings → Artificial Intelligence → Copilot** and enter the client ID/secret.
+The **Copilot** card shows these steps, with your site's callback URL ready to copy:
+
+1. In GitHub, go to **Settings → Developer settings → GitHub Apps** and click **New GitHub App**.
+2. Enter an **App name** and your site's **Homepage URL**.
+3. Under **Callback URL**, enter `https://your-domain.com/copilot/OAuthCallback` (the card shows the exact value).
+4. Webhooks are not required: under **Webhook**, uncheck **Active**.
+5. Under **Permissions**, grant **Copilot Chat → Read-only** under **Account permissions**, to allow model listing.
+6. Choose where the app can be installed, and click **Create GitHub App**.
+7. Copy the **Client ID**, then click **Generate a new client secret** and copy the secret.
+8. In Orchard Core, go to **Settings → Artificial Intelligence → Copilot** and enter the client ID and secret.
 
 The **Client Secret** field only needs a value the first time you configure GitHub OAuth. After that, leave it empty to keep the existing encrypted secret, or enter a new value to replace it.
 
