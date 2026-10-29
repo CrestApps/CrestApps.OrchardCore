@@ -1,3 +1,6 @@
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Realtime;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -30,11 +33,23 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// <returns><see langword="true"/> when the command was one this session will act on.</returns>
     private Task<bool> AcceptSupervisorNoteAsync(LiveConversation live, AIVoiceCallCommand command, CancellationToken callToken)
     {
-        if (command.Kind is not (AIVoiceCallCommandKind.Instruct or AIVoiceCallCommandKind.KeysPressed or AIVoiceCallCommandKind.CallerTurn) ||
+        if (command.Kind is not (AIVoiceCallCommandKind.Instruct or AIVoiceCallCommandKind.KeysPressed or AIVoiceCallCommandKind.CallerTurn or AIVoiceCallCommandKind.SwitchProfile) ||
             string.IsNullOrWhiteSpace(command.Text) ||
             callToken.IsCancellationRequested)
         {
             return Task.FromResult(false);
+        }
+
+        if (command.Kind == AIVoiceCallCommandKind.SwitchProfile)
+        {
+            if (_profileManager is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            _ = Task.Run(() => SwitchProfileAsync(live, command.Text.Trim(), callToken), CancellationToken.None);
+
+            return Task.FromResult(true);
         }
 
         if (command.Kind == AIVoiceCallCommandKind.CallerTurn)
@@ -60,6 +75,62 @@ public sealed partial class RealtimeVoiceConversationRunner
         _ = Task.Run(() => DeliverSupervisorNoteAsync(live, ChatRole.System, note, callToken), CancellationToken.None);
 
         return Task.FromResult(true);
+    }
+
+    // The call's invocation and conversation, kept so a switch made from a supervisor's request runs in them: the
+    // new profile's tools read the call from these scopes, and they are local to the call's own flow.
+    private AIInvocationContext _callInvocation;
+    private AIConversationContext _callConversation;
+
+    private void CaptureCallScopes()
+    {
+        _callInvocation = AIInvocationScope.Current;
+        _callConversation = AIConversationScope.Current;
+    }
+
+    /// <summary>
+    /// Switches the live session to another profile: its instructions and tools from the next reply on, in the same
+    /// voice. The session's other settings stay as the call opened them.
+    /// </summary>
+    private async Task SwitchProfileAsync(LiveConversation live, string profileId, CancellationToken callToken)
+    {
+        try
+        {
+            var profile = await _profileManager.FindByIdAsync(profileId, callToken);
+
+            if (profile is null)
+            {
+                _logger.LogWarning("A supervisor switched a live AI call to profile '{ProfileId}', which does not exist.", profileId);
+
+                return;
+            }
+
+            if (_callInvocation is null || _callConversation is null)
+            {
+                return;
+            }
+
+            using var invocationScope = AIInvocationScope.Begin(_callInvocation);
+
+            _callConversation.Profile = profile;
+
+            using var conversationScope = AIConversationScope.Begin(_callConversation);
+
+            await _orchestrator.SwitchResourceAsync(live.Current, new RealtimeOrchestrationRequest { Resource = profile }, callToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Switched a live AI call to profile '{ProfileId}'.", profileId);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The call ended before the switch.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "A live AI call could not switch to profile '{ProfileId}'.", profileId);
+        }
     }
 
     private async Task DeliverCallerKeysAsync(LiveConversation live, CancellationToken callToken)

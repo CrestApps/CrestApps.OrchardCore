@@ -25,4 +25,9 @@ public enum AIVoiceCallCommandKind
     /// answers like anything the caller said.
     /// </summary>
     CallerTurn,
+
+    /// <summary>
+    /// Switch the live session to another AI profile, whose id is the command's text.
+    /// </summary>
+    SwitchProfile,
 }

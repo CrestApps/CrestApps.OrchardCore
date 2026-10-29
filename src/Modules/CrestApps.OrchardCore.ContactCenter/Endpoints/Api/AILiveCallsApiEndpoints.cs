@@ -18,8 +18,8 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints.Api;
 
 /// <summary>
-/// Live AI calls over the API: list the calls the AI is holding, send the AI a note, transfer a call (cold, warm or
-/// screened) to a number or an agent, and end one. The same actions as the supervisor dashboard.
+/// Live AI calls over the API: list the calls the AI is holding, send the AI a note, switch its profile, transfer a call
+/// (cold, warm or screened) to a number or an agent, and end one. The same actions as the supervisor dashboard.
 /// </summary>
 internal static class AILiveCallsApiEndpoints
 {
@@ -48,6 +48,12 @@ internal static class AILiveCallsApiEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesValidationProblem()
             .WithSummary("Transfers a live AI call to a phone number or an agent: cold, warm (the AI briefs the person first) or screened.");
+
+        group.MapPost("{activityId}/profile", SwitchProfileAsync)
+            .WithName("SwitchAILiveCallProfile")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesValidationProblem()
+            .WithSummary("Switches a live AI call to another AI profile: its instructions and tools from the AI's next reply, in the same voice.");
 
         group.MapPost("{activityId}/end", EndAsync)
             .WithName("EndAILiveCall")
@@ -184,6 +190,35 @@ internal static class AILiveCallsApiEndpoints
         return TypedResults.Ok(new ApiAILiveCallResult(result.Succeeded, result.Message));
     }
 
+    private static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> SwitchProfileAsync(
+        string activityId,
+        ApiAILiveCallProfile request,
+        HttpContext httpContext,
+        IAuthorizationService authorizationService,
+        IEnumerable<IAIVoiceCallSupervision> supervisions)
+    {
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Calls, ContactCenterPermissions.InterveneInCalls))
+        {
+            return Forbidden();
+        }
+
+        if (string.IsNullOrWhiteSpace(request?.ProfileId))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["profileId"] = ["Name the AI profile to switch to."] });
+        }
+
+        var supervision = supervisions.FirstOrDefault();
+
+        if (supervision is null)
+        {
+            return TypedResults.Ok(new ApiAILiveCallResult(false, "No AI is on this call."));
+        }
+
+        var result = await supervision.SwitchProfileAsync(activityId, request.ProfileId.Trim(), httpContext.RequestAborted);
+
+        return TypedResults.Ok(new ApiAILiveCallResult(result.Succeeded, result.Message));
+    }
+
     private static async Task<Results<Ok<ApiAILiveCallResult>, ProblemHttpResult>> EndAsync(
         string activityId,
         HttpContext httpContext,
@@ -250,6 +285,17 @@ public sealed class ApiAILiveCallNote
     /// Gets or sets the note.
     /// </summary>
     public string Note { get; set; }
+}
+
+/// <summary>
+/// The profile to switch a live AI call to.
+/// </summary>
+public sealed class ApiAILiveCallProfile
+{
+    /// <summary>
+    /// Gets or sets the AI profile.
+    /// </summary>
+    public string ProfileId { get; set; }
 }
 
 /// <summary>

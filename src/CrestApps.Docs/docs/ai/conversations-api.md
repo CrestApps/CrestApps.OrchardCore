@@ -103,6 +103,7 @@ Content-Type: application/json
 | `GET live-calls` | Lists the phone calls an AI is holding now, with how long each has gone on and its `conversationId`, whose transcript grows in `GET conversations/{id}`. |
 | `POST live-calls/{activityId}/notes` | Sends the AI a note it acts on at its next turn; the caller does not hear it. Body: `note`. |
 | `POST live-calls/{activityId}/transfer` | Transfers the call. Body: `to` (a number) or `agentId`, `mode` (`cold`, `warm` or `screened`), and optionally `briefing`, `introduction`, `ringTimeoutSeconds` (5 to 120, default 30) and `showCallerNumber`. |
+| `POST live-calls/{activityId}/profile` | Switches the call to another AI profile. Body: `profileId`. On a realtime call its instructions and tools apply from the AI's next reply, in the same voice; on a turn-based call from the caller's next turn. |
 | `POST live-calls/{activityId}/end` | Hangs up. |
 
 Each answers `succeeded` and a `message`, such as "No AI is on this call." when it already ended.

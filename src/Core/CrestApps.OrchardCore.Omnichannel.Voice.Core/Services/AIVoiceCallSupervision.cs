@@ -123,7 +123,12 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
 
         if (activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
         {
-            return new(false, "A live session keeps the AI profile it was opened with.");
+            var command = new AIVoiceCallCommand(AIVoiceCallCommandKind.SwitchProfile, profileId);
+
+            if (!await _commands.SendAsync(activityId, command) && !await _commands.RelayAsync(activityId, command))
+            {
+                return new(false, "The live session could not be reached to switch its profile.");
+            }
         }
 
         activity.AIProfileId = profileId;

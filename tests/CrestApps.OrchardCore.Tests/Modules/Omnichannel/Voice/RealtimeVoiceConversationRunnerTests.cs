@@ -1343,7 +1343,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.True(harness.Media.Stopped);
     }
 
-    private sealed class RealtimeHarness
+    private sealed partial class RealtimeHarness
     {
         /// <summary>
         /// The instant the harness clock reports, so a test can assert a turn was stamped with it.
@@ -1401,7 +1401,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(Mock.Of<global::OrchardCore.ContentManagement.IContentManager>(), Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
                 Commands, Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(),
                 clock.Object,
-                NullLogger<RealtimeVoiceConversationRunner>.Instance);
+                NullLogger<RealtimeVoiceConversationRunner>.Instance, ProfileManager.Object);
         }
 
         public Mock<ISession> DocumentSession { get; }
@@ -1589,7 +1589,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.NotNull(harness.Orchestrator.InvocationScopeAtStart);
     }
 
-    private sealed class RecordingRealtimeOrchestrator : IRealtimeOrchestrator
+    private sealed partial class RecordingRealtimeOrchestrator : IRealtimeOrchestrator
     {
         private readonly IRealtimeConversation _conversation;
 
