@@ -212,6 +212,8 @@ const sidebars = {
                 'user-manual/administration/do-not-call-lists',
                 'user-manual/administration/phone-number-verification',
                 'user-manual/administration/time-zones',
+                'user-manual/administration/wizard',
+                'user-manual/administration/recipes',
                 'user-manual/administration/child-tenants',
                 'user-manual/administration/tenant-hierarchy',
             ],

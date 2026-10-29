@@ -3,14 +3,16 @@ sidebar_label: Wizard
 sidebar_position: 2
 title: Wizard (Stepper) Feature
 description: Build reusable multi-step wizard experiences in Orchard Core via content items or code.
+user_manual: user-manual/administration/wizard
 ---
 
 | | |
 | --- | --- |
 | **Feature Name** | Wizard |
 | **Feature ID** | `CrestApps.OrchardCore.Wizard` |
-| **Contents feature ID** | `CrestApps.OrchardCore.Wizard.Contents` |
-| **Workflows feature ID** | `CrestApps.OrchardCore.Wizard.Workflows` |
+
+
+<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
 
 The Wizard module provides a reusable, multi-step **wizard** (also called a *stepper*) framework. A wizard
 guides a user through an ordered sequence of steps, collects data on each step, and finalizes the flow once
@@ -19,7 +21,7 @@ powers a sign-up flow, an onboarding flow, a survey, a checkout, or any other gu
 
 You can build a wizard two ways:
 
-- **Via content items** — enable **Wizard Contents** and attach the `WizardPart` to a content type. Editors
+- **Via content items** — enable **Wizard** (with `OrchardCore.Contents` on) and attach the `WizardPart` to a content type. Editors
   compose the steps from contained content items, just like the `BagPart` from `OrchardCore.Flows`. No code
   required.
 - **Via code** — register an `IWizardDefinition` and an `IWizardHandler` to contribute and validate steps
@@ -31,9 +33,10 @@ Both models share the same engine, session store, distributed-lock completion, a
 
 | Feature | Description |
 | --- | --- |
-| **Wizard** | The core framework: the flow engine, session store, public host controller, and code extension points. |
-| **Wizard Contents** | Adds the `WizardPart` so editors can build wizards from content items. Depends on `OrchardCore.Contents` and `OrchardCore.Flows`. |
-| **Wizard Workflows** | Raises workflow events for the wizard lifecycle. Depends on `OrchardCore.Workflows`. |
+| **Wizard** | The core framework: the flow engine, session store, public host controller, and code extension points. It also adds the `WizardPart` when `OrchardCore.Contents` and `OrchardCore.Flows` are enabled, and the workflow events when `OrchardCore.Workflows` is enabled. |
+
+There is one feature to turn on. The content part and the workflow activities start by themselves when the Orchard
+Core feature they build on is enabled.
 
 ## Concepts
 
@@ -57,11 +60,11 @@ The public host exposes three routes:
 
 ## Using the wizard via content items
 
-Enable the **Wizard Contents** feature. It also enables **Wizard** and `OrchardCore.Flows`.
+Enable the **Wizard** feature, with `OrchardCore.Contents` and `OrchardCore.Flows` on.
 
 ### 1. Attach the wizard part
 
-1. Go to **Content Definition → Content Types** and edit (or create) the content type that will host the
+1. Go to **Design → Content Definition → Content Types** and edit (or create) the content type that will host the
    wizard, for example `Registration`.
 2. Add the **WizardPart** to the type.
 3. Open the part settings on the type and configure the wizard:
@@ -225,7 +228,7 @@ var result = await _wizardEngine.CompleteAsync(
 
 ## Workflow events
 
-Enable the **Wizard Workflows** feature to react to wizard activity with workflows. It contributes four
+Enable `OrchardCore.Workflows` next to the **Wizard** feature to react to wizard activity with workflows. It contributes four
 events under the **Wizard** category:
 
 | Event | Raised when |
@@ -260,7 +263,7 @@ public sealed class MyWizardAccessPolicy : IWizardAccessPolicy
 
 Register it with `services.AddScoped<IWizardAccessPolicy, MyWizardAccessPolicy>();`. The host challenges the
 visitor when either the definition's `RequiresAuthenticatedUser` is `true` or any policy returns `true`. The
-**Wizard Contents** feature ships such a policy so the per-instance **Requires authenticated user** part
+**Wizard** feature ships such a policy (when `OrchardCore.Contents` is on) so the per-instance **Requires authenticated user** part
 setting is honored.
 
 ## Reusing the wizard from other modules
