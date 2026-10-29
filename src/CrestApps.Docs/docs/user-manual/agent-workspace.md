@@ -126,14 +126,32 @@ If nobody answers, the line is busy, or a machine answers, the dialer hangs up a
 
 ## Protect card details on a recorded call
 
+<YouTube video="contact-center-secure-capture" title="Video of the agent sending the secure link" start={96} end={144} />
+
 When your administrator allows it, the **Active interaction** panel shows:
 
 - **Pause recording** / **Resume recording**: stops the recording while the customer reads out card details or another sensitive number. If your company requires a reason, you are asked to *Enter a reason for pausing recording*. While the recording is paused the panel says *Recording paused for sensitive-data capture*. Click **Resume recording** as soon as the customer has finished. If you forget, the recording resumes on its own after the maximum pause time your administrator set.
-- **Collect data securely**: creates a one-time link for the customer to type their card or bank details themselves, on their own device. The link is copied for you and shown so you can send it. Only a masked value (such as the last four digits of a card) is kept; you, your supervisor and the recording never see the full value. Only one secure capture can run on a call at a time. If the customer does not finish, the link expires (after 5 minutes unless your administrator changed it).
+- **Collect data securely**: creates a one-time link for the customer to type their card or bank details themselves, on their own device. The link is copied for you and shown in a box so you can send it. Only a masked value is kept (see [What is kept](#what-is-kept)); you, your supervisor and the recording never see the full value. Only one secure capture can run on a call at a time. If the customer does not finish, the link expires (after 5 minutes unless your administrator changed it).
 
 While the recording is paused, supervisors cannot listen in to the call, and a supervisor who was already listening is dropped. Every pause and resume is recorded in the audit trail.
 
 These need the *Pause recording on own live interactions* and *Initiate secure capture on own live interactions* permissions (the *Agent* role has both), the [Contact Center settings](contact-center-settings.md) to be switched on and, for pausing, a phone provider that can pause recording.
+
+### What the customer sees
+
+The customer opens the link on their own device. No sign-in is needed. The page is titled *Secure information*, carries a *Secure page* badge and says that the agent on the call cannot see what is typed. It asks for the details the capture requests, such as *Card number*, *Card expiry (MM/YY)* and *Security code*, and has a **Submit securely** button. A value that is not valid, for example a card number that fails the check, is refused on the page and the link stays usable. A valid submission ends on *Thank you*.
+
+<YouTube video="contact-center-secure-capture" title="Video of the customer's secure page" start={144} end={181} />
+
+### What is kept
+
+The agent, the supervisor and the recording never see the value. The platform keeps a masked reference only, such as the last four digits of a card, and a security code is checked and then discarded. The masked reference is stored with the capture and in the *Secure capture completed* event, which [workflows](workflows.md) can react to. No admin screen lists the masked values today. If the customer does not finish, the link expires and recording resumes on its own.
+
+### Secure capture on a production site
+
+The tokenizing used for development is available only in the Development environment, and it is not a compliant vault. On any other site the agent can still send a link, but when the customer submits valid details the page refuses them with *Secure data capture is not configured for this environment* and no sensitive data is accepted, until a developer connects a tokenization provider that meets your compliance requirements. Plan this before you turn the feature on in production.
+
+<YouTube video="contact-center-secure-capture" title="Video of what a production site needs" start={217} end={248} />
 
 ## The docked agent bar
 

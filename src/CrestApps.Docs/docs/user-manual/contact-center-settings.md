@@ -83,10 +83,12 @@ Emergency and premium-rate numbers are always refused.
 
 Needs the **Contact Center Secure Data Capture** feature. It lets an agent send the customer a one-time link to type card or bank details themselves, so the agent never hears or sees them.
 
+<YouTube video="contact-center-secure-capture" title="Video of the Secure Data Capture settings" start={59} end={96} />
+
 | Field | What it does |
 | --- | --- |
 | **Enable agent-assisted secure data capture** | Master switch. Shows **Collect data securely** in the agent workspace. |
 | **Capture link lifetime (seconds)** | How long the link works. 30 to 3600, default 300. |
 | **Pause recording during capture** | Pauses the call recording while the customer enters the data. On by default. |
 
-Card numbers are checked, only the last four digits are kept, and the security code is never stored.
+Card numbers are checked, and the security code is never stored. What else is kept depends on the tokenization sink. The built-in sink, which is for development and evaluation only, keeps a masked reference such as the last four digits of a card. It is available only in the Development environment: on any other site, secure capture refuses every submission until a developer connects a tokenization provider that meets your payment-card compliance requirements. See [Production sites](agent-workspace.md#secure-capture-on-a-production-site).
