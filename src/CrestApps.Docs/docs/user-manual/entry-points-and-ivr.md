@@ -25,11 +25,15 @@ A text entry point decides where the conversations go, how a queue hands them ou
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-entry-points-ivr" title="Video overview of inbound entry points: numbers, routing, closed hours, voicemail, personal lines, text entry points and cloning" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of adding a voice calls entry point that picks a number from the address list and routes its calls to a queue, with business hours and voicemail settings" start={420} end={473} />
 
 ## Create an entry point
 
-1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked.
+<YouTube video="contact-center-entry-points-ivr" title="Video of adding the numbers, and creating a call entry point with its numbers, queue and priority" start={91} end={164} />
+
+1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked under **Used for**.
 2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
 3. Fill in the cards described below. A call entry point has five; the priority, closed-call, phone menu and voicemail settings are for calls only.
 4. Click **Save**. Calls or texts to its numbers follow the new rules straight away.
@@ -47,17 +51,21 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 ### Routing
 
+<YouTube video="contact-center-entry-points-ivr" title="Video of a personal line that rings one specific agent, with a ring window and voicemail" start={228} end={265} />
+
 | Field | What it does |
 | --- | --- |
 | **Route to** | **Queue** (the default), **Specific agent**, or an AI: **AI voice agent** for calls, offered when the Telnyx AI Voice Agent feature is on, and **AI agent** for texts, offered when SMS Omnichannel Automation is on. A specific-agent line rings one person and never falls back to a queue. |
 | **AI agent** | The AI chat profile that answers the calls (AI voice agent routing). See [AI voice agent](#ai-voice-agent). |
 | **Target queue** | The queue that receives the calls (queue routing). |
 | **Priority** | Calls only. Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
-| **Target agent** | The person to ring (specific-agent routing). |
+| **Target agent** | The person to ring (specific-agent routing). The list holds the people who have [agent entitlements](skills-and-entitlements.md); it is empty until you have given someone entitlements. |
 | **Send unanswered calls to voicemail** | Specific-agent lines only. When off, the caller keeps ringing until the agent answers or the caller hangs up. |
 | **Ring window (seconds)** | How long to ring the agent before voicemail. 5 to 300, default 30. |
 
 ### Hours
+
+<YouTube video="contact-center-entry-points-ivr" title="Video of choosing a business hours calendar, a closed action and a closed message" start={164} end={202} />
 
 | Field | What it does |
 | --- | --- |
@@ -78,6 +86,8 @@ The queue has a **Welcome message** of its own, set on the [queue](queues.md). I
 
 ### Voicemail
 
+<YouTube video="contact-center-entry-points-ivr" title="Video of setting the default voicemail greeting and choosing whose inbox receives the message" start={202} end={228} />
+
 | Field | What it does |
 | --- | --- |
 | **Default voicemail greeting** | Spoken when the person receiving the voicemail has not recorded [their own greeting](voicemail.md#record-your-voicemail-greeting). Empty uses the system default. |
@@ -86,6 +96,8 @@ The queue has a **Welcome message** of its own, set on the [queue](queues.md). I
 
 ## Test a new number before you publish it
 
+<YouTube video="contact-center-entry-points-ivr" title="Video of the checklist for testing a new number before you publish it" start={352} end={381} />
+
 1. Add the number under [Omnichannel Addresses](channel-endpoints.md) with **Voice calls** ticked.
 2. Create the target [queue](queues.md): its routing strategy, service level, reservation timeout, required skills and overflow queue. Attach a [business hours](business-hours.md) calendar if the line should close or overflow outside staffed hours.
 3. Create the entry point for the number, as described above.
@@ -93,6 +105,8 @@ The queue has a **Welcome message** of its own, set on the [queue](queues.md). I
 5. Keep the [Live dashboard](live-dashboard.md) open while you test. The queue's waiting count goes up before the call is offered, then the agent moves from available to busy, and to wrap-up when the call ends.
 
 ## Clone an entry point
+
+<YouTube video="contact-center-entry-points-ivr" title="Video of cloning an entry point from its Actions menu" start={317} end={352} />
 
 To start an entry point from an existing one, open its **Actions** menu in the entry point list and choose **Clone**. The form opens with every setting of the original, including its routing, hours, phone menu and voicemail, and the name **Copy of** the original's name. **Numbers** starts empty, because each number is answered by one entry point on each channel. Pick the new entry point's numbers and click **Save**.
 
@@ -109,6 +123,8 @@ While the entry point is open, the AI answers each call itself, greets the calle
 The AI voice agent needs the **Telnyx AI Voice Agent** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
+
+<YouTube video="contact-center-entry-points-ivr" title="Video of adding a text entry point with queue distribution, an auto-reply and a closed auto-reply" start={265} end={317} />
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of adding a text messages entry point that routes a number's texts to a queue, with an auto-reply and a closed auto-reply" start={476} end={522} />
 
