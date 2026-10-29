@@ -15,8 +15,10 @@ public sealed class AgentStateReasonCodeDeploymentStep : DeploymentStep
     public override string Name => ContactCenterDeploymentSteps.AgentStateReasonCode;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }
