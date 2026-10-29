@@ -108,4 +108,8 @@ The choice applies about 15 minutes after a conversation ends, once its workflow
 Contact memory is kept apart from conversations, so the storage mode does not change it. Turn off **Save to contact memory** if it should not hold personal details either. See [Contact memory and integrations](contact-memory-and-integrations.md).
 :::
 
+### Bleeped call recordings
+
+With **Everything except personal details**, the recordings of AI phone calls are bleeped too, once the conversation's transcript has been redacted: every customer line that held a personal detail (a placeholder such as `[CARD]`, or a long run of digits the redaction missed) is covered with a tone, from just before the line starts to when the next line starts, and the recording is stored again as WAV in place of the original. The **Call Recording Bleeping** background task does this every 10 minutes for recordings of the last 14 days, and the recordings API marks a bleeped recording. Lines are placed by when they were said, not word by word, so a whole line is covered, including any words around the detail. MP3 and 16-bit WAV recordings are read; others are left as they are.
+
 A single conversation can also be deleted through the API, for example when a customer asks to be forgotten. See the [AI conversations API](../../ai/conversations-api.md).
