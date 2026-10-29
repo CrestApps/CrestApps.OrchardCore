@@ -99,6 +99,8 @@ The Agents feature seeds a standard set of reason codes at setup (short break, l
 
 ## Skills
 
+<YouTube video="contact-center-skills-entitlements" title="Video overview of skills and agent entitlements" />
+
 Administrators manage routeable capabilities from **Interaction Center → Management → Skills**. A skill has a unique name, description, and enabled state. Enabled skills appear in admin assignment surfaces and queue editor selectors; disabled skills remain on existing agents and queues but are hidden from new selections. Agents do not self-select skills from the soft phone because skills are routing eligibility data owned by supervisors/administrators.
 
 Queues can require one or more skills. Skills are held at a proficiency from 1 to 5. A skill in the queue's **Required skills** list needs proficiency 3 or higher; the **Skill requirements** table can set a different minimum proficiency per skill, mark a skill as preferred rather than required, and relax a requirement after a wait. Agents must meet every enforced requirement to be eligible for that queue, and the routing chain filters out agents who miss one before the queue's scoring strategy runs.
