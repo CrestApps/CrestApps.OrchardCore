@@ -67,7 +67,13 @@ With **Report Subscriptions** on, a report can be emailed every day, week or mon
 
 <YouTube video="report-subscriptions" title="Video overview of report subscriptions" />
 
+<YouTube video="report-subscriptions" title="Video of turning on Report Subscriptions and its permission" start={59} end={111} />
+
 **Email must be set up first.** A subscription goes out through your site's email provider. Under **Settings > Email**, the site says *No email providers are currently enabled* until you enable a provider feature, such as the SMTP provider, and enter its settings (sender address, host name, port and, when the server asks for them, credentials). Until then a subscription can be saved, but each send fails, and the list tells you why.
+
+<YouTube video="report-subscriptions" title="Video of setting up the email provider that subscriptions need" start={111} end={164} />
+
+<YouTube video="report-subscriptions" title="Video of adding a subscription" start={164} end={229} />
 
 1. On **Reports > Subscriptions**, click **Add subscription**.
 2. Choose the **Report**, listed by category. **Name** is optional; the report's name is used when it is blank.
@@ -76,7 +82,11 @@ With **Report Subscriptions** on, a report can be emailed every day, week or mon
 5. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** (*CSV*, *Excel (.xlsx)* or *PDF*) to get the report as a file too, or leave *No file*. The email shows the report's numbers and tables either way.
 6. Leave **On** ticked, and click **Save**, or **Save and send now** to send it straight away for the period before.
 
+<YouTube video="report-subscriptions" title="Video of Save and send now and of reading why a send failed" start={229} end={266} />
+
 The list shows each subscription with its schedule, its recipients and when it goes out next, and you can search it by name. A background task checks every five minutes for subscriptions that are due and sends them. If a send fails, such as when the site's email is not set up, the row says *Last run didn't go out* with the reason, and the subscription's page shows when it goes out next and what happened last time. Fix the cause, and save it again with **Save and send now**. Untick **On** to pause a subscription: it stays in the list with an *Off* badge and is not sent. **Delete** removes it.
+
+<YouTube video="report-subscriptions" title="Video of pausing, searching and deleting subscriptions" start={266} end={291} />
 
 Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to. To email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
 

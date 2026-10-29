@@ -90,7 +90,7 @@ Managers build the contact center: contacts, subjects, campaigns, queues and so 
 | [Dialer profiles](../dialer-profiles.md) | Manage the Contact Center dialer |
 | [Voice media](../voice-media.md) | Manage the Contact Center voice media library |
 | [Extensions](../extensions.md) | Manage telephony extensions |
-| [Reports](../reports.md) | View Contact Center reports; View Omnichannel reports |
+| [Reports](../reports.md) | View Contact Center reports; View Omnichannel reports; Run 'Phone Number Verifications' Report; Manage report subscriptions |
 | [Report Builder](../report-builder/index.md) | Build reports and manage own custom reports and views; Share custom reports publicly and through share links; Manage all custom reports and views |
 
 Each User Manual page names the permission it needs in the table at the top.
