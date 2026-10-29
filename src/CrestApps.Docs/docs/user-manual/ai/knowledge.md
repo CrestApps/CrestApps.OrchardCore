@@ -114,13 +114,52 @@ A data source connects the assistant to a knowledge base built from a search ind
    - **Files**: the target of a [file source](#file-sources).
    - **Web**: the target of a [web crawler](#web-crawlers).
 3. Enter a **Name** and choose the **Destination index**, the AI Knowledge Base index that stores the passages. It cannot be changed after you save.
-4. Fill in the source's own section, such as the **Source index**, or the connection details your technical team gives you for an external index or database. For an external source, **Use the globally configured connection** uses the connection your technical team set up.
+4. Fill in the source's own section, such as the **Source index**, or the connection details your technical team gives you for an external index or database (see [External data sources](#external-data-sources)).
 5. For every type except **Files** and **Web**, fill in the **Field Mapping**: the **Content field** to search, an optional **Title field** for the source list, and a **Key field** that identifies each entry. Ask your technical team which fields to use.
 6. Click **Save**.
 
 The data source fills its knowledge base and keeps it in step with the source. To rebuild it by hand, open the data source's **Actions** menu and choose **Sync index**. When you pick the **Source index**, the **Content field**, **Title field** and **Key field** are filled in with sensible defaults, such as the full text of a content item, its display text and its content item id.
 
 <YouTube video="ai-data-sources" title="Video of syncing a data source" start={187} end={207} />
+
+### External data sources
+
+<YouTube video="ai-data-sources-external" title="Video of external data sources: why, and what every source shares" start={19} end={83} />
+
+A search index or a database table that another system keeps up to date is knowledge already. An **Elasticsearch**, **Azure AI Search** or **PostgreSQL** data source reads it where it is, splits it into passages, and keeps your knowledge base in step. Everything after the connection is the same as for any data source.
+
+Every source has three parts:
+
+| Part | What it is |
+| --- | --- |
+| **Connection** | Where to read: the index and its address, or the database and its table. Your technical team provides the values. |
+| **Destination index** | The AI Knowledge Base index of your site that stores the passages. It cannot be changed after you save. |
+| **Field Mapping** | The **Content field**, the **Title field** (optional) and the **Key field**. For an external source you type the field names, because the site cannot list the fields of a remote source. |
+
+#### Elasticsearch
+
+<YouTube video="ai-data-sources-external" title="Video of creating an Elasticsearch data source and asking a question" start={83} end={157} />
+
+1. Open **Artificial Intelligence > Data Sources**, click **Add Data Source**, and click **Add** on **Elasticsearch**.
+2. Enter a **Name** and the **Index name**, the name of the index on the other server.
+3. Choose the **Environment type**: **Self-managed** asks for the **Elasticsearch URL**, and **Cloud-hosted** asks for the **Elastic Cloud ID**.
+4. Choose the **Authentication type** your technical team gives you: **None**, **Basic** (a **Username** and **Password**), **API key**, **Base64 API key**, or **Key ID and key**. Secrets are stored securely and are not shown again. The optional **Certificate fingerprint** lets the site trust a server by its TLS certificate.
+5. Choose the **Destination index**, and type the **Content field**, **Title field** and **Key field** as they are named in the remote index.
+6. Click **Save**. The data source reads the remote index and fills its knowledge base in the background.
+
+Then [choose the data source on a profile](#use-a-data-source-in-a-profile) and ask a question that the remote index answers. The answer carries a numbered source that names the entry it came from.
+
+#### Azure AI Search
+
+<YouTube video="ai-data-sources-external" title="Video of the Azure AI Search data source form" start={157} end={188} />
+
+Enter a **Name**, the **Index name** and the **Azure AI Search endpoint** of the search service. **Authentication type** is **API key** (stored securely and never shown again), **Default credential**, or **Managed identity**, with an optional **Managed identity client ID**. The **Destination index** and **Field Mapping** work as above. The **Filter** of a profile has no effect when the knowledge base is an Azure AI Search index.
+
+#### PostgreSQL
+
+<YouTube video="ai-data-sources-external" title="Video of the PostgreSQL data source form" start={188} end={212} />
+
+Enter a **Name**, the **Connection string** of the database (stored securely and never shown again) and the **Table name** to read. In **Field Mapping**, the content, title and key fields are the names of columns of that table.
 
 ### Use a data source in a profile
 
