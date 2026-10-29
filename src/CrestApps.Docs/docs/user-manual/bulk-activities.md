@@ -61,7 +61,7 @@ Click **Filters** to open or close the filter panel; the page remembers your cho
 | **Manual** | Manual loads and activities created by hand. | Always. |
 | **Automatic** | Automatic loads worked by an AI profile. | Always. |
 | **Inbound** | Inbound calls and inbound activities logged by an agent. | Always. |
-| **Dialer** | Dialer loads, whatever the profile's mode: preview, and power or progressive when **Contact Center Paced Dialing** is on. | **Contact Center Outbound Dialer** is on. |
+| **Dialer** | Dialer loads, whatever the profile's mode: preview, and power, progressive or predictive when **Contact Center Paced Dialing** is on. | **Contact Center Outbound Dialer** is on. |
 | **Callback** | Callbacks scheduled for a contact. | **Contact Center Outbound Dialer** is on. |
 
 A link or saved filter that names a source the list no longer offers still shows that value, so you can see what the page is filtering on.
