@@ -141,7 +141,8 @@ internal static class TelnyxNumbersApiEndpoints
         int? page,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        TelnyxApiClient client)
+        TelnyxApiClient client,
+        TelnyxCallerNumberReputation reputation)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Numbers, TelephonyPermissions.ManageTelephonySettings))
         {
@@ -150,7 +151,14 @@ internal static class TelnyxNumbersApiEndpoints
 
         var (result, numbers) = await client.ListOwnedNumbersAsync(page ?? 1, 100, httpContext.RequestAborted);
 
-        return result.Succeeded ? TypedResults.Ok(numbers) : CarrierFailed(result);
+        if (!result.Succeeded)
+        {
+            return CarrierFailed(result);
+        }
+
+        await reputation.ApplyToAsync(numbers);
+
+        return TypedResults.Ok(numbers);
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> ReleaseAsync(

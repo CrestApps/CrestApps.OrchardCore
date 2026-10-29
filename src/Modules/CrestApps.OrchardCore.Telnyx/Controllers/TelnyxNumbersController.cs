@@ -21,6 +21,7 @@ namespace CrestApps.OrchardCore.Telnyx.Controllers;
 public sealed class TelnyxNumbersController : Controller
 {
     private readonly TelnyxApiClient _client;
+    private readonly TelnyxCallerNumberReputation _reputation;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
 
@@ -33,9 +34,11 @@ public sealed class TelnyxNumbersController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
-    public TelnyxNumbersController(TelnyxApiClient client, IAuthorizationService authorizationService, INotifier notifier, IHtmlLocalizer<TelnyxNumbersController> htmlLocalizer)
+    /// <param name="reputation">The carriers' spam rejections of the account's numbers.</param>
+    public TelnyxNumbersController(TelnyxApiClient client, IAuthorizationService authorizationService, INotifier notifier, IHtmlLocalizer<TelnyxNumbersController> htmlLocalizer, TelnyxCallerNumberReputation reputation)
     {
         _client = client;
+        _reputation = reputation;
         _authorizationService = authorizationService;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -59,6 +62,8 @@ public sealed class TelnyxNumbersController : Controller
         {
             await _notifier.ErrorAsync(H["Telnyx did not list the numbers ({0}). Check the API key in the Telnyx settings.", (int?)result.StatusCode]);
         }
+
+        await _reputation.ApplyToAsync(numbers);
 
         return View(new TelnyxNumbersViewModel { List = new AdminListContext<TelnyxOwnedNumber> { Source = numbers } });
     }

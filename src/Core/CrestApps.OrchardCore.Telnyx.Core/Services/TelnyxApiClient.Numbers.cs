@@ -276,4 +276,14 @@ public sealed class TelnyxOwnedNumber
 
     /// <summary>Gets or sets the messaging profile it texts through.</summary>
     public string MessagingProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many calls from the number carriers refused as spam (SIP 607 or 608) in the last 30 days.
+    /// </summary>
+    public int SpamRejections { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a carrier last refused a call from the number as spam.
+    /// </summary>
+    public DateTime? LastSpamRejectionUtc { get; set; }
 }

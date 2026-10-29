@@ -164,7 +164,7 @@ A conversation as listed:
 | --- | --- |
 | `GET carrier-numbers/available` | Searches the numbers for sale. Query: `countryCode`, `areaCode`, `city`, `region`, `contains`, `sms`, `limit`. |
 | `POST carrier-numbers/orders` | Buys up to 20 numbers. Body: `phoneNumbers`, and optionally `connectionId`, `messagingProfileId` and `addAsAddresses` (default true). Billed by Telnyx. |
-| `GET carrier-numbers` | Lists the account's numbers. |
+| `GET carrier-numbers` | Lists the account's numbers, each with `spamRejections` (calls carriers refused as spam, SIP 607 or 608, in the last 30 days) and `lastSpamRejectionUtc`. |
 | `DELETE carrier-numbers/{numberId}` | Releases a number. |
 | `PUT carrier-numbers/{numberId}/caller-name` | Sets the caller name. Body: `callerName`. |
 

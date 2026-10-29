@@ -47,6 +47,10 @@ With Telnyx as the phone provider, **Settings → Communication → Telnyx numbe
 
 The same is in the [AI API](../ai/conversations-api.md) under `api/ai/v1/carrier-numbers`: search (`GET available`), buy (`POST orders`), list, release and set the caller name.
 
+### Numbers carriers flag as spam
+
+When a carrier's call analytics label a number as spam, its calls are refused with SIP 608, and a person who blocked it as unwanted refuses them with SIP 607. Each refusal of a call placed from one of your numbers is counted, and the Telnyx numbers list shows a **spam rejections** badge on a number refused in the last 30 days, with the count. The API's number list has the same count as `spamRejections`, and `lastSpamRejectionUtc`. A number with rejections reaches fewer people with every call: register it with the carriers' call analytics, or buy another number and stop calling from it.
+
 ## Inbound routing for calls
 
 Calls to a number are routed by the [inbound entry point](entry-points-and-ivr.md) that picks it under **Numbers**. The entry point decides the queue or agent, the opening hours, the phone menu and voicemail.
