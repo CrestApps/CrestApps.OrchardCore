@@ -22,6 +22,8 @@ The **Transactions** module is a provider-agnostic ledger of *money owed*. It an
 
 Because the ledger is generic, one report, one customer statement, and one reminder pipeline serve every provider. A provider only needs to create a `Transaction` for a balance it leaves outstanding; the Transactions module supplies all of the reporting, settlement, and reminder machinery.
 
+<YouTube video="invoices-receipts" title="Narrated video overview of invoices and receipts" />
+
 ## What it does
 
 <YouTube video="commerce" title="Narrated video of the Transactions report, a transaction, and the reminder settings" start={408} end={454} />
