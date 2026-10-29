@@ -43,7 +43,7 @@ Agents take and place calls, work their activities and answer text messages.
 
 | Area | Permissions the Agent role gets |
 | --- | --- |
-| Contact center | Sign in to Contact Center queues and campaigns; View interactions; Pause recording on own live interactions; Initiate secure capture on own live interactions |
+| Contact center | Sign in to Contact Center queues and campaigns; View interactions; Pause recording on own live interactions; Initiate secure capture on own live interactions; Listen to own call recordings (when Contact Center Call Recording is on) |
 | Activities | List activities; List Contact activities; Complete own activity; Create and edit activities |
 | CRM | Convert leads |
 | Messaging | Use the messaging workspace |
@@ -59,7 +59,7 @@ Supervisors watch the floor, step into live calls, work the shared voicemail and
 
 | Area | Permissions the Supervisor role gets |
 | --- | --- |
-| Contact center | Monitor the Contact Center in real time; View interactions; Transfer Contact Center calls externally; View Contact Center reports; Take over, end, transfer and record live Contact Center calls, and set agents' state |
+| Contact center | Monitor the Contact Center in real time; View interactions; Transfer Contact Center calls externally; View Contact Center reports; Take over, end, transfer and record live Contact Center calls, and set agents' state; Listen to anyone's call recordings (when Contact Center Call Recording is on) |
 | Voicemail | Access shared queue voicemail for entitled queues; Manage shared queue voicemail: delete messages and take over other users' claims |
 | Messaging | Use the messaging workspace; Send group messages; View all messaging conversations; Manage the messaging workspace |
 
@@ -83,12 +83,13 @@ Managers build the contact center: contacts, subjects, campaigns, queues and so 
 | [Cadences](../cadences.md) | Manage cadences |
 | [Lead statuses and opportunity stages](../leads-accounts-opportunities.md) | Manage lead statuses; Manage opportunity stages |
 | [Omnichannel addresses](../channel-endpoints.md) | Manage omnichannel addresses |
-| [Queues](../queues.md) and [entry points](../entry-points-and-ivr.md) | Manage Contact Center queues |
+| [Queues](../queues.md) and [entry points](../entry-points-and-ivr.md) | Manage Contact Center queues; Manage Contact Center queue groups (also covered by *Manage Contact Center queues* and by the administrator's full access) |
 | [Skills](../skills-and-entitlements.md) | Manage Contact Center skills |
 | [Agent entitlements](../skills-and-entitlements.md) and [agent states](../agent-states.md) | Manage Contact Center agents |
 | [Business hours](../business-hours.md) | Manage Contact Center business hours |
 | [Dialer profiles](../dialer-profiles.md) | Manage the Contact Center dialer |
 | [Voice media](../voice-media.md) | Manage the Contact Center voice media library |
+| [Call recordings](../call-recordings.md) | Delete call recordings (the Administrator role only, by default) |
 | [Extensions](../extensions.md) | Manage telephony extensions |
 | [Reports](../reports.md) | View Contact Center reports; View Omnichannel reports |
 | [Report Builder](../report-builder/index.md) | Build reports and manage own custom reports and views; Share custom reports publicly and through share links; Manage all custom reports and views |
