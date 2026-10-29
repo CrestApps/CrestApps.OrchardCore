@@ -115,6 +115,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice
             public const string Area = "CrestApps.OrchardCore.Omnichannel.Voice";
         }
     }
+    public static class VoiceCallInvocationItems
+    {
+        public const string ActivityId = "Omnichannel.Voice.ActivityId";
+        public const string ChannelEndpointId = "Omnichannel.Voice.ChannelEndpointId";
+        public const string ContactContentItemId = "Omnichannel.Voice.ContactContentItemId";
+        public const string ContactContentType = "Omnichannel.Voice.ContactContentType";
+        public const string CustomerNumber = "Omnichannel.Voice.CustomerNumber";
+    }
     public static class VoiceTemplateIds
     {
         public const string ConclusionAnalysis = "voice-conclusion-analysis";
