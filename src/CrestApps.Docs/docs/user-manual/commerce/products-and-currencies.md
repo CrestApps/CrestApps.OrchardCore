@@ -45,13 +45,13 @@ You add the **Product** part to the content type that describes what you sell, f
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types |
+| **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
 | **Feature** | Products |
 
 <AskYourAdmin />
 
-1. Open **Content > Content Definition > Content Types** and edit the content type, or create one.
+1. Open **Design > Content Definition > Content Types** and edit the content type, or create one.
 2. Click **Add Parts**, tick **Product**, and save. Tick **Product prices** as well if items should offer more than one way to buy them, such as monthly and yearly, or **Product variants** if items come in versions such as sizes and colors.
 3. Back on the content type, click **Edit** next to the **Product** part to set its options (below), and save.
 
@@ -116,7 +116,7 @@ A product that comes in versions, such as a shirt in three sizes and two colors,
 
 First, give the content type its options:
 
-1. Open **Content > Content Definition > Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
+1. Open **Design > Content Definition > Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
 2. Click **Edit** next to the **Product variants** part.
 3. Under **Options**, enter one option per row, such as *Size* and *Color*. Tick **Filterable** for an option visitors can filter listings by. Save; saving offers empty rows for more options, and clearing a name removes that option.
 

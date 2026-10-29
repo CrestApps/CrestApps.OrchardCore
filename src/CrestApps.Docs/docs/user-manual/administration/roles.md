@@ -52,7 +52,7 @@ The **Enhanced Roles** feature adds a **Role Picker** part. Add it to a content 
 
 ### Add the role picker to a content type
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. Click **Add Parts**, tick **Role Picker**, and save.
 3. Edit the **Role Picker** part on the content type to set the options below, and save.
 

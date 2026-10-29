@@ -16,7 +16,7 @@ This page covers three screens: setting up the plans you sell, the administrator
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types (to define a plan type), and Content > Content Items (to create plans) |
+| **Menu** | Design > Content Definition > Content Types (to define a plan type), and Content > Content Items (to create plans) |
 | **Permission** | The content permissions for your plan type, such as Edit content |
 | **Feature** | Subscriptions |
 
@@ -26,7 +26,7 @@ This page covers three screens: setting up the plans you sell, the administrator
 
 A plan type is a content type whose items are plans. You create it once, then create as many plans of that type as you sell.
 
-1. Open **Content > Content Definition > Content Types** and click **Create new type**.
+1. Open **Design > Content Definition > Content Types** and click **Create new type**.
 2. Enter a **Display Name** such as *Membership Plan* and click **Create**.
 3. In the type's settings, set **Stereotype** to *Subscription* and click **Save**. The **Subscription** part is added to the type for you, with the billing fields described below.
 4. Click **Add Parts** and add **Title** (so each plan has a name). The **Product** part, which gives each plan its price, is added with the stereotype. To offer the same plan at more than one price, add **Product prices** as well; see [Offer more than one price](#offer-more-than-one-price).

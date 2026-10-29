@@ -29,7 +29,7 @@ Turning on the feature creates a **Gift card** content type, ready to sell. It i
 
 The product's editor says *This product is a gift card. Each one bought issues a gift card worth its price, emailed to the buyer once the order is paid; a discount on the order doesn't make the card worth less.* To sell several amounts, create one gift card item per amount, such as $25, $50 and $100.
 
-To make another product type sell gift cards, add the **Gift card** part to it under **Content > Content Definition > Content Types**.
+To make another product type sell gift cards, add the **Gift card** part to it under **Design > Content Definition > Content Types**.
 
 When an order with gift cards is paid:
 

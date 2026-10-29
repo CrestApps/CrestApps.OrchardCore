@@ -134,13 +134,13 @@ Rules only apply to items that carry the **Taxation** part. Add it to each conte
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types |
+| **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
 | **Feature** | Taxation |
 
 <AskYourAdmin />
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. Click **Add Parts**, tick **Taxation**, and save.
 3. Click **Edit** next to the **Taxation** part, set the options below, and save.
 
