@@ -16,6 +16,8 @@ user_manual:
 
 This module brings the shared CrestApps.Core template system into Orchard Core and makes prompt templates available to Orchard-managed AI profiles and chat experiences.
 
+<YouTube video="ai-profiles-personas-templates" title="Video of creating a system prompt template and adding it to a profile" start={525} end={590} />
+
 ## When to enable it
 
 Enable **AI Prompt Templates** when you want Orchard-managed AI experiences to reuse prompt fragments instead of duplicating large system-message blocks in every profile or interaction.

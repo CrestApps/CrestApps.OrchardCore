@@ -3,6 +3,8 @@ sidebar_label: AI Personas
 sidebar_position: 12
 title: AI Personas
 description: Give AI profiles, chat interactions and workflow tasks a reusable character with its own instructions, name, avatar and voice.
+user_manual:
+  - user-manual/ai/profiles
 ---
 
 # AI Personas
@@ -21,6 +23,10 @@ used, while a persona stays **linked**, so an edit applies to everything that us
 
 The framework part is documented in [CrestApps.Core AI Personas](https://core.crestapps.com/docs/core/ai-personas).
 
+<YouTube video="ai-profiles-personas-templates" title="Video overview of AI profiles, personas and templates" />
+
+The video shows how an administrator creates a persona in the admin and chooses it in a profile.
+
 ## Enabling personas
 
 Enable the **AI Personas** feature (`CrestApps.OrchardCore.AI.Personas`). It adds:
@@ -37,6 +43,8 @@ Without the feature, persona links that are already stored are kept but ignored:
 instructions, label and voice.
 
 ## Creating a persona
+
+<YouTube video="ai-profiles-personas-templates" title="Video of creating a persona and choosing it in a profile" start={372} end={440} />
 
 1. Go to **Artificial Intelligence → Personas** and choose **Add Persona**.
 2. Fill in:
@@ -58,8 +66,8 @@ name, which replaces the provided one for everything that links to it.
 
 ## Using a persona
 
-- **AI profile**: the **AI persona** field on the **Instructions** tab, above the system instructions.
-- **Profile template**: the same field on a Profile template's **Instructions** tab. Profiles created from the
+- **AI profile**: the **AI persona** field in the **Instructions** card, above the system instructions.
+- **Profile template**: the same field in a profile template's **Instructions** card. Profiles created from the
   template start linked to that persona.
 - **Chat interaction**: the **AI persona** field in the **Settings** panel. It saves like the other interaction
   settings and applies from the next message.
