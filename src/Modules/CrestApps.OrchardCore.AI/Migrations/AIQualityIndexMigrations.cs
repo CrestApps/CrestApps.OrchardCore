@@ -29,8 +29,9 @@ internal sealed class AIQualityIndexMigrations : DataMigration
     {
         await AITestIndexSchema.CreateAsync(SchemaBuilder, _options);
         await AIQACohortIndexSchema.CreateAsync(SchemaBuilder, _options);
+        await AIAlertRuleIndexSchema.CreateAsync(SchemaBuilder, _options);
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -42,5 +43,16 @@ internal sealed class AIQualityIndexMigrations : DataMigration
         await AIQACohortIndexSchema.CreateAsync(SchemaBuilder, _options);
 
         return 2;
+    }
+
+    /// <summary>
+    /// Creates the alert rule table.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await AIAlertRuleIndexSchema.CreateAsync(SchemaBuilder, _options);
+
+        return 3;
     }
 }

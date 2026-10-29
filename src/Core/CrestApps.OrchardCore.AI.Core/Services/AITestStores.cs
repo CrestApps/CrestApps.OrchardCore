@@ -162,3 +162,42 @@ public sealed class AIQACohortStore : DocumentCatalog<AIQACohort, AIQACohortInde
         return cohorts.ToList();
     }
 }
+
+/// <summary>
+/// Stores AI alert rules.
+/// </summary>
+public interface IAIAlertRuleStore : ICatalog<AIAlertRule>
+{
+    /// <summary>
+    /// Lists the rules that are checked.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The rules.</returns>
+    Task<IReadOnlyList<AIAlertRule>> ListEnabledAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Stores AI alert rules in the AI collection.
+/// </summary>
+public sealed class AIAlertRuleStore : DocumentCatalog<AIAlertRule, AIAlertRuleIndex>, IAIAlertRuleStore
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIAlertRuleStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="options">The YesSql store options, which name the AI collection.</param>
+    public AIAlertRuleStore(ISession session, IOptions<YesSqlStoreOptions> options)
+        : base(session)
+    {
+        CollectionName = options.Value.AICollectionName;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AIAlertRule>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        var rules = await Session.Query<AIAlertRule, AIAlertRuleIndex>(index => index.Enabled, collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return rules.ToList();
+    }
+}

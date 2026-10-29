@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIAlertRulesEdit" title="@T["Edit '{0}' alert rule", Model.DisplayName]">
+        <breadcrumb-item id="AIAlertRules" action="Index" controller="AIAlertRules" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIQuality.Name">@T["Alert Rules"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

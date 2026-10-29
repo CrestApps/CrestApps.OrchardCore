@@ -92,3 +92,65 @@ public class AIQACohortViewModel
     [BindNever]
     public IList<SelectListItem> Deployments { get; set; } = [];
 }
+
+/// <summary>
+/// The editor of an AI alert rule.
+/// </summary>
+public class AIAlertRuleViewModel
+{
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the rule is checked.
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the metric.
+    /// </summary>
+    public AIConversationMetric Metric { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profile measured; empty for every profile.
+    /// </summary>
+    public string ProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the value is compared.
+    /// </summary>
+    public AIConversationAlertCondition Condition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the threshold.
+    /// </summary>
+    public double Threshold { get; set; }
+
+    /// <summary>
+    /// Gets or sets the window in minutes.
+    /// </summary>
+    public int WindowMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the fewest samples a window needs.
+    /// </summary>
+    public int MinimumSampleSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets how often the rule is checked, in minutes.
+    /// </summary>
+    public int CheckEveryMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the addresses emailed, comma separated.
+    /// </summary>
+    public string NotifyEmails { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profiles to choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Profiles { get; set; } = [];
+}

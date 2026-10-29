@@ -148,6 +148,20 @@ For example, a table grouped by **Profile version** with the average **Score** a
 
 ## Get alerted when something slips
 
+### Alert rules
+
+With the **AI Quality** feature on, **Artificial Intelligence > Alert rules** watches a metric without a workflow. Click **Add alert rule** and choose the **Metric**, the **AI profile** (or every profile), when to alert and the **Threshold**, the **Window** measured, the **Minimum samples** a window needs, and how often to **Check** it. The metrics are the ones the task below measures.
+
+When the threshold is crossed, the rule opens an incident; when a measured window is back within it, the incident resolves. Each change is told once:
+
+- by email to the addresses in **Email**, when the Email feature is set up;
+- by the `alert.triggered` and `alert.resolved` events of **Webhooks**, when the AI Webhooks feature is on;
+- by the **AI Alert Triggered** and **AI Alert Resolved** workflow events, whose input holds the rule, the metric, its value, the threshold and the window.
+
+The list shows each rule as **OK** or **Alerting**, with its latest value and when it last triggered; a rule keeps its last 20 incidents.
+
+### Alerts in a workflow
+
 The **Check AI Conversation Metric** task measures one number over the last window, compares it with a threshold, and remembers whether an alert is already open. Start it with a **Timer** that runs every few minutes.
 
 | Field | What it means |

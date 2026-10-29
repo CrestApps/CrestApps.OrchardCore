@@ -14,6 +14,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
 {
     private static readonly string[] _expectedActivityNames =
     [
+        "AIAlertResolvedEvent",
+        "AIAlertTriggeredEvent",
         "AICallActionTask",
         "AIChatSessionAllFieldsExtractedEvent",
         "AIChatSessionClosedEvent",
