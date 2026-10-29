@@ -175,6 +175,8 @@ Its stock is what its parts in stock can make: with 4 caps left and 2 in each ki
 
 ## Import and export products
 
+<YouTube video="product-import-and-feeds" title="Import and export products" start={133} end={169} />
+
 Products import and export like any other content, with the **Content Transfer** feature (**Content > Bulk Import** and **Bulk Export**), in a CSV file or, with its OpenXml feature, an Excel workbook.
 
 Each product is a row, and its product details are columns: the price, compare-at and sale prices with the sale's dates, SKU, currency, the address of a product sold elsewhere, quantity rules, the options and variants, the category and brand by name, and the stock. Download a template from the import page to see them all. An export has the same columns, so you can change prices in a spreadsheet and import the file back.
