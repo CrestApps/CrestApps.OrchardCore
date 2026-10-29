@@ -242,3 +242,11 @@ Realtime turns are dispatched through `IRealtimeOrchestrator` rather than the st
 - [AI Usage Analytics](usage-analytics.md) — talk time, silence, barge-ins and outcomes of automated voice calls held by a realtime session.
 - [Model Capabilities](model-capabilities.md) — declaring the `realtime` feature on a deployment.
 - [AI Chat](chat.md) and [AI Chat Interactions](chat-interactions.md) — the two chat surfaces that support realtime.
+
+## Voice library
+
+Under **Artificial Intelligence → Voice library**, choose a text-to-speech deployment whose provider has a voice library (ElevenLabs or Cartesia) to search its voices by name and language, hear a sample, and copy a voice's id to a profile's or persona's voice. Where the provider clones voices, **Clone a voice** makes a new voice from a recording of one speaker that you have the right to use; the provider keeps it. Add an ElevenLabs or Cartesia deployment by enabling the **ElevenLabs** or **Cartesia** feature, then adding a speech deployment with the provider's API key.
+
+## Switching profiles during a call
+
+A supervisor can switch a live AI call to another profile from the live dashboard or with the AI Call Action task. On a realtime call, the new profile's instructions and tools apply from the AI's next reply, in the same voice and with the same conversation; the call's voice, deployment and turn detection stay as the call opened them. On a turn-based call, the new profile answers from the caller's next turn.

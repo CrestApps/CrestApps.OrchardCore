@@ -131,6 +131,8 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AzureAIInference/CrestApps.OrchardCore.AzureAIInference.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Ollama/CrestApps.OrchardCore.Ollama.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.ElevenLabs/CrestApps.OrchardCore.ElevenLabs.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Cartesia/CrestApps.OrchardCore.Cartesia.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI/CrestApps.OrchardCore.OpenAI.csproj" />
   </Folder>
