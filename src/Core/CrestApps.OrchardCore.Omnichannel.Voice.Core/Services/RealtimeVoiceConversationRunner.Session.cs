@@ -94,13 +94,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine("## Who you are calling");
         orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(
-            string.IsNullOrWhiteSpace(call?.ContactName)
-                ? "You do not know the name of the person you are calling. Do not use a name, and never guess or " +
-                  "invent one; ask who you are speaking with if you need it."
-                : $"You are calling {call.ContactName}. That is the only name you may use for them. Never use any " +
-                  "other name, and never guess or invent one — if the person says they are somebody else, believe " +
-                  "them and adjust.");
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.WhoYouAreCalling(call?.ContactName));
 
         // The tenant's notice that the call is recorded, ahead of the guidance about the opening it belongs to.
         var recordingDisclosure = VoiceCallGuidance.RecordingDisclosure(call?.RecordingDisclosure);
@@ -220,7 +214,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             if (conversation is not null)
             {
-                await AskForTheGreetingAsync(conversation, cancellationToken);
+                await AskForTheGreetingAsync(conversation, context, cancellationToken);
             }
         }
         catch
@@ -285,12 +279,22 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the session's
     /// own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
     /// </para>
+    /// <para>
+    /// A call with a recording disclosure is the exception: its greeting is asked for with the session's instructions
+    /// followed by the disclosure to begin with. Told only in the session's instructions, live, the model opened with
+    /// its own words for the notice.
+    /// </para>
     /// </remarks>
-    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
+    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
     {
         // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
         await ApplyOpeningTurnDetectionAsync(conversation, cancellationToken);
-        await conversation.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+
+        var opening = VoiceCallGuidance.OpeningWithDisclosure(context?.RecordingDisclosure);
+
+        await conversation.RequestUnpromptedResponseAsync(
+            opening is null ? null : WithSessionInstructions(opening),
+            cancellationToken);
     }
 
     // The conversation could not be started, so a stream that opened anyway has nothing to carry.

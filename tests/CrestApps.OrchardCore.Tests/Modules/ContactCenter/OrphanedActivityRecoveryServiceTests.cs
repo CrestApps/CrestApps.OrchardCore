@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -116,6 +117,44 @@ public sealed class OrphanedActivityRecoveryServiceTests
         Assert.Equal(0, recovered);
         Assert.Equal(ActivityStatus.InProgress, activity.Status);
         harness.VerifyNoRecovery();
+    }
+
+    [Fact]
+    public async Task RecoverCandidates_WhenAnInboundCallerHungUpBeforeAnAgentAnswered_ClosesItAsAbandoned()
+    {
+        // Arrange - live, two callers who hung up in the phone menu were both recorded as failed calls. The platform
+        // answered them to play the menu, so the interaction looks answered; the recorded abandon says otherwise.
+        var harness = new Harness();
+        var activity = harness.NewActivity(ActivityStatus.InProgress);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            Direction = InteractionDirection.Inbound,
+            CreatedUtc = _now.AddMinutes(-20),
+            AnsweredUtc = _now.AddMinutes(-20),
+            EndedUtc = _now.AddMinutes(-19),
+        }.RestorePersistedStatus(InteractionStatus.Ended);
+
+        harness.Interactions
+            .Setup(m => m.FindByActivityIdAsync(activity.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        harness.RecordedEvents.Add(new InteractionEvent
+        {
+            InteractionId = "interaction-1",
+            AggregateId = "interaction-1",
+            EventType = ContactCenterConstants.Events.CallAbandoned,
+            OccurredUtc = _now.AddMinutes(-19),
+        });
+
+        // Act
+        var recovered = await harness.Service.RecoverCandidatesAsync([activity], _now, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, recovered);
+        Assert.Equal(ActivityStatus.Cancelled, activity.Status);
+        Assert.Equal(OrphanedActivityRecoveryService.CallerAbandonedReasonCode, activity.TerminalReasonCode);
+        Assert.Equal(_now, activity.CompletedUtc);
+        harness.VerifyNeverEnqueued();
     }
 
     [Fact]
@@ -325,6 +364,10 @@ public sealed class OrphanedActivityRecoveryServiceTests
 
         public Mock<IQueueItemManager> QueueItems { get; } = new();
 
+        public List<InteractionEvent> RecordedEvents { get; } = [];
+
+        public Mock<IInteractionEventStore> Events { get; } = new();
+
         public OrphanedActivityRecoveryService Service { get; }
 
         public Harness(ISession session = null)
@@ -357,6 +400,16 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 .Setup(q => q.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((QueueItem)null);
 
+            Events
+                .Setup(e => e.GetByAggregateWindowAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => RecordedEvents);
+
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(_now);
 
@@ -370,7 +423,8 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 QueueItems.Object,
                 clock.Object,
                 NullLogger<OrphanedActivityRecoveryService>.Instance,
-                dialerAttemptFinalizer: null);
+                dialerAttemptFinalizer: null,
+                Events.Object);
         }
 
         public OmnichannelActivity NewActivity(

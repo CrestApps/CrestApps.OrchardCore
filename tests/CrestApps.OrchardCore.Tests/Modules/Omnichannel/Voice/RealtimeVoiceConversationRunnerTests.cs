@@ -993,6 +993,13 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         Assert.Contains(VoiceCallGuidance.RecordingDisclosureHeading, systemMessage);
         Assert.Contains("\"This call may be recorded for quality assurance and training purposes.\"", systemMessage);
+
+        // And the greeting itself is asked for with the disclosure as its first words, under the session's own
+        // instructions so it keeps the persona: told only in the instructions, live, the model reworded it.
+        var greeting = harness.Conversation.Unprompted[0];
+
+        Assert.StartsWith(systemMessage.TrimEnd(), greeting, StringComparison.Ordinal);
+        Assert.EndsWith(VoiceCallGuidance.OpeningWithDisclosure(harness.RecordingDisclosure), greeting, StringComparison.Ordinal);
     }
 
     [Fact]
