@@ -38,6 +38,13 @@ public sealed class AIConversationEvaluationRequest
     /// Gets or sets the deployment that judges, or <see langword="null"/> for the site's utility deployment.
     /// </summary>
     public string DeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the assistant's knowledge base and data sources hold on what the customer asked, so the
+    /// judge can tell an answer from the knowledge base from one the assistant made up. <see langword="null"/> judges
+    /// the transcript alone.
+    /// </summary>
+    public string Knowledge { get; set; }
 }
 
 /// <summary>
@@ -160,6 +167,13 @@ public sealed class AIConversationEvaluator : IAIConversationEvaluator
                 builder.Append(index + 1).Append(". ").AppendLine(criteria[index].Trim());
             }
 
+            builder.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Knowledge))
+        {
+            builder.AppendLine("What the assistant's knowledge base and data sources hold on what the customer asked. Report as Hallucination any fact the assistant stated that neither its instructions, this knowledge nor a tool result in the transcript supports, and quote the line:");
+            builder.AppendLine(request.Knowledge.Trim());
             builder.AppendLine();
         }
 

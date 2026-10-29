@@ -123,3 +123,42 @@ public sealed class AITestRunStore : DocumentCatalog<AITestRun, AITestRunIndex>,
         return runs.ToList();
     }
 }
+
+/// <summary>
+/// Stores QA cohorts.
+/// </summary>
+public interface IAIQACohortStore : ICatalog<AIQACohort>
+{
+    /// <summary>
+    /// Lists the cohorts that score conversations.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The cohorts.</returns>
+    Task<IReadOnlyList<AIQACohort>> ListEnabledAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Stores QA cohorts in the AI collection.
+/// </summary>
+public sealed class AIQACohortStore : DocumentCatalog<AIQACohort, AIQACohortIndex>, IAIQACohortStore
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIQACohortStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="options">The YesSql store options, which name the AI collection.</param>
+    public AIQACohortStore(ISession session, IOptions<YesSqlStoreOptions> options)
+        : base(session)
+    {
+        CollectionName = options.Value.AICollectionName;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AIQACohort>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        var cohorts = await Session.Query<AIQACohort, AIQACohortIndex>(index => index.Enabled, collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return cohorts.ToList();
+    }
+}

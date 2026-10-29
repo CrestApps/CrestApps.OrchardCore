@@ -102,6 +102,8 @@ public sealed class AIConversationEvaluationService
     /// <param name="judgeDeploymentName">The deployment that judges, or <see langword="null"/> for the utility
     /// deployment.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="knowledge">What the profile's knowledge base holds on what the customer asked, for the hallucination
+    /// check, or <see langword="null"/> to judge the transcript alone.</param>
     public async Task<AIConversationEvaluation> EvaluateTurnsAsync(
         AIProfile profile,
         AIChatSession session,
@@ -111,7 +113,8 @@ public sealed class AIConversationEvaluationService
         string label,
         string instructions,
         string judgeDeploymentName,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string knowledge = null)
     {
         instructions ??= await GetInstructionsAsync(profile, cancellationToken);
 
@@ -122,6 +125,7 @@ public sealed class AIConversationEvaluationService
             PassingScore = passingScore,
             Instructions = instructions,
             DeploymentName = string.IsNullOrWhiteSpace(judgeDeploymentName) ? null : judgeDeploymentName.Trim(),
+            Knowledge = knowledge,
         }, cancellationToken);
 
         if (evaluation is null)

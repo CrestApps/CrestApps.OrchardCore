@@ -28,7 +28,19 @@ internal sealed class AIQualityIndexMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await AITestIndexSchema.CreateAsync(SchemaBuilder, _options);
+        await AIQACohortIndexSchema.CreateAsync(SchemaBuilder, _options);
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Creates the QA cohort table on a tenant that has the test tables.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await AIQACohortIndexSchema.CreateAsync(SchemaBuilder, _options);
+
+        return 2;
     }
 }

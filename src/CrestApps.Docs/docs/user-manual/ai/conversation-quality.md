@@ -119,6 +119,27 @@ To score a sample of your conversations:
 
 Every evaluation, real or simulated, also starts the workflows that begin with **AI Conversation Evaluated**. Tick **Only conversations that failed** to react to the failures only. The evaluation is in `Workflow.Input.Evaluation`.
 
+## Score a sample of real conversations
+
+With the **AI Quality** feature on, a **QA cohort** scores a share of the real conversations of some AI profiles after they close, without a workflow. Open **Artificial Intelligence > QA**, click **QA cohorts**, then **Add cohort**:
+
+- **AI profiles**: whose conversations are sampled.
+- **Sample**: the share scored, such as 20%. A conversation is in or out of the sample for good, so it is never scored twice.
+- **Success criteria** and **Passing score**, as for the **Evaluate AI Conversation** task.
+- **Check answers against the knowledge base**: the profile's own knowledge base and data sources are searched for what the customer asked, and any fact the AI stated that they don't support is reported as a **Hallucination**, with the line that shows it.
+
+A cohort starts with the conversations that close after it is saved, and scores them every ten minutes. Each score is an evaluation labeled `QA: <cohort name>`, so it shows in the **Conversation evaluations** report and raises the **AI Conversation Evaluated** event like any other.
+
+### The QA dashboard
+
+**Artificial Intelligence > QA** shows, for one cohort or for every scored conversation, over the last 1, 7, 30 or 90 days:
+
+- how many conversations were scored, their average score, and the share that passed and that were resolved;
+- the scores day by day;
+- the issues found, by kind, and the customers' sentiment at the end;
+- the most frequent opening questions, with the share of them resolved;
+- the lowest-scored conversations, each with a link to open it.
+
 ## Reports
 
 In **Reports**, the **AI Chat** data source has a **Conversation evaluations** data set: one row per evaluation, with its profile, profile version, label, score, whether it passed, and a count of each kind of issue. The **Chat sessions** data set has the **Profile version** of each conversation.

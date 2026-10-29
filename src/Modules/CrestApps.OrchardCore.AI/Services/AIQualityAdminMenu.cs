@@ -32,6 +32,13 @@ public sealed class AIQualityAdminMenu : AdminNavigationProvider
                     .Permission(AIPermissions.ManageAIQuality)
                     .LocalNav()
                 )
+                .Add(S["QA"], S["QA"].PrefixPosition(), qa => qa
+                    .AddClass("ai-qa")
+                    .Id("aiQA")
+                    .Action("Index", "AIQADashboard", AIConstants.Feature.Area)
+                    .Permission(AIPermissions.ManageAIQuality)
+                    .LocalNav()
+                )
             );
 
         return ValueTask.CompletedTask;

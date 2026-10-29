@@ -35,6 +35,12 @@ public sealed class QualityStartup : StartupBase
             .AddScoped<IAITestCaseStore, AITestCaseStore>()
             .AddScoped<IAITestRunStore, AITestRunStore>()
             .AddScoped<AITestRunner>()
+            .AddScoped<IAIQACohortStore, AIQACohortStore>()
+            .AddScoped<AIQACohortEvaluator>()
+            .AddScoped<AIConversationKnowledgeCollector>()
+            .AddScoped<AIQADashboardService>()
+            .AddIndexProvider<AIQACohortIndexProvider>()
+            .AddDisplayDriver<AIQACohort, AIQACohortDisplayDriver>()
             .AddIndexProvider<AITestIndexProvider>()
             .AddIndexProvider<AITestRunIndexProvider>()
             .AddDataMigration<AIQualityIndexMigrations>()
@@ -46,6 +52,7 @@ public sealed class QualityStartup : StartupBase
 
         services.TryAddScoped<AIProfileVersionCopies>();
         services.AddSingleton<IBackgroundTask, AITestRunBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, AIQACohortBackgroundTask>();
     }
 }
 

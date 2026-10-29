@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIQACohort>
+
+<a asp-action="Index" asp-controller="AIQADashboard" asp-route-cohortId="@Model.Value.ItemId" class="btn btn-sm btn-primary">@T["Dashboard"]</a>
+<a asp-action="Edit" asp-controller="AIQACohorts" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-secondary">@T["Edit"]</a>
