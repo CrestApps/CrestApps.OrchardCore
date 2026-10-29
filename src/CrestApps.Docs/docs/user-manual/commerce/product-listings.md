@@ -151,6 +151,10 @@ On a site with several languages, translate your products and listing pages with
 
 ## Search with Elasticsearch, Lucene or Azure AI Search
 
+Watch the video for the three steps: the feature, the index and the listing.
+
+<YouTube video="product-search-indexes" title="Product search indexes in CrestApps for Orchard Core" />
+
 Listings search your database by default, which suits most catalogs. A large catalog, or one where keyword search should rank the best matches first, can search a search server instead.
 
 1. Turn on one of **Product Search (Elasticsearch)**, **Product Search (Lucene)** or **Product Search (Azure AI Search)** under **Configuration > Features**. Elasticsearch and Azure AI Search need their connection set up first; Lucene keeps its index on your server and needs nothing else.
