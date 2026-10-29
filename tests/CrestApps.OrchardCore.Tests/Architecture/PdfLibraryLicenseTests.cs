@@ -10,9 +10,8 @@ namespace CrestApps.OrchardCore.Tests.Architecture;
 /// installs them is pulled into AGPL or commercial terms. PDFsharp and MigraDoc are AGPL-3.0-only from 6.5.0 and check
 /// for a license at run time, iText is AGPL, and QuestPDF and the others are commercial or exclude some users.
 /// <para>
-/// This fails when one of them is referenced by a project, given a version in <c>Directory.Packages.props</c>, or
-/// reaches the build through another package. The one exception is PDFsharp-MigraDoc 6.2.4, the last MIT release,
-/// which CrestApps.Core.AI.Documents.Pdf still depends on; it is pinned to that version until CrestApps.Core drops it.
+/// This fails when one of them, at any version, is referenced by a project, given a version in
+/// <c>Directory.Packages.props</c>, or reaches the build through another package.
 /// </para>
 /// </summary>
 public sealed class PdfLibraryLicenseTests
@@ -35,13 +34,6 @@ public sealed class PdfLibraryLicenseTests
         "SelectPdf",
         "EO.Pdf",
     ];
-
-    // The packages CrestApps.Core.AI.Documents.Pdf still brings in, at the last version released under MIT.
-    private static readonly Dictionary<string, string> _pinnedUntilCoreDropsThem = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["PDFsharp-MigraDoc"] = "6.2.4",
-        ["PDFsharp"] = "6.2.4",
-    };
 
     [Fact]
     public void NoProject_ReferencesAPdfLibraryWithANonPermissiveLicense()
@@ -72,7 +64,7 @@ public sealed class PdfLibraryLicenseTests
     }
 
     [Fact]
-    public void CentralPackageVersions_HoldNoNonPermissivePdfLibrary_AndPinPdfSharpToItsLastMitRelease()
+    public void CentralPackageVersions_HoldNoNonPermissivePdfLibrary()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -84,7 +76,7 @@ public sealed class PdfLibraryLicenseTests
             var id = (string)package.Attribute("Include");
             var version = (string)package.Attribute("Version");
 
-            if (IsDenied(id) && !IsPinned(id, version))
+            if (IsDenied(id))
             {
                 violations.Add($"Directory.Packages.props gives {id} the version {version}.");
             }
@@ -116,7 +108,7 @@ public sealed class PdfLibraryLicenseTests
             var id = library.Name[..separator];
             var version = library.Name[(separator + 1)..];
 
-            if (IsDenied(id) && !IsPinned(id, version))
+            if (IsDenied(id))
             {
                 violations.Add($"{id} {version} reaches the build.");
             }
@@ -144,16 +136,10 @@ public sealed class PdfLibraryLicenseTests
             _deniedPackages.Any(denied => id.StartsWith(denied, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool IsPinned(string id, string version)
-    {
-        return _pinnedUntilCoreDropsThem.TryGetValue(id, out var pinned) &&
-            string.Equals(version?.Trim('[', ']', ' '), pinned, StringComparison.Ordinal);
-    }
-
     private static string BuildMessage(List<string> violations)
     {
         var builder = new StringBuilder()
-            .AppendLine("A PDF library whose license is not MIT, Apache-2.0 or BSD is used. Use PdfPig, or pin PDFsharp-MigraDoc to 6.2.4 while CrestApps.Core depends on it:");
+            .AppendLine("A PDF library whose license is not MIT, Apache-2.0 or BSD is used. Use PdfPig instead:");
 
         foreach (var violation in violations)
         {
