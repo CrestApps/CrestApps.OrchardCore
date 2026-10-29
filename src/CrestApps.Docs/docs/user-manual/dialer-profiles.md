@@ -214,6 +214,8 @@ An unanswered call rings for the profile's **Ring time** before it is given up, 
 
 ## What happens to each record
 
+<YouTube video="contact-center-call-flows" title="Video of the checks an outbound call passes before it dials, and how a call that ends early is recorded" start={217} end={280} />
+
 Before an agent is reserved for a record, the dialer checks that the record is due: its scheduled time and the retry delay after its last call have passed, and it has attempts left. A record that is not due yet waits at the back of the queue, and no agent sees it. Before every call the dialer then checks, in order: the number is valid, the number is not [known to be out of service](numbers-not-in-service.md), the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
 
 - A record with no valid number becomes **Failed**.
@@ -253,7 +255,9 @@ When the next attempt is dialed follows the same order. A date picked when the c
 
 The dialer retries this way only calls that rang out, were busy, reached a machine, or were answered and dropped before an agent joined. A call the network failed or the far end rejected, and a number not in service, are dispositioned but not retried. Attempts count across the follow-ups for one contact, so a limit of 3 means the first call and two more.
 
-Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called.
+Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called. The attempt limit, the cool-down between attempts and the number-not-in-service check still apply, and the dialer does not disposition a callback: the agent who takes it does. A callback task runs every minute, queues the callback on the same queue at the queue's default priority, and offers it to an agent like a preview call; the agent accepts, and the platform dials.
+
+<YouTube video="contact-center-call-flows" title="Video of how a callback is created, queued and dialed" start={280} end={320} />
 
 ## Next steps
 

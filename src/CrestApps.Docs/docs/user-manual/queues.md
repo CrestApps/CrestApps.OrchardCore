@@ -99,6 +99,8 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 
 ### Limits
 
+<YouTube video="contact-center-call-flows" title="Video of the queue limits, overflow and voicemail" start={161} end={191} />
+
 | Field | What it does |
 | --- | --- |
 | **Maximum callers waiting** | 0 means no limit. |
@@ -107,6 +109,8 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 | **Maximum-wait action** | **Keep waiting** (the default), **Overflow to the next queue**, or **Send to voicemail**. An overflow action needs an overflow queue or chain. |
 
 ### While callers wait
+
+<YouTube video="contact-center-call-flows" title="Video of the queue treatment: welcome message, hold music, place in line, estimated wait and callback" start={110} end={161} />
 
 | Field | What it does |
 | --- | --- |
