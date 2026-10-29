@@ -32,7 +32,12 @@ internal sealed class ReportPdfFlow
     /// <param name="pageHeight">The height of a page, in points.</param>
     /// <param name="regular">The regular face.</param>
     /// <param name="bold">The bold face.</param>
-    public ReportPdfFlow(PdfDocumentBuilder builder, double pageWidth, double pageHeight, ReportPdfFont regular, ReportPdfFont bold)
+    public ReportPdfFlow(
+        PdfDocumentBuilder builder,
+        double pageWidth,
+        double pageHeight,
+        ReportPdfFont regular,
+        ReportPdfFont bold)
     {
         _builder = builder;
         _pageWidth = pageWidth;
@@ -83,20 +88,8 @@ internal sealed class ReportPdfFlow
     /// </summary>
     public double Remaining => _pageHeight - BottomMargin - Top;
 
-    /// <summary>
-    /// Gets a value indicating whether nothing was laid out on the page yet.
-    /// </summary>
-    public bool IsPageEmpty => Top <= Margin;
-
-    /// <summary>
-    /// Gets the face of a weight.
-    /// </summary>
-    /// <param name="bold">Whether the text is bold.</param>
-    /// <returns>The face.</returns>
-    public ReportPdfFont GetFont(bool bold)
-    {
-        return bold ? Bold : Regular;
-    }
+    // Whether nothing was laid out on the page yet.
+    private bool IsPageEmpty => Top <= Margin;
 
     /// <summary>
     /// Starts a new page.

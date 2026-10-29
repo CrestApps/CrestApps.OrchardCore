@@ -1,3 +1,4 @@
+using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Graphics.Core;
 using UglyToad.PdfPig.Graphics.Operations;
 using UglyToad.PdfPig.Graphics.Operations.General;
@@ -14,22 +15,20 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 internal sealed class ReportPdfPage
 {
     private readonly PdfPageBuilder _page;
+    private readonly double _height;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportPdfPage"/> class.
     /// </summary>
     /// <param name="page">The page of the PdfPig document.</param>
     /// <param name="height">The height of the page, in points.</param>
-    public ReportPdfPage(PdfPageBuilder page, double height)
+    public ReportPdfPage(
+        PdfPageBuilder page,
+        double height)
     {
         _page = page;
-        Height = height;
+        _height = height;
     }
-
-    /// <summary>
-    /// Gets the height of the page, in points.
-    /// </summary>
-    public double Height { get; }
 
     private List<IGraphicsStateOperation> Operations => _page.CurrentStream.Operations;
 
@@ -49,7 +48,7 @@ internal sealed class ReportPdfPage
         }
 
         SetFillColor(color);
-        Operations.Add(new AppendRectangle(x, Height - top - height, width, height));
+        Operations.Add(new AppendRectangle(x, _height - top - height, width, height));
         Operations.Add(FillPathNonZeroWinding.Value);
     }
 
@@ -83,11 +82,11 @@ internal sealed class ReportPdfPage
         Operations.Add(new SetStrokeColorDeviceRgb(color.R / 255d, color.G / 255d, color.B / 255d));
         Operations.Add(new SetLineWidth(width));
         Operations.Add(new SetLineJoin(LineJoinStyle.Round));
-        Operations.Add(new BeginNewSubpath(points[0].X, Height - points[0].Top));
+        Operations.Add(new BeginNewSubpath(points[0].X, _height - points[0].Top));
 
         for (var index = 1; index < points.Count; index++)
         {
-            Operations.Add(new AppendStraightLineSegment(points[index].X, Height - points[index].Top));
+            Operations.Add(new AppendStraightLineSegment(points[index].X, _height - points[index].Top));
         }
 
         Operations.Add(StrokePath.Value);
@@ -106,11 +105,11 @@ internal sealed class ReportPdfPage
         }
 
         SetFillColor(color);
-        Operations.Add(new BeginNewSubpath(points[0].X, Height - points[0].Top));
+        Operations.Add(new BeginNewSubpath(points[0].X, _height - points[0].Top));
 
         for (var index = 1; index < points.Count; index++)
         {
-            Operations.Add(new AppendStraightLineSegment(points[index].X, Height - points[index].Top));
+            Operations.Add(new AppendStraightLineSegment(points[index].X, _height - points[index].Top));
         }
 
         Operations.Add(CloseSubpath.Value);
@@ -146,7 +145,7 @@ internal sealed class ReportPdfPage
             return;
         }
 
-        var centerY = Height - top;
+        var centerY = _height - top;
         var (startX, startY) = Point(x, centerY, radius, start);
 
         SetFillColor(color);
@@ -170,7 +169,7 @@ internal sealed class ReportPdfPage
     }
 
     /// <summary>
-    /// Writes a line of prepared text.
+    /// Writes a line of prepared text, outlining its letters when the face simulates bold.
     /// </summary>
     /// <param name="text">The text, from <see cref="ReportPdfFont.Prepare"/>, without line breaks.</param>
     /// <param name="font">The font.</param>
@@ -189,10 +188,18 @@ internal sealed class ReportPdfPage
 
         if (font.SimulatesBold)
         {
+            // A face without a bold file is made bold by outlining its letters in their own color.
             Operations.Add(new SetStrokeColorDeviceRgb(color.R / 255d, color.G / 255d, color.B / 255d));
+            Operations.Add(new SetLineWidth(size / 30));
+            _page.SetTextRenderingMode(TextRenderingMode.FillThenStroke);
         }
 
-        font.Write(_page, text, size, x, Height - top - (font.Ascent * size));
+        font.Write(_page, text, size, x, _height - top - (font.Ascent * size));
+
+        if (font.SimulatesBold)
+        {
+            _page.SetTextRenderingMode(TextRenderingMode.Fill);
+        }
     }
 
     private void SetFillColor(ReportPdfColor color)

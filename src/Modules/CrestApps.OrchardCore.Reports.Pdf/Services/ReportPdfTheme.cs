@@ -16,27 +16,57 @@ internal static class ReportPdfTheme
     /// </summary>
     public const string FontFamily = "Arial";
 
+    /// <summary>
+    /// The color of body text.
+    /// </summary>
     public static readonly ReportPdfColor Text = new(0x21, 0x25, 0x29);
 
+    /// <summary>
+    /// The color of muted text, such as descriptions and axis labels, and of the rules under headers and along axes.
+    /// </summary>
     public static readonly ReportPdfColor Muted = new(0x6C, 0x75, 0x7D);
 
+    /// <summary>
+    /// The color of the rules between table rows and of chart gridlines.
+    /// </summary>
     public static readonly ReportPdfColor Border = new(0xDE, 0xE2, 0xE6);
 
+    /// <summary>
+    /// The fill of a table's header row.
+    /// </summary>
     public static readonly ReportPdfColor HeaderFill = new(0xF1, 0xF3, 0xF5);
 
+    /// <summary>
+    /// The fill of a metric card.
+    /// </summary>
     public static readonly ReportPdfColor CardFill = new(0xF8, 0xF9, 0xFA);
 
+    /// <summary>
+    /// The fill of a subtotal row.
+    /// </summary>
     public static readonly ReportPdfColor SubtotalFill = new(0xCF, 0xF4, 0xFC);
 
+    /// <summary>
+    /// The fill of a grand total row.
+    /// </summary>
     public static readonly ReportPdfColor GrandTotalFill = new(0xCF, 0xE2, 0xFF);
 
+    /// <summary>
+    /// The empty part of a progress bar.
+    /// </summary>
     public static readonly ReportPdfColor BarTrack = new(0xE9, 0xEC, 0xEF);
 
+    /// <summary>
+    /// The color of the title on a container's band and of the lines between the slices of a pie.
+    /// </summary>
     public static readonly ReportPdfColor White = new(0xFF, 0xFF, 0xFF);
 
+    /// <summary>
+    /// The fill of a container's title band.
+    /// </summary>
     public static readonly ReportPdfColor Primary = new(0x0D, 0x6E, 0xFD);
 
-    public static readonly ReportPdfColor[] Palette =
+    private static readonly ReportPdfColor[] _palette =
     [
         new(0x25, 0x63, 0xEB),
         new(0x14, 0xB8, 0xA6),
@@ -57,6 +87,6 @@ internal static class ReportPdfTheme
     /// <returns>The color.</returns>
     public static ReportPdfColor GetPaletteColor(int index)
     {
-        return Palette[index % Palette.Length];
+        return _palette[index % _palette.Length];
     }
 }

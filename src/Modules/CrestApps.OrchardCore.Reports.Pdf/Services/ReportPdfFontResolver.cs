@@ -2,13 +2,13 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
 /// Finds the installed TrueType font a report PDF is written in: the family a document asks for when it is installed,
-/// otherwise the installed font that stands in for it — Liberation Sans, Serif and Mono first, because they have the
-/// widths of Arial, Times New Roman and Courier New, so a document lays out as it does on Windows — and the bold face
-/// of that font. It reads the font folders of Windows, Linux and macOS.
+/// otherwise the installed font that stands in for it — Liberation Sans first, because it has the widths of Arial, so
+/// a document lays out as it does on Windows — and the bold face of that font. It reads the font folders of Windows,
+/// Linux and macOS.
 /// </summary>
 /// <remarks>
 /// Faces are told apart by their file names: <c>LiberationSans-Bold.ttf</c> on Linux and macOS, and
-/// <c>arialbd.ttf</c> beside <c>arial.ttf</c> on Windows. When no font of a kind is installed, any installed font is
+/// <c>arialbd.ttf</c> beside <c>arial.ttf</c> on Windows. When no sans-serif font is installed, any installed font is
 /// used rather than failing the document.
 /// </remarks>
 internal sealed class ReportPdfFontResolver
@@ -26,8 +26,6 @@ internal sealed class ReportPdfFontResolver
     // Families are compared by their letters and digits only, lowercased: "Liberation Sans" and
     // "LiberationSans-Bold.ttf" both read "liberationsans".
     private static readonly string[] _sansFamilies = ["liberationsans", "arimo", "arial", "helvetica", "dejavusans", "freesans", "notosans", "opensans", "roboto", "ubuntu"];
-    private static readonly string[] _serifFamilies = ["liberationserif", "tinos", "timesnewroman", "times", "dejavuserif", "freeserif", "notoserif"];
-    private static readonly string[] _monoFamilies = ["liberationmono", "cousine", "couriernew", "courier", "dejavusansmono", "freemono", "notosansmono", "ubuntumono"];
 
     // The one-letter suffixes are the ones of the Windows fonts, such as "consolab" and "consolaz".
     private static readonly (string Suffix, FontStyle Style)[] _styleSuffixes =
@@ -52,7 +50,10 @@ internal sealed class ReportPdfFontResolver
     private readonly Dictionary<string, string> _files;
     private readonly string _fallbackFamily;
 
-    private ReportPdfFontResolver(Dictionary<string, Dictionary<FontStyle, string>> families, Dictionary<string, string> files, string fallbackFamily)
+    private ReportPdfFontResolver(
+        Dictionary<string, Dictionary<FontStyle, string>> families,
+        Dictionary<string, string> files,
+        string fallbackFamily)
     {
         _families = families;
         _files = files;
@@ -161,26 +162,11 @@ internal sealed class ReportPdfFontResolver
     /// <returns>The path of the file, and whether the font has no bold face, so bold has to be simulated.</returns>
     public (string Path, bool SimulateBold) Resolve(string familyName, bool isBold)
     {
-        var family = Choose(Normalize(familyName));
+        var requested = Normalize(familyName);
+        var family = _families.ContainsKey(requested) ? requested : _fallbackFamily;
         var (faceName, style) = Face(family, isBold ? FontStyle.Bold : FontStyle.Regular);
 
         return (_files[faceName], isBold && style is not (FontStyle.Bold or FontStyle.BoldItalic));
-    }
-
-    private string Choose(string requested)
-    {
-        if (requested.Length > 0 && _families.ContainsKey(requested))
-        {
-            return requested;
-        }
-
-        var candidates = IsMono(requested)
-            ? _monoFamilies
-            : IsSerif(requested)
-                ? _serifFamilies
-                : _sansFamilies;
-
-        return candidates.FirstOrDefault(_families.ContainsKey) ?? _fallbackFamily;
     }
 
     private (string FaceName, FontStyle Style) Face(string family, FontStyle wanted)
@@ -192,13 +178,9 @@ internal sealed class ReportPdfFontResolver
             return (exact, wanted);
         }
 
-        // Without a bold italic face, the bold one is closer than the italic one: weight shows more.
-        var nearest = wanted switch
-        {
-            FontStyle.BoldItalic => new[] { FontStyle.Bold, FontStyle.Italic, FontStyle.Regular },
-            FontStyle.Bold or FontStyle.Italic => [FontStyle.Regular],
-            _ => [FontStyle.Bold, FontStyle.Italic, FontStyle.BoldItalic],
-        };
+        FontStyle[] nearest = wanted == FontStyle.Bold
+            ? [FontStyle.Regular]
+            : [FontStyle.Bold, FontStyle.Italic, FontStyle.BoldItalic];
 
         foreach (var style in nearest)
         {
@@ -251,42 +233,27 @@ internal sealed class ReportPdfFontResolver
         return new string((name ?? string.Empty).Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
     }
 
-    private static bool IsMono(string family)
-    {
-        return family.Contains("mono", StringComparison.Ordinal) ||
-            family.Contains("courier", StringComparison.Ordinal) ||
-            family.Contains("consol", StringComparison.Ordinal) ||
-            family.Contains("menlo", StringComparison.Ordinal) ||
-            family.Contains("code", StringComparison.Ordinal);
-    }
-
-    private static bool IsSerif(string family)
-    {
-        return (family.Contains("serif", StringComparison.Ordinal) && !family.Contains("sansserif", StringComparison.Ordinal)) ||
-            family.Contains("times", StringComparison.Ordinal) ||
-            family.Contains("georgia", StringComparison.Ordinal) ||
-            family.Contains("garamond", StringComparison.Ordinal) ||
-            family.Contains("cambria", StringComparison.Ordinal) ||
-            family.Contains("palatino", StringComparison.Ordinal) ||
-            family.Contains("bookman", StringComparison.Ordinal);
-    }
-
     private static List<string> FindFontFiles()
     {
         var files = new List<string>();
         var directories = new List<string>();
-        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        if (!string.IsNullOrEmpty(windows))
+        // On Linux and macOS, the fonts folder of .NET is one of the folders of the home directory below.
+        if (OperatingSystem.IsWindows())
         {
-            directories.Add(windows);
-        }
+            var windows = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-        if (OperatingSystem.IsWindows() && !string.IsNullOrEmpty(local))
-        {
-            directories.Add(Path.Combine(local, "Microsoft", "Windows", "Fonts"));
+            if (!string.IsNullOrEmpty(windows))
+            {
+                directories.Add(windows);
+            }
+
+            if (!string.IsNullOrEmpty(local))
+            {
+                directories.Add(Path.Combine(local, "Microsoft", "Windows", "Fonts"));
+            }
         }
 
         directories.AddRange(_fontDirectories);
@@ -298,7 +265,7 @@ internal sealed class ReportPdfFontResolver
             directories.Add(Path.Combine(home, "Library", "Fonts"));
         }
 
-        foreach (var directory in directories.Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var directory in directories)
         {
             if (!Directory.Exists(directory))
             {
@@ -309,13 +276,9 @@ internal sealed class ReportPdfFontResolver
             {
                 files.AddRange(Directory.EnumerateFiles(directory, "*.ttf", SearchOption.AllDirectories).Take(MaxFontFiles - files.Count));
             }
-            catch (IOException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 // A directory that cannot be read is skipped; the others may still hold fonts.
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Likewise.
             }
 
             if (files.Count >= MaxFontFiles)

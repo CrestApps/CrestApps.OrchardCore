@@ -107,7 +107,7 @@ internal static class ReportPdfText
             length++;
         }
 
-        return text[..length].TrimEnd() + ellipsis;
+        return text.Substring(0, length).TrimEnd() + ellipsis;
     }
 
     private static void WrapParagraph(string paragraph, ReportPdfFont font, double size, double width, List<string> lines)

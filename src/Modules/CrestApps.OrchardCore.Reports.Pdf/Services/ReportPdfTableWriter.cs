@@ -5,7 +5,8 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 /// <summary>
 /// Writes a table section: its header row on every page it spans, the shading of its subtotal and total rows, and the
 /// colors and weight of its cell styles. A cell wraps between its words, and a word too long for its column is broken.
-/// A row moves to the next page whole, unless it is taller than a page.
+/// A row that does not fit on the page moves to the next one whole, unless it would not fit there either, under the
+/// header or, for the first row, under the head of the section: it is then split where the page ends.
 /// </summary>
 internal sealed class ReportPdfTableWriter
 {
@@ -26,7 +27,12 @@ internal sealed class ReportPdfTableWriter
     /// <param name="flow">The flow the table is written in.</param>
     /// <param name="section">The table section.</param>
     /// <param name="layout">The measured columns of the table.</param>
-    public ReportPdfTableWriter(ReportPdfFlow flow, ReportSection section, ReportPdfTableLayout layout)
+    /// <param name="space">The height a page has under the head of the section, in points.</param>
+    public ReportPdfTableWriter(
+        ReportPdfFlow flow,
+        ReportSection section,
+        ReportPdfTableLayout layout,
+        double space)
     {
         _flow = flow;
         _section = section;
@@ -41,25 +47,21 @@ internal sealed class ReportPdfTableWriter
 
         _lineHeight = Math.Max(flow.Regular.LineHeight, flow.Bold.LineHeight) * layout.FontSize;
         _header = CreateHeader();
+        LeadHeight = GetLeadHeight(space);
     }
 
     /// <summary>
-    /// Gets the height of the start of the table, its header and first row, which the title of the section stays with.
+    /// Gets the height of the start of the table, which the head of the section stays with: its header and first row,
+    /// or only the first line of that row when the row does not fit in the space under the head.
     /// </summary>
-    /// <returns>The height, in points.</returns>
-    public double GetLeadHeight()
-    {
-        var first = (_section.Rows ?? []).FirstOrDefault(row => row is not null);
-
-        return GetHeight(_header) + (first is null ? 0 : GetHeight(CreateRow(first)));
-    }
+    public double LeadHeight { get; }
 
     /// <summary>
-    /// Writes the table.
+    /// Writes the table, from the next page when its start does not fit on this one.
     /// </summary>
     public void Write()
     {
-        _flow.EnsureSpace(GetLeadHeight());
+        _flow.EnsureSpace(LeadHeight);
         WriteHeader();
 
         var rowsOnPage = 0;
@@ -102,6 +104,25 @@ internal sealed class ReportPdfTableWriter
                 rowsOnPage = 0;
             }
         }
+    }
+
+    private double GetLeadHeight(double space)
+    {
+        var header = GetHeight(_header);
+        var first = (_section.Rows ?? []).FirstOrDefault(row => row is not null);
+
+        if (first is null)
+        {
+            return header;
+        }
+
+        var whole = header + GetHeight(CreateRow(first));
+
+        // A first row that does not fit under the head even at the top of a page is split where the page ends, so only
+        // its first line stays with the head.
+        return whole <= space
+            ? whole
+            : header + _lineHeight + (2 * VerticalPadding);
     }
 
     private void WriteHeader()
@@ -152,7 +173,9 @@ internal sealed class ReportPdfTableWriter
     private Cell CreateCell(int index, string value, bool bold, ReportStyle style)
     {
         var hasStyle = style is not null && !style.IsEmpty;
-        var font = _flow.GetFont(bold || (hasStyle && style.Bold));
+        var font = bold || (hasStyle && style.Bold)
+            ? _flow.Bold
+            : _flow.Regular;
         var color = hasStyle && ReportPdfColor.TryParse(style.Color, out var textColor) ? textColor : ReportPdfTheme.Text;
         ReportPdfColor? fill = hasStyle && ReportPdfColor.TryParse(style.BackgroundColor, out var background) ? background : null;
         var lines = ReportPdfText.Wrap(font.Prepare(value), font, _layout.FontSize, _widths[index] - ReportPdfTableLayout.CellPadding);
@@ -222,14 +245,19 @@ internal sealed class ReportPdfTableWriter
 
     private sealed class Row
     {
-        public Row(Cell[] cells, ReportPdfColor? fill, ReportPdfColor ruleColor, double ruleWidth, bool topRule)
+        public Row(
+            Cell[] cells,
+            ReportPdfColor? fill,
+            ReportPdfColor ruleColor,
+            double ruleWidth,
+            bool topRule)
         {
             Cells = cells;
             Fill = fill;
             RuleColor = ruleColor;
             RuleWidth = ruleWidth;
             TopRule = topRule;
-            LineCount = cells.Length == 0 ? 0 : cells.Max(cell => cell.Lines.Count);
+            LineCount = cells.Max(cell => cell.Lines.Count);
         }
 
         public Cell[] Cells { get; }

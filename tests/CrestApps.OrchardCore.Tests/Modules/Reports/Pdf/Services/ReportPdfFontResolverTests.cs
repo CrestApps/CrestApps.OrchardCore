@@ -65,6 +65,24 @@ public sealed class ReportPdfFontResolverTests
     }
 
     [Fact]
+    public void Resolve_WhenTheFontHasAnItalicFaceButNoBoldFace_ShouldOutlineTheRegularFace()
+    {
+        // Arrange
+        var resolver = ReportPdfFontResolver.FromFiles(
+        [
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        ]);
+
+        // Act
+        var bold = resolver.Resolve("Arial", isBold: true);
+
+        // Assert
+        Assert.Equal("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", bold.Path);
+        Assert.True(bold.SimulateBold);
+    }
+
+    [Fact]
     public void Resolve_WhenAShortSuffixHasNoFamilyBesideIt_ShouldReadTheWholeNameAsTheFamily()
     {
         // Arrange

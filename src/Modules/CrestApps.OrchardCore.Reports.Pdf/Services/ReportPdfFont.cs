@@ -1,9 +1,10 @@
+using System.Globalization;
 using System.Text;
+using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
 using UglyToad.PdfPig.Fonts.TrueType;
 using UglyToad.PdfPig.Fonts.TrueType.Parser;
-using UglyToad.PdfPig.Graphics.Operations.General;
 using UglyToad.PdfPig.Writer;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -14,9 +15,10 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 /// no usable font.
 /// </summary>
 /// <remarks>
-/// A character the font has no glyph for is written as a question mark; Helvetica writes the letters of ASCII, so an
-/// accented letter is written without its accent. A PdfPig TrueType font holds up to 255 different characters, so
-/// the font is embedded again for the next 255.
+/// A character the font has no glyph for is written as a question mark, except an invisible character or a separate
+/// accent, which is left out; Helvetica writes the letters of ASCII, so an accented letter is written without its
+/// accent. A PdfPig TrueType font holds up to 255 different characters, so the font is embedded again for the next
+/// 255.
 /// </remarks>
 internal sealed class ReportPdfFont
 {
@@ -38,7 +40,11 @@ internal sealed class ReportPdfFont
     private readonly Dictionary<char, double> _widths = [];
     private readonly List<EmbeddedFont> _embedded = [];
 
-    private ReportPdfFont(PdfDocumentBuilder builder, byte[] file, TrueTypeFont trueType, bool simulatesBold)
+    private ReportPdfFont(
+        PdfDocumentBuilder builder,
+        byte[] file,
+        TrueTypeFont trueType,
+        bool simulatesBold)
     {
         _builder = builder;
         _file = file;
@@ -57,7 +63,9 @@ internal sealed class ReportPdfFont
         }
     }
 
-    private ReportPdfFont(PdfDocumentBuilder builder, Standard14Font standardFont)
+    private ReportPdfFont(
+        PdfDocumentBuilder builder,
+        Standard14Font standardFont)
     {
         _builder = builder;
         _standardFont = standardFont;
@@ -108,7 +116,10 @@ internal sealed class ReportPdfFont
     /// <param name="builder">The document the face writes in.</param>
     /// <param name="file">The TrueType file.</param>
     /// <param name="simulatesBold">Whether to write the face bold by outlining it.</param>
-    /// <returns>The face, or <see langword="null"/> when PdfPig cannot write with the font.</returns>
+    /// <returns>
+    /// The face, or <see langword="null"/> when the font cannot be read; <see cref="CanUse"/> checks that PdfPig can
+    /// write with it.
+    /// </returns>
     public static ReportPdfFont FromTrueType(PdfDocumentBuilder builder, byte[] file, bool simulatesBold)
     {
         var trueType = Parse(file);
@@ -136,12 +147,33 @@ internal sealed class ReportPdfFont
     /// <returns><see langword="true"/> when the font can be used.</returns>
     public static bool CanUse(byte[] file)
     {
-        return Parse(file) is not null;
+        if (Parse(file) is null)
+        {
+            return false;
+        }
+
+        // Only writing a document with the font checks everything PdfPig needs to embed it, such as TrueType
+        // outlines rather than PostScript ones, and a PostScript name.
+        try
+        {
+            using var builder = new PdfDocumentBuilder();
+            var font = builder.AddTrueTypeFont(file);
+
+            builder.AddPage(PageSize.Letter).AddText(RequiredCharacters, 10, new PdfPoint(0, 0), font);
+            builder.Build();
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     /// <summary>
     /// Prepares a value to be measured and written: line breaks are kept as <c>\n</c>, other control characters
-    /// become spaces, and characters the font has no glyph for are replaced.
+    /// become spaces, an accent written after its letter is joined to it, and characters the font has no glyph for
+    /// are replaced, or left out when they are invisible or separate accents.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The text the font can write.</returns>
@@ -153,6 +185,8 @@ internal sealed class ReportPdfFont
         {
             return string.Empty;
         }
+
+        text = Compose(text);
 
         StringBuilder builder = null;
 
@@ -168,6 +202,13 @@ internal sealed class ReportPdfFont
             }
 
             builder ??= new StringBuilder(text.Length).Append(text, 0, index);
+
+            // A question mark would show an invisible character, such as a byte order mark, or an accent the font
+            // cannot write.
+            if (char.GetUnicodeCategory(character) is UnicodeCategory.Format or UnicodeCategory.NonSpacingMark or UnicodeCategory.EnclosingMark)
+            {
+                continue;
+            }
 
             // A character outside the first plane is a pair of chars, and is replaced once.
             if (char.IsHighSurrogate(character) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
@@ -226,7 +267,7 @@ internal sealed class ReportPdfFont
     }
 
     /// <summary>
-    /// Writes a line of prepared text. The color of the text is the fill color of the page.
+    /// Writes a line of prepared text, in the colors and the text rendering mode the page is set to.
     /// </summary>
     /// <param name="page">The page.</param>
     /// <param name="text">The text, from <see cref="Prepare"/>, without line breaks.</param>
@@ -240,12 +281,6 @@ internal sealed class ReportPdfFont
             return;
         }
 
-        if (SimulatesBold)
-        {
-            page.SetTextRenderingMode(TextRenderingMode.FillThenStroke);
-            page.CurrentStream.Operations.Add(new SetLineWidth(size / 30));
-        }
-
         var start = 0;
 
         while (start < text.Length)
@@ -256,11 +291,6 @@ internal sealed class ReportPdfFont
             page.AddText(run, size, new PdfPoint(x, baseline), font);
             x += Measure(run, size);
             start += length;
-        }
-
-        if (SimulatesBold)
-        {
-            page.SetTextRenderingMode(TextRenderingMode.Fill);
         }
     }
 
@@ -323,12 +353,25 @@ internal sealed class ReportPdfFont
         // An accented letter is written without its accent when the font has the letter, as Helvetica has.
         var decomposed = character.ToString().Normalize(NormalizationForm.FormD);
 
-        if (decomposed.Length > 1 && !char.IsSurrogate(decomposed[0]) && GetWidth(decomposed[0]) is not null)
+        if (decomposed.Length > 1 && GetWidth(decomposed[0]) is not null)
         {
             return decomposed[0];
         }
 
         return '?';
+    }
+
+    private static string Compose(string text)
+    {
+        try
+        {
+            return text.Normalize(NormalizationForm.FormC);
+        }
+        catch (ArgumentException)
+        {
+            // Text with half of a surrogate pair cannot be normalized; its accents stay apart from their letters.
+            return text;
+        }
     }
 
     private double? GetWidth(char character)
@@ -351,8 +394,6 @@ internal sealed class ReportPdfFont
 
     private static double? GetTrueTypeWidth(TrueTypeFont font, char character)
     {
-        // PdfPig writes a character only when its glyph has a box and a width; one the font maps to no glyph would be
-        // written as an empty box.
         if (char.IsSurrogate(character))
         {
             return null;
@@ -360,14 +401,19 @@ internal sealed class ReportPdfFont
 
         try
         {
-            if (font.WindowsUnicodeCMap.CharacterCodeToGlyphIndex(character) == 0 ||
-                !font.TryGetBoundingBox(character, out _) ||
-                !font.TryGetAdvanceWidth(character, out var width))
+            var glyph = font.WindowsUnicodeCMap.CharacterCodeToGlyphIndex(character);
+
+            // PdfPig embeds the glyph and the width the Windows Unicode table maps a character to, but writes the
+            // character only when the glyph of the first table that maps it has a box. A character the font maps to
+            // no glyph would be written as an empty box.
+            if (glyph == 0 ||
+                !font.TryGetBoundingBox(character, _ => glyph, out _) ||
+                !font.TryGetBoundingBox(character, out _))
             {
                 return null;
             }
 
-            return width;
+            return font.TableRegister.HorizontalMetricsTable.GetAdvanceWidth(glyph);
         }
         catch (Exception)
         {
@@ -388,7 +434,8 @@ internal sealed class ReportPdfFont
             var font = TrueTypeFontParser.Parse(new TrueTypeDataBytes(file));
             var tables = font.TableRegister;
 
-            // The tables PdfPig reads to embed the font.
+            // The tables the font is measured with, and those PdfPig reads first to embed it; CanUse embeds the font
+            // to check the rest.
             if (tables.CMapTable is null ||
                 tables.Os2Table is null ||
                 tables.PostScriptTable is null ||

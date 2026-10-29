@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Text;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Pdf.Services;
 using UglyToad.PdfPig;
@@ -75,10 +77,63 @@ public sealed class ReportPdfDocumentBuilderTests
         Assert.DoesNotContain(pdf.GetPage(1).Letters, letter => letter.FontName.StartsWith("Helvetica", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Build_WhenTheFontCannotBeEmbedded_ShouldWriteInHelvetica()
+    {
+        // Arrange
+        Assert.SkipWhen(ReportPdfFonts.Installed.Regular is null, "No TrueType font is installed.");
+
+        // PdfPig names an embedded font by its PostScript name, and cannot embed a font without one.
+        var fonts = new ReportPdfFonts(WithoutPostScriptName(ReportPdfFonts.Installed.Regular), null);
+        var document = new ReportDocument { Title = "Agents" }
+            .Add(ReportSection.ForMetrics("Summary", [new ReportMetric("Calls", "8")]));
+
+        // Act
+        var content = new ReportPdfDocumentBuilder(document, "Page {0} of {1}", fonts).Build();
+
+        // Assert
+        using var pdf = PdfDocument.Open(content);
+
+        Assert.Null(fonts.Regular);
+        Assert.All(pdf.GetPage(1).Letters, letter => Assert.StartsWith("Helvetica", letter.FontName, StringComparison.Ordinal));
+    }
+
     private static IEnumerable<Letter> Letters(List<Word> words, string text)
     {
         var word = words.First(word => word.Text == text);
 
         return word.Letters;
+    }
+
+    private static byte[] WithoutPostScriptName(byte[] file)
+    {
+        var copy = file.ToArray();
+        var tableCount = BinaryPrimitives.ReadUInt16BigEndian(copy.AsSpan(4));
+
+        for (var table = 0; table < tableCount; table++)
+        {
+            var entry = 12 + (16 * table);
+
+            if (Encoding.ASCII.GetString(copy, entry, 4) != "name")
+            {
+                continue;
+            }
+
+            var nameTable = (int)BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(entry + 8));
+            var recordCount = BinaryPrimitives.ReadUInt16BigEndian(copy.AsSpan(nameTable + 2));
+
+            for (var record = 0; record < recordCount; record++)
+            {
+                var nameId = copy.AsSpan(nameTable + 6 + (12 * record) + 6, 2);
+
+                // The PostScript name, name 6, is renamed the trademark notice, name 7.
+                if (BinaryPrimitives.ReadUInt16BigEndian(nameId) == 6)
+                {
+                    BinaryPrimitives.WriteUInt16BigEndian(nameId, 7);
+                }
+            }
+        }
+
+        return copy;
     }
 }

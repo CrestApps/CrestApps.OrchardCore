@@ -13,14 +13,17 @@ internal sealed class ReportPdfFonts
     private static readonly Lazy<ReportPdfFonts> _installed = new(FindInstalled);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReportPdfFonts"/> class.
+    /// Initializes a new instance of the <see cref="ReportPdfFonts"/> class. A file PdfPig cannot write with is not
+    /// used.
     /// </summary>
     /// <param name="regular">The regular TrueType file, or <see langword="null"/> to write in Helvetica.</param>
     /// <param name="bold">The bold TrueType file, or <see langword="null"/> to outline the regular face.</param>
-    internal ReportPdfFonts(byte[] regular, byte[] bold)
+    internal ReportPdfFonts(
+        byte[] regular,
+        byte[] bold)
     {
-        Regular = regular;
-        Bold = regular is null ? null : bold;
+        Regular = ReportPdfFont.CanUse(regular) ? regular : null;
+        Bold = Regular is not null && ReportPdfFont.CanUse(bold) ? bold : null;
     }
 
     /// <summary>
@@ -34,7 +37,7 @@ internal sealed class ReportPdfFonts
     public byte[] Regular { get; }
 
     /// <summary>
-    /// Gets the bold TrueType file, or <see langword="null"/> when bold outlines the regular face.
+    /// Gets the bold TrueType file, or <see langword="null"/> when bold outlines the regular face, or is Helvetica.
     /// </summary>
     public byte[] Bold { get; }
 
@@ -45,8 +48,9 @@ internal sealed class ReportPdfFonts
     /// <returns>The face.</returns>
     public ReportPdfFont CreateRegular(PdfDocumentBuilder builder)
     {
-        return (Regular is null ? null : ReportPdfFont.FromTrueType(builder, Regular, simulatesBold: false))
-            ?? ReportPdfFont.FromStandard(builder, Standard14Font.Helvetica);
+        return Regular is null
+            ? ReportPdfFont.FromStandard(builder, Standard14Font.Helvetica)
+            : ReportPdfFont.FromTrueType(builder, Regular, simulatesBold: false);
     }
 
     /// <summary>
@@ -56,14 +60,14 @@ internal sealed class ReportPdfFonts
     /// <returns>The face.</returns>
     public ReportPdfFont CreateBold(PdfDocumentBuilder builder)
     {
-        if (Regular is null)
+        if (Bold is not null)
         {
-            return ReportPdfFont.FromStandard(builder, Standard14Font.HelveticaBold);
+            return ReportPdfFont.FromTrueType(builder, Bold, simulatesBold: false);
         }
 
-        return (Bold is null ? null : ReportPdfFont.FromTrueType(builder, Bold, simulatesBold: false))
-            ?? ReportPdfFont.FromTrueType(builder, Regular, simulatesBold: true)
-            ?? ReportPdfFont.FromStandard(builder, Standard14Font.HelveticaBold);
+        return Regular is null
+            ? ReportPdfFont.FromStandard(builder, Standard14Font.HelveticaBold)
+            : ReportPdfFont.FromTrueType(builder, Regular, simulatesBold: true);
     }
 
     private static ReportPdfFonts FindInstalled()
@@ -73,31 +77,22 @@ internal sealed class ReportPdfFonts
             return new ReportPdfFonts(null, null);
         }
 
-        var regular = Read(resolver.Resolve(ReportPdfTheme.FontFamily, isBold: false));
+        var regular = resolver.Resolve(ReportPdfTheme.FontFamily, isBold: false);
+        var bold = resolver.Resolve(ReportPdfTheme.FontFamily, isBold: true);
 
-        if (!ReportPdfFont.CanUse(regular.File))
-        {
-            return new ReportPdfFonts(null, null);
-        }
-
-        var bold = Read(resolver.Resolve(ReportPdfTheme.FontFamily, isBold: true));
-
-        return new ReportPdfFonts(regular.File, !bold.SimulateBold && ReportPdfFont.CanUse(bold.File) ? bold.File : null);
+        return new ReportPdfFonts(Read(regular.Path), bold.SimulateBold ? null : Read(bold.Path));
     }
 
-    private static (byte[] File, bool SimulateBold) Read((string Path, bool SimulateBold) face)
+    private static byte[] Read(string path)
     {
         try
         {
-            return (File.ReadAllBytes(face.Path), face.SimulateBold);
+            return File.ReadAllBytes(path);
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return (null, face.SimulateBold);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return (null, face.SimulateBold);
+            // A file that cannot be read is not used, like a font PdfPig cannot write with.
+            return null;
         }
     }
 }

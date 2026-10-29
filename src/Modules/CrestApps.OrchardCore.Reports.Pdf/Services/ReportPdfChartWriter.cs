@@ -15,6 +15,7 @@ internal sealed class ReportPdfChartWriter
     private const double SpaceBefore = 4;
     private const double Swatch = 6;
     private const double MaxCategoryLabelWidth = 90;
+    private const double MinHeight = 180;
 
     // Like the charts on screen, a group of bars takes this part of its category, and a bar this part of its slot.
     private const double GroupShare = 0.8;
@@ -27,6 +28,7 @@ internal sealed class ReportPdfChartWriter
     private readonly int _categoryCount;
     private readonly List<string> _labels = [];
     private readonly List<Series> _series = [];
+    private readonly bool _integers;
     private readonly double _chartHeight;
 
     /// <summary>
@@ -34,7 +36,11 @@ internal sealed class ReportPdfChartWriter
     /// </summary>
     /// <param name="flow">The flow the chart is drawn in.</param>
     /// <param name="chart">The chart of the section.</param>
-    public ReportPdfChartWriter(ReportPdfFlow flow, ReportChart chart)
+    /// <param name="maxHeight">The height a page has under the head of the section, in points, which the chart is kept to.</param>
+    public ReportPdfChartWriter(
+        ReportPdfFlow flow,
+        ReportChart chart,
+        double maxHeight)
     {
         _flow = flow;
         _chart = chart;
@@ -80,12 +86,18 @@ internal sealed class ReportPdfChartWriter
             _series.Add(new Series(SingleLine(datasets[index].Label), values, ReportPdfTheme.GetPaletteColor(index)));
         }
 
-        _chartHeight = _kind switch
+        _integers = _series.SelectMany(series => series.Values).Where(double.IsFinite).All(value => Math.Abs(value - Math.Round(value)) < 1e-9);
+
+        var height = _kind switch
         {
             ChartKind.Pie => _series[0].Values.Any(value => double.IsFinite(value) && value > 0) ? 260 : 0,
-            ChartKind.Bar => Math.Clamp((_categoryCount * ((_series.Count * 12) + 8)) + 60, 180, flow.PageContentHeight * 0.9),
+            ChartKind.Bar => Math.Clamp((_categoryCount * ((_series.Count * 12) + 8)) + 60, MinHeight, flow.PageContentHeight * 0.9),
             _ => 240,
         };
+
+        // The chart fits on a page with the head of its section, unless that would leave it too short to read. A point is
+        // spared for rounding, as the head is measured and laid out in different steps.
+        _chartHeight = Math.Min(height, Math.Max(maxHeight - SpaceBefore - 1, MinHeight));
     }
 
     private enum ChartKind
@@ -111,11 +123,6 @@ internal sealed class ReportPdfChartWriter
     /// </summary>
     public void Write()
     {
-        if (_chartHeight <= 0)
-        {
-            return;
-        }
-
         _flow.EnsureSpace(Height);
         _flow.Advance(SpaceBefore);
 
@@ -157,7 +164,7 @@ internal sealed class ReportPdfChartWriter
             var width = Font.Measure(tickLabels[index], FontSize);
 
             page.DrawLine(plotLeft, y, plotRight, y, ReportPdfTheme.Border, 0.5);
-            page.DrawText(tickLabels[index], Font, FontSize, plotLeft - 4 - width, CenteredTop(y, FontSize), ReportPdfTheme.Muted);
+            page.DrawText(tickLabels[index], Font, FontSize, plotLeft - 4 - width, CenteredTop(y), ReportPdfTheme.Muted);
         }
 
         // Labels that would run into each other are skipped evenly, as the charts on screen skip them.
@@ -188,34 +195,12 @@ internal sealed class ReportPdfChartWriter
         var groupWidth = bandWidth * GroupShare;
         var slotWidth = _stacked ? groupWidth : groupWidth / _series.Count;
 
-        for (var category = 0; category < _categoryCount; category++)
+        foreach (var (category, index, from, to) in GetBars())
         {
-            var positive = 0d;
-            var negative = 0d;
+            var slotLeft = plotLeft + (category * bandWidth) + ((bandWidth - groupWidth) / 2) + (_stacked ? 0 : index * slotWidth);
+            var top = y(Math.Max(from, to));
 
-            for (var index = 0; index < _series.Count; index++)
-            {
-                var value = _series[index].Values[category];
-
-                if (!double.IsFinite(value) || value == 0)
-                {
-                    continue;
-                }
-
-                var slotLeft = plotLeft + (category * bandWidth) + ((bandWidth - groupWidth) / 2) + (_stacked ? 0 : index * slotWidth);
-                var from = _stacked ? (value > 0 ? positive : negative) : 0;
-                var to = from + value;
-
-                if (_stacked)
-                {
-                    positive = value > 0 ? to : positive;
-                    negative = value < 0 ? to : negative;
-                }
-
-                var top = y(Math.Max(from, to));
-
-                _flow.Page.FillRectangle(slotLeft + (slotWidth * (1 - BarShare) / 2), top, slotWidth * BarShare, y(Math.Min(from, to)) - top, _series[index].Color);
-            }
+            _flow.Page.FillRectangle(slotLeft + (slotWidth * (1 - BarShare) / 2), top, slotWidth * BarShare, y(Math.Min(from, to)) - top, _series[index].Color);
         }
     }
 
@@ -234,7 +219,7 @@ internal sealed class ReportPdfChartWriter
                     var polygon = new List<(double X, double Top)> { (run[0].X, y(0)) };
 
                     polygon.AddRange(run);
-                    polygon.Add((run[^1].X, y(0)));
+                    polygon.Add((run[run.Count - 1].X, y(0)));
                     page.FillPolygon(polygon, _series[index].Color.Lighten(0.65));
                 }
             }
@@ -292,7 +277,7 @@ internal sealed class ReportPdfChartWriter
         var tickLabels = scale.Ticks.Select(FormatTick).ToList();
         var labelWidth = Math.Min(_labels.Max(label => Font.Measure(label, FontSize)), box.Width * 0.3);
         var plotLeft = box.Left + labelWidth + 6;
-        var plotRight = box.Right - (Font.Measure(tickLabels[^1], FontSize) / 2) - 2;
+        var plotRight = box.Right - (Font.Measure(tickLabels[tickLabels.Count - 1], FontSize) / 2) - 2;
         var plotTop = box.Top + 4;
         var plotBottom = box.Bottom - legendHeight - LineHeight - 4;
         var bandHeight = (plotBottom - plotTop) / _categoryCount;
@@ -332,6 +317,21 @@ internal sealed class ReportPdfChartWriter
         var groupHeight = bandHeight * GroupShare;
         var slotHeight = _stacked ? groupHeight : groupHeight / _series.Count;
 
+        foreach (var (category, index, from, to) in GetBars())
+        {
+            var slotTop = plotTop + (category * bandHeight) + ((bandHeight - groupHeight) / 2) + (_stacked ? 0 : index * slotHeight);
+            var left = X(Math.Min(from, to));
+
+            page.FillRectangle(left, slotTop + (slotHeight * (1 - BarShare) / 2), X(Math.Max(from, to)) - left, slotHeight * BarShare, _series[index].Color);
+        }
+
+        page.DrawLine(X(0), plotTop, X(0), plotBottom, ReportPdfTheme.Muted, 0.75);
+    }
+
+    // The bars of every category, from and to the values they span: side by side from zero, or stacked, positive values
+    // above zero and negative ones below it. A missing or zero value has no bar.
+    private IEnumerable<(int Category, int Series, double From, double To)> GetBars()
+    {
         for (var category = 0; category < _categoryCount; category++)
         {
             var positive = 0d;
@@ -346,7 +346,6 @@ internal sealed class ReportPdfChartWriter
                     continue;
                 }
 
-                var slotTop = plotTop + (category * bandHeight) + ((bandHeight - groupHeight) / 2) + (_stacked ? 0 : index * slotHeight);
                 var from = _stacked ? (value > 0 ? positive : negative) : 0;
                 var to = from + value;
 
@@ -356,13 +355,9 @@ internal sealed class ReportPdfChartWriter
                     negative = value < 0 ? to : negative;
                 }
 
-                var left = X(Math.Min(from, to));
-
-                page.FillRectangle(left, slotTop + (slotHeight * (1 - BarShare) / 2), X(Math.Max(from, to)) - left, slotHeight * BarShare, _series[index].Color);
+                yield return (category, index, from, to);
             }
         }
-
-        page.DrawLine(X(0), plotTop, X(0), plotBottom, ReportPdfTheme.Muted, 0.75);
     }
 
     private void DrawPie(Box box)
@@ -454,7 +449,8 @@ internal sealed class ReportPdfChartWriter
         // The series are named in rows under the chart, centered, wrapping when they do not fit across it.
         const double Gap = 12;
 
-        var rows = new List<List<(string Text, ReportPdfColor Color, double Width)>> { new() };
+        var current = new List<(string Text, ReportPdfColor Color, double Width)>();
+        var rows = new List<List<(string Text, ReportPdfColor Color, double Width)>> { current };
         var rowWidth = 0d;
 
         foreach (var series in _series)
@@ -462,14 +458,15 @@ internal sealed class ReportPdfChartWriter
             var text = ReportPdfText.Fit(series.Label, Font, FontSize, box.Width - Swatch - 3);
             var width = Swatch + 3 + Font.Measure(text, FontSize);
 
-            if (rows[^1].Count > 0 && rowWidth + Gap + width > box.Width)
+            if (current.Count > 0 && rowWidth + Gap + width > box.Width)
             {
-                rows.Add([]);
+                current = [];
+                rows.Add(current);
                 rowWidth = 0;
             }
 
-            rowWidth += (rows[^1].Count > 0 ? Gap : 0) + width;
-            rows[^1].Add((text, series.Color, width));
+            rowWidth += (current.Count > 0 ? Gap : 0) + width;
+            current.Add((text, series.Color, width));
         }
 
         var rowHeight = LineHeight * 1.3;
@@ -508,7 +505,6 @@ internal sealed class ReportPdfChartWriter
     private Scale GetScale()
     {
         var values = _series.SelectMany(series => series.Values).Where(double.IsFinite).ToList();
-        var integers = values.All(value => Math.Abs(value - Math.Round(value)) < 1e-9);
 
         // Stacked bars are read against the totals of their categories.
         if (_stacked)
@@ -522,21 +518,20 @@ internal sealed class ReportPdfChartWriter
             values = [.. values, .. totals];
         }
 
-        return Scale.Create(values, integers, _chart.PercentageScale);
+        return Scale.Create(values, _integers, _chart.PercentageScale);
     }
 
     private string FormatTick(double value)
     {
-        var integers = _series.SelectMany(series => series.Values).Where(double.IsFinite).All(item => Math.Abs(item - Math.Round(item)) < 1e-9);
-        var format = integers ? "#,##0" : "#,##0.##";
+        var format = _integers ? "#,##0" : "#,##0.##";
 
         return Font.Prepare(value.ToString(_chart.PercentageScale ? format + "'%'" : format, CultureInfo.CurrentCulture));
     }
 
     // Puts a line of text so that the middle of its digits is at a height, such as the height of a gridline.
-    private double CenteredTop(double y, double size)
+    private double CenteredTop(double y)
     {
-        return y - (Font.Ascent * size) + (size * 0.35);
+        return y - (Font.Ascent * FontSize) + (FontSize * 0.35);
     }
 
     private string SingleLine(string value)
@@ -558,7 +553,10 @@ internal sealed class ReportPdfChartWriter
     /// </summary>
     private sealed class Scale
     {
-        private Scale(double min, double max, double step)
+        private Scale(
+            double min,
+            double max,
+            double step)
         {
             Min = min;
             Max = max;

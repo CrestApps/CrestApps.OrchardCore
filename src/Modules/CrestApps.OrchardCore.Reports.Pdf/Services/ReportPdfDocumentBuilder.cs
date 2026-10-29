@@ -5,9 +5,9 @@ using UglyToad.PdfPig.Writer;
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
-/// Lays a report document out as a PDF, written with PdfPig. Sections are stacked at the full width of the page, in
-/// order, the sections of a container follow its title band, as on the page, and the title of a section stays on the
-/// page of its first content.
+/// Lays a report document out as a PDF, written with PdfPig. The sections are stacked down the pages in order. The head
+/// of a section, its title and description under the title band of its container when it is the container's first, is
+/// kept on the page where its content starts, unless the two do not fit on one page.
 /// </summary>
 internal sealed class ReportPdfDocumentBuilder
 {
@@ -24,6 +24,11 @@ internal sealed class ReportPdfDocumentBuilder
     private const double CardHorizontalPadding = 8;
     private const double BarHeight = 6;
     private const double SectionSpacing = 9;
+
+    // The space above the title band of a container, above the title of a section, and below each part of a head.
+    private const double ContainerSpacing = 18;
+    private const double TitleSpacing = 14;
+    private const double HeadSpacing = 6;
 
     // US Letter, in points.
     private const double LetterWidth = 612;
@@ -45,7 +50,10 @@ internal sealed class ReportPdfDocumentBuilder
     /// <param name="report">The report to lay out.</param>
     /// <param name="pageNumberFormat">The page numbers in the footer, with <c>{0}</c> for the page and <c>{1}</c> for the number of pages.</param>
     /// <param name="fonts">The font files to write the report in.</param>
-    public ReportPdfDocumentBuilder(ReportDocument report, string pageNumberFormat, ReportPdfFonts fonts)
+    public ReportPdfDocumentBuilder(
+        ReportDocument report,
+        string pageNumberFormat,
+        ReportPdfFonts fonts)
     {
         _report = report;
         _pageNumberFormat = pageNumberFormat;
@@ -82,7 +90,7 @@ internal sealed class ReportPdfDocumentBuilder
 
         if (!string.IsNullOrWhiteSpace(_report.Title))
         {
-            WriteParagraph(_report.Title, bold, TitleSize, ReportPdfTheme.Text, keepWith: 0);
+            _flow.WriteLines(ReportPdfText.Wrap(bold.Prepare(_report.Title), bold, TitleSize, _flow.Width), bold, TitleSize, ReportPdfTheme.Text);
             _flow.Advance(8);
         }
 
@@ -90,10 +98,8 @@ internal sealed class ReportPdfDocumentBuilder
 
         foreach (var group in _report.GetSectionGroups())
         {
-            if (!string.IsNullOrWhiteSpace(group.Container?.Title))
-            {
-                WriteContainerTitle(group.Container.Title);
-            }
+            // The title band of a container is drawn in the head of its first section.
+            var containerTitle = group.Container?.Title;
 
             foreach (var section in group.Sections)
             {
@@ -101,7 +107,8 @@ internal sealed class ReportPdfDocumentBuilder
                 var showTitle = !string.IsNullOrWhiteSpace(section.Title) &&
                     !(first && string.Equals(section.Title, _report.Title, StringComparison.OrdinalIgnoreCase));
 
-                WriteSection(section, showTitle);
+                WriteSection(section, containerTitle, showTitle);
+                containerTitle = null;
                 first = false;
             }
         }
@@ -123,22 +130,69 @@ internal sealed class ReportPdfDocumentBuilder
         }
     }
 
-    private void WriteSection(ReportSection section, bool showTitle)
+    private void WriteSection(ReportSection section, string containerTitle, bool showTitle)
     {
-        var chart = section.Kind == ReportSectionKind.Chart ? new ReportPdfChartWriter(_flow, section.Chart) : null;
-        var table = section.Kind == ReportSectionKind.Table && _tables.TryGetValue(section, out var layout)
-            ? new ReportPdfTableWriter(_flow, section, layout)
-            : null;
+        var head = CreateHead(section, containerTitle, showTitle);
 
-        // The title and description of a section stay with the start of its content.
-        var lead = section.Kind switch
+        // The start of a table or chart is kept to what a page has under the head, so that the two fit on a page.
+        var space = _flow.PageContentHeight - head.Height;
+
+        switch (section.Kind)
         {
-            ReportSectionKind.Metrics => GetMetricRows(section.Metrics).FirstOrDefault() is { } row ? GetCardsHeight(row) : 0,
-            ReportSectionKind.Table => table?.GetLeadHeight() ?? 0,
-            ReportSectionKind.Bars => GetBars(section.Bars).FirstOrDefault() is { } bar ? GetBarHeight(bar) : 0,
-            ReportSectionKind.Chart => chart.Height,
-            _ => 0,
-        };
+            case ReportSectionKind.Metrics:
+                var rows = CreateMetricRows(section.Metrics);
+
+                WriteHead(head, rows.FirstOrDefault()?.Max(card => card.Height) ?? 0);
+                WriteMetrics(rows);
+                break;
+            case ReportSectionKind.Table:
+                var table = _tables.TryGetValue(section, out var layout)
+                    ? new ReportPdfTableWriter(_flow, section, layout, space)
+                    : null;
+
+                WriteHead(head, table?.LeadHeight ?? 0);
+
+                if (table is not null)
+                {
+                    table.Write();
+                    _flow.AddSpace(SectionSpacing);
+                }
+
+                break;
+            case ReportSectionKind.Bars:
+                var bars = CreateBars(section.Bars);
+
+                WriteHead(head, bars.FirstOrDefault()?.Height ?? 0);
+                WriteBars(bars);
+                break;
+            case ReportSectionKind.Chart:
+                var chart = new ReportPdfChartWriter(_flow, section.Chart, space);
+
+                WriteHead(head, chart.Height);
+
+                if (chart.Height > 0)
+                {
+                    chart.Write();
+                    _flow.AddSpace(SectionSpacing);
+                }
+
+                break;
+            default:
+                WriteHead(head, 0);
+                break;
+        }
+    }
+
+    private Head CreateHead(ReportSection section, string containerTitle, bool showTitle)
+    {
+        var bold = _flow.Bold;
+        var regular = _flow.Regular;
+        var band = string.IsNullOrWhiteSpace(containerTitle)
+            ? []
+            : ReportPdfText.Wrap(bold.Prepare(containerTitle), bold, ContainerTitleSize, _flow.Width - (2 * ContainerTitlePadding));
+        var title = showTitle
+            ? ReportPdfText.Wrap(bold.Prepare(section.Title), bold, SectionTitleSize, _flow.Width)
+            : [];
 
         // Which values picked in other sections filter this one, as those sections show them, then the description.
         var description = new List<string>();
@@ -148,123 +202,135 @@ internal sealed class ReportPdfDocumentBuilder
             var values = string.Join(", ", filter.Selection.GetPickedValues());
             var text = string.IsNullOrWhiteSpace(filter.Title) ? $"Filtered by: {values}" : $"Filtered by {filter.Title}: {values}";
 
-            description.AddRange(ReportPdfText.Wrap(_flow.Regular.Prepare(text), _flow.Regular, DescriptionSize, _flow.Width));
+            description.AddRange(ReportPdfText.Wrap(regular.Prepare(text), regular, DescriptionSize, _flow.Width));
         }
 
         if (!string.IsNullOrWhiteSpace(section.Description))
         {
-            description.AddRange(ReportPdfText.Wrap(_flow.Regular.Prepare(section.Description), _flow.Regular, DescriptionSize, _flow.Width));
+            description.AddRange(ReportPdfText.Wrap(regular.Prepare(section.Description), regular, DescriptionSize, _flow.Width));
         }
 
-        var descriptionHeight = description.Count == 0 ? 0 : ReportPdfFlow.GetHeight(description, _flow.Regular, DescriptionSize) + 6;
+        // The height as WriteHead draws it, without the space above the head, which a page does not start with.
+        var height = 0d;
 
-        if (showTitle)
+        if (band.Count > 0)
         {
-            _flow.AddSpace(14);
-            WriteParagraph(section.Title, _flow.Bold, SectionTitleSize, ReportPdfTheme.Text, keepWith: 6 + descriptionHeight + lead);
-            _flow.Advance(6);
+            height += GetBandHeight(band) + HeadSpacing;
+        }
+
+        if (band.Count > 0 && title.Count > 0)
+        {
+            height += TitleSpacing;
+        }
+
+        if (title.Count > 0)
+        {
+            height += ReportPdfFlow.GetHeight(title, bold, SectionTitleSize) + HeadSpacing;
         }
 
         if (description.Count > 0)
         {
-            if (!showTitle)
-            {
-                _flow.EnsureSpace(descriptionHeight + lead);
-            }
-
-            _flow.WriteLines(description, _flow.Regular, DescriptionSize, ReportPdfTheme.Muted);
-            _flow.Advance(6);
+            height += ReportPdfFlow.GetHeight(description, regular, DescriptionSize) + HeadSpacing;
         }
 
-        switch (section.Kind)
-        {
-            case ReportSectionKind.Metrics:
-                WriteMetrics(section.Metrics);
-                break;
-            case ReportSectionKind.Table:
-                if (table is not null)
-                {
-                    table.Write();
-                    _flow.AddSpace(SectionSpacing);
-                }
-
-                break;
-            case ReportSectionKind.Bars:
-                WriteBars(section.Bars);
-                break;
-            case ReportSectionKind.Chart:
-                if (chart.Height > 0)
-                {
-                    chart.Write();
-                    _flow.AddSpace(SectionSpacing);
-                }
-
-                break;
-        }
+        return new Head(band, title, description, height);
     }
 
-    // A container's title band, colored as on the page. It stays with the title of the container's first section.
-    private void WriteContainerTitle(string title)
+    // The head is drawn without a break once there is room for it and the start of the content, so that none of it is
+    // left at the bottom of a page. Only a head taller than a page breaks, between its lines.
+    private void WriteHead(Head head, double lead)
     {
         var bold = _flow.Bold;
-        var lines = ReportPdfText.Wrap(bold.Prepare(title), bold, ContainerTitleSize, _flow.Width - (2 * ContainerTitlePadding));
-        var height = ReportPdfFlow.GetHeight(lines, bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
-        var lineHeight = bold.LineHeight * ContainerTitleSize;
 
-        _flow.AddSpace(18);
-        _flow.EnsureSpace(height + 6 + 14 + (bold.LineHeight * SectionTitleSize));
-        _flow.Page.FillRectangle(_flow.Left, _flow.Top, _flow.Width, height, ReportPdfTheme.Primary);
-
-        for (var index = 0; index < lines.Count; index++)
+        if (head.Band.Count > 0)
         {
-            _flow.Page.DrawText(lines[index], bold, ContainerTitleSize, _flow.Left + ContainerTitlePadding, _flow.Top + ContainerTitlePadding + (index * lineHeight), ReportPdfTheme.White);
+            _flow.AddSpace(ContainerSpacing);
+        }
+        else if (head.Title.Count > 0)
+        {
+            _flow.AddSpace(TitleSpacing);
         }
 
-        _flow.Advance(height + 6);
+        _flow.EnsureSpace(head.Height + lead);
+
+        // The title band of the container, colored as on the page.
+        if (head.Band.Count > 0)
+        {
+            var height = GetBandHeight(head.Band);
+            var lineHeight = bold.LineHeight * ContainerTitleSize;
+
+            _flow.Page.FillRectangle(_flow.Left, _flow.Top, _flow.Width, height, ReportPdfTheme.Primary);
+
+            for (var index = 0; index < head.Band.Count; index++)
+            {
+                _flow.Page.DrawText(head.Band[index], bold, ContainerTitleSize, _flow.Left + ContainerTitlePadding, _flow.Top + ContainerTitlePadding + (index * lineHeight), ReportPdfTheme.White);
+            }
+
+            _flow.Advance(height + HeadSpacing);
+        }
+
+        if (head.Band.Count > 0 && head.Title.Count > 0)
+        {
+            _flow.Advance(TitleSpacing);
+        }
+
+        if (head.Title.Count > 0)
+        {
+            _flow.WriteLines(head.Title, bold, SectionTitleSize, ReportPdfTheme.Text);
+            _flow.Advance(HeadSpacing);
+        }
+
+        if (head.Description.Count > 0)
+        {
+            _flow.WriteLines(head.Description, _flow.Regular, DescriptionSize, ReportPdfTheme.Muted);
+            _flow.Advance(HeadSpacing);
+        }
     }
 
-    private void WriteParagraph(string value, ReportPdfFont font, double size, ReportPdfColor color, double keepWith)
+    private double GetBandHeight(List<string> lines)
     {
-        var lines = ReportPdfText.Wrap(font.Prepare(value), font, size, _flow.Width);
-
-        _flow.EnsureSpace(ReportPdfFlow.GetHeight(lines, font, size) + keepWith);
-        _flow.WriteLines(lines, font, size, color);
+        return ReportPdfFlow.GetHeight(lines, _flow.Bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
     }
 
-    private static List<List<ReportMetric>> GetMetricRows(IList<ReportMetric> metrics)
+    private List<List<Card>> CreateMetricRows(IList<ReportMetric> metrics)
     {
-        return (metrics ?? [])
+        var rows = (metrics ?? [])
             .Where(metric => metric is not null)
             .Chunk(MetricsPerRow)
-            .Select(row => row.ToList())
+            .ToList();
+
+        if (rows.Count == 0)
+        {
+            return [];
+        }
+
+        // Every row has the columns of the first, so the cards line up, like the cards on screen.
+        var columns = rows[0].Length;
+        var cardWidth = (_flow.Width - ((columns - 1) * CardGap)) / columns;
+
+        return rows
+            .Select(row => row.Select(metric => CreateCard(metric, cardWidth)).ToList())
             .ToList();
     }
 
-    private void WriteMetrics(IList<ReportMetric> metrics)
+    private void WriteMetrics(List<List<Card>> rows)
     {
-        var rows = GetMetricRows(metrics);
-
         if (rows.Count == 0)
         {
             return;
         }
 
-        // Every row has the columns of the first, so the cards line up, like the cards on screen.
-        var columns = rows[0].Count;
-        var cardWidth = (_flow.Width - ((columns - 1) * CardGap)) / columns;
-
-        foreach (var row in rows)
+        foreach (var cards in rows)
         {
-            var cards = row.Select(metric => CreateCard(metric, cardWidth)).ToList();
             var height = cards.Max(card => card.Height);
 
             _flow.EnsureSpace(height);
 
             for (var index = 0; index < cards.Count; index++)
             {
-                var left = _flow.Left + (index * (cardWidth + CardGap));
+                var left = _flow.Left + (index * (cards[index].Width + CardGap));
 
-                _flow.Page.FillRectangle(left, _flow.Top, cardWidth, height, ReportPdfTheme.CardFill);
+                _flow.Page.FillRectangle(left, _flow.Top, cards[index].Width, height, ReportPdfTheme.CardFill);
                 DrawCard(cards[index], left + CardHorizontalPadding, _flow.Top + CardVerticalPadding);
             }
 
@@ -272,14 +338,6 @@ internal sealed class ReportPdfDocumentBuilder
         }
 
         _flow.AddSpace(SectionSpacing - CardGap);
-    }
-
-    private double GetCardsHeight(List<ReportMetric> row)
-    {
-        var columns = Math.Min(row.Count, MetricsPerRow);
-        var cardWidth = (_flow.Width - ((columns - 1) * CardGap)) / columns;
-
-        return row.Max(metric => CreateCard(metric, cardWidth).Height);
     }
 
     private Card CreateCard(ReportMetric metric, double cardWidth)
@@ -309,7 +367,7 @@ internal sealed class ReportPdfDocumentBuilder
 
         var height = (2 * CardVerticalPadding) + parts.Sum(part => part.SpaceBefore + ReportPdfFlow.GetHeight(part.Lines, part.Font, part.Size));
 
-        return new Card(parts, height);
+        return new Card(parts, cardWidth, height);
     }
 
     private void DrawCard(Card card, double left, double top)
@@ -326,67 +384,65 @@ internal sealed class ReportPdfDocumentBuilder
         }
     }
 
-    private static List<ReportBar> GetBars(IList<ReportBar> bars)
+    private List<Bar> CreateBars(IList<ReportBar> bars)
     {
-        return (bars ?? []).Where(bar => bar is not null).ToList();
+        return (bars ?? [])
+            .Where(bar => bar is not null)
+            .Select(CreateBar)
+            .ToList();
     }
 
-    private void WriteBars(IList<ReportBar> bars)
+    private Bar CreateBar(ReportBar bar)
     {
-        var items = GetBars(bars);
+        // The value ends the first line of the label, which wraps before it.
+        var value = _flow.Bold.Prepare(bar.Value).Replace('\n', ' ');
+        var width = Math.Max(_flow.Width / 4, _flow.Width - _flow.Bold.Measure(value, DescriptionSize) - 8);
+        var lines = ReportPdfText.Wrap(_flow.Regular.Prepare(bar.Label), _flow.Regular, DescriptionSize, width);
+        var ratio = double.IsFinite(bar.Ratio) ? Math.Clamp(bar.Ratio, 0, 1) : 0;
+        var height = (Math.Max(1, lines.Count) * _flow.Regular.LineHeight * DescriptionSize) + 2 + BarHeight;
 
-        if (items.Count == 0)
+        return new Bar(value, lines, ratio, height);
+    }
+
+    private void WriteBars(List<Bar> bars)
+    {
+        if (bars.Count == 0)
         {
             return;
         }
 
-        foreach (var bar in items)
+        foreach (var bar in bars)
         {
             // The label and value above, and below them the filled and empty parts of the bar, whose widths follow the
             // ratio, like the progress bars on screen.
-            var (value, lines) = PrepareBar(bar);
-            var textHeight = Math.Max(1, lines.Count) * _flow.Regular.LineHeight * DescriptionSize;
-            var ratio = double.IsFinite(bar.Ratio) ? Math.Clamp(bar.Ratio, 0, 1) : 0;
-            var filled = ratio >= 0.995 ? 1 : ratio <= 0.005 ? 0 : ratio;
-
-            _flow.EnsureSpace(GetBarHeight(bar));
+            _flow.EnsureSpace(bar.Height);
 
             var top = _flow.Top;
 
-            for (var index = 0; index < lines.Count; index++)
+            for (var index = 0; index < bar.Lines.Count; index++)
             {
-                _flow.Page.DrawText(lines[index], _flow.Regular, DescriptionSize, _flow.Left, top + (index * _flow.Regular.LineHeight * DescriptionSize), ReportPdfTheme.Text);
+                _flow.Page.DrawText(bar.Lines[index], _flow.Regular, DescriptionSize, _flow.Left, top + (index * _flow.Regular.LineHeight * DescriptionSize), ReportPdfTheme.Text);
             }
 
-            _flow.Page.DrawText(value, _flow.Bold, DescriptionSize, _flow.Left + _flow.Width - _flow.Bold.Measure(value, DescriptionSize), top, ReportPdfTheme.Text);
+            _flow.Page.DrawText(bar.Value, _flow.Bold, DescriptionSize, _flow.Left + _flow.Width - _flow.Bold.Measure(bar.Value, DescriptionSize), top, ReportPdfTheme.Text);
 
-            var trackTop = top + textHeight + 2;
+            var trackTop = top + bar.Height - BarHeight;
 
             _flow.Page.FillRectangle(_flow.Left, trackTop, _flow.Width, BarHeight, ReportPdfTheme.BarTrack);
-            _flow.Page.FillRectangle(_flow.Left, trackTop, _flow.Width * filled, BarHeight, ReportPdfTheme.Palette[0]);
-            _flow.Advance(GetBarHeight(bar) + 6);
+            _flow.Page.FillRectangle(_flow.Left, trackTop, _flow.Width * bar.Ratio, BarHeight, ReportPdfTheme.GetPaletteColor(0));
+            _flow.Advance(bar.Height + 6);
         }
 
         _flow.AddSpace(SectionSpacing);
     }
 
-    private double GetBarHeight(ReportBar bar)
-    {
-        var (_, lines) = PrepareBar(bar);
-
-        return (Math.Max(1, lines.Count) * _flow.Regular.LineHeight * DescriptionSize) + 2 + BarHeight;
-    }
-
-    private (string Value, List<string> Lines) PrepareBar(ReportBar bar)
-    {
-        // The value ends the first line of the label, which wraps before it.
-        var value = _flow.Bold.Prepare(bar.Value).Replace('\n', ' ');
-        var width = Math.Max(_flow.Width / 4, _flow.Width - _flow.Bold.Measure(value, DescriptionSize) - 8);
-
-        return (value, ReportPdfText.Wrap(_flow.Regular.Prepare(bar.Label), _flow.Regular, DescriptionSize, width));
-    }
+    // The title band of the container when the section is the container's first, the title of the section, and what
+    // filters it and its description, wrapped, with their height on the page.
+    private sealed record Head(List<string> Band, List<string> Title, List<string> Description, double Height);
 
     private sealed record CardPart(List<string> Lines, ReportPdfFont Font, double Size, ReportPdfColor Color, double SpaceBefore);
 
-    private sealed record Card(List<CardPart> Parts, double Height);
+    private sealed record Card(List<CardPart> Parts, double Width, double Height);
+
+    private sealed record Bar(string Value, List<string> Lines, double Ratio, double Height);
 }
