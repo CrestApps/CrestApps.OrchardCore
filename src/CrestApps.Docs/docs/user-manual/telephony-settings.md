@@ -19,13 +19,19 @@ Calls and texts go through a provider account. This page covers the settings an 
 
 <AskYourAdmin />
 
+<YouTube video="telephony" title="Video overview of Telephony: providers, the default provider, extensions and the soft phone" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the Telephony settings tabs and the SMS provider settings" start={38} end={72} />
 
 Each provider you turn on adds its own tab to **Settings > Communication > Telephony**. The **Soft Phone** tab holds the settings that apply whichever provider you use.
 
 ## Connect Telnyx for calls
 
+<<<<<<< HEAD
 <YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings: connect, noise suppression, answering machine detection and speech" />
+=======
+<YouTube video="telephony" title="Video of connecting Telnyx" start={219} end={289} />
+>>>>>>> f6be74ecd (Embed the Telephony video in the telephony pages and fix the extension field order)
 
 Before you start, create an API key in the Telnyx portal under **Account > Keys & Credentials > API Keys** (a V2 key). Sign in to Telnyx as an account **Owner** or **Admin** when you create it: a key made by a restricted member can read the account but cannot create what **Connect Telnyx** needs, and connecting fails with *Not authorized*.
 
@@ -62,7 +68,11 @@ The **Advanced — browser WebRTC (optional)** section holds settings you rarely
 
 ## Connect Asterisk for calls
 
+<<<<<<< HEAD
 <YouTube video="telephony-asterisk-setup" title="Video overview of setting up Asterisk: call control, voicemail, browser audio and capabilities" />
+=======
+<YouTube video="telephony" title="Video of connecting Asterisk" start={153} end={219} />
+>>>>>>> f6be74ecd (Embed the Telephony video in the telephony pages and fix the extension field order)
 
 Use Asterisk when your company runs its own Asterisk phone system. The values come from whoever looks after that system.
 
@@ -90,6 +100,8 @@ AI voice calls, such as the AI voice agent and AI outbound calls, work with Teln
 The [Asterisk reference](../telephony/asterisk.md#tenant-configured-asterisk-settings) explains each field. When no default provider is chosen yet, Asterisk becomes the default. Your IT team can also set up a shared Asterisk connection for every site; it then appears as **Default Asterisk** in the **Default telephony provider** list, with no tab of its own.
 
 ## Choose the default provider and soft phone options
+
+<YouTube video="telephony" title="Video of choosing the default provider and the soft phone options" start={289} end={352} />
 
 On the **Soft Phone** tab of the same page, pick the **Default telephony provider** and set the soft phone options described in [Soft phone](soft-phone.md#administrator-options).
 
