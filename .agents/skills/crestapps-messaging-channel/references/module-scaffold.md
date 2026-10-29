@@ -53,10 +53,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<IProviderWebhookInboxHandler, EmailInboundInboxHandler>();
         services.AddScoped<IMessagingInboundHandler, EmailAutoResponderInboundHandler>(); // optional
 
-        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Email, source =>
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.EmailAddress, OmnichannelConstants.Channels.Email, capability =>
         {
-            source.DisplayName = S["Email"];
-            source.Description = S["A mailbox that sends and receives email in the messaging workspace."];
+            capability.DisplayName = S["Email"];
+            capability.CardName = S["Email"]; // the title of the address editor card the channel adds
         });
 
         // Only when the channel has several providers to pick per endpoint:

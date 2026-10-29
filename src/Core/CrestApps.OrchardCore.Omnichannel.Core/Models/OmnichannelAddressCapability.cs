@@ -28,4 +28,10 @@ public sealed class OmnichannelAddressCapability
     /// Gets or sets the localized hint shown under the capability's checkbox.
     /// </summary>
     public LocalizedString Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized title of the address editor card that groups the capability's settings, such as
+    /// <c>Text messages</c>. Features that add settings for the capability place them on this card.
+    /// </summary>
+    public LocalizedString CardName { get; set; }
 }

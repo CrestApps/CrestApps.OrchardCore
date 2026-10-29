@@ -92,7 +92,18 @@ internal static class OmnichannelHelper
 
         if (channel == OmnichannelConstants.Channels.Email)
         {
-            return contactMethods.GetPrimaryEmailAddress();
+            foreach (var emailAddress in contactMethods.EmailAddresses)
+            {
+                // The destination is the canonical form of the address, which is what a reply from the contact is
+                // matched to its activity by. An entry that is not an address at all is passed over.
+                if (OmnichannelEmailAddress.IsValid(emailAddress?.Email) &&
+                    isExcluded?.Invoke(emailAddress.Email) != true)
+                {
+                    return OmnichannelEmailAddress.Normalize(emailAddress.Email);
+                }
+            }
+
+            return null;
         }
 
         if (channel == OmnichannelConstants.Channels.Phone)

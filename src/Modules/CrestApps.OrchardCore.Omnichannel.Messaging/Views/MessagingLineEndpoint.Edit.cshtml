@@ -2,7 +2,7 @@
 
 <div data-address-capability="@Model.ServedCapabilities">
     <div class="ocat-wrapper" asp-validation-class-for="TextingUserIds">
-        <label asp-for="TextingUserIds" class="ocat-label">@T["Agents who text from this number"]</label>
+        <label asp-for="TextingUserIds" class="ocat-label">@T["Agents who send from this address"]</label>
         <div class="ocat-end">
             @await Component.InvokeAsync("UserPicker", new
             {
@@ -15,7 +15,7 @@
                 smallButton = false,
             })
             <span asp-validation-for="TextingUserIds" class="text-danger"></span>
-            <span class="hint">@T["New conversations these agents start in the messaging workspace are sent from this number, and the Find Agent Numbers workflow task returns it for them. Each agent texts from one number; agents on no number's list use the default SMS number from Settings > Contact Center."]</span>
+            <span class="hint">@T["New {0} conversations these agents start in the messaging workspace are sent from this address, and the Find Agent Numbers workflow task returns it for them. Each agent sends from one address per channel; for text messages, agents on no number's list use the default SMS number from Settings > Contact Center.", Model.ChannelNames]</span>
         </div>
     </div>
 </div>

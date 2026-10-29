@@ -2,7 +2,7 @@
 sidebar_label: Messaging Workspace
 sidebar_position: 4
 title: Omnichannel Messaging Workspace
-description: A human-operated, channel-agnostic messaging inbox for Orchard Core. SMS is the first channel; email, WhatsApp, Messenger and others plug in as further channel features.
+description: A human-operated, channel-agnostic messaging inbox for Orchard Core. SMS and email ship as channels; WhatsApp, Messenger and others plug in as further channel features.
 user_manual:
   - user-manual/messaging
   - user-manual/entry-points-and-ivr
@@ -13,7 +13,7 @@ user_manual:
 | --- | --- |
 | **Feature Name** | Omnichannel Messaging Workspace |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.Messaging` |
-| **Channel features** | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` (SMS Messaging Channel) |
+| **Channel features** | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` (SMS Messaging Channel), `CrestApps.OrchardCore.Omnichannel.Messaging.Email` (Email Messaging Channel) |
 | **Optional add-on** | `CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution` |
 | **Category** | Contact Center |
 | **Admin menu** | **Messaging** |
@@ -25,7 +25,8 @@ The workspace itself carries **no channel**. Each channel is a separate feature 
 | Channel | Feature | Status |
 | --- | --- | --- |
 | SMS | **SMS Messaging Channel** (`CrestApps.OrchardCore.Omnichannel.Messaging.Sms`) | Available |
-| Email, WhatsApp, Facebook Messenger, Telegram, … | Future channel features | Build one with the channel contract below |
+| Email | **Email Messaging Channel** (`CrestApps.OrchardCore.Omnichannel.Messaging.Email`), see [Email](email.md) | Available |
+| WhatsApp, Facebook Messenger, Telegram, … | Future channel features | Build one with the channel contract below |
 
 It is the human counterpart to [SMS Automation](sms.md), which lets an **AI agent** carry an SMS conversation on its own. Both can run on the same numbers. An automated activity handles a conversation until it hands off, and from then on the workspace owns the thread.
 
@@ -207,7 +208,7 @@ The channel answers only what differs between channels:
 | Member | Purpose |
 | --- | --- |
 | `Name`, `DisplayName`, `IconCssClass`, `Order` | Identity. `Name` is stored on every conversation, message and endpoint of the channel, so it must never change. |
-| `Capabilities` | Subject line, media, delivery receipts, broadcasts, quiet hours, maximum body length. The composer and services adapt to them. |
+| `Capabilities` | Subject line, media, delivery receipts, broadcasts, quiet hours, maximum body length. The composer and services adapt to them: a channel with `SupportsSubject` gets a subject line in the composer and on broadcasts, and the subject is kept on each message (`message.GetSubject()`). |
 | `NormalizeAddress`, `FormatAddress`, `IsValidAddress` | How an address is stored, shown and validated. The normalized address is the conversation key. |
 | `SendAsync` | Hand one outbound message to the provider serving the sending endpoint. |
 | `IsOptedOut`, `GetContactAddresses`, `FindContactIdsAsync`, `SearchContactIdsByAddressAsync` | How a CRM contact is reached, recognised and opted out on the channel. |
@@ -215,6 +216,8 @@ The channel answers only what differs between channels:
 Inbound traffic reaches the workspace when the channel's receiver (a webhook, an event handler) calls `IMessagingInboundProcessor.ProcessAsync` with a normalized `OmnichannelMessage` whose `Channel` is the channel's name. The workspace then finds or creates the conversation, routes it, starts the first-response clock, stores the message and notifies the inbox. Rules that belong to one channel only (as the carrier keywords belong to SMS) go in an `IMessagingInboundHandler`. Delivery receipts go to `IMessagingConversationService.ApplyDeliveryReceiptAsync`, naming the channel.
 
 A channel that carries files lists them in `Capabilities.Attachments`: the `Formats` it accepts (from `MessagingFileFormats`, such as `Images` or `Documents`, or its own `MessagingFileFormat`), `MaxCount`, `MaxTotalBytes`, and `ShrinkImagesToFit` when its carriers cap the message size. The composer then offers exactly those formats, the server refuses anything else, and `SendAsync` receives a signed public link to each file in `MessagingOutboundMessage.MediaUrls`. A format with a signature is matched by the file's bytes; one without (plain text) by its extension, and it is only ever served as a download. Only pictures are shown inline. On the way in, the receiver puts the provider's media links on `OmnichannelMessage.MediaReferences`, and the workspace copies the ones the channel carries into its own store. A provider that serves media only to its own account registers an `IMessagingMediaRequestAuthenticator` to sign those downloads. For SMS, a provider sends pictures by implementing `ISmsMediaDispatchProvider`, or, when its `ISmsProvider` cannot be changed, through an `ISmsMediaSender` registered under the provider's name.
+
+A channel that embeds files in the message itself, as email does, sets `Attachments.DeliveredAsLinks` to `false`: `SendAsync` then gets the files in `MessagingOutboundMessage.Attachments` to read from the attachment store, and no public link is created. Each outbound message also says which conversation it belongs to (`ConversationId`), which inbound message it answers when known (`ReplyTo`), and why it is sent (`Purpose`: a reply, an auto-reply, a broadcast, an automated turn or outreach), so a channel can thread replies and mark bulk or automatic mail. Channel-specific data on a message (email's headers, for example) goes in the message's entity properties with `Put<T>()`, not in new `OmnichannelMessage` properties.
 
 Everything else — routing, ownership, SLA, templates, broadcasts, retries, AI hand-off, permissions and the UI — is shared, so a new channel gets all of it without writing any. That includes its endpoints: the workspace stores every messaging channel's endpoint address in the channel's normalized form (so inbound traffic matches it), validates it with the channel's `IsValidAddress`, and adds the inbound-routing editor to it.
 

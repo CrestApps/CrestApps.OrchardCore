@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
@@ -164,8 +165,9 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateReportIndexAsync();
         await CreateAttentionIndexesAsync();
         await CreateActivityIndexAsync();
+        await CreateOutboxIndexAsync();
 
-        return 5;
+        return 6;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -267,6 +269,39 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateActivityIndexAsync();
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
+    /// outbound message.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await CreateOutboxIndexAsync();
+
+        // A message queued before the index existed is in it only once it is saved again. Retries run out within about
+        // an hour and a half, so re-saving the queued messages of the last two days covers every one still waiting. It
+        // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
+        ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
+
+        return 6;
+    }
+
+    private async Task CreateOutboxIndexAsync()
+    {
+        // Outbound messages are stored with the rest of the omnichannel documents, not in the workspace's collection.
+        await SchemaBuilder.CreateMapIndexTableAsync<MessagingOutboxIndex>(table => table
+            .Column<string>("Channel", column => column.WithLength(50))
+            .Column<string>("ServiceAddress", column => column.WithLength(255))
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            collection: OmnichannelConstants.CollectionName);
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingOutboxIndex>(
+            SchemaBuilder,
+            "IDX_MessagingOutboxIndex_Due",
+            OmnichannelConstants.CollectionName,
+            "NextAttemptUtc", "Channel", "DocumentId");
     }
 
     private Task<bool> CreateActivityIndexAsync()

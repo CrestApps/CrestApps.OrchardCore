@@ -1,0 +1,450 @@
+@model EmailAddressSettingsViewModel
+
+@{
+    var smtpSelected = string.Equals(Model.TransportName, EmailChannelConstants.Transports.Smtp, StringComparison.OrdinalIgnoreCase);
+    var orchardSelected = string.Equals(Model.TransportName, EmailChannelConstants.Transports.OrchardCore, StringComparison.OrdinalIgnoreCase);
+    var testUrl = Url.RouteUrl("EmailAddressTestConnection");
+}
+
+<div data-address-capability="Email" data-email-address-settings data-test-url="@testUrl" data-address-id="@Model.AddressId">
+    <h6 class="mt-1 mb-3">@T["Sending"]</h6>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SenderName" class="ocat-label">@T["Sender name"]</label>
+        <div class="ocat-end">
+            <input asp-for="SenderName" class="form-control" maxlength="100" />
+            <span class="hint">@T["The name customers see the email from, such as \"Contoso Support\". Leave empty to use the address's name."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="TransportName" class="ocat-label">@T["Send through"]</label>
+        <div class="ocat-end">
+            <select asp-for="TransportName" class="form-select" asp-items="Model.Transports" data-email-transport></select>
+            <span class="hint">@T["Orchard Core's email service uses the email settings of the site. The address's own SMTP server sends from the mailbox itself and keeps every reply threaded in the customer's mail client."]</span>
+        </div>
+    </div>
+
+    <div data-email-transport-section="@EmailChannelConstants.Transports.OrchardCore" class="@(orchardSelected ? string.Empty : "d-none")">
+        <div class="ocat-wrapper">
+            <label asp-for="ProviderName" class="ocat-label">@T["Email provider"]</label>
+            <div class="ocat-end">
+                <select asp-for="ProviderName" class="form-select" asp-items="Model.Providers">
+                    <option value="">@T["Use the site's default email provider"]</option>
+                </select>
+                <span class="hint">@T["The Orchard Core email provider this address sends through. The provider must be allowed to send from this address."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div data-email-transport-section="@EmailChannelConstants.Transports.Smtp" class="@(smtpSelected ? string.Empty : "d-none")">
+        <div class="ocat-wrapper" asp-validation-class-for="SmtpHost">
+            <label asp-for="SmtpHost" class="ocat-label">@T["SMTP server"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="SmtpHost" class="form-control" placeholder="smtp.office365.com" data-email-smtp-host />
+                    <input asp-for="SmtpPort" type="number" min="0" max="65535" class="form-control" style="max-width: 7rem;" title="@T["Port; 0 for the default"]" data-email-smtp-port />
+                    <select asp-for="SmtpSecurity" class="form-select" style="max-width: 12rem;" data-email-smtp-security>
+                        <option value="@EmailConnectionSecurity.Auto">@T["Automatic"]</option>
+                        <option value="@EmailConnectionSecurity.StartTls">@T["STARTTLS"]</option>
+                        <option value="@EmailConnectionSecurity.SslOnConnect">@T["SSL/TLS"]</option>
+                        <option value="@EmailConnectionSecurity.None">@T["None"]</option>
+                    </select>
+                </div>
+                <span asp-validation-for="SmtpHost" class="text-danger"></span>
+                <span class="hint">@T["Port 0 uses 587 with STARTTLS, or 465 with SSL/TLS."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SmtpUserName" class="ocat-label">@T["SMTP user name"]</label>
+            <div class="ocat-end">
+                <input asp-for="SmtpUserName" class="form-control" autocomplete="off" data-email-smtp-user />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SmtpPassword" class="ocat-label">@T["SMTP password"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="SmtpPassword" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasSmtpPassword ? T["Stored; leave empty to keep it"] : string.Empty)" data-email-smtp-password data-1p-ignore data-lpignore="true" data-bwignore="true" />
+                    <button type="button" class="btn btn-outline-secondary" data-email-test="smtp">@T["Test connection"]</button>
+                </div>
+                <span class="hint">@T["For Microsoft 365 or Google, use an app password, or a mailbox your administrator allows SMTP sign-in for."]</span>
+                <div class="small mt-1" data-email-test-result="smtp"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DefaultSubject" class="ocat-label">@T["Default subject"]</label>
+        <div class="ocat-end">
+            <input asp-for="DefaultSubject" class="form-control" maxlength="255" />
+            <span class="hint">@T["The subject of a new email that is not a reply and was given none. A reply always uses \"Re:\" and the customer's subject."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Signature" class="ocat-label">@T["Signature"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Signature" class="form-control" rows="3"></textarea>
+            <span class="hint">@T["Added below every email this address sends."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="IncludeUnsubscribeLink" />
+                <label class="form-check-label" asp-for="IncludeUnsubscribeLink">@T["Add an unsubscribe link to bulk and campaign email"]</label>
+                <span class="hint dashed">@T["Broadcasts, campaign opening emails and follow-ups carry an unsubscribe link and the one-click unsubscribe header the large mailbox providers require of bulk senders. Replies in a conversation never do."]</span>
+            </div>
+        </div>
+    </div>
+
+    <h6 class="mt-4 mb-1">@T["Sending limits"]</h6>
+    <p class="text-muted small mb-3">@T["Broadcasts, campaign opening emails and follow-ups are held to these limits and wait their turn instead of failing; replies to customers are counted but never held back. Mailbox hosts limit one mailbox too: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. Raise the limits gradually, and only on a dedicated sending service. 0 means no limit."]</p>
+
+    @if (Model.Health is { } health)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="card mb-0">
+                    <div class="card-body py-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <strong>@T["Sending health, last 7 days"]</strong>
+                            @if (health.IsPaused)
+                            {
+                                <span class="badge text-bg-danger">@T["Bulk sending paused"]</span>
+                            }
+                            else if (health.Level == EmailHealthLevel.Poor)
+                            {
+                                <span class="badge text-bg-danger">@T["Poor"]</span>
+                            }
+                            else if (health.Level == EmailHealthLevel.Warning)
+                            {
+                                <span class="badge text-bg-warning">@T["Needs attention"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-success">@T["Healthy"]</span>
+                            }
+                            @if (health.IsWarmingUp)
+                            {
+                                <span class="badge text-bg-info">@T["Warming up: {0} today", health.DailyLimit]</span>
+                            }
+                        </div>
+                        <div class="small">
+                            @T["{0} sent · {1} bounced ({2:P1}) · {3} soft bounces · {4} spam complaints ({5:P2}) · {6} blocks", health.Sent, health.HardBounces, health.BounceRate, health.SoftBounces, health.Complaints, health.ComplaintRate, health.Blocks]
+                        </div>
+                        <div class="small text-muted">
+                            @T["Last hour: {0} of {1}. Last 24 hours: {2} of {3}.", health.SentLastHour, Model.MaxPerHour > 0 ? Model.MaxPerHour.ToString() : T["no limit"].Value, health.SentLastDay, health.DailyLimit > 0 ? health.DailyLimit.ToString() : T["no limit"].Value]
+                        </div>
+                        @if (health.IsPaused && health.State is { } state)
+                        {
+                            <div class="alert alert-danger small mt-2 mb-2">
+                                @(state.PausedUntilUtc is { } until
+                                    ? T["Bulk sending is paused until {0}: {1}", until.ToLocalTime().ToString("g"), state.PauseReason]
+                                    : T["Bulk sending is paused until someone resumes it: {0}", state.PauseReason])
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" asp-for="ResumeBulkSending" />
+                                <label class="form-check-label" asp-for="ResumeBulkSending">@T["Resume bulk sending when I save"]</label>
+                                <span class="hint dashed">@T["Resume once the cause is dealt with: remove the addresses that bounce, or wait out the provider's block. Replies to customers were never paused."]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPerHour" class="ocat-label">@T["Emails per hour"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPerHour" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPerDay" class="ocat-label">@T["Emails per day"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPerDay" type="number" min="0" class="form-control" />
+            <span asp-validation-for="MaxPerHour" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPerHourPerDomain" class="ocat-label">@T["Emails per hour to one domain"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPerHourPerDomain" type="number" min="0" class="form-control" />
+            <span class="hint">@T["The most bulk emails sent to one receiving domain (gmail.com, outlook.com) in an hour, so no mailbox provider sees a burst. Mail to a domain that keeps deferring also waits by itself."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MinimumSecondsBetweenSends" class="ocat-label">@T["Seconds between emails"]</label>
+        <div class="ocat-end">
+            <input asp-for="MinimumSecondsBetweenSends" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="WarmUp" data-email-warm-up />
+                <label class="form-check-label" asp-for="WarmUp">@T["Warm up this address"]</label>
+                <span class="hint dashed">@T["For a new address or sending domain: the daily limit starts small and doubles every day until it reaches the one above, spread over the day. Send your most engaged contacts first."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper @(Model.WarmUp ? string.Empty : "d-none")" data-email-warm-up-section>
+        <label asp-for="WarmUpFirstDayLimit" class="ocat-label">@T["First day's emails"]</label>
+        <div class="ocat-end">
+            <input asp-for="WarmUpFirstDayLimit" type="number" min="1" class="form-control" />
+            <span asp-validation-for="WarmUpFirstDayLimit" class="text-danger"></span>
+            @if (Model.WarmUpStartedUtc is { } warmUpStarted)
+            {
+                <span class="hint">@T["Warming up since {0}.", warmUpStarted.ToLocalTime().ToString("d")]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="PauseOnPoorHealth" />
+                <label class="form-check-label" asp-for="PauseOnPoorHealth">@T["Pause bulk sending when bounces or spam complaints run high"]</label>
+                <span class="hint dashed">@T["Pauses broadcasts and campaigns, until someone resumes them, once 5% of the week's emails bounce or 0.3% are reported as spam: the levels at which mailbox providers start blocking a sender. Gmail asks bulk senders to stay under 0.1% spam complaints."]</span>
+            </div>
+        </div>
+    </div>
+
+    <h6 class="mt-4 mb-3">@T["Receiving"]</h6>
+
+    <div class="ocat-wrapper">
+        <label asp-for="InboundMode" class="ocat-label">@T["Receive mail by"]</label>
+        <div class="ocat-end">
+            <select asp-for="InboundMode" class="form-select" data-email-inbound-mode>
+                <option value="@EmailInboundMode.None">@T["Not receiving (send only)"]</option>
+                <option value="@EmailInboundMode.Webhook">@T["My email provider posts it to a webhook"]</option>
+                <option value="@EmailInboundMode.Mailbox">@T["Reading the mailbox (IMAP)"]</option>
+            </select>
+            <span class="hint">@T["Use the webhook when your provider can post inbound mail (SendGrid, Mailgun, Postmark, Amazon SES, Cloudflare and others). Read the mailbox when it cannot, as with Microsoft 365, Google Workspace or a hosting provider's mail server."]</span>
+        </div>
+    </div>
+
+    <div data-email-inbound-section="@EmailInboundMode.Webhook" class="@(Model.InboundMode == EmailInboundMode.Webhook ? string.Empty : "d-none")">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                @if (Model.WebhookUrls.Count == 0)
+                {
+                    <div class="alert alert-warning mb-0">@T["The site has no inbound email webhook key yet. Open Settings > Communication > Email and save the page to create one, then come back here for the webhook addresses."]</div>
+                }
+                else
+                {
+                    <p class="mb-2">@T["Point your provider's inbound mail at the address for its format. Every address carries the site's secret key, so keep it private."]</p>
+                    <table class="table table-sm align-middle mb-0">
+                        <tbody>
+                            @foreach (var (provider, url) in Model.WebhookUrls)
+                            {
+                                <tr>
+                                    <th class="text-nowrap" style="width: 1%;">@provider</th>
+                                    <td class="text-break"><code>@url</code></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div data-email-inbound-section="@EmailInboundMode.Mailbox" class="@(Model.InboundMode == EmailInboundMode.Mailbox ? string.Empty : "d-none")">
+        @if (!string.IsNullOrEmpty(Model.MailboxLastError))
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="alert alert-danger mb-0">@T["The mailbox could not be read: {0}", Model.MailboxLastError]</div>
+                </div>
+            </div>
+        }
+        else if (Model.MailboxLastSucceededUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="text-success small"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Last read {0}.", Model.MailboxLastSucceededUtc.Value.ToLocalTime().ToString("g")]</span>
+                </div>
+            </div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="ImapHost">
+            <label asp-for="ImapHost" class="ocat-label">@T["IMAP server"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="ImapHost" class="form-control" placeholder="outlook.office365.com" data-email-imap-host />
+                    <input asp-for="ImapPort" type="number" min="0" max="65535" class="form-control" style="max-width: 7rem;" title="@T["Port; 0 for the default"]" data-email-imap-port />
+                    <select asp-for="ImapSecurity" class="form-select" style="max-width: 12rem;" data-email-imap-security>
+                        <option value="@EmailConnectionSecurity.Auto">@T["Automatic"]</option>
+                        <option value="@EmailConnectionSecurity.SslOnConnect">@T["SSL/TLS"]</option>
+                        <option value="@EmailConnectionSecurity.StartTls">@T["STARTTLS"]</option>
+                        <option value="@EmailConnectionSecurity.None">@T["None"]</option>
+                    </select>
+                </div>
+                <span asp-validation-for="ImapHost" class="text-danger"></span>
+                <span class="hint">@T["Port 0 uses 143 with STARTTLS, or 993 with SSL/TLS."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ImapUserName" class="ocat-label">@T["IMAP user name"]</label>
+            <div class="ocat-end">
+                <input asp-for="ImapUserName" class="form-control" autocomplete="off" data-email-imap-user />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ImapPassword" class="ocat-label">@T["IMAP password"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="ImapPassword" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasImapPassword ? T["Stored; leave empty to keep it"] : string.Empty)" data-email-imap-password data-1p-ignore data-lpignore="true" data-bwignore="true" />
+                    <button type="button" class="btn btn-outline-secondary" data-email-test="imap">@T["Test connection"]</button>
+                </div>
+                <div class="small mt-1" data-email-test-result="imap"></div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="MailboxFolder" class="ocat-label">@T["Folder"]</label>
+            <div class="ocat-end">
+                <input asp-for="MailboxFolder" class="form-control" data-email-imap-folder />
+                <span class="hint">@T["The folder new mail is read from, usually INBOX."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="ProcessedFolder">
+            <label asp-for="AfterProcessing" class="ocat-label">@T["Once received"]</label>
+            <div class="ocat-end">
+                <select asp-for="AfterProcessing" class="form-select" data-email-after-processing>
+                    <option value="@EmailMailboxAfterProcessing.MarkAsRead">@T["Mark it as read"]</option>
+                    <option value="@EmailMailboxAfterProcessing.MoveToFolder">@T["Mark it as read and move it to a folder"]</option>
+                </select>
+                <input asp-for="ProcessedFolder" class="form-control mt-2 @(Model.AfterProcessing == EmailMailboxAfterProcessing.MoveToFolder ? string.Empty : "d-none")" placeholder="@T["Folder name, such as Processed"]" data-email-processed-folder />
+                <span asp-validation-for="ProcessedFolder" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="InitialLookbackDays" class="ocat-label">@T["On first connect"]</label>
+            <div class="ocat-end">
+                <div class="input-group" style="max-width: 22rem;">
+                    <span class="input-group-text">@T["Receive unread mail from the last"]</span>
+                    <input asp-for="InitialLookbackDays" type="number" min="0" max="30" class="form-control" />
+                    <span class="input-group-text">@T["days"]</span>
+                </div>
+                <span class="hint">@T["0 receives only mail that arrives after the mailbox is connected, so connecting a busy mailbox does not flood the workspace."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        'use strict';
+
+        var root = document.querySelector('[data-email-address-settings]');
+
+        if (!root) {
+            return;
+        }
+
+        function toggle(selector, attribute, value) {
+            root.querySelectorAll(selector).forEach(function (section) {
+                section.classList.toggle('d-none', section.getAttribute(attribute) !== value);
+            });
+        }
+
+        var transport = root.querySelector('[data-email-transport]');
+        var inboundMode = root.querySelector('[data-email-inbound-mode]');
+        var afterProcessing = root.querySelector('[data-email-after-processing]');
+        var processedFolder = root.querySelector('[data-email-processed-folder]');
+
+        if (transport) {
+            transport.addEventListener('change', function () {
+                toggle('[data-email-transport-section]', 'data-email-transport-section', transport.value);
+            });
+        }
+
+        if (inboundMode) {
+            inboundMode.addEventListener('change', function () {
+                toggle('[data-email-inbound-section]', 'data-email-inbound-section', inboundMode.value);
+            });
+        }
+
+        if (afterProcessing && processedFolder) {
+            afterProcessing.addEventListener('change', function () {
+                processedFolder.classList.toggle('d-none', afterProcessing.value !== '@EmailMailboxAfterProcessing.MoveToFolder');
+            });
+        }
+
+        var warmUp = root.querySelector('[data-email-warm-up]');
+        var warmUpSection = root.querySelector('[data-email-warm-up-section]');
+
+        if (warmUp && warmUpSection) {
+            warmUp.addEventListener('change', function () {
+                warmUpSection.classList.toggle('d-none', !warmUp.checked);
+            });
+        }
+
+        function value(selector) {
+            var element = root.querySelector(selector);
+
+            return element ? element.value : '';
+        }
+
+        root.querySelectorAll('[data-email-test]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var kind = button.getAttribute('data-email-test');
+                var result = root.querySelector('[data-email-test-result="' + kind + '"]');
+                var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                var body = new URLSearchParams();
+
+                body.append('kind', kind);
+                body.append('addressId', root.getAttribute('data-address-id') || '');
+                body.append('host', value('[data-email-' + kind + '-host]'));
+                body.append('port', value('[data-email-' + kind + '-port]') || '0');
+                body.append('security', value('[data-email-' + kind + '-security]'));
+                body.append('userName', value('[data-email-' + kind + '-user]'));
+                body.append('password', value('[data-email-' + kind + '-password]'));
+                body.append('folder', value('[data-email-imap-folder]'));
+
+                result.className = 'small mt-1 text-muted';
+                result.textContent = '@T["Testing…"]';
+                button.disabled = true;
+
+                fetch(root.getAttribute('data-test-url'), {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': tokenInput ? tokenInput.value : ''
+                    },
+                    body: body.toString()
+                })
+                    .then(function (response) { return response.ok ? response.json() : { succeeded: false, message: '@T["The test could not be run."]' }; })
+                    .then(function (outcome) {
+                        result.className = 'small mt-1 ' + (outcome.succeeded ? 'text-success' : 'text-danger');
+                        result.textContent = outcome.message;
+                    })
+                    .catch(function () {
+                        result.className = 'small mt-1 text-danger';
+                        result.textContent = '@T["The test could not be run."]';
+                    })
+                    .finally(function () {
+                        button.disabled = false;
+                    });
+            });
+        });
+    })();
+</script>

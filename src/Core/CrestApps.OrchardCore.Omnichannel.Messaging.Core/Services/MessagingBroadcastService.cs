@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using Microsoft.Extensions.Logging;
@@ -80,7 +81,16 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
 
             try
             {
-                result = await _conversationService.SendDirectAsync(broadcast.Channel, broadcast.ServiceAddress, recipient, broadcast.Body, broadcast.OwnerAgentId, cancellationToken);
+                result = await _conversationService.SendDirectAsync(new MessagingDirectSendRequest
+                {
+                    Channel = broadcast.Channel,
+                    ServiceAddress = broadcast.ServiceAddress,
+                    ContactAddress = recipient,
+                    Subject = broadcast.Subject,
+                    Body = broadcast.Body,
+                    ActingAgentId = broadcast.OwnerAgentId,
+                    Purpose = MessagingOutboundPurpose.Broadcast,
+                }, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -92,6 +102,11 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
             if (result.Succeeded)
             {
                 broadcast.SentCount++;
+            }
+            else if (string.Equals(result.Message?.DeliveryStatus, MessageDeliveryStatus.Queued.ToString(), StringComparison.Ordinal))
+            {
+                // Held back by the address's sending limits, or waiting for a retry: the outbox sends it later.
+                broadcast.QueuedCount++;
             }
             else
             {

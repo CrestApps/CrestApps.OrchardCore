@@ -29,7 +29,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Migrations
 /// </remarks>
 public sealed class OmnichannelContactsMigrationsTests
 {
-    private const int FinalVersion = 13;
+    private const int FinalVersion = 14;
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
 
     private static readonly TimeSpan _runLimit = TimeSpan.FromSeconds(10);
@@ -137,6 +137,7 @@ public sealed class OmnichannelContactsMigrationsTests
     [InlineData(7)]
     [InlineData(8)]
     [InlineData(12)]
+    [InlineData(13)]
     public async Task UpgradeOverACurrentSchema_SkipsEveryChangeThatAlreadyExistsWithoutPoisoningTheTransaction(int startingVersion)
     {
         var databasePath = DatabasePath("contacts-already-current");
