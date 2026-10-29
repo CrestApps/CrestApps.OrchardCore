@@ -20,6 +20,8 @@ Setting up a listing takes three steps: decide which of your products' fields vi
 
 ## Decide what visitors can filter on
 
+<YouTube video="product-listings-and-attributes" title="Choosing what a field is for" start={93} end={142} />
+
 Filters come from the fields of your product types: a car's year and mileage, a home's bedrooms, a shirt's color and size. You choose which fields take part in the field's own settings.
 
 1. Open **Content > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
@@ -43,6 +45,8 @@ The **Product listing** section appears only on fields of product types. Text, n
 The price, the product's type, whether it can be bought online and whether it is featured are always available to filter and sort by, without any field. A product type sold in variants can also filter on its options; see [Products and currencies](products-and-currencies.md#sell-a-product-in-variants).
 
 ## Create a listing page
+
+<YouTube video="product-listings-and-attributes" title="Setting up the listing page" start={160} end={211} />
 
 1. Open **Commerce > Product Listings** and click **New**.
 2. Enter a **Title**, and a **Permalink** such as *shop* or *homes* for the page's address.
@@ -117,6 +121,8 @@ Add the **Autoroute** part to the type as well, so each product has a readable a
 Whether a product can be bought online, and how its price is shown (shown, *Call for price*, or hidden), are set on the type and on each product; see [Products and currencies](products-and-currencies.md). A product that can be bought shows its buy button: a subscription plan's **Sign up**, or **Add to cart** when the Carts feature is on (see [Carts and orders](carts-and-orders.md)).
 
 ## What visitors see
+
+<YouTube video="product-listings-and-attributes" title="What visitors see" start={211} end={230} />
 
 - The filters, in a side panel on wide screens and behind a **Filters** button on phones. Each filter shows how many products match each option, and folds open and closed.
 - The picked filters as chips above the results, each with a button to remove it, and **Clear all**.
