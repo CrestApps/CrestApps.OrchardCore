@@ -45,6 +45,8 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 
 ## Issue a gift card by hand
 
+<YouTube video="orders" title="Video of issuing a gift card by hand" start={292} end={331} />
+
 1. Open **Commerce > Gift cards** and click **Issue gift card**.
 2. Enter the **Amount**, and check the **Currency** (it starts with your checkout currency).
 3. Fill in the recipient and the other fields you need (below).

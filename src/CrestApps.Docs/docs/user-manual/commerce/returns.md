@@ -18,6 +18,8 @@ technical_manual:
 
 ## Set up returns
 
+<YouTube video="orders" title="Video of the returns list and the return settings" start={267} end={292} />
+
 Under **Settings > Commerce > Returns**:
 
 | Setting | What it does | Default |
