@@ -281,10 +281,13 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </remarks>
     private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
     {
+        var opening = VoiceCallGuidance.OpeningWithDisclosure(context?.RecordingDisclosure);
+
+        // A disclosure is heard to the end: see the Opening partial.
+        Volatile.Write(ref _protectOpening, opening is null ? 0 : 1);
+
         // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
         await ApplyOpeningTurnDetectionAsync(conversation, cancellationToken);
-
-        var opening = VoiceCallGuidance.OpeningWithDisclosure(context?.RecordingDisclosure);
 
         await conversation.RequestUnpromptedResponseAsync(
             opening is null ? null : WithSessionInstructions(opening),

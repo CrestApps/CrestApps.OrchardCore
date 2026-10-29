@@ -393,6 +393,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.ResponseCompleted:
                         ResponseInFlight(false);
+                        OpeningResponseCompleted();
 
                         // The line is over: fade it out and send its last, padded packet, rather than stopping dead
                         // on whatever sample it ended on -- which was heard as a click as the assistant finished.
@@ -449,7 +450,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                             media,
                             conversation,
                             bargeIn,
-                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested || OnAMachine(),
+                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested || OnAMachine() ||
+                                OpeningMayNotBeTalkedOver(DateTime.UtcNow.Ticks),
                             activityId,
                             cancellationToken);
 

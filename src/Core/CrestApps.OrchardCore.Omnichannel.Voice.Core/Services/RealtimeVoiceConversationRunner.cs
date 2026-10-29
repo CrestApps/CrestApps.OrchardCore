@@ -531,9 +531,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 }
 
                 var now = DateTime.UtcNow.Ticks;
+
+                // A caller turn the provider opened and has not committed is the caller talking now. Live, a caller
+                // ten seconds into a long question was asked whether they were still there.
                 var quietFor = now - Math.Max(
-                    Interlocked.Read(ref _lastAssistantAudioTicks),
-                    Interlocked.Read(ref _lastCallerSpeechTicks));
+                    Math.Max(Interlocked.Read(ref _lastAssistantAudioTicks), Interlocked.Read(ref _lastCallerSpeechTicks)),
+                    ProviderHeardCallerTicks(now));
 
                 // No session to ask while one that was lost is being replaced; the replacement speaks first anyway.
                 var conversation = live.Current;
