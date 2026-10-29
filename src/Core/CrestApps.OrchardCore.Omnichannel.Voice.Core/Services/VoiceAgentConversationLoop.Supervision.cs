@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -103,6 +104,45 @@ public sealed partial class VoiceAgentConversationLoop
         "[This call has just been handed to you from another assistant, and the customer is waiting for you. Greet them " +
         "in one short sentence, say who you are, and carry on with what they need from the conversation so far. Do not " +
         "repeat what was already said or ask them to start again.]";
+
+    /// <summary>
+    /// Finds the conversation a tool on this turn handed the call to, when it moved the call to another AI profile.
+    /// </summary>
+    /// <param name="activity">The call's activity, as the turn loaded it.</param>
+    /// <param name="profile">The profile that took the turn.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The activity as the tool saved it, with its new profile and session; or <see langword="null"/> when the
+    /// call kept its profile.</returns>
+    private async Task<(OmnichannelActivity Activity, AIProfile Profile, AIChatSession Session)?> FindSwitchedConversationAsync(
+        OmnichannelActivity activity,
+        AIProfile profile,
+        CancellationToken cancellationToken)
+    {
+        var switched = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
+
+        if (switched is null ||
+            string.IsNullOrWhiteSpace(switched.AIProfileId) ||
+            string.Equals(switched.AIProfileId, profile.ItemId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var (newProfile, newSession) = await ResolveConversationAsync(switched, cancellationToken);
+
+        if (newProfile is null || newSession is null)
+        {
+            return null;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "AI voice activity '{ActivityId}' was handed to another AI profile on this turn, so the new profile answers the caller.",
+                activity.ItemId.SanitizeLogValue());
+        }
+
+        return (switched, newProfile, newSession);
+    }
 
     /// <summary>
     /// The caller pressed keys: a live session hears about it through the session holding the call, and a turn-based
