@@ -79,6 +79,8 @@ public sealed partial class VoiceAgentConversationLoop
             media,
             activity,
             _clock.UtcNow,
+            // The AI was cut off mid-call, so nobody has told the caller they are being put through.
+            announced: false,
             cancellationToken);
 
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
