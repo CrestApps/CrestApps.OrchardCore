@@ -34,7 +34,7 @@ Older profiles saved as *Manual* are shown and saved as **Preview**.
 
 ### Compare the dialing modes
 
-<YouTube video="contact-center-dialer-modes-compared" title="Video of how each dialing mode works, and when to choose which" start={0} end={0} />
+<YouTube video="contact-center-dialer-modes-compared" title="Video of the four dialing modes side by side, and when to choose which" start={314} end={406} />
 
 | | **Preview** | **Power** | **Progressive** | **Predictive** |
 | --- | --- | --- | --- | --- |

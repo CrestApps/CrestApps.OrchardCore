@@ -157,6 +157,8 @@ A **dialer profile** is an execution policy, not the source of CRM work. Activit
 
 ### Dialing modes and safety
 
+<YouTube video="contact-center-dialer-modes-compared" title="Video of the four dialing modes side by side, and when to choose which" start={314} end={406} />
+
 Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsupported modes are withheld rather than falling through to an unsafe default:
 
 | Mode | Behavior |
