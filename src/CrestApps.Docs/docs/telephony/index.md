@@ -16,6 +16,8 @@ user_manual:
 | **Feature Name** | Telephony |
 | **Feature ID** | `CrestApps.OrchardCore.Telephony` |
 
+<YouTube video="telephony" title="Video overview of Telephony: providers, the default provider, extensions and the soft phone" />
+
 The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [Telnyx](telnyx.md) or [Asterisk](asterisk.md)).
 
 In this module, **provider** means the configured **telephony backend adapter** (for example Telnyx, Asterisk,

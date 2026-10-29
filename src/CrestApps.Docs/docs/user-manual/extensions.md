@@ -17,7 +17,7 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an extension for a user" start={168} end={191} />
+<YouTube video="telephony" title="Video of creating an extension for a user" start={352} end={405} />
 
 ## Create an extension
 
@@ -27,9 +27,9 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 
 | Field | What it does |
 | --- | --- |
+| **Display name** | The name a colleague sees when they call this extension, for example *Front desk*. Leave it empty to show the user's own name. |
 | **Extension number** | The number a colleague dials to reach this user, for example `1001`. Required, and it must be unique. |
 | **User** | The user this extension rings. Type to search the list of enabled users. Required. |
-| **Display name** | The name a colleague sees when they call this extension, for example *Front desk*. Leave it empty to show the user's own name. |
 
 Every saved extension can be dialed straight away; there is no enabled or disabled switch. To stop an extension ringing, delete it from the list.
 
@@ -61,5 +61,5 @@ The agent sees their own extension as a badge in the [agent workspace](agent-wor
 When the person does not answer, the caller is sent to that person's voicemail, and the message appears on their soft phone's **Voicemail** tab. A caller who hangs up before the call is answered leaves no message.
 
 :::note[Which phone systems support extensions]
-Extension calls work with Telnyx. Asterisk does not offer extension calls yet, so the **Dial extension** control is hidden there.
+Extension calls work with Telnyx. Asterisk does not offer extension calls yet.
 :::
