@@ -25,7 +25,11 @@ Each provider you turn on adds its own tab to **Settings > Communication > Telep
 
 ## Connect Telnyx for calls
 
+<YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings: connect, noise suppression, answering machine detection and speech" />
+
 Before you start, create an API key in the Telnyx portal under **Account > Keys & Credentials > API Keys** (a V2 key). Sign in to Telnyx as an account **Owner** or **Admin** when you create it: a key made by a restricted member can read the account but cannot create what **Connect Telnyx** needs, and connecting fails with *Not authorized*.
+
+<YouTube video="telephony-telnyx-settings" title="Video of the Telnyx tab before connecting" start={47} end={92} />
 
 1. Open **Settings > Communication > Telephony** and choose the **Telnyx** tab.
 2. Tick **Enable Telnyx provider**, paste the key into **API key**, and save. The **Connect Telnyx** button appears once the key is stored.
@@ -42,9 +46,17 @@ Before you start, create an API key in the Telnyx portal under **Account > Keys 
 | **Webhook public key** | The key that proves call events really come from Telnyx. It is not a secret you create; you copy it from the portal. Stored encrypted. |
 | **Webhook endpoint** | The address Connect set on your Telnyx account, shown for reference. |
 
+<YouTube video="telephony-telnyx-settings" title="Video of what appears after connecting: caller id and webhook key" start={92} end={121} />
+
+<YouTube video="telephony-telnyx-settings" title="Video of noise suppression, answering machine detection and text-to-speech" start={121} end={166} />
+
 **Noise suppression** asks Telnyx to clean background sound, such as colleagues talking nearby, out of your agents' calls. Pick **Krisp** for a busy floor, then tick whether to clean the agent's voice (what callers hear, on by default), the caller's voice (what the agent hears), or both. The soft phone's voice isolation usually cleans the agent's voice already, so **Clean the caller's voice** is the one that removes the line hiss and background noise your agents hear. **Suppression strength** sets how hard it works: **Balanced** (the default) removes line hiss while keeping the soft endings of words, **Light** sounds the most natural, and **Strong** removes the most noise but can clip the ends of words and make a voice sound too loud. It is a Telnyx beta feature billed for each voice cleaned; see [Background noise suppression](../telephony/telnyx.md#background-noise-suppression).
 
 The **Advanced — browser WebRTC (optional)** section holds settings you rarely change: **Credential lifetime (minutes)**, **Audio test destination** (a number that plays your voice back, used by the soft phone's **Run audio test**), **Calls with no local record** (what to do with a call left over from a restart: **Report** or **End call**), **Answering machine detection** (**Premium**, **Standard** or **Off**; Telnyx bills the first two per call), **Text-to-speech voice** and **Text-to-speech language** for spoken prompts, the SIP and ICE (STUN/TURN) connection settings, **Preferred audio codecs**, **Soft phone region** and an API address override. Every one has a working default. Change them only when Telnyx support tells you to, or when your network needs a relay server. The [Telnyx reference](../telephony/telnyx.md#browser-webrtc-settings) explains each one.
+
+<YouTube video="telephony-telnyx-settings" title="Video of the advanced Telnyx settings" start={166} end={203} />
+
+**Soft phone region** picks the Telnyx region the browser connects to: **Automatic (chosen by Telnyx)**, or one of the regions in the list. Telnyx can also send texts; its SMS settings are under **Settings > Communication > SMS** when Telnyx SMS is on.
 
 **Disconnect** deletes the resources Connect created on Telnyx, after you confirm. To start over, click **Disconnect** and then **Connect Telnyx** again.
 
