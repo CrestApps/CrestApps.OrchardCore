@@ -16,6 +16,10 @@ A **product listing** is a page of your site that lists products: a shop, a page
 
 <AskYourAdmin />
 
+This video walks through the product screens, including the listing page that shoppers see:
+
+<YouTube video="products" title="Video overview of products, prices and listings" />
+
 Setting up a listing takes three steps: decide which of your products' fields visitors can filter and sort by, create the listing page, and lay out each product's own page.
 
 ## Decide what visitors can filter on
@@ -43,6 +47,8 @@ The **Product listing** section appears only on fields of product types. Text, n
 The price, the product's type, whether it can be bought online and whether it is featured are always available to filter and sort by, without any field. A product type sold in variants can also filter on its options; see [Products and currencies](products-and-currencies.md#sell-a-product-in-variants).
 
 ## Create a listing page
+
+<YouTube video="products" title="Video of a product listing page's settings and the shop" start={331} end={387} />
 
 1. Open **Commerce > Product Listings** and click **New**.
 2. Enter a **Title**, and a **Permalink** such as *shop* or *homes* for the page's address.
@@ -128,6 +134,8 @@ Every combination of filters has its own address, so visitors can bookmark it, s
 
 ## Recommend products
 
+<YouTube video="products" title="Video of comparison, upsells, cross-sells, grouped products and bundles" start={387} end={435} />
+
 With the **Product Recommendations** feature, each product's editor has **Upsells** and **Cross-sells** pickers:
 
 - **Upsells**, better or bigger choices, show on the product's page as *You may also like*.
@@ -144,6 +152,8 @@ With the **Product Comparison** feature, cards and product pages have a **Compar
 On a site with several languages, translate your products and listing pages with Orchard Core's localization as usual. A listing shows the products of the visitor's language, plus products that are not translated at all, and a product's page links back to the listing in its own language.
 
 ## Search with Elasticsearch, Lucene or Azure AI Search
+
+<YouTube video="products" title="Video of product feeds and the product search features" start={435} end={476} />
 
 Listings search your database by default, which suits most catalogs. A large catalog, or one where keyword search should rank the best matches first, can search a search server instead.
 
