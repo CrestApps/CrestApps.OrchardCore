@@ -90,7 +90,11 @@ A public assistant is open to anyone, so the site protects it:
 - Messages that try to trick the assistant into ignoring its instructions are blocked.
 - A visitor is recognized across visits by a cookie, for the analytics and the limits above.
 
-Your administrator can tune these protections under **Settings > Artificial Intelligence** in the **Prompt Security** and **Visitor Identity** sections, and per profile on the **Prompt Security** tab of the profile editor. The settings are explained in the [Technical Manual](../../ai/chat.md#security-and-visitor-identity-settings).
+<YouTube video="ai-prompt-security" title="Video overview of AI prompt security" />
+
+The video shows each protection, a blocked injection attempt, the limits and the visitor cookie.
+
+Your administrator can tune these protections under **Settings > Artificial Intelligence** in the **Prompt Security** and **Visitor Identity** sections, and per profile in the **Prompt Security** card on the **Content** tab of the profile editor. The settings are explained in the [Technical Manual](../../ai/chat.md#security-and-visitor-identity-settings).
 
 :::tip
 Keep a public assistant focused. Give it clear instructions about what it may talk about, and turn on **Restrict answers to retrieved data only** when it should answer only from your own content (see [Knowledge](knowledge.md)).

@@ -227,7 +227,7 @@ For example, setting **Maximum anonymous sessions per window** to `5` while the 
 
 ##### Per-profile throttle overrides
 
-The six anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
+The six anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from the **Prompt Security** card on the **Content** tab of the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
 
 | Override | Behavior |
 | --- | --- |
