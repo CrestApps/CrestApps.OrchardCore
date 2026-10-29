@@ -169,6 +169,8 @@ With the SEO feature on, add the **SEO** part to the **Product Listing** type an
 
 ## Shopping feeds
 
+<YouTube video="product-import-and-feeds" title="Product feeds" start={169} end={211} />
+
 With **Product Feeds** on, your products are published as a feed for Google Merchant Center, Meta (Facebook and Instagram shops) and TikTok, so they show in shopping ads and shops.
 
 1. Set your site's base URL under **Settings > General**: the feed's links and photos need it.
