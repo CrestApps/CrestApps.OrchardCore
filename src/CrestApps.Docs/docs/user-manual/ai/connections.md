@@ -19,13 +19,17 @@ Before anyone can chat with an assistant, the site needs to reach an AI service,
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of the Azure OpenAI provider connection and its chat, utility, and embedding deployments" start={26} end={43} />
+<YouTube video="ai-connections-deployments" title="Video overview of connections, deployments and default models" />
+
+The video covers why the provider is set up once, how connections, deployments and default models fit together, and each task below.
 
 Your technical team can also set up connections and deployments in the site's configuration files. Those show in the lists under **Configuration-based connections** or **Configuration-based deployments** with a **Read-only** badge, and can only be changed there. See the [Technical Manual provider pages](../../ai/providers/index.md).
 
 ## Add a connection
 
 A connection holds the address and the key the site uses to reach one AI service account.
+
+<YouTube video="ai-connections-deployments" title="Video of adding a connection" start={99} end={154} />
 
 1. Open **Artificial Intelligence > Provider Connections** and click **Add Connection**.
 2. In **Available Providers**, click **Add** on your provider.
@@ -54,6 +58,8 @@ The site checks the fields when you click **Save**; it does not contact the prov
 
 A deployment is one model you use through a connection, such as `gpt-4.1-mini` for chat or `text-embedding-3-small` for search. Add one for every model the site needs.
 
+<YouTube video="ai-connections-deployments" title="Video of adding chat and embedding deployments" start={154} end={213} />
+
 1. Open **Artificial Intelligence > Deployments** and click **Add Deployment**.
 2. In **Available Providers**, click **Add** on the provider of the model.
 3. Fill in the fields below and click **Save**.
@@ -66,6 +72,8 @@ A deployment is one model you use through a connection, such as `gpt-4.1-mini` f
 | **Model capabilities** | What the model can do. See below. At least one is required. |
 
 ### Model capabilities
+
+<YouTube video="ai-connections-deployments" title="Video of choosing model capabilities and reasoning effort" start={213} end={258} />
 
 Tick, under **Trained features**, only what the model really supports. The site uses these ticks to decide where the model is offered: an embedding model shows up only where an embedding model is needed, and a feature you leave unticked is never asked of the model.
 
@@ -92,6 +100,8 @@ Tick, under **Trained features**, only what the model really supports. The site 
 - A **Cascaded Realtime** deployment gives you spoken conversations when your provider has no live voice model. It chains three deployments you already have: a **Speech-to-text deployment** that hears the user, a **Chat deployment** that writes the reply, and a **Text-to-speech deployment** that speaks it. The speech-to-text deployment must also have **Realtime (speech-to-speech)** ticked, because it has to transcribe continuously. The three can come from different providers. Expect a little more delay before the assistant starts speaking than with a live voice model.
 
 ## Choose the default models
+
+<YouTube video="ai-connections-deployments" title="Video of choosing the default models" start={258} end={299} />
 
 Open **Settings > Artificial Intelligence** and fill in the **Default Deployments** section. A profile or chat left on **Default** uses these. Each list only shows deployments with the right capability.
 
