@@ -9,7 +9,7 @@ technical_manual:
   - ai/file-sources
 ---
 
-On its own, an AI model only knows what it learned in general. To answer questions about *your* prices, policies, products or help articles, give it your content. The assistant then looks up the passages that match each question, answers from them, and lists them as numbered sources under the answer.
+On its own, an AI model only knows what it learned in general. To answer questions about *your* prices, policies, products or help articles, give it your content. The assistant then looks up the passages that match each question and answers from them. For content such as the pages of a site, the answer carries small numbers and a numbered list of sources appears under it. Documents attached to a profile work quietly in the background.
 
 | | |
 | --- | --- |
@@ -19,9 +19,15 @@ On its own, an AI model only knows what it learned in general. To answer questio
 
 <AskYourAdmin />
 
+<YouTube video="ai-knowledge" title="Video overview of giving an assistant knowledge" />
+
+The video covers why a general model needs your knowledge, the four ways to add it, creating the documents index, uploading a document to a profile and asking about it, and letting people attach files to a chat.
+
 <YouTube video="ai-walkthroughs" title="Video of an Elasticsearch-backed AI data source grounding answers on Article content" start={260} end={351} />
 
 ## Choose how to add your knowledge
+
+<YouTube video="ai-knowledge" title="Video of the four ways to add knowledge" start={57} end={95} />
 
 | Your content | Use | Who keeps it up to date |
 | --- | --- | --- |
@@ -35,16 +41,20 @@ On its own, an AI model only knows what it learned in general. To answer questio
 
 ## Before you start
 
-Knowledge is stored in a search index that understands meaning, not just words. Your technical team sets up the search service once. Then an administrator creates the indexes in **Search > Indexing** with **Add index**, choosing the type and an **Embedding deployment** (see [Connections and deployments](connections.md)):
+<YouTube video="ai-knowledge" title="Video of creating the documents index" start={95} end={143} />
+
+Knowledge is stored in a search index that understands meaning, not just words. Your technical team sets up the search service once. Then an administrator creates the indexes in **Search > Indexing** with **Add index**, choosing the type, and, for an **AI Knowledge Base Index**, an **Embedding deployment** (see [Connections and deployments](connections.md)):
 
 | Index type | Used for |
 | --- | --- |
-| **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. Then choose it under **Settings > Artificial Intelligence > Documents > Index profile**. |
+| **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. It has no embedding choice of its own: it uses the site's **Default embedding deployment**. Then choose it under **Settings > Artificial Intelligence > Documents > Index profile**. |
 | **AI Knowledge Base Index** (Azure AI Search or Elasticsearch) | Data sources, file sources and web crawlers. |
 
-The embedding deployment cannot be changed after the index is created. Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
+The embedding deployment of an index cannot be changed after the index is created. Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
 
 ## Upload documents to a profile
+
+<YouTube video="ai-knowledge" title="Video of uploading a document to a profile" start={143} end={205} />
 
 Documents on a profile are background knowledge the assistant uses in every chat.
 
@@ -61,9 +71,13 @@ To remove a document, click its **Remove document** icon and save. **Download do
 | **Document Top N** | How many matching passages the assistant reads for each question, from 1 to 20. Default 3. More passages give more context, but cost more and slow the answer. |
 | **Document retrieval mode** | **Chunk** gives the assistant only the matching passages. **Hierarchical** finds the matching passages, then gives it the whole documents they come from: better for short documents, much more text for long ones. **Default setting** uses the site's choice. |
 
-The assistant uses the documents quietly; it does not tell users that it has attached files unless they ask about sources.
+The assistant uses the documents quietly; it does not tell users that it has attached files unless they ask about sources. To try it, open the profile's **Actions** menu, click **New chat**, and ask something only the documents can answer.
+
+<YouTube video="ai-knowledge" title="Video of asking a question about a profile document" start={205} end={243} />
 
 ## Let users attach files
+
+<YouTube video="ai-knowledge" title="Video of letting people attach files to a chat" start={243} end={289} />
 
 To let people attach documents or pictures to a chat, open the profile's **Knowledge** tab and tick:
 
@@ -87,11 +101,11 @@ A data source connects the assistant to a knowledge base built from a search ind
    - **Search Index Profile**: an index of this site's own content.
    - **Elasticsearch** or **Azure AI Search**: an external index.
    - **PostgreSQL**: a database table.
-   - **File**: the target of a [file source](#file-sources).
+   - **Files**: the target of a [file source](#file-sources).
    - **Web**: the target of a [web crawler](#web-crawlers).
 3. Enter a **Name** and choose the **Destination index**, the AI Knowledge Base index that stores the passages. It cannot be changed after you save.
 4. Fill in the source's own section, such as the **Source index**, or the connection details your technical team gives you for an external index or database. For an external source, **Use the globally configured connection** uses the connection your technical team set up.
-5. For every type except **File** and **Web**, fill in the **Field Mapping**: the **Content field** to search, an optional **Title field** for the source list, and a **Key field** that identifies each entry. Ask your technical team which fields to use.
+5. For every type except **Files** and **Web**, fill in the **Field Mapping**: the **Content field** to search, an optional **Title field** for the source list, and a **Key field** that identifies each entry. Ask your technical team which fields to use.
 6. Click **Save**.
 
 The data source fills its knowledge base and keeps it in step with the source. To rebuild it by hand, open the data source's **Actions** menu and choose **Sync index**.
@@ -112,9 +126,9 @@ The site defaults are under **Settings > Artificial Intelligence > Data Sources*
 
 ## File sources
 
-A file source reads a folder of files on a schedule and keeps a **File** data source up to date, so nobody has to upload anything. Use it for documents another system exports, such as nightly product sheets on an FTP site.
+A file source reads a folder of files on a schedule and keeps a **Files** data source up to date, so nobody has to upload anything. Use it for documents another system exports, such as nightly product sheets on an FTP site.
 
-1. Create a data source of type **File** (see [Create a data source](#create-a-data-source)).
+1. Create a data source of type **Files** (see [Create a data source](#create-a-data-source)).
 2. Open **Artificial Intelligence > File Sources** and click **Add File Source**.
 3. In **Available Connectors**, click **Add** on **File system** (a folder on the site's server), **FTP / FTPS** or **SFTP**.
 4. Fill in the fields below and the connection details, then click **Save**.
@@ -122,7 +136,7 @@ A file source reads a folder of files on a schedule and keeps a **File** data so
 | Field | What it does |
 | --- | --- |
 | **Name** | The name shown in the list. |
-| **Target File data source** | The **File** data source that receives the content. |
+| **Target File data source** | The **Files** data source that receives the content. |
 | **Enabled** | Whether the scheduled reading runs. |
 | **Re-read interval (minutes)** | How often the folder is read again. The site checks once an hour, so shorter intervals still run at most hourly. Empty uses the site default. |
 | **Figures** | **Auto** (describe charts and pictures that look worth it), **All**, or **Off**. Describing figures needs a vision model and costs more. |
@@ -162,6 +176,8 @@ A web crawler reads a public website, page by page, into a **Web** data source. 
 To read the site right away, open the crawler's **Actions** menu and choose **Synchronize now**. Only new, changed and removed pages are processed. Sources in answers link back to the original page.
 
 ## How the assistant uses your knowledge
+
+<YouTube video="ai-knowledge" title="Video of using knowledge well" start={326} end={371} />
 
 - **Before each answer or on demand.** With **Enable preemptive retrieval-augmented generation (RAG)** on (under **Settings > Artificial Intelligence > Default Orchestrator**), the assistant searches your knowledge before every answer. With it off, the assistant searches when it decides it needs to. Preemptive search is always on for profiles without tools.
 - **Sources.** Statements that come from your content get small numbers, and a numbered list of sources appears under the answer. Sources with a web address are links.
