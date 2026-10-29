@@ -41,7 +41,7 @@ internal sealed class AIProfileA2AConnectionsDisplayDriver : DisplayDriver<AIPro
         {
             var a2aMetadata = profile.GetOrCreate<AIProfileA2AMetadata>();
 
-            model.Connections = connections
+            model.A2AConnections = connections
             .Select(entry => new ToolEntry
             {
                 ItemId = entry.ItemId,
@@ -65,7 +65,7 @@ internal sealed class AIProfileA2AConnectionsDisplayDriver : DisplayDriver<AIPro
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+        var ids = model.A2AConnections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         var metadata = new AIProfileA2AMetadata();
 
