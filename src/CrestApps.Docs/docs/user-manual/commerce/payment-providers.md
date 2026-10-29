@@ -21,6 +21,10 @@ Every provider that is turned on appears as a choice on the **Payment** step of 
 
 ## Connect Stripe
 
+This video walks through connecting Stripe, the offline methods, transactions, refunds and webhooks:
+
+<YouTube video="payments" title="Video overview of payments" />
+
 | | |
 | --- | --- |
 | **Menu** | Settings > Payments > Stripe |
@@ -67,6 +71,8 @@ Click **Disconnect** under **Status** and confirm. The confirmation warns that t
 
 ### Stripe fields
 
+<YouTube video="payments" title="Video of the Stripe settings" start={91} end={134} />
+
 | Field | What it does |
 | --- | --- |
 | **Enable Production** | Ticked: the production (live) keys and account are used and real money is taken. Cleared: the test keys and account are used. While the test environment is in use, buyers see *Stripe is in test mode. No real payment will be taken.* on the payment step. |
@@ -80,6 +86,8 @@ There is nothing to turn on. After a successful **Connect** on a public domain, 
 :::
 
 ## Offline payments: Pay Later, bank transfer and cash on delivery
+
+<YouTube video="payments" title="Video of the offline payment settings" start={134} end={172} />
 
 | | |
 | --- | --- |

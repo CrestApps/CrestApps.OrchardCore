@@ -28,6 +28,8 @@ The system that receives the messages is called the **receiver**. Whoever builds
 
 ## Add a webhook
 
+<YouTube video="payments" title="Video of adding a webhook" start={308} end={359} />
+
 1. Open **Commerce > Webhooks** and click **Add webhook**.
 2. Fill in the fields (below).
 3. Click **Save**.
