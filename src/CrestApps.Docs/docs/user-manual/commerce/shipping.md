@@ -121,6 +121,8 @@ Click **Save**; a new blank location is there for the next one, up to 20. Tick *
 
 ## Ship an order
 
+<YouTube video="shipments-and-labels" title="Creating a shipment" start={78} end={120} />
+
 A paid order with goods gets a **Shipments** section on its page (**Commerce > Orders**, then the order). It lists what has been shipped, and what is left.
 
 1. Under **New shipment**, set how many of each item go in the parcel. All that's left is filled in; lower a number to ship in parts.
@@ -138,6 +140,8 @@ The order shows how far it has gone: *Unfulfilled*, *Partially fulfilled* (some 
 With **Workflows** on, the **Shipment Created**, **Shipment Shipped**, **Shipment Delivered** and **Shipment Returned** events start workflows, for example to tell a warehouse or a carrier.
 
 ## Carrier rates and labels
+
+<YouTube video="shipments-and-labels" title="Carrier rates and labels" start={153} end={202} />
 
 With a carrier provider, buyers see the carriers' own rates at checkout, such as UPS, USPS, FedEx or DHL, and you buy and print the carrier's label from the order. A carrier provider is a shipping account, such as EasyPost, turned on as its own feature.
 
