@@ -29,6 +29,8 @@ A provider is a module that implements the connection layer between CrestApps AI
 | [Ollama](ollama) | `CrestApps.OrchardCore.Ollama` | Local model support via Ollama |
 | [OpenAI](openai) | `CrestApps.OrchardCore.OpenAI` | OpenAI and any OpenAI-compatible provider |
 
+<YouTube video="ai-providers-other" title="Video overview of the other AI providers" />
+
 > **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**. For these providers, use the **OpenAI** provider type when configuring their connections and endpoints. This includes DeepSeek, Google Gemini, Together AI, vLLM, and many more.
 
 ## Deployment model
