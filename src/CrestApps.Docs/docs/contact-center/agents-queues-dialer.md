@@ -404,6 +404,7 @@ A pacing cycle used to leave no trace of its own: its `RoutingDecisionMade` even
 
 | State | Meaning |
 | --- | --- |
+| `LockNotAcquired` | The latest cycle of the queue could not take the pacing lock, and the run of misses is longer than the larger of the cycle timeout (2 minutes by default) and twice the lock expiration. Every cycle skips itself until the lock is available. It is the most severe state. |
 | `Stalled` | Work has waited longer than `CrestApps:ContactCenter:DialerPacing:StalledAfter` (default 5 minutes) without a cycle of the queue completing. The minute task paces every queue with waiting work, so a healthy dialer completes a cycle at least once a minute even when it finds nothing to do. |
 | `Idle` | The last completed cycle found no agent. |
 | `HeldBack` | The last completed cycle held back. |

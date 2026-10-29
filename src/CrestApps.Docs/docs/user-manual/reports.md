@@ -35,7 +35,7 @@ You only see the reports your permissions allow.
 
 If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 
-To build your own reports with drag and drop, see [Report Builder](report-builder/index.md).
+To build your own reports with drag and drop, see [Report Builder](report-builder/build-a-report.md).
 
 ## Run a report
 
@@ -57,9 +57,13 @@ How the filters work:
 - An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`.
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
+<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
 
 Reports of the modules above can be emailed on a schedule (see [Email a report on a schedule](#email-a-report-on-a-schedule)). Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to; to email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
+=======
+The reports of this page can be emailed on a schedule; see [Email a report on a schedule](#email-a-report-on-a-schedule). A report made with the [Report Builder](report-builder/index.md) cannot be subscribed to: use the **Email Report** task of a workflow instead.
+>>>>>>> c70a2ca35 (Document the dialer reports: not pacing state, subscriptions, last pacing decision, and embed the dialer reports video)
 
 ## Email a report on a schedule
 
@@ -286,6 +290,10 @@ How it works:
 
 ## Dialer activity and health
 
+<YouTube video="contact-center-dialer-reports" title="Video overview of the dialer reports: activity and health, the decision log, the inventory and the last pacing decision" />
+
+<YouTube video="contact-center-dialer-reports" title="Video of the Dialer activity and health report and what each state means" start={50} end={147} />
+
 **Dialer activity and health**, under *Operations*, tells you what the dialer is doing for each campaign it dials automatically, and what it did over the period you pick. It appears when the Contact Center Paced Dialing feature is on.
 
 A dialer that places no calls can be in three very different situations, and the report keeps them apart:
@@ -294,6 +302,7 @@ A dialer that places no calls can be in three very different situations, and the
 | --- | --- | --- |
 | **Stalled** | Records are waiting but the dialer has not finished a pass over the campaign for several minutes (five, unless your administrator changed it). The report shows the warning *Due work is waiting but no pacing cycle has completed for N minutes*. | Tell your administrator: the dialer has stopped, not run out of work. |
 | **Idle: no agent available** | The dialer keeps checking the campaign and finds records it may call, but no agent is free to take the call. | Sign more agents in to the campaign, or bring agents back from a break. |
+| **Not pacing: pacing lock not acquired** | Records are waiting, but the dialer could not take the lock it needs to pace the campaign, so every pass skips itself. The report shows a warning naming the campaigns and since when. | Tell your administrator: the dialer is not running, and the cause is the lock, not the data. |
 | **Nothing to call** / **Nothing due** | The dialer keeps checking and finds nothing it may call right now: the campaign has no records waiting, or they are scheduled for later or waiting out their retry delay. | Nothing, unless you expected records to be due. Load more records if the campaign has run out. |
 
 Other states are **Dialing** (the last pass placed calls), **Holding back** (the dialer chose not to call: the compliance check refused the numbers, the abandoned-call cap was reached, or calls already ringing cover the free agents) and **Starting** (records arrived a moment ago).
@@ -302,7 +311,7 @@ The report has these sections:
 
 | Section | What it shows |
 | --- | --- |
-| **Dialer right now** | The overall state, how many campaigns have records waiting, and how many are stalled, idle, holding back, dialing or have nothing due. |
+| **Dialer right now** | The overall state, how many campaigns have records waiting, how many have a pacing lock not acquired, and how many are stalled, idle, holding back, dialing or have nothing due. |
 | **Campaign queues** | One row per campaign: its state, when the dialer's last pass started and finished, how it ended (for example *Placed 2*, *No agents* or *Nothing due*, with how many passes in a row ended that way), why, the **Last call placed** and the **Last call assigned** (when, which agent, which record), and how many passes, calls and routing decisions there were in the period. |
 | **Dialer profiles** | One row per dialer profile: its mode, its last pass, the last call placed, and the calls placed, answered and abandoned and the attempts suppressed in the period. |
 | **Calls per hour** | A chart of calls placed, answered by a person and abandoned, hour by hour (day by day for a period longer than a month). |
@@ -312,6 +321,8 @@ The report has these sections:
 The state and the **Last cycle** columns always describe right now, whatever date range you pick; the counts and charts cover the date range. Times are shown in the site's time zone. The same state is shown as a banner on the [live dashboard](live-dashboard.md#dialer-banner).
 
 ## Dialer queue inventory
+
+<YouTube video="contact-center-dialer-reports" title="Video of the Dialer queue inventory" start={260} end={277} />
 
 **Dialer queue inventory**, under *CRM & Campaigns*, shows what the dialer holds right now: what is waiting in each campaign's queue, which dialer profile those records are stamped with, how many can be dialed now, and why the rest are held back. Use it when a campaign has pending records and agents are available but nothing is being dialed. It answers on one screen, without reading logs.
 
@@ -378,6 +389,8 @@ The **Campaigns** table has these columns beside the progress columns (**Total**
 The **Why pending records are not dialing** table lists every reason a campaign's pending records cannot be dialed now, with the number of records and, for records that wait for a time, when the first becomes due.
 
 ## Dialer decision log
+
+<YouTube video="contact-center-dialer-reports" title="Video of the Dialer decision log by reason, by record and by agent, and what each reason means" start={147} end={260} />
 
 **Dialer decision log**, under *Queue & Routing*, lists every decision routing and the dialer made about queued work: each time routing looked for an agent for a record, and each time the dialer refused to call a record. Use it to answer "why was this record not called?" or "why did this agent not get that call?" without asking for the system logs.
 
