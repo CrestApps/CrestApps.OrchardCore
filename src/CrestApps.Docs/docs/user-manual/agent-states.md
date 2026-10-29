@@ -39,7 +39,7 @@ A disabled reason code is hidden from the presence menu but stays on historical 
 
 <YouTube video="contact-center-agent-states" title="Video of the presence menu in My workspace, with Available, the reason codes and the Break group" start={106} end={136} />
 
-- Break reasons are grouped under a **Break** heading, listed after the other reasons. When the agent is busy on a call, the heading reads **Request break**: the break starts as soon as the current work ends.
+- Break reasons are grouped under a **Break** heading. In **My workspace** it comes after the other reasons; in the soft phone menu it comes first. When the agent is busy on a call, the heading reads **Request break**: the break starts as soon as the current work ends.
 - Every other reason code is listed on its own and sets its state right away.
 - **Available** is always listed. **Offline** is in the soft phone menu only; the **My workspace** menu has no Offline item.
 - If no reason codes exist at all, the menu falls back to the plain states: Away, Do not disturb, Meeting, Training and After-hours unavailable.
