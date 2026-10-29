@@ -16,6 +16,10 @@ Adds a **Web** AI data source that is populated by strategy-based web crawlers. 
 
 ## Overview
 
+<YouTube video="ai-web-crawlers" title="Video overview of web crawlers in the admin" />
+
+The video shows an administrator creating the index, a Web data source and a Sitemap crawler, reading the website, and asking a question that the pages answer.
+
 Unlike the other data sources, which read from an index or database you already maintain, the **Web** source builds its knowledge base by scraping live websites. A **Web** data source is a target bucket, and one or more **web crawlers** point at it. Each crawler owns a site and a crawl **strategy**:
 
 - **Web data source** — A knowledge-base target with no connection settings of its own. It aggregates every enabled crawler that targets it.
