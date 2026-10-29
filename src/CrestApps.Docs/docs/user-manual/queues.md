@@ -18,6 +18,8 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-routing-explained" title="Video overview of how a waiting call finds an agent: the routing chain, strategies, skills, priority, offers and overflow" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a queue group and a queue with routing, service level, hours and caller treatment settings" start={257} end={340} />
 
 ## Create a queue group (optional)
@@ -54,6 +56,8 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 
 ### Routing
 
+<YouTube video="contact-center-routing-explained" title="Video of the routing strategies, sticky agent, reservation timeout and unanswered offer action" start={75} end={137} />
+
 | Field | What it does |
 | --- | --- |
 | **Default priority** | Lowest, Low, **Normal**, High or Highest. Higher-priority items are offered first. It applies to callbacks, workflow enqueues that name no priority, dialer work and lines that have no entry point. A call that comes through an [inbound entry point](entry-points-and-ivr.md) starts at that entry point's own **Priority** instead. |
@@ -63,6 +67,8 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 | **Unanswered offer action** | **Requeue** (offer it to the next agent, the default), **Send to voicemail**, or **Reject call** (end the call). It also applies when an agent accepts the offer but their phone cannot be reached: the caller is treated as unanswered, and that agent is set to **Away** with the reason *Phone unreachable* until they set their own state again. |
 
 ### Service levels
+
+<YouTube video="contact-center-routing-explained" title="Video of priority, automatic priority and aging" start={210} end={280} />
 
 | Field | What it does |
 | --- | --- |
@@ -80,6 +86,8 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 Agents get their skills on the [agent entitlements](skills-and-entitlements.md) screen.
 
 ### Hours and overflow
+
+<YouTube video="contact-center-routing-explained" title="Video of overflow, the overflow chain and the maximum wait" start={309} end={345} />
 
 | Field | What it does |
 | --- | --- |
