@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -35,6 +36,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IShellHost _shellHost;
+    private readonly ShellSettings _shellSettings;
 
     /// <summary>
     /// The length of one ambience frame, in milliseconds. Matches the packet size a phone call is carried in.
@@ -240,6 +243,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="turnNotifier">Tells the conversation turn handlers about each saved turn.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="shellHost">The shell host, which gives the guardrail check a scope of its own.</param>
+    /// <param name="shellSettings">The tenant the call belongs to.</param>
     public RealtimeVoiceConversationRunner(
         IRealtimeOrchestrator orchestrator,
         IContactCenterVoiceMediaProviderResolver mediaResolver,
@@ -250,8 +255,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         IAIVoiceCallCommands voiceCallCommands,
         IAIConversationTurnNotifier turnNotifier,
         IClock clock,
-        ILogger<RealtimeVoiceConversationRunner> logger)
+        ILogger<RealtimeVoiceConversationRunner> logger,
+        IShellHost shellHost = null,
+        ShellSettings shellSettings = null)
     {
+        _shellHost = shellHost;
+        _shellSettings = shellSettings;
         _orchestrator = orchestrator;
         _mediaResolver = mediaResolver;
         _promptStore = promptStore;

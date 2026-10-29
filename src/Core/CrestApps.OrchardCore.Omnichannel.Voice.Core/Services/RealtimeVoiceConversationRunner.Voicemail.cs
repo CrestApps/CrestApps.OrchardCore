@@ -108,8 +108,9 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// only the message asked for once its greeting ended.
     /// </summary>
     private bool MayReachTheLine()
-        => !OnAMachine() ||
-            (Volatile.Read(ref _voicemailMessageStarted) == 1 && Volatile.Read(ref _voicemailMessageDone) == 0);
+        => TheGuardrailsAllowTheLine() &&
+            (!OnAMachine() ||
+                (Volatile.Read(ref _voicemailMessageStarted) == 1 && Volatile.Read(ref _voicemailMessageDone) == 0));
 
     /// <summary>
     /// Whether the message owed to a machine is still to come, so the call is not ended before it.

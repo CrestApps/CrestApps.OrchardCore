@@ -33,8 +33,9 @@ Where the checks run:
 | Web chat | Core's `AIChatHubCore.ValidatePromptSecurityAsync`, after Prompt Security. The caller is shown the profile's placeholder reply. | Core's `AIChatHubCore.ValidateOutputAsync`, after the output security filter. The caller is shown the placeholder reply. |
 | SMS | `SmsOmnichannelEventHandler`, on the customer's pending texts joined, before the completion. | The same handler, before the reply is sent. |
 | Turn-based voice | `VoiceAgentConversationLoop.CompleteAsync`, on the caller's last line. | The same method, before the reply is stored and spoken. |
+| Realtime voice | `RealtimeVoiceConversationRunner`, on each caller transcript, in a shell scope of its own beside the call. A refusal clears the line, keeps the model's reply to it off the line and the transcript, adds a system note not to act on the request, and asks for the placeholder as a standalone message. | Not checked: the audio is played as it is generated. |
 
-A refused customer message skips the completion, so no tool runs. A refused reply keeps what the model decided (a handoff or the end of the call) and replaces only its words. Realtime voice sessions are not checked.
+A refused customer message skips the completion, so no tool runs. A refused reply keeps what the model decided (a handoff or the end of the call) and replaces only its words. On a realtime session the model answers before the transcript exists, so a tool it called for a refused request may already have run.
 
 ## Privacy
 

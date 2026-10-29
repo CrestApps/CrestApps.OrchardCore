@@ -479,6 +479,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                             assistantLineStartedUtc = null;
                             ResponseInFlight(true);
 
+                            // The placeholder asked for after a refused request: the line is open to it again.
+                            ThePlaceholderIsStarting();
+
                             // The response asked for once a machine's greeting ended is the message, and the one
                             // line the machine is let hear -- whatever the model decided before it, including
                             // ending the call on a message that was kept off the line.
@@ -535,6 +538,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // turn-based one is: everything downstream reads the transcript, not the audio.
                         await StorePromptAsync(context, ChatRole.User, conversationEvent.Text, callerLineStartedUtc, cancellationToken);
                         callerLineStartedUtc = null;
+
+                        // Checked beside the call, so an ordinary turn is not held up: see the Guardrails partial.
+                        if (!OnAMachine())
+                        {
+                            GuardCallerLine(media, conversation, context, conversationEvent.Text, cancellationToken);
+                        }
 
                         break;
 
