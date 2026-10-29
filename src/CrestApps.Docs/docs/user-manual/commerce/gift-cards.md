@@ -17,9 +17,15 @@ A **gift card** is a code with money on it. A buyer types the code at checkout a
 
 <AskYourAdmin />
 
+Watch the video for a tour of selling, issuing, spending and following gift cards.
+
+<YouTube video="gift-cards" title="Gift cards in CrestApps for Orchard Core" />
+
 A gift card pays like a second way to pay, not like a discount: tax is worked out on the full price first, and the card then pays toward the total, tax included. The order summary shows the **Total**, what the card pays, and what's still **Due now** by card or another payment method.
 
 ## Sell gift cards
+
+<YouTube video="gift-cards" title="Selling a gift card" start={95} end={130} />
 
 Turning on the feature creates a **Gift card** content type, ready to sell. It is a digital product, so it is never shipped.
 
@@ -45,6 +51,8 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 
 ## Issue a gift card by hand
 
+<YouTube video="gift-cards" title="Issuing a gift card by hand" start={130} end={171} />
+
 1. Open **Commerce > Gift cards** and click **Issue gift card**.
 2. Enter the **Amount**, and check the **Currency** (it starts with your checkout currency).
 3. Fill in the recipient and the other fields you need (below).
@@ -67,6 +75,8 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 
 ## Find a gift card
 
+<YouTube video="gift-cards" title="Finding gift cards" start={273} end={311} />
+
 **Commerce > Gift cards** lists the cards, newest first.
 
 - **Search by code, its last 4 characters, or email** at the top: type the whole code, its last four characters, or part of the recipient's email, and press Enter.
@@ -88,6 +98,8 @@ When nothing matches, the list shows *Nothing here! There are no gift cards that
 
 ## A gift card's page
 
+<YouTube video="gift-cards" title="A gift card's page" start={171} end={217} />
+
 A card's page shows its whole **Code**, its **Balance** (*of* what it started with), when it was **Issued**, and for a card that was bought, a link to the order: *Bought with order …*.
 
 You can change the **Recipient's name**, **Recipient's email**, **Expires (UTC)** and **Note**, and clear **Enabled** to stop the card paying for anything without changing its balance. Click **Save**: *The gift card was updated.* The amount on the card is changed separately, below.
@@ -108,6 +120,8 @@ Under **Email the card**, click **Send** to send the code to the recipient's ema
 
 ## Paying with a gift card
 
+<YouTube video="gift-cards" title="Paying with a gift card" start={242} end={273} />
+
 On the checkout's **Payment** step, the buyer types the code in the **Gift card** box under the order summary and clicks **Apply**. Dashes, spaces and capital letters don't matter. The box then lists the card by its last four characters, with how much it pays (*$30 used*) and what will be left on it (*$20 left after this order*), and the summary shows the new amount **Due now**. The buyer can add another card, or click **Remove** to take one off. See [Checkout](checkout.md#gift-cards-store-credit-and-points).
 
 A card pays the one-time part of an order, up to what's on it. When the cards pay everything, no card payment is needed, and the button reads **Place order**. A card can't pay toward a subscription's recurring charges, a payment of an existing balance (a transaction or a pay link), or a payment plan that saves a card to charge later.
@@ -117,6 +131,8 @@ The money is held for the checkout while the buyer pays the rest, so two buyers 
 The order, its page, its invoice and its confirmation email show *Paid with Gift card ending 4F2K* and the amount.
 
 ## Refunds and cancellations
+
+<YouTube video="gift-cards" title="Refunds and cancellations" start={311} end={346} />
 
 **An order paid with a gift card.** When you refund it, the money goes back to the card or wallet first, up to what was charged; what the gift card paid goes back on the gift card last. The card's activity shows the refund, and the order's notes say *Put $20 back on Gift card ending 4F2K.* See [Refund an order](carts-and-orders.md#refund-an-order).
 
