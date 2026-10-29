@@ -154,6 +154,8 @@ These fine-tune how the model writes. Leave them empty to use the defaults.
 
 ### Prompt Security
 
+<YouTube video="ai-prompt-security" title="Video of the limits of one profile" start={218} end={244} />
+
 You only need this card for a public chat profile, or when a profile needs limits that differ from the site's. Each field overrides the site-wide limit for this profile; leave it empty to keep the site's value, shown in the field.
 
 | Field | What it does |
