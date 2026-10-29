@@ -20,7 +20,7 @@ Both widgets chat with an [AI profile](profiles.md) of type **Chat**. Create the
 
 ## Turn on the admin chat widget
 
-<YouTube video="ai-walkthroughs" title="Video of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant" start={503} end={574} />
+<YouTube video="ai-chat" title="Video of turning on the admin chat widget and using it" start={204} end={258} />
 
 1. Ask your administrator to turn on the **AI Chat Admin Widget** feature.
 2. Open **Settings > Artificial Intelligence** and scroll to the **Admin Widget** section.
@@ -51,12 +51,12 @@ The widget remembers its position, its size, whether it was open and your curren
 
 ## Add a chat box to your website
 
-<YouTube video="ai-walkthroughs" title="Video of adding the website chat widget with an always-on layer" start={577} end={615} />
+<YouTube video="ai-chat" title="Video of adding the website chat widget to a layer" start={258} end={326} />
 
 The website widget is a normal Orchard Core widget called **Artificial Intelligence Chat**, so you place it like any other widget.
 
 1. Create a chat profile for the public, for example *Website assistant*. The **Website assistant** starting point in the **New AI Profile** picker is made for this. See [Create a profile](profiles.md#create-a-profile).
-2. Open **Design > Widgets**.
+2. Open **Design > Widgets**. If it says "Please define the available zones before adding Widgets", your administrator first lists the zones of the theme, such as **Footer**, under **Settings > Zones**.
 3. Make sure there is a layer that is active on the pages where the chat should appear. To show it on every page, use a layer whose rule is a **Boolean** condition set to true. Many sites already have one, often named *Always*.
 4. In the zone where the widget should live, for example **Footer**, click **Add Widget** and choose **Artificial Intelligence Chat**.
 5. Fill in the fields below, pick the layer, and publish the widget.
@@ -64,6 +64,8 @@ The website widget is a normal Orchard Core widget called **Artificial Intellige
 
 | Field | What it does |
 | --- | --- |
+| **Title** | A name for the widget in the widget list. Tick **Render title** only when the title should show with the widget. |
+| **The layer** | The layer that controls where the widget shows. |
 | **Profile** | The chat profile the widget talks to. Required. |
 | **Total history chat to show** | How many past chats a signed-in visitor can reopen from the widget. Set it to 0, or leave it blank, to hide the history. |
 
@@ -83,6 +85,8 @@ Visitors who are not signed in use the **Anonymous** role. The widget only shows
 A chat is saved only once the visitor sends a first message, never just because someone opened a page.
 
 ## Protect a public assistant
+
+<YouTube video="ai-chat" title="Video of the protections of a public assistant" start={383} end={431} />
 
 A public assistant is open to anyone, so the site protects it:
 

@@ -22,6 +22,10 @@ This page covers the features, prerequisites, runtime behavior and security sett
 - [AI profiles](../user-manual/ai/profiles.md): the **New AI Profile** picker and every field of the profile editor.
 - [Chat widgets](../user-manual/ai/chat-widgets.md): turning on the admin widget and placing the website widget.
 
+<YouTube video="ai-chat" title="Video overview of AI chat" />
+
+The video shows how an administrator and staff use the chat page, the admin chat widget and the website chat widget, and how the chat engines are chosen.
+
 ## AI Chat Feature
 
 The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu. The menu entry requires `QueryAnyAIProfile` (or the per-profile `QueryAIProfile_{profileName}` permission), and the menu is cached and invalidated whenever a profile is saved.

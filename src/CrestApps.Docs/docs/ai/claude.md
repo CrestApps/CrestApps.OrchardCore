@@ -10,6 +10,8 @@ user_manual:
 
 # Claude Integration
 
+<YouTube video="ai-chat" title="Video of the chat engines: the default orchestrator, Claude and GitHub Copilot" start={326} end={383} />
+
 | | |
 | --- | --- |
 | **Feature Name** | AI Claude Orchestrator |
