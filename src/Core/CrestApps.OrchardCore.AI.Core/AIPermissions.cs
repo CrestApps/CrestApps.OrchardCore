@@ -39,6 +39,11 @@ public static class AIPermissions
     public static readonly Permission ManageAIWebhooks = new("ManageAIWebhooks", LocalizationSource.Create("Manage AI webhooks", typeof(AIPermissions)));
 
     /// <summary>
+    /// Gets the permission to manage the API keys that call the AI API.
+    /// </summary>
+    public static readonly Permission ManageAIApiKeys = new("ManageAIApiKeys", LocalizationSource.Create("Manage AI API keys", typeof(AIPermissions)));
+
+    /// <summary>
     /// Gets the permission to manage AI deployments.
     /// </summary>
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", LocalizationSource.Create("Manage AI deployments", typeof(AIPermissions)));

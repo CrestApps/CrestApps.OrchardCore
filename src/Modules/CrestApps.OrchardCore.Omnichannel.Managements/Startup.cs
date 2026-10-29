@@ -56,6 +56,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();
 
         services.AddScoped<ActivityHandlerDescriber>();
+        services.AddScoped<AIActivityStarter>();
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IAdminListItemDisplayManager<OmnichannelActivityListEntry>, OmnichannelActivityListEntryDisplayManager>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();

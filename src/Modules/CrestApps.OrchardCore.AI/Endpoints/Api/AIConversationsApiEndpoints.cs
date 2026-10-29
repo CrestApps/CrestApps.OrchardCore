@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -41,7 +42,7 @@ internal static class AIConversationsApiEndpoints
     public static IEndpointRouteBuilder MapAIConversationsApi(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup(RoutePrefix)
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .DisableAntiforgery()
             .WithTags(Tag);
 
@@ -110,7 +111,7 @@ internal static class AIConversationsApiEndpoints
         ISession session,
         IOptions<YesSqlStoreOptions> storeOptions)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Conversations, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -165,7 +166,7 @@ internal static class AIConversationsApiEndpoints
         IAIChatSessionPromptStore promptStore,
         IAIConversationEvaluationStore evaluationStore)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Conversations, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -198,7 +199,7 @@ internal static class AIConversationsApiEndpoints
         IAuthorizationService authorizationService,
         AIConversationPrivacyService privacy)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.DeleteAllChatSessions))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Conversations, AIPermissions.DeleteAllChatSessions))
         {
             return Forbidden();
         }
@@ -216,7 +217,7 @@ internal static class AIConversationsApiEndpoints
         IAIChatSessionManager sessionManager,
         AIConversationEvaluationService evaluationService)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Conversations, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -252,7 +253,7 @@ internal static class AIConversationsApiEndpoints
         IAIProfileManager profileManager,
         AIChatSessionPostCloseProcessor postCloseProcessor)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Conversations, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -294,7 +295,7 @@ internal static class AIConversationsApiEndpoints
         AIConversationSimulator simulator,
         AIConversationEvaluationService evaluationService)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Conversations, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -340,7 +341,7 @@ internal static class AIConversationsApiEndpoints
         var criteria = Clean(request.Criteria);
         var evaluation = criteria.Count == 0
             ? null
-            : await evaluationService.EvaluateTurnsAsync(profile, null, simulation.Turns, criteria, request.PassingScore ?? AIConversationEvaluator.DefaultPassingScore, request.Label?.Trim(), simulation.Instructions, request.JudgeDeploymentName, httpContext.RequestAborted);
+            : await evaluationService.EvaluateTurnsAsync(profile, null, simulation.Turns, criteria, request.PassingScore ?? AIConversationEvaluator.DefaultPassingScore, request.Label?.Trim(), simulation.Instructions, request.JudgeDeploymentName, cancellationToken: httpContext.RequestAborted);
 
         return TypedResults.Ok(new ApiAISimulation(
             simulation.Turns.Select(turn => new ApiAIConversationTurn(turn.Role, turn.Text, turn.CreatedUtc)).ToList(),
@@ -357,7 +358,7 @@ internal static class AIConversationsApiEndpoints
         IAIProfileManager profileManager,
         IAIProfileVersionStore versionStore)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -385,7 +386,7 @@ internal static class AIConversationsApiEndpoints
         IAuthorizationService authorizationService,
         AIContactMemoryService memoryService)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Contacts, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }
@@ -400,7 +401,7 @@ internal static class AIConversationsApiEndpoints
         IAuthorizationService authorizationService,
         AIContactMemoryService memoryService)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIProfiles))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Contacts, AIPermissions.ManageAIProfiles))
         {
             return Forbidden();
         }

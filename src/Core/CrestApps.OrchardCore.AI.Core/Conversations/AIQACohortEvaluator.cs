@@ -146,8 +146,8 @@ public sealed class AIQACohortEvaluator
                     cohort.GetLabel(),
                     instructions: null,
                     cohort.JudgeDeploymentName,
-                    cancellationToken,
-                    knowledge);
+                    knowledge,
+                    cancellationToken);
 
                 if (evaluation is not null)
                 {

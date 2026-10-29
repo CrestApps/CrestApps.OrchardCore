@@ -1,0 +1,143 @@
+@using CrestApps.OrchardCore.AI.Core.ApiKeys
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIApiKeyViewModel
+
+@{
+    var scopes = new Dictionary<string, string>
+    {
+        [AIApiKeys.Scopes.Profiles] = T["AI profiles and their versions."].Value,
+        [AIApiKeys.Scopes.Conversations] = T["Conversations, their analysis and evaluations, and simulations."].Value,
+        [AIApiKeys.Scopes.Tests] = T["Test cases and test runs."].Value,
+        [AIApiKeys.Scopes.Calls] = T["Starting, watching and controlling AI calls and texts."].Value,
+        [AIApiKeys.Scopes.Numbers] = T["Phone numbers and other channel addresses."].Value,
+        [AIApiKeys.Scopes.Knowledge] = T["Data sources, documents and file sources."].Value,
+        [AIApiKeys.Scopes.Contacts] = T["Contact memory."].Value,
+        [AIApiKeys.Scopes.Chat] = T["Chatting with a profile."].Value,
+        [AIApiKeys.Scopes.Recordings] = T["Recordings and links to them."].Value,
+    };
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Kind"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <div class="form-check">
+                <input type="radio" class="form-check-input" asp-for="Kind" value="@AIApiKeyKind.Server" id="kind-server" data-api-key-kind />
+                <label class="form-check-label" for="kind-server">@T["Server key"]</label>
+                <span class="hint dashed">@T["Secret, for a program on a server. Acts with the permissions of its roles, in the areas you choose."]</span>
+            </div>
+            <div class="form-check">
+                <input type="radio" class="form-check-input" asp-for="Kind" value="@AIApiKeyKind.Browser" id="kind-browser" data-api-key-kind />
+                <label class="form-check-label" for="kind-browser">@T["Browser key"]</label>
+                <span class="hint dashed">@T["Public, for a web page. Only chats with the profiles you choose, only from the web sites you list."]</span>
+            </div>
+        }
+        else
+        {
+            <input type="hidden" asp-for="Kind" />
+            <p class="form-control-plaintext">@(Model.Kind == AIApiKeyKind.Browser ? T["Browser key"] : T["Server key"])</p>
+        }
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.PublicKey))
+{
+    <div class="ocat-wrapper">
+        <label for="public-key" class="ocat-label">@T["Key"]</label>
+        <div class="ocat-end">
+            <input id="public-key" class="form-control font-monospace" value="@Model.PublicKey" readonly />
+        </div>
+    </div>
+}
+
+<div data-api-key-for="@AIApiKeyKind.Server">
+    <div class="ocat-wrapper" asp-validation-class-for="Scopes">
+        <label class="ocat-label ocat-label-required">@T["Areas"]</label>
+        <div class="ocat-end">
+            @foreach (var scope in scopes)
+            {
+                var id = "scope-" + scope.Key;
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Scopes)" value="@scope.Key" id="@id" checked="@Model.Scopes.Contains(scope.Key)" />
+                    <label class="form-check-label" for="@id"><span class="font-monospace">ai.@scope.Key</span></label>
+                    <span class="hint dashed">@scope.Value</span>
+                </div>
+            }
+            <span asp-validation-for="Scopes" class="text-danger"></span>
+            <span class="hint">@T["OpenID clients can be limited the same way: add these as scopes on the OpenID server and give the client the ones it needs. A client with no ai. scope may call every area its roles allow."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Roles">
+        <label asp-for="Roles" class="ocat-label ocat-label-required">@T["Roles"]</label>
+        <div class="ocat-end">
+            <select asp-for="Roles" asp-items="Model.AvailableRoles" class="form-select" multiple size="5"></select>
+            <span asp-validation-for="Roles" class="text-danger"></span>
+            <span class="hint">@T["The key acts with these roles' permissions, as a user with them would."]</span>
+        </div>
+    </div>
+</div>
+
+<div data-api-key-for="@AIApiKeyKind.Browser">
+    <div class="ocat-wrapper" asp-validation-class-for="AllowedOrigins">
+        <label asp-for="AllowedOrigins" class="ocat-label ocat-label-required">@T["Web sites"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="AllowedOrigins" class="form-control font-monospace" rows="3" placeholder="https://www.example.com"></textarea>
+            <span asp-validation-for="AllowedOrigins" class="text-danger"></span>
+            <span class="hint">@T["One origin per line. Requests from any other site, or with no Origin header, are refused. Allow the same sites in a CORS policy so browsers may call the API."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="AllowedProfileIds">
+        <label asp-for="AllowedProfileIds" class="ocat-label ocat-label-required">@T["Profiles"]</label>
+        <div class="ocat-end">
+            <select asp-for="AllowedProfileIds" asp-items="Model.AvailableProfiles" class="form-select" multiple size="5"></select>
+            <span asp-validation-for="AllowedProfileIds" class="text-danger"></span>
+            <span class="hint">@T["The key may chat with these profiles through the chat completion endpoint, and nothing else."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ExpiresUtc">
+    <label asp-for="ExpiresUtc" class="ocat-label">@T["Expires (UTC)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ExpiresUtc" type="datetime-local" class="form-control" />
+        <span class="hint">@T["Leave empty for a key that does not expire."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Enabled"]</label>
+            <span class="hint dashed">@T["A disabled key is refused until it is enabled again."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const radios = document.querySelectorAll('[data-api-key-kind]');
+        const current = () => {
+            const checked = document.querySelector('[data-api-key-kind]:checked');
+            return checked ? checked.value : document.querySelector('input[type=hidden][name$="Kind"]')?.value;
+        };
+        const show = () => {
+            const kind = current();
+            document.querySelectorAll('[data-api-key-for]').forEach(section => section.classList.toggle('d-none', section.dataset.apiKeyFor !== kind));
+        };
+        radios.forEach(radio => radio.addEventListener('change', show));
+        show();
+    })();
+</script>

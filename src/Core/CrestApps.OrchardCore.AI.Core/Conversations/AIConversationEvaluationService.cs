@@ -86,7 +86,7 @@ public sealed class AIConversationEvaluationService
 
         var turns = AIConversationTranscript.GetTurns(await _promptStore.GetPromptsAsync(session.SessionId));
 
-        return await EvaluateTurnsAsync(profile, session, turns, criteria, passingScore, label, null, null, cancellationToken);
+        return await EvaluateTurnsAsync(profile, session, turns, criteria, passingScore, label, null, null, cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -101,9 +101,9 @@ public sealed class AIConversationEvaluationService
     /// <param name="instructions">The instructions the AI had, or <see langword="null"/> to read the profile's.</param>
     /// <param name="judgeDeploymentName">The deployment that judges, or <see langword="null"/> for the utility
     /// deployment.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <param name="knowledge">What the profile's knowledge base holds on what the customer asked, for the hallucination
     /// check, or <see langword="null"/> to judge the transcript alone.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public async Task<AIConversationEvaluation> EvaluateTurnsAsync(
         AIProfile profile,
         AIChatSession session,
@@ -113,8 +113,8 @@ public sealed class AIConversationEvaluationService
         string label,
         string instructions,
         string judgeDeploymentName,
-        CancellationToken cancellationToken = default,
-        string knowledge = null)
+        string knowledge = null,
+        CancellationToken cancellationToken = default)
     {
         instructions ??= await GetInstructionsAsync(profile, cancellationToken);
 

@@ -178,3 +178,14 @@ public sealed class ApiAIContactMemoryRequest
     /// </summary>
     public string Text { get; set; }
 }
+
+/// <summary>
+/// An AI profile, as listed.
+/// </summary>
+/// <param name="Id">The profile.</param>
+/// <param name="Name">Its unique name.</param>
+/// <param name="DisplayText">Its title.</param>
+/// <param name="Type">Chat, Utility, TemplatePrompt or Agent.</param>
+/// <param name="Version">The current version, when versions are kept.</param>
+/// <param name="CreatedUtc">When it was made.</param>
+public sealed record ApiAIProfileSummary(string Id, string Name, string DisplayText, string Type, int? Version, DateTime CreatedUtc);

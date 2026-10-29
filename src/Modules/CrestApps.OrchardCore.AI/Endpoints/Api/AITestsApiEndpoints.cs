@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -29,7 +30,7 @@ internal static class AITestsApiEndpoints
     public static IEndpointRouteBuilder MapAITestsApi(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup(AIConversationsApiEndpoints.RoutePrefix)
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .DisableAntiforgery()
             .WithTags(Tag);
 
@@ -59,7 +60,7 @@ internal static class AITestsApiEndpoints
         IAuthorizationService authorizationService,
         IAITestCaseStore store)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIQuality))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Tests, AIPermissions.ManageAIQuality))
         {
             return Forbidden();
         }
@@ -80,7 +81,7 @@ internal static class AITestsApiEndpoints
         IAITestCaseStore store,
         AITestRunner runner)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIQuality))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Tests, AIPermissions.ManageAIQuality))
         {
             return Forbidden();
         }
@@ -110,7 +111,7 @@ internal static class AITestsApiEndpoints
         IAuthorizationService authorizationService,
         IAITestRunStore runStore)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIQuality))
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Tests, AIPermissions.ManageAIQuality))
         {
             return Forbidden();
         }

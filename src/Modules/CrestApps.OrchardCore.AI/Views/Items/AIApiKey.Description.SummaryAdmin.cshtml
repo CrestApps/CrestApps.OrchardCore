@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.AI.Core.ApiKeys
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIApiKey>
+
+<div class="admin-list-secondary text-break">
+    <span class="font-monospace">@Model.Value.Prefix&hellip;</span>
+    @if (Model.Value.LastUsedUtc is { } lastUsed)
+    {
+        <span class="ms-2">@T["Last used"] <date-time utc="@lastUsed" /></span>
+    }
+    else
+    {
+        <span class="ms-2">@T["Never used"]</span>
+    }
+</div>

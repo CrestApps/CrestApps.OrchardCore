@@ -160,7 +160,7 @@ public sealed class AITestRunner
                 label: $"Test: {testCase.Name}",
                 simulation.Instructions,
                 testCase.JudgeDeploymentName,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             if (evaluation is null)
             {
