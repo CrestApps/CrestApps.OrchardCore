@@ -40,4 +40,4 @@ A **business hours calendar** says when you are open. The same calendar can be u
 - The same **From** and **To** time means open for 24 hours.
 - A **To** time earlier than **From** runs past midnight, for example 22:00 to 06:00.
 - Holiday lines that are not valid dates are ignored, so check the list after saving.
-- A **disabled** calendar never closes anything: every queue that uses it is treated as always open.
+- A **disabled** calendar never closes anything: every queue and entry point that uses it is treated as always open. A dialer profile that uses a disabled calendar as its calling window does the opposite: no call is placed, because the window is never open.
