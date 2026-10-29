@@ -17,6 +17,10 @@ Everyone who buys from your store is a **customer**: a person or a business, wit
 
 <AskYourAdmin />
 
+This video shows guest customers and merged accounts, how long guest data is kept, your own checkout fields, and staff's My Account page:
+
+<YouTube video="customers-guests-privacy" title="Narrated video overview of customers, guests and privacy" />
+
 ## Customers and accounts
 
 A customer's sign-in, password and email stay on their **account**, which is managed under **Security > Users** like any other user. The customer record keeps what your store needs on top of that: how to address them, their company and tax id, and whether they want news and offers.
@@ -26,6 +30,8 @@ A customer who signs in and places an order becomes a customer the first time th
 Someone who buys as a guest becomes a **guest** customer with the name, email, phone and billing address they gave at checkout. Each guest checkout makes its own guest customer: an email typed at checkout proves nothing, so it never joins someone else's record.
 
 ## Guests who create an account
+
+<YouTube video="customers-guests-privacy" title="Video of guest customers and merged accounts" start={87} end={130} />
 
 When someone who bought as a guest creates an account with the same email, or signs in to one they already have, their guest purchases join the account, but only once the account's email is confirmed. An email typed at checkout proves nothing, so nobody can claim someone else's orders by typing their email.
 
@@ -147,6 +153,8 @@ Each download and erasure is listed under **Privacy** with when it happened and 
 
 ## How long guest data is kept
 
+<YouTube video="customers-guests-privacy" title="Video of how long guest data is kept" start={130} end={179} />
+
 Under **Settings > Commerce > Customers**, **Privacy** sets how long you keep guests' personal data. Once a day the store applies it:
 
 | Setting | What happens | Default |
@@ -158,7 +166,9 @@ Enter **0** to keep the data. Customers with an account are kept while the accou
 
 ## My Account
 
-A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default.
+A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default. Staff open it under **Commerce > My Account**.
+
+<YouTube video="customers-guests-privacy" title="Video of staff's My Account page" start={237} end={247} />
 
 - The top of the page edits how the store addresses them: whether they buy for **Myself** or **A business**, their name, company, tax id, phone and marketing consent. Their email is shown but is changed on their account.
 - **Addresses** lists their address book, where they add, edit and delete addresses the same way as above.

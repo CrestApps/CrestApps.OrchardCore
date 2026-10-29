@@ -72,6 +72,8 @@ With Orders enabled, Customers adds a **Contact** step to every order's checkout
 - **What it keeps:** the entries as `CustomerContactStep` in the session's saved steps, and a `CheckoutContactInfo` (name, email, phone, billing address) on the session. The order copies that contact and billing address when it is paid, and Pay Later puts the guest's name and email on its transaction, so receipts and reminders reach them.
 - **When the order is paid** (`CompletingAsync`, inside the completion's transaction): the order is linked to the signed-in buyer's customer, or to a new guest customer made with `ICustomerService.CreateGuestAsync`; each guest checkout makes its own, since an email typed at checkout proves nothing. A guest's billing address goes into their address book as the default billing address; a signed-in customer's new address goes in when they asked, never twice.
 
+<YouTube video="customers-guests-privacy" title="Narrated video overview of customers, guests and privacy" />
+
 ## Checkout details
 
 The **Checkout details** feature (`CrestApps.OrchardCore.Customers.CheckoutDetails`, depends on Customers, Orders, Contents and Content Types) creates a `CheckoutDetails` content type with no fields. Its fields are the store's own checkout fields:
