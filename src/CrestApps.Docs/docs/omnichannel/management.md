@@ -31,8 +31,6 @@ The screencast below enables **Omnichannel Management**, opens the **Management*
 
 <YouTube video="omnichannel-2-walkthroughs" title="Video of enabling Omnichannel Management and adding dispositions" start={7} end={40} />
 
-<YouTube video="contact-center-dispositions" title="Video of dispositions" />
-
 The module ships as two features. `CrestApps.OrchardCore.Omnichannel.Activities` is the headless half: contact, subject, campaign, and activity catalogs, their stores and managers, the content parts and indexes, the migrations, the permissions, and the subject-disposition endpoint. `CrestApps.OrchardCore.Omnichannel.Managements` adds the CRM administration experience on top of it - the screens, display drivers, and admin menus described below - and enabling it brings the headless feature with it.
 
 The split exists so that a headless consumer of the activity model, such as the [Contact Center](../contact-center/index.md), can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
@@ -188,6 +186,8 @@ The `OmnichannelSubject` stereotype is not recognized as a subject marker. A sub
 Because subject content items are authored and completed through the omnichannel subject flow rather than the standard content workflow, the default content editor action buttons Orchard Core injects (**Publish**, **Save Draft**, and **Preview**) are automatically hidden on the editor of any content type that has `OmnichannelSubjectPart` attached. This applies as soon as the part is attached and is reverted automatically when the part is detached, without any placement configuration. On the `OmnichannelSubjectPart` settings screen, the Azure AI Search and Elasticsearch index settings that Orchard Core injects into every part editor are hidden too, because indexing for omnichannel subjects is managed automatically.
 
 ### Disposition
+
+<YouTube video="contact-center-dispositions" title="Video of dispositions" />
 A **Disposition** is the outcome of an activity (e.g. `Completed`, `FollowUp`, `DoNotCall`, `Scheduled`, `Sold`).
 
 Dispositions are a key building block for controlling what happens next via subject actions. Disposition names are unique and become fixed after creation so subject-flow mappings stay stable. A disposition's **Outcome** (`DispositionOutcome`: `None`, `NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine`) marks it for automatic use when a call ends in a way nobody chose; see [Dispositions](../user-manual/dispositions.md#outcomes).
