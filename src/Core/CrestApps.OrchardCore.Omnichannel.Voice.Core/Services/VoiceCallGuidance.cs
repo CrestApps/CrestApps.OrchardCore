@@ -22,7 +22,11 @@ internal static class VoiceCallGuidance
     /// <para>
     /// The confirmation rule is here because ending the call is where a wrong one costs: live, a model read an
     /// email address back wrongly, the customer's reply came through garbled, and the model took it for a yes,
-    /// thanked them and hung up with the wrong address.
+    /// thanked them and hung up with the wrong address. It is limited to what the customer gave: live, a model that
+    /// had given the customer a phone number asked them four times whether it was right. That model had also made
+    /// the number up, hence the rule against inventing details. Actions are held to the same rule: live, a profile with
+    /// no booking tool said it would confirm availability and get back to the customer, went silent, and then told
+    /// them the appointment was booked.
     /// </para>
     /// <para>
     /// The callback rule is here for the same reason: live, a customer said "can you call me later?" and the model
@@ -43,10 +47,15 @@ internal static class VoiceCallGuidance
         "not say you are wrapping up or about to finish first; just say goodbye. The call is hung up for you once you " +
         "have finished speaking and the customer has had a moment to add anything, so do not announce that you " +
         "are hanging up and do not wait for them to do it. Never call it while the customer still has questions " +
-        "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +
-        "confirms them: an answer you could not make out, or one that does not plainly say yes, is not a " +
-        "confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the corrected " +
-        "details back before you go on. If the customer says now is not a good time, offer to call them back " +
+        "or is being transferred to a person. When you read back details the customer gave you to confirm them, " +
+        "only a clear yes confirms them: an answer you could not make out, or one that does not plainly say yes, " +
+        "is not a confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the " +
+        "corrected details back before you go on. Information you give the customer needs no confirmation: say it " +
+        "once, and repeat it only if they ask. Never make up a phone number, address, price or other detail you " +
+        "were not given; if you do not have it, say so. Never tell the customer something is booked, confirmed or " +
+        "done unless one of your tools did it, and never say you will check something and come back to them unless a " +
+        "tool is doing it now: if you cannot do it on this call, say what you have noted and who will follow up. " +
+        "If the customer says now is not a good time, offer to call them back " +
         "unless they have made clear they are not interested at all. If they ask to be called back, or accept " +
         "the offer, without saying when, ask once when would suit them before you close, and say that time back " +
         "to them in your goodbye.";
@@ -61,8 +70,10 @@ internal static class VoiceCallGuidance
     public const string PhoneMenusAndScreening =
         "If an automated phone menu answers, listen to the options, then use the " + PressKeysTool.ToolName + " tool " +
         "to press the key that gets you to the person or department you need, or to enter an extension you were " +
-        "given, and wait for what the menu says next. If the phone asks who is calling and why before it connects " +
-        "you (call screening), say your name, the business you are calling for and the reason for the call in one " +
+        "given, and wait for what the menu says next. Press only that key, once: not also the keys for hearing the menu " +
+        "again or going back. When a person answers after the menu, greet them as you would anybody who answers. If " +
+        "the phone asks who is calling and why before it connects you (call screening), say your name, the business " +
+        "you are calling for and the reason for the call in one " +
         "short sentence, then wait: the person will usually pick up next.";
 
     /// <summary>

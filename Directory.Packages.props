@@ -208,6 +208,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->
+    <PackageVersion Include="MySqlConnector" Version="2.6.1" />
     <PackageVersion Include="System.Memory.Data" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.14" />

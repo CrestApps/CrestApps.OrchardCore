@@ -5,6 +5,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,7 +46,8 @@ public sealed class PressKeysTool : AIFunction
     public override string Description =>
         "Presses keys on the phone keypad, as if you pressed them on a handset. Use it when an automated phone menu " +
         "asks you to press a number, or to enter an extension. Listen to the whole menu first, then press the key for " +
-        "the option you need, and wait for what the menu says next. Never press keys while a person is talking to you.";
+        "the one option you need, once, and wait for what the menu says next. Do not also press the keys a menu offers " +
+        "for hearing it again or going back. Never press keys while a person is talking to you.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -99,6 +101,20 @@ public sealed class PressKeysTool : AIFunction
         if (media is null || !await media.SendDigitsAsync(liveCall.ProviderCallId, keys, cancellationToken))
         {
             return "The keys could not be pressed on this call.";
+        }
+
+        // A phone menu is a machine to the provider's detection, and keys are what a menu is answered with: the call
+        // is getting through to somebody, not reaching a voicemail to leave a message on. A live session hears this
+        // through the signal; a turn-based call reads the mark on its next turn, so the mark goes unless the message
+        // is already being left.
+        services.GetService<IAnsweringMachineSignals>()?.PhoneMenuReached(liveCall.ProviderName, liveCall.ProviderCallId);
+
+        if (!liveCall.IsRealtime &&
+            activity.TryGet<VoicemailReached>(out var voicemail) &&
+            !voicemail.MessageLeft &&
+            activity.Properties.Remove(nameof(VoicemailReached)))
+        {
+            await activityStore.UpdateAsync(activity, cancellationToken);
         }
 
         var logger = services.GetService<ILogger<PressKeysTool>>();

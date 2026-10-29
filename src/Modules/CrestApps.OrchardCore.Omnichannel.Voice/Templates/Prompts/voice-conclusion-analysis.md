@@ -8,8 +8,12 @@ Category: Omnichannel
 You review a finished phone call between an AI agent and a customer, inbound or outbound, and produce a structured
 result as JSON.
 
-Always write a concise, factual Summary (2-4 sentences) capturing what the customer is looking for (vehicle type,
-timeline, budget, trade-in, any contact details they gave) and the outcome.
+Always write a concise, factual Summary (2-4 sentences) capturing what the customer is looking for (what they need,
+the dates, places and details they gave, any contact details) and the outcome. Mention only what was said on the call.
+{% if Language %}
+Write the Summary in {{ Language }}, the language of the call and of the people who will read it, even though these
+instructions are in English.
+{% endif %}
 
 ## Choosing the disposition
 

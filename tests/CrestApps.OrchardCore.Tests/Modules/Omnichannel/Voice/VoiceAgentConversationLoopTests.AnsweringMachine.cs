@@ -64,6 +64,47 @@ public sealed partial class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task KeysPressedOnTheCall_ReachTheLiveSessionHoldingIt()
+    {
+        // Arrange
+        // The keys are pressed by a tool in the request holding the call, and the session must hear it to stop
+        // treating the menu as a voicemail.
+        var harness = new LoopHarness();
+        harness.UseRealtime();
+
+        RealtimeVoiceConversationContext held = null;
+        harness.Realtime.DuringSession = context =>
+        {
+            held = context;
+            harness.AnsweringMachine.PhoneMenuReached("Fake", "call-1");
+        };
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(held);
+        Assert.True(held.PhoneMenuReached.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task AMachineReportedAfterKeysWerePressed_IsAPhoneMenu_NotAVoicemail()
+    {
+        // Arrange
+        // Live, the assistant pressed the key for the person it was calling three seconds before the provider
+        // reported a machine, and the call was then treated as a voicemail.
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        harness.AnsweringMachine.PhoneMenuReached("Fake", "call-1");
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(harness.Activity.TryGet<VoicemailReached>(out _));
+    }
+
+    [Fact]
     public async Task WhenTheLiveSessionLeavesItsMessage_TheCallIsEndedOnVoicemail_AndTheActivitySaysSo()
     {
         // Arrange

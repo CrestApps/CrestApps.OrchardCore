@@ -31,6 +31,6 @@
     <div class="ocat-end">
         <input class="form-control" asp-for="ActivityId" />
         <span asp-validation-for="ActivityId"></span>
-        <span class="hint">@T["A Liquid expression resolving the call's activity. The default, <code>{{ Workflow.Input.ActivityId }}</code>, is the call an AI conversation event or an AI tool was raised for. A new AI profile answers from the caller's next turn on turn-based calls only."]</span>
+        <span class="hint">@T["A Liquid expression resolving the call's activity. The default, <code>{{ Workflow.Input.ActivityId }}</code>, is the call an AI conversation event or an AI tool was raised for. Another AI profile can take over turn-based calls only."]</span>
     </div>
 </div>

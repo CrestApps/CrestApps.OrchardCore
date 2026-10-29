@@ -127,7 +127,9 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
 
             if (!await _commands.SendAsync(activityId, command) && !await _commands.RelayAsync(activityId, command))
             {
-                return new(false, "The live session could not be reached to switch its profile.");
+                // The model is told what to do instead: a refusal it read as done had it tell the caller they were being
+                // put through, and then transfer them to a person nobody had asked for.
+                return new(false, "The live session could not be reached to switch its profile, so the call keeps the AI profile it started with. Tell the caller you cannot put them through for this and carry on helping them yourself; do not transfer them to a person or a number instead unless they ask for one.");
             }
         }
 
@@ -145,7 +147,7 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
             }
         }
 
-        return new(true, "The new AI profile answers from the caller's next turn.");
+        return new(true, "The call is handed to the new AI profile, which answers the caller next.");
     }
 
     private async Task<AIVoiceCallActionResult> HandOverAsync(

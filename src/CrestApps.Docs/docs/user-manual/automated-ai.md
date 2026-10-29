@@ -120,7 +120,7 @@ This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** feat
 
 ## When the conversation ends
 
-The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript.
+The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript. When the profile's [AI persona](../ai/personas.md) has a **Language**, the summary is written in that language, and so is the briefing an agent reads when a call is handed to them.
 
 To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
 
@@ -133,3 +133,5 @@ If the AI's live voice connection drops in the middle of a call, the platform fi
 ### Live agent handoff
 
 If the subject allows **live agent handoff**, the AI can pass the customer to the handoff queue when they ask for a person, look like a qualified lead, or are frustrated. SMS conversations appear in the [Messaging workspace](messaging.md); calls ring an agent in the queue.
+
+On a call, the AI tells the caller in its own words that it is connecting them. When nobody in the queue is free, the caller then hears that they are in the queue; when the queue is closed and a callback is booked instead, they hear that someone will call them back, and the call ends. Those two lines are English, read by the telephony provider's voice, so they are said only when the profile's [AI persona](../ai/personas.md) speaks English or names no language; on a call held in another language the caller hears only the AI's own words.

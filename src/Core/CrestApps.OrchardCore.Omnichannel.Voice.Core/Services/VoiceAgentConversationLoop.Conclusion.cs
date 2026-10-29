@@ -220,6 +220,10 @@ public sealed partial class VoiceAgentConversationLoop
         // than assembled in code.
         var templateService = services.GetRequiredService<ITemplateService>();
 
+        // The language the summary is written in. Asked in English, the review answered in English whatever the call
+        // was held in; see VoiceCallLanguage.
+        var language = await VoiceCallLanguage.GetNameAsync(services, profile);
+
         var systemPrompt = await templateService.RenderAsync(
             VoiceTemplateIds.ConclusionAnalysis,
             new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -228,6 +232,7 @@ public sealed partial class VoiceAgentConversationLoop
                 ["AllowContactEmail"] = allowUpdateContact,
                 ["AllowLeadConversion"] = allowLeadConversion,
                 ["LeadQualification"] = allowLeadConversion ? LeadAIConversion.GetQualification(leadConversion, flowSettings?.SubjectGoal) : null,
+                ["Language"] = language,
             });
 
         // The review turns "call me back in an hour" or "tomorrow at three" into a moment, so it is told what time it

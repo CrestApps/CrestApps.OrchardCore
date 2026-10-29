@@ -1,7 +1,9 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -58,11 +60,16 @@ public static class VoiceCallConclusionPolicy
     /// while the agent is still talking — the outcome on record would be the model's guess rather than what the
     /// agent did, and the agent's own wrap-up would then be refused because the work was already finished. An
     /// escalated call belongs to the agent who took it; if nobody ever picks it up, the recovery sweeps close it.
+    /// <para>
+    /// A call transferred to a phone number is escalated too, but no agent is behind it to close it. Live, one was
+    /// left in progress after the caller hung up, holding a slot of the concurrent AI call limit until the orphan
+    /// sweep failed it. It is concluded when the line hangs up.
+    /// </para>
     /// </remarks>
     /// <param name="activity">The activity behind the call.</param>
     public static bool ShouldConclude(OmnichannelActivity activity)
         => activity is not null &&
-            !activity.AiEscalated &&
+            (!activity.AiEscalated || activity.Has<AICallTransfer>()) &&
             !activity.Status.IsTerminal();
 
     /// <summary>
