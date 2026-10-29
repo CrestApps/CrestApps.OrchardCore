@@ -197,6 +197,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public System.Threading.CancellationToken GreetingEnded { get; }
         public System.Threading.CancellationToken MachineDetected { get; }
+        public System.Threading.CancellationToken PhoneMenuReached { get; }
     }
     public sealed class CallAmbience
     {
@@ -237,6 +238,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         void Forget(string providerName, string providerCallId);
         void GreetingEnded(string providerName, string providerCallId);
         void MachineDetected(string providerName, string providerCallId);
+        void PhoneMenuReached(string providerName, string providerCallId);
         CrestApps.OrchardCore.Omnichannel.Voice.Services.AnsweringMachineSignal Watch(string providerName, string providerCallId);
     }
     public interface IRealtimeCallCompletionRunner
@@ -317,6 +319,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public string InteractionId { get; set; }
         public System.Threading.CancellationToken MachineGreetingEnded { get; set; }
         public System.Threading.CancellationToken NodeStopping { get; set; }
+        public System.Threading.CancellationToken PhoneMenuReached { get; set; }
         public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }

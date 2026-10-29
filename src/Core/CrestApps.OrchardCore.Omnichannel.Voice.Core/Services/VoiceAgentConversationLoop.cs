@@ -348,6 +348,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     // greeting: the session stops conversing on the first and leaves its message after the second.
                     AnsweredByMachine = answeringMachine.MachineDetected,
                     MachineGreetingEnded = answeringMachine.GreetingEnded,
+                    PhoneMenuReached = answeringMachine.PhoneMenuReached,
 
                     // Ends the call the way the end-call tool does on voicemail once the message has been left, so
                     // the line is hung up as soon as the message has played, and the call concluded as one that
@@ -607,6 +608,35 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         }
 
         var (reply, handoffRequested, handoffReason, endCallRequested) = await CompleteAsync(profile, session, activity, turnGuidance: null, cancellationToken);
+
+        // A tool on this turn handed the call to another AI profile. The new profile answers now, in place of the old
+        // one's goodbye: live, the old profile said it was connecting the caller, and then nobody spoke until the
+        // caller did.
+        if (!handoffRequested && !endCallRequested)
+        {
+            var switched = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
+
+            if (switched is not null &&
+                !string.IsNullOrWhiteSpace(switched.AIProfileId) &&
+                !string.Equals(switched.AIProfileId, profile.ItemId, StringComparison.Ordinal))
+            {
+                var (newProfile, newSession) = await ResolveConversationAsync(switched, cancellationToken);
+
+                if (newProfile is not null && newSession is not null)
+                {
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "AI voice activity '{ActivityId}' was handed to another AI profile on this turn, so the new profile answers the caller.",
+                            activity.ItemId.SanitizeLogValue());
+                    }
+
+                    activity = switched;
+                    session = newSession;
+                    (reply, handoffRequested, handoffReason, endCallRequested) = await CompleteAsync(newProfile, newSession, activity, ProfileSwitchedTurn, cancellationToken);
+                }
+            }
+        }
 
         // The model recognised a voicemail the greeting check did not, and has left its message on it.
         if (endCallRequested && _endCallTurn.ReachedVoicemail)

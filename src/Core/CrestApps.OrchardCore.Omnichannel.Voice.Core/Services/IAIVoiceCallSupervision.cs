@@ -36,7 +36,7 @@ public interface IAIVoiceCallSupervision
     Task<AIVoiceCallActionResult> TransferToNumberAsync(string activityId, string phoneNumber, string requestedBy, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Hands the conversation to another AI profile, which answers from the caller's next turn with the same
+    /// Hands the conversation to another AI profile, which answers next with the same
     /// transcript and variables. Only a turn-based call can change its profile; a live session keeps the one it
     /// was opened with.
     /// </summary>

@@ -93,7 +93,7 @@ The **AI Call Action** task (under **AI Conversations**) acts on a phone call th
 | **Message the AI** | The note, for example *Offer the 10% retention discount*. The AI acts on it in its own words. |
 | **Hand the call to an agent** | The agent's user name. The AI stops and the call rings that agent. |
 | **Transfer the call to a phone number** | The number, with its country code. The AI stops and the caller is connected to whoever answers. |
-| **Answer with another AI profile** | The profile's identifier. It answers from the caller's next turn, with the same transcript and variables. Turn-based calls only. |
+| **Answer with another AI profile** | The profile's identifier. It takes over with the same transcript and variables. When the call's own AI runs the workflow through a tool, the new profile answers straight away; otherwise it answers from the caller's next turn. Turn-based calls only. |
 | **End the call** | Nothing. |
 
 **Call** says which call, and defaults to `{{ Workflow.Input.ActivityId }}`: the call the AI conversation event or the AI tool was raised for. So a workflow the AI calls as a tool can transfer its own call, and an **AI Conversation Turn** workflow can hand a caller who says *lawyer* to a person.

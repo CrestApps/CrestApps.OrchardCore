@@ -181,6 +181,15 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
             return false;
         }
 
+        // The call is over but its agent is still wrapping it up, and the disposition they give is what finishes the
+        // record. Live, an agent taking longer than the grace period over a call an AI handed them had it failed under
+        // them. A wrap-up nobody finishes is closed by the agent availability recovery once it runs past the longest
+        // allowed, and the record is recovered on the pass after that.
+        if (interaction is { WrapUpStartedUtc: not null, WrapUpCompletedUtc: null })
+        {
+            return false;
+        }
+
         // A campaign call that ended before any agent was connected is the dialer's to disposition: its own end should
         // have done it, and when that was lost this finishes it the same way rather than dialing it again or failing it.
         if (await TryFinalizeDialerAttemptAsync(interaction, cancellationToken))

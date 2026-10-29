@@ -117,7 +117,7 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
 
         if (activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
         {
-            return new(false, "A live session keeps the AI profile it was opened with.");
+            return new(false, "A live call keeps the AI profile it started with, so it cannot be handed to another one. Tell the caller you cannot put them through for this and carry on helping them yourself; do not transfer them to a person or a number instead unless they ask for one.");
         }
 
         activity.AIProfileId = profileId;
@@ -134,7 +134,7 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
             }
         }
 
-        return new(true, "The new AI profile answers from the caller's next turn.");
+        return new(true, "The call is handed to the new AI profile, which answers the caller next.");
     }
 
     private async Task<AIVoiceCallActionResult> HandOverAsync(

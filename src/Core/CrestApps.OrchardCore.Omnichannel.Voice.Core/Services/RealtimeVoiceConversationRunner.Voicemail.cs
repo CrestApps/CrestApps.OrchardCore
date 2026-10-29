@@ -177,8 +177,30 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             callToken.ThrowIfCancellationRequested();
 
+            // The assistant has already pressed keys: the machine is a phone menu it is getting through.
+            if (context.PhoneMenuReached.IsCancellationRequested)
+            {
+                LogPhoneMenuNotVoicemail(context);
+
+                return;
+            }
+
             await StopTalkingToTheMachineAsync(media, live, context, callToken);
-            await WaitForTheGreetingToEndAsync(context, callToken);
+
+            // Keys pressed while the greeting plays make it a phone menu after all, so no message is left on it.
+            using var menuOrCall = CancellationTokenSource.CreateLinkedTokenSource(context.PhoneMenuReached, callToken);
+
+            try
+            {
+                await WaitForTheGreetingToEndAsync(context, menuOrCall.Token);
+            }
+            catch (OperationCanceledException) when (context.PhoneMenuReached.IsCancellationRequested && !callToken.IsCancellationRequested)
+            {
+                await CarryOnPastThePhoneMenuAsync(live, context, callToken);
+
+                return;
+            }
+
             await RequestTheVoicemailMessageAsync(live, context, callToken);
         }
         catch (OperationCanceledException)
@@ -240,6 +262,42 @@ public sealed partial class RealtimeVoiceConversationRunner
         if (conversation is not null)
         {
             await ApplyTelephonyTurnDetectionAsync(conversation, callToken);
+        }
+    }
+
+    /// <summary>
+    /// Goes back to conversing once the machine that answered turns out to be a phone menu: what the model says reaches
+    /// the line again, and the caller the menu puts the call through to may talk over it.
+    /// </summary>
+    /// <remarks>
+    /// The provider's detection cannot tell a business's menu from a voicemail. Live, the assistant pressed the key for
+    /// the person it was calling three seconds after the call was reported as a machine, and was then made to leave a
+    /// message on the menu and hang up.
+    /// </remarks>
+    private async Task CarryOnPastThePhoneMenuAsync(
+        LiveConversation live,
+        RealtimeVoiceConversationContext context,
+        CancellationToken callToken)
+    {
+        Volatile.Write(ref _machineAnswered, 0);
+
+        LogPhoneMenuNotVoicemail(context);
+
+        var conversation = live.Current;
+
+        if (conversation is not null)
+        {
+            await ApplyTelephonyTurnDetectionAsync(conversation, callToken);
+        }
+    }
+
+    private void LogPhoneMenuNotVoicemail(RealtimeVoiceConversationContext context)
+    {
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The machine that answered activity '{ActivityId}' is a phone menu the assistant pressed keys on, so no voicemail message is left and the conversation carries on.",
+                context.Activity?.ItemId.SanitizeLogValue());
         }
     }
 

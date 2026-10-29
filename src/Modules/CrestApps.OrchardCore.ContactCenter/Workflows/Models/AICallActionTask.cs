@@ -116,6 +116,15 @@ public sealed class AICallActionTask : TaskActivity<AICallActionTask>
 
         workflowContext.LastResult = result.Message;
 
+        // Said as a failure as well as routed to Failed: a workflow run as an AI tool reports its outputs to the model,
+        // and without them a failed action read as done. Live, a refused profile switch reached the model as done, and
+        // it told the caller they were being put through and then transferred them to a person instead.
+        if (!result.Succeeded)
+        {
+            workflowContext.Output["status"] = "failed";
+            workflowContext.Output["message"] = result.Message;
+        }
+
         if (!result.Succeeded && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(

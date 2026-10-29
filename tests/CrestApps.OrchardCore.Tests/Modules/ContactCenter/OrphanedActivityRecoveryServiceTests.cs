@@ -97,6 +97,52 @@ public sealed class OrphanedActivityRecoveryServiceTests
     }
 
     [Fact]
+    public async Task RecoverCandidates_WhenTheAgentIsStillWrappingUp_LeavesTheRecordAlone()
+    {
+        // Arrange - live, an agent taking longer than the grace period over a call an AI handed them had the record
+        // failed under them. The disposition they give is what finishes it.
+        var harness = new Harness();
+        var activity = harness.NewActivity(ActivityStatus.InProgress);
+
+        harness.Interactions
+            .Setup(m => m.FindByActivityIdAsync(activity.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { AnsweredUtc = _now.AddMinutes(-20), WrapUpStartedUtc = _now.AddMinutes(-15) }
+                .RestorePersistedStatus(InteractionStatus.Ended));
+
+        // Act
+        var recovered = await harness.Service.RecoverCandidatesAsync([activity], _now, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, recovered);
+        Assert.Equal(ActivityStatus.InProgress, activity.Status);
+        harness.VerifyNoRecovery();
+    }
+
+    [Fact]
+    public async Task RecoverCandidates_WhenTheWrapUpIsFinished_RecoversTheRecord()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.NewActivity(ActivityStatus.InProgress);
+
+        harness.Interactions
+            .Setup(m => m.FindByActivityIdAsync(activity.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction
+            {
+                AnsweredUtc = _now.AddMinutes(-20),
+                WrapUpStartedUtc = _now.AddMinutes(-15),
+                WrapUpCompletedUtc = _now.AddMinutes(-14),
+            }.RestorePersistedStatus(InteractionStatus.Ended));
+
+        // Act
+        var recovered = await harness.Service.RecoverCandidatesAsync([activity], _now, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, recovered);
+        Assert.Equal(ActivityStatus.Failed, activity.Status);
+    }
+
+    [Fact]
     public async Task RecoverCandidates_WhenNeverAnswered_ReturnsToPendingAndReQueues()
     {
         // Arrange - a pre-answer record with no answered interaction was never reached, so it is safe to retry.

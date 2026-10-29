@@ -1493,6 +1493,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public CancellationToken MachineGreetingEnded { get; set; }
 
         /// <summary>
+        /// The token the loop passes when the assistant has pressed keys on the call.
+        /// </summary>
+        public CancellationToken PhoneMenuReached { get; set; }
+
+        /// <summary>
         /// What the loop passes to end the call on voicemail once the session has left its message.
         /// </summary>
         public Action EndCallOnVoicemail { get; set; }
@@ -1560,6 +1565,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 EndCallRequests = EndCallRequests,
                 AnsweredByMachine = AnsweredByMachine,
                 MachineGreetingEnded = MachineGreetingEnded,
+                PhoneMenuReached = PhoneMenuReached,
                 EndCallOnVoicemail = EndCallOnVoicemail,
                 HandoffInstructions = HandoffInstructions,
                 ContactName = ContactName,

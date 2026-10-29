@@ -95,6 +95,14 @@ public sealed partial class VoiceAgentConversationLoop
         => $"[The caller pressed these keys on their phone: {digits}]";
 
     /// <summary>
+    /// The turn a profile answers when the call has just been handed to it from another one.
+    /// </summary>
+    internal const string ProfileSwitchedTurn =
+        "[This call has just been handed to you from another assistant, and the customer is waiting for you. Greet them " +
+        "in one short sentence, say who you are, and carry on with what they need from the conversation so far. Do not " +
+        "repeat what was already said or ask them to start again.]";
+
+    /// <summary>
     /// The caller pressed keys: a live session hears about it through the session holding the call, and a turn-based
     /// call collects them until the caller stops, then takes them as one turn.
     /// </summary>
