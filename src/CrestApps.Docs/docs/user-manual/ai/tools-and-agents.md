@@ -106,14 +106,9 @@ To try an agent on its own, use **Invoke Profile** from its **Actions** menu (se
 
 ## MCP connections
 
-The Model Context Protocol (MCP) is a common way for AI apps to share tools. An MCP connection brings the tools of an outside MCP server, such as a time-zone service or your company's internal tools, into this site.
+The Model Context Protocol (MCP) is a common way for AI apps to share tools. An MCP connection brings the tools of an outside MCP server, such as a time-zone service or your company's internal tools, into this site. Adding a connection, choosing how it signs in and giving it to an assistant are described in [Model Context Protocol (MCP)](mcp.md#connect-to-an-mcp-server).
 
-1. Open **Artificial Intelligence > Model Context Protocol > MCP Hosts** and click **Add Connection**.
-2. In **Available Sources**, click **Add** on the type of server:
-   - **Server-Sent Events**: a server reached over the web. Enter its **Endpoint** and choose the **Authentication** your technical team gives you, such as **Anonymous (No Authentication)**, **API Key** or one of the **OAuth 2.0** options.
-   - **Standard Input/Output**: a program that runs on the site's own server. Your technical team provides the **Command** and the other fields. This kind is only available when the **Model Context Protocol (MCP) Local Client** feature is on.
-3. Enter a **Title** and click **Save**.
-4. In a profile or chat interaction, tick the connection under **MCP Connections** (in a chat interaction: **Connections**) on the **Capabilities** tab.
+<YouTube video="ai-mcp" title="Video of adding an MCP connection" start={96} end={151} />
 
 ## A2A connections
 
@@ -130,15 +125,6 @@ Your site can also offer its own **Agent** profiles to other systems over A2A. T
 
 ## Share your tools with other AI apps
 
-With the **Model Context Protocol (MCP) Server** feature on, AI apps outside the site, such as a desktop AI assistant, can use selected tools of this site.
+With the **Model Context Protocol (MCP) Server** feature on, AI apps outside the site, such as a desktop AI assistant, can use selected tools of this site. You choose the **Authentication type** and tick the tools to share in the **MCP Server** section of **Settings > Artificial Intelligence**, and you can offer reusable prompts and files as well. See [Share your tools with other AI apps](mcp.md#share-your-tools-with-other-ai-apps), [Share prompts](mcp.md#share-prompts) and [Share resources](mcp.md#share-resources).
 
 <YouTube video="ai-walkthroughs" title="Video of the admin chat working with content and tools through the MCP server integration" start={425} end={500} />
-
-1. Open **Settings > Artificial Intelligence** and find the **MCP Server** section.
-2. Choose the **Authentication type** your technical team asks for: **OpenID Connect**, **API key** or **None (Anonymous access)**. Use **None** only for testing.
-3. Tick the tools and tool instances to share under **Tools** and **Tool Instances**. Nothing is shared until you pick it. **Expose all tools** shares every tool; use it only when you trust every app that connects.
-4. Click **Save**. The site reloads its settings.
-
-You need the **Manage the MCP Server settings** permission. How outside apps connect is described in the [Technical Manual](../../ai/mcp/server.md).
-
-The server can also share reusable prompts and data with those apps. Manage them under **Artificial Intelligence > Model Context Protocol > Prompts** (**Add Prompt**: a **Title**, a **Name**, a **Description**, optional **Arguments**, and the **Messages** with their **Role** and **Content**) and **Resources** (**Add Resource**, then a type such as **File**, **Content Item** or **Media**, and a **Display Text**, **Name**, **Path**, **Description** and **MIME Type**). These menus appear only with the MCP Server feature on.
