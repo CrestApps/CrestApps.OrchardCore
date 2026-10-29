@@ -264,6 +264,8 @@ calls) in the user manual.
 
 ### Standalone soft phone page and browser extension
 
+<YouTube video="telephony-phone-apps" title="Video overview of the soft phone browser extension and Windows app" />
+
 Enable the **Telephony Soft Phone Extension** feature (`CrestApps.OrchardCore.Telephony.SoftPhone.Extension`)
 to serve the soft phone outside the admin layout, for the CrestApps Soft Phone browser extension and desktop
 app. Because the phone runs in its own window, a call survives the agent navigating other pages and the phone
