@@ -17,6 +17,8 @@ user_manual:
 
 This module wires the shared Claude support from CrestApps.Core into Orchard Core and exposes the related Orchard settings and editors.
 
+<YouTube video="ai-orchestrators" title="Video of setting up the Claude card and choosing an orchestrator on a profile" start={101} end={181} />
+
 ## Capabilities
 
 - tenant-level Claude settings under **Settings -> Artificial Intelligence -> Claude**
