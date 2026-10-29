@@ -44,6 +44,8 @@ A connection holds the address and the key the site uses to reach one AI service
 Many AI services, such as DeepSeek, Google Gemini or Together AI, work like OpenAI. Choose **OpenAI** and enter that service's endpoint and key.
 :::
 
+<YouTube video="ai-providers-other" title="Video of the OpenAI-compatible, Ollama and Azure AI Inference connections and a deployment" start={60} end={167} />
+
 The site checks the fields when you click **Save**; it does not contact the provider. If the key or the address is wrong, you find out the first time someone chats. A change to a connection can make the site reload its settings for a moment.
 
 **Ollama** connections only have a **Title** and a **Technical name** in the admin; the address of the Ollama server is set in the site's configuration by your technical team.
