@@ -8,7 +8,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.ContactCenter;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -38,6 +41,14 @@ public sealed partial class VoiceAgentConversationLoop
             AIConversationTools.SystemTool(PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu."),
         };
 
+        // Secure keypad entry, where secure data capture is on to take what the caller types.
+        if (OffersSecureKeypad(ShellScope.Services))
+        {
+            systemTools.Add(AIConversationTools.SystemTool(
+                CollectSecureDigitsTool.ToolName,
+                "Makes the caller's keypad private before they type a card, account or identity number."));
+        }
+
         if (offerTransfer)
         {
             systemTools.Add(AIConversationTools.SystemTool(
@@ -47,6 +58,14 @@ public sealed partial class VoiceAgentConversationLoop
 
         return AIConversationTools.AttachAsync(_toolRegistry, context, systemTools, cancellationToken);
     }
+
+    /// <summary>
+    /// Whether calls offer the AI secure keypad entry: only where secure data capture can take what the caller types.
+    /// </summary>
+    /// <param name="services">The tenant's services, or <see langword="null"/> outside a shell scope.</param>
+    /// <returns><see langword="true"/> when the tool is offered.</returns>
+    internal static bool OffersSecureKeypad(IServiceProvider services)
+        => services?.GetService<ISecureCaptureTokenSink>() is not null;
 
     /// <summary>
     /// Puts a time limit on this turn's tools and has the caller hear a short filler line when one runs long.

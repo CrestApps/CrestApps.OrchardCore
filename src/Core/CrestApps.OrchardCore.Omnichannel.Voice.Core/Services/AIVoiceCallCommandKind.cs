@@ -19,4 +19,10 @@ public enum AIVoiceCallCommandKind
     /// The caller pressed keys on their phone.
     /// </summary>
     KeysPressed,
+
+    /// <summary>
+    /// A turn the caller takes without speaking, such as the outcome of a secure keypad entry, which the session
+    /// answers like anything the caller said.
+    /// </summary>
+    CallerTurn,
 }

@@ -75,6 +75,12 @@ public sealed class Startup : StartupBase
             .WithCategory(S["Omnichannel"]);
 
         // Pressing keys is part of every automated call too: the AI may reach a phone menu on the other end.
+        // Secure keypad entry is offered on calls only where secure data capture is on.
+        services.AddCoreAITool<CollectSecureDigitsTool>(CollectSecureDigitsTool.ToolName)
+            .WithTitle(S["Collect digits securely"])
+            .WithDescription(S["Lets an automated call take a card or account number typed on the keypad through secure data capture."])
+            .WithCategory(S["Omnichannel"]);
+
         services.AddCoreAITool<PressKeysTool>(PressKeysTool.ToolName)
             .WithTitle(S["Press keys"])
             .WithDescription(S["Lets an automated call press keys to get through a phone menu."])

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -109,6 +110,16 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
+        // Keys typed while the keypad is private are secure data, never the caller's turn.
+        var secureEntry = SecureKeypadCaptures.Offer(voiceEvent.ActivityId, digits, _clock.UtcNow);
+
+        if (secureEntry.Captured)
+        {
+            await OnSecureEntryAsync(voiceEvent, secureEntry);
+
+            return;
+        }
+
         var keysPressed = new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, digits);
 
         if (await _voiceCallCommands.SendAsync(voiceEvent.ActivityId, keysPressed))
@@ -130,6 +141,50 @@ public sealed partial class VoiceAgentConversationLoop
         // what they said before is overtaken.
         _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
         _callerKeys.Collect(voiceEvent);
+    }
+
+    /// <summary>
+    /// Gives the AI the outcome of a finished secure keypad entry in place of the digits: as a turn on a turn-based
+    /// call, and through the session on a live one.
+    /// </summary>
+    /// <param name="voiceEvent">The event of the last key.</param>
+    /// <param name="entry">The entry.</param>
+    private async Task OnSecureEntryAsync(VoiceAgentEvent voiceEvent, SecureKeypadEntry entry)
+    {
+        if (!entry.Ended)
+        {
+            return;
+        }
+
+        var turn = await SecureKeypadEntries.CompleteAsync(ShellScope.Services, voiceEvent.ActivityId, entry, CancellationToken.None);
+        var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId);
+
+        if (activity is not null && activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
+        {
+            await _voiceCallCommands.RelayAsync(voiceEvent.ActivityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.CallerTurn, turn));
+
+            return;
+        }
+
+        var media = _mediaResolver.Get(voiceEvent.ProviderName) ?? _mediaResolver.GetDefault();
+
+        if (media is not null)
+        {
+            _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
+            await OnTranscriptionAsync(
+                new VoiceAgentEvent
+                {
+                    Kind = VoiceAgentEventKind.Transcription,
+                    ActivityId = voiceEvent.ActivityId,
+                    ProviderName = voiceEvent.ProviderName,
+                    ProviderCallId = voiceEvent.ProviderCallId,
+                    TranscriptionText = turn,
+                    TranscriptionIsFinal = true,
+                    OccurredUtc = voiceEvent.OccurredUtc,
+                },
+                media,
+                CancellationToken.None);
+        }
     }
 
     /// <summary>

@@ -52,6 +52,12 @@ public sealed partial class RealtimeVoiceConversationRunner
         // A call the AI placed may be answered by a phone menu, which only keys get through.
         AttachTool(orchestration, PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu.");
 
+        // A card or account number the caller types goes to secure data capture, where it is on, not to the model.
+        if (VoiceAgentConversationLoop.OffersSecureKeypad(ShellScope.Services))
+        {
+            AttachTool(orchestration, CollectSecureDigitsTool.ToolName, "Makes the caller's keypad private before they type a card, account or identity number.");
+        }
+
         // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
         // a tool the model is never told about is not used, and guidance without a tool has the model promising
         // a transfer that nothing performs.

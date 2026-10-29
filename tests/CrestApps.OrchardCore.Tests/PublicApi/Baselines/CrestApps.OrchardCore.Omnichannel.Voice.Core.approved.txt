@@ -204,6 +204,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         Instruct = 0,
         TakeOver = 1,
         KeysPressed = 2,
+        CallerTurn = 3,
     }
     public sealed class AIVoiceCallCommandRelay : CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommandRelay, System.IDisposable
     {
@@ -504,6 +505,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools
 {
+    public sealed class CollectSecureDigitsTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string ToolName = "collectSecureDigits";
+        public CollectSecureDigitsTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
     public sealed class EndCallTool : Microsoft.Extensions.AI.AIFunction
     {
         public const string ToolName = "endCall";

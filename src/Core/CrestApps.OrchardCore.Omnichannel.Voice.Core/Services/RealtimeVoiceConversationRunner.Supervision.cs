@@ -30,11 +30,18 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// <returns><see langword="true"/> when the command was one this session will act on.</returns>
     private Task<bool> AcceptSupervisorNoteAsync(LiveConversation live, AIVoiceCallCommand command, CancellationToken callToken)
     {
-        if (command.Kind is not (AIVoiceCallCommandKind.Instruct or AIVoiceCallCommandKind.KeysPressed) ||
+        if (command.Kind is not (AIVoiceCallCommandKind.Instruct or AIVoiceCallCommandKind.KeysPressed or AIVoiceCallCommandKind.CallerTurn) ||
             string.IsNullOrWhiteSpace(command.Text) ||
             callToken.IsCancellationRequested)
         {
             return Task.FromResult(false);
+        }
+
+        if (command.Kind == AIVoiceCallCommandKind.CallerTurn)
+        {
+            _ = Task.Run(() => DeliverSupervisorNoteAsync(live, ChatRole.User, command.Text.Trim(), callToken), CancellationToken.None);
+
+            return Task.FromResult(true);
         }
 
         if (command.Kind == AIVoiceCallCommandKind.KeysPressed)

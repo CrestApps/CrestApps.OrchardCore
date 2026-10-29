@@ -120,6 +120,12 @@ On a warm or screened transfer, the caller goes back to the AI when the number i
 
 Warm and screened transfers need a phone provider that can place a second call (Telnyx). With another provider, the caller is transferred cold.
 
+## Take a card or account number on the keypad
+
+When the **Secure Capture** feature of the Contact Center is on, AI phone calls can take a card number, expiry date, security code, bank account number or identity number typed on the caller's keypad, without the AI ever hearing it. The AI uses its **Collect digits securely** tool before it asks: from then on the caller's keys go to secure data capture, not to the AI, until they press **#** (or the entry is full), or **\*** to cancel.
+
+The AI is told only that the number was saved and its masked value, such as *ending in 1111*. The token and the masked value are kept as the conversation variables `secure_card_number_token` and `secure_card_number_masked` (and the same for `card_expiry`, `card_security_code`, `bank_account`, `national_id` and `entry`), so a workflow tool can charge the card with the token. The digits are never written to the transcript, the activity or a log. A security code is not kept at all.
+
 ## React while the conversation is going on
 
 The **AI Conversation Turn** event (under **AI Conversations**) starts a workflow after each turn is saved, on every channel, while the conversation is still going on. What was said is in `Workflow.Input.Text`, and who said it in `Workflow.Input.Role` (`Customer` or `Assistant`). Choose **What the customer says** to run only on the customer's turns.
