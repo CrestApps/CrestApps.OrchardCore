@@ -21,6 +21,8 @@ Every provider that is turned on appears as a choice on the **Payment** step of 
 
 ## Connect Stripe
 
+<YouTube video="stripe-wallets-cards-disputes" title="Entering your Stripe keys" start={89} end={127} />
+
 | | |
 | --- | --- |
 | **Menu** | Settings > Payments > Stripe |
@@ -53,6 +55,8 @@ When a value comes from the application settings:
 Values that are not configured work exactly as described on the rest of this page.
 
 ### What Connect does
+
+<YouTube video="stripe-wallets-cards-disputes" title="What Connect does" start={127} end={174} />
 
 When you click **Connect**, your site:
 
@@ -129,6 +133,8 @@ Pay Later collects no money, so there is nothing to refund through it. Money the
 :::
 
 ## Saved cards
+
+<YouTube video="stripe-wallets-cards-disputes" title="Wallets and saved cards" start={174} end={211} />
 
 With Stripe connected, a signed-in buyer paying for a one-time purchase can tick **Save this card for next time** under the card fields. Next time, the payment step offers **Pay with**: their saved cards, such as *VISA ending in 4242 expires 12/2034*, and **A new card**. Choosing a saved card hides the card fields; the buyer clicks **Pay now** and approves the payment if their bank asks.
 
