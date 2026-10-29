@@ -16,7 +16,13 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 <AskYourAdmin />
 
+This video follows a shopper from the cart to the order confirmation, and shows the checkout settings:
+
+<YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
+
 ## What buyers see
+
+<YouTube video="carts-checkout" title="Video of Add to cart, the mini cart and the cart page" start={93} end={139} />
 
 - **Add to cart** appears on each product that can be bought online, on its listing card and its page. Buyers choose how many, and the option when a product has several prices. Products that are only listed, and subscription plans, do not show it; plans have their own **Sign up** button.
 - The **Cart** link in the navigation bar shows how many items are in the cart. Only themes with a navigation bar, such as **TheTheme**, show it; in any theme, the message shown after adding a product has a **View cart** link.

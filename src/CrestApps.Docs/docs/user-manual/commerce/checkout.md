@@ -17,6 +17,10 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 <AskYourAdmin />
 
+This video walks through every step of the checkout as a shopper sees it:
+
+<YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
+
 **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 
 <YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
@@ -30,6 +34,8 @@ The page has three parts:
 - **The order summary** on the right, on every step, so the total is never a surprise.
 
 ### Steps a buyer may see
+
+<YouTube video="carts-checkout" title="Video of the Contact step" start={139} end={174} />
 
 Which steps appear depends on what is being bought. **Payment** is always last.
 
@@ -47,6 +53,8 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 
 ### One page or a page per step
 
+<YouTube video="carts-checkout" title="Video of the checkout and customer settings, and Checkout details" start={259} end={299} />
+
 Under **Settings > Commerce > Checkout**, **Checkout layout** is one of:
 
 - **A page per step**, the default: the steps described above, one page each.
@@ -61,6 +69,8 @@ The **Order summary** card lists each item with its price. A recurring item show
 When a gift card, store credit or points pay part of the order, the card shows the **Total** first, then a line for each of them with what it pays, such as *Gift card ending 4F2K −$30*, *Store credit* or your rewards program's name, and then **Due now**: what's left to pay by card or another payment method. See [Gift cards, store credit and points](#gift-cards-store-credit-and-points).
 
 ## Pay
+
+<YouTube video="carts-checkout" title="Video of the Payment step, a promotion code and the order confirmation" start={210} end={259} />
 
 On the **Payment** step, the buyer:
 
