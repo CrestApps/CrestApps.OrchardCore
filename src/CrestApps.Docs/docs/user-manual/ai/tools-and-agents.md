@@ -117,16 +117,7 @@ The Model Context Protocol (MCP) is a common way for AI apps to share tools. An 
 
 ## A2A connections
 
-The Agent-to-Agent (A2A) protocol lets AI agents on different systems work together. An A2A connection lets your assistants call the agents of another system.
-
-1. Open **Artificial Intelligence > Agent to Agent Hosts** and click **Add Connection**.
-2. Enter a **Title**, the **Endpoint** (the other system's base address), and the **Authentication** your technical team gives you.
-3. Click **Save**.
-4. In a profile or chat interaction, tick the connection under **A2A Connections** on the **Capabilities** tab.
-
-Each agent the other system offers becomes something your assistant can call.
-
-Your site can also offer its own **Agent** profiles to other systems over A2A. That is set up by your technical team; see the [Technical Manual](../../ai/a2a/host.md).
+The Agent-to-Agent (A2A) protocol lets AI agents on different systems work together. An A2A connection lets your assistants call the agents of another system, and your site can offer its own **Agent** profiles to other systems. Creating agents, adding a connection and giving it to an assistant are described in [Agents and Agent-to-Agent (A2A)](a2a.md).
 
 ## Share your tools with other AI apps
 

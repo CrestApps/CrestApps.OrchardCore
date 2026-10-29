@@ -64,6 +64,7 @@ const sidebars = {
                 'user-manual/ai/prompt-templates',
                 'user-manual/ai/knowledge',
                 'user-manual/ai/tools-and-agents',
+                'user-manual/ai/a2a',
                 'user-manual/ai/memory',
                 'user-manual/ai/analytics',
                 'user-manual/ai/workflows',
