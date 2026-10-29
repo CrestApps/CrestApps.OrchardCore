@@ -86,6 +86,8 @@ An item that cannot be bought online is never sold, whatever a visitor tries: no
 
 ### Offer several prices
 
+<YouTube video="product-variants-and-prices" title="Offering several prices" start={194} end={235} />
+
 The **Product prices** part adds a **Prices** section to the item: the ways the item can be bought. A buyer picks one at checkout. A price that recurs makes the item something people can subscribe to; see [Subscriptions](subscriptions.md).
 
 1. Fill in the first price. A new item starts with one empty price, marked **Default**.
@@ -111,6 +113,8 @@ The **Product prices** part adds a **Prices** section to the item: the ways the 
 If the item cannot be saved, a message under the price says why, for example *A recurring price needs a billing interval.* or *Only one price can be the default.*
 
 ### Sell a product in variants
+
+<YouTube video="product-variants-and-prices" title="Selling a product in variants" start={119} end={164} />
 
 A product that comes in versions, such as a shirt in three sizes and two colors, is one item with **variants**: one per combination of its options, each with its own SKU, price and image. Buyers choose a variant before adding the product to their cart, and the cart and the order record the variant they chose.
 
