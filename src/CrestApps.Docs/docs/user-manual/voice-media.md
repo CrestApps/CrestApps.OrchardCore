@@ -39,6 +39,16 @@ If the phone provider does not accept the upload, the clip is still saved with i
 The demo site is not connected to a phone provider, so the screencast shows the form without uploading a file.
 :::
 
+## Voice media after an export and import
+
+A clip travels in a [deployment plan](administration/import-and-export.md) as its library entry (name, description and format) but the audio does not: the **Contact Center Voice Media Library** step carries no audio. After an import on a site that does not have the file, the clip is listed with its **Master copy** badge, but the audio is not there: open the clip, choose the audio file again and save. The clip keeps its identifier, so the queues, entry points and menus that use it start playing it again. Deleting a clip deletes its master copy and every provider copy, so when two sites share one media store, deleting a clip in one removes the audio the other plays.
+
+<YouTube video="contact-center-configuration-deployment" title="Video of re-uploading the audio of an imported voice media clip" start={207} end={256} />
+
+:::caution[Two things with similar names]
+The **Voice Media** screen under **Interaction Center > Management** is the library of hold music and prompts described on this page. The **Contact Center Voice Media** feature on the **Features** page is a different thing: it adds live two-way audio for calls, such as AI voice conversations. You do not need that feature for hold music and recorded prompts.
+:::
+
 ## What the badges mean
 
 Each clip in the list shows what is stored for it:

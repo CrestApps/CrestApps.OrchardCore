@@ -18,6 +18,8 @@ Bulk import creates or updates many content items from one spreadsheet, and bulk
 
 <YouTube video="site-administration-walkthroughs" title="Video of enabling Content Transfer, exporting a content type, and starting a bulk import" start={221} end={257} />
 
+<YouTube video="contact-center-configuration-deployment" title="Video overview of exporting the Contact Center configuration as a deployment plan and replaying it" />
+
 ## File formats
 
 | Format | When you can use it |
