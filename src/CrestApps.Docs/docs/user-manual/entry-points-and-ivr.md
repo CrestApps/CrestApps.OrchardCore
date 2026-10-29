@@ -68,6 +68,8 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 ### Welcome and IVR menu
 
+<YouTube video="contact-center-ivr-menus" title="Video of the welcome message, which every caller hears once before the menu" start={89} end={116} />
+
 The IVR menu is optional. With no menu, callers go straight to the routing target.
 
 The **Welcome message** is spoken to every caller who rings while the entry point is open: before the first menu's prompt, or, with no menu, before the caller is put through to the target queue or agent. Each caller hears it once. It is not repeated when a caller goes back to the main menu, presses a key the menu does not offer, or is moved on to another queue. Empty means nothing is said.
@@ -98,6 +100,8 @@ To start an entry point from an existing one, open its **Actions** menu in the e
 
 ## AI voice agent
 
+<YouTube video="contact-center-ivr-menus" title="Video of handing calls to an AI voice agent instead of a phone menu" start={285} end={326} />
+
 A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls; texts are set the same way on a [text entry point](automated-ai.md#let-the-ai-answer-incoming-texts). Queues have no AI setting.
 
 1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
@@ -127,6 +131,10 @@ Before text entry points, where a number's texts went was set on the number itse
 
 ## Build an IVR menu
 
+<YouTube video="contact-center-ivr-menus" title="Video overview of IVR menus: the welcome message, building a menu with keys and submenus, tries and the AI voice agent" />
+
+<YouTube video="contact-center-ivr-menus" title="Video of building a menu with a prompt and a key for each choice, including a recorded prompt" start={116} end={179} />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of building a two-level IVR menu with queue, agent, voicemail and submenu key actions" start={525} end={564} />
 
 An IVR menu is a set of **menus**. Each menu has a prompt and a list of **keys**; each key has an **action**. Callers answer with the telephone keypad; speech input is not supported.
@@ -148,7 +156,9 @@ An IVR menu is a set of **menus**. Each menu has a prompt and a list of **keys**
 4. At the top, set **Tries**, the number of wrong or missing keys a caller is allowed (default 3), and **When the tries run out** (the default, *Route to the entry point target*, sends the caller where the entry point routes calls with no menu).
 5. Click **Save**. Until every problem is fixed, the builder shows how many there are and the entry point will not save: a menu needs a prompt or recording and at least one key, a key can only be used once per menu, and queue, agent and transfer actions need a target. Allowed keys are 0-9, `*` and `#`.
 
-Each menu has a **Menu** name; renaming a menu updates every key that opens it. A key that is already used on a menu is not offered again for that menu. **Remove menu** deletes a menu you no longer need.
+<YouTube video="contact-center-ivr-menus" title="Video of a submenu, going back to another menu, repeating a menu, tries and the problems the builder reports" start={179} end={285} />
+
+Menus are not named. The builder draws them the way a caller walks them: the first menu at the top, and each submenu nested under the key that opens it, labelled by the keys that lead there, such as *Main menu > 4*. A key that is already used on a menu is not offered again for that menu. In a submenu's header, the red button (**Remove submenu**) deletes it; in the first menu's header it removes the whole IVR menu.
 
 Two kinds of problems are only warnings, and do not stop you saving: a menu that no key leads to, listed under **Menus no key opens** (callers never hear it), and a queue, agent or destination that no longer exists (shown as *Not found*).
 
