@@ -11,7 +11,7 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 | | |
 | --- | --- |
-| **Menu** | None. Buyers reach the checkout from your site, for example by signing up to a [subscription](subscriptions.md) or opening a payment link. |
+| **Menu** | Settings > Commerce > Checkout (the layout). Buyers reach the checkout itself from your site, for example by signing up to a [subscription](subscriptions.md) or opening a payment link. |
 | **Permission** | None. A checkout only opens for the visitor who started it. |
 | **Feature** | Checkout, plus at least one [payment provider](payment-providers.md) (Stripe or Pay Later) |
 
