@@ -95,7 +95,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AIConstants.Feature.Integrations,
     Name = "AI Integrations",
-    Description = "Connections to Google and Microsoft 365 calendars, HubSpot and Salesforce, and Notion: tools for the AI to check and book appointments and look customers up, and a Log to CRM workflow task.",
+    Description = "Connections to HubSpot and Salesforce, Google Drive, Microsoft 365 and Notion: a tool for the AI to look customers up, a Log to CRM workflow task, and cloud file sources.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

@@ -825,9 +825,14 @@ calls or accounts, is listed after the slices.
   (text, number, yes/no, date, choice, list) and writing extracted fields to the contact (replace, fill if empty, or
   add).
 - Phase 5: an editable contact memory prompt and a rebuild of a contact's memory from their past conversations;
-  webhook subscriptions with signed deliveries, retries and a delivery log; integrations (Google and Microsoft 365
-  calendars, HubSpot and Salesforce, Notion) with OAuth sign-in, calendar tools, a CRM lookup tool and the **Log to
-  CRM** task; Google Drive, SharePoint/OneDrive and Notion file sources.
+  webhook subscriptions with signed deliveries, retries and a delivery log; integrations (HubSpot and Salesforce,
+  Google Drive, Microsoft 365, Notion) with OAuth sign-in, a CRM lookup tool and the **Log to CRM** task; Google
+  Drive, SharePoint/OneDrive and Notion file sources.
+- Calendar booking moved to the Bookings tools plan (`docs/engineering/ai/ai-booking-tools-plan.md`, decision BD3): the
+  AI books through the Bookings module, and a future Calendar module owns Google and Microsoft 365 sync. The
+  `checkCalendarAvailability` and `bookCalendarAppointment` tools built here, the profile's calendar and appointment
+  length, and the connections' calendar, time zone and working hours were removed; the Google and Microsoft 365
+  connections now ask only for file access.
 - Phase 6: the profile's **Voice & Speech** settings (rate, emotion, pronunciations, fallback voice, boosted keywords,
   recognition languages, interruption sensitivity, backchanneling, allowed and starting languages) on the Core
   speech seams; ElevenLabs and Cartesia features and a voice library page (search, sample, clone); Telnyx number

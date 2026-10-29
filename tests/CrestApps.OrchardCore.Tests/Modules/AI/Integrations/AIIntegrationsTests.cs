@@ -8,76 +8,6 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Integrations;
 public sealed class AIIntegrationsTests
 {
     [Fact]
-    public void FindFreeSlots_OffersWeekdayTimesInsideWorkingHoursThatAreNotBusy()
-    {
-        // Arrange: Monday 2 November 2026, in UTC, working 9 to 12.
-        var monday = new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc);
-        var busy = new[] { new AICalendarBusy(monday.AddHours(9), monday.AddHours(10)) };
-
-        // Act
-        var slots = AICalendarSlots.FindFreeSlots(busy, monday.AddHours(8).AddMinutes(10), monday.AddDays(1), TimeSpan.FromMinutes(30), TimeZoneInfo.Utc, 9, 12);
-
-        // Assert
-        Assert.Equal(
-            [monday.AddHours(10), monday.AddHours(10.5), monday.AddHours(11), monday.AddHours(11.5)],
-            slots);
-    }
-
-    [Fact]
-    public void FindFreeSlots_SkipsTheWeekend()
-    {
-        var saturday = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc);
-
-        var slots = AICalendarSlots.FindFreeSlots([], saturday, saturday.AddDays(2).AddHours(10), TimeSpan.FromMinutes(60), TimeZoneInfo.Utc, 9, 17);
-
-        Assert.Equal([saturday.AddDays(2).AddHours(9)], slots);
-    }
-
-    [Fact]
-    public async Task GoogleCalendar_ReadsFreeBusy_AndBooksWithTheAttendee()
-    {
-        // Arrange
-        var handler = new RecordingHttpMessageHandler()
-            .RespondWith(HttpStatusCode.OK, """{ "calendars": { "primary": { "busy": [ { "start": "2026-11-02T09:00:00Z", "end": "2026-11-02T10:00:00Z" } ] } } }""")
-            .RespondWith(HttpStatusCode.OK, """{ "id": "evt-1", "htmlLink": "https://calendar.google.com/evt-1" }""");
-        var calendar = new GoogleCalendarClient(new HttpClient(handler), null);
-        var start = new DateTime(2026, 11, 2, 11, 0, 0, DateTimeKind.Utc);
-
-        // Act
-        var busy = await calendar.GetBusyAsync(start.Date, start.Date.AddDays(1), TestContext.Current.CancellationToken);
-        var booked = await calendar.BookAsync(new AICalendarAppointment { Title = "Consultation", StartUtc = start, EndUtc = start.AddMinutes(30), AttendeeEmail = "jane@example.com" }, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(new AICalendarBusy(start.Date.AddHours(9), start.Date.AddHours(10)), Assert.Single(busy));
-        Assert.Equal("https://www.googleapis.com/calendar/v3/freeBusy", handler.Requests[0].Uri.ToString());
-        Assert.Contains("\"id\":\"primary\"", handler.Requests[0].Body, StringComparison.Ordinal);
-        Assert.StartsWith("https://www.googleapis.com/calendar/v3/calendars/primary/events", handler.Requests[1].Uri.ToString(), StringComparison.Ordinal);
-        Assert.Contains("\"dateTime\":\"2026-11-02T11:00:00Z\"", handler.Requests[1].Body, StringComparison.Ordinal);
-        Assert.Contains("\"email\":\"jane@example.com\"", handler.Requests[1].Body, StringComparison.Ordinal);
-        Assert.Equal("evt-1", booked.Id);
-    }
-
-    [Fact]
-    public async Task MicrosoftCalendar_CountsOnlyBusyEvents()
-    {
-        // Arrange
-        var handler = new RecordingHttpMessageHandler().RespondWith(HttpStatusCode.OK, """
-            { "value": [
-                { "showAs": "busy", "start": { "dateTime": "2026-11-02T09:00:00.0000000" }, "end": { "dateTime": "2026-11-02T10:00:00.0000000" } },
-                { "showAs": "free", "start": { "dateTime": "2026-11-02T12:00:00.0000000" }, "end": { "dateTime": "2026-11-02T13:00:00.0000000" } }
-            ] }
-            """);
-        var calendar = new MicrosoftCalendarClient(new HttpClient(handler), null);
-
-        // Act
-        var busy = await calendar.GetBusyAsync(new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc), TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(new DateTime(2026, 11, 2, 9, 0, 0, DateTimeKind.Utc), Assert.Single(busy).StartUtc);
-        Assert.StartsWith("https://graph.microsoft.com/v1.0/me/calendarView?", handler.Requests[0].Uri.ToString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task HubSpot_FindsByPhone_AndLogsTheCallOnTheContact()
     {
         // Arrange
@@ -130,7 +60,8 @@ public sealed class AIIntegrationsTests
         Assert.Contains("client_id=client-1", url, StringComparison.Ordinal);
         Assert.Contains("access_type=offline", url, StringComparison.Ordinal);
         Assert.Contains("redirect_uri=https%3A%2F%2Fsite%2Fcallback", url, StringComparison.Ordinal);
-        Assert.Contains("calendar", Uri.UnescapeDataString(url), StringComparison.Ordinal);
+        Assert.Contains("drive.readonly", Uri.UnescapeDataString(url), StringComparison.Ordinal);
+        Assert.DoesNotContain("calendar", Uri.UnescapeDataString(url), StringComparison.Ordinal);
     }
 
     [Fact]

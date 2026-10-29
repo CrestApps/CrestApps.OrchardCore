@@ -44,7 +44,7 @@ public static class AIPermissions
     public static readonly Permission ManageAIApiKeys = new("ManageAIApiKeys", LocalizationSource.Create("Manage AI API keys", typeof(AIPermissions)));
 
     /// <summary>
-    /// Gets the permission to manage the calendar, CRM and file connections AI tools use.
+    /// Gets the permission to manage the CRM and file connections AI tools use.
     /// </summary>
     public static readonly Permission ManageAIIntegrations = new("ManageAIIntegrations", LocalizationSource.Create("Manage AI integrations", typeof(AIPermissions)));
 

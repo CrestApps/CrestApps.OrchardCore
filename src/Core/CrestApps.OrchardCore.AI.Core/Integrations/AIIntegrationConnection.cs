@@ -4,7 +4,7 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.AI.Core.Integrations;
 
 /// <summary>
-/// A connection to an outside calendar or CRM that AI tools and workflow tasks use: the app it signs in with and the
+/// A connection to an outside CRM or file store that AI tools, workflow tasks and file sources use: the app it signs in with and the
 /// tokens it holds, encrypted.
 /// </summary>
 public sealed class AIIntegrationConnection : CatalogItem, INameAwareModel
@@ -55,26 +55,6 @@ public sealed class AIIntegrationConnection : CatalogItem, INameAwareModel
     public string InstanceUrl { get; set; }
 
     /// <summary>
-    /// Gets or sets the calendar used, for calendar providers. Empty uses the primary calendar.
-    /// </summary>
-    public string CalendarId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the time zone appointments are offered in, such as <c>America/Los_Angeles</c>.
-    /// </summary>
-    public string TimeZoneId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the first hour appointments are offered, from 0 to 23.
-    /// </summary>
-    public int WorkdayStartHour { get; set; } = 9;
-
-    /// <summary>
-    /// Gets or sets the hour appointments stop, from 1 to 24.
-    /// </summary>
-    public int WorkdayEndHour { get; set; } = 17;
-
-    /// <summary>
     /// Gets or sets who connected it.
     /// </summary>
     public string ConnectedBy { get; set; }
@@ -100,10 +80,10 @@ public sealed class AIIntegrationConnection : CatalogItem, INameAwareModel
 /// </summary>
 public static class AIIntegrationProviders
 {
-    /// <summary>Google Calendar and Google Drive.</summary>
+    /// <summary>Google Drive.</summary>
     public const string Google = "Google";
 
-    /// <summary>Microsoft 365: Outlook calendar and SharePoint or OneDrive files.</summary>
+    /// <summary>Microsoft 365: SharePoint or OneDrive files.</summary>
     public const string Microsoft365 = "Microsoft365";
 
     /// <summary>HubSpot CRM, with a private app token.</summary>
@@ -127,14 +107,6 @@ public static class AIIntegrationProviders
     /// <returns>Whether it does.</returns>
     public static bool UsesOAuth(string provider)
         => provider is Google or Microsoft365 or Salesforce;
-
-    /// <summary>
-    /// Gets whether a provider has a calendar.
-    /// </summary>
-    /// <param name="provider">The provider.</param>
-    /// <returns>Whether it does.</returns>
-    public static bool HasCalendar(string provider)
-        => provider is Google or Microsoft365;
 
     /// <summary>
     /// Gets whether a provider is a CRM.
@@ -173,15 +145,15 @@ public static class AIIntegrationProviders
         };
 
     /// <summary>
-    /// Gets the scopes a provider is asked for: the calendar and files for Google and Microsoft 365, the API for Salesforce.
+    /// Gets the scopes a provider is asked for: the files for Google and Microsoft 365, the API for Salesforce.
     /// </summary>
     /// <param name="provider">The provider.</param>
     /// <returns>The scopes, separated by spaces.</returns>
     public static string Scopes(string provider)
         => provider switch
         {
-            Google => "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.readonly",
-            Microsoft365 => "offline_access Calendars.ReadWrite Files.Read.All Sites.Read.All",
+            Google => "https://www.googleapis.com/auth/drive.readonly",
+            Microsoft365 => "offline_access Files.Read.All Sites.Read.All",
             Salesforce => "api refresh_token",
             _ => null,
         };

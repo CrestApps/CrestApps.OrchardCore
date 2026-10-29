@@ -40,18 +40,6 @@ public class AIIntegrationConnectionViewModel
     /// <summary>Gets or sets the Salesforce address.</summary>
     public string InstanceUrl { get; set; }
 
-    /// <summary>Gets or sets the calendar.</summary>
-    public string CalendarId { get; set; }
-
-    /// <summary>Gets or sets the time zone.</summary>
-    public string TimeZoneId { get; set; }
-
-    /// <summary>Gets or sets the first working hour.</summary>
-    public int WorkdayStartHour { get; set; }
-
-    /// <summary>Gets or sets the hour work ends.</summary>
-    public int WorkdayEndHour { get; set; }
-
     /// <summary>Gets or sets the address to give the provider as the redirect.</summary>
     public string RedirectUrl { get; set; }
 }
@@ -112,10 +100,6 @@ public sealed class AIIntegrationConnectionDisplayDriver : DisplayDriver<AIInteg
             model.HasSecret = !string.IsNullOrEmpty(connection.ProtectedClientSecret) || !string.IsNullOrEmpty(connection.ProtectedAccessToken);
             model.TenantId = connection.TenantId;
             model.InstanceUrl = connection.InstanceUrl;
-            model.CalendarId = connection.CalendarId;
-            model.TimeZoneId = connection.TimeZoneId;
-            model.WorkdayStartHour = connection.WorkdayStartHour;
-            model.WorkdayEndHour = connection.WorkdayEndHour;
         }).Location("Content:1");
     }
 
@@ -156,24 +140,10 @@ public sealed class AIIntegrationConnectionDisplayDriver : DisplayDriver<AIInteg
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Token), S["Enter the {0} token.", connection.Provider]);
         }
 
-        if (!string.IsNullOrWhiteSpace(model.TimeZoneId) && !TimeZoneInfo.TryFindSystemTimeZoneById(model.TimeZoneId.Trim(), out _))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TimeZoneId), S["Enter a time zone such as America/Los_Angeles."]);
-        }
-
-        if (model.WorkdayStartHour is < 0 or > 23 || model.WorkdayEndHour is < 1 or > 24 || model.WorkdayEndHour <= model.WorkdayStartHour)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.WorkdayEndHour), S["Working hours run from a start hour to a later end hour, from 0 to 24."]);
-        }
-
         connection.Name = model.Name?.Trim();
         connection.ClientId = model.ClientId?.Trim();
         connection.TenantId = model.TenantId?.Trim();
         connection.InstanceUrl = model.InstanceUrl?.Trim();
-        connection.CalendarId = model.CalendarId?.Trim();
-        connection.TimeZoneId = model.TimeZoneId?.Trim();
-        connection.WorkdayStartHour = model.WorkdayStartHour;
-        connection.WorkdayEndHour = model.WorkdayEndHour;
 
         // An empty secret or token keeps the saved one: neither is shown again.
         if (!string.IsNullOrWhiteSpace(model.ClientSecret))

@@ -338,7 +338,7 @@ public sealed class SalesforceCrmClient : IAICrmClient
 }
 
 /// <summary>
-/// Makes the calendar or CRM client of a connection.
+/// Makes the CRM client of a connection.
 /// </summary>
 public sealed class AIIntegrationClients
 {
@@ -351,26 +351,6 @@ public sealed class AIIntegrationClients
     public AIIntegrationClients(AIIntegrationTokens tokens)
     {
         _tokens = tokens;
-    }
-
-    /// <summary>
-    /// Makes a connection's calendar client.
-    /// </summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The client.</returns>
-    public async Task<IAICalendarClient> CreateCalendarAsync(AIIntegrationConnection connection, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(connection);
-
-        var http = await _tokens.CreateClientAsync(connection, cancellationToken);
-
-        return connection.Provider switch
-        {
-            AIIntegrationProviders.Google => new GoogleCalendarClient(http, connection.CalendarId),
-            AIIntegrationProviders.Microsoft365 => new MicrosoftCalendarClient(http, connection.CalendarId),
-            _ => throw new InvalidOperationException($"A {connection.Provider} connection has no calendar."),
-        };
     }
 
     /// <summary>

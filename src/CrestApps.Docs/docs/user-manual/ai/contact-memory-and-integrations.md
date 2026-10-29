@@ -92,26 +92,21 @@ Click **Deliveries** to see what was sent: each event with its body, the receive
 
 ## Integrations
 
-Enable **AI Integrations** to connect the AI to a calendar, a CRM or Notion. Under **Artificial Intelligence → Integrations**, **Add integration** and choose the provider:
+Enable **AI Integrations** to connect the AI to a CRM, Google Drive, Microsoft 365 or Notion. Under **Artificial Intelligence → Integrations**, **Add integration** and choose the provider:
 
 | Provider | Signs in with | Used for |
 | --- | --- | --- |
-| **Google** | An OAuth app you register in Google Cloud (client id and secret) | Calendar availability and booking, Google Drive file sources |
-| **Microsoft 365** | An app you register in Microsoft Entra (client id and secret, and your tenant) | Outlook calendar availability and booking, SharePoint and OneDrive file sources |
+| **Google** | An OAuth app you register in Google Cloud (client id and secret) | Google Drive file sources |
+| **Microsoft 365** | An app you register in Microsoft Entra (client id and secret, and your tenant) | SharePoint and OneDrive file sources |
 | **HubSpot** | A private app token with the contacts and calls scopes | Looking customers up, logging calls |
 | **Salesforce** | A connected app (client id and secret) | Looking customers up, logging calls |
 | **Notion** | An internal integration secret | Notion file sources |
 
 For Google, Microsoft 365 and Salesforce, give the app the redirect address the editor shows, then save: you are sent to the provider to approve it, and the connection keeps a refresh token, encrypted, so it stays signed in. **Reconnect** signs it in again. HubSpot and Notion take the token you paste in.
 
-## Calendars
+## Appointments
 
-On a Google or Microsoft 365 connection, set the **Calendar** (empty for the primary one), the **Time zone** and the **Working hours**. Then on the AI profile's **Capabilities** tab choose the **Calendar** and the **Appointment length**, and add the **Check Calendar Availability** and **Book Calendar Appointment** tools:
-
-- **checkCalendarAvailability** lists open times on weekdays inside working hours, over the next days, with each time written the way it is said.
-- **bookCalendarAppointment** books the time the customer picked, after checking it is still free, invites the customer when the AI has their email, and puts the appointment's time and event id in the conversation variables `appointment_start_utc` and `appointment_event_id`.
-
-Another booking service with an API, such as Cal.com or Calendly, is connected with workflows: a **Workflow** tool instance whose workflow calls the service's API with **HTTP Request** (see [Automate AI conversations](conversation-workflows.md)).
+AI Integrations does not book appointments. A booking service with an API is connected with workflows: a **Workflow** tool instance whose workflow calls the service's API with **HTTP Request** (see [Automate AI conversations](conversation-workflows.md)).
 
 ## CRMs
 

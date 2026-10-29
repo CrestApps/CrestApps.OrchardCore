@@ -16,7 +16,7 @@ using OrchardCore.Workflows.Helpers;
 namespace CrestApps.OrchardCore.AI.Integrations;
 
 /// <summary>
-/// Registers the AI Integrations feature: calendar and CRM connections, the tools that use them and the Log to CRM task.
+/// Registers the AI Integrations feature: CRM, Notion and file store connections, the CRM lookup tool and the Log to CRM task.
 /// </summary>
 [Feature(AIConstants.Feature.Integrations)]
 public sealed class AIIntegrationsStartup : StartupBase
@@ -47,18 +47,6 @@ public sealed class AIIntegrationsStartup : StartupBase
             .AddPermissionProvider<AIIntegrationsPermissionsProvider>();
 
         services.AddHttpClient(AIIntegrationTokens.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(20));
-
-        services.AddCoreAITool<CheckCalendarAvailabilityTool>(CheckCalendarAvailabilityTool.TheName)
-            .WithTitle(S["Check Calendar Availability"])
-            .WithDescription(S["Lists open appointment times in the profile's calendar."])
-            .WithCategory(S["Integrations"])
-            .Selectable();
-
-        services.AddCoreAITool<BookCalendarAppointmentTool>(BookCalendarAppointmentTool.TheName)
-            .WithTitle(S["Book Calendar Appointment"])
-            .WithDescription(S["Books an appointment in the profile's calendar."])
-            .WithCategory(S["Integrations"])
-            .Selectable();
 
         services.AddCoreAITool<FindCrmContactTool>(FindCrmContactTool.TheName)
             .WithTitle(S["Find CRM Contact"])

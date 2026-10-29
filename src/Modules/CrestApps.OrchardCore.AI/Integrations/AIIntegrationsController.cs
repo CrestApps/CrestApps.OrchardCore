@@ -22,7 +22,7 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 namespace CrestApps.OrchardCore.AI.Integrations;
 
 /// <summary>
-/// Connections to calendars and CRMs: add one, sign it in with the provider, and remove it.
+/// Connections to CRMs and file stores: add one, sign it in with the provider, and remove it.
 /// </summary>
 [Admin]
 [Feature(AIConstants.Feature.Integrations)]

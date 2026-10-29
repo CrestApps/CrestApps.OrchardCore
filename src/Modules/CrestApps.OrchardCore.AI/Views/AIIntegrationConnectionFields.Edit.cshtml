@@ -7,8 +7,8 @@
     var callback = Url.Action("Callback", "AIIntegrations", new { area = "CrestApps.OrchardCore.AI" }, Context.Request.Scheme);
     var providerNames = new Dictionary<string, string>
     {
-        [AIIntegrationProviders.Google] = T["Google (Calendar and Drive)"].Value,
-        [AIIntegrationProviders.Microsoft365] = T["Microsoft 365 (Outlook calendar, SharePoint and OneDrive)"].Value,
+        [AIIntegrationProviders.Google] = T["Google (Drive)"].Value,
+        [AIIntegrationProviders.Microsoft365] = T["Microsoft 365 (SharePoint and OneDrive)"].Value,
         [AIIntegrationProviders.HubSpot] = T["HubSpot CRM"].Value,
         [AIIntegrationProviders.Salesforce] = T["Salesforce"].Value,
         [AIIntegrationProviders.Notion] = T["Notion"].Value,
@@ -100,37 +100,6 @@
         <div class="ocat-end">
             <input asp-for="InstanceUrl" class="form-control" placeholder="https://yourorg.my.salesforce.com" />
             <span class="hint">@T["Filled in when you connect. Enter a sandbox address first to sign in at test.salesforce.com."]</span>
-        </div>
-    </div>
-</div>
-
-<div data-integration-for="Google Microsoft365">
-    <div class="ocat-wrapper">
-        <label asp-for="CalendarId" class="ocat-label">@T["Calendar"]</label>
-        <div class="ocat-end">
-            <input asp-for="CalendarId" class="form-control" />
-            <span class="hint">@T["The calendar's id. Empty uses the primary calendar of the account that connects."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
-        <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
-        <div class="ocat-end">
-            <input asp-for="TimeZoneId" class="form-control" placeholder="America/Los_Angeles" />
-            <span asp-validation-for="TimeZoneId" class="text-danger"></span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="WorkdayEndHour">
-        <label class="ocat-label">@T["Working hours"]</label>
-        <div class="ocat-end">
-            <div class="input-group" style="max-width: 20rem;">
-                <input asp-for="WorkdayStartHour" type="number" min="0" max="23" class="form-control" />
-                <span class="input-group-text">@T["to"]</span>
-                <input asp-for="WorkdayEndHour" type="number" min="1" max="24" class="form-control" />
-            </div>
-            <span asp-validation-for="WorkdayEndHour" class="text-danger"></span>
-            <span class="hint">@T["Appointments are offered on weekdays between these hours, in the time zone above."]</span>
         </div>
     </div>
 </div>
