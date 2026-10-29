@@ -387,6 +387,8 @@ The customers, cohorts, checkouts, sales by category and VAT one-stop-shop repor
 
 ### Workflow events
 
+<YouTube video="commerce-automation" title="Narrated video overview of commerce automation" />
+
 With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
 
 ### Screens and permissions

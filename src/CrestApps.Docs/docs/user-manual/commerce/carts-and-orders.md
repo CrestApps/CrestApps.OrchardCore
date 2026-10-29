@@ -275,6 +275,33 @@ Link to **Track your order** and **Find my order** from your site's footer or he
 
 <YouTube video="buyer-account-guest-orders" title="Video of Track your order and Find my order" start={204} end={248} />
 
+## Automate with workflows
+
+With **Workflows** on, the moments of your store start workflows, which can send an email, call a web address, change content and more. This video shows the recipes, the editor, turning a workflow on and testing it:
+
+<YouTube video="commerce-automation" title="Narrated video overview of commerce automation" />
+
+| Event | Starts when | Feature |
+| --- | --- | --- |
+| **Order Paid** | An order is paid. | Orders |
+| **Order Canceled** | An order is canceled, with why. | Orders |
+| **Order Refunded** | Money is given back for an order. | Orders |
+| **Low Stock** | A product or variant runs low or sells out. | Inventory |
+| **Shipment Created**, **Shipped**, **Delivered**, **Returned** | A shipment of an order changes. | Shipping |
+| **Stripe** events, such as **Stripe Payment Failed** and **Stripe Dispute Created** | Stripe tells your site. | Stripe |
+
+In a workflow's editor (**Design > Workflows**), **Add Event** shows them under **Commerce** and **Stripe**. Each event's details, such as the order number, total, customer email and the reason, are there for its tasks.
+
+Three recipes under **Tools > Recipes** add workflows to start from: **Automation: thank-you email** (on), **Automation: canceled order alert** and **Automation: low stock alert** (both added off). Run one, then open the workflow, set the address it goes to, and turn it on under **Properties** with **Enabled**. **Delete successfully completed workflows** keeps your list tidy; untick it to keep every run under the workflow's **Instances**.
+
+<YouTube video="commerce-automation" title="Video of the ready-made automation recipes" start={85} end={150} />
+
+<YouTube video="commerce-automation" title="Video of the workflow editor" start={150} end={208} />
+
+<YouTube video="commerce-automation" title="Video of turning a workflow on and testing it" start={208} end={267} />
+
+Workflows act inside your site. To tell another system, such as your accounting software, use [Webhooks](webhooks.md).
+
 ## Order confirmations
 
 When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total, what a gift card, store credit or points paid toward it, and the billing address. It goes to the email given at checkout, once per order.
