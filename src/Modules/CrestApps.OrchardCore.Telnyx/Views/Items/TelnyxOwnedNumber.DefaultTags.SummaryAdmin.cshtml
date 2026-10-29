@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Telnyx.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TelnyxOwnedNumber>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-signal text-secondary me-1" aria-hidden="true"></i>@Model.Value.Status</span>
+@if (!string.IsNullOrEmpty(Model.Value.MessagingProfileId))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-comment-sms text-secondary me-1" aria-hidden="true"></i>@T["Texts"]</span>
+}

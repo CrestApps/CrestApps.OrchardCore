@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Telephony
+@using CrestApps.OrchardCore.Telnyx.ViewModels
+
+@model TelnyxNumberSearchViewModel
+
+<zone Name="Title">
+    <breadcrumb name="TelnyxNumbersSearch" title="@T["Buy a number"]">
+        <breadcrumb-item id="TelnyxNumbers" action="Index" controller="TelnyxNumbers" area="CrestApps.OrchardCore.Telnyx" permission="@TelephonyPermissions.ManageTelephonySettings.Name">@T["Telnyx numbers"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="get" asp-action="Search" class="card text-bg-theme mb-3">
+    <input type="hidden" name="Submitted" value="true" />
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label asp-for="CountryCode" class="form-label">@T["Country"]</label>
+                <input asp-for="CountryCode" class="form-control" maxlength="2" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label asp-for="AreaCode" class="form-label">@T["Area code"]</label>
+                <input asp-for="AreaCode" class="form-control" inputmode="numeric" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label asp-for="City" class="form-label">@T["City"]</label>
+                <input asp-for="City" class="form-control" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label asp-for="Region" class="form-label">@T["State"]</label>
+                <input asp-for="Region" class="form-control" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label asp-for="Contains" class="form-label">@T["Contains"]</label>
+                <input asp-for="Contains" class="form-control" inputmode="numeric" />
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="form-check mb-2">
+                    <input asp-for="Sms" class="form-check-input" />
+                    <label asp-for="Sms" class="form-check-label">@T["Can text"]</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">@T["Search"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="TelnyxAvailableNumbers" context="Model.List"
+            show-select-all="false"
+            empty-message="@(Model.Submitted ? T["<strong>Nothing found.</strong> Try another area code or city."] : T["Search for a number to buy."])">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Number" position="20" title="@T["Number"]" />
+        <admin-list-column name="Cost" position="30" title="@T["Cost"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
