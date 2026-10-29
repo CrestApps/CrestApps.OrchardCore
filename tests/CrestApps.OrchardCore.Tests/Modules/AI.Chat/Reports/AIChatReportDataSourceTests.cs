@@ -6,6 +6,7 @@ using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -278,6 +279,59 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         // Assert
         Assert.Equal(["session-4", "session-3"], Rows(table).Select(row => row[AIChatReportDataSource.SessionIdField]));
         Assert.True(table.Truncated);
+    }
+
+    [Theory]
+    [InlineData("SessionId", "SESSION-2")]
+    [InlineData("UserId", "User-2")]
+    public async Task Report_ChatSessions_AViewerFilterOnAKeyInAnotherCase_KeepsTheRow(string field, string value)
+    {
+        // Arrange: PostgreSQL compares text case-sensitively, so an exact match in the database would find nothing there,
+        // while the report compares without regard to case. (The SQLite tables YesSql creates ignore case, so this
+        // guards the end-to-end behavior; the join test below fails on any database.)
+        await using var session = _store.CreateSession();
+        var query = new ReportQueryDefinition
+        {
+            DataSets = [new ReportDataSetReference { Alias = "S", Source = AIChatReportDataSource.SourceName, DataSet = AIChatReportDataSource.ChatSessionsDataSet }],
+            Columns = [ReportDesignerTestServices.Column("id", "S." + AIChatReportDataSource.SessionIdField)],
+        };
+        query.Filters.Add(new ReportFilterDefinition { Id = "key", Field = "S." + field, Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Equals, Values = [value] });
+        var context = ReportDesignerTestServices.Context(_start.AddDays(5));
+        context.DataSourceContext = new DataSourceContext { User = _user };
+
+        // Act
+        var result = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(AIChatReportDataSource.SourceName, Source(session))).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["session-2"], result.Rows.Select(row => row[0]));
+    }
+
+    [Fact]
+    public async Task Query_ChatSessions_JoinKeys_ReadOnlyTheMatchingSessions()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var joined = Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField);
+        joined.Conditions.Add(new DataCondition { Field = AIChatReportDataSource.SessionIdField, Operator = DataFilterOperator.In, Values = ["session-1", "session-3", "missing"], IsJoinKey = true });
+
+        // A viewer's filter on the same key in another case does not take away the join's keys.
+        var joinedAndFiltered = Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField);
+        joinedAndFiltered.Conditions.Add(new DataCondition { Field = AIChatReportDataSource.SessionIdField, Operator = DataFilterOperator.In, Values = ["session-3"], IsJoinKey = true });
+        joinedAndFiltered.Conditions.Add(Condition(AIChatReportDataSource.SessionIdField, DataFilterOperator.Equals, "SESSION-3"));
+
+        var empty = Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField);
+        empty.Conditions.Add(new DataCondition { Field = ReportsConstants.UserIdField, Operator = DataFilterOperator.In, Values = [], IsJoinKey = true });
+
+        // Act
+        var joinedRows = Rows(await ReportDesignerTestServices.ReadAsync(source, joined, TestContext.Current.CancellationToken));
+        var joinedAndFilteredRows = Rows(await ReportDesignerTestServices.ReadAsync(source, joinedAndFiltered, TestContext.Current.CancellationToken));
+        var none = await ReportDesignerTestServices.ReadAsync(source, empty, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["session-3", "session-1"], joinedRows.Select(row => row[AIChatReportDataSource.SessionIdField]));
+        Assert.Equal(["session-3"], joinedAndFilteredRows.Select(row => row[AIChatReportDataSource.SessionIdField]));
+        Assert.Empty(none.Rows);
     }
 
     [Fact]

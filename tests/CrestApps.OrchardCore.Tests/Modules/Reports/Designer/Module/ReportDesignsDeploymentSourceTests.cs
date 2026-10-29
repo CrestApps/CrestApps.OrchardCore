@@ -27,6 +27,26 @@ public sealed class ReportDesignsDeploymentSourceTests
         // Assert
         Assert.Equal(["Activities by agent", "Campaigns", "Plain report"], Titles(exported, "Reports"));
         Assert.Equal(["Activities with agents", "Agents", "Unused view"], Titles(exported, "Views"));
+        Assert.Equal(["Other", "Sales", "Regional"], Titles(exported, "Groups"));
+    }
+
+    [Fact]
+    public async Task PickedReports_AreExportedWithTheirGroups_AndTheGroupsThoseAreNestedIn()
+    {
+        // Arrange
+        var step = new ReportDesignsDeploymentStep
+        {
+            IncludeAll = false,
+            ReportIds = ["campaigns"],
+        };
+
+        // Act
+        var exported = await ExportAsync(step);
+
+        // Assert: parents first, so the import finds each parent before the groups nested in it.
+        Assert.Equal(["Sales", "Regional"], Titles(exported, "Groups"));
+        Assert.Equal("regional", exported["Reports"][0]["groupId"]?.GetValue<string>());
+        Assert.Equal("sales", exported["Groups"][1]["parentId"]?.GetValue<string>());
     }
 
     [Fact]
@@ -45,6 +65,7 @@ public sealed class ReportDesignsDeploymentSourceTests
         // Assert
         Assert.Equal(["Activities by agent"], Titles(exported, "Reports"));
         Assert.Equal(["Activities with agents", "Agents"], Titles(exported, "Views"));
+        Assert.Empty(Titles(exported, "Groups"));
     }
 
     [Fact]
@@ -79,7 +100,13 @@ public sealed class ReportDesignsDeploymentSourceTests
     {
         var designs = Catalog(
             Report("by-agent", "Activities by agent", ("V", ReportsConstants.ViewsDataSource, "with-agents")),
-            Report("campaigns", "Campaigns", ("C", "Omnichannel", "Campaigns")),
+            new ReportDesign
+            {
+                ItemId = "campaigns",
+                DisplayText = "Campaigns",
+                GroupId = "regional",
+                Query = Query([("C", "Omnichannel", "Campaigns")]),
+            },
             Report("plain", "Plain report"));
 
         var views = Catalog(
@@ -88,7 +115,12 @@ public sealed class ReportDesignsDeploymentSourceTests
             View("unused-view", "Unused view"));
 
         var userManager = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);
-        var source = new ReportDesignsDeploymentSource(designs, views, userManager.Object);
+        var groups = Catalog(
+            new ReportGroup { ItemId = "sales", DisplayText = "Sales" },
+            new ReportGroup { ItemId = "regional", DisplayText = "Regional", ParentId = "sales" },
+            new ReportGroup { ItemId = "other", DisplayText = "Other" });
+
+        var source = new ReportDesignsDeploymentSource(designs, views, groups, userManager.Object);
         var result = new DeploymentPlanResult(Mock.Of<IFileBuilder>(), new RecipeDescriptor());
 
         await source.ProcessDeploymentStepAsync(step, result);

@@ -30,7 +30,7 @@
           "itemId": "reviews-by-stars",
           "displayText": "Reviews by stars",
           "description": "The reviews written in the period, by the stars given and whether they wait for approval, are approved or are rejected.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "r", "source": "Reviews", "dataSet": "ProductReviews", "displayName": "Product reviews" }
@@ -58,7 +58,7 @@
           "itemId": "reviews-by-product",
           "displayText": "Reviews by product",
           "description": "The reviews of each product written in the period: how many wait for approval or are approved, the average rating from the approved reviews, and the share from verified buyers.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "r", "source": "Reviews", "dataSet": "ProductReviews", "displayName": "Product reviews" }

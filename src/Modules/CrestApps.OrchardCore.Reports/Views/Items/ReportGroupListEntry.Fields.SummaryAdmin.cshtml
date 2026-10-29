@@ -1,0 +1,6 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportGroupListEntry>
+
+@* A plain link to the edit page, showing the whole path so a nested group reads in place. *@
+<a asp-route="ReportGroupsEdit" asp-route-id="@Model.Value.Group.ItemId">@Model.Value.PathText</a>

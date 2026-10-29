@@ -284,6 +284,21 @@ body .ta-content {
   color: #ff8a80;
 }
 
+.cc-bar__no-phone {
+  margin: 0.35rem 0 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.35rem;
+  background: rgba(240, 173, 78, 0.18);
+  border: 1px solid rgba(240, 173, 78, 0.55);
+  font-size: 0.85em;
+  line-height: 1.35;
+}
+
+.cc-bar__open-phone {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .cc-bar__workspace {
   color: rgba(244, 246, 248, 0.85);
   text-decoration: none;

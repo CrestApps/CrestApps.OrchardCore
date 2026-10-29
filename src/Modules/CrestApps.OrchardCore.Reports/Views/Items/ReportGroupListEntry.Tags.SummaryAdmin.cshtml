@@ -1,0 +1,22 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportGroupListEntry>
+
+@{
+    var entry = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Display order"]">
+    <i class="fa-solid fa-arrow-down-1-9 text-secondary me-1" aria-hidden="true"></i>@entry.Group.Order
+</span>
+
+@if (entry.GroupCount > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Groups nested in this group"]">
+        <i class="fa-solid fa-folder-tree text-secondary me-1" aria-hidden="true"></i>@T.Plural(entry.GroupCount, "1 group", "{0} groups", entry.GroupCount)
+    </span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Reports in this group"]">
+    <i class="fa-solid fa-chart-column text-secondary me-1" aria-hidden="true"></i>@T.Plural(entry.ReportCount, "1 report", "{0} reports", entry.ReportCount)
+</span>

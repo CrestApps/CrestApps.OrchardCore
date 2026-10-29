@@ -30,7 +30,7 @@
           "itemId": "subscriptions-new",
           "displayText": "New subscriptions",
           "description": "The number of subscriptions started each month in the period.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "s", "source": "Subscriptions", "dataSet": "Subscriptions", "displayName": "Subscriptions" }
@@ -55,7 +55,7 @@
           "itemId": "subscriptions-expiring",
           "displayText": "Expiring subscriptions",
           "description": "The active, trialing and past due subscriptions whose paid period ends in the next 30 days, the soonest first.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "s", "source": "Subscriptions", "dataSet": "Subscriptions", "displayName": "Subscriptions" }

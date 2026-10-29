@@ -24,6 +24,32 @@ internal static class ReportRecipeDesigns
     /// <returns>The designs, in the order the recipe lists them.</returns>
     public static List<ReportDesign> Load(string module, string recipeFileName)
     {
+        return ReportNodes(module, recipeFileName)
+            .Select(node =>
+            {
+                var design = node.Deserialize<ReportDesign>(ReportDesignerJson.Options);
+
+                design.Query = ReportDesignNormalizer.Normalize(design.Query);
+                design.Visuals = ReportDesignNormalizer.Normalize(design.Visuals);
+
+                return design;
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Reads the group path each report of a recipe's <c>ReportDesigns</c> step names, such as <c>Store</c>.
+    /// </summary>
+    /// <param name="module">The folder of the module under <c>src/Modules</c>.</param>
+    /// <param name="recipeFileName">The file name of the recipe in the module's <c>Recipes</c> folder.</param>
+    /// <returns>The group paths, in the order the recipe lists the reports.</returns>
+    public static List<string> GroupPaths(string module, string recipeFileName)
+    {
+        return ReportNodes(module, recipeFileName).Select(node => (string)node["group"]).ToList();
+    }
+
+    private static JsonArray ReportNodes(string module, string recipeFileName)
+    {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
@@ -41,17 +67,7 @@ internal static class ReportRecipeDesigns
         Assert.Contains(ReportsConstants.BuilderFeature, steps[0]["enable"].AsArray().Select(feature => (string)feature));
         Assert.Equal("ReportDesigns", (string)steps[1]["name"]);
 
-        return steps[1]["Reports"].AsArray()
-            .Select(node =>
-            {
-                var design = node.Deserialize<ReportDesign>(ReportDesignerJson.Options);
-
-                design.Query = ReportDesignNormalizer.Normalize(design.Query);
-                design.Visuals = ReportDesignNormalizer.Normalize(design.Visuals);
-
-                return design;
-            })
-            .ToList();
+        return steps[1]["Reports"].AsArray();
     }
 
     /// <summary>

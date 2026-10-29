@@ -72,6 +72,7 @@ public sealed class ReportDesignsController : Controller
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var entries = new List<ReportDesignListEntry>();
         var drafts = new List<ReportDesignListEntry>();
+        var groups = await _designService.GetGroupTreeAsync();
 
         // Every report and draft is authorized; the status filter and the search only narrow what the user may open.
         var showPublished = model.Status != ReportDesignListStatus.Unpublished;
@@ -82,11 +83,14 @@ public sealed class ReportDesignsController : Controller
             var canView = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design);
             var canEdit = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, design);
 
-            if (canView && showPublished && Matches(q, design.DisplayText, design.Category))
+            var groupPath = groups.GetPathText(design.GroupId);
+
+            if (canView && showPublished && Matches(q, design.DisplayText, groupPath))
             {
                 entries.Add(new ReportDesignListEntry
                 {
                     Design = design,
+                    GroupPath = groupPath,
                     CanEdit = canEdit,
                     CanClone = model.CanDesign,
                     IsOwner = string.Equals(design.OwnerId, userId, StringComparison.Ordinal),
@@ -105,6 +109,7 @@ public sealed class ReportDesignsController : Controller
                     drafts.Add(new ReportDesignListEntry
                     {
                         Design = draft.Design,
+                        GroupPath = groups.GetPathText(draft.Design.GroupId),
                         CanEdit = true,
                         IsDraft = true,
                         IsOwner = string.Equals(draft.Design.OwnerId, userId, StringComparison.Ordinal),
@@ -295,9 +300,11 @@ public sealed class ReportDesignsController : Controller
         {
             DisplayText = H["{0} (copy)", design.DisplayText].Value,
             Description = design.Description,
-            Category = design.Category,
+            GroupId = design.GroupId,
             Query = design.Query,
             Visuals = design.Visuals,
+            Containers = design.Containers,
+            Queries = design.Queries,
             AllowExport = design.AllowExport,
         };
 

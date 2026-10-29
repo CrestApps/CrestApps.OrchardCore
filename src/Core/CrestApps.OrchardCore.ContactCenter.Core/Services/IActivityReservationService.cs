@@ -97,6 +97,26 @@ public interface IActivityReservationService
     Task<ActivityReservation> ReleaseUnreachableAgentAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Releases an offer that is still ringing when the agent's phone refused the leg rung for it as unavailable: no
+    /// phone of theirs is there to ring, so the offer cannot be answered before it rings out. The caller is handed on
+    /// at once, as an offer that rang out is (the queue's unanswered-offer action), and the agent is set Away, as when
+    /// an accepted offer could not reach them, so the next caller is not offered to the same phone.
+    /// </summary>
+    /// <remarks>
+    /// Only a pending offer to <paramref name="agentId"/> in a regular queue is released this way. A direct-to-agent
+    /// (personal line) offer and a campaign queue's offer are left to ring out on their own, and an offer that is no
+    /// longer pending, or now someone else's, was decided by whatever changed it.
+    /// </remarks>
+    /// <param name="reservationId">The reservation identifier.</param>
+    /// <param name="agentId">The agent whose phone refused the leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The released reservation, or <see langword="null"/> when it was not found, is not that agent's pending
+    /// offer in a regular queue, or is held by another transition.</returns>
+    /// <exception cref="YesSql.ConcurrencyException">Another transition changed the reservation, the agent or the
+    /// call first.</exception>
+    Task<ActivityReservation> ReleaseUnreachableOfferAsync(string reservationId, string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Expires every pending reservation that has passed its timeout and returns items to their queues.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
