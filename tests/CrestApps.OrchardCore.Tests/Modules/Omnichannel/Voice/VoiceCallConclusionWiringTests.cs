@@ -476,11 +476,6 @@ public sealed class VoiceCallConclusionWiringTests
         public string ContactEmail { get; set; }
     }
 
-    /// <summary>
-    /// Wires the conclusion up to doubles: an in-memory activity and transcript, a catalog of the dispositions the
-    /// subject's actions are wired to, a model that answers on request, and a recording executor standing in for
-    /// the subject's workflow.
-    /// </summary>
     [Fact]
     public async Task ACallWhosePersonaSpeaksGreek_IsReviewedWithTheSummaryAskedForInGreek()
     {
@@ -513,6 +508,11 @@ public sealed class VoiceCallConclusionWiringTests
         Assert.Null(harness.ReviewPromptArguments["Language"]);
     }
 
+    /// <summary>
+    /// Wires the conclusion up to doubles: an in-memory activity and transcript, a catalog of the dispositions the
+    /// subject's actions are wired to, a model that answers on request, and a recording executor standing in for
+    /// the subject's workflow.
+    /// </summary>
     private sealed class ConclusionHarness
     {
         private readonly List<AIChatSessionPrompt> _prompts;
