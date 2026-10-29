@@ -1,4 +1,6 @@
+@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core.Conversations
 
 @model AIProfileDataExtractionViewModel
 
@@ -14,6 +16,15 @@
 
 @{
     var dataExtractionSettingsId = Html.IdFor(m => m.EnableDataExtraction) + "_settings";
+    var typeNames = new Dictionary<DataExtractionFieldType, string>
+    {
+        [DataExtractionFieldType.Text] = T["Text"].Value,
+        [DataExtractionFieldType.Number] = T["Number"].Value,
+        [DataExtractionFieldType.Boolean] = T["Yes or no"].Value,
+        [DataExtractionFieldType.Date] = T["Date"].Value,
+        [DataExtractionFieldType.Enum] = T["Choice"].Value,
+        [DataExtractionFieldType.List] = T["List"].Value,
+    };
 }
 
 <div id="@dataExtractionSettingsId" class="@(Model.EnableDataExtraction ? "" : "d-none")">
@@ -64,6 +75,37 @@
                                     <textarea class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" rows="3" placeholder="@T["What to extract"]">@Model.Entries[i].Description</textarea>
                                     <span class="hint">@T["Describes what data to extract from the conversation. The AI model uses this to understand what to look for."]</span>
                                 </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">@T["Type"]</label>
+                                        <select class="form-select entry-type-select" name="@Html.NameFor(m => m.Entries[i].FieldType)">
+                                            @foreach (var type in Enum.GetValues<DataExtractionFieldType>())
+                                            {
+                                                <option value="@type" selected="@(Model.Entries[i].FieldType == type)">@typeNames[type]</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-8 entry-allowed-values @(Model.Entries[i].FieldType is DataExtractionFieldType.Enum or DataExtractionFieldType.List ? "" : "d-none")">
+                                        <label class="form-label">@T["Allowed values"]</label>
+                                        <textarea class="form-control" name="@Html.NameFor(m => m.Entries[i].AllowedValues)" rows="2" placeholder="@T["One per line"]">@Model.Entries[i].AllowedValues</textarea>
+                                        <span class="hint">@T["A choice takes one of these; a list takes any of them, or anything when empty."]</span>
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">@T["Write to contact field"]</label>
+                                        <input type="text" class="form-control" name="@Html.NameFor(m => m.Entries[i].ContactField)" value="@Model.Entries[i].ContactField" placeholder="@T["e.g., Contact.Company"]" />
+                                        <span class="hint">@T["When the conversation closes, the value is written to this field of its contact, as PartName.FieldName. Text, numeric, yes/no and date fields are supported."]</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">@T["How"]</label>
+                                        <select class="form-select" name="@Html.NameFor(m => m.Entries[i].ContactFieldMode)">
+                                            <option value="@AIContactFieldMappingMode.Overwrite" selected="@(Model.Entries[i].ContactFieldMode == AIContactFieldMappingMode.Overwrite)">@T["Replace what it holds"]</option>
+                                            <option value="@AIContactFieldMappingMode.FillIfEmpty" selected="@(Model.Entries[i].ContactFieldMode == AIContactFieldMappingMode.FillIfEmpty)">@T["Fill only when empty"]</option>
+                                            <option value="@AIContactFieldMappingMode.Append" selected="@(Model.Entries[i].ContactFieldMode == AIContactFieldMappingMode.Append)">@T["Add to a text field"]</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div class="form-check mb-2">
                                     <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].AllowMultipleValues)" value="true" @(Model.Entries[i].AllowMultipleValues ? "checked" : "") />
                                     <label class="form-check-label">@T["Allow Multiple Values"]</label>
@@ -95,6 +137,17 @@
         }
 
         var container = document.getElementById('extractionEntriesContainer');
+        var typeOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(string.Concat(typeNames.Select(pair => $"<option value=\"{pair.Key}\">{System.Net.WebUtility.HtmlEncode(pair.Value)}</option>"))));
+
+        // A choice or a list shows its allowed values.
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('entry-type-select')) {
+                var allowed = e.target.closest('.card-body').querySelector('.entry-allowed-values');
+                if (allowed) {
+                    allowed.classList.toggle('d-none', e.target.value !== 'Enum' && e.target.value !== 'List');
+                }
+            }
+        });
         var addButton = document.getElementById('addExtractionEntry');
 
         if (addButton && container) {
@@ -116,6 +169,10 @@
                     '<div class="card-body">' +
                     '<div class="mb-3"><label class="form-label ocat-label-required">Name</label><input type="text" class="form-control entry-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" /><span class="hint">A unique identifier for this field. Only alphanumeric characters and underscores are allowed.</span></div>' +
                     '<div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="' + prefix + '[' + index + '].Description" rows="3" placeholder="What to extract"></textarea><span class="hint">Describes what data to extract from the conversation. The AI model uses this to understand what to look for.</span></div>' +
+                    '<div class="row g-2 mb-3"><div class="col-md-4"><label class="form-label">Type</label><select class="form-select entry-type-select" name="' + prefix + '[' + index + '].FieldType">' + typeOptions + '</select></div>' +
+                    '<div class="col-md-8 entry-allowed-values d-none"><label class="form-label">Allowed values</label><textarea class="form-control" name="' + prefix + '[' + index + '].AllowedValues" rows="2" placeholder="One per line"></textarea></div></div>' +
+                    '<div class="row g-2 mb-3"><div class="col-md-8"><label class="form-label">Write to contact field</label><input type="text" class="form-control" name="' + prefix + '[' + index + '].ContactField" placeholder="e.g., Contact.Company" /></div>' +
+                    '<div class="col-md-4"><label class="form-label">How</label><select class="form-select" name="' + prefix + '[' + index + '].ContactFieldMode"><option value="Overwrite">Replace what it holds</option><option value="FillIfEmpty">Fill only when empty</option><option value="Append">Add to a text field</option></select></div></div>' +
                     '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">Allow Multiple Values</label><span class="hint dashed">When enabled, the field can accumulate multiple extracted values across messages.</span></div>' +
                     '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsUpdatable" value="true" /><label class="form-check-label">Updatable</label><span class="hint dashed">When enabled, the extracted value can be replaced if the user provides updated information.</span></div>' +
                     '</div>' +
