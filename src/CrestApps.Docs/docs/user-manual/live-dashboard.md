@@ -18,6 +18,8 @@ The **live dashboard** is the supervisor's real-time view of the contact center:
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-dashboard-diagnostics" title="Video overview of the live dashboard diagnostics: the dialer banner, why isn't this dialing, call quality alerts and Free agent" />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the live dashboard summary, queue tiles and agent board filters" start={770} end={799} />
 
 :::info[You see your own queues]
@@ -49,6 +51,8 @@ An agent on a call of their own (a number they dialed from the keypad, or an ext
 
 ## Dialer banner
 
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of the dialer banner and its states, and the pacing warnings" start={59} end={113} />
+
 When your site dials campaigns automatically (the Contact Center Paced Dialing feature), a banner above the summary says what the dialer is doing for the campaigns you oversee. It refreshes every 30 seconds, and names up to three campaigns.
 
 | Banner | What it means |
@@ -66,17 +70,23 @@ When several campaigns are in different states, the banner shows the most seriou
 
 ## Why isn't this dialing?
 
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of the Why isn't this dialing panel and its reasons" start={113} end={182} />
+
 The **Why isn't this dialing?** panel under the queue tiles explains each queue or campaign that has work waiting. It refreshes every 30 seconds. A card shows how many records are pending, how many are *dialable now* and how many are held back, with each reason and its count, for example *Do not call*, *Outside the calling window*, *Waiting out the retry delay*, *Out of attempts*, *No number to dial*, *On the national do-not-call registry*, *Number not in service*, *Compliance check unavailable* or *Abandonment rate cap reached*. Other reasons point at the setup: *The queue is turned off*, *The queue's business hours are closed*, *The dialer profile is turned off*, *Not in the queue, so routing never sees it* and *Assigned to a user for manual work*.
 
 Notes under the list say how the campaign is paced (for example *Paced by the system*), how many agents are signed in and how many are available, and what routing found the last time it looked, with the reason it could not assign anyone. A card is red when something is wrong (a queue blocker, a routing failure, a pacing fault, or dialable work with no available agent) and amber when records are held back and none is dialable. When a pacing lock is not acquired, or pacing has stalled, the card says so first. The panel also appears for ordinary queues with waiting work, where *dialable now* means ready to be handed out.
 
 ## Call-quality alerts
 
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of call quality alerts, their causes and the Dismiss button" start={182} end={231} />
+
 When three of an agent's last five calls were rated poor, the dashboard raises an alert for the supervisors of that agent's queues: *(agent): N of their last M calls rated poor. Likely cause: (cause)*. The cause is one of no audio received, no audio sent from their phone, packet loss on their network, jitter on their network, latency on their network path, the customers' lines, or not determined. An agent raises at most one alert an hour.
 
 Alerts appear only while the dashboard is open: a supervisor who opens it later sees none. The cross on an alert (**Dismiss**) hides it in your browser only; reloading the page brings the dashboard back without it.
 
 ## Free agent
+
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of Free agent for an agent stuck on work that is already over" start={231} end={281} />
 
 An agent can look busy while nothing backs it: a call the provider has already ended, a reservation nothing holds, or work still assigned with no call in progress. Their card then shows a warning badge, with a tooltip that says to use **Free agent** in the **⋮** menu. Choose **Free agent…** there: the panel asks *Release what (agent) is holding that nothing backs?*, lists what is held (for example *Marked busy with no call in progress*, *Holds a reservation that nothing backs* or *Work is still assigned with no call in progress*), and releases it when you click **Free agent**. A call the provider confirms is still alive is never ended; if there is one, nothing is released. The action needs the permission to take over calls, and it is recorded in the audit trail.
 
