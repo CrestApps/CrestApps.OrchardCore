@@ -12,6 +12,8 @@ user_manual:
 | **Feature Name** | DNC Registry |
 | **Feature ID** | `CrestApps.OrchardCore.DncRegistry` |
 
+<YouTube video="do-not-call-lists" title="Video overview of Do Not Call Lists: local lists, enforcement, imports and the national registries" />
+
 The **DNC Registry** module provides a shared compliance layer for Omnichannel contact imports. It lets site owners configure national do-not-call registry providers, enforce registry checks globally, and expose additional registry choices during bulk imports. The same registries screen outbound dialing in the Contact Center.
 
 :::tip[Using the do-not-call screens]
