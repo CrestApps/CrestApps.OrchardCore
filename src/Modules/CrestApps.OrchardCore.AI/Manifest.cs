@@ -93,6 +93,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AIConstants.Feature.CustomLlm,
+    Name = "Custom LLM (WebSocket)",
+    Description = "A provider that sends each turn to your own server over a WebSocket and streams its reply back, for a model or agent you host that does not speak an OpenAI-compatible API.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = AIConstants.Feature.Webhooks,
     Name = "AI Webhooks",
     Description = "Posts signed AI events (a conversation starting, ending, analyzed, transferred or scored, an alert triggering or resolving) to outside addresses, with retries and a delivery log.",
