@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
 
@@ -15,9 +16,11 @@ public sealed class CurrencyDeploymentStep : DeploymentStep
     public override string Name => ProductsConstants.Recipes.Currencies;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>

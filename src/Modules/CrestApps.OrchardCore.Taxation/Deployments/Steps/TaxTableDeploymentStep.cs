@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
 
@@ -15,8 +16,10 @@ public sealed class TaxTableDeploymentStep : DeploymentStep
     public override string Name => TaxationDeploymentSteps.TaxTable;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Title => _title;
 }

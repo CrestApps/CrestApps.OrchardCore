@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
@@ -16,9 +17,11 @@ public sealed class McpConnectionDeploymentStep : DeploymentStep
     public override string Name => McpConnectionStep.StepKey;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>

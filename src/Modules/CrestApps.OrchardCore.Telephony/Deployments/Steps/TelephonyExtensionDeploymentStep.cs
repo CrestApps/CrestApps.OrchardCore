@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
 
@@ -15,8 +16,10 @@ public sealed class TelephonyExtensionDeploymentStep : DeploymentStep
     public override string Name => TelephonyDeploymentSteps.Extension;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Title => _title;
 }

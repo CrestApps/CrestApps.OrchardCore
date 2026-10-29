@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -31,9 +32,11 @@ public sealed class ReportDesignsDeploymentStep : DeploymentStep
     public override string Name => ReportDesignsRecipeStep.Name;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>
