@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Tests.Modules.Reports.Pdf.Services;
 
 public sealed class ReportPdfFontTests
 {
+    // Georgia maps its characters for Mac Roman before Unicode, so its accented letters are other glyphs there.
+    private static readonly string _georgiaPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "georgia.ttf");
+
+    public static bool IsGeorgiaInstalled => File.Exists(_georgiaPath);
+
     [Fact]
     public void Prepare_WhenTheFontHasNoGlyphForAnInvisibleCharacter_ShouldLeaveItOut()
     {
@@ -56,17 +61,13 @@ public sealed class ReportPdfFontTests
         Assert.Equal("Caf\U000000E9", text);
     }
 
-    [Fact]
+    // The skip is decided before the test runs: a skip thrown from inside a test is reported as a failure on CI.
+    [Fact(Skip = "Georgia is not installed.", SkipUnless = nameof(IsGeorgiaInstalled))]
     public void Measure_WhenTheFontListsItsMacRomanCharactersFirst_ShouldGiveTheWidthsThePdfIsWrittenWith()
     {
         // Arrange
-        // Georgia maps its characters for Mac Roman before Unicode, so its accented letters are other glyphs there.
-        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "georgia.ttf");
-
-        Assert.SkipUnless(File.Exists(path), "Georgia is not installed.");
-
         using var builder = new PdfDocumentBuilder();
-        var font = ReportPdfFont.FromTrueType(builder, File.ReadAllBytes(path), simulatesBold: false);
+        var font = ReportPdfFont.FromTrueType(builder, File.ReadAllBytes(_georgiaPath), simulatesBold: false);
         var text = font.Prepare(new string(Enumerable.Range(0xC0, 64).Select(code => (char)code).ToArray()));
 
         // Act
