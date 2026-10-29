@@ -233,6 +233,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.Threading.CancellationToken HandoffRequested { get; set; }
         public string InteractionId { get; set; }
         public System.Threading.CancellationToken MachineGreetingEnded { get; set; }
+        public string NoHandoffInstructions { get; set; }
         public System.Threading.CancellationToken NodeStopping { get; set; }
         public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
         public string ProviderCallId { get; set; }

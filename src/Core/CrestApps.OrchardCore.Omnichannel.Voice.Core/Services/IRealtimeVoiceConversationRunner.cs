@@ -160,6 +160,12 @@ public sealed class RealtimeVoiceConversationContext
     public string HandoffInstructions { get; set; }
 
     /// <summary>
+    /// Gets or sets the guidance for a call that would hand the caller to a person but cannot now, the queue being
+    /// closed, or <see langword="null"/> otherwise. It is given without the transfer tool.
+    /// </summary>
+    public string NoHandoffInstructions { get; set; }
+
+    /// <summary>
     /// Gets or sets the deployment this call is held on.
     /// </summary>
     /// <remarks>

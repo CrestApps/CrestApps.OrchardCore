@@ -909,6 +909,26 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task ACallWhoseQueueIsClosed_IsToldNobodyIsThere_AndOffersNoTransfer()
+    {
+        // Arrange
+        // Offered the transfer after hours, the model told the caller it was connecting them, and the call then ended
+        // with a callback: nobody was there to take it.
+        var harness = new RealtimeHarness();
+        harness.HandoffInstructions = null;
+        harness.NoHandoffInstructions = VoiceCallGuidance.NobodyToHandTo;
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var orchestration = harness.Orchestrator.Contexts.Single();
+
+        Assert.DoesNotContain(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.MustIncludeTools);
+        Assert.Contains(VoiceCallGuidance.NobodyToHandTo, orchestration.SystemMessageBuilder.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TheSessionIsToldWhoItIsCalling()
     {
         // Arrange
@@ -1472,6 +1492,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public string HandoffInstructions { get; set; }
 
         /// <summary>
+        /// What the loop passes instead when the call's handoff queue is closed now.
+        /// </summary>
+        public string NoHandoffInstructions { get; set; }
+
+        /// <summary>
         /// Who the call is to, as the loop resolves it from the contact.
         /// </summary>
         public string ContactName { get; set; }
@@ -1507,6 +1532,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 MachineGreetingEnded = MachineGreetingEnded,
                 EndCallOnVoicemail = EndCallOnVoicemail,
                 HandoffInstructions = HandoffInstructions,
+                NoHandoffInstructions = NoHandoffInstructions,
                 ContactName = ContactName,
                 RecordingDisclosure = RecordingDisclosure,
 

@@ -722,6 +722,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public int? MaxAttempts { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }
     }
+    public enum HandoffAvailability
+    {
+        Open = 0,
+        CallbackOnly = 1,
+        Unavailable = 2,
+    }
     public enum HandoffDisposition
     {
         Routed = 0,
@@ -1704,6 +1710,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetLeadContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOmnichannelHandoffAvailability
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.HandoffAvailability> GetAvailabilityAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IOmnichannelHandoffService
     {

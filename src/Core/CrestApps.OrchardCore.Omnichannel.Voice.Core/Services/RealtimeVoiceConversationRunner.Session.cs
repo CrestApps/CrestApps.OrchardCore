@@ -62,6 +62,13 @@ public sealed partial class RealtimeVoiceConversationRunner
             orchestration.SystemMessageBuilder.AppendLine();
             orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
         }
+        else if (!string.IsNullOrWhiteSpace(call?.NoHandoffInstructions))
+        {
+            // Nobody can take the caller now, so there is no tool, and the model is told why rather than left to
+            // improvise an answer to "can I speak to someone?".
+            orchestration.SystemMessageBuilder.AppendLine();
+            orchestration.SystemMessageBuilder.AppendLine(call.NoHandoffInstructions);
+        }
 
         // Somebody trying to end contact must never be handed to a person instead. This is written for the way it
         // actually arrives: speech recognition on a phone line drops small words, and "don't call me" reaches the

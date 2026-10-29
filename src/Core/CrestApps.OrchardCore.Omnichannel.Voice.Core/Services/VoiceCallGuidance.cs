@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -55,6 +56,38 @@ internal static class VoiceCallGuidance
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.
     /// </summary>
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;
+
+    /// <summary>
+    /// What the model is told on a call that would hand a caller to a person, when nobody can take them now: the queue
+    /// the handoff goes to is closed.
+    /// </summary>
+    /// <remarks>
+    /// Told it may transfer, the model promised the caller a person ("connecting you now") and the call then ended with
+    /// a callback, the queue being closed. So it is not offered the transfer then, and told why, so a caller who asks
+    /// for somebody hears that nobody is there and is offered a message instead.
+    /// </remarks>
+    public const string NobodyToHandTo =
+        "## When the customer asks for a person\n\n" +
+        "Nobody can take this call right now: the people who answer are outside their hours. If the customer asks " +
+        "for a person, say so plainly and offer to take a message -- their name, their number and what they need -- " +
+        "so that someone calls them back. Never say you are connecting or transferring them, and never promise when " +
+        "they will be called.";
+
+    /// <summary>
+    /// What the model is told, with the transfer, when the queue the handoff goes to is closed now but the transfer books
+    /// a callback for when it opens.
+    /// </summary>
+    /// <remarks>
+    /// The transfer's own guidance and reply ask the model to say it is connecting the customer, which after hours is
+    /// not what happens: the customer is called back later. So it is told what the transfer does now, to say it in the
+    /// call's language, rather than the fixed English line the provider would read.
+    /// </remarks>
+    public const string CallbackInsteadOfPerson =
+        "## Outside the office's hours\n\n" +
+        "The people who answer are outside their hours right now, so nobody can take this call. If the customer asks " +
+        "for a person, call the " + OmnichannelHandoffHelper.TransferToAgentToolName + " tool anyway: right now it books " +
+        "a callback for when the office opens. Tell the customer someone will call them back then -- not that you are " +
+        "connecting them, whatever the tool replies -- and never promise an exact time.";
 
     /// <summary>
     /// What the model is told when the call was answered by voicemail or an answering machine and the time has come
