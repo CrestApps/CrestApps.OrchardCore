@@ -267,6 +267,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // symptom was not an error on the line but an assistant that could not hear the caller while it spoke.
         using var invocationScope = AIInvocationScope.Begin();
 
+        // Which call this is, from the call itself, for the tools the profile gives the session.
+        PutCallIdentity(AIInvocationScope.Current?.Items, context.Activity);
+
         // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
         var answeredTicks = DateTime.UtcNow.Ticks;
         _meter = context.Meter;
