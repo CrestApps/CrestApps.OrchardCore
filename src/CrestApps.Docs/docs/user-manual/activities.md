@@ -55,7 +55,7 @@ Open the contact (**Interaction Center > Contacts**, then **List Activities**) a
 <YouTube video="omnichannel-activities" title="Video of scheduling an outbound activity from a contact" start={138} end={174} />
 
 1. Click **Add Activity > Outbound**.
-2. Pick the **Subject content type**, the **Schedule at** time, the **User to assign activity to**, the **Urgency level** and any **Instructions**, The subject's own fields are filled in later, by whoever completes the activity. Only outbound subjects are listed; when there is only one, it is picked for you.
+2. Pick the **Subject content type**, the **Schedule at** time, the **User to assign activity to**, the **Urgency level** and any **Instructions**. The subject's own fields are filled in later, by whoever completes the activity. Only outbound subjects are listed; when there is only one, it is picked for you.
 3. Click **Save**. The activity appears under **Scheduled Activities** on the contact, and in that user's activity list.
 
 If no outbound subject exists yet, the page says so and you cannot schedule an activity. Ask your administrator to [create one](subjects.md).
