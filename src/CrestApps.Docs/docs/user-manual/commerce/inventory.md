@@ -79,6 +79,8 @@ The list and the labels shoppers see count every location together.
 
 ## Order stock from suppliers
 
+<YouTube video="purchase-orders-and-stock-alerts" title="Starting a purchase order from low stock" start={84} end={115} />
+
 With the **Purchase Orders** feature on, **Commerce > Purchase orders** keeps the stock you order from suppliers, and receives it into a location.
 
 1. Click **Add purchase order**, and enter the **Supplier** (earlier suppliers are suggested), the **Supplier's email**, where to **Receive at**, what currency the costs are in (**Costs in**), when it's **Expected**, and a **Note**.
@@ -106,6 +108,8 @@ Each line is found by its **ContentItemId** and **VariantId**, or by its **Sku**
 If any line has a problem, such as a SKU nothing has, a SKU two variants share, the same item twice, or a count that isn't a whole number, nothing is imported. The first problems are listed by line, so you can fix the file and import it again. A file can have up to 10,000 lines.
 
 ## Low-stock alerts
+
+<YouTube video="purchase-orders-and-stock-alerts" title="Low stock alerts" start={216} end={237} />
 
 When a product or variant drops to its low-stock threshold or sells out, users in the roles chosen under **Settings > Commerce > Inventory** get a notification, such as *Low stock: Mug* with *Only 4 of Mug left.*, or *Out of stock: Mug*. It's sent when the stock drops to the threshold, and again if it sells out, not on every sale in between. Notifications need Orchard Core's **Notifications** feature.
 
@@ -141,6 +145,8 @@ To take orders for a product before it's released:
 While none are in stock and the date is still to come, the product shows *Pre-order: ships* with the date, and its button reads **Pre-order**. The cart, the mini cart, the order's page and your order page show the date on the line, as it was when the order was placed. After the date, the product is sold as an ordinary backorder; once you receive stock, it's sold from stock.
 
 ## Tell shoppers when it's back
+
+<YouTube video="purchase-orders-and-stock-alerts" title="Back in stock alerts" start={142} end={166} />
 
 With the **Back-in-Stock Alerts** feature on, the page of a sold-out product that doesn't allow backorders shows *Sold out. Get an email when it's back:* under **Add to cart**, with an email box and **Notify me**. For a product with variants, it shows while a sold-out variant is picked, and asks about that one. A signed-in shopper's email is filled in.
 
