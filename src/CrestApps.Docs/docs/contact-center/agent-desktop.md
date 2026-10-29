@@ -180,6 +180,8 @@ Agents sign in to queues and campaigns from the soft phone's **Work** tab and se
 
 ### 2. Receive and answer an offer
 
+<YouTube video="contact-center-agent-calls" title="Video overview of offers, calls and wrap-up" />
+
 The offer card, **Accept** and **Decline** are described in [Answer or decline an offer](../user-manual/agent-workspace.md#answer-or-decline-an-offer).
 
 - **Accept** accepts the reservation, connects the media, and moves the work into the active panel. For providers that ring the agent's own device, the device rings and the agent answers there. The workspace and the incoming-call modal re-check the provider's current call state before accepting, and the interaction is marked connected only when the provider reports it connected, so the agent never gets stuck on a call the server already ended while the offer was in flight. For server-side queue delivery (for example Asterisk), Contact Center answers the live provider call during the accept, so the connected call stays visible and controllable.

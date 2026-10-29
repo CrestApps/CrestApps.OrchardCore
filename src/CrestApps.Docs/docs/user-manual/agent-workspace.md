@@ -77,6 +77,10 @@ Use the soft phone for the call itself: hold, mute, keypad, transfer and hang up
 
 ## Answer or decline an offer
 
+<YouTube video="contact-center-agent-calls" title="Video overview of offers, calls and wrap-up, with slides for the screens that need a live call" />
+
+<YouTube video="contact-center-agent-calls" title="Video of answering or declining an offer, and what happens when nobody answers" start={40} end={93} />
+
 When routing picks you for a call, an offer card appears in **My workspace** and the docked agent bar opens, showing the caller (name or number), the queue and a countdown.
 
 1. Click **Accept** before the countdown ends. The card shows *Answering…* while the call connects, then the call moves into **Active interaction**. If the call does not connect, the card says *The call is taking too long to connect. Check your soft phone, then try again.*
@@ -91,6 +95,8 @@ If you refresh the page while an offer is ringing, the offer comes back, so you 
 :::
 
 ## Calls from a dialer campaign
+
+<YouTube video="contact-center-agent-calls" title="Video of calls from a dialer campaign: preview, power and progressive" start={93} end={137} />
 
 When you are signed in to a campaign, the outbound dialer gives you calls in one of these ways, set by the campaign's [dialer profile](dialer-profiles.md).
 
@@ -126,6 +132,8 @@ If nobody answers, the line is busy, or a machine answers, the dialer hangs up a
 
 ## Protect card details on a recorded call
 
+<YouTube video="contact-center-agent-calls" title="Video of pausing the recording and collecting card details securely" start={137} end={176} />
+
 When your administrator allows it, the **Active interaction** panel shows:
 
 - **Pause recording** / **Resume recording**: stops the recording while the customer reads out card details or another sensitive number. If your company requires a reason, you are asked to *Enter a reason for pausing recording*. While the recording is paused the panel says *Recording paused for sensitive-data capture*. Click **Resume recording** as soon as the customer has finished. If you forget, the recording resumes on its own after the maximum pause time your administrator set.
@@ -153,6 +161,8 @@ If the bar says *You are signed in to take calls, but no phone of yours is open,
 
 ## After the call: wrap-up
 
+<YouTube video="contact-center-agent-calls" title="Video of wrap-up and completing the activity" start={176} end={215} />
+
 A call that came from a queue or a campaign puts you in **Wrap-up** when it ends, so you can finish your notes. Wrap-up does not end on a timer; you end it by completing the activity:
 
 1. Click **Complete activity** in the **Active interaction** panel.
@@ -167,6 +177,8 @@ If an activity is left open, wrap-up ends by itself after 15 minutes (a setting 
 See [Activities](activities.md#complete-an-activity) for the Complete page.
 
 ## Review your recent activity
+
+<YouTube video="contact-center-agent-calls" title="Video of the Recent activity panel, and the Recent and Voicemail tabs of the soft phone" start={215} end={254} />
 
 The workspace's **Recent activity** panel lists the interactions you finished most recently: the direction, the customer's number, the outcome, when it ended and the talk time. It says *No recent interactions* until you finish your first one.
 
