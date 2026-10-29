@@ -13,7 +13,11 @@ Voicemail goes to one of two places, chosen on the [inbound entry point](entry-p
 - **your own inbox**, which you play from the soft phone's **Voicemail** tab;
 - a **queue's shared voicemail box**, which the team works from **Interaction Center > Shared voicemail**.
 
+<YouTube video="contact-center-voicemail" title="Video overview of Voicemail: greetings, inboxes and the shared box" />
+
 ## Record your voicemail greeting
+
+<YouTube video="contact-center-voicemail" title="Video of recording or uploading a voicemail greeting" start={71} end={131} />
 
 Your greeting is what callers hear before they leave you a message.
 
@@ -37,12 +41,16 @@ Your greeting is what callers hear before they leave you a message.
 
 ## Listen to your voicemail
 
+<YouTube video="contact-center-voicemail" title="Video of listening to your voicemail" start={131} end={178} />
+
 Open the soft phone and choose the **Voicemail** tab. A badge on the tab shows how many messages are unread; opening the tab marks them read and clears the badge. Each message shows the caller's number and the time.
 
 - **Play** a message with the play button on its row. The player keeps the caller's number and time in view while it plays. Every playback is recorded in the audit trail under your name.
 - **Delete** messages: tick one or more rows (or select all) and click **Delete**. Deleting removes the message and erases its recording. If some cannot be deleted, the tab says how many, and each one left stays selected with the reason on its row, for example *This voicemail is under legal hold and must be kept.*
 
 ### Whose inbox a voicemail goes to
+
+<YouTube video="contact-center-voicemail" title="Video of whose inbox a voicemail goes to" start={178} end={230} />
 
 You can play and delete exactly the voicemails in your own Voicemail tab. Nobody can play or delete a voicemail in another person's inbox.
 
@@ -59,6 +67,8 @@ When the entry point delivers to **The queue's shared voicemail box**, queue voi
 Otherwise, queue voicemail is not shared among the queue's agents and is not listed for supervisors. To let a supervisor hear the messages left on a queue line, ask your administrator to set the entry point's **Voicemail inbox** to that supervisor; the messages then appear in their own **Voicemail** tab.
 
 ## Shared voicemail
+
+<YouTube video="contact-center-voicemail" title="Video of working a shared voicemail box" start={230} end={306} />
 
 A queue's shared voicemail box lets a team share the messages left on a line: anyone working the box can claim a message, call the caller back and mark it done, so nothing is missed and nobody calls the same customer twice.
 
