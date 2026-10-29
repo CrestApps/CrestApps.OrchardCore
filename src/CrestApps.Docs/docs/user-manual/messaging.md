@@ -29,14 +29,18 @@ Your administrator also connects the SMS provider to the site, so that customers
 
 ## Work the inbox
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of the messaging inbox: filtering conversations, opening a thread, claiming it and using a canned response" start={558} end={586} />
+<YouTube video="messaging-inbox" title="Video overview of the messaging inbox" />
+
+The video covers why a shared inbox helps, how the page is laid out, and how to open, claim, answer, close, favorite and start conversations.
+
+<YouTube video="messaging-inbox" title="Video of searching, filtering and answering a conversation" start={82} end={180} />
 
 Open **Messaging > Inbox**. The left side lists your customers, most recent first; the right side shows the conversation you open. A customer who wrote on several channels appears only once, with the unread messages of all their channels added together and an icon for each channel they used.
 
 | Control | What it does |
 | --- | --- |
 | **Search** | Narrows the conversation list. |
-| **Filter** (funnel button) | **All conversations**, **My conversations**, or **Unassigned**, each with a count; and a channel filter when you have more than one channel. |
+| **Filter** (funnel button) | **All conversations**, **My conversations**, **Favorites** or **Unassigned**, each with a count; and a channel filter when you have more than one channel. |
 | **Available** switch | *Accept routed conversations to your inbox.* Only used by queues set to routed distribution: new conversations are given only to agents who are available and have the inbox open. |
 | **New conversation** (pencil button) | Starts a conversation with a contact or a number. |
 
@@ -49,9 +53,9 @@ Open a conversation to read the thread. At the top:
 
 This screencast opens the **Unassigned** view, claims a conversation, closes it (a closed conversation shows *This conversation is closed and cannot be replied to*), and reopens it:
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of claiming an unassigned conversation, closing it and reopening it" start={589} end={613} />
+<YouTube video="messaging-inbox" title="Video of closing, marking spam and reopening a conversation" start={180} end={211} />
 
-In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. The side panel has an **AI summary** of the thread and the **Customer** card, which lists every contact record that matches the customer's address, with **View account** for the linked contact.
+In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. On a wide screen, the side panel on the right (hidden below about 1200 pixels of width) has the **Customer** card, which lists every contact record that matches the customer's address, with **View account** for the linked contact, or says that no contact record matches. An **AI summary** of the thread appears there only after an AI conversation was handed to a person.
 
 When the AI was handling a customer's texts and hands the conversation to a person, the whole AI conversation is copied into the thread, so you see every message the customer and the AI exchanged, in order.
 
@@ -60,6 +64,8 @@ When the AI was handling a customer's texts and hands the conversation to a pers
 A banner above the composer warns you during the customer's **quiet hours**: outside the queue's business hours, in the customer's local time. It never stops you sending. Without the *Send messages outside business hours* permission, the banner adds *Sending now may reach the contact at an unsociable hour.*
 
 ### Know when new work arrives
+
+<YouTube video="messaging-inbox" title="Video of the badges and notices for new messages" start={243} end={271} />
 
 You do not have to keep the inbox open to hear about new work.
 
@@ -81,6 +87,8 @@ Each channel accepts its own kinds of files. SMS takes pictures (JPEG, PNG, GIF 
 - If a file cannot be shown (for example, a customer sends a document by text message, or a picture larger than 10 MB), the message says *An attachment could not be shown*, and its text is still there.
 
 ### Favorites
+
+<YouTube video="messaging-inbox" title="Video of favorites and attachments" start={211} end={243} />
 
 Keep the customers you message most one click away.
 
@@ -110,7 +118,7 @@ Who can transfer and to whom:
 
 ## Start a new conversation
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of starting a new SMS conversation and sending it" start={616} end={639} />
+<YouTube video="messaging-inbox" title="Video of starting a new conversation" start={271} end={302} />
 
 1. Click the **New conversation** (pencil) button.
 2. Pick **From**, the number you send from (it decides the channel).
