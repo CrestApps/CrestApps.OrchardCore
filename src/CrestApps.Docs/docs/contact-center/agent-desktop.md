@@ -72,6 +72,8 @@ Grant agents the `ContactCenterSignIntoQueues` permission (or a role that includ
 
 ## For contact center managers: the Live Dashboard
 
+<YouTube video="contact-center-live-dashboard" title="Video overview of the live dashboard and supervisor interventions" />
+
 **Interaction Center → Live dashboard** shows summary metrics, a tile per queue (waiting, signed-in, available, busy/reserved/wrap-up and other not-ready agents, the longest wait and SLA breaches, amber near the SLA and red once breached) and an agent board with filters. It connects to the real-time hub and also re-reads its state every 10 seconds, so it can be left open on a wallboard. Reading the dashboard and every supervisor action, step by step, is in the User Manual's [Live Dashboard](../user-manual/live-dashboard.md).
 
 The dashboard shows only the queues the supervisor is authorized for (the queues and campaigns on the supervisor's own agent entitlement record), and every action is limited to agents and calls in those queues. A supervisor without an entitlement record sees an empty dashboard.
