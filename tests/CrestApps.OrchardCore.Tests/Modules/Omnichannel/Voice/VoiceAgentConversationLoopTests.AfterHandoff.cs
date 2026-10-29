@@ -1,6 +1,7 @@
 ﻿using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Telephony.Services;
 using Moq;
 
@@ -189,6 +190,46 @@ public sealed partial class VoiceAgentConversationLoopTests
             Times.Once);
         Assert.Equal(spoken, harness.Media.Spoken.Count);
         Assert.Equal(0, harness.Media.TranscriptionStarts);
+    }
+
+    [Fact]
+    public async Task ACallPutThrough_IsNotToldAgainThatItIsBeingConnected()
+    {
+        // Act
+        // The model has just said it is putting the caller through, as the transfer tool tells it to. The fixed
+        // "I'm connecting you to a specialist now" after it said the same thing twice, in the provider's voice --
+        // and in English on the AI-0 walk's call held in Greek.
+        var harness = await HandedOffAsync(HandoffDisposition.Routed);
+
+        // Assert
+        Assert.Equal("Let me put you through.", harness.Media.Spoken[^1]);
+    }
+
+    [Fact]
+    public async Task ACallerWaitingInTheQueue_IsToldSo_OnACallHeldInEnglish()
+    {
+        // Act
+        var harness = await HandedOffAsync(HandoffDisposition.WaitingInQueue);
+
+        // Assert
+        Assert.Equal(VoiceAgentConversationLoop.WaitingInQueueLine, harness.Media.Spoken[^1]);
+    }
+
+    [Theory]
+    [InlineData(HandoffDisposition.Routed, true, null)]
+    [InlineData(HandoffDisposition.Routed, false, VoiceAgentConversationLoop.ConnectingLine)]
+    [InlineData(HandoffDisposition.WaitingInQueue, true, VoiceAgentConversationLoop.WaitingInQueueLine)]
+    [InlineData(HandoffDisposition.CallbackScheduled, true, VoiceAgentConversationLoop.CallbackScheduledLine)]
+    public void HandoffLine_IsOnlyWhatTheCallerHasNotBeenToldYet(
+        HandoffDisposition disposition,
+        bool announced,
+        string expected)
+    {
+        // Act
+        var line = VoiceAgentConversationLoop.HandoffLine(disposition, announced);
+
+        // Assert
+        Assert.Equal(expected, line);
     }
 
     /// <summary>

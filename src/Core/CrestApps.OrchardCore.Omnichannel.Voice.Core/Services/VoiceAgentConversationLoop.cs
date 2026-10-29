@@ -523,7 +523,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // the bridge line, so seat the live call in the queue and offer it rather than hanging up or listening again.
         if (activity.TryGet<PendingVoiceHandoff>(out _))
         {
-            await PerformVoiceHandoffAsync(voiceEvent, media, activity, _clock.UtcNow, cancellationToken);
+            await PerformVoiceHandoffAsync(voiceEvent, media, activity, _clock.UtcNow, announced: true, cancellationToken);
             return;
         }
 

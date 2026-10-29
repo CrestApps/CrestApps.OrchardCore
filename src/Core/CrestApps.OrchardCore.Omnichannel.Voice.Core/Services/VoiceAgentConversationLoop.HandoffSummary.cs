@@ -82,9 +82,14 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
+        // Written in the call's language, as the call's review is (see VoiceCallLanguage): the agent reading it works in
+        // the language the caller was spoken to in.
         var systemPrompt = await services.GetRequiredService<ITemplateService>().RenderAsync(
             VoiceTemplateIds.HandoffSummary,
-            new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase));
+            new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Language"] = await VoiceCallLanguage.GetNameAsync(services, profile),
+            });
 
         var context = await services.GetRequiredService<IAICompletionContextBuilder>().BuildAsync(profile, builder =>
         {
