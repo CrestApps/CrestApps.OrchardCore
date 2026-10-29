@@ -22,6 +22,10 @@ This page covers the screens. For exactly how amounts are calculated, rounded an
 
 ## 1. Create tax categories
 
+This video walks through tax categories, jurisdictions, rules, the tax origin, classifying products and the tax at checkout:
+
+<YouTube video="taxation" title="Video overview of taxation" />
+
 A **category** groups what you sell for tax purposes, for example *Electronics*, *Food* or *Tobacco*. Rules can target a category, and products are classified with one.
 
 1. Open **Commerce > Taxation > Categories** and click **Add Tax Category**.
@@ -42,6 +46,8 @@ Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *
 
 ## 3. Create jurisdictions
 
+<YouTube video="taxation" title="Video of adding a jurisdiction" start={133} end={166} />
+
 A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 
 1. Open **Commerce > Taxation > Jurisdictions** and click **Add Tax Jurisdiction**.
@@ -58,6 +64,8 @@ A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 | **Effective from** / **Effective to** | Optional dates between which the jurisdiction is in use. The end cannot be before the start. |
 
 ## 4. Create tax tables (optional)
+
+<YouTube video="taxation" title="Video of tax tables, TaxJar and the EU VAT recipe" start={308} end={348} />
 
 A **tax table** is a list of amount ranges, each with its own rate. You need one only for the **Tax table lookup**, **Progressive** and **Threshold** rules. Skip this step if all your taxes are a simple percentage or a fixed amount.
 
@@ -76,6 +84,8 @@ A **tax table** is a list of amount ranges, each with its own rate. You need one
 Ranges cannot overlap, and only one row can be open-ended. A table that a rule uses cannot be deleted: the message says how many rules use it, so update or remove those rules first.
 
 ## 5. Create tax rules
+
+<YouTube video="taxation" title="Video of adding a percentage tax rule" start={166} end={231} />
 
 A **rule** is one tax: what it applies to, and how it is worked out. Several rules can apply to the same item; for example a general sales tax and an extra tobacco tax.
 
@@ -124,11 +134,15 @@ A rule tied to a **Jurisdiction** only charges buyers whose address is in that j
 
 ## Where you sell from
 
+<YouTube video="taxation" title="Video of the tax origin settings" start={231} end={244} />
+
 Some taxes are charged where the seller is rather than where the buyer is. Under **Settings > Commerce > Tax origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
 
 Customers you mark **Exempt from tax** under [Customers](customers.md) pay no tax when they check out signed in.
 
 ## 6. Classify your products
+
+<YouTube video="taxation" title="Video of adding the Taxation part and setting a product's tax category" start={244} end={285} />
 
 Rules only apply to items that carry the **Taxation** part. Add it to each content type you sell, usually the same type that has the **Product** part (see [Products and Currencies](products-and-currencies.md)).
 
@@ -179,13 +193,15 @@ A product with no category of its own takes the category of its tagged term. A c
 3. **Rules:** add a **Percentage** rule *CA sales tax* with **Tax type** *SalesTax*, **Jurisdiction** *California*, **Category** **Any category**, **Rate** *0.075*. Add a second **Percentage** rule *CA tobacco tax* with **Tax type** *TobaccoTax*, **Category** *Tobacco (TOBACCO)*, **Rate** *0.3*.
 4. **Products:** classify televisions as *Electronics* and cigarettes as *Tobacco*.
 
-For a buyer in California, a television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary. A buyer outside California pays only the tobacco tax, which has no jurisdiction. The sales tax needs the buyer's address, which the checkout only knows when your developer supplies it.
+For a buyer in California, a television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary. A buyer outside California pays only the tobacco tax, which has no jurisdiction. The checkout taxes an order by the address it ships to, or by the billing address when nothing ships, so the sales tax applies to a buyer in California and not to a buyer elsewhere.
 
 ## Prices that include tax
 
 In many countries the price a shopper sees already includes VAT. To sell that way to some countries, add them to a [market](markets.md) with **Prices include tax** on. At checkout, the tax your rules give is then taken out of the prices instead of added on top, so the shopper pays the price they saw.
 
 ## Taxes on the order
+
+<YouTube video="taxation" title="Video of the tax in the checkout's order summary" start={285} end={308} />
 
 The checkout's order summary shows each tax once for each rate, whatever the items it was charged on, such as *VAT 19%* and *VAT 7%*. A tax that was taken out of the prices says so: *VAT 19% (included)*.
 
