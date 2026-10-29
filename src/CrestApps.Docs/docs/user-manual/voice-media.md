@@ -20,6 +20,8 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the voice media library and the upload form" start={194} end={218} />
 
+<YouTube video="telephony-recording-storage" title="Video of the voice media master copy and where it is stored" start={112} end={139} />
+
 ## Add a clip
 
 1. Open **Interaction Center > Management > Voice Media** and click **Add Voice Media**.
