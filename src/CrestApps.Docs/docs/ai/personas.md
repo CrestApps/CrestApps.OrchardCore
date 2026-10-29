@@ -118,6 +118,10 @@ persona has a **Language**, these calls speak in it and listen for it (`es-MX` l
 `en-US`. If the provider refuses to speak a line with the persona's voice or language, the line is spoken again as if
 there were no persona, and the log says why.
 
+A live automated call, held as a speech-to-speech session, listens for the persona's **Language** too: the caller is
+transcribed in its language part (`el-GR` listens for `el`), and the model is told to keep to that language. Without a
+**Language** the model hears and answers in whatever language the caller speaks.
+
 ## Deleting a persona
 
 Profiles that use a deleted persona keep working without one. When you delete a persona that AI profiles still
