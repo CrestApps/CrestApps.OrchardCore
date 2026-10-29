@@ -18,9 +18,13 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-queues" title="Video overview of queues: groups, routing, service levels, skills, hours, overflow, limits, what callers hear and callbacks" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a queue group and a queue with routing, service level, hours and caller treatment settings" start={257} end={340} />
 
 ## Create a queue group (optional)
+
+<YouTube video="contact-center-queues" title="Video of creating a queue group and a queue" start={79} end={122} />
 
 Queue groups only organize queues for administration and reports, for example *Sales* and *Service*. They never change routing.
 
@@ -32,6 +36,8 @@ A queue holds callers and texts for people; it has no AI setting. To have an AI 
 :::
 
 ## Clone a queue
+
+<YouTube video="contact-center-queues" title="Video of cloning a queue from its Actions menu" start={295} end={315} />
 
 To start a queue from an existing one, open its **Actions** menu in the queue list and choose **Clone**. The form opens with every setting of the original and the name **Copy of** the original's name. Change what you need and click **Save**. The agents who work the original queue are not added to the copy.
 
@@ -54,6 +60,8 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 
 ### Routing
 
+<YouTube video="contact-center-queues" title="Video of the Routing card: priority, routing strategy, the last assigned agent and the unanswered offer action" start={122} end={171} />
+
 | Field | What it does |
 | --- | --- |
 | **Default priority** | Lowest, Low, **Normal**, High or Highest. Higher-priority items are offered first. |
@@ -63,6 +71,8 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 | **Unanswered offer action** | **Requeue** (offer it to the next agent, the default), **Send to voicemail**, or **Reject call** (end the call). It also applies when an agent accepts the offer but their phone cannot be reached: the caller is treated as unanswered, and that agent is set to **Away** with the reason *Phone unreachable* until they set their own state again. |
 
 ### Service levels
+
+<YouTube video="contact-center-queues" title="Video of the service level and skills cards" start={171} end={210} />
 
 | Field | What it does |
 | --- | --- |
@@ -75,11 +85,13 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 | Field | What it does |
 | --- | --- |
 | **Required skills** | Agents must hold every skill picked here at proficiency 3 or higher. |
-| **Skill requirements** | Finer rules, one row per skill: **Minimum proficiency** (1-5); **Required** (unticked means *preferred*, which only ranks agents rather than excluding them); and **Relax after (s)**, which drops the requirement once an item has waited that long (0 means never). |
+| **Skill requirements** | Finer rules, one row per skill (click **Add skill requirement** for each): **Minimum proficiency** (1-5); **Required** (unticked means *preferred*, which only ranks agents rather than excluding them); and **Relax after (s)**, which drops the requirement once an item has waited that long (0 means never). |
 
 Agents get their skills on the [agent entitlements](skills-and-entitlements.md) screen.
 
 ### Hours and overflow
+
+<YouTube video="contact-center-queues" title="Video of business hours, overflow and the limits of a queue" start={210} end={252} />
 
 | Field | What it does |
 | --- | --- |
@@ -87,7 +99,7 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 | **Business hours calendar** | The [calendar](business-hours.md) that says when the queue is open. Empty means *Always open*. Routing pauses while the queue is closed. |
 | **After-hours action** | **Hold in queue** (the default) or **Overflow** to another queue while closed. |
 | **Overflow queue** / **Overflow after (seconds)** | A single overflow hop: after this many seconds of waiting, move the caller to the overflow queue. 0 means no time-based overflow. |
-| **Overflow chain** | Several hops, each with a queue and a wait in seconds. It replaces the single hop. A caller never returns to a queue they have already been in. |
+| **Overflow chain** | Several hops (click **Add overflow hop** for each), each with a queue and a wait in seconds. It replaces the single hop. A caller never returns to a queue they have already been in. |
 
 ### Limits
 
@@ -99,6 +111,8 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 | **Maximum-wait action** | **Keep waiting** (the default), **Overflow to the next queue**, or **Send to voicemail**. An overflow action needs an overflow queue or chain. |
 
 ### While callers wait
+
+<YouTube video="contact-center-queues" title="Video of the welcome message, hold music, announcements and the callback key" start={252} end={295} />
 
 | Field | What it does |
 | --- | --- |

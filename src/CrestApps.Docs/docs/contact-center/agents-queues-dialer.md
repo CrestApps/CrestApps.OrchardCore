@@ -107,6 +107,8 @@ Skill names are compared by the same rule wherever they are read: surrounding wh
 
 ## Queues, reservations, and assignment
 
+<YouTube video="contact-center-queues" title="Video overview of queues and how they route work to agents" />
+
 A **queue** holds activities waiting for an agent, with a default priority, an SLA threshold, required skills, an optional inbound channel endpoint mapping, a reservation timeout, a routing policy, an optional business-hours calendar, and optional overflow settings. Activities enter a queue as **queue items**; the system pairs the highest-priority, oldest waiting item with an eligible available agent signed in to that queue and creates a short-lived **reservation**.
 
 Administrators can organize queues under **Interaction Center → Management → Queue groups** and select an optional group in each queue editor. Queue groups are catalog and reporting metadata only: they do not provide routing defaults, SLA inheritance, agent entitlements, capacity, overflow, or any other queue behavior. The dedicated **Manage Contact Center queue groups** permission controls the group catalog, while queue configuration remains controlled by **Manage Contact Center queues**.
