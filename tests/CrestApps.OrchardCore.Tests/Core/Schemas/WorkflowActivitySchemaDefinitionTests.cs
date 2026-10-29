@@ -24,6 +24,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "AICompletionFromProfileTask",
         "AICompletionWithConfigTask",
         "AIConversationEvaluatedEvent",
+        "AIConversationFlowStartedEvent",
+        "AIConversationStageTask",
         "AIConversationStartingEvent",
         "AIConversationTurnEvent",
         "AIGuardrailTriggeredEvent",

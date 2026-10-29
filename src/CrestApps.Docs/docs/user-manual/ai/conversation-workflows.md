@@ -126,6 +126,25 @@ When the **Secure Capture** feature of the Contact Center is on, AI phone calls 
 
 The AI is told only that the number was saved and its masked value, such as *ending in 1111*. The token and the masked value are kept as the conversation variables `secure_card_number_token` and `secure_card_number_masked` (and the same for `card_expiry`, `card_security_code`, `bank_account`, `national_id` and `entry`), so a workflow tool can charge the card with the token. The digits are never written to the transcript, the activity or a log. A security code is not kept at all.
 
+## Guide a conversation stage by stage
+
+A **conversation flow** is a workflow that leads the AI through a conversation in stages, such as *verify identity*, then *check the balance*, then *take a promise to pay*, each with its own instructions and its own ways out. Build it in the workflow designer with two activities, under **AI Conversations**:
+
+- **AI Conversation Flow Started** starts the flow when a conversation of the profile takes its first turn. Its input is the conversation, as for the other AI conversation events.
+- **AI Conversation Stage** is one stage: a **Stage name**, **Instructions** (Liquid) added to the profile's instructions while the conversation is in the stage, and **Ways out**, one per line: a name, a colon, and when the AI should take it, for example `Verified: the date of birth matches`. Each way out is an outcome of the activity.
+
+Connect each way out to the next stage, or to any other activity first: **If/Else** to branch on a variable, **Script**, **HTTP Request** to look something up, **Send Text Message**, **Transfer AI Call** or **AI Call Action** to end the call. The flow ends when the workflow finishes without reaching another stage.
+
+While the conversation is in a stage, the AI has a `moveToStage` tool listing the stage's ways out. When it decides one applies, it calls the tool, the workflow goes on by that outcome to the next stage, and the AI gets the new stage's instructions in the same turn.
+
+To use a flow, open the AI profile, and on the **Instructions** tab choose it under **Conversation flow**. Tick **Flexible** to give the AI every stage's instructions at once, so a caller who jumps between tasks is followed; the AI still moves between stages with the ways out.
+
+The stages a conversation went through, the way out it left each by, and how long each move took the workflow are kept on the conversation, in its `AIConversationFlowState`, and returned by the conversations API.
+
+:::note[A collections flow]
+**AI Conversation Flow Started** → stage **Verify identity** (`Verified: the date of birth matches`, `Failed: two wrong tries`). **Verified** → **If/Else** on `{{ Workflow.Input.Variables.balance_due }}` greater than 0 → stage **Discuss balance** (`Promise: the caller commits to a date and an amount`, `Dispute: the caller disputes the debt`, `Agent: the caller asks for a person`). **Promise** → **Set Conversation Variables** and stage **Confirm** (`Done: the caller confirmed`). **Dispute** and **Agent** → **Transfer AI Call**. **Failed** → **AI Call Action** with **End the call**.
+:::
+
 ## React while the conversation is going on
 
 The **AI Conversation Turn** event (under **AI Conversations**) starts a workflow after each turn is saved, on every channel, while the conversation is still going on. What was said is in `Workflow.Input.Text`, and who said it in `Workflow.Input.Role` (`Customer` or `Assistant`). Choose **What the customer says** to run only on the customer's turns.

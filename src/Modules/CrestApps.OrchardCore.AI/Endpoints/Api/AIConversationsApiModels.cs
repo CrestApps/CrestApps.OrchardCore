@@ -65,6 +65,7 @@ public sealed record ApiAIConversationTurn(string Role, string Text, DateTime Cr
 /// <param name="ExtractedFields">The fields extracted from it.</param>
 /// <param name="Results">The post-session analysis results, by task name.</param>
 /// <param name="Evaluations">Its evaluations, oldest first.</param>
+/// <param name="Flow">Where it stands in its conversation flow and the stages it went through, when it has one.</param>
 public sealed record ApiAIConversation(
     ApiAIConversationSummary Conversation,
     string ContactId,
@@ -72,7 +73,8 @@ public sealed record ApiAIConversation(
     IReadOnlyDictionary<string, string> Variables,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ExtractedFields,
     IReadOnlyDictionary<string, string> Results,
-    IReadOnlyList<AIConversationEvaluation> Evaluations);
+    IReadOnlyList<AIConversationEvaluation> Evaluations,
+    AIConversationFlowState Flow = null);
 
 /// <summary>
 /// Asks for a conversation to be evaluated.

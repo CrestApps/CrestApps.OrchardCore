@@ -40,6 +40,7 @@ using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
+using CrestApps.OrchardCore.AI.Workflows.Flows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.Services;
 using CrestApps.OrchardCore.AI.Workflows.Tools;
@@ -300,6 +301,14 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
         services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
         services.AddActivity<AIAlertTriggeredEvent, AIAlertTriggeredEventDisplayDriver>();
+
+        // Conversation flows: stage-by-stage guidance built from workflow activities.
+        services.AddActivity<AIConversationFlowStartedEvent, AIConversationFlowStartedEventDisplayDriver>();
+        services.AddActivity<AIConversationStageTask, AIConversationStageTaskDisplayDriver>();
+        services.AddScoped<AIConversationFlows>();
+        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationFlowCompletionHandler>();
+        services.AddScoped<IToolRegistryProvider, AIConversationFlowToolProvider>();
+        services.AddDisplayDriver<AIProfile, AIProfileFlowDisplayDriver>();
         services.AddActivity<AIAlertResolvedEvent, AIAlertResolvedEventDisplayDriver>();
         services.AddScoped<AIProfileVersionCopies>();
         services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();

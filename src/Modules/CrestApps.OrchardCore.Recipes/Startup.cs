@@ -2022,6 +2022,8 @@ public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<TransferAICallTaskSchema>()
             .AddWorkflowActivitySchema<AIAlertTriggeredEventSchema>()
             .AddWorkflowActivitySchema<AIAlertResolvedEventSchema>()
+            .AddWorkflowActivitySchema<AIConversationFlowStartedEventSchema>()
+            .AddWorkflowActivitySchema<AIConversationStageTaskSchema>()
             .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>()
             .AddWorkflowActivitySchema<TransferToAgentTaskSchema>();
     }

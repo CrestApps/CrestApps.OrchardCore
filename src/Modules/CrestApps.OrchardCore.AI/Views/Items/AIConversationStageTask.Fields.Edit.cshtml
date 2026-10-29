@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIConversationStageTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="StageName">
+    <label asp-for="StageName" class="ocat-label ocat-label-required">@T["Stage name"]</label>
+    <div class="ocat-end">
+        <input asp-for="StageName" class="form-control" />
+        <span asp-validation-for="StageName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Instructions">
+    <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Instructions" rows="6" class="form-control"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+        <span class="hint">@T["What the AI does in this stage, such as <em>Confirm the caller's date of birth before discussing the account.</em> Added to the profile's instructions while the conversation is in the stage. Liquid is supported."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Outcomes" class="ocat-label">@T["Ways out"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Outcomes" rows="4" class="form-control font-monospace" placeholder="Verified: the date of birth matches&#10;Failed: the caller cannot confirm it after two tries"></textarea>
+        <span class="hint">@T["One per line: the outcome's name, a colon, and when the AI should take it. Each becomes an outcome of this activity: connect it to the next stage, or to a condition, a script, an HTTP request, a text or a transfer. A flow ends when the workflow reaches no other stage."]</span>
+    </div>
+</div>

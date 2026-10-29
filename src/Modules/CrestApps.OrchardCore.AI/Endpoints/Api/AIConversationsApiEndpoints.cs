@@ -188,7 +188,8 @@ internal static class AIConversationsApiEndpoints
             new Dictionary<string, string>(conversation.GetConversationVariables(), StringComparer.OrdinalIgnoreCase),
             conversation.ExtractedData.ToDictionary(field => field.Key, field => (IReadOnlyList<string>)(field.Value?.Values ?? [])),
             conversation.PostSessionResults.ToDictionary(result => result.Key, result => result.Value?.Value),
-            await evaluationStore.ListBySessionAsync(conversation.SessionId)));
+            await evaluationStore.ListBySessionAsync(conversation.SessionId),
+            conversation.TryGet<AIConversationFlowState>(out var flow) ? flow : null));
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
