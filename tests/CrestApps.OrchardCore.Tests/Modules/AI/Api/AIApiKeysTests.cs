@@ -143,7 +143,7 @@ public sealed class AIApiKeysTests
         Assert.Equal("""{"Name":"a","Settings":{"X":1,"Y":3},"Title":"t"}""", target.ToJsonString());
     }
 
-    private static async Task<bool> AuthorizeAsync(IAuthorizationHandler handler, ClaimsPrincipal user, Permission permission, object resource)
+    private static async Task<bool> AuthorizeAsync(AIApiKeyProfileAuthorizationHandler handler, ClaimsPrincipal user, Permission permission, object resource)
     {
         var context = new AuthorizationHandlerContext([new PermissionRequirement(permission)], user, resource);
         await handler.HandleAsync(context);

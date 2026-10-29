@@ -148,9 +148,10 @@ public sealed class SipHeaderVariablesTests
         const string Payload = """{ "data": { "event_type": "call.hangup", "payload": { "call_control_id": "v3:leg" } } }""";
 
         // Act
-        TelnyxCallEventParser.TryParse(Payload, out var callEvent);
+        var parsed = TelnyxCallEventParser.TryParse(Payload, out var callEvent);
 
         // Assert
+        Assert.True(parsed);
         Assert.Empty(callEvent.CustomHeaders);
     }
 

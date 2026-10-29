@@ -20,7 +20,7 @@ public sealed partial class InboundVoiceServiceTests
     {
         // Arrange
         var harness = AIAgentHarness(out var activity);
-        IReadOnlyDictionary<string, string> seenByTheStartingWorkflows = null;
+        Dictionary<string, string> seenByTheStartingWorkflows = null;
         harness.ConversationStarting
             .Setup(starting => starting.StartingAsync(activity, It.IsAny<CancellationToken>()))
             .Callback<OmnichannelActivity, CancellationToken>((created, _) => seenByTheStartingWorkflows = new Dictionary<string, string>(created.GetConversationVariables()))

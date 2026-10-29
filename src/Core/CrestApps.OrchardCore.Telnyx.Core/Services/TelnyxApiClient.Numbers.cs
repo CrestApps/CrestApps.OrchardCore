@@ -156,7 +156,7 @@ public sealed partial class TelnyxApiClient
         }
     }
 
-    private static IEnumerable<JsonElement> ReadArray(JsonElement? json)
+    private static List<JsonElement> ReadArray(JsonElement? json)
         => json is { ValueKind: JsonValueKind.Object } root && root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array
             ? data.EnumerateArray().ToList()
             : [];

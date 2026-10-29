@@ -72,7 +72,7 @@ public sealed class AIVoiceLibraryController : Controller
         model ??= new AIVoiceLibraryViewModel();
         var deployments = await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.TextToSpeech);
         model.Deployments = deployments.Select(deployment => new SelectListItem(deployment.Name, deployment.Name, deployment.Name == model.DeploymentName)).ToList();
-        model.DeploymentName ??= deployments.FirstOrDefault()?.Name;
+        model.DeploymentName ??= deployments.Count > 0 ? deployments[0].Name : null;
 
         var library = await GetLibraryAsync(model.DeploymentName);
         model.HasLibrary = library is not null;
