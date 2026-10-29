@@ -10,6 +10,8 @@ user_manual:
 
 # Enterprise Contact Center Report Catalog
 
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
+
 Contact Center reporting and Omnichannel Management contribute immediately runnable reports to the shared **Reports** area (Contact Center reports activate automatically once `CrestApps.OrchardCore.ContactCenter.Queues` and `CrestApps.OrchardCore.Reports` are both enabled). The admin menu organizes them into **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT** groups. The catalog intentionally reports only facts represented by durable Contact Center or CRM data. It does not infer schedules, pay rates, quality scores, survey responses, or customer-resolution outcomes that have not been collected.
 
 ## Shared report behavior
