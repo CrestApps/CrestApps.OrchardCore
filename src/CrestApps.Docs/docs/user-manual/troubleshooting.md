@@ -98,6 +98,7 @@ See [Automated AI SMS and voice](automated-ai.md) and [Inbound entry points and 
 3. **Is the calling window open?** When the profile enforces a calling window, records are tried again in a later cycle while the calendar is closed, checked in each contact's time zone.
 4. **Has the abandonment cap stopped dialing?** With the cap on, power, progressive and predictive dialing pause when too many answered calls found no agent.
 5. **Are records left?** Records with no valid number or no attempts left become *Failed*; records on a do-not-call list or with a dead number become *Cancelled*. Check **Manage Activities**. See [Managing activities in bulk](bulk-activities.md).
+6. **What does the live dashboard say?** The [dialer banner](live-dashboard.md#dialer-banner) names the state, and [Why isn't this dialing?](live-dashboard.md#why-isnt-this-dialing) lists the reason for every record that is waiting. *Dialer stalled* and *Dialer not pacing* are faults: tell your administrator. For one record or one agent, read the **Dialer decision log** in [Reports](reports.md#dialer-decision-log), and see [Dialer activity and health](reports.md#dialer-activity-and-health) for every campaign.
 
 ## I'm stuck in wrap-up
 

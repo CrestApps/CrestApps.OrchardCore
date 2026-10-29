@@ -422,7 +422,7 @@ The same state drives three surfaces:
 
 An agent can be left showing **On a call**, Busy or Reserved with nothing on the line: a soft-phone call record the provider can no longer resolve, a Contact Center call the provider reports ended, a reservation or queue item nothing backs. The agent's own *Set Available* repairs Contact Center reservations and queue items but deliberately leaves any call the provider might still hold, so it could not clear this.
 
-The **Live dashboard** flags such an agent with a warning badge on their card, and offers **Free agent** in the card's More menu to a supervisor who holds *Intervene in calls* and oversees the agent's queues. The warning is raised only with evidence:
+The **Live dashboard** flags such an agent with a warning badge on their card, and offers **Free agent** in the card's More menu to a supervisor who holds the permission to *take over, end, transfer and record live Contact Center calls, and set agents' state* and oversees the agent's queues. The warning is raised only with evidence:
 
 - an active soft-phone call the provider says is gone, or cannot resolve for several minutes, or one the browser placed itself that has gone quiet with no live session behind it;
 - a Contact Center call that is not settled although the provider reports its call gone;
