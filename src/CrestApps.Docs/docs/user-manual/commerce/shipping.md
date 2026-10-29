@@ -18,6 +18,10 @@ technical_manual:
 
 ## Zones: where you ship
 
+This video walks through zones, methods, pickup, Try rates and shipping an order:
+
+<YouTube video="shipping" title="Video overview of shipping" />
+
 A zone is a set of countries, such as *Domestic* or *Europe*. Buyers see the methods of the zone their address is in.
 
 1. Go to **Commerce > Shipping** and click **Add Shipping Zone**.
@@ -31,6 +35,8 @@ Zones are tried from the smallest **Position**, and the first that covers an add
 Tick **Rest of the world** on one zone to cover every address no other zone covers. Without it, buyers elsewhere can't be shipped to.
 
 ## Methods: how you ship, and what it costs
+
+<YouTube video="shipping" title="Video of adding shipping methods to a zone" start={120} end={164} />
 
 On a zone's page, click **Add method** and pick how it charges:
 
@@ -66,6 +72,8 @@ Buyers whose postal code isn't on the list don't see the method, and choose anot
 
 ## Product weights and shipping classes
 
+<YouTube video="shipping" title="Video of product weights and the shipping settings" start={164} end={198} />
+
 Add the **Shipping** part to your product types (under **Content Definition**), then on each product:
 
 - **Weight** is the weight of one unit, packed, for weight tables. A product without a weight counts as weighing nothing.
@@ -98,6 +106,8 @@ The order page, the order link a guest gets and the confirmation email show wher
 
 ## Store pickup
 
+<YouTube video="shipping" title="Video of the pickup, ship-from and carrier settings" start={198} end={239} />
+
 Let buyers collect their order from your shop instead of having it shipped. Under **Settings > Commerce > Shipping**, **Store pickup**, fill in the blank **Add a pickup location**:
 
 | Field | What it's for |
@@ -120,6 +130,8 @@ Click **Save**; a new blank location is there for the next one, up to 20. Tick *
 4. When they collect it, click **Picked up**.
 
 ## Ship an order
+
+<YouTube video="shipping" title="Video of recording a shipment" start={262} end={292} />
 
 A paid order with goods gets a **Shipments** section on its page (**Commerce > Orders**, then the order). It lists what has been shipped, and what is left.
 
@@ -187,6 +199,8 @@ Tracking updates set themselves up. When your site's **Base URL**, under **Setti
 Once registered, the carrier's latest word, such as *In transit*, shows on the shipment, and the buyer's order page lists where the parcel has been. A parcel the carrier delivers is marked **Delivered** for you.
 
 ## Try your rates
+
+<YouTube video="shipping" title="Video of Try rates" start={239} end={262} />
 
 **Try rates**, on **Commerce > Shipping**, shows which zone an address falls in and what each of its methods charges for an order you describe: country, region, currency, subtotal, weight, number of items and shipping class. No order is placed. Use it to check your zones and tables before buyers see them.
 
