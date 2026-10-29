@@ -103,7 +103,7 @@
                         <option value="">@T["Select an AI profile"]</option>
                     </select>
                     <span asp-validation-for="AIProfileId" class="text-danger"></span>
-                    <span class="hint">@T["Only chat profiles with Start the conversation automatically enabled are shown. The selected profile is stored on each loaded activity and starts automated conversations. Leave empty to use the subject flow profile."]</span>
+                    <span class="hint">@T["Only chat profiles with Start the conversation automatically enabled are shown. The selected profile is stored on each loaded activity and starts automated conversations. An outbound subject cannot hold a profile, so choose one here. Leave empty only when an inbound subject names its own."]</span>
                 </div>
             </div>
 
