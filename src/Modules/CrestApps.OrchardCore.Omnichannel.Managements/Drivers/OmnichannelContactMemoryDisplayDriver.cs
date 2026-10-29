@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -44,6 +46,12 @@ internal sealed class OmnichannelContactMemoryDisplayDriver : ContentPartDisplay
         if (!string.Equals(current?.Trim() ?? string.Empty, model.AIMemory?.Trim() ?? string.Empty, StringComparison.Ordinal))
         {
             await _memoryService.SetAsync(contactId, model.AIMemory);
+        }
+
+        // A rebuild reads every past conversation with a model call each, so it runs after the request.
+        if (model.Rebuild && !context.IsNew)
+        {
+            ShellScope.AddDeferredTask(scope => OmnichannelContactMemoryRebuild.RunAsync(scope.ServiceProvider, contactId));
         }
 
         return Edit(part, context);

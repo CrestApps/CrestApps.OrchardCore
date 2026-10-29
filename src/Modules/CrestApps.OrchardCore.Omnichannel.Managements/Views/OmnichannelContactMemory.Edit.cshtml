@@ -7,3 +7,11 @@
     <textarea asp-for="AIMemory" class="form-control" rows="4" maxlength="2000"></textarea>
     <span class="hint">@T["A short note the AI keeps about this contact from earlier calls, texts and chats, and reads at the start of each conversation when its profile uses contact memory. It is rewritten after each conversation. Edit it to correct it, or empty it to make the AI forget."]</span>
 </div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="Rebuild" />
+        <label class="form-check-label" asp-for="Rebuild">@T["Rebuild from past conversations"]</label>
+        <span class="hint dashed">@T["On save, the note is written again from this contact's past AI calls, texts and chats, oldest first (at most the 50 oldest). It takes a moment; reload the contact to see it."]</span>
+    </div>
+</div>

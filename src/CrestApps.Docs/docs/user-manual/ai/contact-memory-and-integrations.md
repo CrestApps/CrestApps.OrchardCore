@@ -33,6 +33,10 @@ Memory works the same for leads: a call or text with a lead reads and writes the
 
 To see or correct a note, open the contact. **What the AI remembers** shows the note: edit it, or empty it to make the AI forget.
 
+To build a note from a contact's past conversations, for example after turning memory on, tick **Rebuild from past conversations** on the contact and save. The note is written again from the contact's past AI calls, texts and chats, oldest first, as if each had just ended (at most the 50 oldest). It runs after the save, so reload the contact a moment later to see it.
+
+What the AI keeps in a note follows built-in instructions. To change them, for example to keep only open orders or to write the note in another language, go to **Settings > Artificial Intelligence** and write your own **Memory instructions** under **Contact memory**. Leave them empty to go back to the built-in ones. The note is kept to 2,000 characters either way.
+
 :::note[Payment details and secrets]
 The note is written by the utility model, which is told never to keep card numbers, passwords or other secrets. Still, check the notes of profiles that handle sensitive matters, and leave **Save to contact memory** off where it is not needed.
 :::

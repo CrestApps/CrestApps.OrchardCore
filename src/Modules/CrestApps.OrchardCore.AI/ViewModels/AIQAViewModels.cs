@@ -180,3 +180,20 @@ public class AICostSettingsViewModel
     /// </summary>
     public string DeploymentPrices { get; set; }
 }
+
+/// <summary>
+/// The editor of the contact memory instructions.
+/// </summary>
+public class AIContactMemorySettingsViewModel
+{
+    /// <summary>
+    /// Gets or sets the tenant's own instructions; empty uses the built-in ones.
+    /// </summary>
+    public string Instructions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the built-in instructions, shown as the placeholder.
+    /// </summary>
+    [BindNever]
+    public string DefaultInstructions { get; set; }
+}

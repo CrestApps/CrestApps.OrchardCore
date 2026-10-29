@@ -1945,6 +1945,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public OmnichannelContactMemoryViewModel() { }
         public string AIMemory { get; set; }
+        public bool Rebuild { get; set; }
     }
     public class OmnichannelContactPartSettingsViewModel
     {

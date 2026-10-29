@@ -8,6 +8,9 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.AI;
 using OrchardCore.Modules;
+using CrestApps.Core.AI;
+using OrchardCore.Settings;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Conversations;
 
@@ -20,6 +23,8 @@ public sealed class AIContactMemoryService
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _clientFactory;
     private readonly IClock _clock;
+    private readonly ISiteService _siteService;
+    private readonly IAIChatSessionPromptStore _promptStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIContactMemoryService"/> class.
@@ -28,16 +33,22 @@ public sealed class AIContactMemoryService
     /// <param name="deploymentManager">The deployment manager.</param>
     /// <param name="clientFactory">The AI client factory.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="siteService">The site settings, for the tenant's own memory instructions.</param>
+    /// <param name="promptStore">The chat session prompt store, to rebuild a note from past conversations.</param>
     public AIContactMemoryService(
         IAIContactMemoryStore store,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory clientFactory,
-        IClock clock)
+        IClock clock,
+        ISiteService siteService = null,
+        IAIChatSessionPromptStore promptStore = null)
     {
         _store = store;
         _deploymentManager = deploymentManager;
         _clientFactory = clientFactory;
         _clock = clock;
+        _siteService = siteService;
+        _promptStore = promptStore;
     }
 
     /// <summary>
@@ -116,7 +127,7 @@ public sealed class AIContactMemoryService
 
         var response = await client.GetResponseAsync(
             [
-                new ChatMessage(ChatRole.System, SystemPrompt),
+                new ChatMessage(ChatRole.System, await GetInstructionsAsync()),
                 new ChatMessage(ChatRole.User, BuildRequest(current, turns)),
             ],
             cancellationToken: cancellationToken);
@@ -155,6 +166,59 @@ public sealed class AIContactMemoryService
     }
 
     /// <summary>
+    /// Rebuilds a contact's note from past conversations, oldest first, as if each had just ended. The current note is
+    /// replaced.
+    /// </summary>
+    /// <param name="contactId">The contact.</param>
+    /// <param name="sessionIds">The contact's conversations, oldest first.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The rebuilt note, or <see langword="null"/> when no conversation had anything to remember.</returns>
+    public async Task<string> RebuildAsync(string contactId, IEnumerable<string> sessionIds, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(contactId) || _promptStore is null)
+        {
+            return null;
+        }
+
+        await SetAsync(contactId, null, cancellationToken: cancellationToken);
+
+        string note = null;
+
+        foreach (var sessionId in (sessionIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Take(MaxRebuiltConversations))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var turns = AIConversationTranscript.GetTurns(await _promptStore.GetPromptsAsync(sessionId));
+            note = await RememberAsync(contactId, turns, sessionId, cancellationToken) ?? note;
+        }
+
+        return note;
+    }
+
+    /// <summary>
+    /// The most conversations a rebuild reads: the oldest ones count least, and each costs a model call.
+    /// </summary>
+    public const int MaxRebuiltConversations = 50;
+
+    /// <summary>
+    /// The instructions the memory writer follows: the tenant's own when set, and the built-in ones otherwise.
+    /// </summary>
+    /// <returns>The instructions.</returns>
+    public async Task<string> GetInstructionsAsync()
+    {
+        if (_siteService is null)
+        {
+            return SystemPrompt;
+        }
+
+        var settings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<AIContactMemorySettings>();
+
+        return string.IsNullOrWhiteSpace(settings.Instructions)
+            ? SystemPrompt
+            : $"{settings.Instructions.Trim()}\nWrite at most {AIContactMemory.MaxLength} characters, and nothing else.";
+    }
+
+    /// <summary>
     /// Adds a contact's note to a system message.
     /// </summary>
     /// <param name="systemMessage">The system message.</param>
@@ -164,7 +228,7 @@ public sealed class AIContactMemoryService
             ? systemMessage
             : $"{systemMessage}{(string.IsNullOrEmpty(systemMessage) ? string.Empty : "\n\n")}What you remember about this customer from earlier conversations (use it naturally, do not read it out):\n{memory.Trim()}";
 
-    internal static readonly string SystemPrompt =
+    public static readonly string SystemPrompt =
         $"""
         You keep a short memory note about one customer of a business, so the business's assistant can pick up where
         the last conversation left off on any channel.
