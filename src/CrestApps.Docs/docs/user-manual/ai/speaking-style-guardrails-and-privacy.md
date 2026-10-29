@@ -61,7 +61,7 @@ Each message checked is one more request to the utility model, which judges what
 | Website and admin chat | What the customer types, and the AI's reply. The reply streams as it is written, so a refused reply is replaced once it is complete. A refused message and its placeholder are not saved in the conversation, like a message Prompt Security blocks. |
 | Text messages | The customer's texts, and the reply before it is sent. |
 | Phone calls, turn-based | What the caller said, and the reply before it is spoken. Each check adds a moment before the AI answers. |
-| Phone calls, realtime voice | What the caller said, checked while the call goes on, so normal answers are not slowed down. When a request is refused, the AI stops what it had started saying and says the placeholder reply instead. Its replies are not checked: they are spoken as they are made. |
+| Phone calls, realtime voice | What the caller said, checked while the call goes on, so normal answers are not slowed down. When a request is refused, the AI is told not to act on it. If it is still answering, it is cut off and says the placeholder reply instead; an answer it has already finished is left as it was. Its replies are not checked: they are spoken as they are made. |
 
 If the utility model can't be reached, the conversation goes on unchecked rather than leaving the customer without an answer.
 

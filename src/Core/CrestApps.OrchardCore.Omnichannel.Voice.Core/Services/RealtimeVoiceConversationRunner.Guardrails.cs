@@ -18,8 +18,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// <para>
 /// A live session answers the caller as soon as they stop talking, before their words are transcribed, so a check
 /// cannot stand in front of the model the way it does on a turn-based call. It runs beside the call instead, and
-/// adds nothing to an ordinary turn. When it refuses, what the model had started saying is taken off the line and
-/// out of the transcript, the model is told not to act on the request, and the placeholder is said.
+/// adds nothing to an ordinary turn. When it refuses, the model is told not to act on the request. A reply still
+/// being spoken is taken off the line and out of the transcript, and the model is asked, in the conversation, to
+/// give the placeholder instead. A reply already finished is left: live, the check came back after the model had
+/// already declined in its own words.
+/// </para>
+/// <para>
+/// The placeholder is asked for inside the conversation, like a supervisor's note. Asked for as a standalone message
+/// under the session's instructions, the model had no conversation to go on and gave its opening line again: live,
+/// twice in one call.
 /// </para>
 /// <para>
 /// The check runs in a scope of its own: a refusal starts the AI Guardrail Triggered workflows, and those cannot
@@ -41,6 +48,10 @@ public sealed partial class RealtimeVoiceConversationRunner
     // Set once the placeholder has been asked for, so the response that starts next is the one let through.
     private int _guardrailReplyRequested;
 
+    // How many of the assistant's lines have been heard, so a check can tell whether the refused request was already
+    // answered.
+    private int _assistantLinesHeard;
+
     /// <summary>
     /// Gets or sets how a caller's line is checked: the profile, the line and the session in, the placeholder reply
     /// out when the line is refused. Runs the profile's guardrails in a scope of their own unless replaced.
@@ -48,13 +59,19 @@ public sealed partial class RealtimeVoiceConversationRunner
     internal Func<AIProfile, string, string, CancellationToken, Task<string>> CheckCallerLine { get; set; }
 
     /// <summary>
-    /// Builds what the model is asked to say when the caller's request was refused.
+    /// Builds the note that asks the model to give the placeholder, when its own reply was taken off the line.
     /// </summary>
     /// <param name="placeholder">The profile's placeholder reply.</param>
-    /// <returns>The instruction.</returns>
-    internal static string RefusalInstructions(string placeholder)
-        => "Say this to the customer, word for word, and nothing else: \"" + placeholder?.Trim() + "\" If this call " +
-            "is held in another language, say it in that language.";
+    /// <returns>The note.</returns>
+    internal static string RefusalReplyNote(string placeholder)
+        => RefusedRequestNote + " Your reply to it was not heard. Tell the customer this now, in the language of the " +
+            "call, and nothing else: \"" + placeholder?.Trim() + "\"";
+
+    /// <summary>
+    /// Counts an assistant line the caller heard.
+    /// </summary>
+    private void AssistantLineHeard()
+        => Interlocked.Increment(ref _assistantLinesHeard);
 
     /// <summary>
     /// Whether the guardrails let what the model is saying reach the line.
@@ -101,7 +118,9 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
-        _ = Task.Run(() => RefuseIfGuardedAsync(media, conversation, context, line, check, callToken), CancellationToken.None);
+        var heardBefore = Volatile.Read(ref _assistantLinesHeard);
+
+        _ = Task.Run(() => RefuseIfGuardedAsync(media, conversation, context, line, check, heardBefore, callToken), CancellationToken.None);
     }
 
     private async Task RefuseIfGuardedAsync(
@@ -110,6 +129,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         RealtimeVoiceConversationContext context,
         string line,
         Func<AIProfile, string, string, CancellationToken, Task<string>> check,
+        int heardBefore,
         CancellationToken callToken)
     {
         try
@@ -118,6 +138,22 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             if (string.IsNullOrWhiteSpace(placeholder))
             {
+                return;
+            }
+
+            // The model has already answered and nothing of it is still playing: what it said stands, and it is only
+            // told not to act on the request from here on.
+            if (Volatile.Read(ref _responseInFlight) == 0 && Volatile.Read(ref _assistantLinesHeard) > heardBefore)
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "A guardrail refused the caller's request on activity '{ActivityId}' after the model had answered it; the model is told not to act on it.",
+                        context.Activity?.ItemId.SanitizeLogValue());
+                }
+
+                await conversation.AddMessageAsync(ChatRole.System, RefusedRequestNote, callToken);
+
                 return;
             }
 
@@ -146,11 +182,11 @@ public sealed partial class RealtimeVoiceConversationRunner
                 await Task.Delay(TimeSpan.FromMilliseconds(100), callToken);
             }
 
-            await conversation.AddMessageAsync(ChatRole.System, RefusedRequestNote, callToken);
+            await conversation.AddMessageAsync(ChatRole.System, RefusalReplyNote(placeholder), callToken);
 
             Volatile.Write(ref _guardrailReplyRequested, 1);
 
-            await conversation.RequestStandaloneMessageAsync(WithSessionInstructions(RefusalInstructions(placeholder)), callToken);
+            await conversation.RequestUnpromptedResponseAsync(cancellationToken: callToken);
         }
         catch (OperationCanceledException)
         {

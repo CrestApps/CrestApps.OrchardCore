@@ -614,6 +614,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         }
 
                         await StorePromptAsync(context, ChatRole.Assistant, spoken, lineStartedUtc, cancellationToken);
+                        AssistantLineHeard();
 
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
