@@ -98,15 +98,19 @@ To start an entry point from an existing one, open its **Actions** menu in the e
 
 ## AI voice agent
 
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video overview of the AI voice agent for inbound calls: the entry point, open and closed hours, the subject, live conversation and review" />
+
 A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls; texts are set the same way on a [text entry point](automated-ai.md#let-the-ai-answer-incoming-texts). Queues have no AI setting.
 
-1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video of routing a number to an AI voice agent and setting open and closed hours" start={68} end={155} />
+
+1. Make the profile under **Artificial Intelligence > Profiles**, with an **Opening message** (what it says when it picks up) and the business details its instructions ask for.
 2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.
 3. To let the AI pass callers to a person, set up the hand-off on the [subject flow](subjects.md) for the number.
 
-While the entry point is open, the AI answers each call itself, greets the caller with its initial prompt and holds the conversation. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**.
+While the entry point is open, the AI answers each call itself, greets the caller and holds the conversation. A turn-based call speaks the profile's **Opening message**; in a live audio conversation the model words its own greeting from the profile's instructions. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**. An AI entry point has no queue, so **Hold in queue** and **Overflow** act as **Voicemail**, and the voicemail should be delivered to **An agent's inbox** (pick the **Voicemail inbox**): the queue's shared voicemail box needs a queue. A call that arrives on a provider that has no AI voice agent, such as Asterisk, is rejected.
 
-The AI voice agent needs the **Telnyx AI Voice Agent** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
+The AI voice agent needs the **Telnyx AI Voice Agent** feature, and a live audio conversation also needs the **Contact Center Voice Media** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
 
