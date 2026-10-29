@@ -9,6 +9,8 @@ user_manual:
   - user-manual/load-inventory
 ---
 
+<YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel CRM |
