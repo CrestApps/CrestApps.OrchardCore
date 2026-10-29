@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.AI.Integrations
+
+@model LogToCrmTaskViewModel
+
+<div class="mb-3" asp-validation-class-for="ConnectionId">
+    <label asp-for="ConnectionId" class="form-label ocat-label-required">@T["CRM connection"]</label>
+    <select asp-for="ConnectionId" asp-items="Model.Connections" class="form-select">
+        <option value="">@T["Choose a connection"]</option>
+    </select>
+    <span asp-validation-for="ConnectionId" class="text-danger"></span>
+    <span class="hint">@T["Add one under Artificial Intelligence, Integrations."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="Phone">
+    <label asp-for="Phone" class="form-label ocat-label-required">@T["Customer's phone number"]</label>
+    <input asp-for="Phone" class="form-control" placeholder="{{ Workflow.Input.Variables.customer_phone }}" />
+    <span asp-validation-for="Phone" class="text-danger"></span>
+    <span class="hint">@T["Liquid. The customer is found by this number, and added with it when missing."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Fields" class="form-label">@T["Fields"]</label>
+    <textarea asp-for="Fields" class="form-control font-monospace" rows="4" placeholder="firstname: {{ Workflow.Input.Session.ExtractedData.first_name.Values[0] }}"></textarea>
+    <span class="hint">@T["One field: value line each, in Liquid. firstname, lastname and email are the contact's own fields; any other name is the CRM's field name, such as lifecyclestage in HubSpot or LeadSource in Salesforce."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Title" class="form-label">@T["Call title"]</label>
+    <input asp-for="Title" class="form-control" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Notes" class="form-label">@T["Call notes"]</label>
+    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="{{ Workflow.Input.Session.PostSessionResults.summary.Value }}"></textarea>
+    <span class="hint">@T["Liquid, such as the conversation's summary and outcome."]</span>
+</div>
+
+<div class="form-check mb-3">
+    <input asp-for="CreateIfMissing" class="form-check-input" />
+    <label asp-for="CreateIfMissing" class="form-check-label">@T["Add the customer when they are not in the CRM"]</label>
+    <span class="hint dashed">@T["Otherwise the task ends with Not found."]</span>
+</div>

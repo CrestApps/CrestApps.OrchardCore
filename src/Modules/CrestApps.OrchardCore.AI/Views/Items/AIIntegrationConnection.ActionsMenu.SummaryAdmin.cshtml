@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Core.Integrations
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIIntegrationConnection>
+
+<a asp-action="Delete" asp-controller="AIIntegrations" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this integration? The tools and tasks that use it stop working."]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Delete"]</a>

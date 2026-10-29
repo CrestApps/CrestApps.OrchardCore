@@ -110,6 +110,18 @@ save keeps the stored value; type a new one to replace it.
 
 Both feed the same ingestion pipeline as the local connector, so the shared fields above behave identically.
 
+## Google Drive, SharePoint, OneDrive and Notion
+
+With **AI Integrations** on, three more connectors read through an integration connection (see [Contact memory and integrations](../user-manual/ai/contact-memory-and-integrations.md#integrations)):
+
+| Connector | Connection | What it reads |
+| --- | --- | --- |
+| **Google Drive** | Google | A folder, by the id at the end of its address (empty reads My Drive). Google Docs and Slides are read as text and Sheets as CSV; other files as they are. |
+| **SharePoint or OneDrive** | Microsoft 365 | A document library, by its Graph drive id, or the connected user's OneDrive; a folder path in it, or all of it. |
+| **Notion** | Notion | The pages of a database, or a page and its sub-pages, as Markdown, by the id at the end of its address. Share the database or page with the integration first. |
+
+A file's path is the provider's id and the file's name, so a renamed file is the same file. Sub-folders are read when **Read sub-folders** is ticked, and **Most files** caps how many are read.
+
 ## Scheduling
 
 An hourly Orchard background task, **File Source Ingestion**, evaluates every enabled source and runs the

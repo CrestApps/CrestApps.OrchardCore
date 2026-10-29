@@ -90,23 +90,35 @@ The body is JSON: `{ "id": "...", "event": "conversation.ended", "createdUtc": "
 
 Click **Deliveries** to see what was sent: each event with its body, the receiver's answer and the number of attempts. A delivery that fails with a timeout, 429 or a 5xx answer is tried again after 1, 5 and 30 minutes, then 2 and 12 hours; any other refusal is not retried. **Send again** queues a delivery once more, and **Send a test event** sends `webhook.test` to check the receiver.
 
+## Integrations
+
+Enable **AI Integrations** to connect the AI to a calendar, a CRM or Notion. Under **Artificial Intelligence → Integrations**, **Add integration** and choose the provider:
+
+| Provider | Signs in with | Used for |
+| --- | --- | --- |
+| **Google** | An OAuth app you register in Google Cloud (client id and secret) | Calendar availability and booking, Google Drive file sources |
+| **Microsoft 365** | An app you register in Microsoft Entra (client id and secret, and your tenant) | Outlook calendar availability and booking, SharePoint and OneDrive file sources |
+| **HubSpot** | A private app token with the contacts and calls scopes | Looking customers up, logging calls |
+| **Salesforce** | A connected app (client id and secret) | Looking customers up, logging calls |
+| **Notion** | An internal integration secret | Notion file sources |
+
+For Google, Microsoft 365 and Salesforce, give the app the redirect address the editor shows, then save: you are sent to the provider to approve it, and the connection keeps a refresh token, encrypted, so it stays signed in. **Reconnect** signs it in again. HubSpot and Notion take the token you paste in.
+
 ## Calendars
 
-Workflows connect the AI to a booking service that has an API, such as Cal.com, Calendly or your own system:
+On a Google or Microsoft 365 connection, set the **Calendar** (empty for the primary one), the **Time zone** and the **Working hours**. Then on the AI profile's **Capabilities** tab choose the **Calendar** and the **Appointment length**, and add the **Check Calendar Availability** and **Book Calendar Appointment** tools:
 
-1. Create a workflow that starts with **AI Tool Called**, with an **HTTP Request** to the service's *available times* API, using `{{ Workflow.Input.Arguments.date }}`, and **Set Output** with the times it returns.
-2. Create a second one that books a time from `{{ Workflow.Input.Arguments.time }}` and the customer's details.
-3. Create a **Workflow** tool instance for each (see [Automate AI conversations](conversation-workflows.md)), described as *Finds free appointment times on a date* and *Books an appointment at a time the customer chose*, and add both to the AI profile.
+- **checkCalendarAvailability** lists open times on weekdays inside working hours, over the next days, with each time written the way it is said.
+- **bookCalendarAppointment** books the time the customer picked, after checking it is still free, invites the customer when the AI has their email, and puts the appointment's time and event id in the conversation variables `appointment_start_utc` and `appointment_event_id`.
 
-Keep the service's API key in the HTTP Request's headers. Built-in connections to Google Calendar and Microsoft 365 are not available yet.
+Another booking service with an API, such as Cal.com or Calendly, is connected with workflows: a **Workflow** tool instance whose workflow calls the service's API with **HTTP Request** (see [Automate AI conversations](conversation-workflows.md)).
 
 ## CRMs
 
-The same way, workflows keep a CRM such as HubSpot or Salesforce up to date:
+With a HubSpot or Salesforce connection:
 
-- **Look a caller up before the AI answers**: in an **AI Conversation Starting** workflow, an **HTTP Request** to the CRM's search API with `{{ Workflow.Input.CustomerAddress }}`, then **Set Conversation Variables** with what it returns.
-- **Let the AI update a record**: a **Workflow** tool instance whose workflow calls the CRM's update API.
-- **Log the conversation**: an **AI Chat Session Post-Processed** workflow with an **HTTP Request** that creates a CRM activity with the summary and the transcript.
-- **Start an AI call from the CRM**: the CRM's own automation calls an **HTTP Request Event** workflow that runs **Create AI Activity**.
+- **Look a caller up**: choose the **CRM** on the profile's **Capabilities** tab and add the **Find CRM Contact** tool. It finds the customer by the number they call from, or one the AI gives it.
+- **Log the conversation**: add the **Log to CRM** task to an **AI Chat Session Closed** or **AI Chat Session Post-Processed** workflow. It finds the customer by phone (adding them when missing, unless you untick it), writes the fields you list as `field: value` lines in Liquid (`firstname`, `lastname` and `email` are the contact's own fields; any other name is the CRM's own field, such as `lifecyclestage` in HubSpot or `LeadSource` in Salesforce), and logs a completed call with the title and notes you give, such as the summary and the outcome. Its outcomes are **Done**, **Not found** and **Failed**, and `CrmContactId` is in its output.
+- **Start an AI call from the CRM**: the CRM's own automation calls the [AI API](../../ai/conversations-api.md) (`POST /api/ai/v1/calls`) with an API key, or an **HTTP Request Event** workflow that runs **Create AI Activity**.
 
-Built-in CRM connectors, with field mappings and scheduled imports, are not available yet.
+Other CRMs are connected the same way as other booking services, with workflows and **HTTP Request**.

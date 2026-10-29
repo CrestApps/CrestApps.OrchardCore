@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Core.Integrations
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIIntegrationConnection>
+
+@if (AIIntegrationProviders.UsesOAuth(Model.Value.Provider))
+{
+    <a asp-action="Connect" asp-controller="AIIntegrations" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-primary">@(Model.Value.IsConnected ? T["Reconnect"] : T["Connect"])</a>
+}
+<a asp-action="Edit" asp-controller="AIIntegrations" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-secondary">@T["Edit"]</a>

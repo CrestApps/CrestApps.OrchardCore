@@ -1,0 +1,146 @@
+@using CrestApps.OrchardCore.AI.Core.Integrations
+@using CrestApps.OrchardCore.AI.Integrations
+
+@model AIIntegrationConnectionViewModel
+
+@{
+    var callback = Url.Action("Callback", "AIIntegrations", new { area = "CrestApps.OrchardCore.AI" }, Context.Request.Scheme);
+    var providerNames = new Dictionary<string, string>
+    {
+        [AIIntegrationProviders.Google] = T["Google (Calendar and Drive)"].Value,
+        [AIIntegrationProviders.Microsoft365] = T["Microsoft 365 (Outlook calendar, SharePoint and OneDrive)"].Value,
+        [AIIntegrationProviders.HubSpot] = T["HubSpot CRM"].Value,
+        [AIIntegrationProviders.Salesforce] = T["Salesforce"].Value,
+        [AIIntegrationProviders.Notion] = T["Notion"].Value,
+    };
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Provider">
+    <label asp-for="Provider" class="ocat-label ocat-label-required">@T["Provider"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <select asp-for="Provider" class="form-select" data-integration-provider>
+                @foreach (var provider in AIIntegrationProviders.All)
+                {
+                    <option value="@provider" selected="@(Model.Provider == provider)">@providerNames[provider]</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input type="hidden" asp-for="Provider" data-integration-provider />
+            <p class="form-control-plaintext">@providerNames.GetValueOrDefault(Model.Provider ?? string.Empty, Model.Provider)</p>
+        }
+    </div>
+</div>
+
+<div data-integration-for="Google Microsoft365 Salesforce">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info mb-0">
+                @T["Register an app with the provider and give it this redirect address:"] <code>@callback</code>. @T["After saving, you are sent to the provider to approve it."]
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ClientId">
+        <label asp-for="ClientId" class="ocat-label">@T["Client id"]</label>
+        <div class="ocat-end">
+            <input asp-for="ClientId" class="form-control" autocomplete="off" />
+            <span asp-validation-for="ClientId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ClientSecret">
+        <label asp-for="ClientSecret" class="ocat-label">@T["Client secret"]</label>
+        <div class="ocat-end">
+            <input asp-for="ClientSecret" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
+            <span asp-validation-for="ClientSecret" class="text-danger"></span>
+            @if (Model.HasSecret)
+            {
+                <span class="hint">@T["A secret is saved. Leave this empty to keep it."]</span>
+            }
+        </div>
+    </div>
+</div>
+
+<div data-integration-for="HubSpot Notion">
+    <div class="ocat-wrapper" asp-validation-class-for="Token">
+        <label asp-for="Token" class="ocat-label">@T["Token"]</label>
+        <div class="ocat-end">
+            <input asp-for="Token" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
+            <span asp-validation-for="Token" class="text-danger"></span>
+            <span class="hint">@(Model.HasSecret ? T["A token is saved. Leave this empty to keep it."] : T["A HubSpot private app token with the contacts and calls scopes, or a Notion internal integration secret shared with the pages to read."])</span>
+        </div>
+    </div>
+</div>
+
+<div data-integration-for="Microsoft365">
+    <div class="ocat-wrapper">
+        <label asp-for="TenantId" class="ocat-label">@T["Tenant"]</label>
+        <div class="ocat-end">
+            <input asp-for="TenantId" class="form-control" placeholder="common" />
+            <span class="hint">@T["Your Microsoft Entra tenant id or domain. Empty lets any work or school account sign in."]</span>
+        </div>
+    </div>
+</div>
+
+<div data-integration-for="Salesforce">
+    <div class="ocat-wrapper">
+        <label asp-for="InstanceUrl" class="ocat-label">@T["Instance address"]</label>
+        <div class="ocat-end">
+            <input asp-for="InstanceUrl" class="form-control" placeholder="https://yourorg.my.salesforce.com" />
+            <span class="hint">@T["Filled in when you connect. Enter a sandbox address first to sign in at test.salesforce.com."]</span>
+        </div>
+    </div>
+</div>
+
+<div data-integration-for="Google Microsoft365">
+    <div class="ocat-wrapper">
+        <label asp-for="CalendarId" class="ocat-label">@T["Calendar"]</label>
+        <div class="ocat-end">
+            <input asp-for="CalendarId" class="form-control" />
+            <span class="hint">@T["The calendar's id. Empty uses the primary calendar of the account that connects."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
+        <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+        <div class="ocat-end">
+            <input asp-for="TimeZoneId" class="form-control" placeholder="America/Los_Angeles" />
+            <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="WorkdayEndHour">
+        <label class="ocat-label">@T["Working hours"]</label>
+        <div class="ocat-end">
+            <div class="input-group" style="max-width: 20rem;">
+                <input asp-for="WorkdayStartHour" type="number" min="0" max="23" class="form-control" />
+                <span class="input-group-text">@T["to"]</span>
+                <input asp-for="WorkdayEndHour" type="number" min="1" max="24" class="form-control" />
+            </div>
+            <span asp-validation-for="WorkdayEndHour" class="text-danger"></span>
+            <span class="hint">@T["Appointments are offered on weekdays between these hours, in the time zone above."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const provider = document.querySelector('[data-integration-provider]');
+        const show = () => document.querySelectorAll('[data-integration-for]').forEach(section =>
+            section.classList.toggle('d-none', !section.dataset.integrationFor.split(' ').includes(provider.value)));
+        provider?.addEventListener('change', show);
+        show();
+    })();
+</script>

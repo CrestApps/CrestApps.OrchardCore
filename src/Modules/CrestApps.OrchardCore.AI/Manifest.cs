@@ -93,6 +93,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AIConstants.Feature.Integrations,
+    Name = "AI Integrations",
+    Description = "Connections to Google and Microsoft 365 calendars, HubSpot and Salesforce, and Notion: tools for the AI to check and book appointments and look customers up, and a Log to CRM workflow task.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = AIConstants.Feature.CustomLlm,
     Name = "Custom LLM (WebSocket)",
     Description = "A provider that sends each turn to your own server over a WebSocket and streams its reply back, for a model or agent you host that does not speak an OpenAI-compatible API.",

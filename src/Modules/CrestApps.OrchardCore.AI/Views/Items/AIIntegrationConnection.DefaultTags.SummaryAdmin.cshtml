@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Core.Integrations
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIIntegrationConnection>
+
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@Model.Value.Provider</span>
+@if (Model.Value.IsConnected)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@Model.Value.ConnectedBy"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Connected"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-circle-exclamation text-warning me-1" aria-hidden="true"></i>@T["Not connected"]</span>
+}
