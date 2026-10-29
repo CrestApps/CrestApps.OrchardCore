@@ -28,6 +28,8 @@ The AI profile's instructions can use them. Write a variable's name between doub
 
 To include a sentence only when a value is set, put it between `{% if Variables.balance_due %}` and `{% endif %}`.
 
+A call an AI voice agent answers brings the custom SIP headers it arrived with as variables. A phone system or carrier that forwards a call can add `X-` headers, such as the account number the caller typed or the menu option they chose; `X-Account-Id: 42` becomes the variable `sip_account_id` with the value `42`. They are set before the **AI Conversation Starting** workflows run, so a workflow can choose the profile or look the account up with them. Only `X-` headers are kept, up to 20, each up to 256 characters. Today this works for calls that arrive through Telnyx.
+
 The instructions can also read the conversation itself:
 
 | Write | To get |

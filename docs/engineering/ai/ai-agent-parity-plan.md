@@ -831,7 +831,8 @@ calls or accounts, is listed after the slices.
 - Phase 6: the profile's **Voice & Speech** settings (rate, emotion, pronunciations, fallback voice, boosted keywords,
   recognition languages, interruption sensitivity, backchanneling, allowed and starting languages) on the Core
   speech seams; ElevenLabs and Cartesia features and a voice library page (search, sample, clone); Telnyx number
-  search, purchase, release and caller name (CNAM) in the admin and the API.
+  search, purchase, release and caller name (CNAM) in the admin and the API; carrier spam rejections (SIP 607 and 608)
+  of outbound calls counted per caller number over 30 days, shown on the Telnyx numbers list and in the API (V7).
 - Phase 7: conversation flows as two workflow activities (**AI Conversation Flow Started**, **AI Conversation Stage**)
   and a `moveToStage` tool; no change to the workflow engine or designer.
 - Phase 8: the API grew profiles (CRUD, restore a version), calls and texts (start, batches, cancel), live calls
@@ -840,7 +841,8 @@ calls or accounts, is listed after the slices.
   browser keys limited to profiles and web sites) and `ai.` scopes for OpenID clients; a Kiota script that
   generates TypeScript and Python clients; the Custom LLM (WebSocket) provider; copilot tools for the admin AI agent
   over conversations, QA, tests, alerts and contact memory; bleeping of personal details in AI call recordings;
-  signed, expiring recording links.
+  signed, expiring recording links; the custom `X-` SIP headers of an inbound call answered by an AI voice agent become
+  `sip_` conversation variables before the starting workflows run (V8, Telnyx calls).
 
 Checked on a test site (SQLite tenant, outbound traffic blocked except ElevenLabs):
 
@@ -860,13 +862,13 @@ Checked on a test site (SQLite tenant, outbound traffic blocked except ElevenLab
 Needs accounts or real calls: the OAuth integrations (Google, Microsoft 365, HubSpot, Salesforce, Notion) and the
 cloud file sources; Telnyx number search, purchase, release and caller name; ElevenLabs speech on a call and voice
 cloning; Cartesia; switching profiles on a real realtime call; bleeping a real call recording; the Custom LLM
-provider against a real server; warm and screened transfers on real calls.
+provider against a real server; warm and screened transfers on real calls; a real 607/608 refusal being counted, and
+a real PBX's `X-` headers arriving as variables.
 
 Not built, and why:
 
-- V7: branded calling and number reputation, and counting carrier spam rejections (SIP 608) per number: Telnyx's
-  offerings need checking on a real account, and 608s need outbound traffic to see.
-- V8: AI voice on Twilio Media Streams and Asterisk ExternalMedia/AudioSocket, and custom SIP headers into
-  conversation variables: each is a new media provider that needs the carrier's account and real calls to build
-  safely; inbound routing is being live-tested on the shared dev server.
+- V7: branded calling and registering numbers with the carriers' analytics: Telnyx's offerings need checking on a
+  real account.
+- V8: AI voice on Twilio Media Streams and Asterisk ExternalMedia/AudioSocket: each is a new media provider that needs
+  the carrier's account and real calls to build safely. SIP headers from Asterisk calls are not read yet.
 - V6: importing numbers and tracking port-in requests (Telnyx porting needs an account and documents).

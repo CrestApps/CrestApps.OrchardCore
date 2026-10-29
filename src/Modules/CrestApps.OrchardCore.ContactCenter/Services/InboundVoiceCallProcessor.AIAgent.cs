@@ -80,7 +80,19 @@ public sealed partial class InboundVoiceCallProcessor
             contactItemIds,
             now,
             plan.TargetAIProfileId,
-            async created => starting = await _conversationStarting.StartingAsync(created, cancellationToken));
+            async created =>
+            {
+                // The custom SIP headers the call arrived with are variables from the start, so the starting workflows
+                // can route on them and the profile's instructions can use them.
+                var headers = SipHeaderVariables.ToVariables(inboundEvent.Metadata);
+
+                if (headers.Count > 0)
+                {
+                    created.SetConversationVariables(headers);
+                }
+
+                starting = await _conversationStarting.StartingAsync(created, cancellationToken);
+            });
 
         result.ActivityItemId = activity.ItemId;
 
