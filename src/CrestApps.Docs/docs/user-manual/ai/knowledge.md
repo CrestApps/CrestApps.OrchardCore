@@ -50,7 +50,11 @@ Knowledge is stored in a search index that understands meaning, not just words. 
 | **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. It has no embedding choice of its own: it uses the site's **Default embedding deployment**. Then choose it under **Settings > Artificial Intelligence > Documents > Index profile**. |
 | **AI Knowledge Base Index** (Azure AI Search or Elasticsearch) | Data sources, file sources and web crawlers. |
 
-The embedding deployment of an index cannot be changed after the index is created. Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
+The embedding deployment of an index cannot be changed after the index is created. To create an **AI Knowledge Base Index**, open **Search > Indexes**, click **Add index**, click **Add** on **AI Knowledge Base Index (Elasticsearch)** (or the Azure AI Search type), enter an **Index Name** and a **Name**, pick the **Embedding deployment** and click **Save**.
+
+<YouTube video="ai-file-sources" title="Video of creating the knowledge base index" start={90} end={122} />
+
+Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
 
 ## Upload documents to a profile
 
@@ -112,6 +116,8 @@ The data source fills its knowledge base and keeps it in step with the source. T
 
 ### Use a data source in a profile
 
+<YouTube video="ai-file-sources" title="Video of choosing a data source on a profile" start={303} end={335} />
+
 On the profile's **Knowledge** tab:
 
 | Field | What it does |
@@ -124,12 +130,27 @@ On the profile's **Knowledge** tab:
 
 The site defaults are under **Settings > Artificial Intelligence > Data Sources**: **Default strictness** and **Default top documents**.
 
+With a data source chosen, an answer carries small numbers on the statements that come from your files, and a numbered list of sources under it.
+
+<YouTube video="ai-file-sources" title="Video of an answer with its sources" start={335} end={354} />
+
 ## File sources
+
+<YouTube video="ai-file-sources" title="Video overview of file sources" />
+
+The video shows why uploads go stale, how the knowledge base index, a **Files** data source and a file source fit together, each step below, and a real answer with its source.
 
 A file source reads a folder of files on a schedule and keeps a **Files** data source up to date, so nobody has to upload anything. Use it for documents another system exports, such as nightly product sheets on an FTP site.
 
 1. Create a data source of type **Files** (see [Create a data source](#create-a-data-source)).
+
+<YouTube video="ai-file-sources" title="Video of creating a Files data source" start={122} end={153} />
+
 2. Open **Artificial Intelligence > File Sources** and click **Add File Source**.
+
+<YouTube video="ai-file-sources" title="Video of adding a file source" start={153} end={223} />
+
+
 3. In **Available Connectors**, click **Add** on **File system** (a folder on the site's server), **FTP / FTPS** or **SFTP**.
 4. Fill in the fields below and the connection details, then click **Save**.
 
@@ -148,7 +169,11 @@ A file source reads a folder of files on a schedule and keeps a **Files** data s
 
 For FTP and SFTP, enter the **Host**, **Port**, **Username** and **Password** (or a **Private key** for SFTP) your technical team gives you. A stored password or key is never shown again; leave the field blank to keep it.
 
+<YouTube video="ai-file-sources" title="Video of the FTP and SFTP connectors" start={252} end={303} />
+
 The list shows each source's last run: how many files were found, ingested, unchanged, removed and failed, or **Never run**. To read a source right away, open its **Actions** menu and choose **Read now**.
+
+<YouTube video="ai-file-sources" title="Video of reading the folder now" start={223} end={252} />
 
 ## Web crawlers
 
