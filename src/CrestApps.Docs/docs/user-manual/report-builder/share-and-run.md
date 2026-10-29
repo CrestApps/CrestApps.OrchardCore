@@ -119,6 +119,8 @@ When you may change the report, **Edit design** opens it in the builder.
 
 ## Show a report on the dashboard
 
+<YouTube video="reports-dashboard-widgets" title="Video of the Custom Report widget" start={175} end={213} />
+
 When your site uses the admin dashboard, you can put a report you built on it as a widget. The widget shows the report's headline numbers, tables and charts for a period such as the last 30 days, and keeps itself up to date. You do not need a developer.
 
 1. Publish the report. A report that was never published cannot be shown.

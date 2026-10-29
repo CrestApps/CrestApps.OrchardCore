@@ -90,6 +90,34 @@ The list shows each subscription with its schedule, its recipients and when it g
 
 Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to. To email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
 
+## Show a report on the dashboard
+
+With the **Admin Dashboard** feature on (under **Tools > Features**), any report you may view can be a widget on the admin dashboard: its figures, tables and charts for a period that moves with the clock, so the numbers are there without opening the report. The **Report** widget shows any report on this page. The **Custom Report** widget, which comes with the Report Builder, shows a report you built (see [Show a report on the dashboard](report-builder/share-and-run.md#show-a-report-on-the-dashboard)).
+
+<YouTube video="reports-dashboard-widgets" title="Video overview of report widgets on the dashboard" />
+
+<YouTube video="reports-dashboard-widgets" title="Video of turning on the Admin Dashboard and opening its editor" start={55} end={85} />
+
+1. Open the admin **Dashboard** and click **Manage Dashboard**, then **Add Widget**, and pick **Report**.
+2. **Position**, **Width** and **Height** place the tile on the dashboard, and **Title** is the name above it.
+3. Choose the **Report**. The list has every report you may view under **Reports**, by category.
+4. Choose the **Period**: *Today*, *Yesterday*, *Last 7 days*, *Last 30 days*, *Last 90 days*, *This month*, *Last month*, *This year*, *Last 12 months*, *All time*, or *Custom dates*, which asks for a **From** and a **To** day. Every period except custom dates moves with the clock: the last 30 days is always the 30 days up to now.
+5. Choose what to **Show**: *Figures and tables*, *Figures only*, *Tables only*, *Charts only* or *Everything*. A report that has only a table shows nothing under *Figures only*.
+6. **Rows per table** limits how many rows of each table appear (it starts at 5), and **Keep for (minutes)** is how long the widget keeps what it shows before it runs the report again (it starts at 30). 0 runs the report on every visit. Saving the widget starts over.
+7. Click **Publish**, then **Close Editor**.
+
+<YouTube video="reports-dashboard-widgets" title="Video of adding a Report widget" start=85 end=154 />
+
+Each tile names its report, says its period in words, says when its result was made, and has an **Open the full report** link that opens the report with its filters and exports.
+
+<YouTube video="reports-dashboard-widgets" title="Video of the dashboard tiles" start=154 end=175 />
+
+Every tile checks the person looking at it. Someone who may open the dashboard but not the report sees *You can't view the report* in its place, instead of numbers, and a widget that has no report chosen says *Choose the report this widget shows by editing it*. If the report cannot run, the tile says so, and the details are in the log. A tile that has nothing for its period says *Nothing to show for this period*.
+
+<YouTube video="reports-dashboard-widgets" title="Video of what each person sees on the dashboard" start=213 end=227 />
+
+The **Access the Admin Dashboard** permission opens the dashboard, and **Manage the Admin Dashboard** opens its editor. The person also needs the permission of each report whose tile they should see.
+
 ## Agent time over long periods
 
 <YouTube video="reports-run-and-export" title="Video of a period that is too long and of a report whose feature is off" start={313} end={354} />
