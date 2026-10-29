@@ -108,8 +108,20 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        if (await _voiceCallCommands.SendAsync(voiceEvent.ActivityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, digits)))
+        var keysPressed = new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, digits);
+
+        if (await _voiceCallCommands.SendAsync(voiceEvent.ActivityId, keysPressed))
         {
+            return;
+        }
+
+        // The provider's event reached a node other than the one whose live session holds the call: relay it there.
+        var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId);
+
+        if (IsLiveAICall(activity) && activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
+        {
+            await _voiceCallCommands.RelayAsync(voiceEvent.ActivityId, keysPressed);
+
             return;
         }
 

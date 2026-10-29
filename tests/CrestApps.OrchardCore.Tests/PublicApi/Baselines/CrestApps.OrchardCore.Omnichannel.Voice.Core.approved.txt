@@ -178,10 +178,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         TakeOver = 1,
         KeysPressed = 2,
     }
+    public sealed class AIVoiceCallCommandRelay : CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommandRelay, System.IDisposable
+    {
+        public const string ReplyChannelPrefix = "CrestApps:AIVoiceCallCommands:Replies:";
+        public const string RequestChannel = "CrestApps:AIVoiceCallCommands:Requests";
+        public AIVoiceCallCommandRelay(CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallMessageBus bus, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommandRelay> logger) { }
+        public string NodeId { get; }
+        public System.TimeSpan ReplyTimeout { get; set; }
+        public void Dispose() { }
+        public System.Threading.Tasks.Task<bool> SendAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand command, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StartAsync(System.Func<string, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand, System.Threading.Tasks.Task<bool?>> deliverLocally) { }
+    }
     public sealed class AIVoiceCallCommands : CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommands
     {
         public AIVoiceCallCommands() { }
+        public AIVoiceCallCommands(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommandRelay> relays) { }
         public System.IDisposable Register(string activityId, System.Func<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand, System.Threading.Tasks.Task<bool>> handler) { }
+        public System.Threading.Tasks.Task<bool> RelayAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand command) { }
         public System.Threading.Tasks.Task<bool> SendAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand command) { }
     }
     public sealed class AIVoiceCallSupervision : CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallSupervision
@@ -206,10 +219,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.ReadOnlyMemory<byte> NextPcmBytes(int sampleCount) { }
         public static void MixInto(System.Span<short> destination, System.ReadOnlySpan<short> ambience) { }
     }
+    public interface IAIVoiceCallCommandRelay
+    {
+        System.Threading.Tasks.Task<bool> SendAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand command, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartAsync(System.Func<string, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand, System.Threading.Tasks.Task<bool?>> deliverLocally);
+    }
     public interface IAIVoiceCallCommands
     {
         System.IDisposable Register(string activityId, System.Func<CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand, System.Threading.Tasks.Task<bool>> handler);
+        System.Threading.Tasks.Task<bool> RelayAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand command);
         System.Threading.Tasks.Task<bool> SendAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommand command);
+    }
+    public interface IAIVoiceCallMessageBus
+    {
+        System.Threading.Tasks.Task PublishAsync(string channel, string message);
+        System.Threading.Tasks.Task SubscribeAsync(string channel, System.Func<string, System.Threading.Tasks.Task> handler);
     }
     public interface IAIVoiceCallShutdown
     {

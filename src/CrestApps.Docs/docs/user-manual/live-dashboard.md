@@ -125,6 +125,10 @@ The **Live AI calls** panel lists every phone call an AI voice agent is on right
 
 A call leaves the list when it ends or a person takes it over.
 
+:::note[More than one server]
+A live (speech-to-speech) AI call runs on the server that answered it. When the site runs on several servers, enable the **Redis** feature so **Message the AI**, **Take over** and the caller's keys reach that server from any other. Without Redis, they reach only calls held by the server your request lands on.
+:::
+
 ## Who can do what
 
 | Action | Where | Permission |

@@ -107,3 +107,17 @@ public sealed class RealtimeVoiceStartup : StartupBase
         services.Replace(ServiceDescriptor.Scoped<IRealtimeVoiceConversationRunner, RealtimeVoiceConversationRunner>());
     }
 }
+
+/// <summary>
+/// Relays commands for live AI calls between the tenant's nodes over Redis, so a supervisor whose request lands on
+/// one node reaches a live session another node holds. Without Redis, commands reach only the node's own calls.
+/// </summary>
+[RequireFeatures("OrchardCore.Redis")]
+public sealed class RedisVoiceCallRelayStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton<IAIVoiceCallMessageBus, RedisAIVoiceCallMessageBus>();
+        services.AddSingleton<IAIVoiceCallCommandRelay, AIVoiceCallCommandRelay>();
+    }
+}
