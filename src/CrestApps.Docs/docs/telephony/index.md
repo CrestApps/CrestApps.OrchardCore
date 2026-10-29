@@ -394,6 +394,8 @@ Enabling diagnostics does **not** add any browser console logging; the data is s
 
 ### Keypad, recent calls, and extension tabs
 
+<YouTube video="telephony-calls" title="Video overview of placing and handling calls from the soft phone" />
+
 The widget's footer is a tab bar that switches the panel between built-in and contributed views:
 
 - **Keypad**, **Recent** and **Voicemail** – the built-in views. **Recent** is read from the persisted interaction store (see below) and loads the configured number of calls, `30` by default. **Voicemail** counts unread messages in a badge (see [Voicemail](../user-manual/voicemail.md) in the user manual). What each tab shows the agent is described under [The tabs](../user-manual/soft-phone.md#the-tabs).
