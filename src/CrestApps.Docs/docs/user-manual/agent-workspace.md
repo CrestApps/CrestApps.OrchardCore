@@ -22,6 +22,8 @@ An agent works with three things on screen:
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-agent-workspace" title="Video overview of the agent workspace: signing in, presence, My workspace and the docked agent bar" />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of an agent signing in to a queue and a campaign from the soft phone Work tab and setting presence to Available" start={36} end={62} />
 
 ## Your shift at a glance
@@ -35,6 +37,8 @@ An agent works with three things on screen:
 
 ## Start your shift: sign in to queues and campaigns
 
+<YouTube video="contact-center-agent-workspace" title="Video of signing in to two queues from the soft phone Work tab" start={80} end={122} />
+
 You sign in from the soft phone, not from **My workspace**. The workspace only shows a chip for each queue you are signed in to.
 
 1. Open the soft phone and choose the **Work** tab.
@@ -45,6 +49,8 @@ You sign in from the soft phone, not from **My workspace**. The workspace only s
 To leave one queue or campaign and stay in the others, click its **Sign out**. At the end of your shift click **Sign out of all**. The page does not reload when you sign in or out.
 
 ## Set your presence
+
+<YouTube video="contact-center-agent-workspace" title="Video of the presence menu at the top of the soft phone" start={122} end={149} />
 
 Pick your presence from the menu at the top of the soft phone, or from the presence button in **My workspace**.
 
@@ -57,6 +63,8 @@ A break that is waiting for your current work to end shows as **Break pending** 
 
 ## My workspace
 
+<YouTube video="contact-center-agent-workspace" title="Video of My workspace: presence, the signed in to panel, the active interaction and recent activity" start={149} end={187} />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the agent workspace showing presence, queue chips, the active interaction panel and recent activity" start={7} end={33} />
 
 Open **Interaction Center > My workspace**. Keep it open, with the soft phone, for your whole shift. From top to bottom:
@@ -66,7 +74,7 @@ Open **Interaction Center > My workspace**. Keep it open, with the soft phone, f
 | **Name, extension and presence** | Who is signed in, your [extension](extensions.md) (the `#` badge), and a presence button to change your state. |
 | **Connection** | *Connected* while live updates work. *Connection lost. Reconnecting...* or *Disconnected. Live updates are paused.* means the page will not show new offers until it reconnects. |
 | **Live dashboard** | A shortcut, shown to supervisors only. |
-| **Queue chips** | The queues you are signed in to, with how many items are waiting in each, so you can see where the pressure is. Sign in and out from the soft phone Work tab. |
+| **Signed in to** | A panel of queue chips: the queues you are signed in to, with how many items are waiting in each, so you can see where the pressure is. Sign in and out from the soft phone Work tab. |
 | **Offer card** | A new offer, with the caller, the queue and a countdown (*Respond in 25s*). Click **Accept** or **Decline**. See [Answer or decline an offer](#answer-or-decline-an-offer). |
 | **Active interaction** | The interaction you are working: customer, direction, queue, number, status and talk time, with **Open customer record**, **Complete activity**, and the recording controls below. It says *No active interactions right now* until you accept something. It fills in while the call is live: an inbound call once you accept it, and a preview call as soon as it is dialed. A power or progressive call shows *Waiting for a connected call* until you are connected, or, when the dialer profile shows each dial, *Dialing…*, *Screening…* or *Connecting…* with the customer's name (see [Calls from a dialer campaign](#calls-from-a-dialer-campaign)). The status follows the call (*Ringing*, *Connected*, *Held*). When the call ends it shows *Ended* for as long as you are in wrap-up, and clears once you complete the activity. A dial nobody answered clears straight away. The docked agent bar shows the same call. |
 | **Recent activity** | Your latest interactions. See [Review your recent activity](#review-your-recent-activity). |
@@ -136,6 +144,8 @@ While the recording is paused, supervisors cannot listen in to the call, and a s
 These need the *Pause recording on own live interactions* and *Initiate secure capture on own live interactions* permissions (the *Agent* role has both), the [Contact Center settings](contact-center-settings.md) to be switched on and, for pausing, a phone provider that can pause recording.
 
 ## The docked agent bar
+
+<YouTube video="contact-center-agent-workspace" title="Video of the docked agent bar collapsed and expanded on an admin page" start={187} end={219} />
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the docked agent bar collapsed on an admin page and expanded to show the agent's status" start={65} end={78} />
 

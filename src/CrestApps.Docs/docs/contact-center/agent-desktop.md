@@ -167,6 +167,8 @@ The Subject Flow is the primary business workflow for work completion. Use it fo
 
 ### 1. Sign in and set your presence
 
+<YouTube video="contact-center-agent-workspace" title="Video overview of the agent workspace: signing in, presence, My workspace and the docked agent bar" />
+
 Agents sign in to queues and campaigns from the soft phone's **Work** tab and set their presence from the soft phone or the workspace; see [Sign in to queues and campaigns](../user-manual/agent-workspace.md#start-your-shift-sign-in-to-queues-and-campaigns) and [Set your presence](../user-manual/agent-workspace.md#set-your-presence).
 
 - The **Work** tab signs the agent in and out over the live Contact Center connection without reloading the page, so the queue membership updates in place and the browser joins or leaves the live queue groups at once. The live session membership follows too, so signing out removes this browser session from the queue and campaign state immediately.
