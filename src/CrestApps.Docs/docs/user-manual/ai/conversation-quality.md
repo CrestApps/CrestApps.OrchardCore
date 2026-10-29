@@ -60,6 +60,25 @@ To have the AI rewrite a profile's instructions until simulated customers pass, 
 Put the test cases in a **For Each** loop: a list of customers, each with their own criteria, and use the loop's current item, `{{ Workflow.Output.Current }}` unless you renamed it, in **Customer** and **Criteria**. Every result is kept, so the **Conversation evaluations** report shows the pass rate of the whole run.
 :::
 
+## Keep a catalog of tests
+
+With the **AI Quality** feature on, **Artificial Intelligence > Tests** keeps your simulation tests, so you can run them again after every change instead of building a workflow for each.
+
+A **test case** has:
+
+- the **AI profile** to test, and optionally a **Version** of it;
+- the **Simulated customer**: who they are, what they want and how they behave;
+- **Success criteria**, one per line, and the **Passing score**;
+- **Conversation variables**, one `name: value` per line, which the AI sees as it would see real ones;
+- **Mocked tools**, one `tool name: result` per line: the named tool returns that result instead of running, so a test books, charges and texts nothing for real;
+- the **Most customer turns**, and the models that play the customer and judge.
+
+To run tests, click **Run** on a test, or select several and choose **Run** or **Run 5 times** under the list's actions. Runs are queued and start within a minute; the **Runs** page shows each one as it finishes, with the pass rate of the batch. Open a run to read the conversation and each criterion, met or not, with the reason.
+
+To run the tests from a build pipeline, turn on **AI Chat WebAPI** too and call the API with a token from the site's OpenID server: `GET /api/ai/v1/tests` lists the tests, `POST /api/ai/v1/tests/batches` with `{ "profileId": "...", "repeats": 3 }` (or `testCaseIds`) queues a batch, and `GET /api/ai/v1/tests/batches/{batchId}` returns each run and the pass rate, with `completed` set once every run has finished. The client's role needs the **Manage AI tests, QA cohorts and alert rules** permission.
+
+To make a test from a real conversation, open **Artificial Intelligence > AI Chat sessions**, and choose **Create test** in a conversation's menu. The test plays that conversation's customer again, with its variables, so you can change the profile until the conversation goes the way it should, and keep the test to check it stays that way.
+
 ## Compare two profiles on live traffic
 
 The **Split Traffic** task sends each run of a workflow down one of several outcomes, in proportion to their weights. Combined with **Use AI Profile** in an **AI Conversation Starting** workflow, it answers part of your conversations with a different profile.

@@ -29,6 +29,11 @@ public static class AIPermissions
     public static readonly Permission ManageAIPersonas = new("ManageAIPersonas", LocalizationSource.Create("Manage AI personas", typeof(AIPermissions)));
 
     /// <summary>
+    /// Gets the permission to manage AI quality: simulation tests, QA cohorts, the QA dashboard and alert rules.
+    /// </summary>
+    public static readonly Permission ManageAIQuality = new("ManageAIQuality", LocalizationSource.Create("Manage AI tests, QA cohorts and alert rules", typeof(AIPermissions)));
+
+    /// <summary>
     /// Gets the permission to manage AI deployments.
     /// </summary>
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", LocalizationSource.Create("Manage AI deployments", typeof(AIPermissions)));

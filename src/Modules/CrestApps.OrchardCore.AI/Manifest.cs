@@ -80,3 +80,14 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.Quality,
+    Name = "AI Quality",
+    Description = "Simulation test cases you run against AI profiles from the admin or a CI pipeline, QA cohorts that score a sample of real conversations, a QA dashboard, and alert rules that watch the AI's metrics.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
