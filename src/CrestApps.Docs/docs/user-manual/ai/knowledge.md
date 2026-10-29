@@ -41,20 +41,20 @@ The video covers why a general model needs your knowledge, the four ways to add 
 
 ## Before you start
 
-<YouTube video="ai-knowledge" title="Video of creating the documents index" start={95} end={143} />
+<YouTube video="ai-knowledge" title="Video of creating the documents index" start={95} end={145} />
 
-Knowledge is stored in a search index that understands meaning, not just words. Your technical team sets up the search service once. Then an administrator creates the indexes in **Search > Indexing** with **Add index**, choosing the type, and, for an **AI Knowledge Base Index**, an **Embedding deployment** (see [Connections and deployments](connections.md)):
+Knowledge is stored in a search index that understands meaning, not just words. Your technical team sets up the search service once. Then an administrator creates the indexes in **Search > Indexing** with **Add index**, choosing the type, and, for an **AI Documents** index or an **AI Knowledge Base Index**, an **Embedding deployment** (see [Connections and deployments](connections.md)):
 
 | Index type | Used for |
 | --- | --- |
-| **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. It has no embedding choice of its own: it uses the site's **Default embedding deployment**. Then choose it under **Settings > Artificial Intelligence > Documents > Index profile**. |
+| **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. Choose its **Embedding deployment**: the field is on the index form when the **AI Documents for Chat Interactions** feature is on, and without one the documents of a profile are not found. Then choose the index under **Settings > Artificial Intelligence > Documents > Index profile**. |
 | **AI Knowledge Base Index** (Azure AI Search or Elasticsearch) | Data sources, file sources and web crawlers. |
 
 The embedding deployment of an index cannot be changed after the index is created. Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
 
 ## Upload documents to a profile
 
-<YouTube video="ai-knowledge" title="Video of uploading a document to a profile" start={143} end={205} />
+<YouTube video="ai-knowledge" title="Video of uploading a document to a profile" start={145} end={203} />
 
 Documents on a profile are background knowledge the assistant uses in every chat.
 
@@ -73,11 +73,11 @@ To remove a document, click its **Remove document** icon and save. **Download do
 
 The assistant uses the documents quietly; it does not tell users that it has attached files unless they ask about sources. To try it, open the profile's **Actions** menu, click **New chat**, and ask something only the documents can answer.
 
-<YouTube video="ai-knowledge" title="Video of asking a question about a profile document" start={205} end={243} />
+<YouTube video="ai-knowledge" title="Video of asking a question about a profile document" start={203} end={241} />
 
 ## Let users attach files
 
-<YouTube video="ai-knowledge" title="Video of letting people attach files to a chat" start={243} end={289} />
+<YouTube video="ai-knowledge" title="Video of letting people attach files to a chat" start={241} end={286} />
 
 To let people attach documents or pictures to a chat, open the profile's **Knowledge** tab and tick:
 
@@ -177,7 +177,7 @@ To read the site right away, open the crawler's **Actions** menu and choose **Sy
 
 ## How the assistant uses your knowledge
 
-<YouTube video="ai-knowledge" title="Video of using knowledge well" start={326} end={371} />
+<YouTube video="ai-knowledge" title="Video of using knowledge well" start={323} end={368} />
 
 - **Before each answer or on demand.** With **Enable preemptive retrieval-augmented generation (RAG)** on (under **Settings > Artificial Intelligence > Default Orchestrator**), the assistant searches your knowledge before every answer. With it off, the assistant searches when it decides it needs to. Preemptive search is always on for profiles without tools.
 - **Sources.** Statements that come from your content get small numbers, and a numbered list of sources appears under the answer. Sources with a web address are links.
