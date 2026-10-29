@@ -202,6 +202,10 @@ A user can only use a tool their role is allowed to use, even when the profile h
 
 The **Data Processing & Metrics** tab decides what happens with a chat while it runs and after it ends.
 
+<YouTube video="ai-data-extraction-post-session" title="Video overview of data extraction, post-session processing and metrics" />
+
+The video covers the timeout, extraction entries, post-session tasks and the metrics below, and where the results go.
+
 | Field | What it does |
 | --- | --- |
 | **Session inactivity timeout (minutes)** | A chat with no messages for this long is closed. At least 1 minute; default 30. Closing a chat starts post-session processing and the **AI Chat Session Closed** workflow event. |
@@ -213,6 +217,8 @@ The **Data Processing & Metrics** tab decides what happens with a chat while it 
 | **Enable session metrics** | Chat only. Collects the numbers for the chat analytics report, and adds thumbs up and down buttons to answers. |
 | **Enable AI resolution detection** | Chat only. The AI decides whether each closed chat solved the user's problem. |
 | **Enable conversion metrics** | Chat only. The AI scores each closed chat against your goals. Click **Add Goal** for each: a **Name**, a **Description** of what to judge, and a **Min score** and **Max score** (0 to 10 by default). |
+
+<YouTube video="ai-data-extraction-post-session" title="Video of extraction entries, post-session tasks and metrics" start={49} end={177} />
 
 Extracted details and post-session results can be reviewed in the [analytics reports](analytics.md) and used in [workflows](workflows.md). The analytics fields appear only after the profile is saved as a chat profile, and only when the **AI Chat Session Analytics** feature is on.
 
