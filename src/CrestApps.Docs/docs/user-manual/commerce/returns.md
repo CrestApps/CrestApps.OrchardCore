@@ -16,7 +16,13 @@ technical_manual:
 
 <AskYourAdmin />
 
+Watch the video for a tour of the settings, what a buyer does, and how to handle a return.
+
+<YouTube video="returns" title="Returns and exchanges in CrestApps for Orchard Core" />
+
 ## Set up returns
+
+<YouTube video="returns" title="Setting up returns" start={83} end={115} />
 
 Under **Settings > Commerce > Returns**:
 
@@ -29,6 +35,8 @@ Under **Settings > Commerce > Returns**:
 
 ## What buyers do
 
+<YouTube video="returns" title="What a buyer does" start={115} end={158} />
+
 A paid order with goods shows a **Returns** box on its page, in the buyer's account or on the order link a guest has, with **Return items** while the return window is open.
 
 1. The buyer clicks **Return items**, chooses **How many** of each item and **Why**.
@@ -40,6 +48,8 @@ They're emailed that the request arrived, and the **Returns** box lists it as **
 Only goods can be returned: downloads and services have nothing to send back. An item can't be returned more times than it was bought, counting earlier returns that weren't declined or withdrawn.
 
 ## Handle a return
+
+<YouTube video="returns" title="Handling a return" start={158} end={207} />
 
 **Commerce > Returns** lists the open returns, newest first. Search by return or order number, or show **Requested**, **Approved**, **Received**, **Completed**, **Declined**, **Withdrawn** or **All**. A return's page shows what's coming back, why, what it was paid, what the buyer wants and what they wrote, with a link to the order. The order's page lists its returns too.
 
@@ -65,11 +75,13 @@ You can mark a return received without approving it first, such as when a parcel
 
 ### Refund
 
-For a buyer who wants their money back, **Refund** shows the **Amount**, which starts at what the items were paid, before tax and shipping, and can be up to what can still be refunded on the order. Click **Refund and close**. The money goes back the way the buyer paid, the order shows the refund, and the buyer is emailed. You can refund before the items arrive, such as for a damaged item you don't want back.
+For a buyer who wants their money back, **Refund** shows the **Amount**, which starts at what the items were paid, before tax and shipping, and can be up to what can still be refunded on the order. Click **Refund and close**. The money goes back the way the buyer paid, the order shows the refund, and the buyer is emailed. You can refund before the items arrive, such as for a damaged item you don't want back, but only once you have approved the return: **Refund** and **Exchange** appear after you approve it, or once it is received.
 
 ### Exchange
 
-For a buyer who wants something else, send them what they asked for, then under **Exchange** add a message if you like, such as the tracking number, and click **The replacement is on its way**. The return is completed and the buyer is emailed. The replacement isn't made into an order for you: send it as you would any parcel, or [create an order](carts-and-orders.md#create-an-order-for-a-buyer) for it.
+<YouTube video="returns" title="Exchanges and declines" start={207} end={238} />
+
+For a buyer who wants something else, approve the return, which shows the **Exchange** box. Send them what they asked for, then under **Exchange** add a message if you like, such as the tracking number, and click **The replacement is on its way**. The return is completed and the buyer is emailed. The replacement isn't made into an order for you: send it as you would any parcel, or [create an order](carts-and-orders.md#create-an-order-for-a-buyer) for it.
 
 ## Things to know
 
