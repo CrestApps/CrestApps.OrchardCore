@@ -20,6 +20,10 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the voice media library and the upload form" start={194} end={218} />
 
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video of the two things called Voice Media: the Contact Center Voice Media feature and this library" start={205} end={245} />
+
+The **Voice Media** library on this page is not the **Contact Center Voice Media** feature. That feature (see **Tools > Features**) gives automated calls a live two-way audio path, which an AI voice agent needs for a live conversation. The library is part of the base Contact Center and has no feature of its own.
+
 ## Add a clip
 
 1. Open **Interaction Center > Management > Voice Media** and click **Add Voice Media**.
