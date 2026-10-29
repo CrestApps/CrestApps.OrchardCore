@@ -33,6 +33,8 @@ This module depends on:
 
 ## Setup
 
+<YouTube video="ai-memory" title="Video of creating the memory index and turning memory on" start={88} end={209} />
+
 1. Enable **AI Memory indexing using Elasticsearch**.
 2. Enable the Orchard Core Elasticsearch feature that provides search indexes.
 3. Open **Search -> Indexing** and create an **AI Memory (Elasticsearch)** index.
