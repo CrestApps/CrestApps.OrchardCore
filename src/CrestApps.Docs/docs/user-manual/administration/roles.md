@@ -16,6 +16,8 @@ Roles decide what each person can see and do. Use this page when someone cannot 
 
 <AskYourAdmin />
 
+<YouTube video="users-roles" title="Video overview of users, roles, names and avatars" />
+
 ## How roles work
 
 - A **permission** is one thing a person may do, for example *Manage Contact Center queues* or *Run 'Phone Number Verifications' Report*.
@@ -30,11 +32,14 @@ The User Manual pages list the permission each screen needs in the table at the 
 
 ## Give someone access
 
+<YouTube video="users-roles" title="Video of creating a role and giving a person a role" start={163} end={225} />
+
+
 Most of the time you only need step 1.
 
 1. **Give the person a role.** Open **Access Control > Users**, edit the user, tick the role that already has the access they need, and save.
 2. **Or add the permission to a role.** Open **Access Control > Roles**, edit the role, tick the permission in the list (it is grouped by feature), and save. Everyone who holds that role gets it.
-3. **Or create a new role.** On **Access Control > Roles**, click **Add Role**, name it, save it, then edit it to tick its permissions, and give it to the right users.
+3. **Or create a new role.** On **Access Control > Roles**, click **Add Role**, enter a **Name** and a **Description**, and click **Save & Configure** to go straight to its permissions. Tick **Allow** for each permission the role needs (the **Search permissions** box finds one by name), save, and give the role to the right users.
 
 :::tip
 Prefer roles that match job titles, such as *Agent*, *Supervisor* and *Manager*. Changing one role then updates everyone in that job at once.
