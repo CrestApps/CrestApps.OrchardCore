@@ -23,11 +23,17 @@ Store credit and points belong to a customer's account, so only signed-in buyers
 
 <AskYourAdmin />
 
+Watch the video for a tour of giving credit and points, spending them at checkout, and referral links.
+
+<YouTube video="store-credit-loyalty-referrals" title="Store credit, points and referrals in CrestApps for Orchard Core" />
+
 ## Store credit
 
 A customer's store credit is kept per currency: credit in US dollars pays only toward orders in US dollars. Each customer's page shows it, and every change is kept with its reason.
 
 ### Give or take away store credit
+
+<YouTube video="store-credit-loyalty-referrals" title="Giving store credit" start={77} end={120} />
 
 1. Open **Commerce > Customers** and open the customer.
 2. Under **Store credit**, enter an **Amount**, check the **Currency** (it starts with your checkout currency), and give a **Reason**, such as *Late delivery*.
@@ -48,6 +54,8 @@ Under the form, a table lists the latest changes to the customer's credit: **Whe
 
 ### Refund as store credit
 
+<YouTube video="store-credit-loyalty-referrals" title="Refunding as store credit" start={120} end={143} />
+
 When you refund an order whose buyer has an account, the **Refund** form on the order's page has **Give it as store credit**. Tick it to add the refund to the buyer's store credit, in the order's currency, instead of sending the money back to how they paid.
 
 - The order counts it as refunded, like any refund: it shows *Partially refunded* or *Refunded*, and the notes say *Gave $20 back as store credit.*, with your reason when you gave one.
@@ -58,6 +66,8 @@ If the credit can't be added, the refund isn't made: *The refund couldn't be giv
 
 ### Store credit at checkout
 
+<YouTube video="store-credit-loyalty-referrals" title="Store credit at checkout" start={143} end={170} />
+
 On the **Payment** step, a signed-in buyer with store credit in the order's currency sees a **Store credit** box under the order summary: *You have $25 of store credit.* and **Use my store credit**. Clicking it puts the credit toward the order, up to what's due. The box then shows how much is used (*$25 used*) and what's left (*$0 left after this order*), with **Remove**, and the summary shows **Store credit** under the **Total**. See [Checkout](checkout.md#gift-cards-store-credit-and-points).
 
 When the order is refunded later, what the store credit paid goes back on it, after the money charged to the card.
@@ -67,6 +77,8 @@ When the order is refunded later, what the store credit paid goes back on it, af
 A signed-in customer earns points on every order and spends them toward later ones. You decide what the program is called, how many points an order earns, and what a point is worth.
 
 ### Set up the program
+
+<YouTube video="store-credit-loyalty-referrals" title="The loyalty points program" start={170} end={211} />
 
 Open **Settings > Commerce > Rewards**.
 
@@ -99,6 +111,8 @@ A table lists the latest changes: **When**, **What**, **Points** and **Balance**
 
 ### Points at checkout
 
+<YouTube video="store-credit-loyalty-referrals" title="Points at checkout" start={211} end={237} />
+
 On the **Payment** step, a signed-in buyer with points sees a box named after your program:
 
 - With enough points: *You have 1,250 points, worth $12.50.* and **Use my points**. Clicking it pays toward the order with their points, up to what's due. The box then says *$12.50 paid with your points*, with **Remove**, and the summary shows the program's name under the **Total**.
@@ -111,6 +125,8 @@ Points are worth their value to the cent below, and only the points needed are s
 Each signed-in customer gets a referral link, such as *https://example.com/refer/K7PQ2MXA*, under **Refer a friend** in their account. A friend who opens it can get a discount on their first order, and the customer is rewarded when that order is placed.
 
 ### Set up referrals
+
+<YouTube video="store-credit-loyalty-referrals" title="Setting up referrals" start={237} end={268} />
 
 Open **Settings > Commerce > Referrals**.
 
@@ -127,6 +143,8 @@ Create a coupon for referrals, such as *15% off your first order*, and tick **On
 :::
 
 ### When a friend opens the link
+
+<YouTube video="store-credit-loyalty-referrals" title="The referral link and the reward" start={268} end={308} />
 
 The link opens your home page with a message:
 
