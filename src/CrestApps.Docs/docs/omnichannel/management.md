@@ -31,6 +31,8 @@ The screencast below enables **Omnichannel Management**, opens the **Management*
 
 <YouTube video="omnichannel-2-walkthroughs" title="Video of enabling Omnichannel Management and adding dispositions" start={7} end={40} />
 
+<YouTube video="contact-center-campaigns" title="Video of campaigns and campaign groups" />
+
 The module ships as two features. `CrestApps.OrchardCore.Omnichannel.Activities` is the headless half: contact, subject, campaign, and activity catalogs, their stores and managers, the content parts and indexes, the migrations, the permissions, and the subject-disposition endpoint. `CrestApps.OrchardCore.Omnichannel.Managements` adds the CRM administration experience on top of it - the screens, display drivers, and admin menus described below - and enabling it brings the headless feature with it.
 
 The split exists so that a headless consumer of the activity model, such as the [Contact Center](../contact-center/index.md), can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
