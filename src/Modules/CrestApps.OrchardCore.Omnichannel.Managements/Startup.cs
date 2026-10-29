@@ -1,6 +1,7 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
@@ -66,6 +67,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>()
             .UseDisplayDriver<OmnichannelContactMemoryDisplayDriver>();
         services.AddScoped<ILeadConversionRepointer, AIContactMemoryLeadConversionRepointer>();
+        services.AddScoped<IAIConversationClosedHandler, AIContactFieldMapper>();
         services.AddContactMethods();
         services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();

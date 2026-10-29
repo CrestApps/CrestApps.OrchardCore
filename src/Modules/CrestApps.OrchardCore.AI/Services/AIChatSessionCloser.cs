@@ -125,6 +125,8 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
 
         await RememberAsync(profile, chatSession, prompts, cancellationToken);
 
+        await NotifyClosedAsync(profile, chatSession, cancellationToken);
+
         await TriggerSessionClosedWorkflowAsync(profile, chatSession);
     }
 
@@ -163,6 +165,22 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
         catch (Exception ex)
         {
             _logger.LogError(ex, "Updating the contact memory from session '{SessionId}' failed.", chatSession.SessionId);
+        }
+    }
+
+    // Lets other features act on the closed conversation, such as writing its extracted fields to the contact.
+    private async Task NotifyClosedAsync(AIProfile profile, AIChatSession chatSession, CancellationToken cancellationToken)
+    {
+        foreach (var handler in _serviceProvider.GetServices<IAIConversationClosedHandler>())
+        {
+            try
+            {
+                await handler.ClosedAsync(profile, chatSession, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "A closed-conversation handler failed for session '{SessionId}'.", chatSession.SessionId);
+            }
         }
     }
 
