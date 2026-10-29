@@ -109,11 +109,15 @@ Click **Save**.
 
 ### Other site-wide AI settings
 
+<YouTube video="ai-site-settings" title="Video tour of Settings, Artificial Intelligence" />
+
+The video is a tour of every card of the page. Saving the page may restart the website for a moment.
+
 The same page has these sections, each explained on its own page:
 
 | Section | Where it is explained |
 | --- | --- |
-| **General** | **Enable preemptive memory retrieval** lets the assistant read a user's [memory](memory.md) before it answers. The other options are technical; see the [Technical Manual](../../ai/overview.md#site-settings). |
+| **General** | **Enable preemptive memory retrieval** lets the assistant read a user's [memory](memory.md) before it answers. **Maximum iterations per request** limits how many times the assistant may call tools to write one answer (never more than 100). **Enable distributed caching** lets the AI services cache answers on a shared cache, and **Enable OpenTelemetry** sends AI requests to your monitoring tool. See also the [Technical Manual](../../ai/overview.md#site-settings). |
 | **Default Orchestrator** | **Enable preemptive retrieval-augmented generation (RAG)**: search your knowledge before every answer. See [Knowledge](knowledge.md). |
 | **Prompt Security** and **Visitor Identity** | Protections for public chat. See [Chat widgets](chat-widgets.md#protect-a-public-assistant). |
 | **Data Sources** and **Documents** | Defaults for [Knowledge](knowledge.md). |
