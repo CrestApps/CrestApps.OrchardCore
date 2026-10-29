@@ -24,7 +24,7 @@ There are three sources:
 | --- | --- | --- |
 | **Manual** | Activities assigned to the agents you pick, shared out in turn. | Agent call or text lists worked from **Activities**. |
 | **Automatic** | Unassigned **automated** activities an AI profile works on its own. | AI SMS outreach and AI voice calls. See [Automated AI SMS and voice](automated-ai.md). |
-| **Dialer** | Unassigned phone activities queued for the outbound dialer. | Preview, power and progressive dialing. Shown when the Contact Center Outbound Dialer feature is on. |
+| **Dialer** | Unassigned phone activities queued for the outbound dialer. | Preview dialing, and power, progressive and predictive dialing with Contact Center Paced Dialing. Shown when the Contact Center Outbound Dialer feature is on. |
 
 The **Load Activities** list shows the newest loads first. A load does nothing when you save it: it starts only when you choose **Load activities** from its **Actions** menu, or click **Save & Load activities** on the load form.
 
@@ -59,7 +59,7 @@ A message tells you how many loads were deleted and how many were skipped.
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a dialer activity load with a dialer profile, a campaign and the number its calls are dialed from" start={1181} end={1228} />
 
 1. Click **Add Activity Load** and choose **Dialer**.
-2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
+2. Pick the **Dialer profile** (it decides preview, power, progressive or predictive; see [Compare the dialing modes](dialer-profiles.md#compare-the-dialing-modes)) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
 3. Fill in the record filters, save, and choose **Actions > Load activities**.
 
 Dialer loads always use the phone channel and create manual (agent-handled) activities. The activities are left unassigned, take the dialing mode of the dialer profile, and are queued for the campaign as they are created; the dialer then offers them to the agents signed in to that campaign. The campaign always comes from the load (or the subject's default campaign), never from the dialer profile.
@@ -78,7 +78,7 @@ The form has three cards: **Activity load settings** (what to create), **Record 
 | **Campaign** | Stamped on every activity. Leave it empty to use the subject's default campaign. |
 | **Channel** | **Phone** or **SMS**. Required, and hidden for dialer loads. |
 | **Address** | Automatic loads: the number to send from or call from. Only the [Omnichannel Addresses](channel-endpoints.md) used for the **Channel** picked are listed: numbers used for text messages for SMS, numbers used for voice calls for Phone. |
-| **Dialer profile** | Dialer loads: required. It decides the dialing mode (preview, power or progressive) and its pacing. |
+| **Dialer profile** | Dialer loads: required. It decides the dialing mode (preview, power, progressive or predictive) and its pacing. |
 | **Dial from** | Dialer loads: the number the customers called from this load see, picked from the addresses used for voice calls. It is shown instead of the agent's own number and the dialer profile's **Caller ID**, unless the profile is set to **Always show this caller ID**. Leave it on **Default caller ID** to keep those. |
 | **Schedule at** | When the activities become due. Required. |
 | **User(s) to assign activities to** | Manual loads: who gets the work. The activities are shared out in turn between them. |

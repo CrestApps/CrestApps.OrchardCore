@@ -78,7 +78,7 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | **Contact Center Inbound Entry Points** | Entry points for your numbers. | [Entry points and IVR](../entry-points-and-ivr.md) |
 | **Contact Center Inbound Voice** | Call entry points: welcome messages, phone menus, after-hours handling and voicemail. | [Entry points and IVR](../entry-points-and-ivr.md), [Voicemail](../voicemail.md) |
 | **Contact Center Outbound Dialer** | Dialer profiles, preview dialing and queue callbacks. | [Dialer profiles](../dialer-profiles.md) |
-| **Contact Center Paced Dialing** | Power and progressive dialing. | [Dialer profiles](../dialer-profiles.md) |
+| **Contact Center Paced Dialing** | Power, progressive and predictive dialing. | [Dialer profiles](../dialer-profiles.md) |
 | **Contact Center Call Recording** | Call recording and its rules. | [Contact Center settings](../contact-center-settings.md) |
 | **Contact Center Secure Data Capture** | A secure link for customers to type card or bank details. | [Contact Center settings](../contact-center-settings.md), [Agent workspace](../agent-workspace.md) |
 | **Contact Center Supervision & Live Dashboard** | The live dashboard and listen, whisper and barge. | [Live dashboard](../live-dashboard.md) |
