@@ -336,7 +336,7 @@ public sealed partial class VoiceAgentConversationLoop
         // A transfer to a phone number leaves the platform: the provider rings the number and connects the caller.
         if (takeOverRequest is not null && string.IsNullOrEmpty(takeOverRequest.TargetAgentId) && !string.IsNullOrEmpty(takeOverRequest.TargetPhoneNumber))
         {
-            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest.TargetPhoneNumber, cancellationToken);
+            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest, cancellationToken);
 
             return;
         }

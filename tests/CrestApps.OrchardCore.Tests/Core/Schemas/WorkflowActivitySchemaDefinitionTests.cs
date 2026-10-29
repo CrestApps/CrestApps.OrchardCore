@@ -87,6 +87,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "StartOmnichannelActivityTask",
         "StopCallRecordingTask",
         "TimerEvent",
+        "TransferAICallTask",
         "TransferToAgentTask",
         "UnassignUserRoleTask",
         "UnpublishContentTask",

@@ -185,6 +185,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         try
         {
+            // A warm or screened transfer's side call, or the caller holding for one.
+            if (await HandleAttendedTransferEventAsync(voiceEvent, media, cancellationToken))
+            {
+                return;
+            }
+
             switch (voiceEvent.Kind)
             {
                 case VoiceAgentEventKind.Answered:

@@ -83,7 +83,8 @@ public sealed partial class VoiceAgentConversationLoop
 
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
 
-        return current?.AiEscalated == true || current?.Status.IsTerminal() == true;
+        // A warm or screened transfer is under way once its side call rings; the caller is connected later.
+        return current?.AiEscalated == true || current?.Status.IsTerminal() == true || current?.Has<AIAttendedTransfer>() == true;
     }
 
     /// <summary>
@@ -167,15 +168,25 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="voiceEvent">The call.</param>
     /// <param name="media">The media provider carrying it.</param>
     /// <param name="activity">The call's activity.</param>
-    /// <param name="phoneNumber">The number to ring.</param>
+    /// <param name="request">The transfer: the number to ring, and how.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     private async Task TransferToNumberAsync(
         VoiceAgentEvent voiceEvent,
         IVoiceAgentMediaProvider media,
         OmnichannelActivity activity,
-        string phoneNumber,
+        AITakeOverRequest request,
         CancellationToken cancellationToken)
     {
+        var phoneNumber = request.TargetPhoneNumber;
+
+        // A warm or screened transfer rings the number on a side call first; the caller is connected, or given back
+        // to the AI, from that call's events.
+        if (request.TransferMode != AICallTransferMode.Cold &&
+            await StartAttendedTransferAsync(voiceEvent, media, activity, request, cancellationToken))
+        {
+            return;
+        }
+
         if (!await media.TransferAsync(voiceEvent.ProviderCallId, phoneNumber, cancellationToken))
         {
             _logger.LogWarning(
@@ -191,6 +202,7 @@ public sealed partial class VoiceAgentConversationLoop
         await RecordHandoffAsync(activity, cancellationToken, current => current.Put(new AICallTransfer
         {
             PhoneNumber = phoneNumber,
+            Mode = AICallTransferMode.Cold,
             TransferredUtc = _clock.UtcNow,
         }));
 

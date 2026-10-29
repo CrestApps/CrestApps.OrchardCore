@@ -996,6 +996,16 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string To { get; set; }
         public string GetExtension() { }
     }
+    public sealed class VoiceAgentSideCallRequest
+    {
+        public VoiceAgentSideCallRequest() { }
+        public string ActivityId { get; set; }
+        public string CallerId { get; set; }
+        public bool DetectAnsweringMachine { get; set; }
+        public string PhoneNumber { get; set; }
+        public string ProviderCallId { get; set; }
+        public int RingTimeoutSeconds { get; set; }
+    }
     public enum VoiceCallState
     {
         Planned = 0,
@@ -1072,11 +1082,15 @@ namespace CrestApps.OrchardCore.Telephony.Services
     {
         string DefaultVoice { get; }
         string TechnicalName { get; }
+        System.Threading.Tasks.Task<bool> BridgeAsync(string providerCallId, string otherProviderCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> DialSideCallAsync(CrestApps.OrchardCore.Telephony.Models.VoiceAgentSideCallRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> GatherAsync(string providerCallId, string text, string validDigits, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> HangupAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> PlayAudioAsync(string providerCallId, string audio, bool loop = true, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SendDigitsAsync(string providerCallId, string digits, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SpeakAsync(string providerCallId, string text, string voice = null, string language = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> StartTranscriptionAsync(string providerCallId, string language = null, string commandId = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> StopAudioAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> StopTranscriptionAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> TransferAsync(string providerCallId, string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
     }

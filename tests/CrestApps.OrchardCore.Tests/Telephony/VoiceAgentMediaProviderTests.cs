@@ -1,5 +1,7 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -247,6 +249,56 @@ public sealed class VoiceAgentMediaProviderTests
         Assert.Same(telnyx, resolver.GetDefault());
     }
 
+    [Fact]
+    public async Task DialSideCall_RingsTheNumberMarkedAsTheAITransferLegOfTheCaller()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"call_control_id":"side-1"}}""");
+        var provider = CreateProvider(handler, new TelnyxOptions { IsEnabled = true, ConnectionId = "conn-1", DefaultOutboundCallerId = "+15550001111" });
+
+        // Act
+        var sideCallId = await provider.DialSideCallAsync(new VoiceAgentSideCallRequest
+        {
+            ProviderCallId = "caller-1",
+            ActivityId = "act-1",
+            PhoneNumber = "+15552223333",
+            RingTimeoutSeconds = 20,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("side-1", sideCallId);
+        Assert.Equal("/v2/calls", handler.Requests[0].Path);
+        Assert.Contains("15552223333", handler.Requests[0].Body, StringComparison.Ordinal);
+        Assert.Contains("answering_machine_detection", handler.Requests[0].Body, StringComparison.Ordinal);
+
+        var clientState = JsonDocument.Parse(handler.Requests[0].Body).RootElement.GetProperty("client_state").GetString();
+        var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(clientState));
+        Assert.True(TelnyxOutboundBridgeState.TryParse(decoded, out var state));
+        Assert.Equal(TelnyxOutboundBridgeState.AiTransferLegIntent, state.Intent);
+        Assert.Equal("caller-1", state.PeerCallControlId);
+        Assert.Equal("act-1", state.ActivityId);
+    }
+
+    [Fact]
+    public async Task BridgeAndHoldAudio_ReachTheirOwnActions()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler);
+
+        // Act
+        var played = await provider.PlayAudioAsync("caller-1", "https://example.com/hold.mp3", cancellationToken: TestContext.Current.CancellationToken);
+        var stopped = await provider.StopAudioAsync("caller-1", TestContext.Current.CancellationToken);
+        var bridged = await provider.BridgeAsync("caller-1", "side-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(played && stopped && bridged);
+        Assert.Equal("/v2/calls/caller-1/actions/playback_start", handler.Requests[0].Path);
+        Assert.Equal("/v2/calls/caller-1/actions/playback_stop", handler.Requests[1].Path);
+        Assert.Equal("/v2/calls/caller-1/actions/bridge", handler.Requests[2].Path);
+        Assert.Contains("side-1", handler.Requests[2].Body, StringComparison.Ordinal);
+    }
+
     private static TelnyxVoiceAgentMediaProvider CreateProvider(HttpMessageHandler handler, TelnyxOptions options = null)
     {
         var httpClient = new HttpClient(handler)
@@ -264,6 +316,6 @@ public sealed class VoiceAgentMediaProviderTests
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 
-        return new TelnyxVoiceAgentMediaProvider(apiClient);
+        return new TelnyxVoiceAgentMediaProvider(apiClient, new TestOptionsMonitor<TelnyxOptions>(options));
     }
 }

@@ -59,6 +59,7 @@ public sealed class Startup : StartupBase
         // because the session and the request run in different scopes.
         services.AddSingleton<IAIVoiceCallCommands, AIVoiceCallCommands>();
         services.AddScoped<IAIVoiceCallSupervision, AIVoiceCallSupervision>();
+        services.AddScoped<IAIVoiceCallTransfers, AIVoiceCallTransfers>();
 
         // The AI usage report's per-call summaries. The tracker outlives requests, because a turn-based call's
         // measurements span many of them; the store is the analytics feature's, and records nothing without it.

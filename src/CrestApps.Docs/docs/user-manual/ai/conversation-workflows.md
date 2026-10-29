@@ -99,6 +99,27 @@ The **AI Call Action** task (under **AI Conversations**) acts on a phone call th
 
 **Call** says which call, and defaults to `{{ Workflow.Input.ActivityId }}`: the call the AI conversation event or the AI tool was raised for. So a workflow the AI calls as a tool can transfer its own call, and an **AI Conversation Turn** workflow can hand a caller who says *lawyer* to a person.
 
+### Warm and screened transfers
+
+The **Transfer AI Call** task (under **AI Conversations**) transfers a live AI call to a phone number, and chooses **How**:
+
+- **Cold** connects the caller to whoever answers and the AI drops off, like **Transfer the call to a phone number** above.
+- **Warm** rings the number while the caller holds. Whoever answers hears a private **Briefing** first, which the caller does not hear, and then the two are connected. Leave the briefing empty to have the AI write it from the conversation.
+- **Screened** rings the number the same way, reads the briefing and asks *Press 1 to take the call now, or 2 if you cannot.* On 1 the two are connected.
+
+On a warm or screened transfer, the caller goes back to the AI when the number is busy, nobody answers within **Ring for**, a voicemail answers, or the person presses 2 or hangs up. The AI is told why and offers to take a message or arrange a callback.
+
+| Setting | What it does |
+| --- | --- |
+| **Phone number** | The number to ring, with its country code. Liquid is supported. |
+| **Briefing** | What the person answering hears before they are connected. |
+| **Introduction** | A line spoken once the two are connected, such as *You're through to our billing team now*. |
+| **Ring for** | How long the number rings, 5 to 120 seconds. |
+| **Hold audio** | What the caller hears while they hold: the URL of an MP3 or WAV file, or the name of audio stored with the phone provider. Empty asks the caller to hold. |
+| **Show the caller's number** | The person rung sees the caller's number instead of ours, where the carrier allows it. |
+
+Warm and screened transfers need a phone provider that can place a second call (Telnyx). With another provider, the caller is transferred cold.
+
 ## React while the conversation is going on
 
 The **AI Conversation Turn** event (under **AI Conversations**) starts a workflow after each turn is saved, on every channel, while the conversation is still going on. What was said is in `Workflow.Input.Text`, and who said it in `Workflow.Input.Role` (`Customer` or `Assistant`). Choose **What the customer says** to run only on the customer's turns.
