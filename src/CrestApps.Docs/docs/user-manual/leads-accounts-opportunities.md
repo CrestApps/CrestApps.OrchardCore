@@ -19,7 +19,11 @@ When a lead qualifies, you **convert** it. Conversion creates a contact, or merg
 
 <AskYourAdmin />
 
+<<<<<<< HEAD
 <YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
+=======
+<YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
+>>>>>>> origin/docs/omnichannel-leads-video
 
 If you never turn the feature on, or never use accounts, contacts work exactly as before.
 
@@ -53,6 +57,9 @@ A type with the Omnichannel Contact part and no Lead part is a contact type, as 
 
 ## Work with leads
 
+<YouTube video="omnichannel-leads" title="Video of the leads list and adding a lead" start={46} end={113} />
+
+
 **Interaction Center > Leads** lists your open leads. Click **New** followed by the lead type's name to add one. Besides the name and contact methods, a lead has:
 
 | Field | What it is for |
@@ -81,6 +88,9 @@ The `phone:` terms from [Contacts](contacts.md) work here too.
 
 ### Call and text leads
 
+<YouTube video="omnichannel-leads" title="Video of calling and texting a lead" start={157} end={182} />
+
+
 Everything you do with a contact works on a lead: **Add Activity**, **List Activities**, calls, texts and automated AI conversations.
 
 - **Activity loads.** Pick the lead type as the **Record type** and a **Lead filters** panel appears right under it, inside **Record filters**. You can filter by status, imported file, source, rating and owner.
@@ -94,6 +104,9 @@ Everything you do with a contact works on a lead: **Add Activity**, **List Activ
 - **Inbound calls and texts.** When a number belongs to both a contact and a lead, the contact wins. A converted lead never matches.
 
 ## Convert a lead
+
+<YouTube video="omnichannel-leads" title="Video of converting a lead" start={182} end={241} />
+
 
 1. Open the lead and click **Convert Lead**.
 2. Choose the **Contact**:
@@ -115,6 +128,9 @@ What conversion does:
 You cannot convert a lead while a call or message with it is in progress.
 
 ### Let the AI convert leads
+
+<YouTube video="omnichannel-leads" title="Video of the automatic ways to convert a lead" start={241} end={293} />
+
 
 An **Automatic** activity load of a lead type shows an **AI lead conversion** card. Tick **Allow AI to convert the lead**, and when an automated text or call ends, the AI decides from the conversation whether the lead qualified. If it did, the lead is converted before the disposition's follow-up actions run, so those work on the new contact.
 
@@ -182,6 +198,9 @@ Manage both lists under **Interaction Center > Management**. Unlike lead sources
 The name of a status or stage cannot be changed after you create it.
 
 ## Import and export leads
+
+<YouTube video="omnichannel-leads" title="Video of the lead import screen and its options" start={113} end={157} />
+
 
 Import and export leads the same way as [contacts](contacts.md), through Bulk Import and Bulk Export. This needs the Content Transfer feature.
 
