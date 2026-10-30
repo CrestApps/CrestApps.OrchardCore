@@ -71,9 +71,15 @@ Rows a contact import leaves out on purpose, such as duplicate phone numbers or 
 
 ### Follow an import
 
+<<<<<<< HEAD
 <YouTube video="content-transfer" title="Video of following an import and downloading the rejected rows" start={197} end={276} />
 
 Each import is a row on the **Bulk Import** page showing the file name, content type, its status, when it was created, who uploaded it, how many records imported (the green number) and how many had errors (the red number), with the reason a row was rejected under the file name. While it runs, a progress bar shows *N of M records processed*. The list does not refresh by itself: reload the page to see an import's latest status.
+=======
+<YouTube video="content-transfer-recovery" title="Video of an import that finishes with errors, the Download errors action, and deleting an entry" start={40} end={112} />
+
+Each import is a row on the **Bulk Import** page showing the file name, content type, who uploaded it, its status, how many records imported and how many had errors. When rows fail, the entry also groups the errors by reason, for example *Did not pass validation*, with how many rows each reason covers. While it runs, a progress bar shows *N of M records processed*.
+>>>>>>> origin/docs/content-transfer-recovery-video
 
 | Status | Meaning |
 | --- | --- |
