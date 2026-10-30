@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<UpdateCalendarEventTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+    @T["Update Calendar Event"]
+</h4>
+<p>@T["Changes an event's title, time, place or description. Empty fields are left as they are."]</p>

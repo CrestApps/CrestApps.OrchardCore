@@ -139,6 +139,7 @@
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Taxation.Core\CrestApps.OrchardCore.Taxation.Core.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Calendars\CrestApps.OrchardCore.Calendars.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Customers\CrestApps.OrchardCore.Customers.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.AzureAI\CrestApps.OrchardCore.Products.AzureAI.csproj" />

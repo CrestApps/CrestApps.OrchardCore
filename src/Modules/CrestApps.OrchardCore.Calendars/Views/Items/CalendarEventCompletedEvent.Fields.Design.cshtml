@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventCompletedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Calendar Event Completed"])
+    </h4>
+</header>

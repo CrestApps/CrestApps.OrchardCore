@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarAttendeeRespondedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-reply" aria-hidden="true"></i>
+    @T["Calendar Attendee Response Received"]
+</h4>
+<p>@T["Starts when an attendee answers an invitation."]</p>

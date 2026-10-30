@@ -13,6 +13,12 @@ public sealed class CalendarOccurrenceQuery
     public IList<string> CalendarIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether to read events on every calendar, for background work such as reminders. Bounded by
+    /// <see cref="CalendarOptions.MaxEventsPerQuery"/>.
+    /// </summary>
+    public bool AllCalendars { get; set; }
+
+    /// <summary>
     /// Gets or sets users whose invitations to read, on any calendar. Declined invitations are left out.
     /// </summary>
     public IList<string> AttendeeUserIds { get; set; } = [];

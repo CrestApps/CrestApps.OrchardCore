@@ -1,0 +1,14 @@
+[
+  {
+    "action": "vite",
+    "name": "calendar-view.js",
+    "source": "Assets/js/calendar-view.js",
+    "dest": "wwwroot/scripts/calendar-view.js"
+  },
+  {
+    "action": "vite",
+    "name": "calendar-view.css",
+    "source": "Assets/css/calendar-view.css",
+    "dest": "wwwroot/styles/calendar-view.css"
+  }
+]

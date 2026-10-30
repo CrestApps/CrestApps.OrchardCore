@@ -1,0 +1,21 @@
+@model EditCalendarEventViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarEventsCreate" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(Model.Title))">
+        <breadcrumb-item id="CalendarView" action="Index" controller="Calendar" area="CrestApps.OrchardCore.Calendars">@T["Calendar"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Create" class="no-multisubmit">
+    <input type="hidden" asp-for="CalendarId" />
+    <p class="text-muted"><i class="fa-solid fa-calendar me-1" aria-hidden="true"></i>@Model.CalendarName</p>
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-controller="Calendar" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

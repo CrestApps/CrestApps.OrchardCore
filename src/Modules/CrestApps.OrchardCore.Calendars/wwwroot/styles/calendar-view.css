@@ -1,0 +1,51 @@
+.calendar-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+  vertical-align: middle;
+}
+
+.calendar-list .form-check-input:checked {
+  background-color: var(--calendar-color, var(--bs-primary));
+  border-color: var(--calendar-color, var(--bs-primary));
+}
+
+.calendar-list .form-check-input {
+  border-color: var(--calendar-color, var(--bs-border-color));
+}
+
+#calendar-view .fc {
+  --fc-border-color: var(--bs-border-color);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bs-tertiary-bg);
+  --fc-list-event-hover-bg-color: var(--bs-tertiary-bg);
+  --fc-today-bg-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+#calendar-view .fc .fc-toolbar-title {
+  font-size: 1.25rem;
+}
+
+.calendar-availability td {
+  min-width: 0.9rem;
+  padding: 0;
+  border-left: 1px solid var(--bs-border-color);
+}
+
+.calendar-availability td.busy,
+.calendar-availability-key.busy {
+  background-color: var(--bs-danger);
+}
+
+.calendar-availability td.tentative,
+.calendar-availability-key.tentative {
+  background-color: var(--bs-warning);
+}
+
+.calendar-availability td.free,
+.calendar-availability-key.free {
+  background-color: rgba(var(--bs-success-rgb), 0.25);
+  color: var(--bs-body-color);
+}
+/*$vite$:1*/

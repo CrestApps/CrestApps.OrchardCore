@@ -64,7 +64,11 @@ public sealed class DefaultCalendarQueryService : ICalendarQueryService
 
         var events = new Dictionary<string, CalendarEvent>(StringComparer.Ordinal);
 
-        if (query.CalendarIds.Count > 0)
+        if (query.AllCalendars)
+        {
+            Add(events, await _eventStore.ListAnyInRangeAsync(fromUtc, toUtc, _options.MaxEventsPerQuery, cancellationToken));
+        }
+        else if (query.CalendarIds.Count > 0)
         {
             Add(events, await _eventStore.ListInRangeAsync(query.CalendarIds, fromUtc, toUtc, _options.MaxEventsPerQuery, cancellationToken));
         }

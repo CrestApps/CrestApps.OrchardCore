@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventCompletedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
+    @T["Calendar Event Completed"]
+</h4>
+<p>@T["Starts when an occurrence of a calendar event ends."]</p>
