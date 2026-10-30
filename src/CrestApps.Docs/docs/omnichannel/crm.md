@@ -9,6 +9,8 @@ user_manual:
   - user-manual/load-inventory
 ---
 
+<YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel CRM |
