@@ -1,0 +1,14 @@
+@model CalendarRowViewModel
+
+@if (Model.Level >= CalendarAccessLevel.Read)
+{
+    <a class="dropdown-item" asp-controller="CalendarFeeds" asp-action="Export" asp-route-id="@Model.Calendar.ItemId">@T["Export .ics"]</a>
+}
+@if (Model.Level >= CalendarAccessLevel.Write && string.IsNullOrEmpty(Model.Calendar.Source))
+{
+    <a class="dropdown-item" asp-controller="CalendarFeeds" asp-action="Import" asp-route-id="@Model.Calendar.ItemId">@T["Import .ics"]</a>
+}
+@if (Model.Level >= CalendarAccessLevel.Manage)
+{
+    <a class="dropdown-item" asp-controller="CalendarFeeds" asp-action="Feed" asp-route-id="@Model.Calendar.ItemId">@T["Subscription address"]</a>
+}
