@@ -64,6 +64,16 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             context.Activity.ContactResolutionStatus == ContactResolutionStatus.Unknown &&
             string.Equals(context.Activity.Source, ActivitySources.Inbound, StringComparison.Ordinal))
         {
+            // An agent resolves the contact when completing their own activity, and the actions run then. Nobody resolves
+            // the contact on an automated activity once the AI has concluded it, so a new activity -- which needs no
+            // contact, and carries the number and the resolution to its owner -- still runs. The rest needs the contact.
+            if (context.Activity.InteractionType == ActivityInteractionType.Automated)
+            {
+                await ExecuteNewActivitiesWithoutContactAsync(context, cancellationToken);
+
+                return;
+            }
+
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
@@ -112,6 +122,31 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         return ApplyLeadStatusAsync(metadata.StatusId, context.Contact);
+    }
+
+    private async Task ExecuteNewActivitiesWithoutContactAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken)
+    {
+        var allActions = await _actionCatalog.GetAllAsync(cancellationToken);
+
+        var actions = allActions
+            .Where(a => string.Equals(a.SubjectContentType, context.Activity.SubjectContentType, StringComparison.OrdinalIgnoreCase)
+                     && string.Equals(a.DispositionId, context.Disposition.ItemId, StringComparison.OrdinalIgnoreCase)
+                     && string.Equals(a.Source, OmnichannelConstants.ActionTypes.NewActivity, StringComparison.Ordinal))
+            .ToArray();
+
+        foreach (var action in actions)
+        {
+            await ExecuteNewActivityAsync(action, context);
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Ran {Count} new-activity action(s) for automated activity {ActivityId} and deferred the rest, because contact resolution is {ContactResolutionStatus}.",
+                actions.Length,
+                context.Activity.ItemId,
+                context.Activity.ContactResolutionStatus);
+        }
     }
 
     private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
@@ -245,7 +280,12 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             ContactResolvedById = activity.ContactResolvedById,
             ContactResolvedByUsername = activity.ContactResolvedByUsername,
             CampaignId = activity.CampaignId,
-            Instructions = ResolvePreparationNotes(action, context, null),
+            // An agent writes a follow-up's notes on the Complete page. Nobody does for a call the AI concluded, so its summary of the
+            // call is what the follow-up's owner reads -- the message, when the caller left one.
+            Instructions = ResolvePreparationNotes(
+                action,
+                context,
+                activity.InteractionType == ActivityInteractionType.Automated && !string.IsNullOrWhiteSpace(activity.Notes) ? activity.Notes.Trim() : null),
             Attempts = 1,
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,

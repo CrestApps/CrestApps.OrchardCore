@@ -1,19 +1,25 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Privacy;
 using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Guardrails;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.AI.Tooling.Instances.Documentation;
+using CrestApps.Core.AI.Tooling.Parameters;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Extensions;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -32,10 +38,14 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.AI.Workflows.Services;
+using CrestApps.OrchardCore.AI.Workflows.Tools;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Services;
+using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -125,6 +135,56 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
+        // Conversations: the system message rendered with the conversation's values, and tool parameters filled
+        // from the conversation, on every channel.
+        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationLiquidCompletionContextBuilderHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIToolParameterContextResolver, AIConversationToolParameterContextResolver>());
+        services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
+        services.TryAddScoped<IAIConversationTurnNotifier, AIConversationTurnNotifier>();
+
+        // Quality: scoring conversations, simulated test conversations and the metrics alerts watch.
+        services
+            .AddScoped<IAIConversationEvaluator, AIConversationEvaluator>()
+            .AddScoped<IAIConversationEvaluationStore, YesSqlAIConversationEvaluationStore>()
+            .AddScoped<AIConversationEvaluationService>()
+            .AddScoped<AIConversationSimulator>()
+            .AddScoped<AIConversationMetrics>()
+            .AddDataMigration<AIConversationEvaluationIndexMigrations>()
+            .AddIndexProvider<AIConversationEvaluationIndexProvider>();
+
+        // Contact memory: a note per contact the profile's instructions get and its conversations rewrite.
+        services
+            .AddScoped<IAIContactMemoryStore, YesSqlAIContactMemoryStore>()
+            .AddScoped<AIContactMemoryService>()
+            .AddScoped<IAICompletionContextBuilderHandler, AIContactMemoryCompletionContextBuilderHandler>()
+            .AddDataMigration<AIContactMemoryIndexMigrations>()
+            .AddIndexProvider<AIContactMemoryIndexProvider>();
+
+        // Speaking styles (tested prompt sections a profile turns on) and guardrails (topics a profile refuses).
+        // Their default templates are seeded by a migration as editable System Prompt templates.
+        services
+            .AddCoreAISpeakingStyles()
+            .AddCoreAIGuardrails()
+            .AddDisplayDriver<AIProfile, AIProfileSpeakingStyleDisplayDriver>();
+
+        // Profile versions: every save of a profile is kept, numbered, and can be compared and restored.
+        services
+            .AddCoreAIProfileVersions()
+            .AddCoreAIProfileVersionStoresYesSql()
+            .AddDisplayDriver<AIProfileVersionEntry, AIProfileVersionEntryDisplayDriver>()
+            .AddDataMigration<AIProfileVersionIndexMigrations>();
+        services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
+        services.Configure<TemplateOptions>(options =>
+        {
+            options.MemberAccessStrategy.Register<AIConversationTemplateModel>();
+            options.MemberAccessStrategy.Register<AIConversationTurn>();
+            options.MemberAccessStrategy.Register<AIConversationEvaluation>();
+            options.MemberAccessStrategy.Register<AIConversationCriterionResult>();
+            options.MemberAccessStrategy.Register<AIConversationIssue>();
+            options.MemberAccessStrategy.Register<AIChatSession>();
+            options.MemberAccessStrategy.Register<AIProfile>();
+        });
+
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
         services.AddDataMigration<AILegacyDocumentTypeNameMigrations>();
@@ -134,6 +194,7 @@ public sealed class Startup : StartupBase
         services
             .AddCoreAIProfileTemplateStoresYesSql()
             .AddDataMigration<AIProfileTemplateIndexMigrations>()
+            .AddDataMigration<AISystemPromptTemplateDefaultsMigrations>()
             .AddScoped<DefaultAIProfileTemplateManager>()
             .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
@@ -231,6 +292,77 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
         services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
+
+        // AI conversations: workflows that run before a conversation starts, and the tasks they decide with.
+        services.AddActivity<AIConversationStartingEvent, AIConversationStartingEventDisplayDriver>();
+        services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
+        services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
+        services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
+        services.AddActivity<AIToolCalledEvent, AIToolCalledEventDisplayDriver>();
+        services.AddScoped<IAIConversationStartingHandler, WorkflowAIConversationStartingHandler>();
+        services.AddActivity<AIConversationTurnEvent, AIConversationTurnEventDisplayDriver>();
+        services.AddScoped<IAIConversationTurnHandler, WorkflowAIConversationTurnHandler>();
+
+        // Quality: A/B splits, QA evaluations, simulated tests, analysis reruns and metric alerts.
+        services.AddActivity<SplitTrafficTask, SplitTrafficTaskDisplayDriver>();
+        services.AddActivity<EvaluateConversationTask, EvaluateConversationTaskDisplayDriver>();
+        services.AddActivity<AIConversationEvaluatedEvent, AIConversationEvaluatedEventDisplayDriver>();
+        services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
+        services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
+        services.AddActivity<CheckConversationMetricTask, CheckConversationMetricTaskDisplayDriver>();
+
+        // Memory and integrations: rewriting a contact's memory, and signed webhooks to other systems.
+        services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
+        services.AddActivity<SendSignedWebhookTask, SendSignedWebhookTaskDisplayDriver>();
+        services.AddActivity<AIGuardrailTriggeredEvent, AIGuardrailTriggeredEventDisplayDriver>();
+        services.AddScoped<IAIGuardrailHandler, WorkflowAIGuardrailHandler>();
+        services.AddHttpClient(SendSignedWebhookTask.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+    }
+}
+
+/// <summary>
+/// Registers the <c>Workflow</c> tool instance source: a tool the AI calls that runs a workflow and answers with the
+/// workflow's output.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class WorkflowToolInstancesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowToolInstancesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WorkflowToolInstancesStartup(IStringLocalizer<WorkflowToolInstancesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIToolInstanceSource<WorkflowToolInstanceSource>(WorkflowToolConstants.SourceName, entry =>
+        {
+            entry.DisplayName = S["Workflow"];
+            entry.Description = S["Runs a workflow that starts with the AI Tool Called event, and answers with the workflow's output."];
+            entry.Category = S["Automation"];
+            entry.Parameters = new AIToolInstanceParameterCapabilities
+            {
+                Bindings =
+                [
+                    new AIToolParameterBindingOption(WorkflowToolConstants.ArgumentBinding)
+                    {
+                        DisplayName = S["Workflow argument"],
+                        Hint = S["Passed to the workflow as Workflow.Input.Arguments, under the parameter's name."],
+                        SupportsTargetName = false,
+                    },
+                ],
+                Hint = S["Declare what the workflow needs. The model fills each one, or you fix it, or it comes from the conversation, such as the customer's number or a conversation variable."],
+            };
+        });
+
+        services.AddDisplayDriver<AIToolInstance, WorkflowToolInstanceDisplayDriver>();
     }
 }
 
@@ -303,7 +435,15 @@ public sealed class ChatCoreStartup : StartupBase
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>();
 
+        // Closing a session, after inactivity or as soon as its call ends.
+        services.AddScoped<AIChatSessionCloser>();
+        services.AddScoped<IAIChatSessionCloser>(sp => sp.GetRequiredService<AIChatSessionCloser>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
+
+        // Privacy: redacting or stripping ended conversations, and deleting those past the profile's retention.
+        services.AddCoreAIConversationPrivacy();
+        services.AddScoped<IAIConversationPrivacyHandler, AIConversationEvaluationPrivacyHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIConversationPrivacyBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 
@@ -349,6 +489,7 @@ public sealed class ChatWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, ConversationTurnChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
     }
 }
@@ -364,7 +505,8 @@ public sealed class ApiChatStartup : StartupBase
         routes
             .AddApiAIChatSessionEndpoint()
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
-            .AddApiAICompletionEndpoint<ApiChatStartup>();
+            .AddApiAICompletionEndpoint<ApiChatStartup>()
+            .MapAIConversationsApi();
     }
 }
 
