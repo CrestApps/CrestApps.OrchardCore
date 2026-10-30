@@ -1,10 +1,14 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using YesSql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -38,6 +42,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterOutbox"/> class.
@@ -50,6 +55,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// <param name="session">The tenant session used to commit claims before handler execution.</param>
     /// <param name="clock">The clock used to schedule retries.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="httpContextAccessor">The accessor a background HTTP context is set on for handlers run outside a request.</param>
     public ContactCenterOutbox(
         IEnumerable<IContactCenterEventHandler> handlers,
         IContactCenterOutboxStore outboxStore,
@@ -58,7 +64,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         IContactCenterFeatureWorkManager workManager,
         ISession session,
         IClock clock,
-        ILogger<ContactCenterOutbox> logger)
+        ILogger<ContactCenterOutbox> logger,
+        IHttpContextAccessor httpContextAccessor)
     {
         _handlers = ValidateHandlers(handlers);
         _outboxStore = outboxStore;
@@ -68,6 +75,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         _session = session;
         _clock = clock;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     private static IReadOnlyList<IContactCenterEventHandler> ValidateHandlers(IEnumerable<IContactCenterEventHandler> handlers)
@@ -382,6 +390,34 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     }
 
     private async Task<(string Error, bool HandlerUnavailable)> RunHandlersAsync(
+        InteractionEvent interactionEvent,
+        ContactCenterOutboxMessage message,
+        CancellationToken cancellationToken)
+    {
+        // Handlers run after the commit that published the event, which can be after the request that made it has ended
+        // (an answer command its timeout gave up waiting on keeps running), or on the background retry pass. Without an
+        // HTTP context then, triggering a workflow failed with a NullReferenceException in Orchard's
+        // PreviewTemplatesProvider, which reads HttpContext.Items when the activity library is built, and the workflow
+        // never ran. They get a background context for the tenant, as Orchard's own background tasks do.
+        if (_httpContextAccessor.HttpContext is not null ||
+            ShellScope.Context is null)
+        {
+            return await RunHandlersInContextAsync(interactionEvent, message, cancellationToken);
+        }
+
+        _httpContextAccessor.HttpContext = ShellScope.Context.CreateHttpContext();
+
+        try
+        {
+            return await RunHandlersInContextAsync(interactionEvent, message, cancellationToken);
+        }
+        finally
+        {
+            _httpContextAccessor.HttpContext = null;
+        }
+    }
+
+    private async Task<(string Error, bool HandlerUnavailable)> RunHandlersInContextAsync(
         InteractionEvent interactionEvent,
         ContactCenterOutboxMessage message,
         CancellationToken cancellationToken)
