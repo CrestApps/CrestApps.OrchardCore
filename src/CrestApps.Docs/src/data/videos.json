@@ -1,7 +1,9 @@
 {
   "ai-a2a": "Yf0FfborI2o",
+  "ai-agents": "jXRlmWtw-00",
   "ai-chat": "a2S4QqdEbLc",
   "ai-chat-interactions": "jkkWgJwaFEE",
+  "ai-connections-deployments": "X0tP_6Bdzs4",
   "ai-data-extraction-post-session": "JiL7Sa_1x1I",
   "ai-data-sources": "LDs71B6_6m8",
   "ai-data-sources-external": "60BtEo6drt8",
@@ -17,11 +19,13 @@
   "ai-profile-builder": "UOKvEY-kID4",
   "ai-profiles-personas-templates": "AfIqxjZidec",
   "ai-prompt-security": "kXEgtCFMwM4",
+  "ai-realtime-voice": "-cuUgCEB_wc",
   "ai-walkthroughs": "rgGJJM3-u2c",
   "commerce": "YQHVdIucYgI",
   "contact-center-agent-walkthroughs": "B6T-s_80exw",
   "contact-center-setup-walkthroughs": "nMQ4AC7VtWA",
   "omnichannel-2-walkthroughs": "YPLb7Wf9f-4",
+  "products": "y04hQZp-s3s",
   "report-builder": "QRosrn4BE90",
   "site-administration-walkthroughs": "f1en3LF024s",
   "tenant-hierarchy": "eL-gcGqRWxw"
