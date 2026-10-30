@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// <summary>
 /// Represents a reusable re-engagement (nudge) schedule: a named, ordered list of follow-up messages sent to a contact
 /// who has gone quiet in an automated conversation. It is selected on a loading campaign; a campaign with no schedule
-/// selected never nudges. Every nudge still respects the campaign's business-hours calendar.
+/// selected never nudges. Every nudge still respects the business-hours calendar chosen on the activity load.
 /// </summary>
 public sealed class Cadence : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel
 {

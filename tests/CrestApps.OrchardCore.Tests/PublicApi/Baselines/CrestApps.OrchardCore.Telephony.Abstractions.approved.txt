@@ -1074,9 +1074,11 @@ namespace CrestApps.OrchardCore.Telephony.Services
         string TechnicalName { get; }
         System.Threading.Tasks.Task<bool> GatherAsync(string providerCallId, string text, string validDigits, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> HangupAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> SendDigitsAsync(string providerCallId, string digits, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SpeakAsync(string providerCallId, string text, string voice = null, string language = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> StartTranscriptionAsync(string providerCallId, string language = null, string commandId = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> StopTranscriptionAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> TransferAsync(string providerCallId, string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IVoiceAgentMediaProviderResolver
     {

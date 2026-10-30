@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileVersionEntry>
+
+@if (!string.IsNullOrEmpty(Model.Value.Version.Note))
+{
+    <div class="admin-list-secondary">@Model.Value.Version.Note</div>
+}

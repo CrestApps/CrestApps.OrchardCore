@@ -49,6 +49,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         AttachTool(orchestration, EndCallTool.ToolName, "Ends the phone call once the conversation is over.");
 
+        // A call the AI placed may be answered by a phone menu, which only keys get through.
+        AttachTool(orchestration, PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu.");
+
         // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
         // a tool the model is never told about is not used, and guidance without a tool has the model promising
         // a transfer that nothing performs.
@@ -61,6 +64,13 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             orchestration.SystemMessageBuilder.AppendLine();
             orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
+        }
+        else if (!string.IsNullOrWhiteSpace(call?.NoHandoffInstructions))
+        {
+            // Nobody can take the caller now, so there is no tool, and the model is told why rather than left to
+            // improvise an answer to "can I speak to someone?".
+            orchestration.SystemMessageBuilder.AppendLine();
+            orchestration.SystemMessageBuilder.AppendLine(call.NoHandoffInstructions);
         }
 
         // Somebody trying to end contact must never be handed to a person instead. This is written for the way it
@@ -85,13 +95,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine("## Who you are calling");
         orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(
-            string.IsNullOrWhiteSpace(call?.ContactName)
-                ? "You do not know the name of the person you are calling. Do not use a name, and never guess or " +
-                  "invent one; ask who you are speaking with if you need it."
-                : $"You are calling {call.ContactName}. That is the only name you may use for them. Never use any " +
-                  "other name, and never guess or invent one — if the person says they are somebody else, believe " +
-                  "them and adjust.");
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.WhoYouAreCalling(call?.ContactName));
 
         // The tenant's notice that the call is recorded, ahead of the guidance about the opening it belongs to.
         var recordingDisclosure = VoiceCallGuidance.RecordingDisclosure(call?.RecordingDisclosure);
@@ -118,6 +122,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         orchestration.SystemMessageBuilder.AppendLine("## Ending the call");
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.EndingTheCall);
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.PhoneMenusAndScreening);
     }
 
     /// <summary>
@@ -210,7 +215,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             if (conversation is not null)
             {
-                await AskForTheGreetingAsync(conversation, cancellationToken);
+                await AskForTheGreetingAsync(conversation, context, cancellationToken);
             }
         }
         catch
@@ -275,12 +280,25 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the session's
     /// own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
     /// </para>
+    /// <para>
+    /// A call with a recording disclosure is the exception: its greeting is asked for with the session's instructions
+    /// followed by the disclosure to begin with. Told only in the session's instructions, live, the model opened with
+    /// its own words for the notice.
+    /// </para>
     /// </remarks>
-    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
+    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
     {
+        var opening = VoiceCallGuidance.OpeningWithDisclosure(context?.RecordingDisclosure);
+
+        // A disclosure is heard to the end: see the Opening partial.
+        Volatile.Write(ref _protectOpening, opening is null ? 0 : 1);
+
         // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
         await ApplyOpeningTurnDetectionAsync(conversation, cancellationToken);
-        await conversation.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+
+        await conversation.RequestUnpromptedResponseAsync(
+            opening is null ? null : WithSessionInstructions(opening),
+            cancellationToken);
     }
 
     // The conversation could not be started, so a stream that opened anyway has nothing to carry.
@@ -380,9 +398,16 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </remarks>
     /// <param name="prompt">What this response is for.</param>
     private string WithSessionInstructions(string prompt)
-    {
-        var sessionInstructions = _sessionInstructions?.ToString();
+        => WithSessionInstructions(_sessionInstructions?.ToString(), prompt);
 
+    /// <summary>
+    /// The instructions for one prompted response: <paramref name="sessionInstructions"/>, followed by what this
+    /// response is for.
+    /// </summary>
+    /// <param name="sessionInstructions">The instructions the session was opened with.</param>
+    /// <param name="prompt">What this response is for.</param>
+    internal static string WithSessionInstructions(string sessionInstructions, string prompt)
+    {
         if (string.IsNullOrWhiteSpace(sessionInstructions))
         {
             return prompt;

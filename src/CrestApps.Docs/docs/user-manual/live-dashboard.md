@@ -113,6 +113,18 @@ These are in the same **⋮** menu, and work whether or not the agent is on a ca
 
 The state and sign-out actions need the permission to take over calls; **Message…** needs only the permission to monitor.
 
+## Live AI calls
+
+The **Live AI calls** panel lists every phone call an AI voice agent is on right now: the customer, the AI profile, whether the customer called in or the AI called out, and how long the call has lasted. It refreshes every few seconds.
+
+- **Follow** opens the call's transcript under the list. New lines appear as the customer and the AI speak.
+- **Listen** rings your own soft phone with a listen-only line on the call: you hear both sides, and neither the customer nor the AI hears you. Hang up on your soft phone to stop.
+- **Message the AI** (under the transcript) sends the AI a note, such as *offer the 10% retention discount*. The AI acts on it at the next quiet moment in its own words, and never mentions that it got a note.
+- **Take over** stops the AI and rings your soft phone. The AI finishes its sentence, the customer hears the queue music or a ringing tone, and the call is yours once you answer. You need to be a signed-in agent.
+- **End call** hangs up on the customer. The call is concluded as any other ended AI call.
+
+A call leaves the list when it ends or a person takes it over.
+
 ## Who can do what
 
 | Action | Where | Permission |
@@ -122,6 +134,8 @@ The state and sign-out actions need the permission to take over calls; **Message
 | **Take over** | Agent card | Take over calls |
 | **End call…**, **Transfer…**, **Start recording** / **Stop recording** | **⋮** menu | Take over calls |
 | **Set Available**, **Set Not ready**, **Set Break**, **Sign out of queues** | **⋮** menu | Take over calls |
+| **Follow**, **Listen** on an AI call | **Live AI calls** | Monitor |
+| **Message the AI**, **Take over**, **End call** on an AI call | **Live AI calls** | Take over calls |
 
 *Monitor* is *Monitor the Contact Center in real time*; *Take over calls* is *Take over, end, transfer and record live Contact Center calls, and set agents' state*. Every action is recorded in the audit trail under your name.
 
