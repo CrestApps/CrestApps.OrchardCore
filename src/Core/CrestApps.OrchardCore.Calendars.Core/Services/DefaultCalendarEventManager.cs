@@ -75,7 +75,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task<CalendarEvent> NewAsync(Calendar calendar, string eventType = null, DateTime? startUtc = null)
+    public async Task<CalendarEvent> NewAsync(Calendar calendar, string eventType = null, DateTime? startUtc = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendar);
 
@@ -136,13 +136,13 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> CreateAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> CreateAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
 
         options ??= new CalendarChangeOptions();
 
-        var calendar = await _calendarStore.FindByIdAsync(calendarEvent.CalendarId ?? string.Empty);
+        var calendar = await _calendarStore.FindByIdAsync(calendarEvent.CalendarId ?? string.Empty, cancellationToken);
 
         if (calendar is null)
         {
@@ -170,7 +170,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> UpdateAsync(CalendarEvent calendarEvent, Action<CalendarEvent> change, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> UpdateAsync(CalendarEvent calendarEvent, Action<CalendarEvent> change, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
         ArgumentNullException.ThrowIfNull(change);
@@ -179,7 +179,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> UpdateOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, Action<CalendarEvent> change, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> UpdateOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, Action<CalendarEvent> change, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(change);
@@ -189,14 +189,14 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
 
         if (!CalendarEventExpander.TryGetRule(series, out var rule) || series.SeriesId is not null)
         {
-            return await UpdateAsync(series, change, options);
+            return await UpdateAsync(series, change, options, cancellationToken);
         }
 
-        var existing = (await _eventStore.ListOverridesAsync([series.ItemId])).FirstOrDefault(item => item.OriginalStartUtc == originalStartUtc);
+        var existing = (await _eventStore.ListOverridesAsync([series.ItemId], cancellationToken)).FirstOrDefault(item => item.OriginalStartUtc == originalStartUtc);
 
         if (scope == CalendarEditScope.ThisOccurrence && existing is not null)
         {
-            return await UpdateAsync(existing, change, options);
+            return await UpdateAsync(existing, change, options, cancellationToken);
         }
 
         if (!CalendarEventExpander.HasOccurrenceAt(series, originalStartUtc) && existing is null)
@@ -218,14 +218,14 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
             occurrence.SeriesId = series.ItemId;
             occurrence.OriginalStartUtc = originalStartUtc;
 
-            return await CreateAsync(occurrence, options);
+            return await CreateAsync(occurrence, options, cancellationToken);
         }
 
         return await SplitAsync(series, rule, originalStartUtc, change, options);
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> CancelAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> CancelAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
 
@@ -235,7 +235,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
 
         if (result.Succeeded && calendarEvent.SeriesId is null && CalendarEventExpander.TryGetRule(calendarEvent, out _))
         {
-            foreach (var item in await _eventStore.ListOverridesAsync([calendarEvent.ItemId]))
+            foreach (var item in await _eventStore.ListOverridesAsync([calendarEvent.ItemId], cancellationToken))
             {
                 if (item.Status != CalendarEventStatus.Cancelled)
                 {
@@ -254,7 +254,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> CancelOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> CancelOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(series);
 
@@ -264,10 +264,10 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
         if (!CalendarEventExpander.TryGetRule(series, out var rule) || series.SeriesId is not null || scope == CalendarEditScope.AllOccurrences ||
             (scope == CalendarEditScope.ThisAndFollowing && originalStartUtc <= series.StartUtc))
         {
-            return await CancelAsync(series, options);
+            return await CancelAsync(series, options, cancellationToken);
         }
 
-        var overrides = await _eventStore.ListOverridesAsync([series.ItemId]);
+        var overrides = await _eventStore.ListOverridesAsync([series.ItemId], cancellationToken);
 
         if (scope == CalendarEditScope.ThisOccurrence)
         {
@@ -275,7 +275,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
 
             if (existing is not null)
             {
-                return await CancelAsync(existing, options);
+                return await CancelAsync(existing, options, cancellationToken);
             }
 
             var localStart = CalendarTime.ToLocal(originalStartUtc, series.TimeZoneId);
@@ -297,7 +297,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
         {
             foreach (var item in overrides.Where(item => item.OriginalStartUtc >= originalStartUtc))
             {
-                await DeleteAsync(item, new CalendarChangeOptions { Actor = options.Actor, Notify = false, SendInvitations = false });
+                await DeleteAsync(item, new CalendarChangeOptions { Actor = options.Actor, Notify = false, SendInvitations = false }, cancellationToken);
             }
         }
 
@@ -305,13 +305,13 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task DeleteAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null)
+    public async Task DeleteAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
 
         options ??= new CalendarChangeOptions();
 
-        var calendar = await _calendarStore.FindByIdAsync(calendarEvent.CalendarId ?? string.Empty);
+        var calendar = await _calendarStore.FindByIdAsync(calendarEvent.CalendarId ?? string.Empty, cancellationToken);
 
         if (calendar is not null)
         {
@@ -322,13 +322,13 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
 
         if (calendarEvent.SeriesId is null)
         {
-            foreach (var item in await _eventStore.ListOverridesAsync([calendarEvent.ItemId]))
+            foreach (var item in await _eventStore.ListOverridesAsync([calendarEvent.ItemId], cancellationToken))
             {
-                await _eventStore.DeleteAsync(item);
+                await _eventStore.DeleteAsync(item, cancellationToken);
             }
         }
 
-        await _eventStore.DeleteAsync(calendarEvent);
+        await _eventStore.DeleteAsync(calendarEvent, cancellationToken);
 
         if (options.Notify && calendar is not null)
         {
@@ -346,7 +346,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> AddAttendeeAsync(CalendarEvent calendarEvent, CalendarAttendee attendee, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> AddAttendeeAsync(CalendarEvent calendarEvent, CalendarAttendee attendee, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
         ArgumentNullException.ThrowIfNull(attendee);
@@ -375,11 +375,11 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
                     existing.Role = attendee.Role;
                 }
             },
-            options);
+            options, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> RemoveAttendeeAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> RemoveAttendeeAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
 
@@ -397,11 +397,11 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
                     target.Attendees.Remove(item);
                 }
             },
-            options);
+            options, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<CalendarEvent>> RespondAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarAttendeeResponse response, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<CalendarEvent>> RespondAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarAttendeeResponse response, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
 
@@ -422,15 +422,15 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
                     item.RespondedUtc = now;
                 }
             },
-            options);
+            options, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<CalendarError>> ValidateAsync(CalendarEvent calendarEvent)
+    public async Task<IReadOnlyList<CalendarError>> ValidateAsync(CalendarEvent calendarEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendarEvent);
 
-        var calendar = await _calendarStore.FindByIdAsync(calendarEvent.CalendarId ?? string.Empty);
+        var calendar = await _calendarStore.FindByIdAsync(calendarEvent.CalendarId ?? string.Empty, cancellationToken);
 
         if (calendar is null)
         {

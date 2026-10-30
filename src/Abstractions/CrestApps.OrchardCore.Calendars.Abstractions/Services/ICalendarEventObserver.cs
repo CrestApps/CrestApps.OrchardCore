@@ -10,6 +10,7 @@ public interface ICalendarEventObserver
     /// Handles a committed change.
     /// </summary>
     /// <param name="change">What happened.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task OnChangedAsync(CalendarEventChange change);
+    Task OnChangedAsync(CalendarEventChange change, CancellationToken cancellationToken = default);
 }

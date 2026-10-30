@@ -10,13 +10,15 @@ public interface ICalendarReminderObserver
     /// Handles an occurrence that starts within the reminder's offset.
     /// </summary>
     /// <param name="context">The occurrence and the offset.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task OnStartingSoonAsync(CalendarReminderContext context);
+    Task OnStartingSoonAsync(CalendarReminderContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Handles an occurrence that has ended.
     /// </summary>
     /// <param name="context">The occurrence.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task OnCompletedAsync(CalendarReminderContext context);
+    Task OnCompletedAsync(CalendarReminderContext context, CancellationToken cancellationToken = default);
 }

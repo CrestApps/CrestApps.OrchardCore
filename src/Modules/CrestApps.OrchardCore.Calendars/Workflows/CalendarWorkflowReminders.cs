@@ -21,7 +21,7 @@ internal sealed class CalendarWorkflowReminders : ICalendarReminderOffsetProvide
         _workflowManager = workflowManager;
     }
 
-    public async Task<IEnumerable<TimeSpan>> GetOffsetsAsync()
+    public async Task<IEnumerable<TimeSpan>> GetOffsetsAsync(CancellationToken cancellationToken = default)
     {
         var offsets = new HashSet<TimeSpan>();
 
@@ -45,12 +45,12 @@ internal sealed class CalendarWorkflowReminders : ICalendarReminderOffsetProvide
         return offsets;
     }
 
-    public Task OnStartingSoonAsync(CalendarReminderContext context)
+    public Task OnStartingSoonAsync(CalendarReminderContext context, CancellationToken cancellationToken = default)
     {
         return _workflowManager.TriggerEventAsync(nameof(CalendarEventStartingSoonEvent), CalendarWorkflowInput.FromReminder(context), context.Occurrence.Event.ItemId);
     }
 
-    public Task OnCompletedAsync(CalendarReminderContext context)
+    public Task OnCompletedAsync(CalendarReminderContext context, CancellationToken cancellationToken = default)
     {
         return _workflowManager.TriggerEventAsync(nameof(CalendarEventCompletedEvent), CalendarWorkflowInput.FromReminder(context), context.Occurrence.Event.ItemId);
     }

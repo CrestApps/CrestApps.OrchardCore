@@ -146,7 +146,7 @@ public sealed class CalendarSyncService
         }
 
         calendar.Put(subscription);
-        await _calendarService.UpdateAsync(calendar, new CalendarChangeOptions { Actor = Source });
+        await _calendarService.UpdateAsync(calendar, new CalendarChangeOptions { Actor = Source }, cancellationToken);
 
         return result;
     }

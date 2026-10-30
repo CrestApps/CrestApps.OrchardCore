@@ -9,6 +9,7 @@ public interface ICalendarReminderOffsetProvider
     /// <summary>
     /// Gets how long before an occurrence starts to raise its "starting soon" moment.
     /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The offsets.</returns>
-    Task<IEnumerable<TimeSpan>> GetOffsetsAsync();
+    Task<IEnumerable<TimeSpan>> GetOffsetsAsync(CancellationToken cancellationToken = default);
 }

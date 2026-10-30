@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.Bookings.Workflows;
 /// </summary>
 internal sealed class BookingWorkflowHandler : IBookingHandler
 {
-    public Task SavingAsync(BookingSavingContext context)
+    public Task SavingAsync(BookingSavingContext context, CancellationToken cancellationToken = default)
     {
         var booking = context.Booking;
         var events = new List<string>();
@@ -79,7 +79,7 @@ internal sealed class BookingWorkflowHandler : IBookingHandler
         return Task.CompletedTask;
     }
 
-    public Task DeletingAsync(Booking booking)
+    public Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     private static Dictionary<string, object> CreateInput(Booking booking, BookingStatus? previousStatus)

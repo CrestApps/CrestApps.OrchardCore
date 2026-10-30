@@ -57,7 +57,7 @@ public sealed class FindAppointmentSlotsTool : SchedulingAIToolBase
             return "Give a bookable appointmentTypeId and from and to as ISO 8601 times.";
         }
 
-        var slots = await arguments.Services.GetRequiredService<ISchedulingAvailabilityService>().FindSlotsAsync(type, from.UtcDateTime, to > from.AddDays(14) ? from.UtcDateTime.AddDays(14) : to.UtcDateTime, maxResults: 20);
+        var slots = await arguments.Services.GetRequiredService<ISchedulingAvailabilityService>().FindSlotsAsync(type, from.UtcDateTime, to > from.AddDays(14) ? from.UtcDateTime.AddDays(14) : to.UtcDateTime, maxResults: 20, cancellationToken: cancellationToken);
         var result = new List<object>();
 
         foreach (var slot in slots)

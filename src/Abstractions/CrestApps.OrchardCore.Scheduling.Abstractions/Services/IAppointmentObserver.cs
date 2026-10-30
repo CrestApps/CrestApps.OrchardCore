@@ -9,6 +9,7 @@ public interface IAppointmentObserver
     /// Handles a committed change.
     /// </summary>
     /// <param name="change">What happened.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task OnChangedAsync(AppointmentChange change);
+    Task OnChangedAsync(AppointmentChange change, CancellationToken cancellationToken = default);
 }

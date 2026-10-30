@@ -70,7 +70,7 @@ public sealed class BookAppointmentTool : SchedulingAIToolBase
             Notes = Read(arguments, "notes"),
             Source = "AI",
             Actor = "AI",
-        });
+        }, cancellationToken);
 
         if (!result.Succeeded)
         {

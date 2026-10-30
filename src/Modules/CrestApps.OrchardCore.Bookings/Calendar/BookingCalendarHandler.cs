@@ -60,7 +60,7 @@ public sealed class BookingCalendarHandler : IBookingHandler
     }
 
     /// <inheritdoc />
-    public Task SavingAsync(BookingSavingContext context)
+    public Task SavingAsync(BookingSavingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -68,7 +68,7 @@ public sealed class BookingCalendarHandler : IBookingHandler
     }
 
     /// <inheritdoc />
-    public async Task DeletingAsync(Booking booking)
+    public async Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(booking);
 
@@ -77,9 +77,9 @@ public sealed class BookingCalendarHandler : IBookingHandler
             return;
         }
 
-        foreach (var calendarEvent in await _eventManager.FindBySourceAsync(Source, booking.ItemId))
+        foreach (var calendarEvent in await _eventManager.FindBySourceAsync(Source, booking.ItemId, cancellationToken))
         {
-            await _eventManager.DeleteAsync(calendarEvent, _changeOptions);
+            await _eventManager.DeleteAsync(calendarEvent, _changeOptions, cancellationToken);
         }
     }
 

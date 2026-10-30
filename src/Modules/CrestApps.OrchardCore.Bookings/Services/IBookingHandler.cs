@@ -13,13 +13,15 @@ public interface IBookingHandler
     /// Runs when a booking is about to be saved.
     /// </summary>
     /// <param name="context">The booking and what changed.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task SavingAsync(BookingSavingContext context);
+    Task SavingAsync(BookingSavingContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Runs when a booking is about to be deleted.
     /// </summary>
     /// <param name="booking">The booking.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task DeletingAsync(Booking booking);
+    Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default);
 }

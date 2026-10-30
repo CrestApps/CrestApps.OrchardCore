@@ -139,7 +139,7 @@ The store resolves the handlers on first use, so a handler may depend on service
 ```csharp
 internal sealed class BookingAuditHandler : IBookingHandler
 {
-    public Task SavingAsync(BookingSavingContext context)
+    public Task SavingAsync(BookingSavingContext context, CancellationToken cancellationToken = default)
     {
         if (context.StatusChanged && context.Booking.Status == BookingStatus.Canceled)
         {
@@ -149,7 +149,7 @@ internal sealed class BookingAuditHandler : IBookingHandler
         return Task.CompletedTask;
     }
 
-    public Task DeletingAsync(Booking booking)
+    public Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }
 

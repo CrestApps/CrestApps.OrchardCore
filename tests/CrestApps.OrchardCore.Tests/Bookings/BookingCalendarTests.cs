@@ -243,7 +243,7 @@ public sealed class BookingCalendarTests
     {
         public List<BookingSavingContext> Saved { get; } = [];
 
-        public Task SavingAsync(BookingSavingContext context)
+        public Task SavingAsync(BookingSavingContext context, CancellationToken cancellationToken = default)
         {
             // The booking is the same instance across saves, so its values are copied.
             Saved.Add(new BookingSavingContext
@@ -258,7 +258,7 @@ public sealed class BookingCalendarTests
             return Task.CompletedTask;
         }
 
-        public Task DeletingAsync(Booking booking)
+        public Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

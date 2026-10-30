@@ -57,8 +57,8 @@ public sealed class MoveCalendarEventTool : CalendarAIToolBase
         var input = new CalendarEventInput { Start = Read(arguments, "start"), End = Read(arguments, "end") };
         var options = new CalendarChangeOptions { Actor = CalendarUser.GetId(user) };
         var result = DateTimeOffset.TryParse(Read(arguments, "occurrenceStart"), out var original)
-            ? await eventManager.UpdateOccurrenceAsync(calendarEvent, original.UtcDateTime, CalendarEditScope.ThisOccurrence, target => CalendarEventInputApplier.Apply(input, target, errors), options)
-            : await eventManager.UpdateAsync(calendarEvent, target => CalendarEventInputApplier.Apply(input, target, errors), options);
+            ? await eventManager.UpdateOccurrenceAsync(calendarEvent, original.UtcDateTime, CalendarEditScope.ThisOccurrence, target => CalendarEventInputApplier.Apply(input, target, errors), options, cancellationToken)
+            : await eventManager.UpdateAsync(calendarEvent, target => CalendarEventInputApplier.Apply(input, target, errors), options, cancellationToken);
 
         if (errors.Count > 0)
         {

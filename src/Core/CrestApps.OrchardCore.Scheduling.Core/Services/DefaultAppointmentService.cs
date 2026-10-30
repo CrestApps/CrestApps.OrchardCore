@@ -77,18 +77,18 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
-    public async Task<Appointment> FindByIdAsync(string id)
+    public async Task<Appointment> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        return string.IsNullOrEmpty(id) ? null : await _appointmentStore.FindByIdAsync(id);
+        return string.IsNullOrEmpty(id) ? null : await _appointmentStore.FindByIdAsync(id, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> BookAsync(AppointmentRequest request)
+    public async Task<AppointmentResult> BookAsync(AppointmentRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var result = new AppointmentResult();
-        var type = await _typeStore.FindByIdAsync(request.AppointmentTypeId ?? string.Empty);
+        var type = await _typeStore.FindByIdAsync(request.AppointmentTypeId ?? string.Empty, cancellationToken);
 
         if (type is null || !type.Enabled)
         {
@@ -126,7 +126,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
 
         try
         {
-            var slot = (await _availabilityService.FindSlotsAsync(type, start, start.AddMinutes(1), request.ResourceId, 1)).FirstOrDefault(item => item.StartUtc == start);
+            var slot = (await _availabilityService.FindSlotsAsync(type, start, start.AddMinutes(1), request.ResourceId, 1, cancellationToken: cancellationToken)).FirstOrDefault(item => item.StartUtc == start);
 
             if (slot is null)
             {
@@ -169,7 +169,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
             }
 
             await BumpAsync(resourceIds);
-            await _appointmentStore.CreateAsync(appointment);
+            await _appointmentStore.CreateAsync(appointment, cancellationToken);
 
             result.Appointment = appointment;
             Enqueue(appointment.Status switch
@@ -188,7 +188,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> ConfirmAsync(Appointment appointment, string actor = null)
+    public async Task<AppointmentResult> ConfirmAsync(Appointment appointment, string actor = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);
 
@@ -201,26 +201,26 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
-        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId);
+        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
         appointment.Status = AppointmentStatus.Confirmed;
         appointment.HoldExpiresUtc = null;
         appointment.ModifiedUtc = _clock.UtcNow;
 
         await SetEventStatusAsync(appointment, type, CalendarEventStatus.Confirmed, actor);
-        await _appointmentStore.UpdateAsync(appointment);
+        await _appointmentStore.UpdateAsync(appointment, cancellationToken);
         Enqueue(AppointmentChangeKind.Confirmed, appointment, type, actor);
 
         return result;
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> RescheduleAsync(Appointment appointment, DateTime startUtc, string resourceId = null, string actor = null)
+    public async Task<AppointmentResult> RescheduleAsync(Appointment appointment, DateTime startUtc, string resourceId = null, string actor = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);
 
         var result = new AppointmentResult { Appointment = appointment };
-        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId);
+        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
         if (type is null || appointment.Status is not (AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed))
         {
@@ -243,7 +243,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
 
         try
         {
-            var slot = (await _availabilityService.FindSlotsAsync(type, start, start.AddMinutes(1), resourceId, 1, appointment.ItemId)).FirstOrDefault(item => item.StartUtc == start);
+            var slot = (await _availabilityService.FindSlotsAsync(type, start, start.AddMinutes(1), resourceId, 1, appointment.ItemId, cancellationToken)).FirstOrDefault(item => item.StartUtc == start);
 
             if (slot is null)
             {
@@ -277,7 +277,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
             }
 
             await BumpAsync(appointment.ResourceIds);
-            await _appointmentStore.UpdateAsync(appointment);
+            await _appointmentStore.UpdateAsync(appointment, cancellationToken);
 
             _changes.Enqueue(new AppointmentChange
             {
@@ -299,7 +299,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> CancelAsync(Appointment appointment, string reason = null, string actor = null)
+    public async Task<AppointmentResult> CancelAsync(Appointment appointment, string reason = null, string actor = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);
 
@@ -312,7 +312,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
-        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId);
+        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
         await RemoveEventAsync(appointment, type, actor);
 
@@ -320,7 +320,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
         appointment.CancelReason = reason;
         appointment.ModifiedUtc = _clock.UtcNow;
 
-        await _appointmentStore.UpdateAsync(appointment);
+        await _appointmentStore.UpdateAsync(appointment, cancellationToken);
         Enqueue(AppointmentChangeKind.Cancelled, appointment, type, actor);
 
         if (type is not null)
@@ -332,7 +332,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> CompleteAsync(Appointment appointment, bool noShow, string actor = null)
+    public async Task<AppointmentResult> CompleteAsync(Appointment appointment, bool noShow, string actor = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);
 
@@ -345,32 +345,32 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
-        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId);
+        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
         appointment.Status = noShow ? AppointmentStatus.NoShow : AppointmentStatus.Completed;
         appointment.ModifiedUtc = _clock.UtcNow;
 
-        await _appointmentStore.UpdateAsync(appointment);
+        await _appointmentStore.UpdateAsync(appointment, cancellationToken);
         Enqueue(noShow ? AppointmentChangeKind.NoShow : AppointmentChangeKind.Completed, appointment, type, actor);
 
         return result;
     }
 
     /// <inheritdoc />
-    public async Task<int> ExpireHoldsAsync()
+    public async Task<int> ExpireHoldsAsync(CancellationToken cancellationToken = default)
     {
         var expired = await _appointmentStore.ListExpiredHoldsAsync(_clock.UtcNow);
 
         foreach (var appointment in expired)
         {
-            var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId);
+            var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
             await RemoveEventAsync(appointment, type, SchedulingConstants.EventSource);
 
             appointment.Status = AppointmentStatus.Expired;
             appointment.ModifiedUtc = _clock.UtcNow;
 
-            await _appointmentStore.UpdateAsync(appointment);
+            await _appointmentStore.UpdateAsync(appointment, cancellationToken);
             Enqueue(AppointmentChangeKind.HoldExpired, appointment, type, SchedulingConstants.EventSource);
         }
 

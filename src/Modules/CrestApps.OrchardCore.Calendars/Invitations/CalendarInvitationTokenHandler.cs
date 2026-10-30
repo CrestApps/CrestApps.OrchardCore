@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Calendars.Invitations;
 /// </summary>
 internal sealed class CalendarInvitationTokenHandler : CalendarEventHandlerBase
 {
-    public override Task SavingAsync(CalendarEventContext context)
+    public override Task SavingAsync(CalendarEventContext context, CancellationToken cancellationToken = default)
     {
         foreach (var attendee in context.Event.Attendees)
         {

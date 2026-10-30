@@ -15,8 +15,9 @@ public interface ICalendarEventManager
     /// <param name="calendar">The calendar.</param>
     /// <param name="eventType">The event type's technical name, or <see langword="null"/> for the type's first event type.</param>
     /// <param name="startUtc">When the event starts, or <see langword="null"/> for the next whole hour.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The new event.</returns>
-    Task<CalendarEvent> NewAsync(Calendar calendar, string eventType = null, DateTime? startUtc = null);
+    Task<CalendarEvent> NewAsync(Calendar calendar, string eventType = null, DateTime? startUtc = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds an event by id.
@@ -49,8 +50,9 @@ public interface ICalendarEventManager
     /// </summary>
     /// <param name="calendarEvent">The event.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> CreateAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> CreateAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Changes an event (a whole series, for a repeating event). The change is applied, validated and saved; when it is
@@ -59,8 +61,9 @@ public interface ICalendarEventManager
     /// <param name="calendarEvent">The event.</param>
     /// <param name="change">Applies the change.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> UpdateAsync(CalendarEvent calendarEvent, Action<CalendarEvent> change, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> UpdateAsync(CalendarEvent calendarEvent, Action<CalendarEvent> change, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Changes one occurrence of a repeating event, that occurrence and every one after it, or the whole series.
@@ -70,16 +73,18 @@ public interface ICalendarEventManager
     /// <param name="scope">Which occurrences the change applies to.</param>
     /// <param name="change">Applies the change to the occurrence (or to the series for <see cref="CalendarEditScope.AllOccurrences"/>).</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome, with the event that now holds the changed occurrence.</returns>
-    Task<CalendarResult<CalendarEvent>> UpdateOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, Action<CalendarEvent> change, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> UpdateOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, Action<CalendarEvent> change, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Cancels an event (a whole series, for a repeating event).
     /// </summary>
     /// <param name="calendarEvent">The event.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> CancelAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> CancelAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Cancels one occurrence of a repeating event, or that occurrence and every one after it.
@@ -88,16 +93,18 @@ public interface ICalendarEventManager
     /// <param name="originalStartUtc">When the occurrence was due to start by the rule, in UTC.</param>
     /// <param name="scope">Which occurrences to cancel.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> CancelOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> CancelOccurrenceAsync(CalendarEvent series, DateTime originalStartUtc, CalendarEditScope scope, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes an event, and every override of it for a repeating event.
     /// </summary>
     /// <param name="calendarEvent">The event.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task that completes when the deletion is staged.</returns>
-    Task DeleteAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null);
+    Task DeleteAsync(CalendarEvent calendarEvent, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Invites an attendee, or updates the attendee when already invited.
@@ -105,8 +112,9 @@ public interface ICalendarEventManager
     /// <param name="calendarEvent">The event.</param>
     /// <param name="attendee">The attendee.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> AddAttendeeAsync(CalendarEvent calendarEvent, CalendarAttendee attendee, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> AddAttendeeAsync(CalendarEvent calendarEvent, CalendarAttendee attendee, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes an attendee.
@@ -114,8 +122,9 @@ public interface ICalendarEventManager
     /// <param name="calendarEvent">The event.</param>
     /// <param name="attendeeKey">The attendee's key, from <see cref="CalendarAttendee.GetKey"/>.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> RemoveAttendeeAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> RemoveAttendeeAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records an attendee's answer.
@@ -124,13 +133,15 @@ public interface ICalendarEventManager
     /// <param name="attendeeKey">The attendee's key, from <see cref="CalendarAttendee.GetKey"/>.</param>
     /// <param name="response">The answer.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<CalendarEvent>> RespondAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarAttendeeResponse response, CalendarChangeOptions options = null);
+    Task<CalendarResult<CalendarEvent>> RespondAsync(CalendarEvent calendarEvent, string attendeeKey, CalendarAttendeeResponse response, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks an event without saving it: the same validation and overlap check a save runs.
     /// </summary>
     /// <param name="calendarEvent">The event.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The errors, empty when the event could be saved.</returns>
-    Task<IReadOnlyList<CalendarError>> ValidateAsync(CalendarEvent calendarEvent);
+    Task<IReadOnlyList<CalendarError>> ValidateAsync(CalendarEvent calendarEvent, CancellationToken cancellationToken = default);
 }

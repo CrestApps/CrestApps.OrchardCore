@@ -11,8 +11,9 @@ public interface ICalendarService
     /// Creates an unsaved calendar of a type, with the type's defaults.
     /// </summary>
     /// <param name="type">The calendar type's technical name.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The new calendar, or <see langword="null"/> when the type isn't registered.</returns>
-    Task<Calendar> NewAsync(string type);
+    Task<Calendar> NewAsync(string type, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds a calendar by id.
@@ -62,30 +63,34 @@ public interface ICalendarService
     /// </summary>
     /// <param name="calendar">The calendar.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<Calendar>> CreateAsync(Calendar calendar, CalendarChangeOptions options = null);
+    Task<CalendarResult<Calendar>> CreateAsync(Calendar calendar, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates and saves changes to a calendar.
     /// </summary>
     /// <param name="calendar">The calendar, already changed.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The outcome.</returns>
-    Task<CalendarResult<Calendar>> UpdateAsync(Calendar calendar, CalendarChangeOptions options = null);
+    Task<CalendarResult<Calendar>> UpdateAsync(Calendar calendar, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a calendar and every event on it.
     /// </summary>
     /// <param name="calendar">The calendar.</param>
     /// <param name="options">How the change is made.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task that completes when the deletion is staged.</returns>
-    Task DeleteAsync(Calendar calendar, CalendarChangeOptions options = null);
+    Task DeleteAsync(Calendar calendar, CalendarChangeOptions options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a user's personal calendar, creating it when the user has none yet.
     /// </summary>
     /// <param name="userId">The user's id.</param>
     /// <param name="userName">The user's name, used to name a new calendar.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The personal calendar, or <see langword="null"/> when the Personal type isn't registered.</returns>
-    Task<Calendar> GetOrCreatePersonalCalendarAsync(string userId, string userName);
+    Task<Calendar> GetOrCreatePersonalCalendarAsync(string userId, string userName, CancellationToken cancellationToken = default);
 }

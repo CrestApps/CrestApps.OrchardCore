@@ -27,7 +27,7 @@ internal sealed class AppointmentWorkflowReminders : ICalendarReminderOffsetProv
         _typeStore = typeStore;
     }
 
-    public async Task<IEnumerable<TimeSpan>> GetOffsetsAsync()
+    public async Task<IEnumerable<TimeSpan>> GetOffsetsAsync(CancellationToken cancellationToken = default)
     {
         var offsets = new HashSet<TimeSpan>();
 
@@ -44,7 +44,7 @@ internal sealed class AppointmentWorkflowReminders : ICalendarReminderOffsetProv
         return offsets;
     }
 
-    public async Task OnStartingSoonAsync(CalendarReminderContext context)
+    public async Task OnStartingSoonAsync(CalendarReminderContext context, CancellationToken cancellationToken = default)
     {
         var calendarEvent = context.Occurrence.Event;
 
@@ -53,21 +53,21 @@ internal sealed class AppointmentWorkflowReminders : ICalendarReminderOffsetProv
             return;
         }
 
-        var appointment = await _appointmentStore.FindByIdAsync(calendarEvent.SourceId);
+        var appointment = await _appointmentStore.FindByIdAsync(calendarEvent.SourceId, cancellationToken);
 
         if (appointment is null || appointment.Status is not (Models.AppointmentStatus.Confirmed or Models.AppointmentStatus.Requested))
         {
             return;
         }
 
-        var input = AppointmentWorkflowInput.ToInput(appointment, await _typeStore.FindByIdAsync(appointment.AppointmentTypeId));
+        var input = AppointmentWorkflowInput.ToInput(appointment, await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken));
 
         input["MinutesBefore"] = (int)context.Offset.TotalMinutes;
 
         await _workflowManager.TriggerEventAsync(nameof(AppointmentStartingSoonEvent), input, appointment.ItemId);
     }
 
-    public Task OnCompletedAsync(CalendarReminderContext context)
+    public Task OnCompletedAsync(CalendarReminderContext context, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

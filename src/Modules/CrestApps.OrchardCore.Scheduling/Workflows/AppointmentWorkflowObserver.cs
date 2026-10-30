@@ -16,7 +16,7 @@ internal sealed class AppointmentWorkflowObserver : IAppointmentObserver
         _workflowManager = workflowManager;
     }
 
-    public Task OnChangedAsync(AppointmentChange change)
+    public Task OnChangedAsync(AppointmentChange change, CancellationToken cancellationToken = default)
     {
         var name = change.Kind switch
         {

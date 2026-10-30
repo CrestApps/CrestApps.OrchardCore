@@ -31,7 +31,7 @@ public sealed class ListCalendarsTool : CalendarAIToolBase
     /// <inheritdoc />
     protected override async Task<object> InvokeAsync(AIFunctionArguments arguments, IServiceProvider services, ClaimsPrincipal user, CancellationToken cancellationToken)
     {
-        var calendars = await services.GetRequiredService<ICalendarAccessService>().ListAccessibleAsync(user, CalendarAccessLevel.FreeBusy);
+        var calendars = await services.GetRequiredService<ICalendarAccessService>().ListAccessibleAsync(user, CalendarAccessLevel.FreeBusy, cancellationToken: cancellationToken);
 
         return JsonSerializer.Serialize(calendars.Select(access => new
         {

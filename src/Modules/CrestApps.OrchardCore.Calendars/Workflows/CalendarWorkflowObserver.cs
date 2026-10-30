@@ -16,7 +16,7 @@ internal sealed class CalendarWorkflowObserver : ICalendarEventObserver
         _workflowManager = workflowManager;
     }
 
-    public Task OnChangedAsync(CalendarEventChange change)
+    public Task OnChangedAsync(CalendarEventChange change, CancellationToken cancellationToken = default)
     {
         var name = change.Kind switch
         {

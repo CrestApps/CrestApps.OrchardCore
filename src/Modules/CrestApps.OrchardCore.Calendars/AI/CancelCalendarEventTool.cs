@@ -52,8 +52,8 @@ public sealed class CancelCalendarEventTool : CalendarAIToolBase
 
         var options = new CalendarChangeOptions { Actor = CalendarUser.GetId(user) };
         var result = DateTimeOffset.TryParse(Read(arguments, "occurrenceStart"), out var original)
-            ? await eventManager.CancelOccurrenceAsync(calendarEvent, original.UtcDateTime, CalendarEditScope.ThisOccurrence, options)
-            : await eventManager.CancelAsync(calendarEvent, options);
+            ? await eventManager.CancelOccurrenceAsync(calendarEvent, original.UtcDateTime, CalendarEditScope.ThisOccurrence, options, cancellationToken)
+            : await eventManager.CancelAsync(calendarEvent, options, cancellationToken);
 
         return result.Succeeded ? "The event has been cancelled." : "The event was not cancelled: " + string.Join(" ", result.Errors.Select(error => error.Message));
     }

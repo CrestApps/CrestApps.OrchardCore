@@ -42,7 +42,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<AppointmentSlot>> FindSlotsAsync(AppointmentType appointmentType, DateTime fromUtc, DateTime toUtc, string resourceId = null, int maxResults = 200, string excludeAppointmentId = null)
+    public async Task<IReadOnlyList<AppointmentSlot>> FindSlotsAsync(AppointmentType appointmentType, DateTime fromUtc, DateTime toUtc, string resourceId = null, int maxResults = 200, string excludeAppointmentId = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointmentType);
 
@@ -60,7 +60,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
         }
 
         var resourceIds = appointmentType.ResourceIds.Where(id => resourceId is null || id == resourceId).ToList();
-        var resources = (await _resourceStore.GetAsync(resourceIds)).Where(resource => resource.Enabled).ToList();
+        var resources = (await _resourceStore.GetAsync(resourceIds, cancellationToken)).Where(resource => resource.Enabled).ToList();
 
         if (resources.Count == 0 || (appointmentType.Assignment == AppointmentAssignment.AllTogether && resourceId is null && resources.Count < appointmentType.ResourceIds.Count))
         {
@@ -86,7 +86,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
                 FromUtc = earliest - before - duration,
                 ToUtc = latest + after + duration,
                 ExcludeEventIds = excludeEvents,
-            }));
+            }, cancellationToken));
 
             var mine = appointments.Where(appointment => appointment.ResourceIds.Contains(resource.ItemId) && appointment.ItemId != excludeAppointmentId).ToList();
             var starts = new HashSet<DateTime>();

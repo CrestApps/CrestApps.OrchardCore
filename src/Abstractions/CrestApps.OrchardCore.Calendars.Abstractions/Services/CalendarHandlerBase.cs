@@ -6,25 +6,25 @@ namespace CrestApps.OrchardCore.Calendars.Services;
 public abstract class CalendarHandlerBase : ICalendarHandler
 {
     /// <inheritdoc />
-    public virtual Task ValidatingAsync(CalendarValidatingContext context)
+    public virtual Task ValidatingAsync(CalendarValidatingContext context, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public virtual Task CreatedAsync(CalendarContext context)
+    public virtual Task CreatedAsync(CalendarContext context, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public virtual Task UpdatedAsync(CalendarContext context)
+    public virtual Task UpdatedAsync(CalendarContext context, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public virtual Task DeletingAsync(CalendarContext context)
+    public virtual Task DeletingAsync(CalendarContext context, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

@@ -40,7 +40,7 @@ internal sealed class CalendarInvitationObserver : ICalendarEventObserver
         S = stringLocalizer;
     }
 
-    public async Task OnChangedAsync(CalendarEventChange change)
+    public async Task OnChangedAsync(CalendarEventChange change, CancellationToken cancellationToken = default)
     {
         if (!change.SendInvitations || change.Event is null)
         {
@@ -96,7 +96,7 @@ internal sealed class CalendarInvitationObserver : ICalendarEventObserver
                 Stream = new MemoryStream(Encoding.UTF8.GetBytes(ics)),
             });
 
-            var result = await _emailService.SendAsync(message);
+            var result = await _emailService.SendAsync(message, cancellationToken: cancellationToken);
 
             if (!result.Succeeded)
             {

@@ -18,6 +18,6 @@ public sealed class AppointmentHoldsBackgroundTask : IBackgroundTask
     /// <inheritdoc />
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        return serviceProvider.GetRequiredService<IAppointmentService>().ExpireHoldsAsync();
+        return serviceProvider.GetRequiredService<IAppointmentService>().ExpireHoldsAsync(cancellationToken);
     }
 }

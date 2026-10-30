@@ -49,7 +49,7 @@ public sealed class FindCalendarEventsTool : CalendarAIToolBase
         }
 
         var requested = ReadList(arguments, "calendarIds");
-        var calendars = (await services.GetRequiredService<ICalendarAccessService>().ListAccessibleAsync(user, CalendarAccessLevel.FreeBusy))
+        var calendars = (await services.GetRequiredService<ICalendarAccessService>().ListAccessibleAsync(user, CalendarAccessLevel.FreeBusy, cancellationToken: cancellationToken))
             .Where(access => requested.Count == 0 || requested.Contains(access.Calendar.ItemId))
             .ToDictionary(access => access.Calendar.ItemId, access => access.Calendar.Name);
 

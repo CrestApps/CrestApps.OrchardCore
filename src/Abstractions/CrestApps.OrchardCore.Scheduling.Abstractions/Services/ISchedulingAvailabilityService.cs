@@ -17,6 +17,7 @@ public interface ISchedulingAvailabilityService
     /// <param name="resourceId">A resource to limit the times to, or <see langword="null"/>.</param>
     /// <param name="maxResults">The most times to return.</param>
     /// <param name="excludeAppointmentId">An appointment whose own time doesn't count as busy, for a reschedule.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The times, ordered by start.</returns>
-    Task<IReadOnlyList<AppointmentSlot>> FindSlotsAsync(AppointmentType appointmentType, DateTime fromUtc, DateTime toUtc, string resourceId = null, int maxResults = 200, string excludeAppointmentId = null);
+    Task<IReadOnlyList<AppointmentSlot>> FindSlotsAsync(AppointmentType appointmentType, DateTime fromUtc, DateTime toUtc, string resourceId = null, int maxResults = 200, string excludeAppointmentId = null, CancellationToken cancellationToken = default);
 }

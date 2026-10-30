@@ -51,7 +51,7 @@ public sealed class CreateCalendarEventTool : CalendarAIToolBase
         var editor = services.GetRequiredService<CalendarEventEditor>();
         var calendarId = Read(arguments, "calendarId");
         var calendar = calendarId is null
-            ? await calendarService.GetOrCreatePersonalCalendarAsync(CalendarUser.GetId(user), user.Identity?.Name)
+            ? await calendarService.GetOrCreatePersonalCalendarAsync(CalendarUser.GetId(user), user.Identity?.Name, cancellationToken)
             : await calendarService.FindByIdAsync(calendarId, cancellationToken);
 
         if (calendar is null || !await editor.CanAddAsync(user, calendar))
@@ -59,7 +59,7 @@ public sealed class CreateCalendarEventTool : CalendarAIToolBase
             return "The user can't add events to that calendar.";
         }
 
-        var calendarEvent = await eventManager.NewAsync(calendar);
+        var calendarEvent = await eventManager.NewAsync(calendar, cancellationToken: cancellationToken);
         var errors = new List<string>();
 
         CalendarEventInputApplier.Apply(new CalendarEventInput
@@ -77,7 +77,7 @@ public sealed class CreateCalendarEventTool : CalendarAIToolBase
             return string.Join(" ", errors);
         }
 
-        var result = await eventManager.CreateAsync(calendarEvent, new CalendarChangeOptions { Actor = CalendarUser.GetId(user) });
+        var result = await eventManager.CreateAsync(calendarEvent, new CalendarChangeOptions { Actor = CalendarUser.GetId(user) }, cancellationToken);
 
         return result.Succeeded
             ? JsonSerializer.Serialize(CalendarWorkflowInput.ToDictionary(result.Value), JsonOptions)

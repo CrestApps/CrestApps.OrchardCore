@@ -57,7 +57,7 @@ public sealed class FindFreeTimeTool : CalendarAIToolBase
 
         foreach (var calendar in await calendarService.GetAsync(ReadList(arguments, "calendarIds"), cancellationToken))
         {
-            if (await accessService.GetAccessLevelAsync(user, calendar) >= CalendarAccessLevel.FreeBusy)
+            if (await accessService.GetAccessLevelAsync(user, calendar, cancellationToken) >= CalendarAccessLevel.FreeBusy)
             {
                 calendarIds.Add(calendar.ItemId);
             }

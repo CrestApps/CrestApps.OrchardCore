@@ -35,7 +35,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
     }
 
     /// <inheritdoc />
-    public async Task<CalendarAccessLevel> GetAccessLevelAsync(ClaimsPrincipal user, Calendar calendar)
+    public async Task<CalendarAccessLevel> GetAccessLevelAsync(ClaimsPrincipal user, Calendar calendar, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendar);
 
@@ -50,7 +50,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<CalendarAccess>> ListAccessibleAsync(ClaimsPrincipal user, CalendarAccessLevel minimum, string type = null)
+    public async Task<IReadOnlyList<CalendarAccess>> ListAccessibleAsync(ClaimsPrincipal user, CalendarAccessLevel minimum, string type = null, CancellationToken cancellationToken = default)
     {
         if (user?.Identity?.IsAuthenticated != true)
         {
@@ -69,7 +69,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
                 query.Types.Add(type);
             }
 
-            Add(candidates, await _calendarStore.ListAsync(query));
+            Add(candidates, await _calendarStore.ListAsync(query, cancellationToken));
         }
         else if (grants.Access)
         {
@@ -89,11 +89,11 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
 
             if (owned.OwnerIds.Count > 0)
             {
-                Add(candidates, await _calendarStore.ListAsync(owned));
+                Add(candidates, await _calendarStore.ListAsync(owned, cancellationToken));
             }
 
-            Add(candidates, await _calendarStore.ListSharedWithAsync(userId, roles, MaxCalendars));
-            Add(candidates, await _calendarStore.ListVisibleToEveryoneAsync(MaxCalendars));
+            Add(candidates, await _calendarStore.ListSharedWithAsync(userId, roles, MaxCalendars, cancellationToken));
+            Add(candidates, await _calendarStore.ListVisibleToEveryoneAsync(MaxCalendars, cancellationToken));
         }
 
         var result = new List<CalendarAccess>();
@@ -119,7 +119,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
     }
 
     /// <inheritdoc />
-    public async Task<bool> CanCreateAsync(ClaimsPrincipal user, string type)
+    public async Task<bool> CanCreateAsync(ClaimsPrincipal user, string type, CancellationToken cancellationToken = default)
     {
         var descriptor = _typeManager.FindType(type);
 

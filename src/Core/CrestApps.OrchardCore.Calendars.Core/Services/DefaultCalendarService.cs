@@ -58,7 +58,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
     }
 
     /// <inheritdoc />
-    public async Task<Calendar> NewAsync(string type)
+    public async Task<Calendar> NewAsync(string type, CancellationToken cancellationToken = default)
     {
         var descriptor = _typeManager.FindType(type);
 
@@ -128,7 +128,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<Calendar>> CreateAsync(Calendar calendar, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<Calendar>> CreateAsync(Calendar calendar, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendar);
 
@@ -156,7 +156,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
         calendar.ModifiedUtc = now;
         calendar.CreatedBy ??= options.Actor;
 
-        await _calendarStore.CreateAsync(calendar);
+        await _calendarStore.CreateAsync(calendar, cancellationToken);
 
         var context = new CalendarContext(calendar, type, options);
 
@@ -166,7 +166,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
     }
 
     /// <inheritdoc />
-    public async Task<CalendarResult<Calendar>> UpdateAsync(Calendar calendar, CalendarChangeOptions options = null)
+    public async Task<CalendarResult<Calendar>> UpdateAsync(Calendar calendar, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendar);
 
@@ -185,7 +185,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
 
         calendar.ModifiedUtc = _clock.UtcNow;
 
-        await _calendarStore.UpdateAsync(calendar);
+        await _calendarStore.UpdateAsync(calendar, cancellationToken);
 
         var context = new CalendarContext(calendar, type, options);
 
@@ -195,7 +195,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
     }
 
     /// <inheritdoc />
-    public async Task DeleteAsync(Calendar calendar, CalendarChangeOptions options = null)
+    public async Task DeleteAsync(Calendar calendar, CalendarChangeOptions options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calendar);
 
@@ -208,7 +208,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
 
         for (var skip = 0; ; skip += DeleteBatchSize)
         {
-            var batch = await _eventStore.ListByCalendarAsync(calendar.ItemId, skip, DeleteBatchSize);
+            var batch = await _eventStore.ListByCalendarAsync(calendar.ItemId, skip, DeleteBatchSize, cancellationToken);
 
             events.AddRange(batch);
 
@@ -220,14 +220,14 @@ public sealed partial class DefaultCalendarService : ICalendarService
 
         foreach (var calendarEvent in events)
         {
-            await _eventStore.DeleteAsync(calendarEvent);
+            await _eventStore.DeleteAsync(calendarEvent, cancellationToken);
         }
 
-        await _calendarStore.DeleteAsync(calendar);
+        await _calendarStore.DeleteAsync(calendar, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<Calendar> GetOrCreatePersonalCalendarAsync(string userId, string userName)
+    public async Task<Calendar> GetOrCreatePersonalCalendarAsync(string userId, string userName, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
@@ -239,14 +239,14 @@ public sealed partial class DefaultCalendarService : ICalendarService
 
         query.Types.Add(CalendarsConstants.Types.Personal);
 
-        var existing = await _calendarStore.ListAsync(query);
+        var existing = await _calendarStore.ListAsync(query, cancellationToken);
 
         if (existing.Count > 0)
         {
             return existing[0];
         }
 
-        var calendar = await NewAsync(CalendarsConstants.Types.Personal);
+        var calendar = await NewAsync(CalendarsConstants.Types.Personal, cancellationToken);
 
         if (calendar is null)
         {
@@ -256,7 +256,7 @@ public sealed partial class DefaultCalendarService : ICalendarService
         calendar.OwnerId = userId;
         calendar.Name = string.IsNullOrWhiteSpace(userName) ? S["My calendar"].Value : userName;
 
-        var result = await CreateAsync(calendar, new CalendarChangeOptions { Actor = userId });
+        var result = await CreateAsync(calendar, new CalendarChangeOptions { Actor = userId }, cancellationToken);
 
         return result.Succeeded ? result.Value : null;
     }

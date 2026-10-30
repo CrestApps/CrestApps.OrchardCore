@@ -12,27 +12,31 @@ public interface ICalendarEventHandler
     /// Validates an event before it is saved. Add errors to refuse the save.
     /// </summary>
     /// <param name="context">The event, its calendar and type, the event as it was, and the errors.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task ValidatingAsync(CalendarEventValidatingContext context);
+    Task ValidatingAsync(CalendarEventValidatingContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Runs after an event was validated, just before it is staged for saving. The event may still be adjusted.
     /// </summary>
     /// <param name="context">The event.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task SavingAsync(CalendarEventContext context);
+    Task SavingAsync(CalendarEventContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Runs after an event is staged for saving.
     /// </summary>
     /// <param name="context">The event and what happened to it.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task SavedAsync(CalendarEventContext context);
+    Task SavedAsync(CalendarEventContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Runs before an event is deleted.
     /// </summary>
     /// <param name="context">The event.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task DeletingAsync(CalendarEventContext context);
+    Task DeletingAsync(CalendarEventContext context, CancellationToken cancellationToken = default);
 }

@@ -77,7 +77,7 @@ public sealed class CalendarReminderService
 
         foreach (var provider in _offsetProviders)
         {
-            foreach (var offset in await provider.GetOffsetsAsync())
+            foreach (var offset in await provider.GetOffsetsAsync(cancellationToken))
             {
                 if (offset >= TimeSpan.Zero && offset <= TimeSpan.FromDays(30))
                 {
