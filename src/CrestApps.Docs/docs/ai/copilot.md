@@ -15,6 +15,8 @@ user_manual:
 
 Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions.
 
+<YouTube video="ai-chat" title="Video of the chat engines: the default orchestrator, Claude and GitHub Copilot" start={326} end={383} />
+
 ## Summary
 
 Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard Core. This module integrates the [GitHub Copilot SDK for .NET](https://github.com/github/copilot-sdk) as an alternative orchestrator alongside the default Progressive Tool Orchestrator.
@@ -41,8 +43,13 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 
 Depending on which authentication mode you choose:
 
+<<<<<<< HEAD
 - **GitHub Signed-in User (GitHub OAuth)**: a valid **GitHub Copilot subscription** and a **GitHub app** (the settings screen walks you through creating one)
 - **API Key (Bring your own key)**: an API key (and endpoint) for a supported model provider
+=======
+- **GitHub signed-in user** (GitHub OAuth): a valid **GitHub Copilot subscription** and a **GitHub OAuth App**
+- **API key (BYOK)** (bring your own key): an API key (and endpoint) for a supported model provider
+>>>>>>> origin/videos/ai-chat
 
 <YouTube video="ai-orchestrators" title="Video overview of the Default, Copilot and Claude orchestrators" />
 
@@ -55,12 +62,17 @@ Configure the Copilot orchestrator at **Settings → Artificial Intelligence →
 | Authentication type | When to use | What you configure |
 |---|---|---|
 | **Not configured** (`NotConfigured`) | You want to disable Copilot for the tenant without deleting previously entered settings | Nothing else is required; Copilot stays disabled until you select and save another authentication mode |
+<<<<<<< HEAD
 | **GitHub OAuth (GitHub Signed-in User)** (`GitHubOAuth`) | You want to use GitHub Copilot entitlements and user-scoped access | GitHub app (client ID/secret) and user/profile sign-in |
 | **API Key (Bring your own key)** (`ApiKey`) | You want to use your own model provider credentials (no Copilot subscription required) | Provider type, base URL, API key, default model, wire format |
+=======
+| **GitHub signed-in user** (`GitHubOAuth`) | You want to use GitHub Copilot entitlements and user-scoped access | GitHub OAuth app (client ID/secret) and user/profile sign-in |
+| **API key (BYOK)** (`ApiKey`) | You want to use your own model provider credentials (no Copilot subscription required) | Provider type, base URL, API key, default model, wire format |
+>>>>>>> origin/videos/ai-chat
 
 When **Authentication type** is set to **Not configured**, the Copilot orchestrator is disabled for the tenant. The GitHub OAuth client ID and client secret are only required when **GitHub signed-in user** is selected, and an existing stored client secret stays in place until you explicitly replace it with a new value.
 
-### Authentication: GitHub OAuth (GitHub Signed-in User)
+### Authentication: GitHub signed-in user
 
 Use this mode when you want the orchestrator to authenticate to Copilot via GitHub and use the models available to that signed-in identity.
 
@@ -120,7 +132,7 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 #### Setup steps
 
 1. Go to **Settings → Artificial Intelligence → Copilot**.
-2. Set **Authentication Type** to **API Key (Bring your own key)**.
+2. Set **Authentication type** to **API key (BYOK)**.
 3. Choose a **Provider Type**.
 4. Configure the settings listed above.
 5. Save settings.
