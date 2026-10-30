@@ -402,7 +402,7 @@ The bulk actions apply either to the activities selected on the current page or 
 
 ## Reports
 
-When the **Reports** feature (`CrestApps.OrchardCore.Reports`) is enabled, Omnichannel Management contributes 26 CRM reports to the admin **Reports** area, grouped by category: **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT**. They include activity summary, campaign performance, disposition breakdown, dialer call detail, handoff containment, backlog and aging, source, channel and channel-endpoint performance, per-user productivity and completion time, and campaign source, channel, disposition, and attempt mixes.
+When the **Reports** feature (`CrestApps.OrchardCore.Reports`) is enabled, Omnichannel Management contributes its CRM reports (29 with the Omnichannel CRM feature) to the admin **Reports** area, grouped by category: **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT**. They include activity summary, campaign performance, disposition breakdown, dialer call detail, handoff containment, backlog and aging, source, channel and channel-endpoint performance, per-user productivity and completion time, and campaign source, channel, disposition, and attempt mixes.
 
 Every Omnichannel report can be narrowed by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status**, and **Disposition**, which takes several dispositions at once. The filters are read into an `OmnichannelReportCriteria` (`DispositionIds` is the set picked, or `null` for every disposition) and applied by the shared activity filter, so every report that goes through it honors them. Reports export to CSV, and to Excel (`.xlsx`) when the **Reports (OpenXml)** feature is enabled. Viewing them requires the **View Omnichannel reports** permission, which **Manage activities** implies. See [Reports](../user-manual/reports.md) in the user manual.
 
@@ -450,7 +450,7 @@ The headless **Omnichannel Activities** feature registers these permissions (`Pe
 | `ManageActivityBatches` | Manage activity batches | **Load Activities**. |
 | `DeleteLoadedActivityBatches` | Delete loaded activity batches | Deletes a load whose status is *Loaded*; the activities it created are kept. |
 | `ManageSubjectFlows` | Manage subject flows | |
-| `ViewOmnichannelReports` | View Omnichannel reports | Implied by `ManageActivities`. |
+| `ViewOmnichannelReports` | View Omnichannel reports | Implied by `ManageActivities`. Administrators and the built-in **Supervisor** role have it by default. |
 
 ## Exporting and importing configuration
 

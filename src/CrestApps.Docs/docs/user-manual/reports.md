@@ -16,7 +16,7 @@ Reports show what happened in your contact center over a period you choose: call
 | | |
 | --- | --- |
 | **Menu** | Reports > *category* > *report* |
-| **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators have it by default) |
+| **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators and supervisors have it by default) |
 | **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export, and Reports (PDF) adds PDF export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
 
 <AskYourAdmin />
@@ -368,5 +368,13 @@ Tips:
 
 - A queue that shows *No routing decision* while it has work due is the first place to look when nothing is dialing. Check that agents are signed in to it on the **Live dashboard**.
 - A campaign that uses predictive over-dialing places some calls without asking routing first, so it can show as quiet while those calls are in progress.
+
+## Omnichannel reports
+
+Omnichannel adds 29 reports under **CRM & Campaigns** and the other categories, and each needs **View Omnichannel reports**:
+
+- **Five activity reports:** Activity summary, Campaign performance, Disposition breakdown, Dialer call detail, and AI handoff & containment.
+- **Twenty-one workload and performance reports:** Activity backlog, Activity aging, Activity source performance, CRM channel performance, Activity kind performance, Activity assignment performance, Activity attempt analysis, Contact type workload, Activity urgency performance, Assigned user performance, Activity creation by user, User completion time, Daily user productivity, Campaign source mix, Campaign channel mix, Campaign disposition mix, Campaign attempt performance, Overdue workload by user, Address usage, Customer workload, and Scheduled completion performance.
+- **Three CRM reports** with the Omnichannel CRM feature: Lead funnel, Lead conversion by source and list, and Opportunity pipeline.
 
 The [report catalog](../contact-center/report-catalog.md) in the Technical Manual lists every Contact Center and CRM report with its filters, columns and exact formulas, such as how answer rate, service level and average handle time are calculated.
