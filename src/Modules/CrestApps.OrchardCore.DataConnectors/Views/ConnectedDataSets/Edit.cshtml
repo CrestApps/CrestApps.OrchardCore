@@ -1,0 +1,23 @@
+@model DataConnectorEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ConnectedDataSetsEdit" title="@Model.Title">
+        <breadcrumb-item id="ConnectedDataSets" action="Index" controller="ConnectedDataSets" area="CrestApps.OrchardCore.DataConnectors" permission="@DataConnectorPermissions.ManageConnectedDataSets.Name">@T["Data Sets"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit" autocomplete="off">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit" name="submit.Save">@T["Save"]</button>
+            @if (!string.IsNullOrEmpty(Model.ItemId))
+            {
+                <a class="btn btn-info" role="button" asp-action="Preview" asp-route-id="@Model.ItemId">@T["Preview"]</a>
+            }
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

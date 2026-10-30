@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.DataConnectors.Deployments
+
+@model ShapeViewModel<ConnectedDataSetDeploymentStep>
+
+<h5>@T["Connected Data Sets"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All data sets"]</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T.Plural(Model.Value.ItemIds?.Length ?? 0, "1 selected data set", "{0} selected data sets", Model.Value.ItemIds?.Length ?? 0)</span>
+}

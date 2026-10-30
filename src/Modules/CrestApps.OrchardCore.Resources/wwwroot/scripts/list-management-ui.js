@@ -128,10 +128,10 @@
 				element.classList.remove(...classesToRemove);
 			});
 		};
-		const hasVisibleIgnoredSibling = (element, siblingProperty) => {
+		const hasVisibleSibling = (element, siblingProperty) => {
 			let sibling = element?.[siblingProperty] ?? null;
 			while (sibling) {
-				if (!sibling.classList.contains("d-none")) return sibling.classList.contains("ignore-elements");
+				if (!sibling.classList.contains("d-none")) return true;
 				sibling = sibling[siblingProperty];
 			}
 			return false;
@@ -148,8 +148,8 @@
 				}
 				return;
 			}
-			if (!hasVisibleIgnoredSibling(visibleElements[0], "previousElementSibling")) visibleElements[0].classList.add("first-child-visible", ...firstElementClasses);
-			if (!hasVisibleIgnoredSibling(visibleElements[visibleElements.length - 1], "nextElementSibling")) visibleElements[visibleElements.length - 1].classList.add("last-child-visible", ...lastElementClasses);
+			if (!hasVisibleSibling(visibleElements[0], "previousElementSibling")) visibleElements[0].classList.add("first-child-visible", ...firstElementClasses);
+			if (!hasVisibleSibling(visibleElements[visibleElements.length - 1], "nextElementSibling")) visibleElements[visibleElements.length - 1].classList.add("last-child-visible", ...lastElementClasses);
 		};
 		const toggleSearchAlerts = (root, options, hasSearch, visibleCount) => {
 			const searchAlert = getElement(root, options.searchAlertSelector);

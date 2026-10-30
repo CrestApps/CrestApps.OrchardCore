@@ -1,0 +1,9 @@
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@model DataConnectorDeploymentStepViewModel
+
+<partial name="_DataConnectorDeploymentStepFields" model="Model" view-data='new ViewDataDictionary(ViewData)
+{
+    ["Label"] = T["Data Connections"],
+    ["IncludeAllLabel"] = T["Include all connections"],
+    ["Hint"] = T["The connections to export. Their secrets are never exported: give them to the importing recipe, or type them after importing."],
+}' />
