@@ -169,7 +169,8 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="activity">The call the session was held for.</param>
     /// <param name="voiceEvent">The provider event the session was started from.</param>
     /// <param name="sessionLost">Whether the session was lost with the caller still on the line.</param>
-    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent, bool sessionLost)
+    /// <param name="handoffAnnounced">Whether the assistant told the caller before it asked for the handoff.</param>
+    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent, bool sessionLost, bool handoffAnnounced = false)
     {
         // Read here, while the turns that recorded them are still this scope's. Everything after this point runs
         // somewhere else and can carry nothing but plain values.
@@ -195,6 +196,7 @@ public sealed partial class VoiceAgentConversationLoop
                 ProviderName = voiceEvent.ProviderName,
                 ProviderCallId = voiceEvent.ProviderCallId,
                 HandoffRequested = handoffRequested,
+                HandoffAnnounced = handoffAnnounced,
                 EndCallRequested = endCallRequested,
                 EndCallReason = _endCallTurn.Reason,
                 ReachedVoicemail = _endCallTurn.ReachedVoicemail,
@@ -262,10 +264,11 @@ public sealed partial class VoiceAgentConversationLoop
         };
 
         // The caller asked for a person: seat them in the queue, on the same enqueue-and-offer path the
-        // turn-based loop uses, so a handoff means the same thing on both.
+        // turn-based loop uses, so a handoff means the same thing on both. The connecting line is said when the model
+        // asked for the transfer without telling the caller first.
         if (completion.HandoffRequested)
         {
-            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, announced: true, cancellationToken);
+            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, announced: completion.HandoffAnnounced, cancellationToken);
 
             return;
         }

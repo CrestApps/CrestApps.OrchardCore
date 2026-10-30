@@ -206,6 +206,12 @@ public sealed class RealtimeVoiceConversationContext
     public bool SessionLost { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the assistant spoke to the caller after their last words and before it
+    /// asked to hand them to a person, so the handoff need not tell them it is connecting them.
+    /// </summary>
+    public bool HandoffAnnounced { get; set; }
+
+    /// <summary>
     /// Gets or sets the token that fires when this node begins to shut down.
     /// </summary>
     /// <remarks>

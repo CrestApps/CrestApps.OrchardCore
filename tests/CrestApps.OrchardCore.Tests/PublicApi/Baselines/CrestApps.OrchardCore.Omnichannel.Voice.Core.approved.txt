@@ -106,6 +106,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ActivityId { get; set; }
         public string EndCallReason { get; set; }
         public bool EndCallRequested { get; set; }
+        public bool HandoffAnnounced { get; set; }
         public bool HandoffRequested { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
@@ -380,6 +381,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.Threading.CancellationToken EndCallRequested { get; set; }
         public System.Func<int> EndCallRequests { get; set; }
         public bool EndedByShutdown { get; set; }
+        public bool HandoffAnnounced { get; set; }
         public string HandoffInstructions { get; set; }
         public System.Threading.CancellationToken HandoffRequested { get; set; }
         public string InteractionId { get; set; }
