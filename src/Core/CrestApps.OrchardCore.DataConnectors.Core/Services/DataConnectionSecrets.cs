@@ -102,7 +102,8 @@ internal sealed class DataConnectionSecretManager : IDataConnectionSecretManager
             DataConnectorConstants.SecretsProtectionPurpose,
             protectedValue,
             _logger,
-            $"{name} of the data connection '{connection.Name}'");
+            // The warning names the connection, not the secret: a secret's name, such as Password, has no place in a log.
+            $"secret of the data connection '{connection.Name}'");
     }
 
     private sealed class Reader : IDataConnectorSecrets
