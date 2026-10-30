@@ -59,7 +59,6 @@ How the filters work:
 - An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`.
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
-<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
 
 Reports of the modules above can be emailed on a schedule (see [Email a report on a schedule](#email-a-report-on-a-schedule)). Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to; to email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
@@ -92,7 +91,6 @@ The cards at the top of **Executive performance dashboard**, **Call insights** a
 | **Utilization** and **Occupancy** (per agent) | Utilization is busy plus wrap-up time divided by all signed-in time. Occupancy is busy plus wrap-up time divided by the time the agent was available, reserved, busy or in wrap-up. Neither says how well an agent works. |
 
 *Voicemail* and *Callback requested* are neither answered nor abandoned. They count toward *Inbound offered* but not toward the abandonment rate or the service level, and each has its own column.
->>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 ## Email a report on a schedule
 
