@@ -58,7 +58,8 @@ public sealed class BookingCalendarController : Controller
     /// </summary>
     /// <returns>A redirect to the bookings calendar.</returns>
     [HttpPost]
-    [Admin("bookings/calendar/sync", "BookingsCalendarSync")]
+    // Not under "bookings/", where BookingsAdminController's "bookings/{action}/{itemId?}" would take it as its Calendar action.
+    [Admin("bookings-calendar/sync", "BookingsCalendarSync")]
     public async Task<IActionResult> Sync()
     {
         if (!await _authorizationService.AuthorizeAsync(User, BookingsPermissions.ManageBookings))

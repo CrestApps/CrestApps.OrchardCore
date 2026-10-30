@@ -16,6 +16,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Scheduling.Controllers;
 
@@ -97,9 +98,10 @@ public sealed class SchedulingResourcesController : Controller
     /// Shows the editor of a new or existing resource.
     /// </summary>
     /// <param name="id">The resource's id, or empty for a new one.</param>
+    /// <param name="siteService">The site service.</param>
     /// <returns>The editor.</returns>
     [Admin("scheduling/resources/edit/{id?}", "SchedulingResourcesEdit")]
-    public async Task<IActionResult> Edit(string id)
+    public async Task<IActionResult> Edit(string id, [FromServices] ISiteService siteService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SchedulingPermissions.ManageScheduling))
         {
@@ -120,7 +122,8 @@ public sealed class SchedulingResourcesController : Controller
             Kind = resource.Kind.ToString(),
             UserId = resource.UserId,
             CalendarId = resource.CalendarId,
-            TimeZoneId = resource.TimeZoneId,
+            // A new resource starts in the site's time zone rather than the first one in the list.
+            TimeZoneId = resource.TimeZoneId ?? (await siteService.GetSiteSettingsAsync()).TimeZoneId,
             AvailabilityMode = resource.AvailabilityMode.ToString(),
             ShiftCalendarId = resource.ShiftCalendarId,
             WorkingHours = SchedulingFormat.WriteHours(resource.WorkingHours),

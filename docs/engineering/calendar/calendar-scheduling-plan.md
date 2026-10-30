@@ -107,7 +107,7 @@ A range query loads events whose `StartUtc < to` and `RangeEndUtc > from`, expan
 | `ICalendarQueryService` | Occurrences in a range for one or more calendars, for a user (owned + attending), or for a resource; honors visibility and access (free/busy-only callers get busy blocks without titles) |
 | `ICalendarAvailabilityService` | Free/busy for users, calendars and resources, merging busy occurrences with every `ICalendarBusyTimeSource`; finds free windows of a given length |
 | `ICalendarAccessService` + `CalendarPermissions` | Resource-based authorization: `ViewCalendar`, `ViewCalendarFreeBusy`, `EditCalendarEvents`, `ManageCalendar` for a calendar, with an `AuthorizationHandler` that combines the global permissions with owner, sharing and visibility |
-| `IICalendarSerializer` | Writes calendars and events to iCalendar (RFC 5545) and reads VEVENTs (with RRULE, EXDATE, RECURRENCE-ID, VTIMEZONE via TZID) |
+| `ICalendarWriter` / `ICalendarReader` / `ICalendarImporter` (Core) | Write calendars and events to iCalendar (RFC 5545) with VTIMEZONE, read VEVENTs (RRULE, EXDATE, RECURRENCE-ID, TZID) and upsert them into a calendar by UID |
 
 ### Extension points
 
@@ -115,8 +115,8 @@ A range query loads events whose `StartUtc < to` and `RangeEndUtc > from`, expan
 |---|---|
 | `AddCalendarType(...)` | Register a calendar type and its event types |
 | `ICalendarHandler` | React to calendars being created, updated, deleted |
-| `ICalendarEventHandler` | Validate (`ValidatingAsync` adds errors), and react to created, updated, moved, cancelled, deleted, attendee added and response changed. Runs in the request; after-commit work goes through `ICalendarEventNotifier` |
-| `ICalendarEventNotifier` | Raised **after the session commits** (deferred task) with a stable payload; the workflow integration, invitations and provider push listen here |
+| `ICalendarEventHandler` | Validate (`ValidatingAsync` adds errors), and react to created, updated, moved, cancelled, deleted, attendee added and response changed. Runs in the request; after-commit work goes through `ICalendarEventObserver` |
+| `ICalendarEventObserver` | Raised **after the session commits** (deferred task) with a stable payload; the workflow integration, invitations and provider push listen here |
 | `ICalendarBusyTimeSource` | Contribute busy time that isn't stored as events (a module's own records), so free/busy and scheduling see it |
 | `ICalendarEventSource` | Contribute read-only occurrences to the calendar view from another module's records without copying them (for example scheduled callbacks) |
 | `ICalendarProvider` | An external calendar provider (iCalendar feed, Google, Microsoft 365): connect, pull changes, push changes |
@@ -138,11 +138,10 @@ A range query loads events whose `StartUtc < to` and `RangeEndUtc > from`, expan
 | Calendars API | `CrestApps.OrchardCore.Calendars.Api` | Calendars | `/api/calendars/v1` endpoints |
 | Calendar AI Tools | `CrestApps.OrchardCore.Calendars.AI` | Calendars, AI | AI functions: list calendars, find free time, list events, create, move and cancel an event |
 | Workflows integration | (startup with `RequireFeatures("OrchardCore.Workflows")`) | | Calendar workflow events and tasks |
-| Scheduling | `CrestApps.OrchardCore.Scheduling` | Calendars | Appointment types, resources, working hours, availability, appointments, holds, reminders |
+| Scheduling | `CrestApps.OrchardCore.Scheduling` | Calendars | Appointment types, resources, working hours, availability, appointments, holds, reminders, waitlist |
 | Scheduling Self-Service | `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling | Public booking pages, manage links to reschedule or cancel |
-| Scheduling Waitlist | `CrestApps.OrchardCore.Scheduling.Waitlist` | Scheduling | Waitlist entries and the slot-available event |
 | Scheduling API, AI Tools | `...Scheduling.Api`, `...Scheduling.AI` | Scheduling | Endpoints and AI functions |
-| Bookings Calendar | `CrestApps.OrchardCore.Bookings.Calendar` | Bookings, Calendars | Booking events on a Bookings calendar, busy time from a calendar closing slots, backfill |
+| Bookings Calendar | `CrestApps.OrchardCore.Bookings.Calendar` | Bookings, Calendars | Every booking as an event on one shared Bookings calendar, and a sync action that backfills them |
 
 ## Phases
 
@@ -212,3 +211,11 @@ Each phase is a commit (or a few) on one branch and one pull request, per the "o
 ## Progress
 
 - 2026-10-30: plan written.
+- Phase 1 built (commits "Calendars phase 1a/1b/1c"): contracts, recurrence engine, stores, managers, query, free/busy, access, the Calendars module with the seven built-in types, admin screens and the FullCalendar view, workflows, reminders, iCalendar, feeds, ICS subscriptions, recipes, deployment, API, AI tools and invitations. The phase 4 iCalendar and ICS-subscription items were built with phase 1.
+- Phase 2 built ("Scheduling phase 2"): appointment types, resources, availability, concurrency-safe booking, holds, waitlist (part of the base feature, not its own), self-service pages and manage links, workflows, API and AI tools.
+- Phase 3 built ("Bookings phase 3"), smaller than planned:
+  - The hooks are `IBookingHandler` on the booking store (`SavingAsync` with the previous status and dates, `DeletingAsync`), not events raised by `BookingService`, so every path that saves a booking is covered with no change to `BookingService`.
+  - Workflow events: Booking Created, Confirmed, Rescheduled, Canceled, Completed, No-Show and Expired, started after commit. The payment events (Payment Received, Payment Failed, Refunded) were not built.
+  - Bookings Calendar keeps one shared calendar (no per-product setting) and a **Sync to calendar** button; no background backfill pass.
+  - **Block with calendar** (item 4) is `BookingPart.BlockingCalendarId` behind a new `IBookingSlotFilter` seam that `BookingCapacityService` asks for closed dates and times; the month table links to the calendar view (item 5).
+- Not built: Google Calendar and Microsoft 365 providers (phase 4.4; they need app registrations and test accounts), and phase 5 (report data sources, Contact Center callbacks as an event source).

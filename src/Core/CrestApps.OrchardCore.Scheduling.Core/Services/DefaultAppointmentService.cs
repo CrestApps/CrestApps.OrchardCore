@@ -256,20 +256,24 @@ public sealed class DefaultAppointmentService : IAppointmentService
             var previousStart = appointment.StartUtc;
             var keep = appointment.ResourceIds.All(slot.ResourceIds.Contains) && type.Assignment != AppointmentAssignment.AllTogether;
 
-            await RemoveEventAsync(appointment, type, actor);
-
-            appointment.ResourceIds = keep ? appointment.ResourceIds : await ChooseResourcesAsync(type, slot);
             appointment.StartUtc = start;
             appointment.EndUtc = start.AddMinutes(type.DurationMinutes);
             appointment.ModifiedUtc = _clock.UtcNow;
 
-            var eventError = await PlaceEventAsync(type, appointment, actor);
-
-            if (eventError is not null)
+            if (!keep || !await TryMoveEventAsync(appointment, type, actor))
             {
-                result.Errors.Add(eventError);
+                await RemoveEventAsync(appointment, type, actor);
 
-                return result;
+                appointment.ResourceIds = keep ? appointment.ResourceIds : await ChooseResourcesAsync(type, slot);
+
+                var eventError = await PlaceEventAsync(type, appointment, actor);
+
+                if (eventError is not null)
+                {
+                    result.Errors.Add(eventError);
+
+                    return result;
+                }
             }
 
             await BumpAsync(appointment.ResourceIds);
@@ -468,6 +472,32 @@ public sealed class DefaultAppointmentService : IAppointmentService
         appointment.CalendarEventId = created.Value.ItemId;
 
         return null;
+    }
+
+    // With the same resources and one customer per event, the event moves in place, so invitations and synced calendars see
+    // the same event updated rather than one cancelled and another created.
+    private async Task<bool> TryMoveEventAsync(Appointment appointment, AppointmentType type, string actor)
+    {
+        if (type.Capacity > 1)
+        {
+            return false;
+        }
+
+        var calendarEvent = await _eventManager.FindByIdAsync(appointment.CalendarEventId);
+
+        if (calendarEvent is null || calendarEvent.Status == CalendarEventStatus.Cancelled)
+        {
+            return false;
+        }
+
+        var options = new CalendarChangeOptions { Actor = actor ?? SchedulingConstants.EventSource, SkipConflictCheck = true };
+        var moved = await _eventManager.UpdateAsync(calendarEvent, target =>
+        {
+            target.Start = CalendarTime.ToLocal(appointment.StartUtc, target.TimeZoneId);
+            target.End = CalendarTime.ToLocal(appointment.EndUtc, target.TimeZoneId);
+        }, options);
+
+        return moved.Succeeded;
     }
 
     private async Task RemoveEventAsync(Appointment appointment, AppointmentType type, string actor)

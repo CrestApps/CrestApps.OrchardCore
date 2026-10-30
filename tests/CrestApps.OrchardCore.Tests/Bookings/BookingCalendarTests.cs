@@ -130,10 +130,37 @@ public sealed class BookingCalendarTests
         Assert.Null(await FindEventAsync(harness, expired.ItemId));
     }
 
+    [Fact]
+    public async Task SlotFilter_ClosesTimesBusyOnTheBlockingCalendar()
+    {
+        // Arrange: the room is busy 10:00-11:00 New York time on 10 November
+        await using var harness = await CreateAsync(AddBookingsCalendar);
+        var room = await harness.CreateCalendarAsync(CalendarTestHarness.General, "Board Room");
+
+        await harness.CreateEventAsync(room.ItemId, new DateTime(2026, 11, 10, 10, 0, 0), new DateTime(2026, 11, 10, 11, 0, 0));
+
+        var part = new BookingPart { Kind = BookingKind.TimeSlot, SlotMinutes = 30, BlockingCalendarId = room.ItemId };
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+        string[] keys = ["2026-11-10T09:30", "2026-11-10T10:00", "2026-11-10T10:30", "2026-11-10T11:00", "2026-11-11"];
+
+        // Act
+        var closed = await harness.RunAsync(
+            services => services.GetRequiredService<BookingCalendarSlotFilter>().GetClosedSlotKeysAsync("tour1", part, keys, timeZone, TestContext.Current.CancellationToken),
+            commit: false);
+        var unblocked = await harness.RunAsync(
+            services => services.GetRequiredService<BookingCalendarSlotFilter>().GetClosedSlotKeysAsync("tour1", new BookingPart { Kind = BookingKind.TimeSlot }, keys, timeZone, TestContext.Current.CancellationToken),
+            commit: false);
+
+        // Assert
+        Assert.Equal(["2026-11-10T10:00", "2026-11-10T10:30"], closed.Order(StringComparer.Ordinal));
+        Assert.Empty(unblocked);
+    }
+
     private static void AddBookingsCalendar(IServiceCollection services)
     {
         services.AddScoped<BookingCalendarHandler>();
         services.AddScoped<IBookingHandler>(serviceProvider => serviceProvider.GetRequiredService<BookingCalendarHandler>());
+        services.AddScoped<BookingCalendarSlotFilter>();
         services.AddCalendarType(BookingCalendarHandler.CalendarType, type => type
             .ManagedByCode()
             .AddEventType(BookingCalendarHandler.EventType, new LocalizationSource("Booking")));
@@ -203,7 +230,12 @@ public sealed class BookingCalendarTests
     private static Task<CalendarEvent> FindEventAsync(CalendarTestHarness harness, string bookingId)
     {
         return harness.RunAsync(
-            async services => (await services.GetRequiredService<ICalendarEventManager>().FindBySourceAsync(BookingCalendarHandler.Source, bookingId)).FirstOrDefault(),
+            async services =>
+            {
+                var events = await services.GetRequiredService<ICalendarEventManager>().FindBySourceAsync(BookingCalendarHandler.Source, bookingId);
+
+                return events.Count > 0 ? events[0] : null;
+            },
             commit: false);
     }
 

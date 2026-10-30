@@ -1,6 +1,6 @@
 @using OrchardCore.DisplayManagement.Html
-@using OrchardCore.Environment.Shell
-@inject IShellFeaturesManager ShellFeaturesManager
+@using CrestApps.OrchardCore.Bookings.Calendar
+@inject IServiceProvider ServiceProvider
 @model BookingCalendarViewModel
 
 @{
@@ -11,6 +11,10 @@
     var offset = ((int)first.DayOfWeek - firstDay + 7) % 7;
     var days = DateTime.DaysInMonth(first.Year, first.Month);
     var cells = (int)Math.Ceiling((offset + days) / 7.0) * 7;
+
+    // Only registered when the Bookings Calendar feature is on.
+    var calendarHandler = ServiceProvider.GetService(typeof(BookingCalendarHandler)) as BookingCalendarHandler;
+    var bookingsCalendar = calendarHandler is null ? null : await calendarHandler.FindCalendarAsync();
 }
 
 <zone Name="Title">
@@ -23,9 +27,17 @@
     <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar" asp-route-month="@first.AddMonths(-1).ToString("yyyy-MM", invariant)" aria-label="@T["Previous month"]"><span class="fa-solid fa-chevron-left" aria-hidden="true"></span></a>
     <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar">@T["This month"]</a>
     <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar" asp-route-month="@first.AddMonths(1).ToString("yyyy-MM", invariant)" aria-label="@T["Next month"]"><span class="fa-solid fa-chevron-right" aria-hidden="true"></span></a>
-    @if (await ShellFeaturesManager.IsFeatureEnabledAsync(BookingsConstants.CalendarFeature))
+    @if (calendarHandler is not null)
     {
-        <form class="ms-auto" asp-action="Sync" asp-controller="BookingCalendar" asp-area="@BookingsConstants.Feature" method="post">
+        <div class="ms-auto"></div>
+        @if (bookingsCalendar is not null)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-area="CrestApps.OrchardCore.Calendars" asp-controller="Calendar" asp-action="Index" asp-route-calendars="@bookingsCalendar.ItemId" asp-route-date="@first.ToString("yyyy-MM-dd", invariant)" asp-route-view="month">
+                <span class="fa-solid fa-calendar-days" aria-hidden="true"></span>
+                @T["Open in calendar"]
+            </a>
+        }
+        <form asp-action="Sync" asp-controller="BookingCalendar" asp-area="@BookingsConstants.Feature" method="post">
             <button type="submit" class="btn btn-outline-primary btn-sm" title="@T["Adds every booking to the Bookings calendar, or updates its event there."]">
                 <span class="fa-solid fa-rotate" aria-hidden="true"></span>
                 @T["Sync to calendar"]

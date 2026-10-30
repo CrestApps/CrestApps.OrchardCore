@@ -143,21 +143,23 @@ public sealed class BookingCalendarHandler : IBookingHandler
     }
 
     /// <summary>
+    /// Finds the Bookings calendar, without creating it.
+    /// </summary>
+    /// <returns>The calendar, or <see langword="null"/> when no booking was put on it yet.</returns>
+    public async Task<Calendars.Models.Calendar> FindCalendarAsync()
+    {
+        return _calendar ??= await _calendarService.FindBySourceAsync(Source, Source);
+    }
+
+    /// <summary>
     /// Gets the Bookings calendar, creating it the first time.
     /// </summary>
     /// <returns>The calendar, or <see langword="null"/> when it can't be created.</returns>
     public async Task<Calendars.Models.Calendar> GetCalendarAsync()
     {
-        if (_calendar is not null)
+        if (await FindCalendarAsync() is { } existing)
         {
-            return _calendar;
-        }
-
-        _calendar = await _calendarService.FindBySourceAsync(Source, Source);
-
-        if (_calendar is not null)
-        {
-            return _calendar;
+            return existing;
         }
 
         var calendar = await _calendarService.NewAsync(CalendarType);

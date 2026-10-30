@@ -202,6 +202,7 @@ public sealed class SchedulingTests
         // Assert
         Assert.True(moved.Succeeded, string.Join(" ", moved.Errors));
         Assert.Equal(newStart, Assert.Single(occurrences).StartUtc);
+        Assert.Equal(booked.Appointment.CalendarEventId, moved.Appointment.CalendarEventId);
         Assert.Empty(afterCancel);
         Assert.Contains(movePending, change => change.Kind == AppointmentChangeKind.Rescheduled);
         Assert.Contains(movePending, change => change.Kind == AppointmentChangeKind.WaitlistSlotAvailable && change.WaitlistEntry.CustomerName == "Waiting Wendy");
