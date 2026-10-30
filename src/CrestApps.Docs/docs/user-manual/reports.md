@@ -137,15 +137,15 @@ With the **Admin Dashboard** feature on (under **Tools > Features**), any report
 6. **Rows per table** limits how many rows of each table appear (it starts at 5), and **Keep for (minutes)** is how long the widget keeps what it shows before it runs the report again (it starts at 30). 0 runs the report on every visit. Saving the widget starts over.
 7. Click **Publish**, then **Close Editor**.
 
-<YouTube video="reports-dashboard-widgets" title="Video of adding a Report widget" start=85 end=154 />
+<YouTube video="reports-dashboard-widgets" title="Video of adding a Report widget" start={85} end={154} />
 
 Each tile names its report, says its period in words, says when its result was made, and has an **Open the full report** link that opens the report with its filters and exports.
 
-<YouTube video="reports-dashboard-widgets" title="Video of the dashboard tiles" start=154 end=175 />
+<YouTube video="reports-dashboard-widgets" title="Video of the dashboard tiles" start={154} end={175} />
 
 Every tile checks the person looking at it. Someone who may open the dashboard but not the report sees *You can't view the report* in its place, instead of numbers, and a widget that has no report chosen says *Choose the report this widget shows by editing it*. If the report cannot run, the tile says so, and the details are in the log. A tile that has nothing for its period says *Nothing to show for this period*.
 
-<YouTube video="reports-dashboard-widgets" title="Video of what each person sees on the dashboard" start=213 end=227 />
+<YouTube video="reports-dashboard-widgets" title="Video of what each person sees on the dashboard" start={213} end={227} />
 
 The **Access the Admin Dashboard** permission opens the dashboard, and **Manage the Admin Dashboard** opens its editor. The person also needs the permission of each report whose tile they should see.
 
