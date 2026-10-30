@@ -53,6 +53,14 @@ Two-way providers for Google Calendar and Microsoft 365 are not available yet. T
 
 `ManageAllCalendars` implies the other three; `ViewAllCalendars` and `CreateCalendars` imply `AccessCalendars`. `ViewAllCalendars` implies `ListCalendarEvents` and `ViewCalendarEvents`, each of which implies its Own permission, and `AccessCalendars` implies both Own permissions.
 
+### Reminders on screen
+
+`CalendarEvent.ReminderMinutes` holds how many minutes before the start an event reminds its people (one of `CalendarReminders.Choices`: 0, 5, 10, 15, 30, 60, 120 or 1440). New events that take time get `CalendarOptions.DefaultReminderMinutes` (10) unless their event type sets `RemindBefore(minutes)` (negative for none). `CalendarReminderService` raises each event's own offsets next to the ones workflows asked for, once each through the reminder log. `CalendarUserReminderObserver` turns them into a `CalendarUserReminder` per person (the owner of a user-owned calendar and every user attendee who hasn't declined). `CalendarRemindersFilter` adds the `CalendarReminders` shape and script to every full admin page of a user with `AccessCalendars`. The script polls `GET Admin/api/calendars/reminders` every minute and shows each reminder as a toast that doesn't hide by itself, until `POST Admin/api/calendars/reminders/{id}/dismiss` (with the antiforgery token header).
+
+### Letting a user choose a time
+
+Any page can let the user choose a time on their own calendar: render the `CalendarPicker` shape (`@await DisplayAsync(await New.CalendarPicker())`) and call `CrestAppsCalendarPicker.open({ date, durationMinutes, title })`. It shows the user's schedule in a modal and resolves with `{ start, end, local }` (`local` is the wall-clock time in the user's time zone, which date inputs in that zone expect), or `null` when the user closes it. Omnichannel uses it for follow-up activities (see the Omnichannel activities docs).
+
 ### Schedules and event details
 
 Code only checks the broad permission, with the resource, and `CalendarEventAuthorizationHandler` (an `AuthorizationHandler<PermissionRequirement>`) grants it through the Own permission when the resource is the user's:

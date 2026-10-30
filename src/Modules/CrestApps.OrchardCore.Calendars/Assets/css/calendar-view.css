@@ -23,6 +23,17 @@
   --fc-today-bg-color: rgba(var(--bs-primary-rgb), 0.08);
 }
 
+#calendar-picker-modal .fc {
+  --fc-border-color: var(--bs-border-color);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bs-tertiary-bg);
+  --fc-today-bg-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+#calendar-picker-modal .fc .fc-toolbar-title {
+  font-size: 1.1rem;
+}
+
 #calendar-view .fc .fc-toolbar-title {
   font-size: 1.25rem;
 }

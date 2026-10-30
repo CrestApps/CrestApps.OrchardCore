@@ -412,9 +412,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public ActivityDispositionRequest() { }
         public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
         public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
+        public System.Collections.Generic.ISet<string> ActionsToCalendar { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public string ActorDisplayName { get; set; }
         public string ActorId { get; set; }
+        public System.Collections.Generic.IDictionary<string, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> CreatedActivities { get; set; }
         public string DispositionId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionActor? DispositionedBy { get; set; }
         public string NotInServiceSource { get; set; }
@@ -1405,6 +1407,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public OrchardCore.ContentManagement.ContentItem Contact { get; set; }
+        public System.Collections.Generic.IDictionary<string, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> CreatedActivities { get; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition Disposition { get; set; }
         public string NotInServiceSource { get; set; }
         public OrchardCore.ContentManagement.ContentItem Subject { get; set; }

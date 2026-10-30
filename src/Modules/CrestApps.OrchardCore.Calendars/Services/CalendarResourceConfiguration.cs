@@ -23,6 +23,11 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
     /// </summary>
     public const string RemindersScript = "CrestApps.OrchardCore.Calendars.Reminders";
 
+    /// <summary>
+    /// The script that lets a page ask the user to choose a time on their own calendar.
+    /// </summary>
+    public const string PickerScript = "CrestApps.OrchardCore.Calendars.Picker";
+
     private static readonly ResourceManifest _manifest;
 
     static CalendarResourceConfiguration()
@@ -34,6 +39,14 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
             .SetUrl(
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-view.min.js",
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-view.js")
+            .SetDependencies("fullcalendar")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript(PickerScript)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Calendars/scripts/calendar-picker.min.js",
+                "~/CrestApps.OrchardCore.Calendars/scripts/calendar-picker.js")
             .SetDependencies("fullcalendar")
             .SetVersion("1.0.0");
 

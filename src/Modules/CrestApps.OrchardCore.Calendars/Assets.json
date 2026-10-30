@@ -13,6 +13,12 @@
   },
   {
     "action": "vite",
+    "name": "calendar-picker.js",
+    "source": "Assets/js/calendar-picker.js",
+    "dest": "wwwroot/scripts/calendar-picker.js"
+  },
+  {
+    "action": "vite",
     "name": "calendar-view.css",
     "source": "Assets/css/calendar-view.css",
     "dest": "wwwroot/styles/calendar-view.css"

@@ -247,6 +247,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         await _session.SaveAsync(nextAttempt, collection: OmnichannelConstants.CollectionName);
+        context.CreatedActivities[action.ItemId] = nextAttempt;
     }
 
     private async Task ExecuteNewActivityAsync(SubjectAction action, SubjectActionExecutionContext context)
@@ -324,6 +325,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         await _session.SaveAsync(newActivity, collection: OmnichannelConstants.CollectionName);
+        context.CreatedActivities[action.ItemId] = newActivity;
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsForSubjectAsync(string subjectContentType)
