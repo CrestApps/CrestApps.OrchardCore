@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.AI.Recipes;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
@@ -17,11 +16,11 @@ public sealed class AIProfileDeploymentStep : DeploymentStep
     public override string Name => AIProfileStep.StepKey;
 
     /// <inheritdoc />
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>

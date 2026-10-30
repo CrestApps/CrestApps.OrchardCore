@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
 
@@ -16,10 +15,10 @@ public sealed class ContactCenterQueueGroupDeploymentStep : DeploymentStep
     public override string Name => ContactCenterDeploymentSteps.QueueGroup;
 
     /// <inheritdoc />
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

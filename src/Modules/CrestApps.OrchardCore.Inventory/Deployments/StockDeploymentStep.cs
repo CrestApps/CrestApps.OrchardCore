@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Inventory.Core;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
@@ -17,10 +16,10 @@ public sealed class StockDeploymentStep : DeploymentStep
     public override string Name => InventoryConstants.StockRecipeStep;
 
     /// <inheritdoc />
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }
