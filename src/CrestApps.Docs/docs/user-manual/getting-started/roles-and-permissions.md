@@ -103,7 +103,7 @@ A settings page under **Settings** opens for anyone who has the permission liste
 | --- | --- |
 | **Settings > Payments > Stripe** | Manage Stripe Settings |
 | **Settings > Commerce > Transactions** | Manage transaction settings |
-| **Settings > Commerce > Pay Later** | Manage transaction settings |
+| **Settings > Commerce > Offline payments** | Manage transaction settings |
 | **Settings > Commerce > Receipts** | Manage receipt settings |
 | **Settings > Subscriptions** | Manage subscriptions settings |
 | **Settings > Communication > Telephony** | Manage telephony settings |
