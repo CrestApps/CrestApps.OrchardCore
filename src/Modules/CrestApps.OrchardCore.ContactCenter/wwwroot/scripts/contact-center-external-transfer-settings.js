@@ -25,7 +25,7 @@
 		function initialize(root) {
 			var config = parseConfig(root);
 			var prefix = root.getAttribute("data-prefix");
-			var namePrefix = prefix ? prefix + "." : "";
+			var namePrefix = encodeAttribute(prefix ? prefix + "." : "");
 			var idPrefix = namePrefix.replace(/\./g, "_");
 			var strings = config.strings;
 			var displayNamePlaceholder = encodeAttribute(strings.displayName);

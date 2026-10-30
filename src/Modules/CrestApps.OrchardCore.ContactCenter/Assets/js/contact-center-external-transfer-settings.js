@@ -39,7 +39,7 @@
         var config = parseConfig(root);
         // The editor posts back under a field prefix; rows added here must use the same one, or they do not bind.
         var prefix = root.getAttribute('data-prefix');
-        var namePrefix = prefix ? prefix + '.' : '';
+        var namePrefix = encodeAttribute(prefix ? prefix + '.' : '');
         var idPrefix = namePrefix.replace(/\./g, '_');
         var strings = config.strings;
         var displayNamePlaceholder = encodeAttribute(strings.displayName);
