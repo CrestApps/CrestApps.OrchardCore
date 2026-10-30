@@ -17,6 +17,10 @@ One chat thread carries both kinds of turn. A surface in **Conversation** chat m
 *beside* an ordinary message box: start a session and speak, end it and type, and both land in the same
 thread. Choosing a speech-to-speech model no longer turns the surface voice-only.
 
+<YouTube video="ai-realtime-voice" title="Video overview of setting up a spoken conversation" />
+
+The video shows the speech deployments, a **Cascaded Realtime** deployment, the site defaults and the profile settings below, and where the voice button appears in the chat. It does not run a live conversation, which needs a microphone and a live speech service.
+
 ## Prerequisites
 
 1. **A realtime deployment.** Either of:
@@ -67,6 +71,10 @@ No migration is required.
 
 ## What changes in the UI
 
+<YouTube video="ai-realtime-voice" title="Video of the site defaults, the profile settings and the voice button" start={135} end={238} />
+
+The **Chat mode**, **Conversation deployment** and **Voice** settings appear on the **Content** tab of a saved chat profile, and only once the site has a speech deployment. In the chat, the voice toggle is the sound-wave button beside **Send**; its tooltip is **Start speaking**.
+
 What users see and do in a spoken conversation is described in the User Manual under [Talk instead of type](../user-manual/ai/chat.md#talk-instead-of-type). In summary, in conversation mode the chat surface keeps everything it had and adds a voice toggle:
 
 - Between sessions the message box has the row, with **Send** beside it and the soundwave toggle on the right.
@@ -96,13 +104,15 @@ providers — transcribe with one, reason with another, speak with a third.
 
 ### Creating one
 
+<YouTube video="ai-realtime-voice" title="Video of adding the speech deployments and a Cascaded Realtime deployment" start={56} end={135} />
+
 1. Create the three deployments it will chain, if you do not have them already:
    - a **speech-to-text** deployment whose model declares the **Realtime** feature (it has to transcribe
      continuously, not file-at-a-time),
    - a **chat** deployment,
    - a **text-to-speech** deployment.
 2. Go to **Artificial Intelligence → Deployments**, click **Add Deployment** and choose the **Cascaded Realtime** provider.
-3. Name the deployment, then pick the three deployments on the **Cascaded realtime** card.
+3. Enter the **Model name** (required) and a **Technical name**, then pick the three deployments on the **Cascaded realtime** card. Each list offers only the deployments that fit its role.
 
 The deployment declares the **Realtime** feature for you — a cascade is realtime by construction — so it
 appears wherever a realtime deployment is offered. It owns no connection of its own; the three deployments
