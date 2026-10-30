@@ -14,6 +14,8 @@ user_manual: user-manual/commerce/memberships
 
 The **Memberships** feature sells access. The attachable **Membership** part (`MembershipPart`: `RoleNames`, `DurationDays`) makes a product a membership. Buying it puts the buyer in its roles, so whatever those roles gate opens to them, such as content restricted with Content Access Control. Admin screens are described in the [User Manual](../user-manual/commerce/memberships.md). The **Memberships sample** recipe adds a Member role, a members' article and an annual membership.
 
+<YouTube video="memberships" title="Narrated video overview of memberships" />
+
 ## Memberships
 
 `Membership` (collection `Memberships`, store `IMembershipStore`) holds the following:
