@@ -55,6 +55,8 @@ Watch the short video, then read about each data source below.
 
 If a data source or data set is missing, your site may not use the feature that stores that data, or you may not have the permission it asks for. Ask your administrator.
 
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
+
 ## Content items
 
 Each content type is a data set. It starts with the information every item has, in the **Content item** group: **Content item id**, **Version id**, **Content type**, **Display text**, **Owner**, **Author**, **Published**, **Latest**, **Created**, **Modified** and **Published on**.

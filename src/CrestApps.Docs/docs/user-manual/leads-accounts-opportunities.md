@@ -250,6 +250,8 @@ With the **Workflows** feature on, the CRM adds two activities under **Omnichann
 
 Three reports appear under **Reports > CRM & Campaigns**. Each one is filtered by date range only, and needs the **View Omnichannel reports** permission. See [Reports](reports.md) for how to run and export a report.
 
+<YouTube video="omnichannel-reports" title="Video of the lead funnel, lead conversion and opportunity pipeline reports" start={288} end={322} />
+
 | Report | Shows |
 | --- | --- |
 | **Lead funnel** | The leads created in the period, by their current status, with the share converted. |

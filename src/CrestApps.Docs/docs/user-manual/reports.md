@@ -604,10 +604,104 @@ Tips:
 
 ## Omnichannel reports
 
-Omnichannel adds 29 reports under **CRM & Campaigns** and the other categories, and each needs **View Omnichannel reports**:
+<YouTube video="omnichannel-reports" title="Video overview of the omnichannel reports: which report answers which question" />
 
-- **Five activity reports:** Activity summary, Campaign performance, Disposition breakdown, Dialer call detail, and AI handoff & containment.
-- **Twenty-one workload and performance reports:** Activity backlog, Activity aging, Activity source performance, CRM channel performance, Activity kind performance, Activity assignment performance, Activity attempt analysis, Contact type workload, Activity urgency performance, Assigned user performance, Activity creation by user, User completion time, Daily user productivity, Campaign source mix, Campaign channel mix, Campaign disposition mix, Campaign attempt performance, Overdue workload by user, Address usage, Customer workload, and Scheduled completion performance.
-- **Three CRM reports** with the Omnichannel CRM feature: Lead funnel, Lead conversion by source and list, and Opportunity pipeline.
+The omnichannel reports read your CRM activities (the calls to make, texts to send and follow-ups), the campaigns and dispositions they carry, and your leads and opportunities. Each one needs **View Omnichannel reports**, which administrators and supervisors have by default, and so does anyone who may manage activities. They come with **Omnichannel Management**; the three lead and opportunity reports also need **Omnichannel CRM**. They sit in the categories below, and most are under **CRM & Campaigns**.
 
-The [report catalog](../contact-center/report-catalog.md) in the Technical Manual lists every Contact Center and CRM report with its filters, columns and exact formulas, such as how answer rate, service level and average handle time are calculated.
+<YouTube video="omnichannel-reports" title="Video of where the omnichannel reports are, their filters and the permission they need" start={43} end={83} />
+
+### The filters they share
+
+The activity reports offer **Date range**, **Campaign group**, **Campaign**, **Channel** (Phone or SMS), **Source** (Automatic, Callback, Dialer, Inbound or Manual), **Status** and **Disposition**, and you can tick several dispositions at once. **Dialer call detail** opens on the **Dialer** source and adds a page picker. **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** use the **Date range** only.
+
+An activity belongs to the period in which it was **created**, except where a report says otherwise: **Disposition breakdown** and **AI handoff & containment** place an activity by when it was **completed**, and **Dialer call detail** by its completion time, or by its scheduled time while it is open. **Activity backlog** and **Activity aging** ignore the start of the range and list all work still open that was created by its end. **Daily user productivity** groups by the UTC day an activity was completed. A row of **Not set** means the activity has no value for the grouping, such as no assigned user or no recorded creator.
+
+The rows show the source as stored, so a dialer activity appears as *PreviewDial*, *PowerDial*, *ProgressiveDial* or *PredictiveDial* while the **Source** filter offers *Dialer* for all four.
+
+### Volume and completion
+
+<YouTube video="omnichannel-reports" title="Video of the volume and completion reports" start={83} end={114} />
+
+| Report | Category | What it answers |
+| --- | --- | --- |
+| **Activity summary** | Operations | How many activities were created, how many are completed, pending, in progress, failed or cancelled, the completion rate, and the daily trend. Bars break the same activities down by source, channel and status. |
+| **Campaign performance** | CRM & Campaigns | The same counts for each campaign, and again for each campaign group. |
+| **Disposition breakdown** | Compliance & Audit | How the activities completed in the period were dispositioned, and each disposition's share. |
+
+### Backlog and age
+
+<YouTube video="omnichannel-reports" title="Video of the backlog and age reports" start={114} end={148} />
+
+| Report | Category | What it answers |
+| --- | --- | --- |
+| **Activity backlog** | Queue & Routing | How much work is still open: the open, unassigned, overdue and reserved counts, and the open work by status. |
+| **Activity aging** | Queue & Routing | How old the open work is, in bands from under an hour to over seven days, with the unassigned and overdue count of each band. |
+| **Overdue workload by user** | Agent Performance | Who holds the overdue work: the count per person, how much is unassigned, and the average and maximum age. |
+
+### Workload by group
+
+<YouTube video="omnichannel-reports" title="Video of the reports that group the workload" start={148} end={201} />
+
+These reports share one table, with the total, the completed, in progress, pending, failed and cancelled counts, the completion rate and the average attempts of each group. Only the grouping changes.
+
+| Report | Category | Grouped by |
+| --- | --- | --- |
+| **Activity source performance** | Operations | Where the work came from: manual, automatic (an AI profile), a callback, an inbound call or a dialer mode. |
+| **CRM channel performance** | Operations | Channel: Phone or SMS. |
+| **Activity kind performance** | Operations | Kind of work, such as a call or a text. |
+| **Contact type workload** | CRM & Campaigns | The type of record the activity is about, such as a Lead or a Contact. |
+| **Activity assignment performance** | Queue & Routing | Assignment status, such as Assigned, Available or Released. |
+| **Activity urgency performance** | Queue & Routing | Urgency. |
+| **Activity attempt analysis** | Operations | The number of attempts: how many activities needed one, two, three or more, and how many of those completed or failed. |
+| **Scheduled completion performance** | Operations | Whether an activity was completed by its scheduled time or late, with the average difference. |
+
+### People
+
+<YouTube video="omnichannel-reports" title="Video of the reports about people" start={201} end={234} />
+
+| Report | Category | What it answers |
+| --- | --- | --- |
+| **Assigned user performance** | Agent Performance | Each person's activities, outcomes, completion rate and attempts. |
+| **User completion time** | Agent Performance | How long finished work took from creation: the average, median and maximum for each person. |
+| **Daily user productivity** | Agent Performance | The same for each person and each day, with the attempts. |
+| **Activity creation by user** | Compliance & Audit | Who or what created the work and how it ended, for audits. |
+
+### Campaigns, customers and addresses
+
+<YouTube video="omnichannel-reports" title="Video of the campaign, customer and address reports" start={234} end={258} />
+
+| Report | Category | What it answers |
+| --- | --- | --- |
+| **Campaign source mix** | CRM & Campaigns | For each campaign, the activities, completed, failed and completion rate by source. |
+| **Campaign channel mix** | CRM & Campaigns | The same by channel. |
+| **Campaign disposition mix** | CRM & Campaigns | The same by disposition. |
+| **Campaign attempt performance** | CRM & Campaigns | The same by number of attempts. |
+| **Customer workload** | CRM & Campaigns | One row per customer: how many activities they received, how they ended, and the attempts. |
+| **Address usage** | Technical & IT | The same for each address that handled the work, such as a sales line or a text line. |
+
+### Dialer and AI
+
+<YouTube video="omnichannel-reports" title="Video of the dialer call detail and AI handoff reports" start={258} end={288} />
+
+| Report | Category | What it answers |
+| --- | --- | --- |
+| **Dialer call detail** | CRM & Campaigns | Which numbers the dialer worked: one row per number with its contact, campaign, last disposition, attempts, completion time, agent and status. It shows 100 rows a page, and an export includes every row. |
+| **AI handoff & containment** | CRM & Campaigns | Of the automated conversations completed in the period, how many the AI contained and how many it passed to a live agent, the containment and escalation rates, the average time to escalate, and the reasons. |
+
+### Leads and deals
+
+<YouTube video="omnichannel-reports" title="Video of the lead funnel, lead conversion and opportunity pipeline reports" start={288} end={322} />
+
+| Report | Category | What it answers |
+| --- | --- | --- |
+| **Lead funnel** | CRM & Campaigns | The leads created in the period by the status they have now, the share of each, and how many converted. |
+| **Lead conversion by source and list** | CRM & Campaigns | For each lead source and each list, the leads, how many converted, the rate and the average time to convert. |
+| **Opportunity pipeline** | CRM & Campaigns | The open opportunities by stage with their amount and weighted amount (the amount times the stage's probability), and for deals closed in the period the win rate and the amount won. |
+
+### Build your own from the same data
+
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
+
+The [Report Builder](report-builder/data-sources.md) reads the same records. The **Omnichannel** data source offers **Activities**, **Dispositions**, **Campaigns**, **Campaign groups** and **Activity batches**; contacts, leads, accounts and opportunities are content items, under **Content items**. The **Messaging** data source offers **Conversations** and **Messages**, including each outbound text's delivery status but never its text. Related data sets are joined for you.
+
+The [report catalog](../contact-center/report-catalog.md) in the Technical Manual lists every Contact Center and CRM report with its filters, columns and exact formulas.
