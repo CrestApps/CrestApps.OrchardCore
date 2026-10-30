@@ -64,7 +64,8 @@ internal static class SecureKeypadEntries
 
         if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("A secure keypad entry ({Field}) on AI call activity '{ActivityId}' was saved as a token.", entry.Field, activityId.SanitizeLogValue());
+            // Which field it was stays out of the log: the log says only that a secure entry became a token.
+            logger.LogInformation("A secure keypad entry on AI call activity '{ActivityId}' was saved as a token.", activityId.SanitizeLogValue());
         }
 
         var saved = string.IsNullOrEmpty(result.MaskedValue) ? "accepted" : $"saved securely as {result.MaskedValue}";

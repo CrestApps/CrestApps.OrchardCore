@@ -100,7 +100,7 @@ public sealed class CollectSecureDigitsTool : AIFunction
 
         if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("The keypad on AI call activity '{ActivityId}' is private for a {Field} entry.", activityId.SanitizeLogValue(), field);
+            logger.LogInformation("The keypad on AI call activity '{ActivityId}' is private for a secure entry.", activityId.SanitizeLogValue());
         }
 
         return $"The keypad is private now. Ask the caller to type the {SecureKeypadEntries.Describe(field)} on their keypad and press the pound key when done, or star to cancel. Wait quietly until you are told it was saved.";
