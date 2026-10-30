@@ -24,7 +24,7 @@ Each data set is read in one of two ways:
 ## Add a connection
 
 1. Go to **Tools > Data Connectors > Connections** and click **Add Connection**.
-2. Pick the kind of system, then click **Add**.
+2. In **Which kind of system should the connection reach?**, find the kind of system (type in **Filter** to narrow the list), then click **Add** on its card.
 3. Enter a **Name** and the settings of the system (see the tables below).
 4. Click **Save and test**. The site saves the connection and checks that it can reach the system. A green message says what it found, such as the server's version; a red message says why it failed.
 
@@ -84,7 +84,7 @@ The site can't reach servers on its own private network unless your administrato
 ## Add a data set
 
 1. Go to **Tools > Data Connectors > Data Sets** and click **Add Data Set**, or open **Actions** on a connection and click **Add data set**.
-2. Pick the connection.
+2. In **Which connection should the new data set read?**, find the connection and click **Add** on its card. The connections are grouped by the kind of system they reach: click a group on the left, such as **SQL Server** or **HTTP API**, to see only its connections, or type in **Filter** to search their names and descriptions.
 3. Enter a **Name**. The **Technical name** is what reports and pipelines store; it is made from the name if you leave it empty, and it can't change after you save.
 4. Pick the **Resource**: start typing to choose from what the connection lists, such as a table, a view, an index or a file. For an HTTP API, type the path, such as */orders?status=open*.
 5. Choose **Live** or **Imported** under **Access**. A connector that can do only one shows the other as unavailable.

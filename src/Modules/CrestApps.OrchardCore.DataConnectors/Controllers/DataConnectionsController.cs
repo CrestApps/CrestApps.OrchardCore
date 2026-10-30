@@ -122,7 +122,23 @@ public sealed class DataConnectionsController : Controller
         return View(new DataConnectionsIndexViewModel
         {
             Options = options,
-            Connectors = [.. _connectorManager.GetConnectors().OrderBy(connector => connector.DisplayName.Value, StringComparer.OrdinalIgnoreCase)],
+            Picker = new DataConnectorPickerViewModel
+            {
+                Id = "modalAddConnection",
+                Title = H["Which kind of system should the connection reach?"],
+                EmptyMessage = H["No connector is enabled. Enable a connector feature, such as <strong>HTTP API Data Connector</strong> or <strong>SQL Server Data Connector</strong>, under <strong>Configuration › Features</strong>."],
+                Items =
+                [
+                    .. _connectorManager.GetConnectors()
+                        .OrderBy(connector => connector.DisplayName.Value, StringComparer.OrdinalIgnoreCase)
+                        .Select(connector => new DataConnectorPickerItem
+                        {
+                            Title = connector.DisplayName.Value,
+                            Description = connector.Description.Value,
+                            Url = Url.Action(nameof(Create), new { id = connector.Name }),
+                        }),
+                ],
+            },
             List = new AdminListContext<DataConnection>
             {
                 Source = [.. all.Skip(pager.GetStartIndex()).Take(pager.PageSize)],

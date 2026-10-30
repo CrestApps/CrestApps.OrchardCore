@@ -136,15 +136,44 @@ public sealed class ConnectedDataSetsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        // Only the connections whose connector is enabled can feed a new data set.
+        // Only the connections whose connector is enabled can feed a new data set; they are grouped by connector.
         var connections = (await _connectionStore.ListAsync(HttpContext.RequestAborted))
-            .Where(connection => _connectorManager.GetDescriptor(connection.Connector) is not null)
+            .Select(connection => (Connection: connection, Connector: _connectorManager.GetDescriptor(connection.Connector)))
+            .Where(entry => entry.Connector is not null)
             .ToArray();
 
         return View(new ConnectedDataSetsIndexViewModel
         {
             Options = options,
-            Connections = connections,
+            Picker = new DataConnectorPickerViewModel
+            {
+                Id = "modalAddDataSet",
+                Title = H["Which connection should the new data set read?"],
+                EmptyMessage = H["There is no connection to read from yet. <a href=\"{0}\">Add a connection</a> first.", Url.Action(nameof(DataConnectionsController.Index), "DataConnections")],
+                Categories =
+                [
+                    .. connections
+                        .GroupBy(entry => entry.Connector.Name, StringComparer.OrdinalIgnoreCase)
+                        .Select(group => new DataConnectorPickerCategory
+                        {
+                            Id = group.Key,
+                            Name = group.First().Connector.DisplayName.Value,
+                            Count = group.Count(),
+                        })
+                        .OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase),
+                ],
+                Items =
+                [
+                    .. connections.Select(entry => new DataConnectorPickerItem
+                    {
+                        Title = entry.Connection.DisplayText,
+                        Description = entry.Connection.Description,
+                        Badge = entry.Connector.DisplayName.Value,
+                        CategoryId = entry.Connector.Name,
+                        Url = Url.Action(nameof(Create), new { id = entry.Connection.ItemId }),
+                    }),
+                ],
+            },
             List = new AdminListContext<ConnectedDataSet>
             {
                 Source = [.. all.Skip(pager.GetStartIndex()).Take(pager.PageSize)],

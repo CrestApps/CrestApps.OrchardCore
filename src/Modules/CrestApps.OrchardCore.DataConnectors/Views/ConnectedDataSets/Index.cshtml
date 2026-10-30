@@ -39,42 +39,6 @@
     <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">@T["Your search returned no results."]</div>
 </form>
 
-<div class="modal fade" id="modalAddDataSet" tabindex="-1" role="dialog" aria-labelledby="available-connections-title" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="available-connections-title">@T["Read a data set from"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
-            </div>
-            <div class="modal-body">
-                @if (Model.Connections.Count == 0)
-                {
-                    <div class="alert alert-warning mb-0" role="alert">
-                        @T["There is no connection to read from yet."]
-                        <a asp-action="Index" asp-controller="DataConnections">@T["Add a connection first."]</a>
-                    </div>
-                }
-                else
-                {
-                    <div class="list-group">
-                        @foreach (var connection in Model.Connections)
-                        {
-                            <a class="list-group-item list-group-item-action" asp-action="Create" asp-route-id="@connection.ItemId">
-                                <strong>@connection.DisplayText</strong>
-                                @if (!string.IsNullOrEmpty(connection.Description))
-                                {
-                                    <div class="hint">@connection.Description</div>
-                                }
-                            </a>
-                        }
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="_DataConnectorPicker" model="Model.Picker" />
 
 <script asp-name="list-management-ui" at="Foot"></script>

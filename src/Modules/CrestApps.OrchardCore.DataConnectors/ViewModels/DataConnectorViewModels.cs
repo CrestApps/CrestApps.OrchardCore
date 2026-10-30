@@ -38,10 +38,10 @@ public class DataConnectionsIndexViewModel
     public AdminListContext List { get; set; }
 
     /// <summary>
-    /// Gets or sets the connectors a connection can use.
+    /// Gets or sets the picker of the connector a new connection uses.
     /// </summary>
     [BindNever]
-    public IReadOnlyList<DataConnectorDescriptor> Connectors { get; set; } = [];
+    public DataConnectorPickerViewModel Picker { get; set; }
 }
 
 /// <summary>
@@ -61,10 +61,93 @@ public class ConnectedDataSetsIndexViewModel
     public AdminListContext List { get; set; }
 
     /// <summary>
-    /// Gets or sets the connections a data set can read.
+    /// Gets or sets the picker of the connection a new data set reads.
     /// </summary>
     [BindNever]
-    public IReadOnlyList<DataConnection> Connections { get; set; } = [];
+    public DataConnectorPickerViewModel Picker { get; set; }
+}
+
+/// <summary>
+/// A searchable picker of cards in a modal, grouped by category, like the steps of a deployment plan.
+/// </summary>
+public class DataConnectorPickerViewModel
+{
+    /// <summary>
+    /// Gets or sets the modal's element identifier.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the modal's title.
+    /// </summary>
+    public IHtmlContent Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message shown when there is nothing to pick.
+    /// </summary>
+    public IHtmlContent EmptyMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the cards are grouped in, or none to show only the search.
+    /// </summary>
+    public IList<DataConnectorPickerCategory> Categories { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the cards.
+    /// </summary>
+    public IList<DataConnectorPickerItem> Items { get; set; } = [];
+}
+
+/// <summary>
+/// A category of a picker.
+/// </summary>
+public class DataConnectorPickerCategory
+{
+    /// <summary>
+    /// Gets or sets the category's identifier.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category's name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of cards in the category.
+    /// </summary>
+    public int Count { get; set; }
+}
+
+/// <summary>
+/// A card of a picker.
+/// </summary>
+public class DataConnectorPickerItem
+{
+    /// <summary>
+    /// Gets or sets the card's title.
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the card's description.
+    /// </summary>
+    public string Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the badge under the title, such as the connector.
+    /// </summary>
+    public string Badge { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the card's category.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address the card's button opens.
+    /// </summary>
+    public string Url { get; set; }
 }
 
 /// <summary>
