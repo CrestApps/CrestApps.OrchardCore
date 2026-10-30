@@ -117,11 +117,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers
         [OrchardCore.Admin.Admin("messaging/conversation/{id}/claim", "MessagingClaim")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Claim(string id) { }
         [OrchardCore.Admin.Admin("messaging/conversation/{id}", "MessagingConversation")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Conversation(string id, string show, string channel, int page = 1, long beforeTicks = 0) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Conversation(string id, string show, string channel, bool unread = false, int page = 1, long beforeTicks = 0) { }
         [OrchardCore.Admin.Admin("messaging/inbox", "MessagingInboxList")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> InboxList(string show, string channel, string selected, int page = 1) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> InboxList(string show, string channel, string selected, bool unread = false, int page = 1) { }
         [OrchardCore.Admin.Admin("messaging", "MessagingIndex")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(string show, string channel, int page = 1) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(string show, string channel, bool unread = false, int page = 1) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("messaging/conversation/{id}/read", "MessagingConversationRead")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> MarkRead(string id) { }
@@ -464,7 +464,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
                 "Items",
                 "EndpointChannels"})]
         public System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.IReadOnlyList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>, System.Collections.Generic.IReadOnlyDictionary<string, string>>> BuildEndpointOptionsAsync(string preferredChannel, string selectedEndpointId = null) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxViewModel> BuildInboxAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile currentAgent, string show, string channel, int page, string selectedCustomerKey, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxViewModel> BuildInboxAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile currentAgent, string show, string channel, bool unreadOnly, int page, string selectedCustomerKey, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.ThreadViewModel> BuildThreadAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.DateTime? beforeUtc, System.Func<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation, string> conversationUrl, System.Func<string, string, string> startUrl, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<int> CountNeedingAttentionAsync(System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<int> CountNeedingAttentionAsync(System.Security.Claims.ClaimsPrincipal user, bool refresh, System.Threading.CancellationToken cancellationToken) { }
@@ -599,6 +599,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         public string ShowRouteValue { get; }
         public int TotalCount { get; set; }
         public int UnassignedCount { get; set; }
+        public bool UnreadOnly { get; set; }
+        public bool? UnreadRouteValue { get; }
     }
     public class MessageBubbleViewModel
     {
