@@ -16,7 +16,13 @@ A **company** is a business you sell to. Several people buy for it, it may pay o
 
 <AskYourAdmin />
 
+This video shows the Customers and Companies modules, including adding a company, price lists, approvals and punchout:
+
+<YouTube video="customers-companies" title="Narrated video overview of the Customers and Companies modules" />
+
 ## Add a company
+
+<YouTube video="customers-companies" title="Video of adding a company" start={540} end={625} />
 
 1. On **Commerce > Companies**, click **Add company**.
 2. Enter its **Name**, and if you like its **Tax or VAT number** (printed on its invoices) and a **Billing email** that gets its invoices too.
@@ -42,6 +48,8 @@ Under **Locations**, add the places the company has orders shipped to, with a na
 
 ## Price lists
 
+<YouTube video="customers-companies" title="Video of creating a price list" start={497} end={540} />
+
 A **price list** gives the companies on it their own prices.
 
 1. On **Commerce > Price lists**, click **Add price list**.
@@ -53,6 +61,8 @@ A **price list** gives the companies on it their own prices.
 A product on the list by SKU costs its price there; any other product costs your price less the percentage. Prices are in your store's currency: a buyer shopping in a [market](markets.md) with another currency pays them converted at its rate. A buyer always pays the lower of the list's price and yours, and volume or role discounts don't come off a list price too. Deleting a price list puts its companies back on your prices.
 
 ## Order limits, budgets and approvals
+
+<YouTube video="customers-companies" title="Video of how order limits, budgets and approvals work" start={625} end={676} />
 
 Two settings send a buyer's order to the company's admins before it can be paid:
 
@@ -75,6 +85,8 @@ An order that grows past the total that was approved, such as with more items, n
 Company buyers can ask for a quote from their cart, with their purchase order number, when your store takes quote requests. See [Quotes](carts-and-orders.md#quotes).
 
 ## Punchout
+
+<YouTube video="customers-companies" title="Video of the punchout settings of a company" start={676} end={716} />
 
 **Punchout** lets a company's procurement system, such as SAP, open your store: the buyer fills a cart, and it goes back to their system, where it's approved and ordered. Your store speaks OCI.
 

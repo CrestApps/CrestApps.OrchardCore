@@ -14,6 +14,8 @@ user_manual: user-manual/commerce/companies
 
 The **Companies** feature sells to businesses. A company has buyers, some of them admins, the places it ships to, the terms it pays on, a price list, limits and a monthly budget that send orders for approval, and a punchout key for its procurement system. Admin screens are described in the [User Manual](../user-manual/commerce/companies.md).
 
+<YouTube video="customers-companies" title="Narrated video overview of the Customers and Companies modules" />
+
 ## Model
 
 Companies and price lists live in the `Companies` YesSql collection.
