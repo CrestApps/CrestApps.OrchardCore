@@ -19,6 +19,8 @@ user_manual:
   - user-manual/reports
 ---
 
+<YouTube video="omnichannel-contacts" title="Video overview of omnichannel contacts" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel Management |
