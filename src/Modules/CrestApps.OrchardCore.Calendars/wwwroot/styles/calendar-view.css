@@ -27,6 +27,12 @@
   font-size: 1.25rem;
 }
 
+/* While a period's events load. */
+#calendar-view.calendar-loading .fc-view-harness {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
 #calendar-view .fc .fc-toolbar {
   flex-wrap: wrap;
   gap: 0.5rem;

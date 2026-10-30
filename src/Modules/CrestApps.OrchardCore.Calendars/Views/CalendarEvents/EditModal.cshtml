@@ -1,0 +1,11 @@
+@model EditCalendarEventViewModel
+@{
+    ViewData["CalendarModal"] = true;
+}
+
+<h2 class="h5 mb-3" data-calendar-modal-title>@T["Edit '{0}'", Model.Title]</h2>
+<partial name="_EditEventForm" model="Model" view-data="ViewData" />
+
+@* The modal has no page around it, so it brings the scripts and styles its editor asked for. *@
+<resources type="Stylesheet" />
+<resources type="FootScript" />

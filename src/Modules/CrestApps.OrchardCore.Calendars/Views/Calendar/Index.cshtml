@@ -6,6 +6,10 @@
 
 <style asp-name="CrestApps.OrchardCore.Calendars.View"></style>
 <script asp-name="fullcalendar-locales" at="Foot"></script>
+@* The event editor opens in a modal; the pickers it uses are loaded with the page. *@
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="item-selector" depends-on="bootstrap-select" at="Foot"></script>
 <script asp-name="CrestApps.OrchardCore.Calendars.View" at="Foot"></script>
 
 <div id="calendar-view" class="row g-3" data-config="@Model.ConfigurationJson">
@@ -14,7 +18,7 @@
             <div class="card-body">
                 @if (Model.Calendars.Any(calendar => calendar.Writable))
                 {
-                    <a class="btn btn-primary w-100 mb-3" asp-controller="CalendarEvents" asp-action="Choose">
+                    <a class="btn btn-primary w-100 mb-3" asp-controller="CalendarEvents" asp-action="Choose" data-calendar-new-event>
                         <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New event"]
                     </a>
                 }
@@ -141,6 +145,18 @@
     </div>
 </div>
 
+<div class="modal fade" id="calendar-editor-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" data-editor-title></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body" data-editor-body></div>
+        </div>
+    </div>
+</div>
+
 <template id="calendar-labels">
     <span data-label="calendar">@T["Calendar"]</span>
     <span data-label="type">@T["Kind"]</span>
@@ -156,4 +172,6 @@
     <span data-label="month">@T["Month"]</span>
     <span data-label="agenda">@T["Agenda"]</span>
     <span data-label="today">@T["Today"]</span>
+    <span data-label="loading">@T["Loading…"]</span>
+    <span data-label="editorFailed">@T["Something went wrong. Try again, or open the event's page."]</span>
 </template>

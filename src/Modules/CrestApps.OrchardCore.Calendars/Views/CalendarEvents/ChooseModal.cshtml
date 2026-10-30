@@ -1,0 +1,7 @@
+@model ChooseCalendarViewModel
+@{
+    ViewData["CalendarModal"] = true;
+}
+
+<h2 class="h5 mb-3" data-calendar-modal-title>@T["New Event"]</h2>
+<partial name="_ChooseCalendar" model="Model" view-data="ViewData" />

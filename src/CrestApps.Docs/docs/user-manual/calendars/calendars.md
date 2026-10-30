@@ -94,6 +94,14 @@ Free events, and kinds of events that don't count (such as a team's **Out of off
 
 ## Add and change events
 
+You can do everything from the calendar without leaving it. The editor opens in a window over the calendar, and the calendar refreshes when you save:
+
+- **Add:** choose **New event**, or drag across the times (or click a day) where the event goes, then pick the calendar and the kind of event.
+- **Change, cancel or delete:** click an event and choose **Edit**. The editor's **Open full page** link opens the same editor on its own page.
+- **Move or resize:** drag the event, or drag its bottom edge.
+
+Only the events of calendars you can change can be edited this way. The calendar loads the events of the days you're looking at as you move between them, so a busy calendar still opens quickly.
+
 The event editor has three tabs.
 
 **General**
@@ -113,7 +121,7 @@ The event editor has three tabs.
 
 **Repeat**
 
-Choose how the event **Repeats**: **Does not repeat**, **Daily**, **Weekly**, **Monthly** or **Yearly**, and **every** how many days, weeks, months or years. A weekly event repeats **On** the days you tick. A monthly event repeats on **The same day of the month** or **The same weekday of the same week, such as the second Tuesday**. Under **Ends**, choose **Never**, **On** a date, or **After** a number of occurrences. For a pattern the choices don't cover, a **Custom rule** (an iCalendar repeat rule) is used instead.
+Choose how the event **Repeats**: **Does not repeat**, **Daily**, **Weekly**, **Monthly** or **Yearly**, and **every** how many days, weeks, months or years. A weekly event repeats **On** the days you tick, so "every day from the 3rd to the 30th except Mondays" is **Weekly**, every 1 week, with every day but Monday ticked, and **Ends** **On** the 30th. A monthly event repeats on **The same day of the month** or **The same weekday of the same week, such as the second Tuesday**. Under **Ends**, choose **Never**, **On** a date, or **After** a number of occurrences. For a pattern the choices don't cover, a **Custom rule** (an iCalendar repeat rule) is used instead.
 
 **Attendees**
 
@@ -128,9 +136,9 @@ When you're invited to an event, its page shows **You are invited. Your answer:*
 
 ### Change a repeating event
 
-Opening one occurrence of a repeating event shows **Apply the changes to**: **This occurrence**, **This and following**, or **All occurrences**. Changing only this occurrence leaves the others as they are; changing this and following ends the series there and starts a new one with your changes. To change how the event repeats, edit the whole series from its first occurrence.
+Opening one occurrence of a repeating event shows **Apply the changes, or the cancellation, to**: **This occurrence**, **This and following**, or **All occurrences**. Changing only this occurrence leaves the others as they are; changing this and following ends the series there and starts a new one with your changes. To change how the event repeats, edit the whole series from its first occurrence.
 
-**Cancel event** cancels it (or the occurrences you chose), and it stays on the calendar as cancelled. **Delete** removes it for good, with every occurrence if it repeats.
+**Cancel event** (**Cancel** on an occurrence) cancels it, or the occurrences you chose: cancelling **This occurrence** removes just that day from the series, and **All occurrences** cancels the whole event, which stays on the calendar as cancelled. **Delete** removes it for good, with every occurrence if it repeats.
 
 ### Approve time off
 

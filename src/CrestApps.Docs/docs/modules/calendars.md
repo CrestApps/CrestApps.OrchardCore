@@ -68,6 +68,8 @@ await authorizationService.AuthorizeAsync(User, CalendarPermissions.ViewCalendar
 - `ListCalendarEvents` with a `CalendarSchedule` succeeds through `ListOwnCalendarEvents` when the schedule is the user's own.
 - `ViewCalendarEvents` with a `CalendarEvent` succeeds through `ViewOwnCalendarEvents` when the user created the event (`CreatedBy`), attends it, or owns its calendar. It also succeeds when the user can read the event's calendar (**Read**, or **Write** for a private event), so calendar sharing and the event permissions give the same answer.
 
+The calendar view adds, changes, cancels and deletes events in a modal. The event pages (`calendar/events/choose`, `create`, `edit/{id}`, and the `cancel`, `delete`, `confirm` and `respond` posts) take `modal=true`: the editor then comes back as a partial view (`ChooseModal`, `CreateModal`, `EditModal`) that also writes out the scripts and styles its editor asked for, and a finished change answers `{ "succeeded": true|false, "message": "..." }` (`CalendarEditorOutcome`) instead of redirecting. Without `modal` they are the full admin pages, and a display driver added to the event editor shows up in both.
+
 A person's schedule is the events on the calendars they own and the events they attend on any calendar; everyone's is every event. The calendar view's occurrences endpoint takes `schedule` (a user id or `everyone`) instead of `calendars`; it answers 403 without `ListCalendarEvents` for that schedule and returns each event the viewer can't `ViewCalendarEvents` as a busy block.
 
 What a user can do with one calendar is a `CalendarAccessLevel`, worked out by `ICalendarAccessService` from the global permissions, ownership, sharing and visibility. Each level includes the ones below it:

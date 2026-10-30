@@ -43,6 +43,66 @@ function toSafeNavigationUrl(candidate, queryString) {
 }
 
 /**
+ * Returns a same-origin URL of an event page asking for its modal form, or an empty string for any other URL.
+ * @param {string} candidate
+ * @returns {string}
+ */
+function toModalUrl(candidate) {
+    try {
+        const url = new URL(candidate || '', window.location.origin);
+
+        if (url.origin !== window.location.origin) {
+            return '';
+        }
+
+        url.searchParams.set('modal', 'true');
+
+        return url.toString();
+    } catch {
+        return '';
+    }
+}
+
+/**
+ * Puts server-rendered editor HTML into an element. Scripts the page has already loaded are skipped; every other script is
+ * recreated so the browser runs it, in order.
+ * @param {HTMLElement} target
+ * @param {string} html
+ */
+function renderEditor(target, html) {
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const loaded = new Set(Array.from(document.querySelectorAll('script[src]')).map((script) => script.getAttribute('src')));
+    const scripts = Array.from(parsed.body.querySelectorAll('script'));
+
+    scripts.forEach((script) => script.remove());
+    parsed.head.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+        if (!document.querySelector(`link[rel="stylesheet"][href="${CSS.escape(link.getAttribute('href') || '')}"]`)) {
+            document.head.append(document.importNode(link, true));
+        }
+    });
+    target.replaceChildren(...Array.from(parsed.body.childNodes).map((node) => document.importNode(node, true)));
+
+    scripts.forEach((script) => {
+        const source = script.getAttribute('src');
+
+        if (source && loaded.has(source)) {
+            return;
+        }
+
+        const runnable = document.createElement('script');
+
+        if (source) {
+            runnable.src = source;
+            runnable.async = false;
+        } else {
+            runnable.textContent = script.textContent;
+        }
+
+        target.append(runnable);
+    });
+}
+
+/**
  * Formats a date as yyyy-MM-dd in local time.
  * @param {Date} date
  * @returns {string}
@@ -193,6 +253,7 @@ function initialize() {
             timeGridWeek: { dayHeaderFormat: { weekday: 'short', day: 'numeric' } },
             dayGridMonth: { dayHeaderFormat: { weekday: narrow ? 'narrow' : 'short' } },
         },
+        loading: (/** @type {boolean} */ isLoading) => root.classList.toggle('calendar-loading', isLoading),
         windowResize: () => {
             const nowNarrow = isNarrow();
 
@@ -310,6 +371,13 @@ function initialize() {
                 edit.classList.add('d-none');
             }
 
+            edit.onclick = (clickEvent) => {
+                clickEvent.preventDefault();
+                // @ts-ignore Bootstrap is loaded by the admin theme.
+                window.bootstrap.Modal.getOrCreateInstance(modal).hide();
+                openEditor(edit.href);
+            };
+
             showModal(modal);
         },
         /** @param {any} info */
@@ -329,14 +397,148 @@ function initialize() {
 
             if (shown.length === 1) {
                 params.set('calendarId', shown[0]);
-                window.location.href = toSafeNavigationUrl(config.createUrl, params.toString());
+                openEditor(toSafeNavigationUrl(config.createUrl, params.toString()));
             } else {
-                window.location.href = toSafeNavigationUrl(config.chooseUrl, params.toString());
+                openEditor(toSafeNavigationUrl(config.chooseUrl, params.toString()));
             }
+
+            calendar.unselect();
         },
         eventDrop: (/** @type {any} */ info) => move(info),
         eventResize: (/** @type {any} */ info) => move(info),
     });
+
+    const editorModal = /** @type {HTMLElement} */ (document.getElementById('calendar-editor-modal'));
+    const editorBody = /** @type {HTMLElement} */ (editorModal.querySelector('[data-editor-body]'));
+    const editorTitle = /** @type {HTMLElement} */ (editorModal.querySelector('[data-editor-title]'));
+
+    /**
+     * Shows a message at the top of the editor modal.
+     * @param {string} message
+     */
+    const showEditorMessage = (message) => {
+        const alert = document.createElement('div');
+
+        alert.className = 'alert alert-danger';
+        alert.setAttribute('role', 'alert');
+        alert.textContent = message;
+        editorBody.querySelector('.alert[role="alert"]')?.remove();
+        editorBody.prepend(alert);
+        editorBody.querySelectorAll('button').forEach((button) => {
+            /** @type {HTMLButtonElement} */ (button).disabled = false;
+        });
+    };
+
+    /**
+     * Shows what an event page answered: its form or list in the modal, or, once a change is done, the calendar again.
+     * @param {Response} response
+     */
+    const showEditorResponse = async (response) => {
+        if (!response.ok) {
+            showEditorMessage(labels.editorFailed);
+
+            return;
+        }
+
+        if ((response.headers.get('Content-Type') || '').includes('application/json')) {
+            const outcome = await response.json();
+
+            if (outcome.succeeded) {
+                // @ts-ignore Bootstrap is loaded by the admin theme.
+                window.bootstrap.Modal.getOrCreateInstance(editorModal).hide();
+                calendar.refetchEvents();
+            } else {
+                showEditorMessage(outcome.message || labels.editorFailed);
+            }
+
+            return;
+        }
+
+        renderEditor(editorBody, await response.text());
+
+        const heading = editorBody.querySelector('[data-calendar-modal-title]');
+
+        editorTitle.textContent = heading ? heading.textContent : '';
+        heading?.remove();
+
+        // The editor's pickers start on page load, so the ones in the modal are started here.
+        // @ts-ignore The item selector and the select picker are loaded by the page.
+        window.CrestAppsItemSelector?.initAll(editorBody);
+        editorBody.querySelectorAll('select.selectpicker').forEach((select) => {
+            // @ts-ignore
+            window.Selectpicker?.getOrCreateInstance(select);
+        });
+    };
+
+    /**
+     * Opens an event page (choose a calendar, add or edit an event) in the editor modal.
+     * @param {string} href
+     */
+    const openEditor = async (href) => {
+        const url = toModalUrl(href);
+
+        if (!url) {
+            return;
+        }
+
+        const spinner = document.createElement('div');
+
+        spinner.className = 'text-center text-muted py-5';
+        spinner.textContent = labels.loading;
+        editorTitle.textContent = '';
+        editorBody.replaceChildren(spinner);
+        showModal(editorModal);
+
+        try {
+            await showEditorResponse(await fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html, application/json' } }));
+        } catch {
+            showEditorMessage(labels.editorFailed);
+        }
+    };
+
+    // Every form in the modal posts in place, with the button that was pressed.
+    editorBody.addEventListener('submit', async (event) => {
+        const form = /** @type {HTMLFormElement} */ (event.target);
+
+        if (!form.matches('[data-calendar-editor-form]')) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const submitter = /** @type {HTMLButtonElement | null} */ (/** @type {SubmitEvent} */ (event).submitter);
+        const url = toModalUrl(submitter && submitter.hasAttribute('formaction') ? submitter.formAction : form.action);
+
+        if (!url) {
+            return;
+        }
+
+        try {
+            await showEditorResponse(await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'text/html, application/json' },
+                body: new FormData(form, submitter),
+            }));
+        } catch {
+            showEditorMessage(labels.editorFailed);
+        }
+    });
+
+    // Links between event pages (such as choosing a calendar, then the kind of event) stay in the modal.
+    editorBody.addEventListener('click', (event) => {
+        const link = /** @type {HTMLElement} */ (event.target).closest('a[data-calendar-modal-link]');
+
+        if (link) {
+            event.preventDefault();
+            openEditor(/** @type {HTMLAnchorElement} */ (link).href);
+        }
+    });
+
+    document.querySelectorAll('[data-calendar-new-event]').forEach((button) => button.addEventListener('click', (event) => {
+        event.preventDefault();
+        openEditor(/** @type {HTMLAnchorElement} */ (button).href);
+    }));
 
     /**
      * Saves a dragged or resized occurrence, asking which occurrences to move for a repeating event.

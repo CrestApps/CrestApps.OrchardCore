@@ -82,7 +82,7 @@ public sealed class CalendarEventsController : Controller
     /// <param name="allDay">Whether the event lasts whole days.</param>
     /// <returns>The page.</returns>
     [Admin("calendar/events/choose", "CalendarEventsChoose")]
-    public async Task<IActionResult> Choose(string start, string end, bool allDay)
+    public async Task<IActionResult> Choose(string start, string end, bool allDay, bool modal = false)
     {
         var writable = await _accessService.ListAccessibleAsync(User, CalendarAccessLevel.Write);
         var model = new ChooseCalendarViewModel
@@ -108,7 +108,7 @@ public sealed class CalendarEventsController : Controller
             });
         }
 
-        return View(model);
+        return Page(nameof(Choose), model, modal);
     }
 
     /// <summary>
@@ -121,13 +121,13 @@ public sealed class CalendarEventsController : Controller
     /// <param name="allDay">Whether it lasts whole days.</param>
     /// <returns>The editor.</returns>
     [Admin("calendar/events/create", "CalendarEventsCreate")]
-    public async Task<IActionResult> Create(string calendarId, string eventType, string start, string end, bool allDay)
+    public async Task<IActionResult> Create(string calendarId, string eventType, string start, string end, bool allDay, bool modal = false)
     {
         var calendar = await _calendarService.FindByIdAsync(calendarId);
 
         if (calendar is null)
         {
-            return RedirectToAction(nameof(Choose), new { start, end, allDay });
+            return RedirectToAction(nameof(Choose), new { start, end, allDay, modal });
         }
 
         if (!await _editor.CanAddAsync(User, calendar))
@@ -137,14 +137,14 @@ public sealed class CalendarEventsController : Controller
 
         var calendarEvent = await NewEventAsync(calendar, eventType, start, end, allDay);
 
-        return View(new EditCalendarEventViewModel
+        return Page(nameof(Create), new EditCalendarEventViewModel
         {
             CalendarId = calendar.ItemId,
             CalendarName = calendar.Name,
             IsNew = true,
             Title = S["New Event"],
             Editor = await _displayManager.BuildEditorAsync(calendarEvent, _updateModelAccessor.ModelUpdater, isNew: true),
-        });
+        }, modal);
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public sealed class CalendarEventsController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("calendar/events/create", "CalendarEventsCreate")]
-    public async Task<IActionResult> CreatePost(EditCalendarEventViewModel model)
+    public async Task<IActionResult> CreatePost(EditCalendarEventViewModel model, bool modal = false)
     {
         var calendar = await _calendarService.FindByIdAsync(model.CalendarId);
 
@@ -178,22 +178,20 @@ public sealed class CalendarEventsController : Controller
 
             if (result.Succeeded)
             {
-                await _notifier.SuccessAsync(H["The event has been added."]);
-
-                return RedirectToCalendar(calendarEvent);
+                return await SucceededAsync(calendarEvent, H["The event has been added."], modal);
             }
 
             CalendarEventEditor.AddErrors(ModelState, result.Errors);
         }
 
-        return View(new EditCalendarEventViewModel
+        return Page(nameof(Create), new EditCalendarEventViewModel
         {
             CalendarId = calendar.ItemId,
             CalendarName = calendar.Name,
             IsNew = true,
             Title = S["New Event"],
             Editor = editor,
-        });
+        }, modal);
     }
 
     /// <summary>
@@ -203,7 +201,7 @@ public sealed class CalendarEventsController : Controller
     /// <param name="occurrence">When the occurrence was due to start, as an ISO 8601 UTC time.</param>
     /// <returns>The editor.</returns>
     [Admin("calendar/events/edit/{id}", "CalendarEventsEdit")]
-    public async Task<IActionResult> Edit(string id, string occurrence)
+    public async Task<IActionResult> Edit(string id, string occurrence, bool modal = false)
     {
         var (calendarEvent, calendar) = await LoadAsync(id);
 
@@ -220,7 +218,7 @@ public sealed class CalendarEventsController : Controller
         var originalStartUtc = ParseOccurrence(calendarEvent, occurrence);
         var target = originalStartUtc.HasValue ? CreateOccurrenceCopy(calendarEvent, originalStartUtc.Value) : calendarEvent;
 
-        return View(await BuildEditModelAsync(calendarEvent, calendar, occurrence, originalStartUtc.HasValue, await _displayManager.BuildEditorAsync(target, _updateModelAccessor.ModelUpdater, isNew: false)));
+        return Page(nameof(Edit), await BuildEditModelAsync(calendarEvent, calendar, occurrence, originalStartUtc.HasValue, await _displayManager.BuildEditorAsync(target, _updateModelAccessor.ModelUpdater, isNew: false)), modal);
     }
 
     /// <summary>
@@ -232,7 +230,7 @@ public sealed class CalendarEventsController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("calendar/events/edit/{id}", "CalendarEventsEdit")]
-    public async Task<IActionResult> EditPost(string id, EditCalendarEventViewModel model)
+    public async Task<IActionResult> EditPost(string id, EditCalendarEventViewModel model, bool modal = false)
     {
         var (calendarEvent, calendar) = await LoadAsync(id);
 
@@ -259,15 +257,13 @@ public sealed class CalendarEventsController : Controller
 
             if (result.Succeeded)
             {
-                await _notifier.SuccessAsync(H["The event has been saved."]);
-
-                return RedirectToCalendar(result.Value);
+                return await SucceededAsync(result.Value, H["The event has been saved."], modal);
             }
 
             CalendarEventEditor.AddErrors(ModelState, result.Errors);
         }
 
-        return View(await BuildEditModelAsync(calendarEvent, calendar, model.Occurrence, originalStartUtc.HasValue, editor));
+        return Page(nameof(Edit), await BuildEditModelAsync(calendarEvent, calendar, model.Occurrence, originalStartUtc.HasValue, editor), modal);
     }
 
     /// <summary>
@@ -279,7 +275,7 @@ public sealed class CalendarEventsController : Controller
     /// <returns>A redirect to the calendar.</returns>
     [HttpPost]
     [Admin("calendar/events/cancel/{id}", "CalendarEventsCancel")]
-    public async Task<IActionResult> Cancel(string id, string occurrence, string scope)
+    public async Task<IActionResult> Cancel(string id, string occurrence, string scope, bool modal = false)
     {
         var (calendarEvent, calendar) = await LoadAsync(id);
 
@@ -299,16 +295,9 @@ public sealed class CalendarEventsController : Controller
             ? await _eventManager.CancelOccurrenceAsync(calendarEvent, originalStartUtc.Value, Enum.TryParse<CalendarEditScope>(scope, out var editScope) ? editScope : CalendarEditScope.ThisOccurrence, options)
             : await _eventManager.CancelAsync(calendarEvent, options);
 
-        if (result.Succeeded)
-        {
-            await _notifier.SuccessAsync(H["The event has been cancelled."]);
-        }
-        else
-        {
-            await _notifier.ErrorAsync(H["The event could not be cancelled: {0}", string.Join(" ", result.Errors.Select(error => error.Message))]);
-        }
-
-        return RedirectToCalendar(calendarEvent);
+        return result.Succeeded
+            ? await SucceededAsync(calendarEvent, H["The event has been cancelled."], modal)
+            : await FailedAsync(calendarEvent, H["The event could not be cancelled: {0}", Describe(result.Errors)], S["The event could not be cancelled: {0}", Describe(result.Errors)], modal);
     }
 
     /// <summary>
@@ -318,7 +307,7 @@ public sealed class CalendarEventsController : Controller
     /// <returns>A redirect to the calendar.</returns>
     [HttpPost]
     [Admin("calendar/events/delete/{id}", "CalendarEventsDelete")]
-    public async Task<IActionResult> Delete(string id)
+    public async Task<IActionResult> Delete(string id, bool modal = false)
     {
         var (calendarEvent, calendar) = await LoadAsync(id);
 
@@ -333,9 +322,8 @@ public sealed class CalendarEventsController : Controller
         }
 
         await _eventManager.DeleteAsync(calendarEvent, new CalendarChangeOptions { Actor = CalendarUser.GetId(User) });
-        await _notifier.SuccessAsync(H["The event has been deleted."]);
 
-        return RedirectToCalendar(calendarEvent);
+        return await SucceededAsync(calendarEvent, H["The event has been deleted."], modal);
     }
 
     /// <summary>
@@ -345,7 +333,7 @@ public sealed class CalendarEventsController : Controller
     /// <returns>A redirect to the calendar.</returns>
     [HttpPost]
     [Admin("calendar/events/confirm/{id}", "CalendarEventsConfirm")]
-    public async Task<IActionResult> Confirm(string id)
+    public async Task<IActionResult> Confirm(string id, bool modal = false)
     {
         var (calendarEvent, calendar) = await LoadAsync(id);
 
@@ -361,16 +349,9 @@ public sealed class CalendarEventsController : Controller
 
         var result = await _eventManager.UpdateAsync(calendarEvent, target => target.Status = CalendarEventStatus.Confirmed, new CalendarChangeOptions { Actor = CalendarUser.GetId(User) });
 
-        if (result.Succeeded)
-        {
-            await _notifier.SuccessAsync(H["The event has been confirmed."]);
-        }
-        else
-        {
-            await _notifier.ErrorAsync(H["The event could not be confirmed: {0}", string.Join(" ", result.Errors.Select(error => error.Message))]);
-        }
-
-        return RedirectToCalendar(calendarEvent);
+        return result.Succeeded
+            ? await SucceededAsync(calendarEvent, H["The event has been confirmed."], modal)
+            : await FailedAsync(calendarEvent, H["The event could not be confirmed: {0}", Describe(result.Errors)], S["The event could not be confirmed: {0}", Describe(result.Errors)], modal);
     }
 
     /// <summary>
@@ -381,7 +362,7 @@ public sealed class CalendarEventsController : Controller
     /// <returns>A redirect to the calendar.</returns>
     [HttpPost]
     [Admin("calendar/events/respond/{id}", "CalendarEventsRespond")]
-    public async Task<IActionResult> Respond(string id, string response)
+    public async Task<IActionResult> Respond(string id, string response, bool modal = false)
     {
         var (calendarEvent, _) = await LoadAsync(id);
         var userId = CalendarUser.GetId(User);
@@ -393,16 +374,9 @@ public sealed class CalendarEventsController : Controller
 
         var result = await _eventManager.RespondAsync(calendarEvent, "user:" + userId, answer, new CalendarChangeOptions { Actor = userId });
 
-        if (result.Succeeded)
-        {
-            await _notifier.SuccessAsync(H["Your answer has been saved."]);
-        }
-        else
-        {
-            await _notifier.ErrorAsync(H["Your answer could not be saved: {0}", string.Join(" ", result.Errors.Select(error => error.Message))]);
-        }
-
-        return RedirectToCalendar(calendarEvent);
+        return result.Succeeded
+            ? await SucceededAsync(calendarEvent, H["Your answer has been saved."], modal)
+            : await FailedAsync(calendarEvent, H["Your answer could not be saved: {0}", Describe(result.Errors)], S["Your answer could not be saved: {0}", Describe(result.Errors)], modal);
     }
 
     private async Task<(CalendarEvent Event, Calendar Calendar)> LoadAsync(string id)
@@ -465,6 +439,42 @@ public sealed class CalendarEventsController : Controller
             Source = calendarEvent.Source,
             Editor = editor,
         };
+    }
+
+    // In the calendar view's modal, the page comes without the admin page around it.
+    private IActionResult Page(string viewName, object model, bool modal)
+    {
+        return modal ? PartialView(viewName + "Modal", model) : View(viewName, model);
+    }
+
+    // The calendar view's modal reads the outcome as JSON, closes and reloads the calendar; a page shows a note and goes back.
+    private async Task<IActionResult> SucceededAsync(CalendarEvent calendarEvent, LocalizedHtmlString message, bool modal)
+    {
+        if (modal)
+        {
+            return Json(new CalendarEditorOutcome { Succeeded = true, Message = message.Value });
+        }
+
+        await _notifier.SuccessAsync(message);
+
+        return RedirectToCalendar(calendarEvent);
+    }
+
+    private async Task<IActionResult> FailedAsync(CalendarEvent calendarEvent, LocalizedHtmlString message, LocalizedString text, bool modal)
+    {
+        if (modal)
+        {
+            return Json(new CalendarEditorOutcome { Succeeded = false, Message = text.Value });
+        }
+
+        await _notifier.ErrorAsync(message);
+
+        return RedirectToCalendar(calendarEvent);
+    }
+
+    private static string Describe(IEnumerable<CalendarError> errors)
+    {
+        return string.Join(" ", errors.Select(error => error.Message));
     }
 
     private RedirectToActionResult RedirectToCalendar(CalendarEvent calendarEvent)
