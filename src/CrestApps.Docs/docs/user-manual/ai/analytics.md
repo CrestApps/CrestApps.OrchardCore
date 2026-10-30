@@ -17,7 +17,9 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of enabling session metrics and running the AI chat analytics report" start={659} end={690} />
+<YouTube video="ai-chat-analytics" title="Video overview of the AI chat analytics reports" />
+
+The video shows the settings that collect the data and tours the Session Analytics, Extracted Data and Conversion Goals reports.
 
 | Report | What it shows |
 | --- | --- |
@@ -35,9 +37,13 @@ The reports only contain what was collected, and only from the moment collection
 
 When session metrics are on, every answer in the chat gets **Thumbs up** and **Thumbs down** buttons, and people's ratings feed the **User Feedback** section.
 
+<YouTube video="ai-chat-analytics" title="Video of the Data Processing and Metrics settings" start={53} end={95} />
+
 A chat counts as finished when it ends naturally or when nobody writes for the profile's **Session inactivity timeout**. Resolution, conversion and extracted data appear only after a chat has finished and been analyzed, which can take a few minutes.
 
 ## AI Chat Session Analytics
+
+<YouTube video="ai-chat-analytics" title="Video of the AI Chat Session Analytics report" start={95} end={177} />
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Session Analytics**.
 2. Choose a **Date range**, such as **Last 30 Days** or dates of your own, and optionally one profile (or **Any profile**).
@@ -99,6 +105,8 @@ Some AI services do not report tokens for every answer, so these figures can be 
 
 Lists the details an assistant collected with data extraction, such as names, emails and products of interest, one row per chat.
 
+<YouTube video="ai-chat-analytics" title="Video of the AI Chat Extracted Data report" start={177} end={207} />
+
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Extracted Data**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
 3. Click **Show**. The table has **Session date**, **Session ID** and one column per extracted detail.
@@ -107,6 +115,8 @@ Lists the details an assistant collected with data extraction, such as names, em
 ## AI Chat Conversion Goals
 
 Shows how each finished chat scored against the profile's conversion goals.
+
+<YouTube video="ai-chat-analytics" title="Video of the AI Chat Conversion Goals report" start={207} end={235} />
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Conversion Goals**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.

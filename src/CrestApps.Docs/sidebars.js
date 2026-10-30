@@ -202,6 +202,8 @@ const sidebars = {
             items: [
                 'user-manual/telephony-settings',
                 'user-manual/soft-phone',
+                'user-manual/soft-phone-widget',
+                'user-manual/manual-dialing',
                 'user-manual/phone-apps',
             ],
         },
