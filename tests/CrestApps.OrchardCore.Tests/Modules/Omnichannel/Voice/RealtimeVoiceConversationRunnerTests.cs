@@ -1408,7 +1408,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(Mock.Of<global::OrchardCore.ContentManagement.IContentManager>(), Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
                 Commands, Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(),
                 clock.Object,
-                NullLogger<RealtimeVoiceConversationRunner>.Instance, ProfileManager.Object);
+                NullLogger<RealtimeVoiceConversationRunner>.Instance, profileManager: ProfileManager.Object);
         }
 
         public Mock<ISession> DocumentSession { get; }

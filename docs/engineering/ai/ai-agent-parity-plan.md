@@ -762,7 +762,8 @@ Built:
   and the **AI Guardrail Triggered** workflow event. On web chat through the hub's prompt security and the output
   filter, on SMS and on turn-based calls in their reply paths; built in Orchard rather than as Core guardrail
   categories (AD10). Verified live on web chat: medical advice and a competitor question refused with the placeholder,
-  an order lookup still answered, the event logged the category and reason. Not covered: realtime voice; SMS and
+  an order lookup still answered, the event logged the category and reason. Realtime voice checks what the caller says
+  beside the call and answers a refused request with the placeholder; its replies are not checked. SMS and
   turn-based calls are not live-tested (Telnyx).
 - D4: a **storage mode** per profile (everything, everything except personal details, or times, outcomes and scores
   only) applied by a background task 15 minutes after a conversation's last activity, and **retention** in days that

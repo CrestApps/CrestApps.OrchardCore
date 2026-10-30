@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -36,6 +37,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly CrestApps.Core.AI.Profiles.IAIProfileManager _profileManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IShellHost _shellHost;
+    private readonly ShellSettings _shellSettings;
 
     /// <summary>
     /// The length of one ambience frame, in milliseconds. Matches the packet size a phone call is carried in.
@@ -241,6 +244,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="turnNotifier">Tells the conversation turn handlers about each saved turn.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="shellHost">The shell host, which gives the guardrail check a scope of its own.</param>
+    /// <param name="shellSettings">The tenant the call belongs to.</param>
     /// <param name="profileManager">Finds the profile a supervisor switches the call to.</param>
     public RealtimeVoiceConversationRunner(
         IRealtimeOrchestrator orchestrator,
@@ -253,8 +258,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         IAIConversationTurnNotifier turnNotifier,
         IClock clock,
         ILogger<RealtimeVoiceConversationRunner> logger,
+        IShellHost shellHost = null,
+        ShellSettings shellSettings = null,
         CrestApps.Core.AI.Profiles.IAIProfileManager profileManager = null)
     {
+        _shellHost = shellHost;
+        _shellSettings = shellSettings;
         _orchestrator = orchestrator;
         _mediaResolver = mediaResolver;
         _promptStore = promptStore;
@@ -527,9 +536,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 }
 
                 var now = DateTime.UtcNow.Ticks;
+
+                // A caller turn the provider opened and has not committed is the caller talking now. Live, a caller
+                // ten seconds into a long question was asked whether they were still there.
                 var quietFor = now - Math.Max(
-                    Interlocked.Read(ref _lastAssistantAudioTicks),
-                    Interlocked.Read(ref _lastCallerSpeechTicks));
+                    Math.Max(Interlocked.Read(ref _lastAssistantAudioTicks), Interlocked.Read(ref _lastCallerSpeechTicks)),
+                    ProviderHeardCallerTicks(now));
 
                 // No session to ask while one that was lost is being replaced; the replacement speaks first anyway.
                 var conversation = live.Current;
