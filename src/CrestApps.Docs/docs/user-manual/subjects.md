@@ -34,6 +34,8 @@ Create an **inbound** subject for calls customers make. This one is a manual pho
 
 ## Create a subject
 
+<YouTube video="omnichannel-subjects" title="Video of creating an outbound subject with the Omnichannel Subject part and its settings" start={51} end={100} />
+
 1. Open **Interaction Center > Management > Subject Flows** and click **Add Subject**. (When there are no subjects yet, the page shows a **Create a new content type** link instead.)
 2. Enter the subject's **Display Name**, for example *Support Request*, and click **Create**.
 3. On the **Add Parts** page, click **Add & Configure** next to **Omnichannel Subject**. The subject's settings open straight away (described below). Save them.
@@ -45,9 +47,13 @@ Later, use the buttons next to the subject on the Subject Flows list:
 - **Edit Content Type** opens the whole content type, to add or change fields. Both buttons are shown only when you have the **Edit content types** permission.
 - **Manage Flow** opens the [subject flow](subject-flows.md).
 
+<YouTube video="omnichannel-subjects" title="Video of adding a field to a subject" start={100} end={131} />
+
 Agents fill in a subject's fields while they work an activity, so the usual **Publish**, **Save Draft** and **Preview** buttons are hidden on a subject's editor.
 
 ## Subject settings
+
+<YouTube video="omnichannel-subjects" title="Video of creating an inbound subject and the settings it adds" start={131} end={170} />
 
 | Setting | Applies to | What it does |
 | --- | --- | --- |
@@ -59,6 +65,8 @@ Agents fill in a subject's fields while they work an activity, so the usual **Pu
 | **Require a disposition** | all | The agent must pick an outcome to complete the activity. Leave it on unless the subject is a one-way notice, such as an SMS alert, with no outcome to record: the disposition is what runs the subject flow. |
 
 For outbound subjects, the interaction type, channel and address are hidden, because they are chosen when activities are loaded.
+
+<YouTube video="omnichannel-subjects" title="Video of the settings of an automated subject" start={170} end={207} />
 
 When the AI features are enabled, more settings appear:
 
