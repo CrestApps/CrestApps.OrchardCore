@@ -21,6 +21,8 @@ A **cadence** is a reusable series of follow-up messages for automated SMS conve
 
 ## Create a cadence
 
+<YouTube video="omnichannel-cadences" title="Video of building a cadence with a defined message step and an AI-generated step" start={45} end={96} />
+
 1. Open **Interaction Center > Management > Cadences** and click **Add cadence**.
 2. Enter a **Name** and optional **Description**, and leave **Enabled** ticked. A disabled cadence never sends follow-ups.
 3. Under **Follow-up steps**, click **Add step** for each follow-up:
@@ -33,9 +35,13 @@ The clock restarts every time the automation sends a message, so the delays add 
 
 The number of steps is the most follow-ups a customer will ever get. After the last step, the conversation ends on its normal no-response timeout. Each follow-up restarts that timeout, so the customer has the full time to answer it.
 
+<YouTube video="omnichannel-cadences" title="Video of editing, disabling and deleting a cadence" start={96} end={133} />
+
 Unlike campaigns, cadences can be deleted. Deleting or editing a cadence does not change conversations already in progress.
 
 ## Use a cadence
+
+<YouTube video="omnichannel-cadences" title="Video of how the timing of a cadence works and where it is used" start={133} end={187} />
 
 On an **Automatic** [activity load](automated-ai.md#ai-options-on-an-automatic-load), pick the cadence under **Re-engagement**. With *No follow-up cadence*, nobody is followed up.
 
