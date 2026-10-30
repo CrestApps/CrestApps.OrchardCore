@@ -30,10 +30,10 @@ Open **Calendars > Scheduling Resources** and choose **Add resource**.
 | **Calendar** | The calendar appointments go on. Its events also make the resource busy. Leave it on **Make a new calendar** to get one, or choose an existing calendar, such as a room's calendar. |
 | **Time zone** | The time zone the working hours are in. |
 | **Takes appointments** | Untick to stop offering this resource without deleting it. |
-| **Hours come from** | **Working hours below**, or **Shifts on a workforce calendar**. |
+| **Hours come from** | **Working hours below**, or **Shifts on a calendar** (a calendar that holds **Shift** events, such as one a workforce management module adds). |
 | **Working hours** | One line per day, such as *Monday 09:00-12:00, 13:00-17:00*. The gaps are breaks. A day that isn't listed is a day off. |
 | **Days off and changed days** | One per line, such as *2026-12-24 closed*, or *2026-12-31 09:00-12:00* for shorter hours that day. |
-| **Shift calendar** | For hours from shifts: the workforce calendar whose **Shift** events name this staff member. They can then only be booked during their shifts. |
+| **Shift calendar** | For hours from shifts: the calendar whose **Shift** events name this staff member, such as one a workforce management module provides. They can then only be booked during their shifts. |
 
 The resource's calendar is an **Appointments** calendar. Like any calendar, you can open it in **Calendars > Calendar**, and anything you add to it there, such as a **Blocked time** event, keeps that time from being booked.
 
@@ -149,7 +149,7 @@ For example: email the customer when an appointment is confirmed, send a text me
 
 ## AI assistant
 
-With **Scheduling AI Tools** on, an AI assistant can list the appointment types customers can book, find open times, book an appointment, and move or cancel one. To move or cancel, the customer gives the code from their manage link, or the email or phone number they booked with. Only appointment types with **Customers can book it themselves** are offered to customers.
+With **Scheduling** and **AI Services** both on, an AI assistant can list the appointment types customers can book, find open times, book an appointment, and move or cancel one. To move or cancel, the customer gives the code from their manage link, or the email or phone number they booked with. Only appointment types with **Customers can book it themselves** are offered to customers.
 
 ## Troubleshooting
 

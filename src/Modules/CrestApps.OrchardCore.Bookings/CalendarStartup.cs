@@ -11,9 +11,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Bookings;
 
 /// <summary>
-/// Keeps every booking on a Bookings calendar.
+/// Keeps every booking on a Bookings calendar whenever the Calendars feature is on.
 /// </summary>
-[Feature(BookingsConstants.CalendarFeature)]
+[Feature(BookingsConstants.Feature)]
+[RequireFeatures(CalendarsConstants.Features.Calendars)]
 public sealed class CalendarStartup : StartupBase
 {
     /// <inheritdoc />

@@ -6,7 +6,7 @@ user_manual:
   - user-manual/calendars/scheduling
 ---
 
-The **Scheduling** module books appointments with staff, rooms and equipment. It works out open times from each resource's working hours (or its shifts on a workforce calendar) less its busy time on the shared [calendar](./calendars.md), books them so a resource can never be taken twice, and puts every appointment on the resource's calendar. The admin screens are described in the [User Manual](../user-manual/calendars/scheduling.md).
+The **Scheduling** module books appointments with staff, rooms and equipment. It works out open times from each resource's working hours (or its shifts on a calendar that holds **Shift** events, such as one a workforce management module provides) less its busy time on the shared [calendar](./calendars.md), books them so a resource can never be taken twice, and puts every appointment on the resource's calendar. The admin screens are described in the [User Manual](../user-manual/calendars/scheduling.md).
 
 | | |
 | --- | --- |
@@ -23,9 +23,8 @@ The **Scheduling** module books appointments with staff, rooms and equipment. It
 | Scheduling | `CrestApps.OrchardCore.Scheduling` | `CrestApps.OrchardCore.Calendars` | Appointment types, resources, availability, appointments, holds, the waitlist, the **Appointments** calendar type and the admin screens under **Calendars** |
 | Scheduling Self-Service | `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling | Public booking pages (`book/{slug}`) and manage links (`book/manage/{id}/{token}`) |
 | Scheduling API | `CrestApps.OrchardCore.Scheduling.Api` | Scheduling | The `/api/scheduling/v1` endpoints |
-| Scheduling AI Tools | `CrestApps.OrchardCore.Scheduling.AI` | Scheduling, `CrestApps.OrchardCore.AI` | AI tools that find open times and book, move and cancel appointments |
 
-Workflow activities are registered when `OrchardCore.Workflows` is enabled; **Appointment Starting Soon** also needs Calendar Reminders (`CrestApps.OrchardCore.Calendars.Reminders`).
+Workflow activities are registered when `OrchardCore.Workflows` is enabled; **Appointment Starting Soon** also needs Calendar Reminders (`CrestApps.OrchardCore.Calendars.Reminders`). The [AI tools](#ai-tools) are registered when `CrestApps.OrchardCore.AI` is enabled.
 
 ## Permissions
 
@@ -53,7 +52,7 @@ All records live in the `Scheduling` collection.
 `ISchedulingAvailabilityService.FindSlotsAsync(type, fromUtc, toUtc, resourceId)` returns `AppointmentSlot`s (`StartUtc`, `EndUtc`, the free `ResourceIds`, and `Remaining` places for a group session):
 
 1. The window is cut to the type's minimum notice and booking horizon.
-2. For each eligible resource, the open hours are its weekly working hours less its date overrides, in the resource's time zone, or in `Shifts` mode the **Shift** events on its shift calendar that name its user as an attendee.
+2. For each eligible resource, the open hours are its weekly working hours less its date overrides, in the resource's time zone, or in `Shifts` mode the **Shift** events on its shift calendar (`ShiftCalendarId`, any calendar that holds a `Shift` event type, such as one a workforce management module registers) that name its user as an attendee.
 3. Busy time comes from `ICalendarAvailabilityService.GetBusyAsync` for the resource's calendar and its user, which includes every [busy-time source](./calendars.md#extension-points). Each busy interval is widened by the type's buffers.
 4. Start times step by `SlotIntervalMinutes`. A time is offered when the whole appointment fits, the daily limit isn't reached, and, for a group session, the session has places left.
 5. With `AllTogether`, a time is offered only when every resource is free.
@@ -139,7 +138,7 @@ A time that was taken returns `409 Conflict`.
 
 ## AI tools
 
-The Scheduling AI Tools feature registers these tools in the **Scheduling** category. They are meant for customer-facing assistants, so they work for anonymous visitors, but only with appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**.
+With `CrestApps.OrchardCore.AI` enabled, Scheduling registers these tools in the **Scheduling** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They are meant for customer-facing assistants, so they work for anonymous visitors, but only with appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**.
 
 | Function | Title | Description |
 | --- | --- | --- |

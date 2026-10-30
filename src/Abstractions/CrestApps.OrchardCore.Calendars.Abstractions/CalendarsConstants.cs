@@ -35,10 +35,6 @@ public static class CalendarsConstants
         /// </summary>
         public const string Resources = "CrestApps.OrchardCore.Calendars.Resources";
 
-        /// <summary>
-        /// Workforce calendars with shifts, time off and training.
-        /// </summary>
-        public const string Workforce = "CrestApps.OrchardCore.Calendars.Workforce";
 
         /// <summary>
         /// Office calendars with desk capacity.
@@ -70,10 +66,6 @@ public static class CalendarsConstants
         /// </summary>
         public const string Api = "CrestApps.OrchardCore.Calendars.Api";
 
-        /// <summary>
-        /// The calendar AI tools.
-        /// </summary>
-        public const string AITools = "CrestApps.OrchardCore.Calendars.AI";
     }
 
     /// <summary>
@@ -106,10 +98,6 @@ public static class CalendarsConstants
         /// </summary>
         public const string Equipment = "Equipment";
 
-        /// <summary>
-        /// Shifts, time off and training for a group of employees.
-        /// </summary>
-        public const string Workforce = "Workforce";
 
         /// <summary>
         /// Who is in an office and which desks are booked.

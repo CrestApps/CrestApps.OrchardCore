@@ -34,14 +34,3 @@ using OrchardCore.Modules.Manifest;
     Dependencies = [SchedulingConstants.Features.Scheduling]
 )]
 
-[assembly: Feature(
-    Id = SchedulingConstants.Features.AITools,
-    Name = "Scheduling AI Tools",
-    Description = "AI tools that find open times and book, move and cancel appointments for customers.",
-    Category = "Calendar",
-    Dependencies =
-    [
-        SchedulingConstants.Features.Scheduling,
-        "CrestApps.OrchardCore.AI",
-    ]
-)]

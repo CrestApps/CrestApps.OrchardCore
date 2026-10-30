@@ -129,19 +129,20 @@ A range query loads events whose `StartUtc < to` and `RangeEndUtc > from`, expan
 | Calendars | `CrestApps.OrchardCore.Calendars` | Users | Calendars, events, General and Personal types, admin screens, the calendar view (day, week, month, agenda), permissions, recipes and deployment |
 | Team Calendars | `CrestApps.OrchardCore.Calendars.Teams` | Calendars, Roles | Team type and the team availability view |
 | Resource Calendars | `CrestApps.OrchardCore.Calendars.Resources` | Calendars | Room and Equipment types, resource attendees |
-| Workforce Calendars | `CrestApps.OrchardCore.Calendars.Workforce` | Calendars | Workforce type: shifts, time off with approval |
+| ~~Workforce Calendars~~ | ~~`CrestApps.OrchardCore.Calendars.Workforce`~~ | | Removed 2026-10-30: the workforce type moves to a future Workforce Management module ([#1225](https://github.com/CrestApps/CrestApps.OrchardCore/issues/1225)) |
 | Office Calendars | `CrestApps.OrchardCore.Calendars.Office` | Calendars | Office type with desk capacity |
 | Calendar Invitations | `CrestApps.OrchardCore.Calendars.Invitations` | Calendars, Email | Invitation, update and cancellation emails with an `.ics` attachment; reply links that record the response |
 | Calendar Reminders | `CrestApps.OrchardCore.Calendars.Reminders` | Calendars | Durable "starting soon" and "ended" processing (background task + reminder ledger) used by workflows and notifications |
 | Calendar Sharing Feeds | `CrestApps.OrchardCore.Calendars.Feeds` | Calendars | A private iCalendar feed URL per calendar that Google Calendar, Outlook and phones can subscribe to; `.ics` import and export in the admin |
 | External Calendars | `CrestApps.OrchardCore.Calendars.External` | Calendars | Provider connections and the sync background task; the built-in iCalendar URL provider (read-only subscription) |
 | Calendars API | `CrestApps.OrchardCore.Calendars.Api` | Calendars | `/api/calendars/v1` endpoints |
-| Calendar AI Tools | `CrestApps.OrchardCore.Calendars.AI` | Calendars, AI | AI functions: list calendars, find free time, list events, create, move and cancel an event |
+| Calendar AI tools | (Calendars startup with `RequireFeatures("CrestApps.OrchardCore.AI")`; was `CrestApps.OrchardCore.Calendars.AI` until 2026-10-30) | | AI functions: list calendars, find free time, list events, create, move and cancel an event |
 | Workflows integration | (startup with `RequireFeatures("OrchardCore.Workflows")`) | | Calendar workflow events and tasks |
 | Scheduling | `CrestApps.OrchardCore.Scheduling` | Calendars | Appointment types, resources, working hours, availability, appointments, holds, reminders, waitlist |
 | Scheduling Self-Service | `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling | Public booking pages, manage links to reschedule or cancel |
-| Scheduling API, AI Tools | `...Scheduling.Api`, `...Scheduling.AI` | Scheduling | Endpoints and AI functions |
-| Bookings Calendar | `CrestApps.OrchardCore.Bookings.Calendar` | Bookings, Calendars | Every booking as an event on one shared Bookings calendar, and a sync action that backfills them |
+| Scheduling API | `...Scheduling.Api` | Scheduling | Endpoints |
+| Scheduling AI tools | (Scheduling startup with `RequireFeatures("CrestApps.OrchardCore.AI")`; was `...Scheduling.AI` until 2026-10-30) | | AI functions |
+| Bookings on the calendar | (Bookings startup with `RequireFeatures` Calendars; was `CrestApps.OrchardCore.Bookings.Calendar` until 2026-10-30) | | Every booking as an event on one shared Bookings calendar, and a sync action that backfills them |
 
 ## Phases
 
@@ -218,4 +219,8 @@ Each phase is a commit (or a few) on one branch and one pull request, per the "o
   - Workflow events: Booking Created, Confirmed, Rescheduled, Canceled, Completed, No-Show and Expired, started after commit. The payment events (Payment Received, Payment Failed, Refunded) were not built.
   - Bookings Calendar keeps one shared calendar (no per-product setting) and a **Sync to calendar** button; no background backfill pass.
   - **Block with calendar** (item 4) is `BookingPart.BlockingCalendarId` behind a new `IBookingSlotFilter` seam that `BookingCapacityService` asks for closed dates and times; the month table links to the calendar view (item 5).
+- 2026-10-30: fewer features.
+  - Workforce calendars moved out of Calendars: the `CrestApps.OrchardCore.Calendars.Workforce` feature and its `Workforce` type (Shift, Time off, Break, Training) are gone, and a future Workforce Management module registers its own type with `AddCalendarType` ([#1225](https://github.com/CrestApps/CrestApps.OrchardCore/issues/1225)). `RequiresAttendee()` and `NeedsApproval()` stay in Calendars, and Scheduling's "hours from shifts" still reads `Shift` events from whichever calendar a resource names.
+  - The Calendar AI Tools and Scheduling AI Tools features were folded into Calendars and Scheduling: their tools are registered by startups with `RequireFeatures("CrestApps.OrchardCore.AI")`.
+  - The Bookings Calendar feature was folded into Bookings: `CalendarStartup` belongs to Bookings with `RequireFeatures` Calendars, so bookings go on the calendar whenever both are on. The sync route is `bookings-calendar/sync`.
 - Not built: Google Calendar and Microsoft 365 providers (phase 4.4; they need app registrations and test accounts), and phase 5 (report data sources, Contact Center callbacks as an event source).

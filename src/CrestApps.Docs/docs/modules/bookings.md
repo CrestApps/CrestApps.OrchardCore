@@ -1,16 +1,16 @@
 ---
 sidebar_label: Bookings
 title: Bookings
-description: "Bookings: products sold by date as fixed departures, nightly stays or time slots, capacity per date held like stock, occupancy pricing, deposits whose balance is charged to the saved card, cancellation policies, requests the store confirms, travelers' details, date search, a calendar, booking hooks and workflow events, and the Bookings Calendar feature."
+description: "Bookings: products sold by date as fixed departures, nightly stays or time slots, capacity per date held like stock, occupancy pricing, deposits whose balance is charged to the saved card, cancellation policies, requests the store confirms, travelers' details, date search, a calendar, booking hooks and workflow events, and bookings on the shared calendar when Calendars is on."
 user_manual: user-manual/commerce/bookings
 ---
 
 | | |
 | --- | --- |
-| **Features** | `CrestApps.OrchardCore.Bookings` (Bookings), `CrestApps.OrchardCore.Bookings.Calendar` (Bookings Calendar) |
+| **Features** | `CrestApps.OrchardCore.Bookings` (Bookings) |
 | **Category** | Commerce |
-| **Depends on** | Commerce, Orders, Customers, Transactions; Bookings Calendar also needs Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) |
-| **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders), `ICheckoutTenderProvider` and two `CheckoutFlowDisplayDriver`s (Checkout), `ICartActionProvider` (Carts); with Bookings Calendar, a calendar type and `ICalendarAvailabilityService` (Calendars) |
+| **Depends on** | Commerce, Orders, Customers, Transactions; with Calendars (`CrestApps.OrchardCore.Calendars`) also on, bookings go on the calendar |
+| **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders), `ICheckoutTenderProvider` and two `CheckoutFlowDisplayDriver`s (Checkout), `ICartActionProvider` (Carts); with Calendars on, a calendar type and `ICalendarAvailabilityService` (Calendars) |
 | **Seams it offers** | `IBookingHandler`, `IBookingSlotFilter` |
 
 The **Bookings** feature sells products by date. The attachable **Booking** part (`BookingPart`) makes a product a booking of one of three kinds (`BookingKind`):
@@ -185,11 +185,11 @@ The input of every event:
 | `Status`, `PreviousStatus` | Its status now and at its last save. |
 | `CustomerName`, `CustomerEmail` | The buyer. |
 
-## Bookings Calendar
+## Bookings on the calendar
 
-The **Bookings Calendar** feature (`CrestApps.OrchardCore.Bookings.Calendar`, `CalendarStartup`) puts bookings on the shared [calendar](./calendars.md) and lets a calendar close booking dates.
+Whenever Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) are both on, Bookings puts bookings on the shared [calendar](./calendars.md) and lets a calendar close booking dates. There is no separate feature to enable: `CalendarStartup` belongs to the Bookings feature and carries `[RequireFeatures(CalendarsConstants.Features.Calendars)]`, so it runs only while Calendars is on.
 
-**One calendar for every booking.** The feature registers the `Bookings` calendar type, managed by code (`ManagedByCode()`, so it isn't in **Add calendar**), with one event type, `Booking`. `BookingCalendarHandler` is an `IBookingHandler`: on every booking save it creates, moves or cancels the booking's calendar event on the **Bookings** calendar, which it creates the first time (`Source = Bookings`, `SourceId = Bookings`, found again with `ICalendarService.FindBySourceAsync`). The event:
+**One calendar for every booking.** Bookings registers the `Bookings` calendar type, managed by code (`ManagedByCode()`, so it isn't in **Add calendar**), with one event type, `Booking`. `BookingCalendarHandler` is an `IBookingHandler`: on every booking save it creates, moves or cancels the booking's calendar event on the **Bookings** calendar, which it creates the first time (`Source = Bookings`, `SourceId = Bookings`, found again with `ICalendarService.FindBySourceAsync`). The event:
 
 - has `Source = Bookings`, `SourceId` = the booking id and `Editable = false`, so it can only be changed by Bookings;
 - is titled with the product and the buyer's name, starts and ends with the booking, is busy, and names the buyer as an attendee;
@@ -198,9 +198,9 @@ The **Bookings Calendar** feature (`CrestApps.OrchardCore.Bookings.Calendar`, `C
 
 The handler writes with `SkipConflictCheck` (Bookings checks capacity itself) and `SendInvitations = false`, inside the booking's session. The calendar is private by default, so only calendar administrators and the people it is shared with see it.
 
-**Sync to calendar.** `BookingCalendarController.Sync` (`bookings/calendar/sync`, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before the feature was on. It changes only what differs, so running it again is harmless. **Commerce > Bookings > Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
+**Sync to calendar.** `BookingCalendarController.Sync` (`bookings-calendar/sync` in the admin, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before Calendars was on. It answers `404` while Calendars is off. It changes only what differs, so running it again is harmless. **Commerce > Bookings > Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
 
-**Block with calendar.** The feature adds a **Block with calendar** setting to the Booking part (`BookingPart.BlockingCalendarId`, edited by `BookingPartCalendarDisplayDriver`), listing every calendar except the Bookings calendar itself. `BookingCalendarSlotFilter` is its `IBookingSlotFilter`: it reads busy time on that calendar through `ICalendarAvailabilityService.GetBusyAsync`, tentative events included and busy-time sources left out. A time slot is closed when anything busy overlaps it; a departure date or a night is closed when anything busy falls on that day. Use it to keep a room, a guide or a vehicle from being sold twice across products, or to close dates that a team calendar marks as out of office.
+**Block with calendar.** With Calendars on, Bookings adds a **Block with calendar** setting to the Booking part (`BookingPart.BlockingCalendarId`, edited by `BookingPartCalendarDisplayDriver`), listing every calendar except the Bookings calendar itself. `BookingCalendarSlotFilter` is its `IBookingSlotFilter`: it reads busy time on that calendar through `ICalendarAvailabilityService.GetBusyAsync`, tentative events included and busy-time sources left out. A time slot is closed when anything busy overlaps it; a departure date or a night is closed when anything busy falls on that day. Use it to keep a room, a guide or a vehicle from being sold twice across products, or to close dates that a team calendar marks as out of office.
 
 ## Recipes
 

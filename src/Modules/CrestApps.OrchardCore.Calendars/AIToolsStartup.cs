@@ -7,9 +7,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Calendars;
 
 /// <summary>
-/// Registers the calendar AI tools, which administrators can pick on AI profiles.
+/// Registers the calendar AI tools, which administrators can pick on AI profiles, whenever the AI feature is on.
 /// </summary>
-[Feature(CalendarsConstants.Features.AITools)]
+[Feature(CalendarsConstants.Features.Calendars)]
+[RequireFeatures("CrestApps.OrchardCore.AI")]
 public sealed class AIToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

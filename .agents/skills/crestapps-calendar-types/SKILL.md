@@ -35,8 +35,10 @@ Read first:
   `CalendarTypeBuilder`, `CalendarEventTypeBuilder`, `Services/`, `Models/`).
 - Worked examples in the repo:
   - Built-in types: `src/Modules/CrestApps.OrchardCore.Calendars/Startup.cs`, `TeamsStartup.cs`, `ResourcesStartup.cs`,
-    `WorkforceStartup.cs`, `OfficeStartup.cs`.
-  - A module-managed type from another module: `src/Modules/CrestApps.OrchardCore.Bookings/CalendarStartup.cs` and
+    `OfficeStartup.cs`. There is no built-in workforce type: a workforce management module registers its own
+    (shifts with `RequiresAttendee()`, time off with `NeedsApproval()`).
+  - A module-managed type from another module: `src/Modules/CrestApps.OrchardCore.Bookings/CalendarStartup.cs` (a
+    Bookings startup with `[RequireFeatures(CalendarsConstants.Features.Calendars)]`) and
     `Calendar/BookingCalendarHandler.cs` (one event per booking), `Calendar/BookingCalendarSlotFilter.cs` (reading busy
     time).
   - Scheduling: `src/Modules/CrestApps.OrchardCore.Scheduling/Startup.cs` (the `Appointments` type) and
@@ -48,8 +50,11 @@ Read first:
 - Project reference: `CrestApps.OrchardCore.Calendars.Abstractions` (and `.Core` only if you need `CalendarTime`, the
   iCalendar reader/writer or `ICalendarProvider`).
 - Feature dependency: `CrestApps.OrchardCore.Calendars` (`CalendarsConstants.Features.Calendars`), either in the
-  feature's `Dependencies` or, for an optional integration, in a separate feature (as `Bookings.Calendar` does) or a
-  startup with `[RequireFeatures(CalendarsConstants.Features.Calendars)]`.
+  feature's `Dependencies` when your feature can't work without calendars or, for an optional integration (the
+  recommended way), a startup of your own feature with `[RequireFeatures(CalendarsConstants.Features.Calendars)]`, as
+  Bookings' `CalendarStartup` does. Don't add a separate "X Calendar" feature just for the integration: the startup runs
+  whenever both features are on, and anything outside it (a controller, a view) resolves the integration's services
+  with `GetService` and treats `null` as "Calendars is off".
 
 ## 2. Register a calendar type
 

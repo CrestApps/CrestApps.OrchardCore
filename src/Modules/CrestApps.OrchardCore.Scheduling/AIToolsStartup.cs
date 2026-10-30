@@ -7,9 +7,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Scheduling;
 
 /// <summary>
-/// Registers the scheduling AI tools, which administrators can pick on AI profiles.
+/// Registers the scheduling AI tools, which administrators can pick on AI profiles, whenever the AI feature is on.
 /// </summary>
-[Feature(SchedulingConstants.Features.AITools)]
+[Feature(SchedulingConstants.Features.Scheduling)]
+[RequireFeatures("CrestApps.OrchardCore.AI")]
 public sealed class AIToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

@@ -1,12 +1,12 @@
 ---
 sidebar_label: Calendars
 title: Calendars
-description: "Keep shared, personal, team, room, equipment, workforce and office calendars in one place, with repeating events, attendees and invitations, room and desk limits, team availability, sharing, reminders, subscription addresses and external calendars."
+description: "Keep shared, personal, team, room, equipment and office calendars in one place, with repeating events, attendees and invitations, room and desk limits, team availability, sharing, reminders, subscription addresses and external calendars."
 technical_manual:
   - modules/calendars
 ---
 
-The calendar keeps everyone's time in one place: company events, your own meetings, a team's on-call rota, who books which meeting room, employees' shifts and time off, and who is in the office. Each calendar has a **type** that says what it's for, and the type decides who owns the calendar, which kinds of events it holds, and whether events may overlap.
+The calendar keeps everyone's time in one place: company events, your own meetings, a team's on-call rota, who books which meeting room, and who is in the office. Each calendar has a **type** that says what it's for, and the type decides who owns the calendar, which kinds of events it holds, and whether events may overlap.
 
 | | |
 | --- | --- |
@@ -27,16 +27,15 @@ Which types you can choose depends on the features your administrator turned on.
 | **Team** | Team Calendars | A team's calendar. The team is a role: everyone in the role can see it and add to it. | Meeting, On call, Out of office, Milestone |
 | **Room** | Resource Calendars | A meeting room or another space that one group uses at a time. Invite the room to an event to book it. | Booking, Maintenance |
 | **Equipment** | Resource Calendars | Something that can be reserved, such as a projector or a vehicle. | Reservation, Maintenance |
-| **Workforce** | Workforce Calendars | Shifts, time off and training for a group of employees. The employees on a shift are its attendees, and time off waits for approval. | Shift, Time off, Break, Training |
 | **Office** | Office Calendars | Who is in an office and which desks are booked, up to the number of desks. | In office, Desk booking, Visitor, Office closed |
 
-Two more types are kept by other features and can't be added by hand: **Appointments**, one per staff member, room or piece of equipment that takes appointments (see [Scheduling](./scheduling.md)), and **Bookings**, which holds the store's bookings (see [Bookings](../commerce/bookings.md#bookings-on-the-calendar)).
+Two more types are kept by other features and can't be added by hand: **Appointments**, one per staff member, room or piece of equipment that takes appointments (see [Scheduling](./scheduling.md)), and **Bookings**, which holds the store's bookings (see [Bookings](../commerce/bookings.md#bookings-on-the-calendar)). Other modules you add can bring types of their own, such as a calendar of employees' shifts and time off.
 
 Some kinds of events have their own behavior:
 
 - **Holiday**, **Reminder**, **Milestone** and **Office closed** leave the time free: they show on the calendar but don't make anyone busy.
-- **On call**, **Out of office** (on a team calendar), **Shift**, **Time off**, **Break**, **In office** and **Desk booking** must name at least one person.
-- **Time off** is created as *Tentative* and waits until someone who manages the calendar confirms it.
+- **On call**, **Out of office** (on a team calendar), **In office** and **Desk booking** must name at least one person.
+- A kind of event that needs approval, such as time off on a calendar another module adds, is created as *Tentative* and waits until someone who manages the calendar confirms it.
 
 ## Use the calendar
 
@@ -71,7 +70,7 @@ When you create a calendar, you manage it. **Manage Calendars** lists the calend
 
 ### Owner
 
-Personal calendars belong to a user, and team and workforce calendars belong to a role. On the **Owner** tab, choose the user or the **Team** (role). Everyone in the role can see a team calendar and add events to it. Only calendar administrators can give a personal calendar to someone else.
+Personal calendars belong to a user, and team calendars belong to a role. On the **Owner** tab, choose the user or the **Team** (role). Everyone in the role can see a team calendar and add events to it. Only calendar administrators can give a personal calendar to someone else.
 
 ### Sharing
 
@@ -141,9 +140,9 @@ Opening one occurrence of a repeating event shows **Apply the changes, or the ca
 
 **Cancel event** (**Cancel** on an occurrence) cancels it, or the occurrences you chose: cancelling **This occurrence** removes just that day from the series, and **All occurrences** cancels the whole event, which stays on the calendar as cancelled. **Delete** removes it for good, with every occurrence if it repeats.
 
-### Approve time off
+### Approve events
 
-A kind of event that needs approval, such as **Time off**, is created as *Tentative*. Someone who manages the calendar opens it and chooses **Confirm**.
+A kind of event that needs approval, such as time off on a calendar of employees' shifts, is created as *Tentative*. Someone who manages the calendar opens it and chooses **Confirm**.
 
 ## Book rooms and equipment
 
@@ -222,7 +221,7 @@ With the **Workflows** feature on, the **Calendar** category of the workflow edi
 - **Events** that start a workflow: **Calendar Event Created**, **Calendar Event Updated**, **Calendar Event Cancelled**, **Calendar Event Deleted**, **Calendar Attendee Invited** and **Calendar Attendee Response Received**, and with Calendar Reminders, **Calendar Event Starting Soon** (set **Minutes before the start**) and **Calendar Event Completed**. Each can be limited to some **Calendars**, **Calendar types** or **Kinds of events**. **Ignore changes made by workflows** is ticked by default, so a workflow that changes events doesn't start itself again.
 - **Tasks** that act on the calendar: **Create Calendar Event**, **Update Calendar Event**, **Cancel Calendar Event**, **Get Calendar Event**, **Find Calendar Events**, **Add Calendar Attendee**, **Remove Calendar Attendee** and **Find Free Time**.
 
-For example: when a **Time off** event is created on the workforce calendar, email the team lead; or when a meeting is starting soon, send its attendees the room and the agenda. The values each event hands to the next steps are listed in the [Technical Manual](../../modules/calendars.md#workflows).
+For example: when an **Out of office** event is created on a team calendar, email the team lead; or when a meeting is starting soon, send its attendees the room and the agenda. The values each event hands to the next steps are listed in the [Technical Manual](../../modules/calendars.md#workflows).
 
 ## Which feature to turn on
 
@@ -231,14 +230,13 @@ For example: when a **Time off** event is created on the workforce calendar, ema
 | Use the calendar, with shared and personal calendars | Calendars |
 | Give teams their own calendar and see when a team is free | Team Calendars |
 | Book meeting rooms and equipment | Resource Calendars |
-| Plan shifts and approve time off | Workforce Calendars |
 | Track who is in the office and book desks | Office Calendars |
 | Email invitations that attendees answer from the email | Calendar Invitations |
 | Act a set time before events start, or once they end | Calendar Reminders (with Workflows) |
 | Subscribe to a calendar from Outlook, Google Calendar or a phone, or import and export files | Calendar Feeds |
 | Show an external calendar's events here | External Calendars |
 | Let other systems read and change events | Calendars API |
-| Let an AI assistant read your calendar, find free time and add events | Calendar AI Tools |
+| Let an AI assistant read your calendar, find free time and add events | Calendars and AI Services |
 | Book appointments with staff, rooms and equipment | Scheduling (see [Scheduling](./scheduling.md)) |
 
 ## Troubleshooting

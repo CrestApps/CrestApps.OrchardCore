@@ -40,9 +40,5 @@ public static class SchedulingConstants
         /// </summary>
         public const string Api = "CrestApps.OrchardCore.Scheduling.Api";
 
-        /// <summary>
-        /// The scheduling AI tools.
-        /// </summary>
-        public const string AITools = "CrestApps.OrchardCore.Scheduling.AI";
     }
 }

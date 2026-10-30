@@ -76,22 +76,22 @@ The **Find a date** page (*/bookings* on your site) lets shoppers enter dates an
 
 ## Bookings on the calendar
 
-With the **Bookings Calendar** feature on (it needs Bookings and Calendars), every booking also goes on a **Bookings** calendar, next to the rest of your calendars:
+When the **Calendars** feature is on too, every booking also goes on a **Bookings** calendar, next to the rest of your calendars:
 
 - A held or requested booking shows as *Tentative*, and a booked one as *Confirmed*.
 - When a booking moves to other dates, its event moves too. When it's canceled or its hold runs out, the event is cancelled.
 - Each event shows the product and the buyer's name. It can't be changed on the calendar: change the booking under **Commerce > Bookings** instead.
 
-The Bookings calendar is created with the first booking after the feature is turned on. It's private: calendar administrators see it, and they can share it with your staff under **Calendars > Manage Calendars**. See [Calendars](../calendars/calendars.md) for how to share and view calendars.
+The Bookings calendar is created with the first booking after Calendars is turned on. It's private: calendar administrators see it, and they can share it with your staff under **Calendars > Manage Calendars**. See [Calendars](../calendars/calendars.md) for how to share and view calendars.
 
 On **Commerce > Bookings > Calendar**:
 
-- **Sync to calendar** adds every booking from today on to the Bookings calendar, or updates its event there. Use it once after turning the feature on, for bookings made before. Running it again does no harm.
+- **Sync to calendar** adds every booking from today on to the Bookings calendar, or updates its event there. Use it once after turning Calendars on, for bookings made before. Running it again does no harm.
 - **Open in calendar** opens the Bookings calendar in the calendar view, on the same month. It appears once the Bookings calendar exists.
 
 ### Block dates with a calendar
 
-With the feature on, a booking product's **Booking** settings have **Block with calendar**. Choose a calendar, such as a room's, a guide's or a vehicle's, and dates and times that are busy on it can't be booked: they show as full on the product's page and in **Find a date**. Tentative events count as busy.
+With Calendars on, a booking product's **Booking** settings have **Block with calendar**. Choose a calendar, such as a room's, a guide's or a vehicle's, and dates and times that are busy on it can't be booked: they show as full on the product's page and in **Find a date**. Tentative events count as busy.
 
 - A time slot is closed when anything busy on the calendar overlaps it.
 - A departure date or a night is closed when anything busy falls on that day.

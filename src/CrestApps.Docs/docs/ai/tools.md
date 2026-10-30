@@ -181,7 +181,7 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 
 ### Calendar tools
 
-**Available when:** `CrestApps.OrchardCore.Calendars.AI` (Calendar AI Tools)
+**Available when:** `CrestApps.OrchardCore.Calendars` with `CrestApps.OrchardCore.AI` on
 
 These tools act for the signed-in person using the AI, with that person's access to each calendar, and refuse anonymous callers. See [Calendars](../modules/calendars.md#ai-tools).
 
@@ -196,7 +196,7 @@ These tools act for the signed-in person using the AI, with that person's access
 
 ### Scheduling tools
 
-**Available when:** `CrestApps.OrchardCore.Scheduling.AI` (Scheduling AI Tools)
+**Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on
 
 These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**. See [Scheduling](../modules/scheduling.md#ai-tools).
 

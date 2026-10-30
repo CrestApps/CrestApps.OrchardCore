@@ -38,13 +38,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies = [CalendarsConstants.Features.Calendars]
 )]
 
-[assembly: Feature(
-    Id = CalendarsConstants.Features.Workforce,
-    Name = "Workforce Calendars",
-    Description = "Calendars for a group of employees: shifts with the people working them, time off that waits for approval, breaks and training.",
-    Category = "Calendar",
-    Dependencies = [CalendarsConstants.Features.Calendars]
-)]
 
 [assembly: Feature(
     Id = CalendarsConstants.Features.Office,
@@ -98,14 +91,3 @@ using OrchardCore.Modules.Manifest;
     Dependencies = [CalendarsConstants.Features.Calendars]
 )]
 
-[assembly: Feature(
-    Id = CalendarsConstants.Features.AITools,
-    Name = "Calendar AI Tools",
-    Description = "AI tools that list calendars and events, find free time, and create, move and cancel events for the person using the AI.",
-    Category = "Calendar",
-    Dependencies =
-    [
-        CalendarsConstants.Features.Calendars,
-        "CrestApps.OrchardCore.AI",
-    ]
-)]

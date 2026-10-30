@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Bookings.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
@@ -12,9 +13,8 @@ using OrchardCore.Mvc.Core.Utilities;
 namespace CrestApps.OrchardCore.Bookings.Calendar;
 
 /// <summary>
-/// Puts every booking on the Bookings calendar, such as the bookings made before the Bookings Calendar feature was turned on.
+/// Puts every booking on the Bookings calendar, such as the bookings made before the Calendars feature was turned on.
 /// </summary>
-[Feature(BookingsConstants.CalendarFeature)]
 public sealed class BookingCalendarController : Controller
 {
     private const int PageSize = 200;
@@ -22,7 +22,6 @@ public sealed class BookingCalendarController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IBookingStore _bookingStore;
-    private readonly BookingCalendarHandler _handler;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
 
@@ -33,21 +32,18 @@ public sealed class BookingCalendarController : Controller
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="bookingStore">The booking store.</param>
-    /// <param name="handler">The booking calendar handler.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public BookingCalendarController(
         IAuthorizationService authorizationService,
         IBookingStore bookingStore,
-        BookingCalendarHandler handler,
         IClock clock,
         INotifier notifier,
         IHtmlLocalizer<BookingCalendarController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _bookingStore = bookingStore;
-        _handler = handler;
         _clock = clock;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -67,7 +63,15 @@ public sealed class BookingCalendarController : Controller
             return Forbid();
         }
 
-        if (await _handler.GetCalendarAsync() is null)
+        // The handler is only there while the Calendars feature is on.
+        var handler = HttpContext.RequestServices.GetService<BookingCalendarHandler>();
+
+        if (handler is null)
+        {
+            return NotFound();
+        }
+
+        if (await handler.GetCalendarAsync() is null)
         {
             await _notifier.ErrorAsync(H["The Bookings calendar couldn't be created."]);
 
@@ -86,7 +90,7 @@ public sealed class BookingCalendarController : Controller
 
                 foreach (var booking in bookings)
                 {
-                    if (await _handler.SyncAsync(booking))
+                    if (await handler.SyncAsync(booking))
                     {
                         changed++;
                     }

@@ -23,16 +23,14 @@ The **Calendars** module is a calendar foundation that other modules build on. I
 | Calendars | `CrestApps.OrchardCore.Calendars` | `OrchardCore.Users`, `OrchardCore.Roles`, `CrestApps.OrchardCore.Resources` | Calendars, events, the **General** and **Personal** types, the calendar view (day, week, month, agenda), the calendar list and editors, permissions, recipes and deployment |
 | Team Calendars | `CrestApps.OrchardCore.Calendars.Teams` | Calendars | The **Team** type and the **Team Availability** page |
 | Resource Calendars | `CrestApps.OrchardCore.Calendars.Resources` | Calendars | The **Room** and **Equipment** types, with location, seats and equipment fields; rooms and equipment can be invited to events |
-| Workforce Calendars | `CrestApps.OrchardCore.Calendars.Workforce` | Calendars | The **Workforce** type: shifts, time off that needs approval, breaks and training |
 | Office Calendars | `CrestApps.OrchardCore.Calendars.Office` | Calendars | The **Office** type: in office, desk bookings up to the desk count, visitors, office closed |
 | Calendar Reminders | `CrestApps.OrchardCore.Calendars.Reminders` | Calendars | A background task that raises "starting soon" and "completed" once per occurrence |
 | Calendar Invitations | `CrestApps.OrchardCore.Calendars.Invitations` | Calendars, `OrchardCore.Email` | Invitation, update and cancellation emails with an `.ics` attachment, and answer links |
 | Calendar Feeds | `CrestApps.OrchardCore.Calendars.Feeds` | Calendars | A private iCalendar feed address per calendar, and `.ics` import and export |
 | External Calendars | `CrestApps.OrchardCore.Calendars.External` | Calendars | Subscriptions to external calendars, the sync background task and the built-in iCalendar address provider |
 | Calendars API | `CrestApps.OrchardCore.Calendars.Api` | Calendars | The `/api/calendars/v1` endpoints |
-| Calendar AI Tools | `CrestApps.OrchardCore.Calendars.AI` | Calendars, `CrestApps.OrchardCore.AI` | AI tools that list calendars and events, find free time, and create, move and cancel events |
 
-Workflow activities need no feature of their own: they are registered when `OrchardCore.Workflows` is enabled. The **Starting Soon** and **Completed** workflow events also need Calendar Reminders. The `Calendars` recipe step needs `OrchardCore.Recipes.Core`, and the deployment step needs `OrchardCore.Deployment`.
+Workflow activities need no feature of their own: they are registered when `OrchardCore.Workflows` is enabled. The [AI tools](#ai-tools) need none either: Calendars registers them when `CrestApps.OrchardCore.AI` is enabled. The **Starting Soon** and **Completed** workflow events also need Calendar Reminders. The `Calendars` recipe step needs `OrchardCore.Recipes.Core`, and the deployment step needs `OrchardCore.Deployment`.
 
 :::note[Google Calendar and Microsoft 365]
 Two-way providers for Google Calendar and Microsoft 365 are not available yet. The `ICalendarProvider` seam exists, and External Calendars ships one read-only provider: a subscription to an iCalendar (`.ics`) address, which Google Calendar, Outlook and most calendar apps can publish. In the other direction, Calendar Feeds publishes a calendar as an address those apps can subscribe to.
@@ -119,7 +117,7 @@ Event type builder (`CalendarEventTypeBuilder`):
 | `AllDayByDefault()` | New events last whole days. |
 | `Lasts(minutes)` | Default length (60). |
 | `NeedsApproval()` | New events are created `Tentative` and someone with **Manage** confirms them. |
-| `RequiresAttendee()` | An event must name at least one attendee, such as the employee on a shift. |
+| `RequiresAttendee()` | An event must name at least one attendee, such as the person on call. |
 | `IgnoresCapacity()` | Busy events of the type don't count toward the calendar's capacity. |
 
 The built-in types:
@@ -131,10 +129,11 @@ The built-in types:
 | `Team` | Team Calendars | Role | Allow overlaps | Meeting, On call (attendee, 8 h), Out of office (all day, attendee, ignores capacity), Milestone (all day, free) |
 | `Room` | Resource Calendars | Resource; visibility `Public` | Limit 1 | Booking, Maintenance |
 | `Equipment` | Resource Calendars | Resource; visibility `Public` | Limit 1 | Reservation, Maintenance |
-| `Workforce` | Workforce Calendars | Role | Allow overlaps | Shift (attendee, 8 h), Time off (all day, needs approval, attendee), Break (30 min, attendee), Training (2 h) |
 | `Office` | Office Calendars | None; visibility `Public` | Limit 20 (the desk count, changed per calendar) | In office (all day, attendee), Desk booking (attendee, 4 h), Visitor, Office closed (all day, free) |
 | `Appointments` | [Scheduling](./scheduling.md) | None, managed by code | Allow overlaps (Scheduling checks under its own lock) | Appointment, Blocked time |
-| `Bookings` | [Bookings Calendar](./bookings.md#bookings-calendar) | None, managed by code | Allow overlaps | Booking |
+| `Bookings` | [Bookings](./bookings.md#bookings-on-the-calendar), with Calendars on | None, managed by code | Allow overlaps | Booking |
+
+Calendars has no workforce type (shifts, time off, breaks). A workforce management module is expected to register one with `AddCalendarType` (see [#1225](https://github.com/CrestApps/CrestApps.OrchardCore/issues/1225)), using `RequiresAttendee()` for the people on a shift and `NeedsApproval()` for time off.
 
 A personal calendar is created for a user the first time they open **Calendars > Calendar** (`ICalendarService.GetOrCreatePersonalCalendarAsync`).
 
@@ -354,7 +353,7 @@ The admin calendar view uses its own endpoints under `Admin/api/calendars` (`occ
 
 ## AI tools
 
-The Calendar AI Tools feature registers these tools in the **Calendar** category. They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers.
+With `CrestApps.OrchardCore.AI` enabled, Calendars registers these tools in the **Calendar** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers.
 
 | Function | Title | Description |
 | --- | --- | --- |
@@ -406,4 +405,4 @@ The **Calendars** deployment step exports every calendar (without its feed token
 ## Building on the calendar
 
 - [Scheduling](./scheduling.md) puts appointments on `Appointments` calendars and reads free/busy time from the calendar.
-- [Bookings Calendar](./bookings.md#bookings-calendar) keeps every booking on a `Bookings` calendar and closes booking dates that are busy on a chosen calendar.
+- [Bookings](./bookings.md#bookings-on-the-calendar), with Calendars on, keeps every booking on a `Bookings` calendar and closes booking dates that are busy on a chosen calendar.
