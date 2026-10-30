@@ -102,6 +102,8 @@ On the **Data Processing & Metrics** tab, **Privacy** chooses what is kept of ea
 
 The choice applies about 15 minutes after a conversation ends, once its workflows, its post-session analysis and contact memory have read it, so they still work on the full conversation. It applies to conversations that end after you choose it; conversations kept before are left as they were. Personal details are found by patterns and by the utility model; a detail it misses stays, so check a sample of redacted conversations before relying on it.
 
+**Names to keep** lists the names that are not the customer's personal details, so they stay in the transcript: the name the assistant introduces itself by and the business's name, one per line or separated by commas. You don't need to list the site name (from **Configuration → Settings → General**) or, with the **AI Personas** feature, the assistant name of the persona the profile uses; those are kept anyway. A detail spoken over two turns, such as an email address dictated in two parts, is found and replaced in both. The customer's own name is still replaced wherever either side says it.
+
 **Delete conversations after** deletes a conversation, with its transcript, extracted data and evaluations, after that many days without activity. Leave it empty to keep conversations. Usage records are kept, because they are what usage is billed and reported on.
 
 :::note[Contact memory]

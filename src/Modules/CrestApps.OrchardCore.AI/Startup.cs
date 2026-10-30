@@ -457,6 +457,7 @@ public sealed class ChatCoreStartup : StartupBase
         // Privacy: redacting or stripping ended conversations, and deleting those past the profile's retention.
         services.AddCoreAIConversationPrivacy();
         services.AddScoped<IAIConversationPrivacyHandler, AIConversationEvaluationPrivacyHandler>();
+        services.AddScoped<IAIConversationPrivacyHandler, AISiteNamePrivacyHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIConversationPrivacyBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
@@ -677,6 +678,7 @@ public sealed class PersonasStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<AIPersona>, AIPersonaDeletionHandler>()
             .AddDisplayDriver<AIPersona, AIPersonaDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePersonaDisplayDriver>()
+            .AddScoped<IAIConversationPrivacyHandler, AIPersonaNamePrivacyHandler>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePersonaDisplayDriver>()
             .AddNavigationProvider<AIPersonaAdminMenu>()
             .AddPermissionProvider<AIPersonaPermissionsProvider>();
