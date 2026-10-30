@@ -26,7 +26,7 @@ Download links are sent to the email the buyer gives at checkout, which the **Cu
 
 1. Open the product and find **Digital files**.
 2. Under **Files**, choose one or more files. Each uploads right away, up to 1 GB, and appears in the list.
-3. Optionally set **Downloads per buyer** and **Days the links work** for this product. Leave them blank to use the site's settings.
+3. Optionally set **Downloads per buyer** and **Days the links work** for this product. Leave them blank to use the site's settings under **Settings > Commerce > Downloads**, which start at **5 downloads** and **30 days** until you change them.
 4. **Publish** the product.
 
 The files are kept privately: they are not in the media library, and nobody can open them without a buyer's link. When the site checks uploads for viruses, a file that fails the check, or that can't be checked, isn't kept and an error shows under **Files**. To replace a file, tick **Remove** next to the old one and upload the new one. Buyers who already have the old file keep it.

@@ -52,7 +52,7 @@ This video walks through the commerce features, from connecting Stripe to refund
 | --- | --- |
 | **Commerce** | **Orders**, **My Orders**, **Returns**, **Customers**, **Inventory**, **Purchase orders**, **Shipping**, **Reviews**, **Transactions**, **My Transactions**, **Payments**, **Refunds**, **Coupons**, **Gift cards**, **Webhooks**, **Point of sale**, **Markets**, **Currencies** and **Taxation**. |
 | **Subscriptions** | **Agreements**, **My Plans**, **Installment Plans**, **Site provisioning** and **My Sites**. |
-| **Settings** | **Payments > Stripe**, **Subscriptions**, **Address suggestions**, and under **Commerce**: **Orders**, **Returns**, **Inventory**, **Shipping**, **Downloads**, **Reviews**, **Customers**, **Rewards**, **Referrals**, **Transactions** (reminders), **Receipts** and **Pay Later**. |
+| **Settings** | **Payments > Stripe**, **Subscriptions**, **Address suggestions**, and under **Commerce**: **Orders**, **Returns**, **Inventory**, **Shipping**, **Downloads**, **Reviews**, **Customers**, **Rewards**, **Referrals**, **Transactions** (reminders), **Receipts** and **Offline payments** (bank transfer and cash on delivery, from the Pay Later feature). |
 
 You only see the menus your role allows, and only for the features your site has turned on. Customers open **My Plans**, **My Sites** and **My Transactions** with their own account; they need no other admin access, and the rest of the admin stays closed to them.
 
@@ -71,7 +71,7 @@ You only see the menus your role allows, and only for the features your site has
 Every way of paying ends up in the same place, so there is one record of what each customer owes and paid:
 
 1. **Something is sold.** A customer buys a subscription or a site online, or a store manager sets up an installment plan.
-2. **The customer pays through the checkout.** By card, Apple Pay or Google Pay through Stripe, or later with Pay Later. A coupon and taxes are applied along the way.
+2. **The customer pays through the checkout.** By card, Apple Pay or Google Pay through Stripe, or later with Pay Later (bank transfer or cash on delivery). A coupon and taxes are applied along the way.
 3. **What is owed becomes a transaction.** Anything not paid in full, such as a Pay Later order or a scheduled payment of a plan, is listed under **Commerce > Transactions**. The customer sees it under **My Transactions** and is reminded before and after it falls due.
 4. **The customer gets paperwork.** An invoice with a link that pays it, and a receipt after each payment.
 5. **Every payment is recorded.** Each one is listed under **Commerce > Payments**, where it can be refunded.

@@ -26,6 +26,8 @@ To try it, run the **Memberships sample** recipe under **Configuration > Recipes
 
 Buying it makes the buyer a member at once. Buying it again while still a member adds the days to when it ends. Buyers sign in to buy a membership, since it's for their account. They see theirs under **Memberships** in their account.
 
+The list on **Commerce > Memberships** filters by status: **Active**, **Expired** or **Ended early**, and shows every membership by default.
+
 ## Keep content for members
 
 With **Content Access Control** on, add the **Role Picker** part to a content type, and in its settings tick that it restricts who sees the content. On each item, choose the roles that can see it, such as Member. Anyone else who opens it is asked to sign in, or told they don't have access. Administrators see everything.

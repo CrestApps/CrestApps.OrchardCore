@@ -19,7 +19,7 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 
-<YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
+<YouTube video="carts-checkout" title="Carts and checkout: the buyer's journey and the checkout settings" />
 
 ## The checkout page
 
