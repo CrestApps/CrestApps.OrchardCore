@@ -21,13 +21,10 @@ Every provider that is turned on appears as a choice on the **Payment** step of 
 
 ## Connect Stripe
 
-<<<<<<< HEAD
 <YouTube video="stripe-wallets-cards-disputes" title="Entering your Stripe keys" start={89} end={127} />
-=======
 This video walks through connecting Stripe, the offline methods, transactions, refunds and webhooks:
 
 <YouTube video="payments" title="Video overview of payments" />
->>>>>>> origin/videos/payments-docs
 
 | | |
 | --- | --- |

@@ -17,15 +17,12 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 <AskYourAdmin />
 
-<<<<<<< HEAD
 A checkout a buyer leaves unfinished is canceled after 24 hours. That time is not a setting in the admin; ask your developer if you need a different one. **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
-=======
 This video walks through every step of the checkout as a shopper sees it:
 
 <YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
 
 **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
->>>>>>> origin/videos/carts-checkout-docs
 
 <YouTube video="carts-checkout" title="Carts and checkout: the buyer's journey and the checkout settings" />
 

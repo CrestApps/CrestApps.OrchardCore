@@ -32,13 +32,10 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 
 ## Set up a content type (once)
 
-<<<<<<< HEAD
 1. Open **Design > Content Definition > Content Types** and edit the content type.
-=======
 <YouTube video="content-access-control" title="Video of adding the Role Picker to a content type and restricting its content" start={89} end={144} />
 
 1. Open **Content > Content Definition > Content Types** and edit the content type.
->>>>>>> origin/docs/content-access-control-video
 2. If it does not have the **Role Picker** part yet, click **Add Parts**, tick **Role Picker**, and save.
 3. Click **Add & Configure** next to **Role Picker**, or edit the **Role Picker** part on the content type.
    Give it a clear **Display Name**: editors see it above the picker.

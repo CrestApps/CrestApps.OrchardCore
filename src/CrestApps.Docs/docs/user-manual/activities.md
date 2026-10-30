@@ -82,11 +82,8 @@ If the caller is not in the system yet, create the contact first, then log the c
 
 ## Other actions on a contact's activities
 
-<<<<<<< HEAD
 When the AI handed a customer to you, the **Complete** page starts with the **AI assistant's summary**: a blue banner with what the AI learned, and the time it was written. It is not part of your notes. **Review AI conversation** appears on a completed activity that an AI conversation worked, and opens that conversation in the AI chat screen, which follows the usual AI chat permissions.
-=======
 <YouTube video="omnichannel-activities" title="Video of the contact's activities page and purging an activity" start={213} end={244} />
->>>>>>> origin/docs/omnichannel-activities-video
 
 On a contact's **Activities** page, scheduled activities have **Complete**, **Edit** and **Purge**; completed ones have **Edit** and, for AI conversations, **Review AI conversation**.
 

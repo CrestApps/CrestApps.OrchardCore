@@ -9,11 +9,8 @@ user_manual:
   - user-manual/load-inventory
 ---
 
-<<<<<<< HEAD
 <YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
-=======
 <YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
->>>>>>> origin/docs/omnichannel-leads-video
 
 | | |
 | --- | --- |

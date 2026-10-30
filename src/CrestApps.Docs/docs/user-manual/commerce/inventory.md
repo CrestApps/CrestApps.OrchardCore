@@ -87,11 +87,8 @@ The list and the labels shoppers see count every location together.
 
 ## Order stock from suppliers
 
-<<<<<<< HEAD
 <YouTube video="purchase-orders-and-stock-alerts" title="Starting a purchase order from low stock" start={84} end={115} />
-=======
 <YouTube video="inventory" title="Video of a purchase order" start={274} end={323} />
->>>>>>> origin/videos/inventory-docs
 
 With the **Purchase Orders** feature on, **Commerce > Purchase orders** keeps the stock you order from suppliers, and receives it into a location.
 

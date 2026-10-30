@@ -39,11 +39,8 @@ Every template has these fields:
 
 ### Profile template
 
-<<<<<<< HEAD
 A profile template has the same tabs as the [profile editor](profiles.md#the-profile-editor): **General**, **Deployments & Interactions**, **Knowledge**, **Instructions**, **Parameters**, **Capabilities**, **Data Processing & Metrics**, with a **Prompt Security** card on the first tab. Whatever you fill in is copied onto every profile created from the template. Leave a field empty to let each new profile use the default.
-=======
 A profile template has the same cards and tabs as the [profile editor](profiles.md#the-profile-editor): the **General**, **Deployments & Interactions**, **Instructions**, **Parameters** and **Prompt Security** cards, the **Capabilities** and **Data Processing & Metrics** tabs, and a **Knowledge** tab when document or data source features are on. Whatever you fill in is copied onto every profile created from the template. Leave a field empty to let each new profile use the default.
->>>>>>> origin/videos/ai-profiles-personas-templates
 
 On the **General** tab, **Profile type** decides what kind of profile the template creates. Templates of type **Template generated prompt** never appear in the **New AI Profile** picker.
 

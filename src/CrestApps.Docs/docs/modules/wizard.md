@@ -10,13 +10,10 @@ user_manual: user-manual/administration/wizard
 | --- | --- |
 | **Feature Name** | Wizard |
 | **Feature ID** | `CrestApps.OrchardCore.Wizard` |
-<<<<<<< HEAD
 
 
 <YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
-=======
 | **Other features** | None. The content item support and the workflow events turn on by themselves when `OrchardCore.Contents` and `OrchardCore.Workflows` are enabled. |
->>>>>>> origin/docs/wizard-video
 
 The Wizard module provides a reusable, multi-step **wizard** (also called a *stepper*) framework. A wizard
 guides a user through an ordered sequence of steps, collects data on each step, and finalizes the flow once
@@ -25,11 +22,8 @@ powers a sign-up flow, an onboarding flow, a survey, a checkout, or any other gu
 
 You can build a wizard two ways:
 
-<<<<<<< HEAD
 - **Via content items** — enable **Wizard** (with `OrchardCore.Contents` on) and attach the `WizardPart` to a content type. Editors
-=======
 - **Via content items** — enable **Wizard** (with `OrchardCore.Contents` and `OrchardCore.Flows`) and attach the `WizardPart` to a content type. Editors
->>>>>>> origin/docs/wizard-video
   compose the steps from contained content items, just like the `BagPart` from `OrchardCore.Flows`. No code
   required.
 - **Via code** — register an `IWizardDefinition` and an `IWizardHandler` to contribute and validate steps
@@ -43,19 +37,16 @@ There is one feature, **Wizard**. Two parts of it start only when the feature th
 
 | When this is enabled | The wizard adds |
 | --- | --- |
-<<<<<<< HEAD
 | **Wizard** | The core framework: the flow engine, session store, public host controller, and code extension points. It also adds the `WizardPart` when `OrchardCore.Contents` and `OrchardCore.Flows` are enabled, and the workflow events when `OrchardCore.Workflows` is enabled. |
 
 There is one feature to turn on. The content part and the workflow activities start by themselves when the Orchard
 Core feature they build on is enabled.
-=======
 | `OrchardCore.Contents` | The `WizardPart`, so editors can build wizards from content items, and the access policy that honors the part's **Requires authenticated user** setting. |
 | `OrchardCore.Workflows` | The four wizard workflow events. |
 
 The step editor of the `WizardPart` uses the editor of `OrchardCore.Flows`, so enable **Flows** too.
 
 <YouTube video="wizard" title="Video overview of the Wizard part settings, resuming a visit, permissions and workflow events" />
->>>>>>> origin/docs/wizard-video
 
 ## Concepts
 
@@ -79,13 +70,11 @@ The public host exposes three routes:
 
 ## Using the wizard via content items
 
-<<<<<<< HEAD
 Enable the **Wizard** feature, with `OrchardCore.Contents` and `OrchardCore.Flows` on.
 
 ### 1. Attach the wizard part
 
 1. Go to **Design → Content Definition → Content Types** and edit (or create) the content type that will host the
-=======
 Enable **Wizard**, `OrchardCore.Contents` and `OrchardCore.Flows`.
 
 ### 1. Attach the wizard part
@@ -93,7 +82,6 @@ Enable **Wizard**, `OrchardCore.Contents` and `OrchardCore.Flows`.
 <YouTube video="wizard" title="Video of the settings of the Wizard part" start={46} end={99} />
 
 1. Go to **Content Definition → Content Types** and edit (or create) the content type that will host the
->>>>>>> origin/docs/wizard-video
    wizard, for example `Registration`.
 2. Add the **WizardPart** to the type.
 3. Open the part settings on the type and configure the wizard:
@@ -259,13 +247,10 @@ var result = await _wizardEngine.CompleteAsync(
 
 ## Workflow events
 
-<<<<<<< HEAD
 Enable `OrchardCore.Workflows` next to the **Wizard** feature to react to wizard activity with workflows. It contributes four
-=======
 <YouTube video="wizard" title="Video of the four wizard workflow events" start={180} end={213} />
 
 Enable **Wizard** with `OrchardCore.Workflows` to react to wizard activity with workflows. It contributes four
->>>>>>> origin/docs/wizard-video
 events under the **Wizard** category:
 
 | Event | Raised when |
@@ -308,11 +293,8 @@ public sealed class MyWizardAccessPolicy : IWizardAccessPolicy
 
 Register it with `services.AddScoped<IWizardAccessPolicy, MyWizardAccessPolicy>();`. The host challenges the
 visitor when either the definition's `RequiresAuthenticatedUser` is `true` or any policy returns `true`. The
-<<<<<<< HEAD
 **Wizard** feature ships such a policy (when `OrchardCore.Contents` is on) so the per-instance **Requires authenticated user** part
-=======
 `OrchardCore.Contents` support ships such a policy so the per-instance **Requires authenticated user** part
->>>>>>> origin/docs/wizard-video
 setting is honored.
 
 ## Reusing the wizard from other modules

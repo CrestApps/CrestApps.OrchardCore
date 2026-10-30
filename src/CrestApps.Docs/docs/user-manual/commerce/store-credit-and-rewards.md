@@ -23,13 +23,10 @@ Store credit and points belong to a customer's account, so only signed-in buyers
 
 <AskYourAdmin />
 
-<<<<<<< HEAD
 Watch the video for a tour of giving credit and points, spending them at checkout, and referral links.
 
 <YouTube video="store-credit-loyalty-referrals" title="Store credit, points and referrals in CrestApps for Orchard Core" />
-=======
 <YouTube video="customers-companies" title="Video of giving store credit and loyalty points, and setting up rewards and referrals" start={268} end={319} />
->>>>>>> origin/videos/customers-companies-docs
 
 ## Store credit
 

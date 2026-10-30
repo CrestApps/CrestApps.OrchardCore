@@ -131,11 +131,8 @@ Click **Save**; a new blank location is there for the next one, up to 20. Tick *
 
 ## Ship an order
 
-<<<<<<< HEAD
 <YouTube video="shipments-and-labels" title="Creating a shipment" start={78} end={120} />
-=======
 <YouTube video="shipping" title="Video of recording a shipment" start={262} end={292} />
->>>>>>> origin/videos/shipping-docs
 
 A paid order with goods gets a **Shipments** section on its page (**Commerce > Orders**, then the order). It lists what has been shipped, and what is left.
 

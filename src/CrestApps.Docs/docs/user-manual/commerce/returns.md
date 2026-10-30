@@ -22,11 +22,8 @@ Watch the video for a tour of the settings, what a buyer does, and how to handle
 
 ## Set up returns
 
-<<<<<<< HEAD
 <YouTube video="returns" title="Setting up returns" start={83} end={115} />
-=======
 <YouTube video="orders" title="Video of the returns list and the return settings" start={267} end={292} />
->>>>>>> origin/videos/orders-docs
 
 Under **Settings > Commerce > Returns**:
 

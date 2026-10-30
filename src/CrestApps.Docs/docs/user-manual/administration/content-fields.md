@@ -25,14 +25,11 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 ## Add a phone field to a content type
 
-<<<<<<< HEAD
 1. Open **Design > Content Definition > Content Types** and edit the content type.
-=======
 <YouTube video="content-fields" title="Video of adding a phone field to a content type" start={104} end={156} />
 
 
 1. Open **Content > Content Definition > Content Types** and edit the content type.
->>>>>>> origin/docs/content-fields-video
 2. Click **Add Field**.
 3. Enter the display name editors will see, for example *Main phone*. Orchard Core fills in the **Technical Name** for you.
 4. Choose **PhoneField** as the field type and save.

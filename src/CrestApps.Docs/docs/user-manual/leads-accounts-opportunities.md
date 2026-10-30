@@ -19,11 +19,8 @@ When a lead qualifies, you **convert** it. Conversion creates a contact, or merg
 
 <AskYourAdmin />
 
-<<<<<<< HEAD
 <YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
-=======
 <YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
->>>>>>> origin/docs/omnichannel-leads-video
 
 If you never turn the feature on, or never use accounts, contacts work exactly as before.
 
@@ -175,13 +172,10 @@ If an account's page says *Please specify at least one contained content type*, 
 
 ## Opportunities
 
-<<<<<<< HEAD
 **Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Design > Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
-=======
 <YouTube video="omnichannel-accounts-opportunities" title="Video of the opportunities list and its search terms" start={103} end={130} />
 
 **Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
->>>>>>> origin/docs/omnichannel-accounts-opportunities-video
 
 Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for example `closed:false`.
 

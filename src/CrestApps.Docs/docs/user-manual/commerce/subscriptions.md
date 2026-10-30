@@ -110,11 +110,8 @@ This video shows a visitor signing up to a plan, then the Agreements screen:
 
 ## Manage subscriptions
 
-<<<<<<< HEAD
 <YouTube video="subscriptions-lifecycle" title="Managing a subscription" start={110} end={154} />
-=======
 <YouTube video="subscriptions" title="Video of the Agreements list and a subscription" start={194} end={234} />
->>>>>>> origin/videos/subscriptions-docs
 
 | | |
 | --- | --- |
