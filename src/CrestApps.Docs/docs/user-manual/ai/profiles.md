@@ -62,7 +62,7 @@ The site comes with these starting points (some only when their feature is on):
 | **Do work in the background** | **Background summarizer** (a utility profile) |
 | **Text messaging** | **Qualify leads by text**, **Customer care by text** |
 | **Phone calls** | **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone** |
-| Agent categories, such as **Research**, **Content** and **Analysis** | Building-block agents such as **Research Agent**, **Writer Agent**, **Summarizer Agent**, **Data Analyst Agent** and **Reviewer Agent** |
+| Agent categories, such as **Research**, **Content** and **Analysis** | Building-block agents such as **Research Agent**, **Writer Agent**, **Summarizer Agent**, **Data Analyst Agent**, **Reviewer Agent**, **Code Assistant Agent**, **Executor Agent** and **Planner Agent** |
 
 Profile templates that your team creates under **Artificial Intelligence > Templates** also get a card. See [Templates](prompt-templates.md).
 

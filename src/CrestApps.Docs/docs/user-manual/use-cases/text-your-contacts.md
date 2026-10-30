@@ -7,6 +7,8 @@ technical_manual:
   - omnichannel/sms
 ---
 
+<YouTube video="use-case-text-your-contacts" title="Video recap of this use case" />
+
 ## Who it's for and what you get
 
 For **managers** setting up two-way texting with customers, and the **agents** and **supervisors** who answer.

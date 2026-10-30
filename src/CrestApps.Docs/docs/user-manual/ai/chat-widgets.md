@@ -8,11 +8,13 @@ technical_manual:
 
 A chat widget is a small chat window that floats in the corner of the page. The **admin chat widget** gives your staff an assistant on every admin page, so they can ask a question without leaving what they are doing. The **website chat widget** puts an assistant on your public site, for example to answer visitors' questions about your products or opening hours.
 
+<YouTube video="ai-chat-widgets" title="Video overview of the chat widgets" />
+
 | | |
 | --- | --- |
 | **Menu** | Settings > Artificial Intelligence, **Admin Widget** section (admin widget); Design > Widgets (website widget) |
 | **Permission** | Manage AI profiles (admin widget settings); Manage layers (website widget); Query any AI profile, or Query AI profile - *profile name*, to chat |
-| **Feature** | AI Chat Admin Widget (admin widget); AI Chat with Widgets and Layers (website widget) |
+| **Feature** | AI Chat Admin Widget, which also turns on AI Chat and Orchard Core AI Agent (admin widget); AI Chat, with the Orchard Core Widgets and Layers features (website widget) |
 
 <AskYourAdmin />
 
@@ -20,9 +22,9 @@ Both widgets chat with an [AI profile](profiles.md) of type **Chat**. Create the
 
 ## Turn on the admin chat widget
 
-<YouTube video="ai-chat" title="Video of turning on the admin chat widget and using it" start={204} end={258} />
+<YouTube video="ai-chat-widgets" title="Video of turning on and setting up the admin widget" start={63} end={122} />
 
-1. Ask your administrator to turn on the **AI Chat Admin Widget** feature.
+1. Ask your administrator to turn on the **AI Chat Admin Widget** feature. It depends on **AI Chat** and **Orchard Core AI Agent**, which are turned on with it.
 2. Open **Settings > Artificial Intelligence** and scroll to the **Admin Widget** section.
 3. Fill in the fields below and click **Save**.
 
@@ -42,6 +44,8 @@ An admin assistant becomes much more useful when it can act on the site, for exa
 
 ## Use the admin chat widget
 
+<YouTube video="ai-chat-widgets" title="Video of using the floating admin assistant" start={122} end={167} />
+
 - Click the round robot button (**Open AI Assistant**) in the bottom-right corner to open the chat. Click the **x** to close it.
 - Type your question and press **Enter**. The widget has the same message box as the chat page, including attachments, voice, read-aloud, copy and ratings when the profile allows them. See [Chat with an AI assistant](chat.md).
 - In the header, click **New chat** to start over, or **Chat history** to list your recent chats and reopen one.
@@ -51,7 +55,7 @@ The widget remembers its position, its size, whether it was open and your curren
 
 ## Add a chat box to your website
 
-<YouTube video="ai-chat" title="Video of adding the website chat widget to a layer" start={258} end={326} />
+<YouTube video="ai-chat-widgets" title="Video of adding the website chat widget with an always-on layer, and the Anonymous permission" start={167} end={237} />
 
 The website widget is a normal Orchard Core widget called **Artificial Intelligence Chat**, so you place it like any other widget.
 
@@ -77,6 +81,8 @@ Visitors who are not signed in use the **Anonymous** role. The widget only shows
 
 ## What visitors see
 
+<YouTube video="ai-chat-widgets" title="Video of the website chat widget as a visitor sees it" start={237} end={265} />
+
 - A round chat button in the bottom-right corner (**Open AI Chat**). Clicking it opens a chat window titled **AI Chat**.
 - The welcome message of the profile, then a message box. Visitors type a question and get an answer as it is written.
 - The same extras as the admin chat, when the profile allows them: attaching files, voice, read-aloud, copy, ratings and numbered sources.
@@ -86,7 +92,7 @@ A chat is saved only once the visitor sends a first message, never just because 
 
 ## Protect a public assistant
 
-<YouTube video="ai-chat" title="Video of the protections of a public assistant" start={383} end={431} />
+<YouTube video="ai-chat-widgets" title="Video of how a public assistant is protected" start={265} end={304} />
 
 A public assistant is open to anyone, so the site protects it:
 
