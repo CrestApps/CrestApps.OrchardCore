@@ -9,7 +9,7 @@ technical_manual:
   - ai/file-sources
 ---
 
-On its own, an AI model only knows what it learned in general. To answer questions about *your* prices, policies, products or help articles, give it your content. The assistant then looks up the passages that match each question, answers from them, and lists them as numbered sources under the answer.
+On its own, an AI model only knows what it learned in general. To answer questions about *your* prices, policies, products or help articles, give it your content. The assistant then looks up the passages that match each question and answers from them. For content such as the pages of a site, the answer carries small numbers and a numbered list of sources appears under it. Documents attached to a profile work quietly in the background.
 
 | | |
 | --- | --- |
@@ -19,9 +19,15 @@ On its own, an AI model only knows what it learned in general. To answer questio
 
 <AskYourAdmin />
 
+<YouTube video="ai-knowledge" title="Video overview of giving an assistant knowledge" />
+
+The video covers why a general model needs your knowledge, the four ways to add it, creating the documents index, uploading a document to a profile and asking about it, and letting people attach files to a chat.
+
 <YouTube video="ai-walkthroughs" title="Video of an Elasticsearch-backed AI data source grounding answers on Article content" start={260} end={351} />
 
 ## Choose how to add your knowledge
+
+<YouTube video="ai-knowledge" title="Video of the four ways to add knowledge" start={57} end={95} />
 
 | Your content | Use | Who keeps it up to date |
 | --- | --- | --- |
@@ -35,16 +41,24 @@ On its own, an AI model only knows what it learned in general. To answer questio
 
 ## Before you start
 
-Knowledge is stored in a search index that understands meaning, not just words. Your technical team sets up the search service once. Then an administrator creates the indexes in **Search > Indexing** with **Add index**, choosing the type and an **Embedding deployment** (see [Connections and deployments](connections.md)):
+<YouTube video="ai-knowledge" title="Video of creating the documents index" start={95} end={145} />
+
+Knowledge is stored in a search index that understands meaning, not just words. Your technical team sets up the search service once. Then an administrator creates the indexes in **Search > Indexing** with **Add index**, choosing the type, and, for an **AI Documents** index or an **AI Knowledge Base Index**, an **Embedding deployment** (see [Connections and deployments](connections.md)):
 
 | Index type | Used for |
 | --- | --- |
-| **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. Then choose it under **Settings > Artificial Intelligence > Documents > Index profile**. |
+| **AI Documents** (Azure AI Search or Elasticsearch) | Documents on profiles and attachments in chats. Choose its **Embedding deployment**: the field is on the index form when the **AI Documents for Chat Interactions** feature is on, and without one the documents of a profile are not found. Then choose the index under **Settings > Artificial Intelligence > Documents > Index profile**. |
 | **AI Knowledge Base Index** (Azure AI Search or Elasticsearch) | Data sources, file sources and web crawlers. |
 
-The embedding deployment cannot be changed after the index is created. Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
+The embedding deployment of an index cannot be changed after the index is created. To create an **AI Knowledge Base Index**, open **Search > Indexes**, click **Add index**, click **Add** on **AI Knowledge Base Index (Elasticsearch)** (or the Azure AI Search type), enter an **Index Name** and a **Name**, pick the **Embedding deployment** and click **Save**.
+
+<YouTube video="ai-file-sources" title="Video of creating the knowledge base index" start={90} end={122} />
+
+Avoid switching to a different index once people use it, because documents stored in the old one are no longer found.
 
 ## Upload documents to a profile
+
+<YouTube video="ai-knowledge" title="Video of uploading a document to a profile" start={145} end={203} />
 
 Documents on a profile are background knowledge the assistant uses in every chat.
 
@@ -61,9 +75,17 @@ To remove a document, click its **Remove document** icon and save. **Download do
 | **Document Top N** | How many matching passages the assistant reads for each question, from 1 to 20. Default 3. More passages give more context, but cost more and slow the answer. |
 | **Document retrieval mode** | **Chunk** gives the assistant only the matching passages. **Hierarchical** finds the matching passages, then gives it the whole documents they come from: better for short documents, much more text for long ones. **Default setting** uses the site's choice. |
 
-The assistant uses the documents quietly; it does not tell users that it has attached files unless they ask about sources.
+The assistant uses the documents quietly; it does not tell users that it has attached files unless they ask about sources. To try it, open the profile's **Actions** menu, click **New chat**, and ask something only the documents can answer.
+
+<YouTube video="ai-knowledge" title="Video of asking a question about a profile document" start={203} end={241} />
 
 ## Let users attach files
+
+<YouTube video="ai-knowledge" title="Video of letting people attach files to a chat" start={241} end={286} />
+
+<YouTube video="ai-documents" title="Video overview of attaching documents to a chat" />
+
+The second video shows a person attaching a file to a chat and asking about it, and the assistant reading a chart inside a PDF report.
 
 To let people attach documents or pictures to a chat, open the profile's **Knowledge** tab and tick:
 
@@ -76,27 +98,88 @@ To let people attach documents or pictures to a chat, open the profile's **Knowl
 
 Attached files belong to one chat only. How users attach them is described in [Chat with an AI assistant](chat.md#attach-files-to-a-chat).
 
+<YouTube video="ai-documents" title="Video of the site settings and of allowing uploads on a profile" start={87} end={179} />
+
+The site-wide defaults are under **Settings > Artificial Intelligence**, in the **Documents** section: the **Index profile** that stores every attachment, **Document retrieval mode**, **Allow document uploads in chat interactions**, **Allow image uploads in chat interactions**, **Largest document that can be indexed** and **Describe figures in uploaded documents**. Pictures and figures need a **Default vision deployment**, in the **Deployments** section of the same page. A profile can use the site default or choose its own.
+
+<YouTube video="ai-documents" title="Video of attaching a file to a chat and asking about it" start={179} end={208} />
+
+### Ask about a chart
+
+<YouTube video="ai-documents" title="Video of asking about a chart inside a PDF report" start={208} end={239} />
+
+With **Describe figures in uploaded documents** on and a vision deployment chosen, the site describes the charts and pictures of an attached PDF, so the assistant can answer a question such as which quarter sold the most units. A figure is described when it has a caption, such as "Figure 1: Unit sales by quarter", or when the text refers to it; a picture with neither is treated as decoration and skipped. Describing figures takes longer, so an attachment with figures is slower to prepare.
+
 ## Data sources
+
+<YouTube video="ai-data-sources" title="Video overview of data sources" />
+
+The video shows how a content index, a knowledge base index and a data source fit together, each step below, and a real answer with its source.
 
 A data source connects the assistant to a knowledge base built from a search index or a database. Use it for large or changing content, such as all the articles on your site.
 
 ### Create a data source
+
+<YouTube video="ai-data-sources" title="Video of indexing content and creating a data source" start={85} end={187} />
 
 1. Open **Artificial Intelligence > Data Sources** and click **Add Data Source**.
 2. In **Available Source Types**, click **Add** on the type you need:
    - **Search Index Profile**: an index of this site's own content.
    - **Elasticsearch** or **Azure AI Search**: an external index.
    - **PostgreSQL**: a database table.
-   - **File**: the target of a [file source](#file-sources).
+   - **Files**: the target of a [file source](#file-sources).
    - **Web**: the target of a [web crawler](#web-crawlers).
 3. Enter a **Name** and choose the **Destination index**, the AI Knowledge Base index that stores the passages. It cannot be changed after you save.
-4. Fill in the source's own section, such as the **Source index**, or the connection details your technical team gives you for an external index or database. For an external source, **Use the globally configured connection** uses the connection your technical team set up.
-5. For every type except **File** and **Web**, fill in the **Field Mapping**: the **Content field** to search, an optional **Title field** for the source list, and a **Key field** that identifies each entry. Ask your technical team which fields to use.
+4. Fill in the source's own section, such as the **Source index**, or the connection details your technical team gives you for an external index or database (see [External data sources](#external-data-sources)).
+5. For every type except **Files** and **Web**, fill in the **Field Mapping**: the **Content field** to search, an optional **Title field** for the source list, and a **Key field** that identifies each entry. Ask your technical team which fields to use.
 6. Click **Save**.
 
-The data source fills its knowledge base and keeps it in step with the source. To rebuild it by hand, open the data source's **Actions** menu and choose **Sync index**.
+The data source fills its knowledge base and keeps it in step with the source. To rebuild it by hand, open the data source's **Actions** menu and choose **Sync index**. When you pick the **Source index**, the **Content field**, **Title field** and **Key field** are filled in with sensible defaults, such as the full text of a content item, its display text and its content item id.
+
+<YouTube video="ai-data-sources" title="Video of syncing a data source" start={187} end={207} />
+
+### External data sources
+
+<YouTube video="ai-data-sources-external" title="Video of external data sources: why, and what every source shares" start={19} end={83} />
+
+A search index or a database table that another system keeps up to date is knowledge already. An **Elasticsearch**, **Azure AI Search** or **PostgreSQL** data source reads it where it is, splits it into passages, and keeps your knowledge base in step. Everything after the connection is the same as for any data source.
+
+Every source has three parts:
+
+| Part | What it is |
+| --- | --- |
+| **Connection** | Where to read: the index and its address, or the database and its table. Your technical team provides the values. |
+| **Destination index** | The AI Knowledge Base index of your site that stores the passages. It cannot be changed after you save. |
+| **Field Mapping** | The **Content field**, the **Title field** (optional) and the **Key field**. For an external source you type the field names, because the site cannot list the fields of a remote source. |
+
+#### Elasticsearch
+
+<YouTube video="ai-data-sources-external" title="Video of creating an Elasticsearch data source and asking a question" start={83} end={157} />
+
+1. Open **Artificial Intelligence > Data Sources**, click **Add Data Source**, and click **Add** on **Elasticsearch**.
+2. Enter a **Name** and the **Index name**, the name of the index on the other server.
+3. Choose the **Environment type**: **Self-managed** asks for the **Elasticsearch URL**, and **Cloud-hosted** asks for the **Elastic Cloud ID**.
+4. Choose the **Authentication type** your technical team gives you: **None**, **Basic** (a **Username** and **Password**), **API key**, **Base64 API key**, or **Key ID and key**. Secrets are stored securely and are not shown again. The optional **Certificate fingerprint** lets the site trust a server by its TLS certificate.
+5. Choose the **Destination index**, and type the **Content field**, **Title field** and **Key field** as they are named in the remote index.
+6. Click **Save**. The data source reads the remote index and fills its knowledge base in the background.
+
+Then [choose the data source on a profile](#use-a-data-source-in-a-profile) and ask a question that the remote index answers. The answer carries a numbered source that names the entry it came from.
+
+#### Azure AI Search
+
+<YouTube video="ai-data-sources-external" title="Video of the Azure AI Search data source form" start={157} end={188} />
+
+Enter a **Name**, the **Index name** and the **Azure AI Search endpoint** of the search service. **Authentication type** is **API key** (stored securely and never shown again), **Default credential**, or **Managed identity**, with an optional **Managed identity client ID**. The **Destination index** and **Field Mapping** work as above. The **Filter** of a profile has no effect when the knowledge base is an Azure AI Search index.
+
+#### PostgreSQL
+
+<YouTube video="ai-data-sources-external" title="Video of the PostgreSQL data source form" start={188} end={212} />
+
+Enter a **Name**, the **Connection string** of the database (stored securely and never shown again) and the **Table name** to read. In **Field Mapping**, the content, title and key fields are the names of columns of that table.
 
 ### Use a data source in a profile
+
+<YouTube video="ai-data-sources" title="Video of choosing a data source on a profile" start={207} end={244} />
 
 On the profile's **Knowledge** tab:
 
@@ -110,19 +193,36 @@ On the profile's **Knowledge** tab:
 
 The site defaults are under **Settings > Artificial Intelligence > Data Sources**: **Default strictness** and **Default top documents**.
 
+<YouTube video="ai-data-sources" title="Video of an answer with its source and the site-wide defaults" start={244} end={287} />
+
+With a data source chosen, an answer carries small numbers on the statements that come from your files, and a numbered list of sources under it.
+
+<YouTube video="ai-file-sources" title="Video of an answer with its sources" start={335} end={354} />
+
 ## File sources
 
-A file source reads a folder of files on a schedule and keeps a **File** data source up to date, so nobody has to upload anything. Use it for documents another system exports, such as nightly product sheets on an FTP site.
+<YouTube video="ai-file-sources" title="Video overview of file sources" />
 
-1. Create a data source of type **File** (see [Create a data source](#create-a-data-source)).
+The video shows why uploads go stale, how the knowledge base index, a **Files** data source and a file source fit together, each step below, and a real answer with its source.
+
+A file source reads a folder of files on a schedule and keeps a **Files** data source up to date, so nobody has to upload anything. Use it for documents another system exports, such as nightly product sheets on an FTP site.
+
+1. Create a data source of type **Files** (see [Create a data source](#create-a-data-source)).
+
+<YouTube video="ai-file-sources" title="Video of creating a Files data source" start={122} end={153} />
+
 2. Open **Artificial Intelligence > File Sources** and click **Add File Source**.
+
+<YouTube video="ai-file-sources" title="Video of adding a file source" start={153} end={223} />
+
+
 3. In **Available Connectors**, click **Add** on **File system** (a folder on the site's server), **FTP / FTPS** or **SFTP**.
 4. Fill in the fields below and the connection details, then click **Save**.
 
 | Field | What it does |
 | --- | --- |
 | **Name** | The name shown in the list. |
-| **Target File data source** | The **File** data source that receives the content. |
+| **Target File data source** | The **Files** data source that receives the content. |
 | **Enabled** | Whether the scheduled reading runs. |
 | **Re-read interval (minutes)** | How often the folder is read again. The site checks once an hour, so shorter intervals still run at most hourly. Empty uses the site default. |
 | **Figures** | **Auto** (describe charts and pictures that look worth it), **All**, or **Off**. Describing figures needs a vision model and costs more. |
@@ -134,14 +234,28 @@ A file source reads a folder of files on a schedule and keeps a **File** data so
 
 For FTP and SFTP, enter the **Host**, **Port**, **Username** and **Password** (or a **Private key** for SFTP) your technical team gives you. A stored password or key is never shown again; leave the field blank to keep it.
 
+<YouTube video="ai-file-sources" title="Video of the FTP and SFTP connectors" start={252} end={303} />
+
 The list shows each source's last run: how many files were found, ingested, unchanged, removed and failed, or **Never run**. To read a source right away, open its **Actions** menu and choose **Read now**.
 
+<YouTube video="ai-file-sources" title="Video of reading the folder now" start={223} end={252} />
+
 ## Web crawlers
+
+<YouTube video="ai-web-crawlers" title="Video overview of web crawlers" />
+
+The video shows why copying pages goes stale, how the knowledge base index, a **Web** data source and a web crawler fit together, each step below, and an answer that links to its page.
 
 A web crawler reads a public website, page by page, into a **Web** data source. Use it for your help center or product pages, so the assistant can answer from them and link to the page.
 
 1. Create a data source of type **Web** (see [Create a data source](#create-a-data-source)).
+
+<YouTube video="ai-web-crawlers" title="Video of creating a Web data source" start={108} end={137} />
+
 2. Open **Artificial Intelligence > Web Crawlers** and click **Add Web Crawler**.
+
+<YouTube video="ai-web-crawlers" title="Video of adding a web crawler" start={137} end={208} />
+
 3. In **Available Crawl Strategies**, click **Add** on **Sitemap**.
 4. Fill in the fields below and click **Save**.
 
@@ -159,9 +273,15 @@ A web crawler reads a public website, page by page, into a **Web** data source. 
 | **Include URL patterns** / **Exclude URL patterns** | Which pages to read or skip, one pattern per line. Ask your technical team to write these. Exclude wins over include. |
 | **User-Agent (optional)** | How the crawler introduces itself to the website. |
 
-To read the site right away, open the crawler's **Actions** menu and choose **Synchronize now**. Only new, changed and removed pages are processed. Sources in answers link back to the original page.
+To read the site right away, open the crawler's **Actions** menu and choose **Synchronize now**. A new crawler also queues a first synchronization when you save it. Only new, changed and removed pages are processed. Sources in answers link back to the original page.
+
+<YouTube video="ai-web-crawlers" title="Video of reading the website now" start={208} end={238} />
+
+<YouTube video="ai-web-crawlers" title="Video of choosing the data source and asking a question" start={238} end={274} />
 
 ## How the assistant uses your knowledge
+
+<YouTube video="ai-knowledge" title="Video of using knowledge well" start={323} end={368} />
 
 - **Before each answer or on demand.** With **Enable preemptive retrieval-augmented generation (RAG)** on (under **Settings > Artificial Intelligence > Default Orchestrator**), the assistant searches your knowledge before every answer. With it off, the assistant searches when it decides it needs to. Preemptive search is always on for profiles without tools.
 - **Sources.** Statements that come from your content get small numbers, and a numbered list of sources appears under the answer. Sources with a web address are links.

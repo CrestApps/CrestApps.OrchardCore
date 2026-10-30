@@ -14,6 +14,8 @@ user_manual:
 
 Provides custom Orchard Core content fields maintained by CrestApps.
 
+<YouTube video="content-fields" title="Video overview of the phone and address fields" />
+
 ## Overview
 
 This module adds custom content fields for Orchard Core that extend the built-in field library with additional functionality. Each field ships with its own display driver, settings, edit and display views.

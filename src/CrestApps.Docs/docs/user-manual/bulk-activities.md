@@ -24,6 +24,8 @@ Each row shows who will handle the activity: **Manual** or **Automated (AI)** wo
 
 ## Filter the activities
 
+<YouTube video="omnichannel-bulk-activities" title="Video of the Manage Activities list and its filter panel" start={45} end={93} />
+
 Click **Filters** to open or close the filter panel; the page remembers your choice in this browser. Combine any of these:
 
 **Contact filters**
@@ -61,7 +63,7 @@ Click **Filters** to open or close the filter panel; the page remembers your cho
 | **Manual** | Manual loads and activities created by hand. | Always. |
 | **Automatic** | Automatic loads worked by an AI profile. | Always. |
 | **Inbound** | Inbound calls and inbound activities logged by an agent. | Always. |
-| **Dialer** | Dialer loads, whatever the profile's mode: preview, and power or progressive when **Contact Center Paced Dialing** is on. | **Contact Center Outbound Dialer** is on. |
+| **Dialer** | Dialer loads, whatever the profile's mode: preview, and power, progressive or predictive when **Contact Center Paced Dialing** is on. | **Contact Center Outbound Dialer** is on. |
 | **Callback** | Callbacks scheduled for a contact. | **Contact Center Outbound Dialer** is on. |
 
 A link or saved filter that names a source the list no longer offers still shows that value, so you can see what the page is filtering on.
@@ -69,6 +71,8 @@ A link or saved filter that names a source the list no longer offers still shows
 Choose a **Page size** of 10, 25, 50 or 100 to see more at once.
 
 ## Apply a bulk action
+
+<YouTube video="omnichannel-bulk-activities" title="Video of selecting activities, choosing an action and applying it to every match" start={93} end={139} />
 
 1. Tick the activities on the page. Or, in the **Bulk actions** card, tick **Apply to all *N* matching activities** to act on every result of the filter, including those on other pages.
 2. Pick an action in **Select an action** and fill in its fields.
@@ -85,7 +89,7 @@ In the screencast, the manager filters by subject and assignment status, ticks t
 | **Set Urgency Level** | Changes their urgency. |
 | **Change Subject** | Moves them to another subject and applies that subject's campaign, channel and address. Subject field values are cleared. |
 | **Clear Assignment** | Removes the owner and any reservation so the work can be routed or dialed again. |
-| **Change Source** | Sets the source to **Manual** or **Automatic**, and by default clears assignment and reservation. The dialer sources are not offered here. |
+| **Change Source** | Sets the source to **Manual** or **Automatic**, picks an **Interaction type** (keep the current one, **Manual** or **Automated**), and by default clears assignment and reservation. The dialer sources are not offered here. |
 | **Change Campaign** | Moves them to another campaign, or to no campaign. Activities waiting for the dialer move to the new campaign's dialer queue with them. Shown when campaigns exist. |
 | **Change Dialer Profile** | Hands them to another dialer profile's mode, makes them agent-handled calls, and queues them for the dialer on their campaign. Pick a **Campaign** to move them all to it at the same time, or keep each one's current campaign. Shown when dialer profiles exist. |
 
@@ -104,5 +108,7 @@ A subject's campaign is only the default for activities created from it: it does
 The dialer needs a campaign, so dialer activities cannot be moved to no campaign. The rule that a campaign's waiting dialer activities share one dialer profile applies here too: dialer activities using different profiles are refused when moved together, and so are activities whose profile differs from the one already waiting in the new campaign. Move one profile's activities at a time, or use **Change Dialer Profile** with a campaign to change both at once.
 
 ## Activities the dialer is working
+
+<YouTube video="omnichannel-bulk-activities" title="Video of Change Source with its Interaction type, Purge, and what bulk actions leave alone" start={139} end={207} />
 
 An activity the dialer is dialing right now, ringing an agent with, or that an agent is on a call for is left unchanged by every bulk action, **Purge** included, and the message says how many. Changing it under the dialer would pull it out from under a live call. Run the action again once those calls end.

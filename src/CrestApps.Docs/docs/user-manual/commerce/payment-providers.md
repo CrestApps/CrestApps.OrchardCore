@@ -21,6 +21,11 @@ Every provider that is turned on appears as a choice on the **Payment** step of 
 
 ## Connect Stripe
 
+<YouTube video="stripe-wallets-cards-disputes" title="Entering your Stripe keys" start={89} end={127} />
+This video walks through connecting Stripe, the offline methods, transactions, refunds and webhooks:
+
+<YouTube video="payments" title="Video overview of payments" />
+
 | | |
 | --- | --- |
 | **Menu** | Settings > Payments > Stripe |
@@ -54,6 +59,8 @@ Values that are not configured work exactly as described on the rest of this pag
 
 ### What Connect does
 
+<YouTube video="stripe-wallets-cards-disputes" title="What Connect does" start={127} end={174} />
+
 When you click **Connect**, your site:
 
 1. Checks the saved secret key with Stripe. If Stripe rejects it, an error says why and nothing else changes.
@@ -66,6 +73,8 @@ When you click **Connect**, your site:
 Click **Disconnect** under **Status** and confirm. The confirmation warns that the keys are deleted. Your site removes the webhook it created and **clears the keys** for that environment, so Stripe payments stop until you enter the keys again, save and click **Connect**. Disconnecting one environment leaves the other one as it is.
 
 ### Stripe fields
+
+<YouTube video="payments" title="Video of the Stripe settings" start={91} end={134} />
 
 | Field | What it does |
 | --- | --- |
@@ -80,6 +89,8 @@ There is nothing to turn on. After a successful **Connect** on a public domain, 
 :::
 
 ## Offline payments: Pay Later, bank transfer and cash on delivery
+
+<YouTube video="payments" title="Video of the offline payment settings" start={134} end={172} />
 
 | | |
 | --- | --- |
@@ -129,6 +140,8 @@ Pay Later collects no money, so there is nothing to refund through it. Money the
 :::
 
 ## Saved cards
+
+<YouTube video="stripe-wallets-cards-disputes" title="Wallets and saved cards" start={174} end={211} />
 
 With Stripe connected, a signed-in buyer paying for a one-time purchase can tick **Save this card for next time** under the card fields. Next time, the payment step offers **Pay with**: their saved cards, such as *VISA ending in 4242 expires 12/2034*, and **A new card**. Choosing a saved card hides the card fields; the buyer clicks **Pay now** and approves the payment if their bank asks.
 

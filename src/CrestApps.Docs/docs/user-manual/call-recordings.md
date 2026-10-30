@@ -17,12 +17,23 @@ Every recorded call is listed on one page, whatever kind of call it was. You can
 
 <AskYourAdmin />
 
+## Where recordings are stored
+
+Recordings, and the master copy of every voice media clip, are kept in an encrypted store in a folder of the site. The phone provider records the call on its side, and the platform downloads the finished recording into the store, so a recording stays with you when you change provider. A company can move the same encrypted files to Azure Blob Storage with the **Telephony - Azure Blob Storage** feature under **Tools > Features**: the feature needs a storage account supplied by a developer in the site's configuration, and until that is done the local store stays in use. Recordings are encrypted with the site's own key before they leave the site, so Azure only holds the scrambled files.
+
+<YouTube video="telephony-recording-storage" title="Video of where call recordings are stored" start={14} end={112} />
+<YouTube video="contact-center-call-recordings" title="Video overview of Call Recordings: search, playback, transcripts and erasing" />
+
 ## Who sees which calls
+
+<YouTube video="contact-center-call-recordings" title="Video of who sees which calls" start={60} end={86} />
 
 - With **Listen to own call recordings**, the page lists only the calls you were the agent on. You cannot search for, list or open anyone else's.
 - With **Listen to anyone's call recordings**, the page lists every recorded call and you can search by agent too.
 
 ## Which calls are recorded
+
+<YouTube video="contact-center-call-recordings" title="Video of which calls are recorded" start={86} end={128} />
 
 Calls are recorded while the **Contact Center Call Recording** feature is enabled and **Record every call automatically** is checked in [Contact Center settings](contact-center-settings.md#recording-governance), which it is by default:
 
@@ -36,6 +47,8 @@ Calls are recorded while the **Contact Center Call Recording** feature is enable
 A call shows up on the page once its recording has been saved, which can take a minute after the call ends.
 
 ## Search the calls
+
+<YouTube video="contact-center-call-recordings" title="Video of searching the calls" start={128} end={187} />
 
 Use the bar at the top of the page:
 
@@ -51,6 +64,8 @@ Click **Search**, or **Clear** to start again. Each row shows the customer's num
 - **View** opens the call page.
 
 ## View a call
+
+<YouTube video="contact-center-call-recordings" title="Video of the call page and its transcript" start={187} end={246} />
 
 The call page shows who was on the call and when, a player for the recording and, below it, the transcript.
 
@@ -76,6 +91,8 @@ A transcript keeps one time for each line. The silence between lines is worked o
 :::
 
 ## Erase a recording
+
+<YouTube video="contact-center-call-recordings" title="Video of erasing a recording" start={246} end={276} />
 
 Only users with the *Delete call recordings* permission see **Erase recording** at the bottom of the call page. No role has it by default except *Administrator*; managing the contact center does not include it.
 

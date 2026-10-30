@@ -23,6 +23,8 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 
 ## Add an address
 
+<YouTube video="omnichannel-addresses" title="Video of the address list and adding a phone number used for text messages" start={44} end={122} />
+
 1. Open **Interaction Center > Management > Omnichannel Addresses** and click **Add Address**.
 2. Under **What kind of address?**, pick the kind, such as **Phone number**. Only kinds that something on your site can use are offered. If none is, the page asks for a feature that uses addresses, such as Contact Center Voice or SMS Messaging Channel.
 3. Enter a **Name** people will recognize and the **Phone number** in international format, such as `+17025550100`.
@@ -35,11 +37,15 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 
 To add a number set up like an existing one, open the existing address's **Actions** menu and choose **Clone**. The form opens with its kind, what it is used for, its description and its SMS provider. Enter the new number and a name, pick its agents, and click **Save**. The number and the agents who dial or text from it are not copied, because each agent dials and texts from one number.
 
+<YouTube video="omnichannel-addresses" title="Video of cloning a number" start={122} end={149} />
+
 A number is listed once. To use a number for calls and texts, tick both on the same address rather than adding it twice. The kind of address cannot be changed after it is created, and addresses cannot be deleted.
 
 The address list shows each address's kind, what it is used for, its number and its SMS provider as badges under its name.
 
 Numbers that were listed once per channel before addresses had capabilities were merged into one address when the site was upgraded, with the settings of both.
+
+<YouTube video="omnichannel-addresses" title="Video of voice calls, the agents who dial and the caller ID precedence" start={149} end={188} />
 
 ## Inbound routing for calls
 

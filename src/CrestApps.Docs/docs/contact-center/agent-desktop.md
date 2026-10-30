@@ -72,6 +72,8 @@ Grant agents the `ContactCenterSignIntoQueues` permission (or a role that includ
 
 ## For contact center managers: the Live Dashboard
 
+<YouTube video="contact-center-live-dashboard" title="Video overview of the live dashboard and supervisor interventions" />
+
 **Interaction Center → Live dashboard** shows summary metrics, a tile per queue (waiting, signed-in, available, busy/reserved/wrap-up and other not-ready agents, the longest wait and SLA breaches, amber near the SLA and red once breached) and an agent board with filters. It connects to the real-time hub and also re-reads its state every 10 seconds, so it can be left open on a wallboard. Reading the dashboard and every supervisor action, step by step, is in the User Manual's [Live Dashboard](../user-manual/live-dashboard.md).
 
 The dashboard shows only the queues the supervisor is authorized for (the queues and campaigns on the supervisor's own agent entitlement record), and every action is limited to agents and calls in those queues. A supervisor without an entitlement record sees an empty dashboard.
@@ -99,6 +101,8 @@ Every intervention is audited under the supervisor's name: `SupervisorTookOver`,
 
 ## For contact center managers: inbound routing runbook
 
+<YouTube video="contact-center-entry-points-ivr" title="Video overview of inbound entry points: numbers, routing, closed hours, voicemail, personal lines, text entry points and cloning" />
+
 Before publishing a new inbound line, follow the User Manual's [Test a new number before you publish it](../user-manual/entry-points-and-ivr.md#test-a-new-number-before-you-publish-it) checklist: the channel endpoint, the queue and its business hours, the inbound entry point, then a test call with a signed-in agent while watching the Live dashboard. In addition:
 
 - Configure the Subject Flow for the endpoint so inbound activities get the right subject, campaign, disposition list, required-disposition policy, and follow-up subject actions.
@@ -106,6 +110,8 @@ Before publishing a new inbound line, follow the User Manual's [Test a new numbe
 - The expected path of the test call is **provider webhook → entry point → queue → reservation → Agent Workspace offer → soft-phone media**. On the Live dashboard, the queue's waiting count increases before assignment, then the selected agent moves from available to reserved/busy/wrap-up as the call progresses.
 
 ### Building an IVR menu
+
+<YouTube video="contact-center-ivr-menus" title="Video overview of IVR menus: the welcome message, building a menu with keys and submenus, tries and the AI voice agent" />
 
 An entry point can play a phone menu ("press 1 for sales, 2 for support") before the caller is routed. The **IVR menu** field on the entry point editor is a visual editor; building a menu with it is described step by step in the User Manual's [Build an IVR menu](../user-manual/entry-points-and-ivr.md#build-an-ivr-menu).
 
@@ -167,6 +173,8 @@ The Subject Flow is the primary business workflow for work completion. Use it fo
 
 ### 1. Sign in and set your presence
 
+<YouTube video="contact-center-agent-workspace" title="Video overview of the agent workspace: signing in, presence, My workspace and the docked agent bar" />
+
 Agents sign in to queues and campaigns from the soft phone's **Work** tab and set their presence from the soft phone or the workspace; see [Sign in to queues and campaigns](../user-manual/agent-workspace.md#start-your-shift-sign-in-to-queues-and-campaigns) and [Set your presence](../user-manual/agent-workspace.md#set-your-presence).
 
 - The **Work** tab signs the agent in and out over the live Contact Center connection without reloading the page, so the queue membership updates in place and the browser joins or leaves the live queue groups at once. The live session membership follows too, so signing out removes this browser session from the queue and campaign state immediately.
@@ -179,6 +187,8 @@ Agents sign in to queues and campaigns from the soft phone's **Work** tab and se
 - A break is system-approved: it is granted at once when nothing is being routed to the agent, and otherwise kept as `RequestBreak` until the current work ends. A reason code mapped to `Break` submits a break request; other reason codes set the state they are mapped to and record the reason on the agent profile and in the audit trail. With no reason codes configured, the soft phone menu falls back to the built-in not-ready states.
 
 ### 2. Receive and answer an offer
+
+<YouTube video="contact-center-agent-calls" title="Video overview of offers, calls and wrap-up" />
 
 The offer card, **Accept** and **Decline** are described in [Answer or decline an offer](../user-manual/agent-workspace.md#answer-or-decline-an-offer).
 
@@ -228,6 +238,8 @@ The agent desktop and the Supervisor Dashboard both reflect the pause and resume
 
 #### Hosted secure data capture
 
+<YouTube video="contact-center-secure-capture" title="Video overview of secure data capture: settings, the agent's link, the customer's page and production requirements" />
+
 Pausing recording keeps a spoken value out of the recorded media, but the agent still hears the customer read it out. **Hosted secure data capture** removes the agent from the exchange entirely: the customer enters the sensitive value on a dedicated secure page, the value is tokenized the moment it is submitted, and only a masked representation (such as the last four digits of a card) and a durable token reference are ever stored. Values that must never be retained in any form, such as a card security code, are validated and then discarded - no token and no mask are kept for them. The agent, the supervisor, and the recording never see the raw value. This mirrors the hosted-page tokenization pattern that state-of-the-art contact center platforms use to keep cardholder data out of agent scope and out of the recorded media path.
 
 The **Collect data securely** control appears on the active interaction only when every one of these is true:
@@ -237,7 +249,7 @@ The **Collect data securely** control appears on the active interaction only whe
 
 When the agent starts a capture, the server re-checks the setting and confirms the agent owns the live interaction before it mints a one-time access token. Only one secure capture may be in progress for an interaction at a time, so a second request is refused while one is still collecting. The token is returned to the agent exactly once as a short-lived secure link to share with the customer over the existing channel; only its SHA-256 hash is stored, so a leaked datastore can never reconstruct a usable link. The secure page is served with `Cache-Control: no-store` and `Referrer-Policy: no-referrer` so the token in the link is never cached or leaked through a referrer header. Starting a capture also pauses recording as defense in depth when the tenant leaves **Pause recording during capture** enabled, so a provider that records the whole media path cannot retain the segment either. If the capture cannot be persisted after recording was paused, recording is resumed immediately so a failed start never leaves recording suppressed.
 
-The customer opens the link on their own device and enters each requested value on the secure page. On submission every requested field is tokenized before anything is persisted, so a single invalid value cannot leave a half-completed capture; recording resumes automatically, and a **secure capture completed** audit event records only the masked values. Resuming recording is self-healing: if the provider cannot resume at the moment a capture settles, a background recovery pass retries it, so a transient provider failure never leaves recording paused permanently. If the customer never finishes, the one-time link expires after the tenant's configured window (30 seconds to one hour, five minutes by default), a background safety net settles the abandoned capture, and recording is resumed. The agent can also cancel an in-progress capture.
+The customer opens the link on their own device and enters each requested value on the secure page. On submission every requested field is tokenized before anything is persisted, so a single invalid value cannot leave a half-completed capture; recording resumes automatically, and a **secure capture completed** audit event records only the masked values. Resuming recording is self-healing: if the provider cannot resume at the moment a capture settles, a background recovery pass retries it, so a transient provider failure never leaves recording paused permanently. If the customer never finishes, the one-time link expires after the tenant's configured window (30 seconds to one hour, five minutes by default), a background safety net settles the abandoned capture, and recording is resumed. An in-progress capture can be cancelled through the cancel endpoint; the workspace does not show a cancel button today, so an unfinished capture ends when its link expires.
 
 The default tokenization sink validates and masks the value locally and returns an opaque surrogate token. It is registered **only** in the Development environment and is intended for development and evaluation only: it is **not** a PCI-DSS-compliant sink, because the surrogate is not backed by a compliant vault. Outside Development, no sink is registered by default, so secure capture fails closed until an operator wires one up - a misconfigured production deployment can never silently fall back to the non-compliant developer sink. A production deployment that captures cardholder data must replace the `ISecureCaptureTokenSink` implementation with one that forwards the raw value to a PCI-DSS-compliant tokenization provider and returns that provider's token. The sink receives a stable per-capture, per-field idempotency key and a production implementation **must** honor it as an idempotency contract: the same key with the same value returns the original token without minting a second vault token, and the same key with a different value fails safely instead of tokenizing the new value. This makes a retried or replayed submission exactly-once at the vault even though the capture service runs inside an ambient unit of work whose commit is evaluated after the call returns.
 

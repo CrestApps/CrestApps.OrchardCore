@@ -17,20 +17,26 @@ Workflows can react to contact center events and act on them without code. For e
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a workflow that starts on a contact center event and adds contact center tasks" start={1351} end={1393} />
+<YouTube video="omnichannel-workflows" title="Video overview of contact center and CRM workflows" />
 
 ## Build a workflow
 
-The screencast builds a workflow that starts recording every call as soon as it connects.
+The steps below build a workflow that starts recording every call as soon as it connects.
+
+<YouTube video="omnichannel-workflows" title="Video of creating a workflow and opening the event picker" start={35} end={68} />
 
 1. Open **Design > Workflows** and click **Create Workflow**. Enter a **Name** such as *Record connected calls* and click **Save**.
 2. Click **Add Event**, find **Contact Center Event** and click its **Add** button.
 3. Pick the **Event type** to react to, for example **Call connected** (leave *Any event type* to react to every event), and click **Save**.
-4. Click **Add Task**, find a Contact Center task such as **Start Call Recording**, and click **Add**. Fill in its fields; for the interaction, use `{{ Workflow.Input.InteractionId }}` to take it from the event. Click **Save**.
+4. Click **Add Task**, open the **Contact Center** category (the contact center tasks, including **Send Text Message**) or **Omnichannel CRM** (**Convert Lead**), find a task such as **Start Call Recording**, and click **Add**. Fill in its fields; for the interaction, use `{{ Workflow.Input.InteractionId }}` to take it from the event. Click **Save**.
 5. On the canvas, drag the task away from the event, then drag from the event's **Matched** outcome to the task to connect them.
 6. Click **Save**.
 
-The **Event type** list is grouped: Interaction, Activity, Routing & queues, Agent, Offer, Dialer, Callback, Call, Recording, Supervision, Secure capture and Shared voicemail. The event has two outcomes: **Matched** when the event is the type you picked (or you picked *Any event type*), and **Ignored** otherwise.
+<YouTube video="omnichannel-workflows" title="Video of the Contact Center Event and its Event type list" start={68} end={127} />
+
+The **Event type** list is grouped: Interaction, Activity, Routing & queues, Agent, Offer, Dialer, Callback, Call, Shared voicemail, Recording, Supervision and Secure capture. The event has two outcomes: **Matched** when the event is the type you picked (or you picked *Any event type*), and **Ignored** otherwise.
+
+<YouTube video="omnichannel-workflows" title="Video of adding a Send Text Message task and connecting it to the event" start={127} end={186} />
 
 ### Values the event passes to the workflow
 
@@ -79,13 +85,15 @@ Two events carry what a follow-up needs, such as a text message to a customer th
 
 ### Call a contact again
 
-When the dialer dispositions a call, what happens next is up to the disposition. There are two ways to have the dialer call the contact again:
+When the dialer dispositions a call, what happens next is up to the disposition. There are three ways the dialer comes to call the contact again:
 
 - **In the subject flow (no workflow).** Wire **Try Again** to the disposition, for example *No answer*. The next attempt is created as a new activity and put back in the same campaign with the same dialer profile, due no sooner than the profile's retry delay. No attempt is created past the action's **Maximum attempts**, or past the profile's **Max attempts** when the action leaves it empty.
-- **Neither.** When the subject has no disposition for how the call ended, the dialer retries a call that rang out, was busy, reached a machine or was dropped, up to the profile's **Max attempts**. See [Retries and the attempt limit](dialer-profiles.md#retries-and-the-attempt-limit).
+- **On its own (neither of the above).** When the subject has no disposition for how the call ended, the dialer retries a call that rang out, was busy, reached a machine or was dropped, up to the profile's **Max attempts**. See [Retries and the attempt limit](dialer-profiles.md#retries-and-the-attempt-limit).
 - **In a workflow.** Use the **Schedule Dialer Retry** task. It does the same, but the workflow decides when: set **Delay in minutes** (empty uses the profile's retry delay, and a shorter delay is raised to it). It ends with **Scheduled** (the next activity is in `{{ Workflow.Output.NextActivityItemId }}`), **Exhausted** when no attempt is left, or **Failed**.
 
 Use one or the other for the same disposition, or the contact gets two follow-up activities. A **Schedule Dialer Retry** that runs after the dialer already retried the call on its own finds that attempt and does not create another.
+
+To retry a busy line after 15 minutes from a workflow:
 
 1. Create a workflow and add the **Contact Center Event** event with the event type **Activity disposition applied**.
 2. Add an **If/Else** task with the condition `input("Data").DialerOutcome == "Busy" && input("Data").RemainingAttempts > 0`, and connect the event's **Matched** outcome to it.
@@ -96,7 +104,7 @@ Use one or the other for the same disposition, or the contact gets two follow-up
 
 1. Create a workflow and add the **Contact Center Event** event with the event type **Dialer attempt completed**.
 2. Add an **If/Else** task with the condition `input("Data").Outcome == "NoAnswer"`, and connect the event's **Matched** outcome to it.
-3. Add a **Send SMS** task. Set **Phone Number** to `{{ Workflow.Input.Data.PhoneNumber }}` and write the **Body**, then connect the **If/Else** task's **True** outcome to it.
+3. Add a **Send Text Message** task (under **Contact Center**). Set **From** to one of your SMS numbers, **To** to `{{ Workflow.Input.Data.PhoneNumber }}`, and write the **Message**, then connect the **If/Else** task's **True** outcome to it. Leave **Agent** empty to send a system text.
 4. Save the workflow.
 
 Every Power, Progressive or Preview call that rings out now sends the text. Use `"Busy"`, `"AnsweringMachine"` or `"Disconnected"` in the condition to text on those outcomes instead. For automated (AI) calls, use **Activity disposition applied** with `input("Data").Outcome == "NoAnswer"`.
@@ -110,6 +118,14 @@ Every Power, Progressive or Preview call that rings out now sends the text. Use 
 3. Add **Send Text Message** with **From** `{{ Workflow.Output.AgentSmsNumber }}`, **To** `{{ Workflow.Input.Data.PhoneNumber }}`, your **Message**, and **Agent** `{{ Workflow.Input.Data.CompletedById }}`, and connect the **Done** outcome of Find Agent Numbers to it.
 
 The text is sent by the provider that owns the number and lands in the customer's conversation in the [messaging workspace](messaging.md), owned by the agent, so the customer's reply reaches them. Leave **Agent** empty to send a system text instead.
+
+## See what a workflow did
+
+<YouTube video="omnichannel-workflows" title="Video of the runs of a workflow" start={337} end={379} />
+
+Open the workflow's editor and click **Instances** (at the top right) to list its runs. Each run shows its status, such as **Finished**, and when it ran. Click a run to see the path it took through the workflow: **Restart** runs it again and **Delete** removes it. The workflow's **Properties** hold **Enabled**, **Single instance** and **Delete successfully completed workflows**.
+
+Every contact center event starts a run of each workflow that begins with a **Contact Center Event**, so a busy contact center produces many runs. A run for an event of another type ends at the **Ignored** outcome and does nothing. To keep the list short, tick **Delete successfully completed workflows** in the workflow's **Properties**, or open **Settings > Workflow Trimming**: **Statuses** picks which runs to remove once they pass the **Retention period** (90 days by default), and **Disable** turns the trimming off.
 
 ## Contact Center activities
 
@@ -125,22 +141,30 @@ A task only appears in the **Add Task** list when the feature it needs is on. Ev
 | **Enqueue Activity** | Activity, Queue, Priority | Done, Failed | Contact Center Work Distribution |
 | **Hand Off to Live Agent** | Activity, Queue, Reason, Summary | Connected, Waiting In Queue, Callback Scheduled, Failed | Contact Center Work Distribution |
 | **Schedule Callback** | Destination, Delay (minutes), Campaign, Queue, Contact | Done, Failed | Contact Center Outbound Dialer |
+| **Schedule Dialer Retry** | Activity, Delay in minutes | Scheduled, Exhausted, Failed | Contact Center Outbound Dialer |
 | **Start Call Recording** / **Stop Call Recording** | Interaction | Done, Indeterminate, Failed | Contact Center Call Recording |
+
+<YouTube video="omnichannel-workflows" title="Video of every outcome a task can end in" start={294} end={337} />
 
 The [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#automate-with-workflows) page describes the **Lead Converted** event and the **Convert Lead** task of the Omnichannel CRM feature.
 
 ### What each task does
 
-- **Place Call or Send Message** starts an automated activity right away instead of waiting for the next automatic pass. A Phone activity is dialed; an SMS activity is sent its opening message. It ends in **Already Started** when the activity was already started, so a workflow that fires twice never calls a customer twice.
+<YouTube video="omnichannel-workflows" title="Video of the settings of every contact center task" start={186} end={268} />
+
+- **Place Call or Send Message** starts an automated activity right away instead of waiting for the next automatic pass. A Phone activity is dialed; an SMS activity is sent its opening message. It ends in **Already Started** when the activity was already started, so a workflow that fires twice never calls a customer twice. It does not run the checks the automatic pass runs first (opt-out, numbers not in service, do-not-call lists and the calling window), so use it only for contacts you have already cleared.
 - **Set Agent Presence** puts an agent into a status such as a break, with an optional reason. The **Status** list offers *Offline*, *Available*, *Break*, *Requested break*, *Away*, *Do not disturb*, *Meeting*, *Training* and *After-hours unavailable*. It leaves out the reserved, busy and wrap-up states, because the platform sets those itself while an agent is offered or handling work.
 - **Find Agent Numbers** looks up the numbers an agent calls and texts from. See the example above.
 - **Send Text Message** sends a text from one of your SMS numbers. **Agent** is optional: name an agent so the customer's reply reaches them, or leave it empty for a system text.
 - **Enqueue Activity** puts an activity on a queue for routing. **Priority** is optional; *Use queue default* keeps the queue's own priority. If the activity or the queue does not exist, the task ends in **Failed**.
 - **Hand Off to Live Agent** moves an automated (AI) conversation to people: a live call is put in a queue and offered to an agent, and a text conversation becomes a queue-owned conversation in the messaging workspace. Leave **Queue** empty to use the hand-off queue of the subject flow. **Reason** is shown to the agent who takes it, and **Summary** gives them the conversation so far. It ends in **Connected** (put straight through), **Waiting In Queue**, or **Callback Scheduled** (for example after hours), so you can handle each case differently. It does nothing to a call a person is already handling.
+- **Schedule Dialer Retry** creates the next attempt of a dialer call, as the **Try Again** action of a subject flow does: a new activity in the same campaign with the same dialer profile, due after the **Delay in minutes** and never sooner than the profile's retry delay. It ends in **Scheduled**, **Exhausted** when the contact has no attempts left, or **Failed**. See [Call a contact again](#call-a-contact-again).
 - **Schedule Callback** schedules a callback to the **Destination** number. **Delay (minutes)** of 0 makes it due now. **Campaign**, **Queue** and **Contact** are optional.
 - **Start Call Recording** and **Stop Call Recording** end in **Indeterminate** when the provider may have made the change but the platform could not confirm it. Use that outcome to alert someone or check the recording, rather than assuming it worked.
 
 ### What workflows cannot do
+
+<YouTube video="omnichannel-workflows" title="Video of workflows to start from, and what stays with people" start={379} end={412} />
 
 - **Transfer a live call.** A transfer needs the agent or supervisor who asks for it, so it stays an action people take on the call.
 - **Give work to one particular agent.** Routing decides who gets work, taking presence, skills and entitlements into account. Use **Enqueue Activity** to put the work on a queue and let routing pick the agent.

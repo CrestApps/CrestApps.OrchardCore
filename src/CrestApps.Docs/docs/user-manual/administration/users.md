@@ -16,14 +16,21 @@ Everyone who signs in has a **user account**. Orchard Core gives you the user li
 
 <AskYourAdmin />
 
+<YouTube video="users-roles" title="Video overview of users, roles, names and avatars" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of enabling User Display Name, choosing a format, and editing a user" start={105} end={135} />
 
 ## Add a user and give them access
 
+<YouTube video="users-roles" title="Video of reading the user list and adding a person" start={97} end={163} />
+
+
 1. Open **Access Control > Users** and click **Add User**.
-2. Fill in the account details and tick the **roles** the person needs. The roles decide what the person can see and do. See [Roles and Permissions](roles.md).
+2. Fill in the **User name** and **Email**. **Phone Number** is optional and must start with the country code. For the **Password**, type one, or click **Generate password** and **Copy password** to pass it on. Tick the **roles** the person needs. The roles decide what the person can see and do. See [Roles and Permissions](roles.md).
 3. If the display name boxes are shown, fill them in (see [Set a person's name](#set-a-persons-name)).
 4. Save the user.
+
+Each row of the user list shows the user name, the email address and a badge for each role. **Unconfirmed** means the person has not confirmed their email address yet. The **Search** box, and the **Role**, **Show** and **Sort** menus, narrow and order the list. The **Actions** menu on a row offers **Change password**, **Disable**, **Confirm email** and **Delete**.
 
 Creating accounts, passwords, sign-in and registration are standard Orchard Core screens. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for those.
 
@@ -32,6 +39,9 @@ To change what someone can do later, edit their user and change their roles. You
 :::
 
 ## Choose how names are shown
+
+<YouTube video="users-roles" title="Video of choosing how names appear" start={225} end={268} />
+
 
 Open **Settings > User Display Name**. It decides how a person's name is built everywhere the site shows a user.
 
@@ -73,6 +83,9 @@ In the content type's Common part settings you can also choose the **Permission 
 
 ## Avatars
 
+<YouTube video="users-roles" title="Video of the avatar settings and the Avatar box on a user" start={268} end={295} />
+
+
 Open **Settings > User Avatars** to set how avatars work, then click **Save**.
 
 | Field | What it does |
@@ -84,7 +97,10 @@ To give someone a picture, edit the user and use the **Avatar** box to pick or u
 
 ## Sign in with an email code
 
-With the **Sign in with an email code** feature on, the login page offers **Email me a sign-in code**. The user enters their email and gets a six-digit code, which they type on the next page to sign in, without a password.
+<YouTube video="users-roles" title="Video of the sign-in page that offers an emailed code" start={295} end={320} />
+
+
+With the **Sign in with an email code** feature on, the login page offers **Email me a sign-in code instead**. The user clicks **Email me a code** after entering their email, and gets a six-digit code, which they type on the next page to sign in, without a password.
 
 - A code works once, for ten minutes and five tries. A new code replaces the last one.
 - A few codes can be sent to an email, and from one visitor, every fifteen minutes.

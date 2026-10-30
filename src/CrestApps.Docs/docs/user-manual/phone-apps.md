@@ -17,15 +17,23 @@ A phone that lives inside a web page loses its call when you reload or leave the
 
 Both apps show your site's own `/softphone` page, so the call controls are exactly the ones described in [Placing and handling calls](calls.md). They talk only to the site you configure, and they use your normal site sign-in; there is no separate password.
 
+<YouTube video="telephony-phone-apps" title="Video overview of the soft phone apps: the administrator steps, the browser extension and the Windows app" />
+
+<YouTube video="telephony-phone-apps" title="Video of the soft phone page that both apps open" start={119} end={137} />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the soft phone window that the browser extension and Windows app open" start={81} end={104} />
 
 ## Before you start (administrator)
+
+<YouTube video="telephony-phone-apps" title="Video of turning on the Telephony Soft Phone Extension feature and finding the Use the telephony soft phone permission" start={85} end={119} />
 
 1. Enable the **Telephony Soft Phone Extension** feature in **Tools > Features**. It adds the `/softphone` page the apps open.
 2. Give the users the **Use the telephony soft phone** permission. The *Agent* role does not have it by default, so add it to that role or to another role your agents have.
 3. Tell your users the site's domain, for example `phone.example.com`.
 
 ## Browser extension
+
+<YouTube video="telephony-phone-apps" title="Video describing how to set up the browser extension" start={137} end={187} />
 
 ![The soft phone browser extension floating above a web page, with its keypad and the Keypad, Recent, Voicemail and Work tabs](/img/docs/phone-app-browser-extension.png)
 
@@ -38,6 +46,8 @@ When a call comes in, you get a popup with **Answer**, **Decline** and **Voicema
 
 ## Windows app
 
+<YouTube video="telephony-phone-apps" title="Video describing how to set up the Windows app" start={187} end={238} />
+
 ![The Soft Phone Windows app window with its keypad, presence menu and settings button](/img/docs/phone-app-windows.png)
 
 1. Download and run `SoftPhone-Setup-vX.Y.Z.exe` from the [GitHub releases](https://github.com/CrestApps/CrestApps.SoftPhone.Windows/releases). It installs for your user only, with no administrator rights. You can also use the portable zip, or the Microsoft Store where your organization has published it.
@@ -48,6 +58,8 @@ When a call comes in, you get a popup with **Answer**, **Decline** and **Voicema
 Incoming calls raise a Windows notification and a call window with the caller, the queue, and matched records, with **Answer**, **Decline** and **Voicemail**. While the app's notification is showing, the phone page does not show its own incoming-call window, so you are not asked twice.
 
 **Settings** has a **General** tab (site domain, start when I sign in, play ringtone, always on top, developer tools, reload phone) and a **Diagnostics** tab with **Run connection test** and a live connection indicator. IT departments can push and lock the domain and other settings through Group Policy or Intune; see the app's enterprise deployment guide in its repository.
+
+<YouTube video="telephony-phone-apps" title="Video describing the kill switch and managed installs" start={238} end={260} />
 
 :::note[Kill switch]
 The **Enable the soft phone** setting hides the in-page phone only. The apps keep working while the Soft Phone Extension feature is enabled; disable that feature to stop them.

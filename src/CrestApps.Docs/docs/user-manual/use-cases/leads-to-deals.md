@@ -6,6 +6,8 @@ technical_manual:
   - omnichannel/crm
 ---
 
+<YouTube video="use-case-leads-to-deals" title="Video recap of this use case" />
+
 ## Who it's for and what you get
 
 For **managers** and **sales teams** who work lists of prospects: purchased lists, trade-show scans or web forms.

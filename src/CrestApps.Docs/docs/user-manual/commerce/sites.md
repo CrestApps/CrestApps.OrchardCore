@@ -21,16 +21,24 @@ Creating a site happens after the purchase, in the background, so a slow or fail
 
 <YouTube video="commerce" title="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning" start={231} end={305} />
 
+This video shows how to set up a plan that sells a site, the buyer signing up, My Sites, Site provisioning, and the statuses:
+
+<YouTube video="selling-sites" title="Narrated video overview of selling sites" />
+
 ## Set up a plan that sells a site
+
+<YouTube video="selling-sites" title="Video of setting up a plan with Tenant Onboarding" start={78} end={125} />
 
 A site plan is an ordinary [subscription plan](subscriptions.md) with the **Tenant Onboarding** part added.
 
-1. Open **Content > Content Definition > Content Types** and edit your plan type, or create one as described in [Subscriptions](subscriptions.md#create-a-plan-type).
+1. Open **Design > Content Definition > Content Types** and edit your plan type, or create one as described in [Subscriptions](subscriptions.md#create-a-plan-type).
 2. Click **Add Parts**, tick **Tenant Onboarding**, and save.
 3. Open a plan of that type. In **Tenant Onboarding**, pick the **Recipe** the new site is set up from, for example a blog or an agency site. It is required.
 4. Set the price and billing terms as for any plan, then click **Publish**.
 
 When a customer signs up for that plan, the checkout adds a **Your new site** step:
+
+<YouTube video="selling-sites" title="Video of the buyer signing up and the Your new site step" start={125} end={183} />
 
 | Field | What it does |
 | --- | --- |
@@ -55,6 +63,8 @@ New sites are created on the database chosen on the **Tenant Onboarding** tab of
 
 ## My Sites (for customers)
 
+<YouTube video="selling-sites" title="Video of My Sites" start={183} end={201} />
+
 **My Sites** lists every site the customer bought, and opens the ones that are ready.
 
 
@@ -68,6 +78,8 @@ New sites are created on the database chosen on the **Tenant Onboarding** tab of
 Each row also shows the **Site name** and when it was **Bought**. While a site is still being created, the page notes that a new site usually takes a minute or two to appear; reload the page to see its progress.
 
 ## Site provisioning (for administrators)
+
+<YouTube video="selling-sites" title="Video of Site provisioning and Retry now" start={201} end={241} />
 
 **Site provisioning** lists every site that has been bought, with the job that creates it. Use it to spot sites that could not be created and to try them again.
 
@@ -108,6 +120,8 @@ Once you have created an abandoned job's site by hand:
 The job becomes **Created**, and the customer sees the site as **Ready**. Only an **Abandoned** job can be marked as created.
 
 ## When the subscription ends
+
+<YouTube video="selling-sites" title="Video of the statuses and what happens when the subscription ends" start={241} end={301} />
 
 A sold site runs for as long as its subscription is current, including the period the customer already paid for after cancelling and the grace period after a failed payment. When the subscription is no longer current, the site is **disabled**: it stops serving visitors, but nothing is deleted. If the subscription becomes current again, for example when the customer pays a late renewal, the site is enabled again exactly as it was.
 

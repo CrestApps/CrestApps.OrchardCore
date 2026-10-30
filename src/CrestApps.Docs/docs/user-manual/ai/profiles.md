@@ -5,6 +5,7 @@ description: Create an AI assistant from a starting point or from scratch, and s
 technical_manual:
   - ai/overview
   - ai/chat
+  - ai/personas
   - ai/profile-templates
   - ai/realtime-voice
 ---
@@ -21,7 +22,9 @@ An **AI profile** is one AI assistant or task with its own name, instructions, m
 
 Before you create a profile, an administrator must connect at least one AI provider and add a chat deployment. See [Connections and deployments](connections.md).
 
-<YouTube video="ai-walkthroughs" title="Video of creating a chat AI profile and chatting with the model" start={46} end={75} />
+<YouTube video="ai-profiles-personas-templates" title="Video overview of AI profiles, personas and templates" />
+
+The video covers why each assistant is described once, how profiles, personas and templates fit together, and each task below.
 
 ## Profile types
 
@@ -33,6 +36,8 @@ Before you create a profile, an administrator must connect at least one AI provi
 | **Agent** | A specialist that other assistants can call for help, such as a research or writing agent. See [Tools and agents](tools-and-agents.md#agents). |
 
 ## Create a profile
+
+<YouTube video="ai-profiles-personas-templates" title="Video of starting a profile from the New AI Profile picker" start={124} end={200} />
 
 1. Open **Artificial Intelligence > Profiles** and click **Add Profile**. The **New AI Profile** picker opens.
 2. Pick a starting point and click its **Start** button, or pick **Blank profile** to fill in everything yourself.
@@ -57,7 +62,7 @@ The site comes with these starting points (some only when their feature is on):
 | **Do work in the background** | **Background summarizer** (a utility profile) |
 | **Text messaging** | **Qualify leads by text**, **Customer care by text** |
 | **Phone calls** | **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone** |
-| Agent categories, such as **Research**, **Content** and **Analysis** | Building-block agents such as **Research Agent**, **Writer Agent**, **Summarizer Agent**, **Data Analyst Agent** and **Reviewer Agent** |
+| Agent categories, such as **Research**, **Content** and **Analysis** | Building-block agents such as **Research Agent**, **Writer Agent**, **Summarizer Agent**, **Data Analyst Agent**, **Reviewer Agent**, **Code Assistant Agent**, **Executor Agent** and **Planner Agent** |
 
 Profile templates that your team creates under **Artificial Intelligence > Templates** also get a card. See [Templates](prompt-templates.md).
 
@@ -81,6 +86,8 @@ After you create one of these, finish it in the editor:
 
 ## Edit, clone and delete
 
+<YouTube video="ai-profiles-personas-templates" title="Video of profile types, cloning and the profile list" start={313} end={372} />
+
 - Click **Edit** on a profile to change it, then **Save**.
 - Open the profile's **Actions** menu and choose **Clone** to start a new profile from a copy. The copy opens unsaved, named "Copy of" the original; check its title and technical name, then **Save**.
 - **Actions > Delete** removes a profile after you confirm. Profiles marked **System** cannot be deleted.
@@ -90,7 +97,9 @@ The **Actions** menu also has **New chat**, **View chat history** and **Delete c
 
 ## The profile editor
 
-The editor opens on a page of cards with the main settings. Other settings sit on the **Knowledge**, **Capabilities** and **Data Processing & Metrics** tabs. Some fields only appear for some profile types, or when a feature is turned on.
+<YouTube video="ai-profiles-personas-templates" title="Video of the cards and tabs of the profile editor" start={200} end={313} />
+
+The editor opens on the **Content** tab, a page of collapsible cards with the main settings: **General**, **Deployments & Interactions**, **Instructions**, **Parameters** and **Prompt Security**. Other settings sit on the **Capabilities** and **Data Processing & Metrics** tabs, and on a **Knowledge** tab when document or data source features are on. Some fields only appear for some profile types, or when a feature is turned on.
 
 ### General
 
@@ -130,6 +139,7 @@ The deployment fields are hidden when a GitHub Copilot or Claude orchestrator is
 
 | Field | What it does |
 | --- | --- |
+| **AI persona** | The character the assistant plays: its name, personality, voice and picture. Shown when the **AI Personas** feature is on. **No persona** keeps the profile's own instructions only. See [Personas](#personas). |
 | **System instructions** | What the assistant is, what it should and should not do, and how it should answer. This is the most important setting. Write it in plain language. |
 | **Prompt template** | Template generated prompt only, required. The prompt that runs against the chat. |
 | **Prompt templates** | Reusable pieces of instructions added on top of yours, such as "Use Markdown syntax". Click **Add prompt template**, search, and pick one. See [Templates](prompt-templates.md#reuse-pieces-of-instructions). |
@@ -153,6 +163,8 @@ These fine-tune how the model writes. Leave them empty to use the defaults.
 | **Use caching** | Shown only when the site caches AI answers. Lets the profile reuse answers to identical requests. |
 
 ### Prompt Security
+
+<YouTube video="ai-prompt-security" title="Video of the limits of one profile" start={219} end={244} />
 
 You only need this card for a public chat profile, or when a profile needs limits that differ from the site's. Each field overrides the site-wide limit for this profile; leave it empty to keep the site's value, shown in the field.
 
@@ -202,6 +214,10 @@ A user can only use a tool their role is allowed to use, even when the profile h
 
 The **Data Processing & Metrics** tab decides what happens with a chat while it runs and after it ends.
 
+<YouTube video="ai-data-extraction-post-session" title="Video overview of data extraction, post-session processing and metrics" />
+
+The video covers the timeout, extraction entries, post-session tasks and the metrics below, and where the results go.
+
 | Field | What it does |
 | --- | --- |
 | **Session inactivity timeout (minutes)** | A chat with no messages for this long is closed. At least 1 minute; default 30. Closing a chat starts post-session processing and the **AI Chat Session Closed** workflow event. |
@@ -212,9 +228,40 @@ The **Data Processing & Metrics** tab decides what happens with a chat while it 
 | **Post-session tasks** | On the **Tasks** tab, click **Add Task**: a **Name**, a **Type** (**Semantic** for free text such as a summary, or **Predefined Options** to pick from a list such as *Resolved*, *Escalated*, *Abandoned*) and **Instructions**. For **Predefined Options**, add each choice with **Add Option** (a **Value** and a **Description**) and choose **Allow multiple values** if needed. On the **Capabilities** tab, pick tools the AI may use while it analyzes. |
 | **Enable session metrics** | Chat only. Collects the numbers for the chat analytics report, and adds thumbs up and down buttons to answers. |
 | **Enable AI resolution detection** | Chat only. The AI decides whether each closed chat solved the user's problem. |
-| **Enable conversion metrics** | Chat only. The AI scores each closed chat against your goals. Click **Add Goal** for each: a **Name**, a **Description** of what to judge, and a **Min score** and **Max score** (0 to 10 by default). |
+| **Enable conversion metrics** | Chat only. The AI scores each closed chat against your goals. Click **Add Goal** for each: a **Name** (letters, numbers and underscores only, such as `booked_demo`), a **Description** of what to judge, and a **Min score** and **Max score** (0 to 10 by default). |
+
+<YouTube video="ai-data-extraction-post-session" title="Video of extraction entries, post-session tasks and metrics" start={49} end={177} />
 
 Extracted details and post-session results can be reviewed in the [analytics reports](analytics.md) and used in [workflows](workflows.md). The analytics fields appear only after the profile is saved as a chat profile, and only when the **AI Chat Session Analytics** feature is on.
+
+## Personas
+
+<YouTube video="ai-profiles-personas-templates" title="Video of creating a persona and choosing it in a profile" start={372} end={440} />
+
+An **AI persona** is a reusable character: who the assistant is and how it talks, apart from what it does. The profile's **System instructions** still say what the assistant does and which rules it follows. Keeping the two apart lets one persona serve many profiles, such as a support assistant and a sales assistant that share the same friendly character.
+
+| | |
+| --- | --- |
+| **Menu** | Artificial Intelligence > Personas |
+| **Permission** | Manage AI personas |
+| **Feature** | AI Personas |
+
+1. Open **Artificial Intelligence > Personas** and click **Add Persona**.
+2. Fill in the fields below and click **Save**.
+3. Edit a profile, and pick the persona in the **AI persona** field of the **Instructions** card. Profile templates, chat interactions and the **AI completion with configuration** workflow task have the same field.
+
+| Field | What it does |
+| --- | --- |
+| **Title** | The name shown in lists and pickers. |
+| **Technical name** | A unique name that profiles link to. It cannot be changed later. |
+| **Description** | Optional. Helps editors choose the right persona. |
+| **Persona instructions** | Required. Who the assistant is and how it talks: its personality, tone and manners. Leave the task and the rules to the profile. |
+| **Assistant name** | The name the assistant uses for itself, such as *Casey*. Chat screens show it on the assistant's messages. |
+| **Language** | Optional, such as `en-US`. Spoken conversations listen in this language when nothing else sets one. |
+| **Voice** | Optional. Choose a deployment, then a voice from its list. The persona speaks with this voice only on deployments of the same provider. A profile that picks its own voice overrides it. |
+| **Avatar URL** | Optional. A picture that chat screens show next to the assistant's messages. |
+
+A persona is **linked**, not copied. When you edit it, every profile that uses it follows from the next message. A profile template, in contrast, is copied once when a profile is created from it. See the [Technical Manual](../../ai/personas.md) for how personas are provided by files.
 
 ## Things to know
 

@@ -11,6 +11,8 @@ The Report Builder authorizes designed reports and views the way Orchard Core au
 
 ## Permissions
 
+<YouTube video="report-builder-administration" title="Video of the Report Builder permissions in a role" start={14} end={70} />
+
 The permissions are declared in `ReportDesignerPermissions` (`CrestApps.OrchardCore.Reports.Designer`) and offered by the Report Builder feature:
 
 | Key | Name in the role editor | Implied by | Security critical |

@@ -4,6 +4,7 @@ sidebar_position: 2
 title: A2A Client Integration
 description: Connect to remote A2A hosts to discover and use external AI agents.
 user_manual:
+  - user-manual/ai/a2a
   - user-manual/ai/tools-and-agents
 ---
 
@@ -25,6 +26,10 @@ The A2A Client feature allows your Orchard Core application to connect to extern
 Connections are managed under **Artificial Intelligence** → **Agent to Agent Hosts** (permission `ManageA2AConnections`). Each connection has a **Title**, an **Endpoint** (the base URL of the A2A host, e.g. `https://agents.example.com`; the agent card is automatically resolved at `/.well-known/agent-card.json`), and an **Authentication** method. The admin steps are in the User Manual under [A2A connections](../../user-manual/ai/tools-and-agents.md#a2a-connections).
 
 Each connection represents a single A2A host that may expose multiple agents through its agent card. A2A 1.0-style cards advertise protocol endpoints through `supportedInterfaces`; older cards that still expose a top-level URL are handled by the shared A2A client support.
+
+:::note
+The client sends messages to the connection's **Endpoint** itself, so for the A2A host of a CrestApps site, enter the site's address followed by `/a2a`, where the host answers. The client registers the **skills** of the agent card as tools, so the host must list its agents as skills: set `ExposeAgentsAsSkill` to `true` in the host's options (see [A2A Host](./host.md)).
+:::
 
 ### Authentication Types
 

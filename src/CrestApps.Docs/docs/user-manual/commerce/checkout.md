@@ -11,15 +11,20 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 | | |
 | --- | --- |
-| **Menu** | None. Buyers reach the checkout from your site, for example by signing up to a [subscription](subscriptions.md) or opening a payment link. |
+| **Menu** | Settings > Commerce > Checkout (the layout). Buyers reach the checkout itself from your site, for example by signing up to a [subscription](subscriptions.md) or opening a payment link. |
 | **Permission** | None. A checkout only opens for the visitor who started it. |
 | **Feature** | Checkout, plus at least one [payment provider](payment-providers.md) (Stripe or Pay Later) |
 
 <AskYourAdmin />
 
+A checkout a buyer leaves unfinished is canceled after 24 hours. That time is not a setting in the admin; ask your developer if you need a different one. **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
+This video walks through every step of the checkout as a shopper sees it:
+
+<YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
+
 **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 
-<YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
+<YouTube video="carts-checkout" title="Carts and checkout: the buyer's journey and the checkout settings" />
 
 ## The checkout page
 
@@ -30,6 +35,8 @@ The page has three parts:
 - **The order summary** on the right, on every step, so the total is never a surprise.
 
 ### Steps a buyer may see
+
+<YouTube video="carts-checkout" title="Video of the Contact step" start={139} end={174} />
 
 Which steps appear depends on what is being bought. **Payment** is always last.
 
@@ -47,6 +54,8 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 
 ### One page or a page per step
 
+<YouTube video="carts-checkout" title="Video of the checkout and customer settings, and Checkout details" start={259} end={299} />
+
 Under **Settings > Commerce > Checkout**, **Checkout layout** is one of:
 
 - **A page per step**, the default: the steps described above, one page each.
@@ -61,6 +70,8 @@ The **Order summary** card lists each item with its price. A recurring item show
 When a gift card, store credit or points pay part of the order, the card shows the **Total** first, then a line for each of them with what it pays, such as *Gift card ending 4F2K −$30*, *Store credit* or your rewards program's name, and then **Due now**: what's left to pay by card or another payment method. See [Gift cards, store credit and points](#gift-cards-store-credit-and-points).
 
 ## Pay
+
+<YouTube video="carts-checkout" title="Video of the Payment step, a promotion code and the order confirmation" start={210} end={259} />
 
 On the **Payment** step, the buyer:
 
@@ -145,12 +156,18 @@ When the order is paid, it keeps its own copy of the name, email, phone and bill
 
 ## Your own checkout fields
 
+<YouTube video="customers-guests-privacy" title="Video of adding a required field to Checkout details" start={179} end={215} />
+
 To ask buyers for something of your own, such as a gift message, a delivery date or a purchase order number:
 
 1. Enable the **Checkout details** feature (**Tools > Features**).
 2. Go to **Design > Content Types**, open **Checkout details** and add the fields you need, for example a **Text Field** named *Gift message*. Tick **Required** in a field's settings to make buyers fill it in.
 
-The fields appear under **Order details** on the **Contact** step, in the order the content type lists them. What the buyer enters is kept on the order and shown under **Order details** on the order's page, for you and for the buyer. A field left out while required keeps the buyer on the step with *A value is required for …*. With no fields on the content type, the checkout asks for nothing extra.
+The fields appear under **Order details** on the **Contact** step, in the order the content type lists them. What the buyer enters is kept on the order and shown under **Order details** on the order's page, for you and for the buyer. A field left out while required keeps the buyer on the step with *A value is required for …*.
+
+<YouTube video="customers-guests-privacy" title="Video of what the buyer sees at checkout" start={215} end={237} />
+
+ With no fields on the content type, the checkout asks for nothing extra.
 
 When a buyer picks one of their saved addresses on the **Contact** or **Shipping** step, the form for a new address is hidden until they choose **A new address, entered below**.
 

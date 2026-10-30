@@ -65,6 +65,8 @@ Hover over a badge to see its name. Click the title or **Manage** to open the tr
 
 ## Manage a transaction
 
+<YouTube video="payments" title="Video of a transaction: reminders, the invoice, adjusting a balance and recording a payment" start={172} end={241} />
+
 The transaction's page has a **Summary** card and a **Timeline** on the left, and the actions on the right.
 
 ### Summary

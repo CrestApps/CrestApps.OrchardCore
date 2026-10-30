@@ -12,6 +12,8 @@ user_manual:
 | **Feature Name** | Phone Number Verifications |
 | **Feature ID** | `CrestApps.OrchardCore.PhoneNumbers.Verifications` |
 
+<YouTube video="phone-number-verification" title="Video overview of Phone Number Verification: providers, status icons, the queue and the report" />
+
 The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results directly on content items through a content part. It manages verification providers, content-part storage helpers, SQL indexing, and a background revalidation process. When the shared [Reports](reports) module is enabled, this module also contributes its report automatically.
 
 The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, and **Twilio Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.

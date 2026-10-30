@@ -209,6 +209,8 @@ zeros it never measured.
 
 ## Report Builder data source
 
+<YouTube video="ai-usage-analytics" title="Video of the AI chat data sets in the Report Builder" start={299} end={345} />
+
 The usage records are also two data sets of the **AI chat** data source (technical name `AIChat`), so the [Report Builder](../modules/report-builder/index.md) can build your own usage and cost reports from them, such as the cost per model per month or the tokens each profile used per day. The same source has the **Chat sessions** (`ChatSessions`) and **Chat session metrics** (`ChatSessionMetrics`) data sets.
 
 | | |

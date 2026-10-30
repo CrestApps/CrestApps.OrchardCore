@@ -17,7 +17,7 @@ Templates save you from setting up the same thing twice. A **profile template** 
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of creating an AI profile template with reusable defaults" start={204} end={226} />
+<YouTube video="ai-profiles-personas-templates" title="Video of creating a profile template and starting a profile from it" start={440} end={525} />
 
 ## Create a template
 
@@ -39,7 +39,8 @@ Every template has these fields:
 
 ### Profile template
 
-A profile template has the same tabs as the [profile editor](profiles.md#the-profile-editor): **General**, **Deployments & Interactions**, **Knowledge**, **Instructions**, **Parameters**, **Capabilities**, **Data Processing & Metrics** and **Prompt Security**. Whatever you fill in is copied onto every profile created from the template. Leave a field empty to let each new profile use the default.
+A profile template has the same tabs as the [profile editor](profiles.md#the-profile-editor): **General**, **Deployments & Interactions**, **Knowledge**, **Instructions**, **Parameters**, **Capabilities**, **Data Processing & Metrics**, with a **Prompt Security** card on the first tab. Whatever you fill in is copied onto every profile created from the template. Leave a field empty to let each new profile use the default.
+A profile template has the same cards and tabs as the [profile editor](profiles.md#the-profile-editor): the **General**, **Deployments & Interactions**, **Instructions**, **Parameters** and **Prompt Security** cards, the **Capabilities** and **Data Processing & Metrics** tabs, and a **Knowledge** tab when document or data source features are on. Whatever you fill in is copied onto every profile created from the template. Leave a field empty to let each new profile use the default.
 
 On the **General** tab, **Profile type** decides what kind of profile the template creates. Templates of type **Template generated prompt** never appear in the **New AI Profile** picker.
 
@@ -65,7 +66,7 @@ Create one profile template per kind of assistant your teams need, for example *
 
 With the **AI Prompt Templates** feature on, profiles, profile templates, chat interactions and AI workflow tasks have a **Prompt templates** field next to their instructions. The selected templates are added, in order, before your own instructions.
 
-<YouTube video="ai-walkthroughs" title="Video of attaching reusable prompt templates to an AI profile" start={229} end={257} />
+<YouTube video="ai-profiles-personas-templates" title="Video of creating a system prompt template and adding it to a profile" start={525} end={590} />
 
 1. In the profile editor, find **Prompt templates** in the **Instructions** card (in a chat interaction, on the **Settings** tab).
 2. Click **Add prompt template**, type in **Search prompt templates...**, and pick a template. The list is grouped by category.

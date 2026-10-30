@@ -1588,11 +1588,11 @@ for the full list.
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContentTransfer` |
-| **Controls** | Import and export batch sizes, upload size limits, and which content types can be imported |
+| **Controls** | Import and export batch sizes, upload size limits and the lifetime of temporary files |
 
 Keys: `ImportBatchSize` (default `100`), `ExportBatchSize` (`200`), `ExportQueueThreshold` (`500`),
 `MaxUploadFileSize` (`1073741824`), `MaxUploadChunkSize` (`26214400`), `TemporaryFileLifetime`
-(`01:00:00`), `AllowAllContentTypes` (`true`), `AllowedContentTypes`.
+(`01:00:00`). Which content types can be imported and exported is not set here: it is the **Allow bulk import** and **Allow bulk export** setting of each content type.
 
 ```json
 {

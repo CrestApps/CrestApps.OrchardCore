@@ -12,6 +12,8 @@ The **Workflows** bridge exposes the Contact Center to the Orchard Core [Workflo
 
 The bridge is not a separate feature. Simply enable `OrchardCore.Workflows` alongside Contact Center and the event activity becomes available automatically. The task activities are additionally gated on the capability that owns the underlying service, so an activity only appears in the editor when its capability is enabled and its service is guaranteed to be resolvable.
 
+<YouTube video="omnichannel-workflows" title="Video overview of contact center and CRM workflows" />
+
 How to build a workflow in the designer, with worked examples (recording connected calls, texting a customer the dialer could not reach, texting from the agent's own number), is in [Contact Center Workflows](../user-manual/workflows.md) in the User Manual. The Omnichannel CRM feature adds a **Lead Converted** event and a **Convert Lead** task; see [Workflows](../omnichannel/crm.md#workflows) on the CRM page.
 
 ## Contact Center Event
@@ -47,6 +49,7 @@ Each task exposes its identifier fields as Liquid expressions so they can bind t
 | **Set Agent Presence** | `CrestApps.OrchardCore.ContactCenter.Agents` | Sets an agent's presence status (for example, into break or away) from a resolved user id, status, and optional reason. The reservation- and work-lifecycle-owned states (`Reserved`, `Busy`, `WrapUp`) are excluded from the picker and rejected at execution, because those states are applied by the runtime as a side effect of an offer, an active interaction, or wrap-up - setting them from automation would create a parked profile with no backing call and block future routing. |
 | **Enqueue Activity** | `CrestApps.OrchardCore.ContactCenter.Queues` | Adds a CRM activity to a queue for routing, with an optional priority override. The target queue and the CRM activity must both exist; a resolved identifier that matches neither takes the **Failed** outcome instead of creating an orphan queue item. |
 | **Schedule Callback** | `CrestApps.OrchardCore.ContactCenter.Dialer` | Schedules a customer callback - for example, after an abandoned call - with an optional delay, campaign, queue, and contact. |
+| **Schedule Dialer Retry** | `CrestApps.OrchardCore.ContactCenter.Dialer` | Schedules the next attempt of a dialer activity, as the dialer's own retry would, but when the workflow decides. It does nothing when the dialer already retried the call. |
 | **Start Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Starts recording for a resolved interaction. |
 | **Stop Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Stops recording for a resolved interaction. |
 | **Place Call or Send Message** | `CrestApps.OrchardCore.ContactCenter` | Starts an automated omnichannel activity immediately, instead of waiting for the periodic automated-activities pass to pick it up. The activity's own channel selects the processor, so the same task places the outbound call for a Phone activity and sends the opening message for an SMS activity. |
@@ -64,6 +67,7 @@ Text inputs accept Liquid that resolves the identifier or value, so they can bin
 | **Set Agent Presence** | **User**, **Status** (picker), **Reason** (optional) | Done, Failed |
 | **Enqueue Activity** | **Activity**, **Queue**, **Priority** (optional picker) | Done, Failed |
 | **Schedule Callback** | **Destination**, **Delay (minutes)** (number), **Campaign**, **Queue**, **Contact** (the last three optional) | Done, Failed |
+| **Schedule Dialer Retry** | **Activity**, **Delay in minutes** (number, optional: empty uses the dialer profile's retry delay, and a shorter delay is raised to it) | Scheduled, Exhausted, Failed |
 | **Start Call Recording** / **Stop Call Recording** | **Interaction** | Done, Indeterminate, Failed |
 | **Place Call or Send Message** | **Activity** | Done, Already Started, Failed |
 | **Hand Off to Live Agent** | **Activity**, **Queue**, **Reason**, **Summary** (the last three optional) | Connected, Waiting In Queue, Callback Scheduled, Failed |

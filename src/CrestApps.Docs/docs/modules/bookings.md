@@ -12,6 +12,8 @@ user_manual: user-manual/commerce/bookings
 | **Depends on** | Commerce, Orders, Customers, Transactions |
 | **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders), `ICheckoutTenderProvider` and two `CheckoutFlowDisplayDriver`s (Checkout), `ICartActionProvider` (Carts) |
 
+<YouTube video="bookings" title="Narrated video overview of Bookings" />
+
 The **Bookings** feature sells products by date. The attachable **Booking** part (`BookingPart`) makes a product a booking of one of three kinds (`BookingKind`):
 
 - **Departure:** a fixed date with seats, such as a tour, an event or a class. The store adds its dates.

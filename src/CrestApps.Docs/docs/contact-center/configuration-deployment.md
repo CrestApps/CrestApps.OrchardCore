@@ -12,6 +12,10 @@ user_manual:
 
 A contact centre that can only be configured by hand cannot be promoted. Contact Center therefore exports everything an operator configures through Orchard Core's standard deployment and recipe pipelines, so a tenant can be built and reviewed in staging, committed to source control as a diff, and replayed into production instead of being rebuilt under a cutover window.
 
+<YouTube video="contact-center-configuration-deployment" title="Video overview of the Contact Center features, the recipe, exporting a plan and replaying it" />
+
+<YouTube video="contact-center-configuration-deployment" title="Video of the Contact Center features and their dependencies" start={58} end={96} />
+
 ## One-step feature enablement recipes
 
 A supported Contact Center tenant enables roughly a dozen features across the base module, the voice stack, and a provider adapter, and getting that set — and its order — right by hand is the bulk of first-run toil. The base module ships a harvestable recipe for each certified provider profile that enables exactly the feature set of the matching certified tenant profile in a single step:
@@ -19,6 +23,8 @@ A supported Contact Center tenant enables roughly a dozen features across the ba
 | Recipe | Display name | Enables the feature set of tenant profile |
 | --- | --- | --- |
 | `contact-center-asterisk-ga-core` | **Contact Center — Asterisk (GA-Core)** | `ga-core-asterisk` |
+
+<YouTube video="contact-center-configuration-deployment" title="Video of the Contact Center feature recipe" start={96} end={123} />
 
 Enable **Recipes** (`OrchardCore.Recipes`), then run the recipe for your provider from **Configuration → Recipes**. Orchard Core resolves feature dependencies, so the listed features and anything they depend on are enabled together. Each recipe enables the base orchestration and administration menu, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the provider's Contact Center voice adapter. Each capability includes the screens needed to configure its queues, agents, entry points, or dialer profiles after the recipe runs.
 
@@ -50,6 +56,10 @@ A voice media clip travels as its library entry: its name, description, format a
 Deleting a voice media clip also deletes its master copy and every provider copy. When two environments share one media store or one provider account, deleting a clip in one environment removes the audio the other environment plays.
 :::
 
+<YouTube video="contact-center-configuration-deployment" title="Video of voice media: the audio does not travel" start={207} end={256} />
+
+<YouTube video="contact-center-configuration-deployment" title="Video of what does not travel" start={256} end={292} />
+
 Shared voicemail messages do not travel: each is a message a caller left, not configuration.
 
 Full agent profiles do not travel. A profile names the person who holds it, carries their contact details, and records the state they are in right now; it is a record of who works in an environment rather than of how that environment is configured, so it is treated as runtime state and stays where it is produced. The manager-owned entitlement configuration an operator does grant — display name, maximum concurrent interactions, allowed queues, allowed campaigns and skills — travels through the **Contact Center Agent Entitlements** step. That step is a deliberate projection: it is keyed by the Orchard user name (the internal user identifier differs between environments) and it never carries live presence, the internal user identifier, or the profile item identifier. The user name is resolved from the live user record at export time, so a plan stays valid even after an administrator renames the user. On import each entry is matched to a user by name — an entry whose user is absent from the destination is reported and skipped — dangling queue and campaign references are dropped, and an existing profile has only its configuration promoted, so a signed-in agent's presence and active reservation are left untouched.
@@ -72,6 +82,9 @@ The telephony provider settings are different, because they hold credentials. Ea
 
 ## Exporting a tenant
 
+<YouTube video="contact-center-configuration-deployment" title="Video of building a deployment plan and downloading it" start={123} end={161} />
+
+
 1. Enable **Deployment** (`OrchardCore.Deployment`) alongside the Contact Center features you use.
 2. Go to **Configuration → Import/Export → Deployment Plans** and create a plan.
 3. Add the Contact Center steps you need. Each step exports every entry of its type.
@@ -79,6 +92,9 @@ The telephony provider settings are different, because they hold credentials. Ea
 5. Execute the plan with the **Download** target.
 
 ## Importing into another tenant
+
+<YouTube video="contact-center-configuration-deployment" title="Video of replaying a plan with Package Import" start={161} end={207} />
+
 
 Enable **Recipes** (`OrchardCore.Recipes.Core`) in the destination, then import the plan from **Configuration → Import/Export → Package Import**, or include the steps in a setup recipe.
 

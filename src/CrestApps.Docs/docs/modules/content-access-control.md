@@ -14,6 +14,8 @@ user_manual:
 
 Provides a way to control who can access content items.
 
+<YouTube video="content-access-control" title="Video overview of restricting content by role" />
+
 ## Overview
 
 This feature allows you to restrict access to content items based on user roles. It depends on
