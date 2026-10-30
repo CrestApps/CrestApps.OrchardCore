@@ -74,6 +74,8 @@ If the caller is not in the system yet, create the contact first, then log the c
 
 ## Other actions on a contact's activities
 
+When the AI handed a customer to you, the **Complete** page starts with the **AI assistant's summary**: a blue banner with what the AI learned, and the time it was written. It is not part of your notes. **Review AI conversation** appears on a completed activity that an AI conversation worked, and opens that conversation in the AI chat screen, which follows the usual AI chat permissions.
+
 On a contact's **Activities** page, scheduled activities have **Complete**, **Edit** and **Purge**; completed ones have **Edit** and, for AI conversations, **Review AI conversation**.
 
 A completed activity shows who dispositioned it, and how, in its **Dispositioned by** badge and on its **Edit** page: the user's name when a person completed it, **AI voice agent (profile: …)** or **AI agent (profile: …)** when the AI conversation concluded it, **Dialer (automatic)** when the dialer completed the attempt on its own (for example no answer, a busy line, an answering machine, an abandoned call or a number not in service), or **Automatically (system)** for anything else the platform closed by itself, such as a call transferred out by the IVR. Activities completed before this was recorded show the best match from what they do record. Editing a completed activity lets you correct its disposition and notes; it does not re-run the flow, so no new tries or follow-ups are created.
