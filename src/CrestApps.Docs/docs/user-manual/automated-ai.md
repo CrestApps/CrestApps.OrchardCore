@@ -23,6 +23,8 @@ An **automatic** activity load creates activities that an **AI profile** works b
 | **Permission** | Manage activity batches |
 | **Features** | **SMS Omnichannel Automation** for texts; **Telnyx AI Voice Agent** (which turns on **Automated Voice**) for calls. Both turn on the AI features they need; an AI provider connection must also be set up. |
 
+<YouTube video="omnichannel-automated-sms" title="Video overview of automated SMS: the AI profile, the automatic load, opt-outs and the text entry point" />
+
 <AskYourAdmin />
 
 ## Before you start
