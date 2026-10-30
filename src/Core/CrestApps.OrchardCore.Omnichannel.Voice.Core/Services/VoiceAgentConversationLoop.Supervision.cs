@@ -143,6 +143,11 @@ public sealed partial class VoiceAgentConversationLoop
                 activity.ItemId.SanitizeLogValue());
         }
 
+        // The new profile answers in its own voice, now and on every later turn, rather than the first profile's.
+        switched.Put(new AIProfileSwitch { ProfileId = switched.AIProfileId });
+        await _activityStore.UpdateAsync(switched, cancellationToken);
+        _callSpeech = null;
+
         return (switched, newProfile, newSession);
     }
 

@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -44,6 +45,9 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Only the new profile's greeting is spoken; the old profile's line about connecting is dropped.
         var spoken = Assert.Single(harness.Media.Spoken.Skip(spokenBefore));
         Assert.Equal("Hi, this is Alex from the service department. What does your car need?", spoken);
+        // From now on the call speaks in the voice of the profile it was handed to, not the voice it started with.
+        Assert.True(harness.Activity.TryGet<AIProfileSwitch>(out var profileSwitch));
+        Assert.Equal("profile-2", profileSwitch.ProfileId);
     }
 
     [Fact]

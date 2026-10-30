@@ -35,6 +35,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
     }
+    public sealed class AIProfileSwitch
+    {
+        public AIProfileSwitch() { }
+        public string ProfileId { get; set; }
+        public static bool HandedTo(CrestApps.OrchardCore.Omnichannel.Voice.Models.AIProfileSwitch activityProfileSwitch, string profileId) { }
+    }
     public sealed class AITakeOverRequest
     {
         public AITakeOverRequest() { }

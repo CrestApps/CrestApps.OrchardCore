@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
-using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -96,16 +96,24 @@ public sealed partial class RealtimeVoiceConversationRunner
     private PendingProfileSwitch _pendingProfileSwitch;
     private readonly SemaphoreSlim _callSessionLock = new(1, 1);
 
+    // The call the session holds, so a session for another profile is opened the way this one was.
+    private RealtimeVoiceConversationContext _callContext;
+
+    // When the last response ended.
+    private long _lastResponseEndedTicks;
+
     private sealed record PendingProfileSwitch(LiveConversation Live, string ProfileId);
 
-    private void CaptureCallScopes()
+    private void CaptureCallScopes(RealtimeVoiceConversationContext context)
     {
+        _callContext = context;
         _callInvocation = AIInvocationScope.Current;
         _callConversation = AIConversationScope.Current;
     }
 
     /// <summary>
-    /// Applies the switch asked for, if there is one, and has the new profile greet the caller.
+    /// Applies the switch asked for, if there is one: finds the profile through the call's own document session, and
+    /// hands the call to it once the old profile has finished speaking.
     /// </summary>
     private async Task ApplyPendingProfileSwitchAsync(CancellationToken callToken)
     {
@@ -114,7 +122,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
-        bool switched;
+        AIProfile profile;
 
         try
         {
@@ -127,75 +135,36 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         try
         {
-            switched = await SwitchProfileAsync(pending.Live, pending.ProfileId, callToken);
+            profile = await _profileManager.FindByIdAsync(pending.ProfileId, callToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "A live AI call could not switch to profile '{ProfileId}'.", pending.ProfileId);
+
+            return;
         }
         finally
         {
             _callSessionLock.Release();
         }
 
-        // The new profile speaks first, from a note in the conversation: the session's own instructions already are
-        // the new profile's, and a reply asked for with instructions of its own had the model repeat its opening.
-        if (switched)
+        if (profile is null)
         {
-            _ = Task.Run(() => DeliverSupervisorNoteAsync(pending.Live, ChatRole.System, VoiceAgentConversationLoop.ProfileSwitchedTurn, callToken), CancellationToken.None);
-        }
-    }
+            _logger.LogWarning("A supervisor switched a live AI call to profile '{ProfileId}', which does not exist.", pending.ProfileId);
 
-    /// <summary>
-    /// Switches the live session to another profile: its instructions and tools from the next reply on, in the same
-    /// voice. The session's other settings stay as the call opened them.
-    /// </summary>
-    private async Task<bool> SwitchProfileAsync(LiveConversation live, string profileId, CancellationToken callToken)
-    {
-        try
+            return;
+        }
+
+        if (_callContext is null || string.Equals(profile.ItemId, _callContext.Profile?.ItemId, StringComparison.Ordinal))
         {
-            var profile = await _profileManager.FindByIdAsync(profileId, callToken);
-
-            if (profile is null)
-            {
-                _logger.LogWarning("A supervisor switched a live AI call to profile '{ProfileId}', which does not exist.", profileId);
-
-                return false;
-            }
-
-            if (_callInvocation is null || _callConversation is null)
-            {
-                return false;
-            }
-
-            using var invocationScope = AIInvocationScope.Begin(_callInvocation);
-
-            _callConversation.Profile = profile;
-
-            // The call's own session keeps the profile it is on, so the turns it saves next do not put the old one back.
-            if (_callConversation.Session is { } chatSession)
-            {
-                chatSession.ProfileId = profile.ItemId;
-            }
-
-            using var conversationScope = AIConversationScope.Begin(_callConversation);
-
-            await _orchestrator.SwitchResourceAsync(live.Current, new RealtimeOrchestrationRequest { Resource = profile }, callToken);
-
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Switched a live AI call to profile '{ProfileId}'.", profileId);
-            }
-
-            return true;
+            return;
         }
-        catch (OperationCanceledException)
-        {
-            // The call ended before the switch.
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "A live AI call could not switch to profile '{ProfileId}'.", profileId);
 
-            return false;
-        }
+        QueueHandover(pending.Live, profile, callToken);
     }
 
     private async Task DeliverCallerKeysAsync(LiveConversation live, CancellationToken callToken)

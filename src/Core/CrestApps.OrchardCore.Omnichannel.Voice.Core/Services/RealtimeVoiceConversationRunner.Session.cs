@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -451,7 +452,12 @@ public sealed partial class RealtimeVoiceConversationRunner
             : await services.ResolvePersonaAsync(context.Profile, cancellationToken);
         var speechLanguage = LanguagePart(persona?.Language);
 
-        var activityVoice = context.Activity?.TextToSpeechVoiceId;
+        // The campaign's voice is the voice of the profile the call started with; one it was handed to has its own.
+        var activityVoice = context.Activity is not null &&
+            context.Activity.TryGet<AIProfileSwitch>(out var profileSwitch) &&
+            AIProfileSwitch.HandedTo(profileSwitch, context.Profile?.ItemId)
+                ? null
+                : context.Activity?.TextToSpeechVoiceId;
 
         if (!string.IsNullOrWhiteSpace(activityVoice))
         {

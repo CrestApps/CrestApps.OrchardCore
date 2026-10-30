@@ -216,7 +216,14 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     private void ResponseInFlight(bool inFlight)
-        => Interlocked.Exchange(ref _responseInFlight, inFlight ? 1 : 0);
+    {
+        Interlocked.Exchange(ref _responseInFlight, inFlight ? 1 : 0);
+
+        if (!inFlight)
+        {
+            Interlocked.Exchange(ref _lastResponseEndedTicks, DateTime.UtcNow.Ticks);
+        }
+    }
 
     /// <summary>
     /// When the provider last heard the caller, counting a turn it still has open as hearing them now.

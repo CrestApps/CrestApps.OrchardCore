@@ -330,6 +330,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 switch (conversationEvent.Type)
                 {
                     case RealtimeConversationEventType.AssistantAudioDelta:
+                        await StopTransferToneAsync();
                         var speech = conversationEvent.Audio;
 
                         // The model says its goodbye, calls the end-call tool, reads the tool's reply and — with
@@ -431,6 +432,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:
+                        await StopTransferToneAsync();
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
                         LogProviderRunningBehind(activityId);
                         ProviderHeardCaller(turnOpen: true);

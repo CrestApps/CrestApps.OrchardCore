@@ -301,7 +301,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
 
         // Which call this is, from the call itself, for the tools the profile gives the session.
         PutCallIdentity(AIInvocationScope.Current?.Items, context.Activity);
-        CaptureCallScopes();
+        CaptureCallScopes(context);
 
         // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
         var answeredTicks = DateTime.UtcNow.Ticks;
@@ -553,7 +553,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                     attempts = 0;
                 }
 
-                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor), Volatile.Read(ref _responseInFlight) == 1);
+                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor), IsBusy);
 
                 if (step == IdleStep.Wait || conversation is null)
                 {
