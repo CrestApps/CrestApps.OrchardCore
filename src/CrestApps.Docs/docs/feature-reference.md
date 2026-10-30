@@ -188,6 +188,26 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Reports.Pdf` | Reports (PDF) | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.Builder` | Report Builder | [Report Builder](./modules/report-builder/) |
 
+## Calendar
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Calendars` | Calendars | [Calendars](./modules/calendars) |
+| `CrestApps.OrchardCore.Calendars.Teams` | Team Calendars | [Calendars](./modules/calendars#calendar-types) |
+| `CrestApps.OrchardCore.Calendars.Resources` | Resource Calendars | [Calendars](./modules/calendars#conflicts-and-concurrency) |
+| `CrestApps.OrchardCore.Calendars.Workforce` | Workforce Calendars | [Calendars](./modules/calendars#calendar-types) |
+| `CrestApps.OrchardCore.Calendars.Office` | Office Calendars | [Calendars](./modules/calendars#calendar-types) |
+| `CrestApps.OrchardCore.Calendars.Reminders` | Calendar Reminders | [Calendars](./modules/calendars#reminders) |
+| `CrestApps.OrchardCore.Calendars.Invitations` | Calendar Invitations | [Calendars](./modules/calendars#invitations) |
+| `CrestApps.OrchardCore.Calendars.Feeds` | Calendar Feeds | [Calendars](./modules/calendars#icalendar-feeds-import-and-export) |
+| `CrestApps.OrchardCore.Calendars.External` | External Calendars | [Calendars](./modules/calendars#external-calendars) |
+| `CrestApps.OrchardCore.Calendars.Api` | Calendars API | [Calendars](./modules/calendars#http-api) |
+| `CrestApps.OrchardCore.Calendars.AI` | Calendar AI Tools | [Calendars](./modules/calendars#ai-tools) |
+| `CrestApps.OrchardCore.Scheduling` | Scheduling | [Scheduling](./modules/scheduling) |
+| `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling Self-Service | [Scheduling](./modules/scheduling#self-service) |
+| `CrestApps.OrchardCore.Scheduling.Api` | Scheduling API | [Scheduling](./modules/scheduling#http-api) |
+| `CrestApps.OrchardCore.Scheduling.AI` | Scheduling AI Tools | [Scheduling](./modules/scheduling#ai-tools) |
+
 ## Commerce
 
 | Feature ID | Name | Docs |
@@ -216,6 +236,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
+| `CrestApps.OrchardCore.Bookings.Calendar` | Bookings Calendar | [Bookings](./modules/bookings#bookings-calendar) |
 
 ## Payment Providers
 

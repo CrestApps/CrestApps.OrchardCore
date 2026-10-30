@@ -154,6 +154,15 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Calendars and Scheduling',
+            className: icon('calendar-days'),
+            items: [
+                'user-manual/calendars/calendars',
+                'user-manual/calendars/scheduling',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -379,6 +388,15 @@ const sidebars = {
                         'contact-center/production-support',
                     ],
                 },
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Calendars and Scheduling',
+            className: icon('calendar-days'),
+            items: [
+                'modules/calendars',
+                'modules/scheduling',
             ],
         },
         {

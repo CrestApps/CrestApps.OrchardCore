@@ -179,6 +179,34 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | Save User Memory | Creates or updates a named memory entry for the current user. |
 | Remove User Memory | Removes a saved memory entry when it should be forgotten. |
 
+### Calendar tools
+
+**Available when:** `CrestApps.OrchardCore.Calendars.AI` (Calendar AI Tools)
+
+These tools act for the signed-in person using the AI, with that person's access to each calendar, and refuse anonymous callers. See [Calendars](../modules/calendars.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `listCalendars` | Lists the calendars the user can see. |
+| `findCalendarEvents` | Lists the events on the user's calendars between two times (at most 62 days apart). |
+| `findFreeTime` | Finds times when the user and others are free, optionally together with calendars such as a room (at most 31 days). |
+| `createCalendarEvent` | Adds an event to one of the user's calendars, or to their personal calendar when none is named. |
+| `moveCalendarEvent` | Moves an event, or one occurrence of a repeating event, to another time. |
+| `cancelCalendarEvent` | Cancels an event, or one occurrence of a repeating event. |
+
+### Scheduling tools
+
+**Available when:** `CrestApps.OrchardCore.Scheduling.AI` (Scheduling AI Tools)
+
+These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**. See [Scheduling](../modules/scheduling.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `listAppointmentTypes` | Lists the kinds of appointments that can be booked. |
+| `findAppointmentSlots` | Finds open times for an appointment. |
+| `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned. |
+| `changeAppointment` | Cancels or moves a customer's appointment. The customer proves it is theirs with the manage code, or the email or phone number on the appointment. |
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.
