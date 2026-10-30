@@ -59,7 +59,33 @@ public sealed class AICallActionTaskTests
         Assert.False(context.Output.ContainsKey("status"));
     }
 
-    private static AICallActionTask CreateTask(IAIVoiceCallSupervision supervision)
+    [Fact]
+    public async Task TakeOver_WithoutAgentProfiles_FailsWithTheReason()
+    {
+        // Arrange
+        // The task is registered whenever Workflows is on, so a tenant without the Contact Center Agents feature has no
+        // agent profiles to find the agent in. Requiring them failed every workflow trigger there, sign-in included.
+        var supervision = new Mock<IAIVoiceCallSupervision>();
+        supervision
+            .Setup(x => x.TakeOverAsync("activity-1", null, "Workflow", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AIVoiceCallActionResult(false, "Only a signed-in agent can take a call over."));
+
+        var task = CreateTask(supervision.Object, agentProfileManagers: []);
+        task.Action = AICallActions.TakeOver;
+        task.Value = "agent";
+        var context = CreateContext();
+
+        // Act
+        var result = await task.ExecuteAsync(context, null!);
+
+        // Assert
+        Assert.Contains("Failed", result.Outcomes);
+        Assert.Equal("Only a signed-in agent can take a call over.", context.Output["message"]);
+    }
+
+    private static AICallActionTask CreateTask(
+        IAIVoiceCallSupervision supervision,
+        IEnumerable<IAgentProfileManager> agentProfileManagers = null)
     {
         var evaluator = new Mock<IWorkflowExpressionEvaluator>();
         evaluator
@@ -72,7 +98,7 @@ public sealed class AICallActionTaskTests
 
         return new AICallActionTask(
             [supervision],
-            Mock.Of<IAgentProfileManager>(),
+            agentProfileManagers ?? [Mock.Of<IAgentProfileManager>()],
             new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null).Object,
             evaluator.Object,
             NullLogger<AICallActionTask>.Instance,
