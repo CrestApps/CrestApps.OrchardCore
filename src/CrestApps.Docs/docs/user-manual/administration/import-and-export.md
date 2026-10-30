@@ -16,6 +16,8 @@ Bulk import creates or updates many content items from one spreadsheet, and bulk
 
 <AskYourAdmin />
 
+<YouTube video="content-transfer" title="Video overview of bulk import and export" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of enabling Content Transfer, exporting a content type, and starting a bulk import" start={221} end={257} />
 
 ## File formats
@@ -35,9 +37,13 @@ Every import file follows the same rules:
 
 ## Which content types appear
 
+<YouTube video="content-transfer" title="Video of choosing which content types can be imported and exported" start={85} end={112} />
+
 Every content type appears on the import and export screens unless an administrator turns it off. On the content type's settings, **Allow bulk import** and **Allow bulk export** are ticked by default. Untick one to keep a type off that screen.
 
 ## Import a file
+
+<YouTube video="content-transfer" title="Video of preparing a file and uploading it" start={112} end={197} />
 
 1. Open **Content > Import**. The **Bulk Import** page lists earlier imports.
 2. Click **Import** and pick the content type. When only one type can be imported, the button reads **Import** followed by the type's name.
@@ -61,7 +67,9 @@ Rows a contact import leaves out on purpose, such as duplicate phone numbers or 
 
 ### Follow an import
 
-Each import is a row on the **Bulk Import** page showing the file name, content type, who uploaded it, its status, how many records imported and how many had errors. While it runs, a progress bar shows *N of M records processed*.
+<YouTube video="content-transfer" title="Video of following an import and downloading the rejected rows" start={197} end={276} />
+
+Each import is a row on the **Bulk Import** page showing the file name, content type, its status, when it was created, who uploaded it, how many records imported (the green number) and how many had errors (the red number), with the reason a row was rejected under the file name. While it runs, a progress bar shows *N of M records processed*. The list does not refresh by itself: reload the page to see an import's latest status.
 
 | Status | Meaning |
 | --- | --- |
@@ -75,7 +83,7 @@ Each import is a row on the **Bulk Import** page showing the file name, content 
 
 The **Actions** menu on each row offers:
 
-- **Download errors** downloads only the rows that were skipped, in the same file format as your upload, with an **Errors** column that gives the reason for each. Fix them and import that file again.
+- **Download errors (N)**, where N is the number of rejected rows, downloads only the rows that were skipped, in the same file format as your upload, with an **Errors** column that gives the reason for each. Fix them and import that file again.
 - **Pause import** stops an import that is running.
 - **Resume import** continues a pending, paused, failed or stalled import from the last saved batch.
 - **Delete** removes the entry. It also deletes the uploaded file, but never the content items that were imported.
@@ -83,6 +91,8 @@ The **Actions** menu on each row offers:
 Use the status and sort menus above the list to find an import, and tick several rows to **Remove** them at once.
 
 ## Export content
+
+<YouTube video="content-transfer" title="Video of exporting content with filters and downloading the file" start={276} end={351} />
 
 1. Open **Content > Export**. The **Bulk Export** page lists earlier exports.
 2. Click **Export** to open the **Export contents** form.
