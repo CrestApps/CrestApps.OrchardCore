@@ -173,6 +173,8 @@ With the **Grouped Products** feature, a product can show several products on on
 
 ## Sell a bundle or kit
 
+<YouTube video="product-bundles-and-recommendations" title="Sell a bundle or kit" start={82} end={145} />
+
 With the **Product Bundles** feature, a product can be a bundle of other products, such as a starter kit of two caps and a tee, sold at its own price. Under **Bundle** on the product's editor, choose each product in it under **Made of** and how many each bundle holds. The bundle's page lists what's in it.
 
 Its stock is what its parts in stock can make: with 4 caps left and 2 in each kit, it shows *Only 2 left*. Selling a bundle takes each part from stock, and canceling or refunding the order puts them back. Don't count the bundle's own stock. A part can't be sold in variants or be a bundle itself.
