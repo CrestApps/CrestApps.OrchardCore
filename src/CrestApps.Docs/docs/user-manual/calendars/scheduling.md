@@ -138,6 +138,12 @@ When a customer wants a time that's taken, add them to the waitlist. Open **Cale
 
 When an appointment of that type is cancelled or moved, the customer who has waited longest and can come at the freed time is marked *Notified*, and the **Waitlist Slot Available** workflow event starts, so a workflow can tell them. **Remove** takes a customer off the list.
 
+## Copy scheduling to another site
+
+Add the **Scheduling** step (under **Calendar**) to a deployment plan to take the appointment types and the staff, rooms and equipment that take appointments. Tick **Include appointments** to take every appointment too (with the customers' names, emails and phone numbers) and **Include the waitlist** for the waitlist. Add the **Calendars** step as well, with **Include events** when you take appointments, so the resources' calendars and the appointments' calendar events come along; put **Calendars** before **Scheduling** in the plan.
+
+Importing creates what's missing and updates what's already there, matched by id. Customers' links to move or cancel an appointment aren't exported: an imported appointment keeps the link it already had on that site, or gets a new one.
+
 ## Workflows
 
 With the **Workflows** feature on, the **Scheduling** category of the workflow editor has:

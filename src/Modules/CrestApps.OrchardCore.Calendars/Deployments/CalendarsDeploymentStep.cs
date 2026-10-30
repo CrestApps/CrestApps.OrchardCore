@@ -15,13 +15,20 @@ public sealed class CalendarsDeploymentStep : DeploymentStep
     public override string Name => CalendarsConstants.RecipeStepName;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>
     /// Gets or sets whether the events are exported with their calendars.
     /// </summary>
     public bool IncludeEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the categories (everyone's) are exported too.
+    /// </summary>
+    public bool IncludeCategories { get; set; } = true;
 }

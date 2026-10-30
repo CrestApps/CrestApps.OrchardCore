@@ -15,7 +15,11 @@ internal sealed class CalendarsDeploymentStepDisplayDriver : DisplayDriver<Deplo
 
     public override IDisplayResult Edit(CalendarsDeploymentStep step, BuildEditorContext context)
     {
-        return Initialize<CalendarsDeploymentStepViewModel>("CalendarsDeploymentStep_Fields_Edit", model => model.IncludeEvents = step.IncludeEvents).Location("Content");
+        return Initialize<CalendarsDeploymentStepViewModel>("CalendarsDeploymentStep_Fields_Edit", model =>
+        {
+            model.IncludeEvents = step.IncludeEvents;
+            model.IncludeCategories = step.IncludeCategories;
+        }).Location("Content");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CalendarsDeploymentStep step, UpdateEditorContext context)
@@ -24,6 +28,7 @@ internal sealed class CalendarsDeploymentStepDisplayDriver : DisplayDriver<Deplo
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
         step.IncludeEvents = model.IncludeEvents;
+        step.IncludeCategories = model.IncludeCategories;
 
         return Edit(step, context);
     }

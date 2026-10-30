@@ -39,6 +39,12 @@ public sealed class DefaultCalendarCategoryService : ICalendarCategoryService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<CalendarCategory>> ListAllAsync(CancellationToken cancellationToken = default)
+    {
+        return [.. await _session.Query<CalendarCategory, CalendarCategoryIndex>(collection: CalendarsConstants.CollectionName).ListAsync(cancellationToken)];
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<CalendarCategory>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         var keys = ids?.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
@@ -70,6 +76,10 @@ public sealed class DefaultCalendarCategoryService : ICalendarCategoryService
         if (string.IsNullOrEmpty(category.ItemId))
         {
             category.ItemId = CrestApps.Core.UniqueId.GenerateId();
+        }
+
+        if (category.CreatedUtc == default)
+        {
             category.CreatedUtc = _clock.UtcNow;
         }
 

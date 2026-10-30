@@ -9,4 +9,6 @@ public class CalendarsDeploymentStepViewModel
     /// Gets or sets whether the events are exported with their calendars.
     /// </summary>
     public bool IncludeEvents { get; set; }
+
+    public bool IncludeCategories { get; set; }
 }

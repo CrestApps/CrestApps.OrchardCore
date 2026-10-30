@@ -24,7 +24,7 @@ The **Calendars** module is a calendar foundation that other modules build on. I
 | Team Calendars | `CrestApps.OrchardCore.Calendars.Teams` | Calendars | The **Team** type and the **Team Availability** page |
 | Resource Calendars | `CrestApps.OrchardCore.Calendars.Resources` | Calendars | The **Room** and **Equipment** types, with location, seats and equipment fields; rooms and equipment can be invited to events |
 | Office Calendars | `CrestApps.OrchardCore.Calendars.Office` | Calendars | The **Office** type: in office, desk bookings up to the desk count, visitors, office closed |
-| Calendar Reminders | `CrestApps.OrchardCore.Calendars.Reminders` | Calendars | A background task that raises "starting soon" and "completed" once per occurrence |
+| Calendar Reminders | `CrestApps.OrchardCore.Calendars.Reminders` | Calendars | The **Remind** setting on events and the reminders that stay on people's admin pages until dismissed; a background task that raises "starting soon" and "completed" once per occurrence for workflows |
 | Calendar Invitations | `CrestApps.OrchardCore.Calendars.Invitations` | Calendars, `OrchardCore.Email` | Invitation, update and cancellation emails with an `.ics` attachment, and answer links |
 | Calendar Feeds | `CrestApps.OrchardCore.Calendars.Feeds` | Calendars | A private iCalendar feed address per calendar, and `.ics` import and export |
 | External Calendars | `CrestApps.OrchardCore.Calendars.External` | Calendars | Subscriptions to external calendars, the sync background task and the built-in iCalendar address provider |
@@ -368,29 +368,37 @@ See [AI Tools](../ai/tools.md#calendar-tools).
 
 ## Recipes and deployment
 
-The `Calendars` recipe step creates or updates calendars, matched by `ItemId`, with their events. A calendar needs a `Type` whose feature is on. Recipe changes skip the overlap check and send no invitations. Event `Start` and `End` are wall-clock times without an offset. Enum values are written as numbers, the way the **Calendars** deployment step exports them, so the easiest way to get the exact shape is to export a calendar first.
+The **Calendars** deployment step exports every calendar (without its feed token and booking version), with **Include events** their events, and with **Include categories** (on by default) everyone's categories. The `Calendars` recipe step reads the same shape back: it creates or updates categories first, then calendars, matched by `itemId`, each with its events. A calendar needs a `type` whose feature is on. Recipe changes skip the overlap check and send no invitations.
+
+Property names are camelCase and enums are written by name (a number is read too). Event `start` and `end` are wall-clock times in the event's `timeZoneId`, without an offset. The easiest way to get the exact shape is to export first.
 
 ```json
 {
   "steps": [
     {
       "name": "Calendars",
+      "Categories": [
+        { "itemId": "holidays0000001", "name": "Company holiday", "color": "#e03131", "ownerId": null }
+      ],
       "Calendars": [
         {
-          "ItemId": "companycalendar01",
-          "Name": "Company",
-          "Type": "General",
-          "Color": "#1971c2",
-          "TimeZoneId": "America/New_York",
-          "Events": [
+          "itemId": "companycalendar01",
+          "name": "Company",
+          "type": "General",
+          "color": "#1971c2",
+          "timeZoneId": "America/New_York",
+          "visibility": "Public",
+          "events": [
             {
-              "ItemId": "allhands0000001",
-              "EventType": "Meeting",
-              "Title": "All hands",
-              "Start": "2026-11-02T09:00:00",
-              "End": "2026-11-02T10:00:00",
-              "TimeZoneId": "America/New_York",
-              "Recurrence": { "Rule": "FREQ=WEEKLY;BYDAY=MO" }
+              "itemId": "allhands0000001",
+              "eventType": "Meeting",
+              "title": "All hands",
+              "start": "2026-11-02T09:00:00",
+              "end": "2026-11-02T10:00:00",
+              "timeZoneId": "America/New_York",
+              "status": "Confirmed",
+              "reminderMinutes": [ 10 ],
+              "recurrence": { "rule": "FREQ=WEEKLY;BYDAY=MO" }
             }
           ]
         }
@@ -400,7 +408,7 @@ The `Calendars` recipe step creates or updates calendars, matched by `ItemId`, w
 }
 ```
 
-The **Calendars** deployment step exports every calendar (without its feed token and booking version), and with **Include events** their events.
+With the **CrestApps Recipes** feature on, the module describes the `Calendars` recipe step (`CalendarsRecipeStepSchema`, an `IRecipeStep`) and the deployment step's settings (`CalendarsDeploymentStepSchema`) to it, from `RecipesSchemaStartup` (`[RequireFeatures("CrestApps.OrchardCore.Recipes")]`), so recipes can be checked and written with help.
 
 ## Building on the calendar
 

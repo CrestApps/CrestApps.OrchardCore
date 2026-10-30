@@ -120,6 +120,32 @@ Tasks take Liquid fields; each can rename its output with **OutputName**.
 
 Appointments booked by a workflow have `Source = Workflow`.
 
+## Recipes and deployment
+
+The **Scheduling** deployment step exports the scheduling resources and appointment types, with **Include appointments** every appointment (with the customer's name, email and phone, but without its manage link), and with **Include the waitlist** the waitlist. Add the **Calendars** step too (with events when appointments are included), so the resources' calendars and the appointments' calendar events come along.
+
+The `Scheduling` recipe step reads the same shape back: `Resources`, `AppointmentTypes`, `Appointments` and `Waitlist`, each created or, when its `itemId` matches a stored one, replaced in place. Run it after the `Calendars` step. An imported appointment keeps the manage link it already had on the site, or gets a new one. Property names are camelCase and enums are written by name (a number is read too).
+
+```json
+{
+  "steps": [
+    {
+      "name": "Scheduling",
+      "Resources": [
+        { "itemId": "drsmith00000001", "name": "Dr. Smith", "kind": "Staff", "calendarId": "drsmithcal00001", "timeZoneId": "America/New_York",
+          "availabilityMode": "WorkingHours", "workingHours": [ { "day": "Monday", "start": "09:00", "end": "17:00" } ], "enabled": true }
+      ],
+      "AppointmentTypes": [
+        { "itemId": "consultation001", "name": "Consultation", "slug": "consultation", "durationMinutes": 30, "slotIntervalMinutes": 30,
+          "resourceIds": [ "drsmith00000001" ], "assignment": "AnyAvailable", "allowSelfService": true, "enabled": true }
+      ]
+    }
+  ]
+}
+```
+
+With the **CrestApps Recipes** feature on, the module describes the `Scheduling` recipe step (`SchedulingRecipeStepSchema`) and the deployment step's settings (`SchedulingDeploymentStepSchema`) to it.
+
 ## HTTP API
 
 The Scheduling API feature maps `/api/scheduling/v1`, authenticated with Orchard Core's `Api` scheme.

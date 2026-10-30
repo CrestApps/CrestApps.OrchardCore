@@ -16,6 +16,13 @@ public interface ICalendarCategoryService
     Task<IReadOnlyList<CalendarCategory>> ListAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists every category, everyone's, for exporting them.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The categories.</returns>
+    Task<IReadOnlyList<CalendarCategory>> ListAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets categories by id.
     /// </summary>
     /// <param name="ids">The ids.</param>

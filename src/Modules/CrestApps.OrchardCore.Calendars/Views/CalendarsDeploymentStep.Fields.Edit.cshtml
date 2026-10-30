@@ -8,4 +8,9 @@
         <label asp-for="IncludeEvents" class="form-check-label">@T["Include events"]</label>
         <span class="hint dashed">@T["Export the events of each calendar too, up to 10,000 per calendar."]</span>
     </div>
+    <div class="form-check">
+        <input asp-for="IncludeCategories" class="form-check-input" />
+        <label asp-for="IncludeCategories" class="form-check-label">@T["Include categories"]</label>
+        <span class="hint dashed">@T["Export everyone's categories too, so the events keep their colors."]</span>
+    </div>
 </div>

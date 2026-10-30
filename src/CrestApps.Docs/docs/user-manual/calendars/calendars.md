@@ -223,6 +223,16 @@ With the **Workflows** feature on, the **Calendar** category of the workflow edi
 
 For example: when an **Out of office** event is created on a team calendar, email the team lead; or when a meeting is starting soon, send its attendees the room and the agenda. The values each event hands to the next steps are listed in the [Technical Manual](../../modules/calendars.md#workflows).
 
+## Copy calendars to another site
+
+Calendars, their events and the categories travel between sites with a deployment plan (**Configuration > Import/Export > Deployment Plans**, with the **Deployment** feature on):
+
+1. Open or create a deployment plan and choose **Add Step**.
+2. Under **Calendar**, add **Calendars**. Tick **Include events** to take every calendar's events (up to 10,000 per calendar) and **Include categories** (on by default) to take everyone's categories, so the events keep their colors.
+3. **Execute** the plan to download it, then import the file on the other site (**Import/Export > Package Import**), or send it with a remote deployment.
+
+The import creates what's missing and updates what's already there, matched by each record's id, so importing the same file twice doesn't duplicate anything. A calendar needs its kind's feature to be on in the other site (for example **Resource Calendars** for rooms). Imported events don't send invitations and aren't checked for overlaps.
+
 ## Which feature to turn on
 
 | You want to... | Ask your administrator to turn on |
@@ -232,6 +242,7 @@ For example: when an **Out of office** event is created on a team calendar, emai
 | Book meeting rooms and equipment | Resource Calendars |
 | Track who is in the office and book desks | Office Calendars |
 | Email invitations that attendees answer from the email | Calendar Invitations |
+| Be reminded before events start, on screen | Calendar Reminders |
 | Act a set time before events start, or once they end | Calendar Reminders (with Workflows) |
 | Subscribe to a calendar from Outlook, Google Calendar or a phone, or import and export files | Calendar Feeds |
 | Show an external calendar's events here | External Calendars |

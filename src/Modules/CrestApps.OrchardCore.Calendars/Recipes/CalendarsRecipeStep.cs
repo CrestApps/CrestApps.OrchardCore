@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using OrchardCore.Recipes.Models;
@@ -13,23 +14,48 @@ namespace CrestApps.OrchardCore.Calendars.Recipes;
 /// </summary>
 internal sealed class CalendarsRecipeStep : NamedRecipeStepHandler
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    // Enums are written by name, and read by name or number.
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private readonly ICalendarService _calendarService;
     private readonly ICalendarEventManager _eventManager;
+    private readonly ICalendarCategoryService _categoryService;
 
     public CalendarsRecipeStep(
         ICalendarService calendarService,
-        ICalendarEventManager eventManager)
+        ICalendarEventManager eventManager,
+        ICalendarCategoryService categoryService)
         : base(CalendarsConstants.RecipeStepName)
     {
         _calendarService = calendarService;
         _eventManager = eventManager;
+        _categoryService = categoryService;
     }
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
         var options = new CalendarChangeOptions { Actor = "recipe", SkipConflictCheck = true, SendInvitations = false };
+
+        // Categories first, so the events that use them find them.
+        foreach (var node in (context.Step["Categories"] as JsonArray ?? []).OfType<JsonObject>())
+        {
+            var incoming = node.Deserialize<CalendarCategory>(_jsonOptions);
+
+            if (incoming is null || string.IsNullOrWhiteSpace(incoming.Name))
+            {
+                context.Errors.Add("A category in the Calendars step has no name.");
+
+                continue;
+            }
+
+            var category = (string.IsNullOrEmpty(incoming.ItemId) ? null : await _categoryService.FindByIdAsync(incoming.ItemId)) ?? incoming;
+
+            category.Name = incoming.Name.Trim();
+            category.Color = string.IsNullOrWhiteSpace(incoming.Color) ? category.Color ?? "#1971c2" : incoming.Color.Trim();
+            category.OwnerId = string.IsNullOrWhiteSpace(incoming.OwnerId) ? null : incoming.OwnerId;
+
+            await _categoryService.SaveAsync(category);
+        }
 
         foreach (var node in (context.Step["Calendars"] as JsonArray ?? []).OfType<JsonObject>())
         {

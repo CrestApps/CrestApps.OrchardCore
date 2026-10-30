@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Core.Services;
 using CrestApps.OrchardCore.Calendars.Services;
 using OrchardCore.Deployment;
@@ -11,17 +12,21 @@ internal sealed class CalendarsDeploymentSource : DeploymentSourceBase<Calendars
     private const int MaxEventsPerCalendar = 10_000;
     private const int PageSize = 500;
 
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    // Enums are written by name, and read by name or number.
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private readonly ICalendarService _calendarService;
     private readonly ICalendarEventStore _eventStore;
+    private readonly ICalendarCategoryService _categoryService;
 
     public CalendarsDeploymentSource(
         ICalendarService calendarService,
-        ICalendarEventStore eventStore)
+        ICalendarEventStore eventStore,
+        ICalendarCategoryService categoryService)
     {
         _calendarService = calendarService;
         _eventStore = eventStore;
+        _categoryService = categoryService;
     }
 
     protected override async Task ProcessAsync(CalendarsDeploymentStep step, DeploymentPlanResult result)
@@ -60,10 +65,17 @@ internal sealed class CalendarsDeploymentSource : DeploymentSourceBase<Calendars
             calendars.Add(node);
         }
 
-        result.Steps.Add(new JsonObject
+        var stepNode = new JsonObject
         {
             ["name"] = step.Name,
             ["Calendars"] = calendars,
-        });
+        };
+
+        if (step.IncludeCategories)
+        {
+            stepNode["Categories"] = new JsonArray([.. (await _categoryService.ListAllAsync()).Select(category => JsonSerializer.SerializeToNode(category, _jsonOptions))]);
+        }
+
+        result.Steps.Add(stepNode);
     }
 }

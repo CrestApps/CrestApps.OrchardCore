@@ -21,6 +21,11 @@ public static class SchedulingConstants
     public const string CalendarType = "Appointments";
 
     /// <summary>
+    /// The name of the recipe step, and of the deployment step, that carries the scheduling setup.
+    /// </summary>
+    public const string RecipeStepName = "Scheduling";
+
+    /// <summary>
     /// The feature identifiers of the scheduling module.
     /// </summary>
     public static class Features

@@ -50,7 +50,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = CalendarsConstants.Features.Reminders,
     Name = "Calendar Reminders",
-    Description = "Runs once a minute to raise the 'starting soon' and 'completed' moments of events, exactly once each, for workflows and other modules.",
+    Description = "Reminds people of their events on screen, at the time each event asks for, until they dismiss it; and raises the 'starting soon' and 'completed' moments of events, exactly once each, for workflows and other modules.",
     Category = "Calendar",
     Dependencies = [CalendarsConstants.Features.Calendars]
 )]
