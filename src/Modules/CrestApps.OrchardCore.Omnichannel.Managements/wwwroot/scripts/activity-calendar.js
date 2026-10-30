@@ -16,7 +16,7 @@
 			const check = document.createElement("div");
 			const box = document.createElement("input");
 			const label = document.createElement("label");
-			const hint = document.createElement("div");
+			const hint = document.createElement("span");
 			check.className = "form-check mt-2";
 			box.type = "checkbox";
 			box.className = "form-check-input";
@@ -26,7 +26,7 @@
 			label.className = "form-check-label";
 			label.htmlFor = id;
 			label.textContent = data.addText || "";
-			hint.className = "form-text";
+			hint.className = "hint dashed";
 			hint.textContent = data.hintText || "";
 			check.append(box, label, hint);
 			const choose = document.createElement("div");

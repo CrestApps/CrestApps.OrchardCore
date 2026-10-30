@@ -41,6 +41,8 @@ Some kinds of events have their own behavior:
 
 Open **Calendars > Calendar**. The list on the side shows every calendar you can see; tick the ones to show. Your choice is remembered on that browser.
 
+Times on the calendar are in your time zone (the one on your user profile, or the site's), not your computer's, so they match the times on forms and lists across the site even when you're away.
+
 - **Day**, **Week**, **Month** and **Agenda** change the view, the arrows move back and forward, and **Today** comes back to today.
 - Click an event to see its calendar, kind, place, status, attendees and description, and **Edit** to open it. On a calendar you can only see as busy time, the event shows as busy, without its details.
 - To add an event, choose **New event**, or drag across the times you want. When more than one calendar you can add to is showing, you're asked to choose the calendar and the kind of event first.

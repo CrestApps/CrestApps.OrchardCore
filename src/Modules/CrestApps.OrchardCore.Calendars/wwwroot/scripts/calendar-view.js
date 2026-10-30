@@ -3,6 +3,101 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
+	/**
+	* Returns the browser's IANA time zone, or an empty string when it is unknown.
+	* @returns {string}
+	*/
+	function browserTimeZone() {
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+		} catch {
+			return "";
+		}
+	}
+	/**
+	* Returns the wall-clock time of an instant in a time zone, as a local Date with those components, which is what date
+	* inputs that work in that zone expect.
+	* @param {Date} instant
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function toWallClock(instant, timeZone) {
+		if (!timeZone) return new Date(instant.getTime());
+		try {
+			const parts = new Intl.DateTimeFormat("en-US", {
+				timeZone,
+				hourCycle: "h23",
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit",
+				hour: "2-digit",
+				minute: "2-digit",
+				second: "2-digit"
+			}).formatToParts(instant);
+			/** @param {string} type */
+			const part = (type) => Number((parts.find((item) => item.type === type) || { value: "0" }).value);
+			return new Date(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
+		} catch {
+			return new Date(instant.getTime());
+		}
+	}
+	/**
+	* Returns a wall-clock time as a calendar date: a Date whose UTC components are that time.
+	* @param {Date} local A local Date whose components are the wall-clock time.
+	* @returns {Date}
+	*/
+	function toCalendarDate(local) {
+		return new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate(), local.getHours(), local.getMinutes(), local.getSeconds()));
+	}
+	/**
+	* Returns the wall-clock time a calendar date stands for, as a local Date with those components.
+	* @param {Date} value
+	* @returns {Date}
+	*/
+	function fromCalendarDate(value) {
+		return new Date(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), value.getUTCHours(), value.getUTCMinutes(), value.getUTCSeconds());
+	}
+	/**
+	* Returns the instant of a wall-clock time in a time zone; the reverse of toWallClock.
+	* @param {Date} local A local Date whose components are the wall-clock time.
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function fromWallClock(local, timeZone) {
+		if (!timeZone) return new Date(local.getTime());
+		const wanted = toCalendarDate(local).getTime();
+		let instant = wanted;
+		for (let pass = 0; pass < 2; pass++) instant += wanted - toCalendarDate(toWallClock(new Date(instant), timeZone)).getTime();
+		return new Date(instant);
+	}
+	/**
+	* Returns the calendar date of an instant in a time zone.
+	* @param {Date} instant
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function instantToCalendarDate(instant, timeZone) {
+		return toCalendarDate(toWallClock(instant, timeZone));
+	}
+	/**
+	* Returns the instant a calendar date stands for in a time zone.
+	* @param {Date} value
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function calendarDateToInstant(value, timeZone) {
+		return fromWallClock(fromCalendarDate(value), timeZone);
+	}
+	/**
+	* Returns the yyyy-MM-dd day of a calendar date.
+	* @param {Date} value
+	* @returns {string}
+	*/
+	function toDayString(value) {
+		return value.toISOString().slice(0, 10);
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-view.js
 	/**
 	* Reads the localized labels the page renders in its template.
@@ -75,16 +170,6 @@
 		});
 	}
 	/**
-	* Formats a date as yyyy-MM-dd in local time.
-	* @param {Date} date
-	* @returns {string}
-	*/
-	function toDateString(date) {
-		const month = String(date.getMonth() + 1).padStart(2, "0");
-		const day = String(date.getDate()).padStart(2, "0");
-		return `${date.getFullYear()}-${month}-${day}`;
-	}
-	/**
 	* Adds a term and its value to a definition list.
 	* @param {HTMLElement} list
 	* @param {string} term
@@ -140,6 +225,9 @@
 		const FullCalendar = window.FullCalendar;
 		if (!root || !FullCalendar) return;
 		const config = JSON.parse(root.getAttribute("data-config") || "{}");
+		const timeZone = config.timeZone || browserTimeZone();
+		/** @param {Date} value A date FullCalendar gives back. */
+		const toInstantString = (value) => calendarDateToInstant(value, timeZone).toISOString();
 		const labels = readLabels();
 		const tokenInput = document.querySelector("#calendar-antiforgery input[name=\"__RequestVerificationToken\"]");
 		const storageKey = "crestapps-calendar-selection";
@@ -193,6 +281,8 @@
 			initialView: narrow && config.initialView === "timeGridWeek" ? "timeGridDay" : config.initialView,
 			initialDate: config.initialDate,
 			locale: config.locale,
+			timeZone: "UTC",
+			now: () => instantToCalendarDate(/* @__PURE__ */ new Date(), timeZone),
 			...toolbars(narrow),
 			views: {
 				timeGridWeek: { dayHeaderFormat: {
@@ -240,8 +330,8 @@
 					return;
 				}
 				const url = new URL(config.occurrencesUrl, window.location.origin);
-				url.searchParams.set("start", info.start.toISOString());
-				url.searchParams.set("end", info.end.toISOString());
+				url.searchParams.set("start", (/* @__PURE__ */ new Date(info.start.getTime() - 864e5)).toISOString());
+				url.searchParams.set("end", new Date(info.end.getTime() + 864e5).toISOString());
 				if (config.schedule) url.searchParams.set("schedule", config.schedule);
 				else url.searchParams.set("calendars", calendars.join(","));
 				fetch(url.toString(), {
@@ -253,8 +343,8 @@
 				}).then((items) => success(items.filter((item) => item.details && item.details.busyOnly || categoryToggles.length === 0 || !hiddenCategories.has(item.categoryId || "")).map((item) => ({
 					id: item.id,
 					title: item.title,
-					start: item.start,
-					end: item.end,
+					start: item.allDay ? item.start : instantToCalendarDate(new Date(item.start), timeZone),
+					end: item.allDay || !item.end ? item.end : instantToCalendarDate(new Date(item.end), timeZone),
 					allDay: item.allDay,
 					color: item.color,
 					editable: item.editable,
@@ -301,11 +391,11 @@
 				const shown = selectedCalendars().filter((id) => writable.has(id));
 				params.set("allDay", info.allDay ? "true" : "false");
 				if (info.allDay) {
-					params.set("start", toDateString(info.start));
-					params.set("end", toDateString(info.end));
+					params.set("start", toDayString(info.start));
+					params.set("end", toDayString(info.end));
 				} else {
-					params.set("start", info.start.toISOString());
-					params.set("end", info.end.toISOString());
+					params.set("start", toInstantString(info.start));
+					params.set("end", toInstantString(info.end));
 				}
 				if (shown.length === 1) {
 					params.set("calendarId", shown[0]);
@@ -435,8 +525,8 @@
 			const body = {
 				eventId: info.event.extendedProps.eventId,
 				originalStartUtc: details.recurring ? details.originalStart : null,
-				start: allDay ? toDateString(info.event.start) : info.event.start.toISOString(),
-				end: info.event.end ? allDay ? toDateString(info.event.end) : info.event.end.toISOString() : null,
+				start: allDay ? toDayString(info.event.start) : toInstantString(info.event.start),
+				end: info.event.end ? allDay ? toDayString(info.event.end) : toInstantString(info.event.end) : null,
 				allDay,
 				scope
 			};

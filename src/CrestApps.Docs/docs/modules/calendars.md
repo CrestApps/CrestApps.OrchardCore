@@ -61,7 +61,9 @@ Two-way providers for Google Calendar and Microsoft 365 are not available yet. T
 
 ### Letting a user choose a time
 
-Any page can let the user choose a time on their own calendar: render the `CalendarPicker` shape (`@await DisplayAsync(await New.CalendarPicker())`) and call `CrestAppsCalendarPicker.open({ date, durationMinutes, title })`. It shows the user's schedule in a modal and resolves with `{ start, end, local }` (`local` is the wall-clock time in the user's time zone, which date inputs in that zone expect), or `null` when the user closes it. Omnichannel uses it for follow-up activities (see the Omnichannel activities docs).
+Any page can let the user choose a time on their own calendar: render the `CalendarPicker` shape (`@await DisplayAsync(await New.CalendarPicker())`) and call `CrestAppsCalendarPicker.open({ date, durationMinutes, title })`. `date` is the time to show as chosen, as a wall-clock time in the user's time zone (what a date input in that zone holds). It shows the user's schedule in a modal and resolves with `{ start, end, local }` (`start` and `end` are instants; `local` is the wall-clock time in the user's time zone, which date inputs in that zone expect), or `null` when the user closes it.
+
+The calendar view and the picker draw times in the user's time zone (`ILocalClock`), not the browser's, so a time clicked is the time a form gets. FullCalendar has no time zone support without a plugin, so it runs in UTC and is given dates whose UTC components are the wall-clock time in the user's zone; `Assets/js/shared/calendar-time.js` converts instants to those dates and back, and the page sends instants to the server. Omnichannel uses it for follow-up activities (see the Omnichannel activities docs).
 
 ### Schedules and event details
 

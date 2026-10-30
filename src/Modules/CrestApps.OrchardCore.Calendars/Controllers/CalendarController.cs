@@ -24,7 +24,6 @@ public sealed class CalendarController : Controller
     private readonly ICalendarService _calendarService;
     private readonly ICalendarTypeManager _typeManager;
     private readonly IStringLocalizerFactory _localizerFactory;
-    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CalendarController"/> class.
@@ -34,21 +33,18 @@ public sealed class CalendarController : Controller
     /// <param name="calendarService">The calendar service.</param>
     /// <param name="typeManager">The calendar type manager.</param>
     /// <param name="localizerFactory">The localizer factory.</param>
-    /// <param name="clock">The clock.</param>
     public CalendarController(
         IAuthorizationService authorizationService,
         ICalendarAccessService accessService,
         ICalendarService calendarService,
         ICalendarTypeManager typeManager,
-        IStringLocalizerFactory localizerFactory,
-        IClock clock)
+        IStringLocalizerFactory localizerFactory)
     {
         _authorizationService = authorizationService;
         _accessService = accessService;
         _calendarService = calendarService;
         _typeManager = typeManager;
         _localizerFactory = localizerFactory;
-        _clock = clock;
     }
 
     /// <summary>
@@ -62,7 +58,7 @@ public sealed class CalendarController : Controller
     /// <param name="userLookup">The user lookup.</param>
     /// <returns>The page.</returns>
     [Admin("calendar", "CalendarView")]
-    public async Task<IActionResult> Index(string date, string view, string calendars, string schedule, string[] people, [FromServices] CalendarUserLookup userLookup, [FromServices] ICalendarCategoryService categoryService)
+    public async Task<IActionResult> Index(string date, string view, string calendars, string schedule, string[] people, [FromServices] CalendarUserLookup userLookup, [FromServices] ICalendarCategoryService categoryService, [FromServices] ILocalClock localClock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CalendarPermissions.AccessCalendars))
         {
@@ -132,13 +128,18 @@ public sealed class CalendarController : Controller
             });
         }
 
+        // The calendar is drawn in the user's time zone, so its times match the ones on forms and elsewhere on the site.
+        var timeZone = await localClock.GetLocalTimeZoneAsync();
+        var today = await localClock.GetLocalNowAsync();
+
         model.ConfigurationJson = JsonSerializer.Serialize(new
         {
             occurrencesUrl = Url.RouteUrl("CalendarsOccurrences"),
             moveUrl = Url.RouteUrl("CalendarsMoveOccurrence"),
             chooseUrl = Url.Action("Choose", "CalendarEvents", new { area = CalendarsConstants.Features.Calendars }),
             createUrl = Url.Action("Create", "CalendarEvents", new { area = CalendarsConstants.Features.Calendars }),
-            initialDate = DateTime.TryParse(date, out var initial) ? initial.ToString("yyyy-MM-dd") : _clock.UtcNow.ToString("yyyy-MM-dd"),
+            initialDate = DateTime.TryParse(date, out var initial) ? initial.ToString("yyyy-MM-dd") : today.ToString("yyyy-MM-dd"),
+            timeZone = timeZone.TimeZoneId,
             initialView = view switch
             {
                 "day" => "timeGridDay",

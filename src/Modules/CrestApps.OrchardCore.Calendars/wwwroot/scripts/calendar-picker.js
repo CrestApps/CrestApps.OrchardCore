@@ -3,38 +3,99 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
+	/**
+	* Returns the browser's IANA time zone, or an empty string when it is unknown.
+	* @returns {string}
+	*/
+	function browserTimeZone() {
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+		} catch {
+			return "";
+		}
+	}
+	/**
+	* Returns the wall-clock time of an instant in a time zone, as a local Date with those components, which is what date
+	* inputs that work in that zone expect.
+	* @param {Date} instant
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function toWallClock(instant, timeZone) {
+		if (!timeZone) return new Date(instant.getTime());
+		try {
+			const parts = new Intl.DateTimeFormat("en-US", {
+				timeZone,
+				hourCycle: "h23",
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit",
+				hour: "2-digit",
+				minute: "2-digit",
+				second: "2-digit"
+			}).formatToParts(instant);
+			/** @param {string} type */
+			const part = (type) => Number((parts.find((item) => item.type === type) || { value: "0" }).value);
+			return new Date(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
+		} catch {
+			return new Date(instant.getTime());
+		}
+	}
+	/**
+	* Returns a wall-clock time as a calendar date: a Date whose UTC components are that time.
+	* @param {Date} local A local Date whose components are the wall-clock time.
+	* @returns {Date}
+	*/
+	function toCalendarDate(local) {
+		return new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate(), local.getHours(), local.getMinutes(), local.getSeconds()));
+	}
+	/**
+	* Returns the wall-clock time a calendar date stands for, as a local Date with those components.
+	* @param {Date} value
+	* @returns {Date}
+	*/
+	function fromCalendarDate(value) {
+		return new Date(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), value.getUTCHours(), value.getUTCMinutes(), value.getUTCSeconds());
+	}
+	/**
+	* Returns the instant of a wall-clock time in a time zone; the reverse of toWallClock.
+	* @param {Date} local A local Date whose components are the wall-clock time.
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function fromWallClock(local, timeZone) {
+		if (!timeZone) return new Date(local.getTime());
+		const wanted = toCalendarDate(local).getTime();
+		let instant = wanted;
+		for (let pass = 0; pass < 2; pass++) instant += wanted - toCalendarDate(toWallClock(new Date(instant), timeZone)).getTime();
+		return new Date(instant);
+	}
+	/**
+	* Returns the calendar date of an instant in a time zone.
+	* @param {Date} instant
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function instantToCalendarDate(instant, timeZone) {
+		return toCalendarDate(toWallClock(instant, timeZone));
+	}
+	/**
+	* Returns the instant a calendar date stands for in a time zone.
+	* @param {Date} value
+	* @param {string} timeZone
+	* @returns {Date}
+	*/
+	function calendarDateToInstant(value, timeZone) {
+		return fromWallClock(fromCalendarDate(value), timeZone);
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-picker.js
 	(function() {
 		/**
-		* Returns the wall-clock time of an instant in a time zone, as a local Date with those components, which is what date
-		* inputs that work in that zone expect.
-		* @param {Date} instant
-		* @param {string} timeZone
-		* @returns {Date}
-		*/
-		const toWallClock = (instant, timeZone) => {
-			if (!timeZone) return new Date(instant.getTime());
-			try {
-				const parts = new Intl.DateTimeFormat("en-US", {
-					timeZone,
-					hourCycle: "h23",
-					year: "numeric",
-					month: "2-digit",
-					day: "2-digit",
-					hour: "2-digit",
-					minute: "2-digit",
-					second: "2-digit"
-				}).formatToParts(instant);
-				/** @param {string} type */
-				const part = (type) => Number((parts.find((item) => item.type === type) || { value: "0" }).value);
-				return new Date(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
-			} catch {
-				return new Date(instant.getTime());
-			}
-		};
-		/**
 		* Opens the picker.
-		* @param {{ date?: Date | null, durationMinutes?: number, title?: string }} [options]
+		* @param {{ date?: Date | null, durationMinutes?: number, title?: string }} [options] The date is the wall-clock time
+		* to show as chosen, in the user's time zone (what a date input in that zone holds), like the local time it returns.
 		* @returns {Promise<{ start: Date, end: Date, local: Date } | null>} The chosen instant, its end, and its wall-clock
 		* time in the user's time zone; or null when the user closes the picker.
 		*/
@@ -43,7 +104,12 @@
 			if (!settings || !window.FullCalendar || !window.bootstrap) return Promise.resolve(null);
 			const data = settings.dataset;
 			const durationMinutes = options && options.durationMinutes ? options.durationMinutes : 15;
-			const initial = options && options.date ? options.date : /* @__PURE__ */ new Date();
+			const browserZone = browserTimeZone();
+			const timeZone = data.timeZone || browserZone;
+			/** @param {Date} instant */
+			const toZoneCalendarDate = (instant) => instantToCalendarDate(instant, timeZone);
+			const initialLocal = options && options.date ? options.date : toWallClock(/* @__PURE__ */ new Date(), timeZone);
+			const initial = toCalendarDate(initialLocal);
 			const modal = document.createElement("div");
 			modal.className = "modal fade";
 			modal.tabIndex = -1;
@@ -69,6 +135,7 @@
 			body.id = "calendar-picker-modal";
 			hint.className = "text-muted small";
 			hint.textContent = data.hintText || "";
+			if (timeZone && browserZone && timeZone !== browserZone) hint.textContent += ` ${(data.zoneText || "").replace("{0}", timeZone)}`;
 			header.append(title, close);
 			body.append(hint, host);
 			content.append(header, body);
@@ -83,6 +150,8 @@
 					initialView: host.clientWidth < 576 || window.innerWidth < 576 ? "timeGridDay" : "timeGridWeek",
 					initialDate: initial,
 					locale: data.locale || void 0,
+					timeZone: "UTC",
+					now: () => toZoneCalendarDate(/* @__PURE__ */ new Date()),
 					headerToolbar: {
 						left: "prev,next today",
 						center: "title",
@@ -93,11 +162,11 @@
 						day: data.dayText,
 						week: data.weekText
 					},
-					height: "auto",
+					height: Math.max(360, Math.round(window.innerHeight * .65)),
 					nowIndicator: true,
 					selectable: true,
 					selectMirror: true,
-					scrollTime: `${String(Math.max(0, initial.getHours() - 1)).padStart(2, "0")}:00:00`,
+					scrollTime: `${String(Math.max(0, initialLocal.getHours() - 1)).padStart(2, "0")}:00:00`,
 					slotDuration: "00:15:00",
 					snapDuration: "00:15:00",
 					/**
@@ -111,8 +180,8 @@
 							success([]);
 							return;
 						}
-						url.searchParams.set("start", info.start.toISOString());
-						url.searchParams.set("end", info.end.toISOString());
+						url.searchParams.set("start", (/* @__PURE__ */ new Date(info.start.getTime() - 864e5)).toISOString());
+						url.searchParams.set("end", new Date(info.end.getTime() + 864e5).toISOString());
 						url.searchParams.set("schedule", data.userId);
 						fetch(url.toString(), {
 							credentials: "same-origin",
@@ -120,8 +189,8 @@
 						}).then((response) => response.ok ? response.json() : []).then((items) => success([...items.map((item) => ({
 							id: item.id,
 							title: item.title,
-							start: item.start,
-							end: item.end,
+							start: item.allDay ? item.start : toZoneCalendarDate(new Date(item.start)),
+							end: item.allDay || !item.end ? item.end : toZoneCalendarDate(new Date(item.end)),
 							allDay: item.allDay,
 							color: item.color,
 							editable: false
@@ -141,10 +210,11 @@
 							return;
 						}
 						const end = info.end && info.end > info.start ? info.end : new Date(info.start.getTime() + durationMinutes * 6e4);
+						const local = fromCalendarDate(info.start);
 						chosen = {
-							start: info.start,
-							end,
-							local: toWallClock(info.start, data.timeZone || "")
+							start: fromWallClock(local, timeZone),
+							end: calendarDateToInstant(end, timeZone),
+							local
 						};
 						bootstrapModal.hide();
 					}
@@ -160,7 +230,8 @@
 		};
 		window.CrestAppsCalendarPicker = {
 			open,
-			toWallClock
+			toWallClock,
+			fromWallClock
 		};
 	})();
 	//#endregion

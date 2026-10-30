@@ -62,9 +62,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
-            .UseDisplayDriver<OmnichannelContactPartDisplayDriver>()
-            .UseDisplayDriver<OmnichannelContactMemoryDisplayDriver>();
-        services.AddScoped<ILeadConversionRepointer, AIContactMemoryLeadConversionRepointer>();
+            .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
         services.AddContactMethods();
         services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
@@ -145,6 +143,11 @@ public sealed class AISubjectFlowStartup : StartupBase
             .AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectAISettingsDisplayDriver>()
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
+
+        // The contact memory lives in the AI feature, so its editor and lead-conversion repointer come with it.
+        services.AddContentPart<OmnichannelContactPart>()
+            .UseDisplayDriver<OmnichannelContactMemoryDisplayDriver>();
+        services.AddScoped<ILeadConversionRepointer, AIContactMemoryLeadConversionRepointer>();
 
         // The automated-activity processing tunables, and their startup validation.
         services.Configure<OmnichannelAutomationOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Automation"));

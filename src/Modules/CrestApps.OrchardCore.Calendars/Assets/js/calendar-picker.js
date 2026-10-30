@@ -1,45 +1,24 @@
 // @ts-check
 // Lets a page ask the user to choose a time on their own calendar. The page renders the CalendarPicker shape and calls
 // CrestAppsCalendarPicker.open(): a modal shows the user's schedule (their calendars and the events they attend) so they
-// can see when they're free, and resolves with the time they click or drag across, or null when they close it.
+// can see when they're free, and resolves with the time they click or drag across, or null when they close it. The
+// calendar is drawn in the user's time zone, not the browser's, so the time they click is the time they get.
+
+import {
+    browserTimeZone,
+    calendarDateToInstant,
+    fromCalendarDate,
+    fromWallClock,
+    instantToCalendarDate,
+    toCalendarDate,
+    toWallClock,
+} from './shared/calendar-time.js';
 
 (function () {
     /**
-     * Returns the wall-clock time of an instant in a time zone, as a local Date with those components, which is what date
-     * inputs that work in that zone expect.
-     * @param {Date} instant
-     * @param {string} timeZone
-     * @returns {Date}
-     */
-    const toWallClock = (instant, timeZone) => {
-        if (!timeZone) {
-            return new Date(instant.getTime());
-        }
-
-        try {
-            const parts = new Intl.DateTimeFormat('en-US', {
-                timeZone,
-                hourCycle: 'h23',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-            }).formatToParts(instant);
-
-            /** @param {string} type */
-            const part = (type) => Number((parts.find((item) => item.type === type) || { value: '0' }).value);
-
-            return new Date(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'), part('second'));
-        } catch {
-            return new Date(instant.getTime());
-        }
-    };
-
-    /**
      * Opens the picker.
-     * @param {{ date?: Date | null, durationMinutes?: number, title?: string }} [options]
+     * @param {{ date?: Date | null, durationMinutes?: number, title?: string }} [options] The date is the wall-clock time
+     * to show as chosen, in the user's time zone (what a date input in that zone holds), like the local time it returns.
      * @returns {Promise<{ start: Date, end: Date, local: Date } | null>} The chosen instant, its end, and its wall-clock
      * time in the user's time zone; or null when the user closes the picker.
      */
@@ -53,7 +32,15 @@
 
         const data = settings.dataset;
         const durationMinutes = options && options.durationMinutes ? options.durationMinutes : 15;
-        const initial = options && options.date ? options.date : new Date();
+        const browserZone = browserTimeZone();
+        const timeZone = data.timeZone || browserZone;
+
+        /** @param {Date} instant */
+        const toZoneCalendarDate = (instant) => instantToCalendarDate(instant, timeZone);
+
+        // Everything the calendar shows, the chosen time included, is a wall-clock time in the user's time zone.
+        const initialLocal = options && options.date ? options.date : toWallClock(new Date(), timeZone);
+        const initial = toCalendarDate(initialLocal);
 
         const modal = document.createElement('div');
 
@@ -83,6 +70,12 @@
         body.id = 'calendar-picker-modal';
         hint.className = 'text-muted small';
         hint.textContent = data.hintText || '';
+
+        // The times are the user's, which aren't the computer's when they're away; say which they are.
+        if (timeZone && browserZone && timeZone !== browserZone) {
+            hint.textContent += ` ${(data.zoneText || '').replace('{0}', timeZone)}`;
+        }
+
         header.append(title, close);
         body.append(hint, host);
         content.append(header, body);
@@ -102,13 +95,16 @@
                 initialView: host.clientWidth < 576 || window.innerWidth < 576 ? 'timeGridDay' : 'timeGridWeek',
                 initialDate: initial,
                 locale: data.locale || undefined,
+                timeZone: 'UTC',
+                now: () => toZoneCalendarDate(new Date()),
                 headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek' },
                 buttonText: { today: data.todayText, day: data.dayText, week: data.weekText },
-                height: 'auto',
+                // A fixed height keeps the toolbar in view and lets the calendar open at the chosen time.
+                height: Math.max(360, Math.round(window.innerHeight * 0.65)),
                 nowIndicator: true,
                 selectable: true,
                 selectMirror: true,
-                scrollTime: `${String(Math.max(0, initial.getHours() - 1)).padStart(2, '0')}:00:00`,
+                scrollTime: `${String(Math.max(0, initialLocal.getHours() - 1)).padStart(2, '0')}:00:00`,
                 slotDuration: '00:15:00',
                 snapDuration: '00:15:00',
                 /**
@@ -125,8 +121,9 @@
                         return;
                     }
 
-                    url.searchParams.set('start', info.start.toISOString());
-                    url.searchParams.set('end', info.end.toISOString());
+                    // The range is in the user's time zone; a day either side covers any offset from UTC.
+                    url.searchParams.set('start', new Date(info.start.getTime() - 86400000).toISOString());
+                    url.searchParams.set('end', new Date(info.end.getTime() + 86400000).toISOString());
                     url.searchParams.set('schedule', data.userId);
 
                     fetch(url.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
@@ -135,8 +132,8 @@
                             ...items.map((/** @type {any} */ item) => ({
                                 id: item.id,
                                 title: item.title,
-                                start: item.start,
-                                end: item.end,
+                                start: item.allDay ? item.start : toZoneCalendarDate(new Date(item.start)),
+                                end: item.allDay || !item.end ? item.end : toZoneCalendarDate(new Date(item.end)),
                                 allDay: item.allDay,
                                 color: item.color,
                                 editable: false,
@@ -162,7 +159,9 @@
 
                     const end = info.end && info.end > info.start ? info.end : new Date(info.start.getTime() + durationMinutes * 60000);
 
-                    chosen = { start: info.start, end, local: toWallClock(info.start, data.timeZone || '') };
+                    const local = fromCalendarDate(info.start);
+
+                    chosen = { start: fromWallClock(local, timeZone), end: calendarDateToInstant(end, timeZone), local };
                     bootstrapModal.hide();
                 },
             });
@@ -179,5 +178,5 @@
     };
 
     // @ts-ignore
-    window.CrestAppsCalendarPicker = { open, toWallClock };
+    window.CrestAppsCalendarPicker = { open, toWallClock, fromWallClock };
 })();

@@ -1,6 +1,9 @@
 // @ts-check
 // Draws the calendar view with FullCalendar: loads the occurrences of the calendars ticked in the side list, opens an
 // occurrence's details when it is clicked, moves it when it is dragged or resized, and starts a new event from a selection.
+// The calendar is drawn in the user's time zone (see shared/calendar-time.js), so its times match the rest of the site.
+
+import { browserTimeZone, calendarDateToInstant, instantToCalendarDate, toDayString } from './shared/calendar-time.js';
 
 /**
  * Reads the localized labels the page renders in its template.
@@ -103,18 +106,6 @@ function renderEditor(target, html) {
 }
 
 /**
- * Formats a date as yyyy-MM-dd in local time.
- * @param {Date} date
- * @returns {string}
- */
-function toDateString(date) {
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-
-    return `${date.getFullYear()}-${month}-${day}`;
-}
-
-/**
  * Adds a term and its value to a definition list.
  * @param {HTMLElement} list
  * @param {string} term
@@ -196,6 +187,10 @@ function initialize() {
     }
 
     const config = JSON.parse(root.getAttribute('data-config') || '{}');
+    const timeZone = config.timeZone || browserTimeZone();
+
+    /** @param {Date} value A date FullCalendar gives back. */
+    const toInstantString = (value) => calendarDateToInstant(value, timeZone).toISOString();
     const labels = readLabels();
     const tokenInput = /** @type {HTMLInputElement | null} */ (document.querySelector('#calendar-antiforgery input[name="__RequestVerificationToken"]'));
     const storageKey = 'crestapps-calendar-selection';
@@ -267,6 +262,8 @@ function initialize() {
         initialView: narrow && config.initialView === 'timeGridWeek' ? 'timeGridDay' : config.initialView,
         initialDate: config.initialDate,
         locale: config.locale,
+        timeZone: 'UTC',
+        now: () => instantToCalendarDate(new Date(), timeZone),
         ...toolbars(narrow),
         views: {
             timeGridWeek: { dayHeaderFormat: { weekday: 'short', day: 'numeric' } },
@@ -325,8 +322,9 @@ function initialize() {
 
             const url = new URL(config.occurrencesUrl, window.location.origin);
 
-            url.searchParams.set('start', info.start.toISOString());
-            url.searchParams.set('end', info.end.toISOString());
+            // The range is in the user's time zone; a day either side covers any offset from UTC.
+            url.searchParams.set('start', new Date(info.start.getTime() - 86400000).toISOString());
+            url.searchParams.set('end', new Date(info.end.getTime() + 86400000).toISOString());
 
             if (config.schedule) {
                 url.searchParams.set('schedule', config.schedule);
@@ -345,8 +343,8 @@ function initialize() {
                 .then((items) => success(items.filter((/** @type {any} */ item) => (item.details && item.details.busyOnly) || categoryToggles.length === 0 || !hiddenCategories.has(item.categoryId || '')).map((/** @type {any} */ item) => ({
                     id: item.id,
                     title: item.title,
-                    start: item.start,
-                    end: item.end,
+                    start: item.allDay ? item.start : instantToCalendarDate(new Date(item.start), timeZone),
+                    end: item.allDay || !item.end ? item.end : instantToCalendarDate(new Date(item.end), timeZone),
                     allDay: item.allDay,
                     color: item.color,
                     editable: item.editable,
@@ -408,11 +406,11 @@ function initialize() {
             params.set('allDay', info.allDay ? 'true' : 'false');
 
             if (info.allDay) {
-                params.set('start', toDateString(info.start));
-                params.set('end', toDateString(info.end));
+                params.set('start', toDayString(info.start));
+                params.set('end', toDayString(info.end));
             } else {
-                params.set('start', info.start.toISOString());
-                params.set('end', info.end.toISOString());
+                params.set('start', toInstantString(info.start));
+                params.set('end', toInstantString(info.end));
             }
 
             if (shown.length === 1) {
@@ -582,8 +580,8 @@ function initialize() {
         const body = {
             eventId: info.event.extendedProps.eventId,
             originalStartUtc: details.recurring ? details.originalStart : null,
-            start: allDay ? toDateString(info.event.start) : info.event.start.toISOString(),
-            end: info.event.end ? (allDay ? toDateString(info.event.end) : info.event.end.toISOString()) : null,
+            start: allDay ? toDayString(info.event.start) : toInstantString(info.event.start),
+            end: info.event.end ? (allDay ? toDayString(info.event.end) : toInstantString(info.event.end)) : null,
             allDay,
             scope,
         };
