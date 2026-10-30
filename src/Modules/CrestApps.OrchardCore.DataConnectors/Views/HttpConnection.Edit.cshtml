@@ -54,7 +54,7 @@
         <div class="ocat-wrapper">
             <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
             <div class="ocat-end">
-                <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? savedPlaceholder : string.Empty)" />
+                <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? savedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ApiKey" class="text-danger"></span>
             </div>
         </div>
@@ -71,7 +71,7 @@
         <div class="ocat-wrapper" data-auth="Basic" data-grant="Password">
             <label asp-for="Password" class="ocat-label">@T["Password"]</label>
             <div class="ocat-end">
-                <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasPassword ? savedPlaceholder : string.Empty)" />
+                <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasPassword ? savedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             </div>
         </div>
     </div>
@@ -80,7 +80,7 @@
         <div class="ocat-wrapper">
             <label asp-for="BearerToken" class="ocat-label">@T["Bearer token"]</label>
             <div class="ocat-end">
-                <input asp-for="BearerToken" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasBearerToken ? savedPlaceholder : string.Empty)" />
+                <input asp-for="BearerToken" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasBearerToken ? savedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="BearerToken" class="text-danger"></span>
                 <span class="hint">@T["Sent as \"Authorization: Bearer &lt;token&gt;\" with every request. Use OAuth 2.0 or OpenID Connect instead when the token expires."]</span>
             </div>
@@ -122,7 +122,7 @@
         <div class="ocat-wrapper">
             <label asp-for="ClientSecret" class="ocat-label">@T["Client secret"]</label>
             <div class="ocat-end">
-                <input asp-for="ClientSecret" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasClientSecret ? savedPlaceholder : string.Empty)" />
+                <input asp-for="ClientSecret" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasClientSecret ? savedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             </div>
         </div>
         <div class="ocat-wrapper">

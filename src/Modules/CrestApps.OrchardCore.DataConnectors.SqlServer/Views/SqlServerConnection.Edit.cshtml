@@ -50,7 +50,7 @@
     <div class="ocat-wrapper" data-sign-in="SqlLogin EntraServicePrincipal">
         <label asp-for="Password" class="ocat-label">@T["Password or client secret"]</label>
         <div class="ocat-end">
-            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasPassword ? T["Saved. Leave empty to keep it."].Value : string.Empty)" />
+            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasPassword ? T["Saved. Leave empty to keep it."].Value : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="Password" class="text-danger"></span>
             <span class="hint">@T["Stored encrypted with the site's data protection keys and never shown again."]</span>
         </div>
