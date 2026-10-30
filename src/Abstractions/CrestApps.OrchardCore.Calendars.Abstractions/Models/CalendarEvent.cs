@@ -91,6 +91,12 @@ public sealed class CalendarEvent : CatalogItem
     public string Color { get; set; }
 
     /// <summary>
+    /// Gets or sets the category the event is in, which colors it on the calendar and lets people filter by it; or
+    /// <see langword="null"/>. See <c>ICalendarCategoryService</c>.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets how many minutes before the start the event's people are reminded (with Calendar Reminders on); empty for
     /// no reminder. The people are the owner of a personal calendar and the users invited who haven't declined.
     /// </summary>

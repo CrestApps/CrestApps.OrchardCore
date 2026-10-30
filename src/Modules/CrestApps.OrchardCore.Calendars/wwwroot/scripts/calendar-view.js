@@ -143,6 +143,19 @@
 		const labels = readLabels();
 		const tokenInput = document.querySelector("#calendar-antiforgery input[name=\"__RequestVerificationToken\"]");
 		const storageKey = "crestapps-calendar-selection";
+		const categoryStorageKey = "crestapps-calendar-hidden-categories";
+		const categoryToggles = Array.from(document.querySelectorAll("[data-category-toggle]"));
+		/** @type {Set<string>} */
+		let hiddenCategories = /* @__PURE__ */ new Set();
+		try {
+			const savedHidden = JSON.parse(window.localStorage.getItem(categoryStorageKey) || "[]");
+			if (Array.isArray(savedHidden)) {
+				hiddenCategories = new Set(savedHidden.map(String));
+				categoryToggles.forEach((toggle) => {
+					toggle.checked = !hiddenCategories.has(toggle.value);
+				});
+			}
+		} catch {}
 		const toggles = Array.from(document.querySelectorAll("[data-calendar-toggle]"));
 		if (!new URLSearchParams(window.location.search).has("calendars")) try {
 			const saved = JSON.parse(window.localStorage.getItem(storageKey) || "null");
@@ -237,7 +250,7 @@
 				}).then((response) => {
 					if (!response.ok) throw new Error(String(response.status));
 					return response.json();
-				}).then((items) => success(items.map((item) => ({
+				}).then((items) => success(items.filter((item) => item.details && item.details.busyOnly || categoryToggles.length === 0 || !hiddenCategories.has(item.categoryId || "")).map((item) => ({
 					id: item.id,
 					title: item.title,
 					start: item.start,
@@ -264,6 +277,7 @@
 				list.replaceChildren();
 				if (details.busyOnly) addDetail(list, "", labels.busy);
 				addDetail(list, labels.calendar, details.calendar);
+				addDetail(list, labels.category, details.category);
 				addDetail(list, labels.type, details.eventType);
 				addDetail(list, labels.location, details.location);
 				addDetail(list, labels.status, details.status);
@@ -453,6 +467,13 @@
 		toggles.forEach((toggle) => toggle.addEventListener("change", () => {
 			try {
 				window.localStorage.setItem(storageKey, JSON.stringify(selectedCalendars()));
+			} catch {}
+			calendar.refetchEvents();
+		}));
+		categoryToggles.forEach((toggle) => toggle.addEventListener("change", () => {
+			hiddenCategories = new Set(categoryToggles.filter((item) => !item.checked).map((item) => item.value));
+			try {
+				window.localStorage.setItem(categoryStorageKey, JSON.stringify(Array.from(hiddenCategories)));
 			} catch {}
 			calendar.refetchEvents();
 		}));

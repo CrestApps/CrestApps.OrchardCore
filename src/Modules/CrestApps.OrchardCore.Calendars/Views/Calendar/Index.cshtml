@@ -59,6 +59,27 @@
                 }
             </div>
         </div>
+        @if (Model.Categories.Count > 0)
+        {
+            <div class="card text-bg-theme mb-3">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-muted">@T["Categories"]</h2>
+                    <ul class="list-unstyled calendar-list mb-0">
+                        @foreach (var category in Model.Categories)
+                        {
+                            <li class="form-check">
+                                <input class="form-check-input" type="checkbox" value="@category.ItemId" id="category-@category.ItemId" checked data-category-toggle style="--calendar-color: @category.Color" />
+                                <label class="form-check-label" for="category-@category.ItemId">@category.Name</label>
+                            </li>
+                        }
+                        <li class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="category-none" checked data-category-toggle />
+                            <label class="form-check-label text-muted" for="category-none">@T["No category"]</label>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        }
         @if (Model.CanViewSchedules)
         {
             <form class="card text-bg-theme mb-3" method="get" asp-action="Index">
@@ -96,6 +117,7 @@
         }
         <div class="d-grid gap-2">
             <a class="btn btn-sm btn-outline-secondary" asp-controller="Calendars" asp-action="Index">@T["Manage calendars"]</a>
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="CalendarCategories" asp-action="Index">@T["Manage categories"]</a>
         </div>
     </div>
     <div class="col-lg-8 col-xl-9 col-xxl-10">
@@ -176,6 +198,7 @@
 
 <template id="calendar-labels">
     <span data-label="calendar">@T["Calendar"]</span>
+    <span data-label="category">@T["Category"]</span>
     <span data-label="type">@T["Kind"]</span>
     <span data-label="location">@T["Location"]</span>
     <span data-label="status">@T["Status"]</span>

@@ -19,6 +19,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <label asp-for="CategoryId" class="ocat-label">@T["Category"]</label>
+    <div class="ocat-end">
+        <select asp-for="CategoryId" asp-items="Model.CategoryOptions" class="form-select" style="max-width: 20rem">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["Colors the event on the calendar and lets you filter by it."] <a asp-controller="CalendarCategories" asp-action="Index" target="_blank">@T["Manage categories"]</a></span>
+    </div>
+</div>
+
 @if (Model.SupportsAllDay)
 {
     <div class="ocat-wrapper">

@@ -110,6 +110,7 @@ The event editor has three tabs.
 | --- | --- |
 | **Title** | The event's name. |
 | **Kind of event** | The kinds the calendar's type offers. The kind sets its color and its defaults, such as how long it lasts. |
+| **Category** | One of your categories (see [Color-code with categories](#color-code-with-categories)). Its color wins over the kind's. |
 | **All day** | Lasts whole days. **Ends** is then the last day it lasts. |
 | **Starts**, **Ends** | When it starts and ends. |
 | **Time zone** | A repeating event keeps its time of day in this time zone, across daylight saving changes. |
@@ -149,6 +150,15 @@ A kind of event that needs approval, such as **Time off**, is created as *Tentat
 With Resource Calendars on, add a **Room** or **Equipment** calendar for each room or item. To book one, invite it under **Rooms and equipment** on any event, or add a **Booking** directly on the room's calendar. A room takes one booking at a time, so a second booking for the same time is refused with a message saying the room is already booked. A booking that the room has declined doesn't count.
 
 Office calendars work the same way with their desk count: once that many people are in the office or have booked a desk at the same time, the next one is refused.
+
+## Color-code with categories
+
+Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps you read your week at a glance. Open **Calendars > Categories**, choose **Add category**, give it a **Name** and a **Color**, and **Save**. Then pick it as an event's **Category** in the event editor.
+
+- An event shows in its category's color, unless the event picks its own color under **Color**.
+- The calendar view lists your categories under **Categories**, with **No category** at the end. Untick a category to hide its events; your choice is remembered in this browser.
+- Your categories are only yours. People who can manage all calendars can also tick **Everyone can use it**, to make a category everyone sees and uses (such as "Company holiday").
+- Deleting a category keeps its events; they show again in their kind's color.
 
 ## See someone else's schedule
 

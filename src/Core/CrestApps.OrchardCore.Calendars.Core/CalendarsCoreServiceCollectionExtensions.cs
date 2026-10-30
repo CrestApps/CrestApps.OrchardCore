@@ -24,6 +24,7 @@ public static class CalendarsCoreServiceCollectionExtensions
         services.TryAddScoped<ICalendarStore, CalendarStore>();
         services.TryAddScoped<ICalendarEventStore, CalendarEventStore>();
         services.TryAddScoped<ICalendarAccessService, DefaultCalendarAccessService>();
+        services.TryAddScoped<ICalendarCategoryService, DefaultCalendarCategoryService>();
         services.TryAddScoped<ICalendarService, DefaultCalendarService>();
         services.TryAddScoped<ICalendarQueryService, DefaultCalendarQueryService>();
         services.TryAddScoped<ICalendarAvailabilityService, DefaultCalendarAvailabilityService>();

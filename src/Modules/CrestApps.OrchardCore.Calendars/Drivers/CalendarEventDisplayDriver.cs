@@ -3,11 +3,12 @@ using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Calendars.ViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
@@ -27,6 +28,8 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly IClock _clock;
     private readonly IShellFeaturesManager _shellFeaturesManager;
+    private readonly ICalendarCategoryService _categoryService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -36,6 +39,8 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         IStringLocalizerFactory localizerFactory,
         IClock clock,
         IShellFeaturesManager shellFeaturesManager,
+        ICalendarCategoryService categoryService,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<CalendarEventDisplayDriver> stringLocalizer)
     {
         _calendarService = calendarService;
@@ -43,6 +48,8 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         _localizerFactory = localizerFactory;
         _clock = clock;
         _shellFeaturesManager = shellFeaturesManager;
+        _categoryService = categoryService;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -52,6 +59,14 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         var type = calendar is null ? null : _typeManager.FindType(calendar.Type);
         var eventTypes = calendar is null ? [] : _typeManager.ListEventTypes(calendar.Type);
         var remindersEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(CalendarsConstants.Features.Reminders);
+        var categories = (await _categoryService.ListAsync(CalendarUser.GetId(_httpContextAccessor.HttpContext?.User))).ToList();
+
+        // An event someone else put in their own category keeps it, shown by name.
+        if (!string.IsNullOrEmpty(calendarEvent.CategoryId) && categories.All(category => category.ItemId != calendarEvent.CategoryId) &&
+            await _categoryService.FindByIdAsync(calendarEvent.CategoryId) is { } current)
+        {
+            categories.Insert(0, current);
+        }
 
         return Initialize<CalendarEventGeneralViewModel>("CalendarEventGeneral_Edit", model =>
         {
@@ -76,6 +91,8 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
             model.Transparency = calendarEvent.Transparency.ToString();
             model.ReminderMinutes = calendarEvent.ReminderMinutes.Count > 0 ? calendarEvent.ReminderMinutes[0].ToString(CultureInfo.InvariantCulture) : string.Empty;
             model.RemindersEnabled = remindersEnabled;
+            model.CategoryId = calendarEvent.CategoryId;
+            model.CategoryOptions = categories.Select(category => new SelectListItem(category.Name, category.ItemId, category.ItemId == calendarEvent.CategoryId)).ToList();
             model.Visibility = calendarEvent.Visibility.ToString();
             model.UseColor = !string.IsNullOrEmpty(calendarEvent.Color);
             model.Color = calendarEvent.Color ?? _typeManager.FindEventType(calendar?.Type, calendarEvent.EventType)?.Color ?? calendar?.Color ?? "#1971c2";
@@ -100,6 +117,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
 
         calendarEvent.Title = model.Title?.Trim();
         calendarEvent.EventType = model.EventType;
+        calendarEvent.CategoryId = string.IsNullOrWhiteSpace(model.CategoryId) ? null : model.CategoryId.Trim();
         calendarEvent.AllDay = model.AllDay;
         calendarEvent.Location = string.IsNullOrWhiteSpace(model.Location) ? null : model.Location.Trim();
         calendarEvent.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim();

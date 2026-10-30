@@ -9,6 +9,14 @@ internal sealed class CalendarMigrations : DataMigration
     {
         await CalendarIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 1;
+        return 2;
+    }
+
+    // The categories events are put in.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CalendarIndexSchema.CreateCategoriesAsync(SchemaBuilder);
+
+        return 2;
     }
 }

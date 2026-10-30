@@ -20,6 +20,8 @@ internal sealed class CalendarViewEventMapper
     private readonly LinkGenerator _linkGenerator;
     private readonly IStringLocalizer S;
 
+    private Dictionary<string, CalendarCategory> _categories = new(StringComparer.Ordinal);
+
     public CalendarViewEventMapper(
         HttpContext httpContext,
         ICalendarTypeManager typeManager,
@@ -34,11 +36,20 @@ internal sealed class CalendarViewEventMapper
         S = stringLocalizer;
     }
 
+    // The categories of the occurrences about to be mapped, looked up once.
+    public async Task LoadCategoriesAsync(IEnumerable<CalendarOccurrence> occurrences, ICalendarCategoryService categoryService, CancellationToken cancellationToken)
+    {
+        var ids = occurrences.Select(occurrence => occurrence.Event.CategoryId).Where(id => !string.IsNullOrEmpty(id));
+
+        _categories = (await categoryService.GetAsync(ids, cancellationToken)).ToDictionary(category => category.ItemId, StringComparer.Ordinal);
+    }
+
     public CalendarViewEvent Map(CalendarOccurrence occurrence, CalendarAccess access)
     {
         var calendarEvent = occurrence.Event;
         var calendar = access?.Calendar;
         var eventType = calendar is null ? null : _typeManager.FindEventType(calendar.Type, calendarEvent.EventType);
+        var category = occurrence.BusyOnly || string.IsNullOrEmpty(calendarEvent.CategoryId) ? null : _categories.GetValueOrDefault(calendarEvent.CategoryId);
         var canChange = calendar is not null && !occurrence.BusyOnly && calendarEvent.Editable && !string.IsNullOrEmpty(calendarEvent.ItemId) && access.Level >= CalendarAccessLevel.Write;
         var editUrl = canChange
             ? _linkGenerator.GetPathByAction(_httpContext, "Edit", "CalendarEvents", new
@@ -58,12 +69,16 @@ internal sealed class CalendarViewEventMapper
             AllDay = calendarEvent.AllDay,
             Start = calendarEvent.AllDay ? occurrence.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : CalendarAdminEndpoints.FormatInstant(occurrence.StartUtc),
             End = calendarEvent.AllDay ? occurrence.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : CalendarAdminEndpoints.FormatInstant(occurrence.EndUtc),
-            Color = occurrence.BusyOnly ? "#868e96" : calendarEvent.Color ?? eventType?.Color ?? calendar?.Color,
+            CategoryId = occurrence.BusyOnly ? null : calendarEvent.CategoryId,
+
+            // An event's own color first, then its category's, its kind's and its calendar's.
+            Color = occurrence.BusyOnly ? "#868e96" : calendarEvent.Color ?? category?.Color ?? eventType?.Color ?? calendar?.Color,
             Editable = canChange,
             Details = new CalendarViewEventDetails
             {
                 BusyOnly = occurrence.BusyOnly,
                 Calendar = calendar?.Name,
+                Category = category?.Name,
                 EventType = occurrence.BusyOnly || eventType is null ? null : _localizerFactory.Localize(eventType.DisplayName).Value,
                 Location = occurrence.BusyOnly ? null : calendarEvent.Location,
                 Description = occurrence.BusyOnly ? null : calendarEvent.Description,

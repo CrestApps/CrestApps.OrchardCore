@@ -34,11 +34,13 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CalendarsConstants.CollectionName));
         services.AddDataMigration<CalendarMigrations>()
             .AddIndexProvider<CalendarIndexProvider>()
-            .AddIndexProvider<CalendarEventIndexProvider>();
+            .AddIndexProvider<CalendarEventIndexProvider>()
+            .AddIndexProvider<CalendarCategoryIndexProvider>();
 
         services.AddCalendarsCore();
         services.AddScoped<CalendarEventEditor>();
         services.AddScoped<CalendarUserLookup>();
+        services.AddDisplayDriver<CalendarCategory, CalendarCategoryDisplayDriver>();
         // The handler reaches these lazily: the access service authorizes, so a direct dependency would be a cycle.
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.TryAddScoped(sp => new Lazy<ICalendarService>(sp.GetRequiredService<ICalendarService>));

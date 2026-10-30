@@ -199,6 +199,25 @@ function initialize() {
     const labels = readLabels();
     const tokenInput = /** @type {HTMLInputElement | null} */ (document.querySelector('#calendar-antiforgery input[name="__RequestVerificationToken"]'));
     const storageKey = 'crestapps-calendar-selection';
+    const categoryStorageKey = 'crestapps-calendar-hidden-categories';
+    const categoryToggles = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll('[data-category-toggle]')));
+
+    // The categories unticked in the side list; "No category" is the empty value. Busy blocks are always shown.
+    /** @type {Set<string>} */
+    let hiddenCategories = new Set();
+
+    try {
+        const savedHidden = JSON.parse(window.localStorage.getItem(categoryStorageKey) || '[]');
+
+        if (Array.isArray(savedHidden)) {
+            hiddenCategories = new Set(savedHidden.map(String));
+            categoryToggles.forEach((toggle) => {
+                toggle.checked = !hiddenCategories.has(toggle.value);
+            });
+        }
+    } catch {
+        // Storage can be unavailable; every category is then shown.
+    }
     const toggles = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll('[data-calendar-toggle]')));
     const hasRequestedCalendars = new URLSearchParams(window.location.search).has('calendars');
 
@@ -323,7 +342,7 @@ function initialize() {
 
                     return response.json();
                 })
-                .then((items) => success(items.map((/** @type {any} */ item) => ({
+                .then((items) => success(items.filter((/** @type {any} */ item) => (item.details && item.details.busyOnly) || categoryToggles.length === 0 || !hiddenCategories.has(item.categoryId || '')).map((/** @type {any} */ item) => ({
                     id: item.id,
                     title: item.title,
                     start: item.start,
@@ -357,6 +376,7 @@ function initialize() {
             }
 
             addDetail(list, labels.calendar, details.calendar);
+            addDetail(list, labels.category, details.category);
             addDetail(list, labels.type, details.eventType);
             addDetail(list, labels.location, details.location);
             addDetail(list, labels.status, details.status);
@@ -603,6 +623,18 @@ function initialize() {
             window.localStorage.setItem(storageKey, JSON.stringify(selectedCalendars()));
         } catch {
             // Storage can be unavailable; the selection then lasts only for this page.
+        }
+
+        calendar.refetchEvents();
+    }));
+
+    categoryToggles.forEach((toggle) => toggle.addEventListener('change', () => {
+        hiddenCategories = new Set(categoryToggles.filter((item) => !item.checked).map((item) => item.value));
+
+        try {
+            window.localStorage.setItem(categoryStorageKey, JSON.stringify(Array.from(hiddenCategories)));
+        } catch {
+            // Storage can be unavailable; the filter then lasts only for this page.
         }
 
         calendar.refetchEvents();

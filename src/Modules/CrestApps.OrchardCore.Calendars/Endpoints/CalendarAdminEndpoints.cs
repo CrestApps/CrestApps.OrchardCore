@@ -51,6 +51,7 @@ internal static class CalendarAdminEndpoints
         ICalendarAccessService accessService,
         ICalendarService calendarService,
         ICalendarQueryService queryService,
+        ICalendarCategoryService categoryService,
         ICalendarTypeManager typeManager,
         IStringLocalizerFactory localizerFactory,
         LinkGenerator linkGenerator)
@@ -70,7 +71,7 @@ internal static class CalendarAdminEndpoints
 
         if (!string.IsNullOrWhiteSpace(schedule))
         {
-            return await GetScheduleAsync(schedule.Trim(), fromUtc, toUtc, httpContext, authorizationService, accessService, calendarService, queryService, mapper);
+            return await GetScheduleAsync(schedule.Trim(), fromUtc, toUtc, httpContext, authorizationService, accessService, calendarService, queryService, categoryService, mapper);
         }
 
         var requested = (calendars ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
@@ -91,6 +92,8 @@ internal static class CalendarAdminEndpoints
             Viewer = httpContext.User,
             IncludeEventSources = true,
         });
+
+        await mapper.LoadCategoriesAsync(occurrences, categoryService, httpContext.RequestAborted);
 
         var result = new List<CalendarViewEvent>(occurrences.Count);
 
@@ -128,6 +131,7 @@ internal static class CalendarAdminEndpoints
         ICalendarAccessService accessService,
         ICalendarService calendarService,
         ICalendarQueryService queryService,
+        ICalendarCategoryService categoryService,
         CalendarViewEventMapper mapper)
     {
         var user = httpContext.User;
@@ -171,6 +175,8 @@ internal static class CalendarAdminEndpoints
         }
 
         var canView = new Dictionary<string, bool>(StringComparer.Ordinal);
+        await mapper.LoadCategoriesAsync(occurrences, categoryService, httpContext.RequestAborted);
+
         var result = new List<CalendarViewEvent>(occurrences.Count);
 
         foreach (var occurrence in occurrences)

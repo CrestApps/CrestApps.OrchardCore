@@ -97,5 +97,29 @@ public static class CalendarIndexSchema
             table.CreateIndex("IDX_CalendarEventAttendeeIndex_Resource", "ResourceCalendarId", "StartUtc", "RangeEndUtc");
             table.CreateIndex("IDX_CalendarEventAttendeeIndex_Email", "Email");
         }, collection: collection);
+
+        await CreateCategoriesAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the index of calendar categories.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateCategoriesAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<CalendarCategoryIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("OwnerId", column => column.Nullable().WithLength(26))
+            .Column<string>("Name", column => column.Nullable().WithLength(100)),
+            collection: CalendarsConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<CalendarCategoryIndex>(table =>
+        {
+            table.CreateIndex("IDX_CalendarCategoryIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_CalendarCategoryIndex_OwnerId", "OwnerId");
+        }, collection: CalendarsConstants.CollectionName);
     }
 }

@@ -58,7 +58,7 @@ internal sealed class CalendarTestHarness : IAsyncDisposable
         var databasePath = Path.Combine(Path.GetTempPath(), $"calendars-{Guid.NewGuid():N}.db");
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
 
-        store.RegisterIndexes(new IIndexProvider[] { new CalendarIndexProvider(), new CalendarEventIndexProvider() }.Concat(indexProviders ?? []).ToArray());
+        store.RegisterIndexes(new IIndexProvider[] { new CalendarIndexProvider(), new CalendarEventIndexProvider(), new CalendarCategoryIndexProvider() }.Concat(indexProviders ?? []).ToArray());
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(CalendarsConstants.CollectionName, TestContext.Current.CancellationToken);
 

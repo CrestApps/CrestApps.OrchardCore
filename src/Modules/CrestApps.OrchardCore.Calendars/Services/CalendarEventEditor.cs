@@ -98,6 +98,7 @@ public sealed class CalendarEventEditor
         target.Transparency = source.Transparency;
         target.Visibility = source.Visibility;
         target.Color = source.Color;
+        target.CategoryId = source.CategoryId;
         target.ReminderMinutes = source.ReminderMinutes.ToList();
         target.Attendees = source.Attendees.ToList();
         target.Properties = new Dictionary<string, object>(source.Properties, StringComparer.OrdinalIgnoreCase);

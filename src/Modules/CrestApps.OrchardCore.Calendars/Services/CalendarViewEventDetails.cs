@@ -11,6 +11,11 @@ public sealed class CalendarViewEventDetails
     public string EventType { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the event's category.
+    /// </summary>
+    public string Category { get; set; }
+
+    /// <summary>
     /// Gets or sets the calendar's name.
     /// </summary>
     public string Calendar { get; set; }

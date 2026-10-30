@@ -25,6 +25,13 @@ public sealed class CalendarsAdminMenu : AdminNavigationProvider
         { "action", nameof(CalendarsController.Index) },
     };
 
+    private static readonly RouteValueDictionary _categoriesRoute = new()
+    {
+        { "area", CalendarsConstants.Features.Calendars },
+        { "controller", typeof(CalendarCategoriesController).ControllerName() },
+        { "action", nameof(CalendarCategoriesController.Index) },
+    };
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -52,6 +59,11 @@ public sealed class CalendarsAdminMenu : AdminNavigationProvider
             .Add(S["Manage Calendars"], S["Manage Calendars"].PrefixPosition("2"), list => list
                 .Id("calendarList")
                 .Action(_calendarsRoute)
+                .Permission(CalendarPermissions.AccessCalendars)
+                .LocalNav())
+            .Add(S["Categories"], S["Categories"].PrefixPosition("3"), categories => categories
+                .Id("calendarCategories")
+                .Action(_categoriesRoute)
                 .Permission(CalendarPermissions.AccessCalendars)
                 .LocalNav()));
 

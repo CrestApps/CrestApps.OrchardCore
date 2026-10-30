@@ -53,6 +53,10 @@ Two-way providers for Google Calendar and Microsoft 365 are not available yet. T
 
 `ManageAllCalendars` implies the other three; `ViewAllCalendars` and `CreateCalendars` imply `AccessCalendars`. `ViewAllCalendars` implies `ListCalendarEvents` and `ViewCalendarEvents`, each of which implies its Own permission, and `AccessCalendars` implies both Own permissions.
 
+### Categories
+
+`CalendarCategory` (name, color, and an `OwnerId`, or none for a category everyone can use) lives in the Calendars collection behind `ICalendarCategoryService` (`ListAsync(userId)` gives the user's own and the shared ones). `CalendarEvent.CategoryId` puts an event in one. The calendar view colors an event with, in order, its own `Color`, its category's, its event type's, then its calendar's, and sends `categoryId` with each occurrence so the page can filter by category (busy blocks carry none). Users manage their own categories at **Calendars > Categories** (`AccessCalendars`); shared ones need `ManageAllCalendars`.
+
 ### Reminders on screen
 
 `CalendarEvent.ReminderMinutes` holds how many minutes before the start an event reminds its people (one of `CalendarReminders.Choices`: 0, 5, 10, 15, 30, 60, 120 or 1440). New events that take time get `CalendarOptions.DefaultReminderMinutes` (10) unless their event type sets `RemindBefore(minutes)` (negative for none). `CalendarReminderService` raises each event's own offsets next to the ones workflows asked for, once each through the reminder log. `CalendarUserReminderObserver` turns them into a `CalendarUserReminder` per person (the owner of a user-owned calendar and every user attendee who hasn't declined). `CalendarRemindersFilter` adds the `CalendarReminders` shape and script to every full admin page of a user with `AccessCalendars`. The script polls `GET Admin/api/calendars/reminders` every minute and shows each reminder as a toast that doesn't hide by itself, until `POST Admin/api/calendars/reminders/{id}/dismiss` (with the antiforgery token header).

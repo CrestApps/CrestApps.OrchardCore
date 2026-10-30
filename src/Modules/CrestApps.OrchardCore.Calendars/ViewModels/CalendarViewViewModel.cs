@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Calendars.Models;
+
 namespace CrestApps.OrchardCore.Calendars.ViewModels;
 
 /// <summary>
@@ -24,6 +26,11 @@ public class CalendarViewViewModel
     /// Gets or sets whether the viewer may see other people's schedules.
     /// </summary>
     public bool CanViewSchedules { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the viewer can filter by: their own and the shared ones.
+    /// </summary>
+    public IList<CalendarCategory> Categories { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whose schedule is shown: empty for the viewer's calendars, <c>everyone</c>, or <c>people</c>.

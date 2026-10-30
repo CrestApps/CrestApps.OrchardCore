@@ -62,7 +62,7 @@ public sealed class CalendarController : Controller
     /// <param name="userLookup">The user lookup.</param>
     /// <returns>The page.</returns>
     [Admin("calendar", "CalendarView")]
-    public async Task<IActionResult> Index(string date, string view, string calendars, string schedule, string[] people, [FromServices] CalendarUserLookup userLookup)
+    public async Task<IActionResult> Index(string date, string view, string calendars, string schedule, string[] people, [FromServices] CalendarUserLookup userLookup, [FromServices] ICalendarCategoryService categoryService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CalendarPermissions.AccessCalendars))
         {
@@ -97,6 +97,7 @@ public sealed class CalendarController : Controller
         {
             CanCreateCalendars = await _authorizationService.AuthorizeAsync(User, CalendarPermissions.CreateCalendars),
             CanViewSchedules = await _authorizationService.AuthorizeAsync(User, CalendarPermissions.ListCalendarEvents, CalendarSchedule.Everyone),
+            Categories = [.. await categoryService.ListAsync(userId, HttpContext.RequestAborted)],
         };
 
         if (everyone)

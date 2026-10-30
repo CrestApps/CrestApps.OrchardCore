@@ -74,6 +74,17 @@ public class CalendarEventGeneralViewModel
     public string ReminderMinutes { get; set; }
 
     /// <summary>
+    /// Gets or sets the event's category, or empty for none.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories to choose from.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<SelectListItem> CategoryOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether reminders are on, so the reminder can be chosen.
     /// </summary>
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]

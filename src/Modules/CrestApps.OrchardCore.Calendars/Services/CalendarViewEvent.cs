@@ -41,6 +41,12 @@ public sealed class CalendarViewEvent
     public bool AllDay { get; set; }
 
     /// <summary>
+    /// Gets or sets the event's category, which the calendar view filters by; <see langword="null"/> for none or when only
+    /// its busy time can be seen.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the color to draw it in.
     /// </summary>
     public string Color { get; set; }
