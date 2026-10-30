@@ -12,14 +12,18 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 /// </summary>
 public sealed class UseAIProfileTask : TaskActivity<UseAIProfileTask>
 {
+    private readonly AIProfileVersionCopies _versionCopies;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UseAIProfileTask"/> class.
     /// </summary>
+    /// <param name="versionCopies">Runs an earlier version of a profile.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public UseAIProfileTask(IStringLocalizer<UseAIProfileTask> stringLocalizer)
+    public UseAIProfileTask(AIProfileVersionCopies versionCopies, IStringLocalizer<UseAIProfileTask> stringLocalizer)
     {
+        _versionCopies = versionCopies;
         S = stringLocalizer;
     }
 
@@ -39,11 +43,22 @@ public sealed class UseAIProfileTask : TaskActivity<UseAIProfileTask>
     }
 
     /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the version of the profile to answer with, or <see langword="null"/> for its current version. An
+    /// earlier version runs from a copy made on first use, so two versions of one profile can be split live.
+    /// </summary>
+    public int? ProfileVersion
+    {
+        get => GetProperty<int?>();
+        set => SetProperty(value);
+    }
+
+    /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
         => [new Outcome(S["Done"]), new Outcome(S["Not starting"])];
 
     /// <inheritdoc/>
-    public override ActivityExecutionResult Execute(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
+    public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         if (string.IsNullOrWhiteSpace(ProfileId) ||
             !workflowContext.Input.TryGetValue(AIConversationWorkflowInput.StartingResult, out var value) ||
@@ -52,7 +67,22 @@ public sealed class UseAIProfileTask : TaskActivity<UseAIProfileTask>
             return Outcome("Not starting");
         }
 
-        starting.ProfileId = ProfileId;
+        if (ProfileVersion is not > 0)
+        {
+            starting.ProfileId = ProfileId;
+
+            return Outcome("Done");
+        }
+
+        // An earlier version answers through its copy; a version that no longer exists leaves the profile as it was.
+        var profile = await _versionCopies.GetOrCreateAsync(ProfileId, ProfileVersion.Value);
+
+        if (profile is null)
+        {
+            return Outcome("Not starting");
+        }
+
+        starting.ProfileId = profile.ItemId;
 
         return Outcome("Done");
     }

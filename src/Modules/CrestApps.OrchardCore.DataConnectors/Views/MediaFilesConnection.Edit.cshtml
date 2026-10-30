@@ -1,0 +1,10 @@
+@model MediaFilesConnectionViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Folder" class="ocat-label">@T["Folder"]</label>
+    <div class="ocat-end">
+        <input asp-for="Folder" class="form-control" placeholder="@T["e.g. data/exports"]" />
+        <span asp-validation-for="Folder" class="text-danger"></span>
+        <span class="hint">@T["The media library folder whose CSV, JSON, JSON Lines and Excel files data sets can read, with its subfolders. Leave empty for the whole library."]</span>
+    </div>
+</div>

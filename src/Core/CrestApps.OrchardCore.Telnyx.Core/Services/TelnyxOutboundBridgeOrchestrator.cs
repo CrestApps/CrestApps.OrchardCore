@@ -86,7 +86,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
 
         var isAnswered = string.Equals(callEvent.EventType?.Trim(), "call.answered", StringComparison.OrdinalIgnoreCase);
 
-        if (state.Intent == TelnyxOutboundBridgeState.AiVoiceLegIntent)
+        if (state.Intent is TelnyxOutboundBridgeState.AiVoiceLegIntent or TelnyxOutboundBridgeState.AiTransferLegIntent)
         {
             return await AdvanceAiVoiceLegAsync(callEvent, state, cancellationToken);
         }

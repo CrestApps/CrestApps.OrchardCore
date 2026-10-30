@@ -1,0 +1,3 @@
+@model ShapeViewModel<DataSetRefreshRun>
+
+<span>@await DisplayAsync(await New.DateTime(Utc: Model.Value.StartedUtc, Format: "g"))</span>

@@ -1,0 +1,91 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileSpeechViewModel
+
+<p class="text-muted">@T["How the profile sounds and listens on phone calls and voice chats. Settings a provider does not support are ignored."]</p>
+
+<div class="ocat-wrapper" asp-validation-class-for="SpeakingRate">
+    <label asp-for="SpeakingRate" class="ocat-label">@T["Speaking rate"]</label>
+    <div class="ocat-end">
+        <input asp-for="SpeakingRate" type="number" min="0.5" max="2" step="0.05" class="form-control" style="max-width: 10rem;" placeholder="1.0" />
+        <span asp-validation-for="SpeakingRate" class="text-danger"></span>
+        <span class="hint">@T["1 is normal; 0.9 is a little slower. Empty uses the voice's own pace."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SpeakingEmotion" class="ocat-label">@T["Emotion"]</label>
+    <div class="ocat-end">
+        <input asp-for="SpeakingEmotion" class="form-control" style="max-width: 20rem;" placeholder="@T["e.g., calm, friendly, excited"]" />
+        <span class="hint">@T["Where the voice provider supports it, such as Cartesia."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Pronunciations" class="ocat-label">@T["Pronunciations"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Pronunciations" class="form-control font-monospace" rows="3" placeholder="CrestApps = Crest Apps&#10;!SQL = sequel"></textarea>
+        <span class="hint">@T["One word = how to say it per line. Start a line with ! to match the word's case."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="FallbackTextToSpeechDeploymentName" class="ocat-label">@T["Fallback voice"]</label>
+    <div class="ocat-end">
+        <select asp-for="FallbackTextToSpeechDeploymentName" asp-items="Model.SpeechDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The text-to-speech deployment used when the first one fails mid-call."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="BoostedKeywords" class="ocat-label">@T["Boosted keywords"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="BoostedKeywords" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Names and terms speech recognition should listen for, one per line, such as product names."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RecognitionLanguages" class="ocat-label">@T["Recognition languages"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecognitionLanguages" class="form-control" placeholder="en-US, es-US" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="InterruptionSensitivity">
+    <label asp-for="InterruptionSensitivity" class="ocat-label">@T["Interruption sensitivity"]</label>
+    <div class="ocat-end">
+        <input asp-for="InterruptionSensitivity" type="number" min="0" max="1" step="0.05" class="form-control" style="max-width: 10rem;" placeholder="0.5" />
+        <span asp-validation-for="InterruptionSensitivity" class="text-danger"></span>
+        <span class="hint">@T["0 lets the caller barely interrupt; 1 stops the AI at the first sound."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnableBackchanneling" class="form-check-input" />
+            <label asp-for="EnableBackchanneling" class="form-check-label">@T["Backchannel"]</label>
+            <span class="hint dashed">@T["The AI says short acknowledgements, such as \"mm-hm\", while the caller talks."]</span>
+        </div>
+        <textarea asp-for="BackchannelPhrases" class="form-control mt-2" rows="2" placeholder="@T["One per line. Empty uses the defaults."]"></textarea>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AllowedLanguages" class="ocat-label">@T["Languages"]</label>
+    <div class="ocat-end">
+        <input asp-for="AllowedLanguages" class="form-control" placeholder="en, es" />
+        <span class="hint">@T["The languages the AI may switch to when the caller speaks one. Empty allows any."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="StartingLanguage" class="ocat-label">@T["Starting language"]</label>
+    <div class="ocat-end">
+        <input asp-for="StartingLanguage" class="form-control" style="max-width: 20rem;" placeholder="{{ Workflow.Input.Variables.language }}" />
+        <span class="hint">@T["The language it greets in, or a conversation variable's value."]</span>
+    </div>
+</div>

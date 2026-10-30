@@ -41,6 +41,10 @@ internal static class VoiceCallGuidance
     /// was followed by "let me just wrap this up with you" and a two-sentence goodbye, twelve seconds of talking
     /// before the line could drop.
     /// </para>
+    /// <para>
+    /// A confirmed detail stays confirmed: live, a customer said yes to their email being read back, and when they
+    /// then said "Bye." the model read the email back and asked again, leaving them a question instead of a goodbye.
+    /// </para>
     /// </remarks>
     public const string EndingTheCall =
         "You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
@@ -52,7 +56,10 @@ internal static class VoiceCallGuidance
         "or is being transferred to a person. When you read back details the customer gave you to confirm them, " +
         "only a clear yes confirms them: an answer you could not make out, or one that does not plainly say yes, " +
         "is not a confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the " +
-        "corrected details back before you go on. Information you give the customer needs no confirmation: say it " +
+        "corrected details back before you go on. Once the customer has said yes to a detail, it is confirmed: never " +
+        "read it back or ask about it again, not even as you close. When the customer says goodbye, the conversation " +
+        "has finished: say goodbye back and end the call, and do not ask them another question. " +
+        "Information you give the customer needs no confirmation: say it " +
         "once, and repeat it only if they ask. Never make up a phone number, address, price or other detail you " +
         "were not given; if you do not have it, say so. Never tell the customer something is booked, confirmed or " +
         "done unless one of your tools did it, and never say you will check something and come back to them unless a " +

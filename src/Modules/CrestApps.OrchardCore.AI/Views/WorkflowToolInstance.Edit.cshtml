@@ -16,3 +16,15 @@
         }
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TimeoutSeconds">
+    <label asp-for="TimeoutSeconds" class="ocat-label">@T["Time limit on calls"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="TimeoutSeconds" type="number" min="0" max="300" step="1" class="form-control" placeholder="8" />
+            <span class="input-group-text">@T["seconds"]</span>
+        </div>
+        <span asp-validation-for="TimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long the AI waits for this workflow on a phone call before it tells the caller it could not get an answer. The caller hears a short \"one moment\" while it runs. Leave empty for 8 seconds; 0 waits as long as the workflow takes."]</span>
+    </div>
+</div>

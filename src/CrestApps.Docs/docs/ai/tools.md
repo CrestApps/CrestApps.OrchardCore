@@ -42,6 +42,20 @@ This catalog only lists functions registered in code. Functions created by admin
 | `listTimeZones` | Retrieves a list of the available time zones in the system. |
 | `listAIProfiles` | Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing. |
 | `viewAIProfile` | Retrieves detailed configuration for a specific AI profile by ID or name. |
+| `listAIConversations` | Lists AI conversations on every channel, newest first, by profile, status and time. |
+| `viewAIConversation` | Reads a conversation's transcript, variables, extracted fields, analysis, evaluations and flow stages. |
+| `getAIContactMemory` | Reads what the AI remembers about a contact. |
+
+### AI quality tools
+
+With the **AI Quality** feature on, the admin AI agent can also look at QA results and run tests, so an admin can ask questions such as "why did calls fail yesterday?" and get proposed fixes to review.
+
+| Function | Description |
+| --- | --- |
+| `summarizeAIQuality` | Sums up QA evaluations over a period: count, average score, pass rate, resolution, sentiment, the most common issues, the questions asked most and the trend by day. |
+| `listAITestCases` | Lists the simulation test cases. |
+| `runAITests` | Queues test cases to run in the background and returns the batch. |
+| `listAIAlerts` | Lists the alert rules and which are open. |
 
 ### Recipe tools
 

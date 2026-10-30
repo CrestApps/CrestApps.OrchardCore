@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIConversationStageTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-signs-post" aria-hidden="true"></i>
+    @T["AI Conversation Stage"]
+</h4>
+<p>@T["A stage of a conversation flow: gives the AI its instructions and waits until one of its ways out applies."]</p>

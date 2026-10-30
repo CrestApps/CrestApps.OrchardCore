@@ -108,6 +108,19 @@ public sealed class AIVoiceUsageReportDataSet : IndexedReportDataSet<AIVoiceSess
         AddField("SilenceMinutes", S["Silence minutes"], DataFieldType.Decimal, record => record.MutualSilenceMs / MillisecondsPerMinute, time).Description = unknown;
         AddField(nameof(AIVoiceSessionSummary.TimeToFirstAssistantAudioMs), S["Time to first AI audio (ms)"], DataFieldType.Integer, record => record.TimeToFirstAssistantAudioMs, time).Description = unknown;
         AddField(nameof(AIVoiceSessionSummary.EchoHeldMs), S["Echo held (ms)"], DataFieldType.Integer, record => record.EchoHeldMs, time).Description = unknown;
+        AddField(nameof(AIVoiceSessionSummary.ResponseLatencyP50Ms), S["Answer latency, median (ms)"], DataFieldType.Integer, record => record.ResponseLatencyP50Ms, time)
+            .Description = S["The median time from the caller's turn to the AI's first audio, over the call's answers."].Value;
+        AddField(nameof(AIVoiceSessionSummary.ResponseLatencyP90Ms), S["Answer latency, 90th percentile (ms)"], DataFieldType.Integer, record => record.ResponseLatencyP90Ms, time).Description = unknown;
+        AddField(nameof(AIVoiceSessionSummary.ResponseLatencyP95Ms), S["Answer latency, 95th percentile (ms)"], DataFieldType.Integer, record => record.ResponseLatencyP95Ms, time).Description = unknown;
+        AddField(nameof(AIVoiceSessionSummary.ResponseLatencyMaxMs), S["Answer latency, longest (ms)"], DataFieldType.Integer, record => record.ResponseLatencyMaxMs, time).Description = unknown;
+        AddField(nameof(AIVoiceSessionSummary.ModelLatencyP50Ms), S["Model latency, median (ms)"], DataFieldType.Integer, record => record.ModelLatencyP50Ms, time)
+            .Description = S["The model's part of each answer: from the turn being taken to the first audio on a live call, the completion on a turn-based one."].Value;
+        AddField(nameof(AIVoiceSessionSummary.DetectorWaitP50Ms), S["Turn detection wait, median (ms)"], DataFieldType.Integer, record => record.DetectorWaitP50Ms, time)
+            .Description = S["How long the live session's turn detector waited after the caller stopped talking."].Value;
+        AddField(nameof(AIVoiceSessionSummary.LatencySamples), S["Answers measured"], DataFieldType.Integer, record => record.LatencySamples, time);
+        AddField(nameof(AIVoiceSessionSummary.EstimatedCost), S["Estimated cost"], DataFieldType.Decimal, record => record.EstimatedCost, call)
+            .Description = S["The carrier's minutes and the AI's minutes or tokens, at the prices in Settings > Artificial Intelligence > Costs, in the currency set there."].Value;
+        AddField(nameof(AIVoiceSessionSummary.CostCurrency), S["Cost currency"], DataFieldType.Text, record => record.CostCurrency, call);
 
         AddField(nameof(AIVoiceSessionSummary.AssistantTurns), S["AI turns"], DataFieldType.Integer, record => record.AssistantTurns, turns);
         AddField(nameof(AIVoiceSessionSummary.CallerTurns), S["Caller turns"], DataFieldType.Integer, record => record.CallerTurns, turns);

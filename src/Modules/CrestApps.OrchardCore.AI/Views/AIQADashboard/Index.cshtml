@@ -1,0 +1,167 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIQADashboardViewModel
+
+@{
+    var dashboard = Model.Dashboard;
+    string Percent(double? value) => value is { } number ? number.ToString("P0", CultureInfo.CurrentCulture) : "-";
+    var maxDay = dashboard.Days.Count == 0 ? 1 : dashboard.Days.Max(day => day.Count);
+}
+
+<zone Name="Title">
+    <breadcrumb name="AIQADashboard" title="@T["QA Dashboard"]" />
+</zone>
+
+<form method="get" asp-action="Index" class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md">
+                <label class="form-label" for="cohortId">@T["Cohort"]</label>
+                <select id="cohortId" name="cohortId" class="form-select" asp-items="Model.Cohorts" onchange="this.form.submit()">
+                    <option value="">@T["Every scored conversation"]</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-auto">
+                <label class="form-label" for="days">@T["Last"]</label>
+                <select id="days" name="days" class="form-select" onchange="this.form.submit()">
+                    @foreach (var period in Model.Periods)
+                    {
+                        <option value="@period.Value" selected="@period.Selected">@T["{0} days", period.Text]</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-auto">
+                <a class="btn btn-outline-secondary" asp-action="Index" asp-controller="AIQACohorts">@T["QA cohorts"]</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (dashboard.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <h2 class="h5">@T["Nothing scored yet"]</h2>
+            <p class="text-body-secondary mb-0">@T["Conversations appear here once a QA cohort, the Evaluate AI Conversation task or a test scores them."]</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-2 mb-3">
+        @foreach (var (label, value) in new[] { (T["Scored"].Value, dashboard.Count.ToString(CultureInfo.CurrentCulture)), (T["Average score"].Value, dashboard.AverageScore?.ToString("0", CultureInfo.CurrentCulture) ?? "-"), (T["Passed"].Value, Percent(dashboard.PassRate)), (T["Resolved"].Value, Percent(dashboard.ResolutionRate)) })
+        {
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body py-2">
+                        <div class="text-body-secondary small">@label</div>
+                        <div class="fs-3">@value</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-8">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6">@T["By day"]</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr><th>@T["Day"]</th><th>@T["Scored"]</th><th>@T["Average"]</th><th>@T["Passed"]</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var day in dashboard.Days)
+                                {
+                                    <tr>
+                                        <td class="text-nowrap">@day.Date.ToString("d", CultureInfo.CurrentCulture)</td>
+                                        <td style="min-width: 8rem;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="bg-primary rounded" style="height: .5rem; width: @((int)(day.Count * 100.0 / maxDay))%;"></div>
+                                                <span>@day.Count</span>
+                                            </div>
+                                        </td>
+                                        <td>@day.AverageScore.ToString("0", CultureInfo.CurrentCulture)</td>
+                                        <td>@Percent(day.PassRate)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6">@T["Issues found"]</h2>
+                    @if (dashboard.Issues.Count == 0)
+                    {
+                        <p class="text-body-secondary mb-0">@T["None."]</p>
+                    }
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var issue in dashboard.Issues)
+                        {
+                            <li class="d-flex justify-content-between"><span>@issue.Kind</span><span class="badge ta-badge fw-normal">@issue.Count</span></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h6">@T["Sentiment at the end"]</h2>
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var sentiment in dashboard.Sentiments.OrderByDescending(entry => entry.Value))
+                        {
+                            <li class="d-flex justify-content-between"><span>@sentiment.Key</span><span class="badge ta-badge fw-normal">@sentiment.Value</span></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6">@T["Top questions"]</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead><tr><th>@T["Question"]</th><th>@T["Asked"]</th><th>@T["Resolved"]</th></tr></thead>
+                            <tbody>
+                                @foreach (var question in dashboard.TopQuestions)
+                                {
+                                    <tr><td class="text-break">@question.Example</td><td>@question.Count</td><td>@Percent(question.ResolutionRate)</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6">@T["Lowest scores"]</h2>
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var evaluation in dashboard.Worst)
+                        {
+                            <li class="mb-2">
+                                <span class="badge ta-badge fw-normal @(evaluation.Passed ? "text-bg-success" : "text-bg-danger")">@evaluation.Score</span>
+                                @if (!string.IsNullOrEmpty(evaluation.SessionId))
+                                {
+                                    <a asp-action="Index" asp-controller="Admin" asp-route-area="CrestApps.OrchardCore.AI.Chat" asp-route-profileId="@evaluation.ProfileId" asp-route-sessionId="@evaluation.SessionId">@T["Open conversation"]</a>
+                                }
+                                <div class="small text-body-secondary">@evaluation.Summary</div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}

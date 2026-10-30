@@ -33,6 +33,10 @@ Memory works the same for leads: a call or text with a lead reads and writes the
 
 To see or correct a note, open the contact. **What the AI remembers** shows the note: edit it, or empty it to make the AI forget.
 
+To build a note from a contact's past conversations, for example after turning memory on, tick **Rebuild from past conversations** on the contact and save. The note is written again from the contact's past AI calls, texts and chats, oldest first, as if each had just ended (at most the 50 oldest). It runs after the save, so reload the contact a moment later to see it.
+
+What the AI keeps in a note follows built-in instructions. To change them, for example to keep only open orders or to write the note in another language, go to **Settings > Artificial Intelligence** and write your own **Memory instructions** under **Contact memory**. Leave them empty to go back to the built-in ones. The note is kept to 2,000 characters either way.
+
 :::note[Payment details and secrets]
 The note is written by the utility model, which is told never to keep card numbers, passwords or other secrets. Still, check the notes of profiles that handle sensitive matters, and leave **Save to contact memory** off where it is not needed.
 :::
@@ -68,6 +72,24 @@ The task goes on by **Delivered** or **Failed**. What happened is in `Workflow.O
 
 For example, start a workflow with **AI Conversation Evaluated**, tick **Only conversations that failed**, and add **Send Signed Webhook** with **Event name** `conversation.failed_qa` to tell your QA tool.
 
+## Webhook subscriptions
+
+With the **AI Webhooks** feature on, **Artificial Intelligence > Webhooks** sends AI events to another system without a workflow. Click **Add webhook**, enter the **URL** (HTTPS) and a **Signing secret**, and tick the events to send:
+
+| Event | Sent when |
+| --- | --- |
+| `conversation.started` | An AI conversation starts, on any channel. |
+| `conversation.ended` | An AI conversation ends. |
+| `conversation.analyzed` | A conversation's analysis finishes, with its extracted fields and results. |
+| `conversation.transferred` | An AI call is handed to a person or transferred to a number. |
+| `conversation.evaluated` | A conversation is scored, by a QA cohort, a test or a workflow. |
+| `alert.triggered` | An AI alert rule crosses its threshold. |
+| `alert.resolved` | An AI alert rule is back within its threshold. |
+
+The body is JSON: `{ "id": "...", "event": "conversation.ended", "createdUtc": "...", "data": { ... } }`, signed with the same headers as the **Send Signed Webhook** task below. Events are queued and sent within a minute, so a slow receiver never holds up a conversation.
+
+Click **Deliveries** to see what was sent: each event with its body, the receiver's answer and the number of attempts. A delivery that fails with a timeout, 429 or a 5xx answer is tried again after 1, 5 and 30 minutes, then 2 and 12 hours; any other refusal is not retried. **Send again** queues a delivery once more, and **Send a test event** sends `webhook.test` to check the receiver.
+
 ## Calendars
 
 Workflows connect the AI to a booking service that has an API, such as Cal.com, Calendly or your own system:
@@ -85,6 +107,6 @@ The same way, workflows keep a CRM such as HubSpot or Salesforce up to date:
 - **Look a caller up before the AI answers**: in an **AI Conversation Starting** workflow, an **HTTP Request** to the CRM's search API with `{{ Workflow.Input.CustomerAddress }}`, then **Set Conversation Variables** with what it returns.
 - **Let the AI update a record**: a **Workflow** tool instance whose workflow calls the CRM's update API.
 - **Log the conversation**: an **AI Chat Session Post-Processed** workflow with an **HTTP Request** that creates a CRM activity with the summary and the transcript.
-- **Start an AI call from the CRM**: the CRM's own automation calls an **HTTP Request Event** workflow that runs **Create AI Activity**.
+- **Start an AI call from the CRM**: the CRM's own automation calls the [AI API](../../ai/conversations-api.md) (`POST /api/ai/v1/calls`) with an API key, or an **HTTP Request Event** workflow that runs **Create AI Activity**.
 
 Built-in CRM connectors, with field mappings and scheduled imports, are not available yet.

@@ -34,6 +34,7 @@
     <PackageReference Include="OrchardCore.Redis.Abstractions" />
     <PackageReference Include="OrchardCore.SignalR" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="NLayer" />
   </ItemGroup>
 
   <ItemGroup>

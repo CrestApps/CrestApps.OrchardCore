@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Data Connectors - SQL Server</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Adds a SQL Server connector to Data Connectors: tables, views and read-only queries of any SQL Server or Azure SQL
+      database, read live or imported, with SQL, Windows or Microsoft Entra authentication. Its own module so a tenant
+      that reads no database never loads the SQL client.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS DataSources DataPipelines Connectors SqlServer AzureSql</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Enabling this feature also enables Data Connectors, which registers the screens this connector appears on. -->
+    <ProjectReference Include="../CrestApps.OrchardCore.DataConnectors/CrestApps.OrchardCore.DataConnectors.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

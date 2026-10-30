@@ -257,6 +257,8 @@ public sealed class AIActivityWorkflowsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // The task's starter is registered with it: this startup runs without the feature that registers it too.
+        services.TryAddScoped<AIActivityStarter>();
         services.AddActivity<Workflows.Models.CreateAIActivityTask, Workflows.Drivers.CreateAIActivityTaskDisplayDriver>();
     }
 }

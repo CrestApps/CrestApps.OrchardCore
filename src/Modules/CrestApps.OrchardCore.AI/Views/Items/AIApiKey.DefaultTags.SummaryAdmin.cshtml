@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.AI.Core.ApiKeys
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIApiKey>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-pause text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]</span>
+}
+
+@if (Model.Value.ExpiresUtc is { } expires)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Expires"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i><date-time utc="@expires" /></span>
+}
+
+@if (Model.Value.Kind == AIApiKeyKind.Browser)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@string.Join(", ", Model.Value.AllowedOrigins)"><i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>@T["Browser key"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@string.Join(", ", Model.Value.Roles)"><i class="fa-solid fa-server text-secondary me-1" aria-hidden="true"></i>@T["Server key"]</span>
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@string.Join(", ", Model.Value.Scopes.Select(scope => "ai." + scope))"><i class="fa-solid fa-key text-secondary me-1" aria-hidden="true"></i>@T["Areas: {0}", Model.Value.Scopes.Count]</span>
+}

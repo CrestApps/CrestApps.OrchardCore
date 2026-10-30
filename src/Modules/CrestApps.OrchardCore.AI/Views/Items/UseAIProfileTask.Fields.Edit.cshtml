@@ -12,3 +12,12 @@
         <span class="hint">@T["The AI profile that answers the conversation. Use it in an AI Conversation Starting workflow."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProfileVersion">
+    <label class="ocat-label" asp-for="ProfileVersion">@T["Version"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ProfileVersion" type="number" min="1" step="1" />
+        <span asp-validation-for="ProfileVersion"></span>
+        <span class="hint">@T["Leave empty to answer with the profile as it is now. Enter a version number from the profile's <strong>Versions</strong> page to answer with that version, for example in one branch of a <strong>Split Traffic</strong> task, to compare two versions of one profile live. The version runs from a copy named after it, made the first time it is used."]</span>
+    </div>
+</div>

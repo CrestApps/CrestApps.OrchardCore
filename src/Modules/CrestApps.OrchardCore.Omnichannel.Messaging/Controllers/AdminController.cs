@@ -89,7 +89,7 @@ public sealed class AdminController : Controller
     }
 
     [Admin("messaging", "MessagingIndex")]
-    public async Task<IActionResult> Index(string show, string channel, int page = 1)
+    public async Task<IActionResult> Index(string show, string channel, bool unread = false, int page = 1)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
         {
@@ -100,14 +100,14 @@ public sealed class AdminController : Controller
 
         return View("Workspace", new WorkspaceViewModel
         {
-            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, page, null, HttpContext.RequestAborted),
+            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, unread, page, null, HttpContext.RequestAborted),
         });
     }
 
     // Re-renders the customer list alone, so a new message can reorder it live without reloading the conversation
     // the agent is typing in.
     [Admin("messaging/inbox", "MessagingInboxList")]
-    public async Task<IActionResult> InboxList(string show, string channel, string selected, int page = 1)
+    public async Task<IActionResult> InboxList(string show, string channel, string selected, bool unread = false, int page = 1)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
         {
@@ -116,7 +116,7 @@ public sealed class AdminController : Controller
 
         var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
 
-        return PartialView("_InboxList", await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, page, selected, HttpContext.RequestAborted));
+        return PartialView("_InboxList", await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, unread, page, selected, HttpContext.RequestAborted));
     }
 
     // The count on the Messaging admin menu item. The menu is on every admin page, so the pages ask for the number
@@ -133,7 +133,7 @@ public sealed class AdminController : Controller
     }
 
     [Admin("messaging/conversation/{id}", "MessagingConversation"), Filters.EndAbortedRequest]
-    public async Task<IActionResult> Conversation(string id, string show, string channel, int page = 1, long beforeTicks = 0)
+    public async Task<IActionResult> Conversation(string id, string show, string channel, bool unread = false, int page = 1, long beforeTicks = 0)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
         {
@@ -170,12 +170,12 @@ public sealed class AdminController : Controller
 
         return View("Workspace", new WorkspaceViewModel
         {
-            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, page, conversation.GetCustomerKey(), HttpContext.RequestAborted),
+            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, unread, page, conversation.GetCustomerKey(), HttpContext.RequestAborted),
             Thread = await _workspaceBuilder.BuildThreadAsync(
                 User,
                 conversation,
                 beforeUtc,
-                target => Url.Action(nameof(Conversation), new { id = target.ItemId, show, channel }),
+                target => Url.Action(nameof(Conversation), new { id = target.ItemId, show, channel, unread = unread ? true : (bool?)null }),
                 (tabChannel, address) => Url.Action(nameof(Start), new { channel = tabChannel, address }),
                 HttpContext.RequestAborted),
         });
@@ -773,7 +773,7 @@ public sealed class AdminController : Controller
 
         return View("Workspace", new WorkspaceViewModel
         {
-            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show: null, channel: null, page: 1, selectedCustomerKey: null, HttpContext.RequestAborted),
+            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show: null, channel: null, unreadOnly: false, page: 1, selectedCustomerKey: null, HttpContext.RequestAborted),
             Compose = model,
         });
     }

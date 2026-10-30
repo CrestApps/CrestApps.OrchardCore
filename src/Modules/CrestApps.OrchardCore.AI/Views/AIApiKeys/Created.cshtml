@@ -1,0 +1,43 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.ApiKeys
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIApiKeyCreatedViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIApiKeysCreated" title="@T["API key '{0}' is ready", Model.ApiKey.Name]">
+        <breadcrumb-item id="AIApiKeys" action="Index" controller="AIApiKeys" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIApiKeys.Name">@T["API keys"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-warning" role="alert">
+    @if (Model.ApiKey.Kind == AIApiKeyKind.Server)
+    {
+        @T["Copy the key now and keep it secret. It is not shown again: if it is lost, delete the key and make another."]
+    }
+    else
+    {
+        @T["A browser key is public: put it in the web page. It works only from the web sites and with the profiles you chose."]
+    }
+</div>
+
+<div class="ocat-wrapper">
+    <label for="api-key" class="ocat-label">@T["Key"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input id="api-key" class="form-control font-monospace" value="@Model.Key" readonly />
+            <button type="button" class="btn btn-outline-secondary" id="copy-api-key" title="@T["Copy"]" aria-label="@T["Copy"]"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+        </div>
+        <span class="hint">@T["Send it in the {0} header, or as Authorization: Bearer.", AIApiKeys.HeaderName]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <a class="btn btn-primary" role="button" asp-action="Index">@T["Done"]</a>
+    </div>
+</div>
+
+<script at="Foot">
+    document.getElementById('copy-api-key').addEventListener('click', () => navigator.clipboard.writeText(document.getElementById('api-key').value));
+</script>

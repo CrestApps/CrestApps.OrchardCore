@@ -17,4 +17,9 @@ public class EditAIProfileDataPrivacyViewModel
     /// Gets or sets after how many days conversations are deleted.
     /// </summary>
     public int? RetentionDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names kept when personal details are redacted, one per line or separated by commas.
+    /// </summary>
+    public string NamesToKeep { get; set; }
 }

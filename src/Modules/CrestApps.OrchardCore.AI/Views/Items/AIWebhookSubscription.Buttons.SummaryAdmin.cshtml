@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.AI.Core.Webhooks
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIWebhookSubscription>
+
+<a asp-action="Deliveries" asp-controller="AIWebhooks" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-primary">@T["Deliveries"]</a>
+<a asp-action="Edit" asp-controller="AIWebhooks" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-secondary">@T["Edit"]</a>

@@ -804,14 +804,77 @@ Changed after review:
   seeded once per tenant by a migration as editable System Prompt templates. Versions saved before the move do not
   load (no upgrade path before release).
 
-Not started, and why:
+### The remainder, built on branch `claude/ai-agent-parity-remainder-eb7cf3`
 
-- V1 voices, V2 turn-taking, V4 languages: need the TTS and speech recognition seams in CrestApps.Core (AD10) and
-  provider accounts (ElevenLabs, Cartesia) to test against.
-- V6 numbers, V7 caller trust, V8 other carriers: need Telnyx and Twilio accounts and real calls.
-- F1 to F3 conversation flows: the spike needs real calls to measure transitions, and must be built as activities
-  without changing the Orchard Core workflow designer or engine.
-- D2 SDKs: can be generated from the OpenAPI document once package names and publishing are decided.
-- D3 custom LLM WebSocket: on customer demand (AD12).
-- D5 copilot: the admin AI agent's tools over conversations, evaluations and contact memory; can now call the services
-  the API uses.
+One commit per slice. Everything below has unit tests; what was checked on a test site, and what still needs real
+calls or accounts, is listed after the slices.
+
+- Phase 1: a spoken filler ("One moment...") when a tool on a turn-based call is still running after 1.5 seconds,
+  and a per-tool time limit (8 seconds by default, per Workflow tool), after which the AI is told the tool timed out.
+- Phase 2: supervisor commands relayed over Redis to the node holding a live AI call (AD3), with the in-process
+  registry as the fallback.
+- Phase 3: warm, briefed and screened transfers (the AI dials the person on a side leg, briefs them or asks whether
+  they take the call, then bridges or comes back to the caller) through the **Transfer AI Call** task and the API;
+  secure keypad capture (the `collectSecureDigits` tool tokenizes the digits; neither the model nor the transcript
+  sees them); switching profiles on a realtime session (Core `SwitchResourceAsync`, from the live dashboard, the
+  AI Call Action task and the API).
+- Phase 4: a live split between two versions of one profile (**Use AI Profile** with a version number, run as a
+  read-only copy); a test case catalog with a run page, a CI endpoint and "Create test" from a conversation; QA
+  cohorts as records sampling real conversations, and a QA dashboard; the hallucination check against what the
+  knowledge base returns; alert rules as records with email, webhook and workflow notifications; per-turn latency
+  percentiles and an estimated cost per call in a currency from per-deployment prices; typed extraction fields
+  (text, number, yes/no, date, choice, list) and writing extracted fields to the contact (replace, fill if empty, or
+  add).
+- Phase 5: an editable contact memory prompt and a rebuild of a contact's memory from their past conversations;
+  webhook subscriptions with signed deliveries, retries and a delivery log.
+- Calendar booking moved to the Bookings tools plan (`docs/engineering/ai/ai-booking-tools-plan.md`, decision BD3): the
+  AI books through the Bookings module, and a future Calendar module owns Google and Microsoft 365 sync. The
+  `checkCalendarAvailability` and `bookCalendarAppointment` tools built here were removed.
+- The outside connectors moved to the `claude/ai-integrations-connectors` branch, because none of them can be tested
+  without real accounts: the **AI Integrations** feature (HubSpot, Salesforce, Google, Microsoft 365 and Notion
+  connections with OAuth sign-in, the `findCrmContact` tool and the **Log to CRM** task) and the Google Drive,
+  SharePoint/OneDrive and Notion file sources. Until it lands, CRMs and booking services are connected through
+  workflows, as the user manual describes.
+- Phase 6: the profile's **Voice & Speech** settings (rate, emotion, pronunciations, fallback voice, boosted keywords,
+  recognition languages, interruption sensitivity, backchanneling, allowed and starting languages) on the Core
+  speech seams; ElevenLabs and Cartesia features and a voice library page (search, sample, clone); Telnyx number
+  search, purchase, release and caller name (CNAM) in the admin and the API; carrier spam rejections (SIP 607 and 608)
+  of outbound calls counted per caller number over 30 days, shown on the Telnyx numbers list and in the API (V7).
+- Phase 7: conversation flows as two workflow activities (**AI Conversation Flow Started**, **AI Conversation Stage**)
+  and a `moveToStage` tool; no change to the workflow engine or designer.
+- Phase 8: the API grew profiles (CRUD, restore a version), calls and texts (start, batches, cancel), live calls
+  (notes, cold/warm/screened transfer, end), knowledge (profile documents, data sources, file sources, web crawlers),
+  phone numbers and carrier numbers, recordings with signed links; API keys (server keys with roles and `ai.` scopes,
+  browser keys limited to profiles and web sites) and `ai.` scopes for OpenID clients; a Kiota script that
+  generates TypeScript and Python clients; the Custom LLM (WebSocket) provider; copilot tools for the admin AI agent
+  over conversations, QA, tests, alerts and contact memory; bleeping of personal details in AI call recordings;
+  signed, expiring recording links; the custom `X-` SIP headers of an inbound call answered by an AI voice agent become
+  `sip_` conversation variables before the starting workflows run (V8, Telnyx calls).
+
+Checked on a test site (SQLite tenant, outbound traffic blocked except ElevenLabs):
+
+- API keys: no key and a wrong key get 401; a key without the scope gets 403; `X-Api-Key` and `Bearer` both work; a
+  browser key is refused without its web site's `Origin` or with another one, accepted with it, and refused on the
+  server-only profiles API.
+- Profiles CRUD over the API, a duplicate name refused, a version listed and restored; texts scheduled, read and
+  cancelled (a second cancel gets 409); a batch of two; phone numbers created and deleted; profile documents, tests
+  and recordings listed; a malformed shared recording link gets 404; carrier numbers answer 502 without a Telnyx
+  account; the OpenAPI document lists 38 `/api/ai` paths, and the Kiota script generated TypeScript and Python
+  clients from it.
+- The ElevenLabs voice library listed the account's voices from a deployment declared in the tenant's settings.
+- The API keys, Telnyx numbers, call recordings and voice library admin pages render.
+- Live testing found the Create AI Activity task failing to resolve its starter when CRM activities were on without
+  the Managements default feature (every page that activated workflows failed); fixed in its own commit.
+
+Needs accounts or real calls: Telnyx number search, purchase, release and caller name; ElevenLabs speech on a call and voice
+cloning; Cartesia; switching profiles on a real realtime call; bleeping a real call recording; the Custom LLM
+provider against a real server; warm and screened transfers on real calls; a real 607/608 refusal being counted, and
+a real PBX's `X-` headers arriving as variables.
+
+Not built, and why:
+
+- V7: branded calling and registering numbers with the carriers' analytics: Telnyx's offerings need checking on a
+  real account.
+- V8: AI voice on Twilio Media Streams and Asterisk ExternalMedia/AudioSocket: each is a new media provider that needs
+  the carrier's account and real calls to build safely. SIP headers from Asterisk calls are not read yet.
+- V6: importing numbers and tracking port-in requests (Telnyx porting needs an account and documents).

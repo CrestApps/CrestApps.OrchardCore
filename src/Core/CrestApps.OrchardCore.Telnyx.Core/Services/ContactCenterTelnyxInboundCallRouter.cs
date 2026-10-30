@@ -28,14 +28,19 @@ public sealed class ContactCenterTelnyxInboundCallRouter : ITelnyxInboundCallRou
     {
         ArgumentNullException.ThrowIfNull(callEvent);
 
-        await _inboundVoiceEventSink.RouteAsync(new InboundVoiceEvent
+        var inboundEvent = new InboundVoiceEvent
         {
             ProviderName = TelnyxConstants.ProviderTechnicalName,
             ProviderCallId = callEvent.CallControlId,
             FromAddress = callEvent.From,
             ToAddress = callEvent.To,
             ReceivedUtc = occurredUtc,
-        }, cancellationToken);
+        };
+
+        // The custom headers a PBX or carrier added to the call, so an AI agent answering it has them as variables.
+        SipHeaderVariables.AddToMetadata(inboundEvent.Metadata, callEvent.CustomHeaders);
+
+        await _inboundVoiceEventSink.RouteAsync(inboundEvent, cancellationToken);
 
         return true;
     }

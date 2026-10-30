@@ -43,7 +43,9 @@ internal sealed class WorkflowToolInstanceDisplayDriver : DisplayDriver<AIToolIn
 
         return Initialize<WorkflowToolInstanceViewModel>("WorkflowToolInstance_Edit", async model =>
         {
-            model.WorkflowTypeId = instance.GetOrCreate<WorkflowToolSettings>().WorkflowTypeId;
+            var settings = instance.GetOrCreate<WorkflowToolSettings>();
+            model.WorkflowTypeId = settings.WorkflowTypeId;
+            model.TimeoutSeconds = settings.TimeoutSeconds;
             model.WorkflowTypes = (await _workflowTypeStore.ListAsync())
                 .Where(type => type.Activities.Any(activity => activity.IsStart && activity.Name == nameof(AIToolCalledEvent)))
                 .OrderBy(type => type.Name)
@@ -68,7 +70,16 @@ internal sealed class WorkflowToolInstanceDisplayDriver : DisplayDriver<AIToolIn
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.WorkflowTypeId), S["Choose the workflow this tool runs."]);
         }
 
-        instance.Put(new WorkflowToolSettings { WorkflowTypeId = model.WorkflowTypeId?.Trim() });
+        if (model.TimeoutSeconds is < 0 or > 300)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TimeoutSeconds), S["The time limit must be between 0 and 300 seconds."]);
+        }
+
+        instance.Put(new WorkflowToolSettings
+        {
+            WorkflowTypeId = model.WorkflowTypeId?.Trim(),
+            TimeoutSeconds = model.TimeoutSeconds,
+        });
 
         return Edit(instance, context);
     }

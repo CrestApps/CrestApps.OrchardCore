@@ -1,0 +1,23 @@
+@model ShapeViewModel<DataSetRefreshRun>
+
+@{
+    var run = Model.Value;
+    var statusCssClass = run.Status switch
+    {
+        DataSetRefreshStatus.Succeeded => "bg-success-subtle",
+        DataSetRefreshStatus.Failed => "bg-danger-subtle",
+        DataSetRefreshStatus.Canceled => "bg-warning-subtle",
+        DataSetRefreshStatus.Running => "bg-info-subtle",
+        _ => string.Empty,
+    };
+}
+
+<span class="badge ta-badge fw-normal @statusCssClass" data-bs-toggle="tooltip" title="@T["Result"]">
+    <i class="fa-solid fa-flag-checkered text-secondary me-1" aria-hidden="true"></i>@run.Status
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["What the refresh read"]">
+    <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@(run.Mode == DataSetRefreshMode.Incremental ? T["Changed rows"] : T["Every row"])
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Started by"]">
+    <i class="fa-solid @(run.Trigger == DataSetRefreshTrigger.Manual ? "fa-hand-pointer" : "fa-clock") text-secondary me-1" aria-hidden="true"></i>@(run.Trigger == DataSetRefreshTrigger.Manual ? (run.RequestedBy ?? T["Someone"].Value) : T["Schedule"].Value)
+</span>

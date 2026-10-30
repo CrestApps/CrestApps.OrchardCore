@@ -247,6 +247,12 @@ public sealed partial class RealtimeVoiceConversationRunner
         // muted -- the customer heard silence and then the line go dead.
         string lastAssistantLine = null;
 
+        // Whether the caller heard the transfer coming, read the moment the transfer tool fires. The model does not
+        // always speak first: live, it called the tool straight after the caller's words, nobody said anything, and
+        // the caller heard silence until they hung up.
+        using var handoffWatch = context.HandoffRequested.Register(
+            () => context.HandoffAnnounced = Volatile.Read(ref spokeSinceCaller) || Volatile.Read(ref utteranceInFlight));
+
         // How many of the caller's turns the provider could not transcribe on this call.
         var transcriptionFailures = 0;
 
@@ -324,6 +330,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 switch (conversationEvent.Type)
                 {
                     case RealtimeConversationEventType.AssistantAudioDelta:
+                        await StopTransferToneAsync();
                         var speech = conversationEvent.Audio;
 
                         // The model says its goodbye, calls the end-call tool, reads the tool's reply and — with
@@ -400,19 +407,10 @@ public sealed partial class RealtimeVoiceConversationRunner
                         await WriteToLineAsync(media, _outgoing.Finish(), cancellationToken);
 
                         // The response's usage was recorded on this scope's session just before this event was
-                        // handed over, and recording it flushes: the write lock is taken and held until something
-                        // commits. The transcript commit (StorePromptAsync) comes before the response completes,
-                        // so without this the lock was held through the caller's whole next turn and, after the
-                        // last response, until the call ended -- live, a 37 second tenant-wide stall at hangup.
-                        // Bookkeeping, so a commit the database refuses is reported and the conversation goes on.
-                        try
-                        {
-                            await _session.SaveChangesAsync(cancellationToken);
-                        }
-                        catch (Exception ex) when (ex is not OperationCanceledException)
-                        {
-                            _logger.LogWarning(ex, "Could not commit the usage of a realtime response on activity '{ActivityId}'; the call carries on.", activityId);
-                        }
+                        // handed over, and is committed now. A profile switch asked for during the response (by a
+                        // tool it called) is applied after it, from this flow, which owns the call's session.
+                        await CommitResponseUsageAsync(activityId, cancellationToken);
+                        await ApplyPendingProfileSwitchAsync(cancellationToken);
 
                         // The message asked for on a machine has been said. It is the last thing the recording hears:
                         // the call is ended as the end-call tool ends it on voicemail, and anything the model says
@@ -434,6 +432,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:
+                        await StopTransferToneAsync();
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
                         LogProviderRunningBehind(activityId);
                         ProviderHeardCaller(turnOpen: true);
@@ -732,7 +731,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             ? started
             : now;
 
-        await _promptStore.CreateAsync(new AIChatSessionPrompt
+        await SaveTurnAsync(context, new AIChatSessionPrompt
         {
             ItemId = UniqueId.GenerateId(),
             SessionId = context.Session.SessionId,
@@ -744,17 +743,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             // review is handed a conversation whose speakers are interleaved in arbitrary order, and it
             // dispositions the call off that. A two-minute answered call came back as "No Answer" this way.
             CreatedUtc = saidUtc,
-        }, cancellationToken);
-
-        context.Session.LastActivityUtc = now;
-        await _chatSessionManager.SaveAsync(context.Session, cancellationToken);
-
-        // Commit the turn now. A realtime session holds the call for its entire duration inside a single scope, so
-        // without an explicit flush every turn's write sits uncommitted until the call ends and the scope disposes
-        // — one write transaction held open for minutes. On SQLite that is a tenant-wide stall: a two-minute call
-        // blocked agent presence heartbeats and other webhook deliveries until they timed out. Flushing per turn
-        // keeps each write short, and also means a transcript survives a call that ends abruptly.
-        await _session.SaveChangesAsync(cancellationToken);
+        }, now, cancellationToken);
 
         await _turnNotifier.NotifyAsync(
             context.Session,

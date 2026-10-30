@@ -32,6 +32,12 @@ public sealed class RealtimeCallCompletion
     public bool HandoffRequested { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the assistant told the caller before it asked for the handoff, so the
+    /// handoff need not tell them again that they are being connected.
+    /// </summary>
+    public bool HandoffAnnounced { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the model reported the conversation finished.
     /// </summary>
     public bool EndCallRequested { get; set; }

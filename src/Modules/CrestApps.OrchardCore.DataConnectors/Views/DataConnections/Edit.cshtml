@@ -1,0 +1,20 @@
+@model DataConnectorEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="DataConnectionsEdit" title="@Model.Title">
+        <breadcrumb-item id="DataConnections" action="Index" controller="DataConnections" area="CrestApps.OrchardCore.DataConnectors" permission="@DataConnectorPermissions.ManageDataConnections.Name">@T["Connections"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit" autocomplete="off">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit" name="submit.Save">@T["Save"]</button>
+            <button class="btn btn-info" type="submit" name="submit.Test">@T["Save and test"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

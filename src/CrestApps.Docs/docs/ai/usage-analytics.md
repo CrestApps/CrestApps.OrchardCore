@@ -174,6 +174,9 @@ a transcript only exists once a turn is over, and says nothing about how long it
 | **Barge-ins** | Times the caller talked over the assistant *and* its speech was stopped: the provider reported speech while the echo guard heard a voice over the assistant. The closing line is left to finish and is not counted. | Not applicable: a turn-based call stops listening while it speaks. |
 | **Idle prompts** | Times the session asked whether the caller was still there because the line had been quiet on both sides: at most two in a row, after which the next silence ends the call. | The "are you still there?" lines it said. |
 | **Echo held** | Caller audio heard while the assistant was speaking that the echo guard sent to the model as silence. | Not applicable. |
+| **Answer latency** | For each answer, the time from the caller's voice stopping on the line to the assistant's first audio: the turn detector's wait plus the model's time to first audio. The call keeps the median, 90th and 95th percentiles and the longest. | For each answer to a caller's line, the time from the line being taken to the provider's *speak started*: the model's completion plus the start of speech. A voicemail message is not counted. |
+| **Model latency** | From the provider taking the caller's turn as finished to the model's first audio. Median per call. | The completion's time. Median per call. |
+| **Turn detection wait** | From the caller's voice stopping on the line to the provider taking the turn as finished, where the voice was heard. Median per call. | Not measurable. |
 
 Durations that an engine cannot measure are stored as unknown and left out of that figure's totals and averages,
 so a turn-based call counts toward **Calls** and **AI minutes** but does not dilute caller minutes or barge-ins with
@@ -244,8 +247,20 @@ The client identifier, the visitor identifier and the provider's response identi
 | **Talk time** | `SessionDurationMs`, `SessionSeconds`, `SessionMinutes`, `AssistantSpeakingMs`, `AIMinutes`, `CallerSpeakingMs`, `CallerMinutes`, `MutualSilenceMs`, `SilenceMinutes`, `TimeToFirstAssistantAudioMs`, `EchoHeldMs` |
 | **Turns** | `AssistantTurns`, `CallerTurns`, `BargeIns`, `IdlePrompts` |
 | **Tokens** | `InputAudioTokens`, `OutputAudioTokens`, `InputTextTokens`, `OutputTextTokens`, `CachedInputTokens` |
+| **Latency** | `ResponseLatencyP50Ms`, `ResponseLatencyP90Ms`, `ResponseLatencyP95Ms`, `ResponseLatencyMaxMs`, `ModelLatencyP50Ms`, `DetectorWaitP50Ms`, `LatencySamples` (the answers measured), in the **Talk time** group |
+| **Cost** | `EstimatedCost`, `CostCurrency`, in the **Call** group |
 
 A measurement that the engine of the call cannot make is empty, as described in [How each metric is measured](#how-each-metric-is-measured). The provider's call identifier is not exposed. The names keep at most 255 characters, as the index does. The AI Usage Analytics page counts one summary per activity; in the rare case that a call has two summaries, count the distinct `ActivityId` values to count calls.
+
+### Cost per call
+
+Each AI call's summary carries an estimated cost when prices are set under **Settings > Artificial Intelligence**, in **Costs**:
+
+- the **Currency**;
+- the carrier's price of a **Phone call, per minute** and of a **Text message**;
+- the price of each **AI deployment**, one per line: `name | input | output | audio input | audio output | per minute`, with token prices per million tokens. Use **per minute** for a model billed by the minute.
+
+The cost is the call's minutes at the carrier's price, plus its minutes or tokens at its deployment's prices. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
 
 ### Cost per model
 

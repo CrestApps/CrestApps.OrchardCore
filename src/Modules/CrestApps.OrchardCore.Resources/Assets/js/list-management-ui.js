@@ -182,12 +182,15 @@ window.listManagementUI = (function () {
         });
     };
 
-    const hasVisibleIgnoredSibling = (element, siblingProperty) => {
+    const hasVisibleSibling = (element, siblingProperty) => {
         let sibling = element?.[siblingProperty] ?? null;
 
+        // Any visible sibling before (or after) the first (or last) visible result is drawn there, so the result isn't
+        // at the edge of the list: an AdminList's toolbar row sits above its first row, and rounding that row's corners
+        // opened a notch between them.
         while (sibling) {
             if (!sibling.classList.contains('d-none')) {
-                return sibling.classList.contains('ignore-elements');
+                return true;
             }
 
             sibling = sibling[siblingProperty];
@@ -214,11 +217,11 @@ window.listManagementUI = (function () {
             return;
         }
 
-        if (!hasVisibleIgnoredSibling(visibleElements[0], 'previousElementSibling')) {
+        if (!hasVisibleSibling(visibleElements[0], 'previousElementSibling')) {
             visibleElements[0].classList.add('first-child-visible', ...firstElementClasses);
         }
 
-        if (!hasVisibleIgnoredSibling(visibleElements[visibleElements.length - 1], 'nextElementSibling')) {
+        if (!hasVisibleSibling(visibleElements[visibleElements.length - 1], 'nextElementSibling')) {
             visibleElements[visibleElements.length - 1].classList.add('last-child-visible', ...lastElementClasses);
         }
     };

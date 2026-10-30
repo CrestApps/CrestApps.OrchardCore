@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -124,6 +125,8 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
 
         await RememberAsync(profile, chatSession, prompts, cancellationToken);
 
+        await NotifyClosedAsync(profile, chatSession, cancellationToken);
+
         await TriggerSessionClosedWorkflowAsync(profile, chatSession);
     }
 
@@ -165,8 +168,32 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
         }
     }
 
+    // Lets other features act on the closed conversation, such as writing its extracted fields to the contact.
+    private async Task NotifyClosedAsync(AIProfile profile, AIChatSession chatSession, CancellationToken cancellationToken)
+    {
+        foreach (var handler in _serviceProvider.GetServices<IAIConversationClosedHandler>())
+        {
+            try
+            {
+                await handler.ClosedAsync(profile, chatSession, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "A closed-conversation handler failed for session '{SessionId}'.", chatSession.SessionId);
+            }
+        }
+    }
+
     private async Task TriggerSessionClosedWorkflowAsync(AIProfile profile, AIChatSession chatSession)
     {
+        await AIWebhookPublisher.TryPublishAsync(_serviceProvider, AIWebhookEvents.ConversationEnded, new
+        {
+            sessionId = chatSession.SessionId,
+            profileId = profile.ItemId,
+            closedUtc = chatSession.ClosedAtUtc,
+            variables = chatSession.GetConversationVariables(),
+        });
+
         var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
 
         if (workflowManager is null)
