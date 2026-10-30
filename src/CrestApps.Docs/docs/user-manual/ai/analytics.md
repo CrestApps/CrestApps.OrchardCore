@@ -125,7 +125,13 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 ## AI Usage Analytics
 
+<YouTube video="ai-usage-analytics" title="Video overview of the AI Usage Analytics report" />
+
+The video turns the feature on, runs the report, groups the figures, explains the voice figures and builds a usage report in the Report Builder.
+
 Shows what AI used across the whole site: every request sent to an AI service, the completions from chats and chat interactions, and the automated AI phone calls. Use it to see which models and which features your AI budget goes to.
+
+<YouTube video="ai-usage-analytics" title="Video of running the AI Usage Analytics report" start={92} end={188} />
 
 1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs the **AI Usage Analytics** feature, not **AI Chat Session Analytics**.
 2. Choose a **Date range**, and optionally an **AI profile**.
@@ -136,6 +142,8 @@ Shows what AI used across the whole site: every request sent to an AI service, t
    - **Group voice calls by**: **Deployment (model)**, **AI profile**, **Campaign**, **Channel**, **Engine** or **Day**.
 4. Click **Show**.
 
+<YouTube video="ai-usage-analytics" title="Video of the group-by choices of the usage report" start={188} end={261} />
+
 The **Metered usage** table counts every request sent to an AI service, of every kind: chat, embeddings for search, images, speech-to-text, text-to-speech and realtime voice. One answer can take several requests, such as searching your documents, using a tool and writing the reply, and each is counted. Next to the tokens it shows the other things AI services charge for: cached input, reasoning, audio tokens, audio minutes, characters spoken and images. These are the figures to compare with your AI provider's bill.
 
 The **Audio usage** table covers only speech-to-text and text-to-speech: requests, hours of audio, hours of speech, characters, audio size, segments and tokens. An asterisk next to the hours means some requests did not report an audio length, so the figure is a minimum.
@@ -143,6 +151,9 @@ The **Audio usage** table covers only speech-to-text and text-to-speech: request
 Under **Chat completions**, the top tiles show **Provider calls**, **Chat sessions**, **Chat interactions** and **Total tokens**. The table shows, per group, the **Calls**, **Sessions**, **Interactions**, **Input**, **Output** and total **Tokens**, and the **Avg latency**.
 
 The **Voice** section covers automated AI phone calls:
+
+<YouTube video="ai-usage-analytics" title="Video of the voice figures of the usage report" start={261} end={299} />
+
 
 | Figure | What it means |
 | --- | --- |
