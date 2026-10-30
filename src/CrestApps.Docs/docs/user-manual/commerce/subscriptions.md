@@ -14,6 +14,10 @@ This page covers three screens: setting up the plans you sell, the administrator
 
 ## Set up a plan
 
+This video walks through plans, signing up, agreements, the settings and memberships:
+
+<YouTube video="subscriptions" title="Video overview of subscriptions and memberships" />
+
 | | |
 | --- | --- |
 | **Menu** | Design > Content Definition > Content Types (to define a plan type), and Content > Content Items (to create plans) |
@@ -34,6 +38,8 @@ A plan type is a content type whose items are plans. You create it once, then cr
 6. Click **Save**.
 
 ### Create a plan
+
+<YouTube video="subscriptions" title="Video of a plan type and a plan's billing fields" start={98} end={163} />
 
 1. Open **Content > Content Items** and create a new item of your plan type, for example *Membership Plan*.
 2. Enter the **Title**, the **Price** on the **Product** part, and the billing terms on the **Subscription** part.
@@ -64,6 +70,8 @@ On the plan's card on your site, the buyer picks one under **Choose your plan** 
 
 ### Show your plans on your site
 
+<YouTube video="subscriptions" title="Video of signing up to a plan from the Plans page" start={163} end={194} />
+
 Plans are products, so you show them to visitors with a [product listing](product-listings.md), like any other product. Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button.
 
 1. Make sure the **Product Listing** feature is on.
@@ -86,6 +94,8 @@ What a plan grants is copied onto each subscription when it is bought, so changi
 
 ### Subscription settings
 
+<YouTube video="subscriptions" title="Video of the subscription settings" start={234} end={254} />
+
 The site-wide settings are under **Settings > Subscriptions**, with the **Manage subscriptions settings** permission.
 
 | Field | What it does |
@@ -100,7 +110,11 @@ This video shows a visitor signing up to a plan, then the Agreements screen:
 
 ## Manage subscriptions
 
+<<<<<<< HEAD
 <YouTube video="subscriptions-lifecycle" title="Managing a subscription" start={110} end={154} />
+=======
+<YouTube video="subscriptions" title="Video of the Agreements list and a subscription" start={194} end={234} />
+>>>>>>> origin/videos/subscriptions-docs
 
 | | |
 | --- | --- |

@@ -20,6 +20,8 @@ To try it, run the **Memberships sample** recipe under **Configuration > Recipes
 
 ## Sell a membership
 
+<YouTube video="subscriptions" title="Video of the Membership part and the Memberships list" start={254} end={280} />
+
 1. Under **Access Control > Roles**, add a role for members, such as **Member**.
 2. Add the **Membership** part to a product's content type. On the product, under **Membership**, tick the roles members are in.
 3. Enter how many **Days a membership lasts**, such as 365, or 0 for one that doesn't end.

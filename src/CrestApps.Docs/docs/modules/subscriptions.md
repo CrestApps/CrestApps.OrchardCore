@@ -18,6 +18,10 @@ Subscriptions owns no checkout of its own. Buying a plan runs through the [Check
 
 ## Features
 
+This video shows the subscription screens in the admin:
+
+<YouTube video="subscriptions" title="Video overview of subscriptions and memberships" />
+
 The module ships several composable features:
 
 | Feature | Feature ID | Description |
