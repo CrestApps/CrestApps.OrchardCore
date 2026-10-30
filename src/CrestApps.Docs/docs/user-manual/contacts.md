@@ -25,7 +25,7 @@ A **contact** is the person you call or text. Contacts are ordinary content item
 
 An administrator with the **Edit content types** permission usually does this once, when the site is set up. One contact type is usually all you need. Create more than one only when you want to keep different kinds of people apart, for example *Customer* and *Employee*.
 
-1. Open **Content > Content Definition > Content Types** and create a type named *Contact* (or edit your existing one).
+1. Open **Design > Content Definition > Content Types** and create a type named *Contact* (or edit your existing one).
 2. Add the **Omnichannel Contact** part and any fields your business needs, such as a title for the person's name.
 3. Open the part's settings to choose what the contact editor shows:
 

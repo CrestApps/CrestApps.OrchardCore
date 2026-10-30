@@ -25,7 +25,7 @@ Creating a site happens after the purchase, in the background, so a slow or fail
 
 A site plan is an ordinary [subscription plan](subscriptions.md) with the **Tenant Onboarding** part added.
 
-1. Open **Content > Content Definition > Content Types** and edit your plan type, or create one as described in [Subscriptions](subscriptions.md#create-a-plan-type).
+1. Open **Design > Content Definition > Content Types** and edit your plan type, or create one as described in [Subscriptions](subscriptions.md#create-a-plan-type).
 2. Click **Add Parts**, tick **Tenant Onboarding**, and save.
 3. Open a plan of that type. In **Tenant Onboarding**, pick the **Recipe** the new site is set up from, for example a blog or an agency site. It is required.
 4. Set the price and billing terms as for any plan, then click **Publish**.

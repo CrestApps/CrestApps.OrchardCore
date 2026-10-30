@@ -13,7 +13,7 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types |
+| **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
 | **Feature** | CrestApps Content Fields (Phone Field), Address Field |
 
@@ -23,7 +23,7 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 ## Add a phone field to a content type
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. Click **Add Field**.
 3. Enter the display name editors will see, for example *Main phone*. Orchard Core fills in the **Technical Name** for you.
 4. Choose **PhoneField** as the field type and save.
@@ -62,7 +62,7 @@ If the number is not a valid phone number, the item is not saved and the form sh
 
 Turn on the **Address Field** feature first. It also turns on **Addresses**.
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. Click **Add Field**, enter the display name editors will see, for example *Location* or *Home address*, choose **AddressField** and save.
 3. On the field's settings page, set the options below and save.
 

@@ -10,7 +10,7 @@ Content Access Control lets an editor say, on each content item, which roles may
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types (setup); the content item editor (picking roles) |
+| **Menu** | Design > Content Definition > Content Types (setup); the content item editor (picking roles) |
 | **Permission** | Edit content types (setup); the usual permission to edit the content (picking roles) |
 | **Feature** | Content Access Control (turns on Enhanced Roles too) |
 
@@ -28,7 +28,7 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 
 ## Set up a content type (once)
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. If it does not have the **Role Picker** part yet, click **Add Parts**, tick **Role Picker**, and save.
 3. Edit the **Role Picker** part on the content type.
 4. Tick **Restrict content?**. Its hint reads: *When checked, only users in the selected roles will be allowed to access this content.*

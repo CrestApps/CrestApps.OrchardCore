@@ -20,7 +20,7 @@ technical_manual:
 
 Stock is counted for content types that have the **Inventory** part:
 
-1. Under **Content > Content Definition > Content Types**, edit your product type and add the **Inventory** part.
+1. Under **Design > Content Definition > Content Types**, edit your product type and add the **Inventory** part.
 2. Go to **Commerce > Inventory** and click **Find products to count**. Every product of that type, and each of its variants, gets a line with nothing on hand.
 
 From then on, saving a product keeps its lines up to date: a new variant gets its own line, and a removed variant's line is archived with its history.

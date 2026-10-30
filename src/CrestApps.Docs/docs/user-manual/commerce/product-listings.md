@@ -28,7 +28,7 @@ Setting up a listing takes three steps: decide which of your products' fields vi
 
 Filters come from the fields of your product types: a car's year and mileage, a home's bedrooms, a shirt's color and size. You choose which fields take part in the field's own settings.
 
-1. Open **Content > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
+1. Open **Design > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
 2. Click **Edit** next to a field.
 3. In the **Product listing** section, tick what the field is for, and save.
 
@@ -118,7 +118,7 @@ Leave **Offer the standard sorts and every sortable field** ticked to offer **Re
 
 Each product can have its own page with its images, price, highlights and actions, and its specification table.
 
-1. Open **Content > Content Definition > Content Types** and edit the product type.
+1. Open **Design > Content Definition > Content Types** and edit the product type.
 2. Click **Edit** next to the **Product** part.
 3. Tick **Show product details on the product page**.
 4. For products that cannot be bought online, fill in **Inquiry button**, such as *Schedule a viewing*, and **Inquiry link**, where the button leads. In the link, `{id}` and `{title}` are replaced with the product's identifier and title.
