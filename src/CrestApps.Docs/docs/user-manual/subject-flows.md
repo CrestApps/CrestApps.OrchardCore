@@ -27,6 +27,8 @@ The inbound *Sales Inquiry* call finishes when the question is answered, and whe
 
 ## Add actions to a flow
 
+<YouTube video="omnichannel-subject-flows" title="Video of opening a subject flow, choosing an action type and adding a Finish action" start={46} end={93} />
+
 1. Open **Interaction Center > Management > Subject Flows** and click **Manage Flow** next to the subject.
 2. Click **Add Action** and pick the action type (below).
 3. Pick the **Disposition** it responds to and fill in the fields.
@@ -51,11 +53,15 @@ The screencast below builds this flow for the *Spring Lead Drive* campaign of a 
 
 ## Action types
 
+<YouTube video="omnichannel-subject-flows" title="Video of adding a Try Again action and a New Activity action" start={93} end={160} />
+
 | Type | What it does |
 | --- | --- |
 | **Finish** | Completes the task. Nothing else happens. |
 | **Try Again** | Creates a new try of the same activity, with the same details and the attempt count raised by one. |
 | **New Activity** | Creates a new activity, for the same subject or another one. The new activity takes its campaign, channel and interaction type from its subject. |
+
+<YouTube video="omnichannel-subject-flows" title="Video of the Convert Lead action" start={160} end={181} />
 
 With the Omnichannel CRM feature on, a **Convert Lead** action is offered too. See [Convert from a disposition](leads-accounts-opportunities.md#convert-from-a-disposition).
 
@@ -79,5 +85,7 @@ Extra fields on **Try Again** and **New Activity**:
 | **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
 
 ## What the agent sees
+
+<YouTube video="omnichannel-subject-flows" title="Video of what the agent sees when picking a disposition" start={181} end={207} />
 
 When the agent picks a disposition on the Complete page, a preview lists the actions that will run, with a **Schedule at** date and **Preparation notes** for each follow-up. The notes become the instructions of the new activity. See [Activities](activities.md#complete-an-activity).
