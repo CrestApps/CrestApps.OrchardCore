@@ -18,6 +18,8 @@ The **live dashboard** is the supervisor's real-time view of the contact center:
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-live-dashboard" title="Video overview of the live dashboard: reading it, filtering the agent board, and what a supervisor can do from an agent's card" />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the live dashboard summary, queue tiles and agent board filters" start={770} end={799} />
 
 :::info[You see your own queues]
@@ -26,17 +28,22 @@ The dashboard shows the queues and campaigns on **your own** [agent entitlement]
 
 ## Reading the dashboard
 
+<YouTube video="contact-center-live-dashboard" title="Video of the summary, queue tiles and dialer panel of the live dashboard" start={67} end={119} />
+
 The page updates as events happen and refreshes every 10 seconds. The status at the top says *Connected* while live updates work; *Connection lost. Reconnecting...* or *Disconnected. Live updates are paused.* means the numbers may be out of date.
 
 | Area | What it shows |
 | --- | --- |
 | **Dialer banner** | When the Contact Center Paced Dialing feature is on: one line saying whether the dialer is stalled, idle, holding back, dialing or has nothing to call (see [Dialer banner](#dialer-banner)). |
+| **Why isn't this dialing?** | A panel under the queue tiles that explains why work is not being dispatched. It reads *No work is waiting to be dispatched.* when nothing is due. |
 | **Summary** | Total waiting across your queues, available agents, agents, and queues. |
 | **Call-quality alerts** | An agent whose recent calls were rated poor, with the likely cause (for example packet loss on their network). Dismiss an alert once handled. |
 | **Queue tiles** | For each queue: waiting, signed-in agents, available, busy and not-ready agents, the longest wait, and SLA breaches. A tile turns **amber** when the longest wait passes half the SLA threshold and **red** when there is a breach. |
 | **Agent board** | One card per agent with presence, a status badge, active interactions and action buttons. |
 
 Each agent's badge shows their state as their own screens do: *Available*, *Reserved*, *On a call*, *Wrap-up*, or the reason for a not-ready state. An agent the dialer is calling for is *Reserved* until a person answers and they are connected.
+
+<YouTube video="contact-center-live-dashboard" title="Video of the agent board and its filters" start={119} end={156} />
 
 Filter the agent board by **Agent** name, **Signed-in queue**, **Signed-in campaign** and **Status** (Available, Busy, On a call, Not ready, Offline). **Busy** groups everyone at work: *Reserved*, *On a call* and *Wrap-up*, as the queue tiles count them. **On a call** keeps only agents who are connected to a call; a *Reserved* agent whose call is still ringing is left out. **Clear** resets the filters; the browser remembers them for next time. The board header shows how many agents match, for example *4 of 12 agents*.
 
@@ -63,6 +70,8 @@ When several campaigns are in different states, the banner shows the most seriou
 
 ## Listen, whisper or barge
 
+<YouTube video="contact-center-live-dashboard" title="Video describing how to listen, whisper and barge into a live call" start={156} end={196} />
+
 You hear the call on **your own soft phone**, so keep it open and signed in. When you start, the system rings your soft phone and it answers by itself. The call does not appear as a call row: a banner at the top of your soft phone shows it instead.
 
 1. On the agent board, find the agent who is on a call.
@@ -85,6 +94,8 @@ An agent on a call that cannot be monitored shows **Cannot be monitored**. Point
 Calls an agent dialed from the keypad, and extension calls between colleagues, can be listened to, whispered to, barged into and ended like any other call. A keypad call can also be taken over. Neither can be transferred or recorded from the dashboard.
 
 ## Take over a call
+
+<YouTube video="contact-center-live-dashboard" title="Video describing take over, end, transfer, record, set state and message" start={196} end={236} />
 
 Taking over hands the call to you and releases the agent, for example when a customer asks for a manager.
 
@@ -114,6 +125,8 @@ These are in the same **⋮** menu, and work whether or not the agent is on a ca
 The state and sign-out actions need the permission to take over calls; **Message…** needs only the permission to monitor.
 
 ## Who can do what
+
+<YouTube video="contact-center-live-dashboard" title="Video of the two permissions that decide what a supervisor can do" start={236} end={263} />
 
 | Action | Where | Permission |
 | --- | --- | --- |
