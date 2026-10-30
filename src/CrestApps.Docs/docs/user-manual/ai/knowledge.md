@@ -177,10 +177,20 @@ The list shows each source's last run: how many files were found, ingested, unch
 
 ## Web crawlers
 
+<YouTube video="ai-web-crawlers" title="Video overview of web crawlers" />
+
+The video shows why copying pages goes stale, how the knowledge base index, a **Web** data source and a web crawler fit together, each step below, and an answer that links to its page.
+
 A web crawler reads a public website, page by page, into a **Web** data source. Use it for your help center or product pages, so the assistant can answer from them and link to the page.
 
 1. Create a data source of type **Web** (see [Create a data source](#create-a-data-source)).
+
+<YouTube video="ai-web-crawlers" title="Video of creating a Web data source" start={108} end={137} />
+
 2. Open **Artificial Intelligence > Web Crawlers** and click **Add Web Crawler**.
+
+<YouTube video="ai-web-crawlers" title="Video of adding a web crawler" start={137} end={208} />
+
 3. In **Available Crawl Strategies**, click **Add** on **Sitemap**.
 4. Fill in the fields below and click **Save**.
 
@@ -198,7 +208,11 @@ A web crawler reads a public website, page by page, into a **Web** data source. 
 | **Include URL patterns** / **Exclude URL patterns** | Which pages to read or skip, one pattern per line. Ask your technical team to write these. Exclude wins over include. |
 | **User-Agent (optional)** | How the crawler introduces itself to the website. |
 
-To read the site right away, open the crawler's **Actions** menu and choose **Synchronize now**. Only new, changed and removed pages are processed. Sources in answers link back to the original page.
+To read the site right away, open the crawler's **Actions** menu and choose **Synchronize now**. A new crawler also queues a first synchronization when you save it. Only new, changed and removed pages are processed. Sources in answers link back to the original page.
+
+<YouTube video="ai-web-crawlers" title="Video of reading the website now" start={208} end={238} />
+
+<YouTube video="ai-web-crawlers" title="Video of choosing the data source and asking a question" start={238} end={274} />
 
 ## How the assistant uses your knowledge
 
