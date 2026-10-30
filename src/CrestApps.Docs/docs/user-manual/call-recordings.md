@@ -17,15 +17,12 @@ Every recorded call is listed on one page, whatever kind of call it was. You can
 
 <AskYourAdmin />
 
-<<<<<<< HEAD
 ## Where recordings are stored
 
 Recordings, and the master copy of every voice media clip, are kept in an encrypted store in a folder of the site. The phone provider records the call on its side, and the platform downloads the finished recording into the store, so a recording stays with you when you change provider. A company can move the same encrypted files to Azure Blob Storage with the **Telephony - Azure Blob Storage** feature under **Tools > Features**: the feature needs a storage account supplied by a developer in the site's configuration, and until that is done the local store stays in use. Recordings are encrypted with the site's own key before they leave the site, so Azure only holds the scrambled files.
 
 <YouTube video="telephony-recording-storage" title="Video of where call recordings are stored" start={14} end={112} />
-=======
 <YouTube video="contact-center-call-recordings" title="Video overview of Call Recordings: search, playback, transcripts and erasing" />
->>>>>>> origin/videos/video-links
 
 ## Who sees which calls
 

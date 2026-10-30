@@ -27,11 +27,8 @@ Each provider you turn on adds its own tab to **Settings > Communication > Telep
 
 ## Connect Telnyx for calls
 
-<<<<<<< HEAD
 <YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings: connect, noise suppression, answering machine detection and speech" />
-=======
 <YouTube video="telephony" title="Video of connecting Telnyx" start={219} end={289} />
->>>>>>> origin/videos/video-links
 
 Before you start, create an API key in the Telnyx portal under **Account > Keys & Credentials > API Keys** (a V2 key). Sign in to Telnyx as an account **Owner** or **Admin** when you create it: a key made by a restricted member can read the account but cannot create what **Connect Telnyx** needs, and connecting fails with *Not authorized*.
 
@@ -68,11 +65,8 @@ The **Advanced — browser WebRTC (optional)** section holds settings you rarely
 
 ## Connect Asterisk for calls
 
-<<<<<<< HEAD
 <YouTube video="telephony-asterisk-setup" title="Video overview of setting up Asterisk: call control, voicemail, browser audio and capabilities" />
-=======
 <YouTube video="telephony" title="Video of connecting Asterisk" start={153} end={219} />
->>>>>>> origin/videos/video-links
 
 Use Asterisk when your company runs its own Asterisk phone system. The values come from whoever looks after that system.
 

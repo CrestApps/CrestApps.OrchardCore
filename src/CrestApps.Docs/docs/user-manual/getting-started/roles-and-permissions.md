@@ -51,12 +51,9 @@ Agents take and place calls, work their activities and answer text messages.
 
 | Area | Permissions the Agent role gets |
 | --- | --- |
-<<<<<<< HEAD
 | Contact center | Sign in to Contact Center queues and campaigns; View interactions; Pause recording on own live interactions; Initiate secure capture on own live interactions; Listen to own call recordings (when Contact Center Call Recording is on) |
-=======
 | Contact center | Sign in to Contact Center queues and campaigns; View interactions; Pause recording on own live interactions; Initiate secure capture on own live interactions |
 | Call recordings | Listen to own call recordings (never anyone else's) |
->>>>>>> f4b471485 (Roles and permissions: add the call recording, queue group and soft phone permissions, the administrator-only list, and the Contact Center roles video)
 | Activities | List activities; List Contact activities; Complete own activity; Create and edit activities |
 | CRM | Convert leads |
 | Messaging | Use the messaging workspace |
@@ -74,12 +71,9 @@ Supervisors watch the floor, step into live calls, work the shared voicemail and
 
 | Area | Permissions the Supervisor role gets |
 | --- | --- |
-<<<<<<< HEAD
 | Contact center | Monitor the Contact Center in real time; View interactions; Transfer Contact Center calls externally; View Contact Center reports; Take over, end, transfer and record live Contact Center calls, and set agents' state; Listen to anyone's call recordings (when Contact Center Call Recording is on) |
-=======
 | Contact center | Monitor the Contact Center in real time; View interactions; Transfer Contact Center calls externally; View Contact Center reports; Take over, end, transfer and record live Contact Center calls, and set agents' state |
 | Call recordings | Listen to anyone's call recordings (which includes listening to their own) |
->>>>>>> f4b471485 (Roles and permissions: add the call recording, queue group and soft phone permissions, the administrator-only list, and the Contact Center roles video)
 | Voicemail | Access shared queue voicemail for entitled queues; Manage shared queue voicemail: delete messages and take over other users' claims |
 | Messaging | Use the messaging workspace; Send group messages; View all messaging conversations; Manage the messaging workspace |
 
@@ -105,15 +99,12 @@ Managers build the contact center: contacts, subjects, campaigns, queues and so 
 | [Cadences](../cadences.md) | Manage cadences |
 | [Lead statuses and opportunity stages](../leads-accounts-opportunities.md) | Manage lead statuses; Manage opportunity stages |
 | [Omnichannel addresses](../channel-endpoints.md) | Manage omnichannel addresses |
-<<<<<<< HEAD
 | [Queues](../queues.md) and [entry points](../entry-points-and-ivr.md) | Manage Contact Center queues; Manage Contact Center queue groups (also covered by *Manage Contact Center queues* and by the administrator's full access) |
-=======
 | [Queues](../queues.md) and [entry points](../entry-points-and-ivr.md) | Manage Contact Center queues |
 | [Queue groups](../queues.md) | Manage Contact Center queue groups |
 | [Call recordings](../call-recordings.md) | Listen to own call recordings; Listen to anyone's call recordings; Delete call recordings |
 | [Shared voicemail](../voicemail.md) | Access shared queue voicemail for entitled queues; Manage shared queue voicemail |
 | [Soft phone](../soft-phone.md) | Use the telephony soft phone |
->>>>>>> f4b471485 (Roles and permissions: add the call recording, queue group and soft phone permissions, the administrator-only list, and the Contact Center roles video)
 | [Skills](../skills-and-entitlements.md) | Manage Contact Center skills |
 | [Agent entitlements](../skills-and-entitlements.md) and [agent states](../agent-states.md) | Manage Contact Center agents |
 | [Business hours](../business-hours.md) | Manage Contact Center business hours |

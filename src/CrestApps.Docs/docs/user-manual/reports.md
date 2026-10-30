@@ -16,22 +16,16 @@ Reports show what happened in your contact center over a period you choose: call
 | | |
 | --- | --- |
 | **Menu** | Reports > *category* > *report* |
-<<<<<<< HEAD
 | **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators and supervisors have it by default) |
-=======
 | **Permissions** | Each report has the permission of the module that provides it. **View Contact Center reports** opens the Contact Center reports (supervisors and administrators have it by default). **View Omnichannel reports** opens the CRM and campaign reports (administrators have it by default, and so does anyone who may manage activities). A report with its own permission, such as **Run 'Phone Number Verifications' Report**, needs that one. **Manage report subscriptions** opens **Reports > Subscriptions** (administrators have it by default). |
->>>>>>> 8beb8fc65 (Docs: reports page videos, subscriptions details, permissions, export file names and the capability notice)
 | **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export, and Reports (PDF) adds PDF export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
 
 <AskYourAdmin />
 
-<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
-=======
 <YouTube video="contact-center-reports" title="Video overview of Contact Center reports: running, filtering, reading and exporting a report" />
 
 <YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />
->>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 <YouTube video="reports-run-and-export" title="Video of finding a report in the Reports menu" start={47} end={79} />
 
@@ -45,11 +39,8 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 
 ## Run a report
 
-<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video of running a report and choosing its date range" start={121} end={190} />
-=======
 <YouTube video="contact-center-reports" title="Video of running a report and choosing the date range" start={108} end={161} />
->>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 1. Open **Reports** and pick a category, then a report.
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
@@ -57,11 +48,8 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
 
-<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video of filtering a report" start={190} end={237} />
-=======
 <YouTube video="contact-center-reports" title="Video of filtering a report" start={161} end={192} />
->>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 How the filters work:
 
@@ -72,13 +60,10 @@ How the filters work:
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
 <<<<<<< HEAD
-<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
 
 Reports of the modules above can be emailed on a schedule (see [Email a report on a schedule](#email-a-report-on-a-schedule)). Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to; to email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
-=======
 The reports of this page can be emailed on a schedule; see [Email a report on a schedule](#email-a-report-on-a-schedule). A report made with the [Report Builder](report-builder/index.md) cannot be subscribed to: use the **Email Report** task of a workflow instead.
->>>>>>> c70a2ca35 (Document the dialer reports: not pacing state, subscriptions, last pacing decision, and embed the dialer reports video)
 =======
 <YouTube video="contact-center-reports" title="Video of exporting a report to CSV, Excel and PDF" start={257} end={289} />
 
@@ -168,11 +153,8 @@ The **Access the Admin Dashboard** permission opens the dashboard, and **Manage 
 
 ## Agent time over long periods
 
-<<<<<<< HEAD
 <YouTube video="reports-run-and-export" title="Video of a period that is too long and of a report whose feature is off" start={313} end={354} />
-=======
 <YouTube video="contact-center-reports" title="Video of the 31-day limit on reports about agents' time" start={289} end={343} />
->>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:
 
