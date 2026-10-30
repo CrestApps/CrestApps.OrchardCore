@@ -279,6 +279,7 @@ const sidebars = {
                         'ai/providers/index',
                         'ai/providers/azure-ai-inference',
                         'ai/providers/azure-openai',
+                        'ai/providers/custom-llm',
                         'ai/providers/ollama',
                         'ai/providers/openai',
                     ],
