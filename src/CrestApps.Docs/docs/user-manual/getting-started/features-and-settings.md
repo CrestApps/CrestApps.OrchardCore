@@ -43,7 +43,7 @@ Site-wide settings live under **Settings** and **Tools**. Each screen appears wh
 | **Settings > Phone Number Verifications** | The phone number lookup provider. | [Phone number verification](../administration/phone-number-verification.md) |
 | **Settings > User Display Name**, **Settings > User Avatars** | How people's names and pictures are shown. | [Users](../administration/users.md) |
 | **Tools > Features** | Turn features on and off. | This page |
-| **Tools > Recipes** | Run ready-made setups. | |
+| **Tools > Recipes** | Run ready-made setups. | [CrestApps Recipes](../../modules/recipes.md) |
 | **Tools > Time Zones** | The friendly time zone names people pick from. | [Time zones](../administration/time-zones.md) |
 | **Tools > Phone Verifications Queue** | The numbers waiting to be checked. | [Phone number verification](../administration/phone-number-verification.md) |
 
@@ -111,6 +111,10 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | **User Display Name**, **User Avatar** | Full names and pictures for users. | [Users](../administration/users.md) |
 | **Enhanced Roles** | A role picker for content items. | [Roles](../administration/roles.md) |
 | **Time Zones** | Friendly time zone names. | [Time zones](../administration/time-zones.md) |
+| **Email Code Sign In** | Sign in with a code sent by email instead of a password. | [Users](../administration/users.md) |
+| **Wizard** | Ask visitors for information one step at a time, and let them resume. | [Wizard](../../modules/wizard.md) |
+| **CrestApps Recipes** | Descriptions for recipes, and a JSON editor that suggests steps and checks a pasted recipe. | [CrestApps Recipes](../../modules/recipes.md) |
+| **Tenant Hierarchy Platform**, **Parent Tenant**, **Child Tenant** | A parent tenant that creates, manages and opens its own child tenants. | [Child tenants](../administration/child-tenants.md) |
 | **Workflows** (from Orchard Core) | Automations that react to events. | [Contact Center workflows](../workflows.md), [AI workflows](../ai/workflows.md) |
 
 ### Artificial intelligence
