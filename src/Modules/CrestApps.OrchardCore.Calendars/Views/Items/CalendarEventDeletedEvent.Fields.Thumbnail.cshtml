@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventDeletedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-minus" aria-hidden="true"></i>
+    @T["Calendar Event Deleted"]
+</h4>
+<p>@T["Starts when a calendar event is deleted."]</p>

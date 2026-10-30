@@ -44,6 +44,16 @@ public sealed class ActivityDispositionRequest
     public IDictionary<string, string> ActionPreparationNotes { get; set; }
 
     /// <summary>
+    /// Gets or sets the ids of the actions whose follow-up activity the agent wants on their calendar (with the calendar on).
+    /// </summary>
+    public ISet<string> ActionsToCalendar { get; set; }
+
+    /// <summary>
+    /// Gets or sets the follow-up activities the actions created, by the action's id; filled in once the actions ran.
+    /// </summary>
+    public IDictionary<string, OmnichannelActivity> CreatedActivities { get; set; }
+
+    /// <summary>
     /// Gets or sets what found the number out of service when the platform chose a not-in-service disposition on its
     /// own, one of <see cref="OmnichannelConstants.NotInServiceSources"/>. Left unset for a person's own disposition.
     /// </summary>

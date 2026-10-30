@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RemoveCalendarAttendeeTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-minus" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Remove Calendar Attendee"])
+    </h4>
+</header>

@@ -1,0 +1,27 @@
+@using System.Security.Claims
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@{
+    // A shape any page can show to let the user choose a time on their own calendar: the page calls
+    // CrestAppsCalendarPicker.open() and gets the time back (see calendar-picker.js).
+    var timeZone = await LocalClock.GetLocalTimeZoneAsync();
+}
+
+<style asp-name="@CrestApps.OrchardCore.Calendars.Services.CalendarResourceConfiguration.ViewStyle"></style>
+<script asp-name="fullcalendar-locales" at="Foot"></script>
+<script asp-name="@CrestApps.OrchardCore.Calendars.Services.CalendarResourceConfiguration.PickerScript" at="Foot"></script>
+
+<div class="d-none"
+     data-calendar-picker
+     data-occurrences-url="@Url.RouteUrl("CalendarsOccurrences")"
+     data-user-id="@User.FindFirstValue(ClaimTypes.NameIdentifier)"
+     data-time-zone="@timeZone.TimeZoneId"
+     data-locale="@System.Globalization.CultureInfo.CurrentUICulture.Name"
+     data-title-text="@T["Choose a time on your calendar"]"
+     data-hint-text="@T["Your calendar is shown so you can see when you're free. Click or drag across a time to choose it."]"
+     data-selected-text="@T["Chosen time"]"
+     data-busy-text="@T["Busy"]"
+     data-today-text="@T["Today"]"
+     data-day-text="@T["Day"]"
+     data-week-text="@T["Week"]"
+     data-zone-text="@T["Times are in your time zone, {0}."].Value"
+     data-close-text="@T["Close"]"></div>

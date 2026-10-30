@@ -1,0 +1,16 @@
+@model ShapeViewModel<AppointmentType>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Length"]"><i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@T["{0} min", Model.Value.DurationMinutes]</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Resources"]"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@Model.Value.ResourceIds.Count</span>
+@if (Model.Value.Capacity > 1)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Places per session"]"><i class="fa-solid fa-chair text-secondary me-1" aria-hidden="true"></i>@Model.Value.Capacity</span>
+}
+@if (Model.Value.AllowSelfService && !string.IsNullOrEmpty(Model.Value.Slug))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Public booking page"]"><i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>/book/@Model.Value.Slug</span>
+}
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]</span>
+}

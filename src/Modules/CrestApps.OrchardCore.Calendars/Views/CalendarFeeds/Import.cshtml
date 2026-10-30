@@ -1,0 +1,18 @@
+@model CalendarFeedViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarsImport" title="@T["Import into '{0}'", Model.Name]">
+        <breadcrumb-item id="CalendarsIndex" action="Index" controller="Calendars" area="CrestApps.OrchardCore.Calendars">@T["Calendars"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Import" asp-route-id="@Model.Id" enctype="multipart/form-data" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <p>@T["Choose an iCalendar (.ics) file, such as one exported from Google Calendar or Outlook. Events already in the calendar with the same UID are updated instead of added again."]</p>
+            <input type="file" name="file" accept=".ics,text/calendar" class="form-control" required />
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">@T["Import"]</button>
+    <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Cancel"]</a>
+</form>

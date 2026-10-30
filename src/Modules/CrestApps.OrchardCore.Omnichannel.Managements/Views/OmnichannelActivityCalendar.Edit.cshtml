@@ -1,0 +1,12 @@
+@* Adds "Add to my calendar" to each follow-up activity of the completion page (see activity-calendar.js). *@
+<script asp-name="omnichannel-activity-calendar" at="Foot"></script>
+
+@await DisplayAsync(await New.CalendarPicker())
+
+<div class="d-none"
+     data-activity-calendar
+     data-add-text="@T["Add to my calendar"]"
+     data-hint-text="@T["The follow-up goes on your calendar as an event, and moving either one moves the other."]"
+     data-choose-text="@T["Choose on my calendar"]"
+     data-picker-title-text="@T["When should this follow-up happen?"]"
+     data-chosen-text="@T["Scheduled for {0}"].Value"></div>

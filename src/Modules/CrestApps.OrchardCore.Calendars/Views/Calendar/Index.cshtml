@@ -1,0 +1,217 @@
+@model CalendarViewViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarView" title="@T["Calendar"]" />
+</zone>
+
+<style asp-name="CrestApps.OrchardCore.Calendars.View"></style>
+<script asp-name="fullcalendar-locales" at="Foot"></script>
+@* The event editor opens in a modal; the pickers it uses are loaded with the page. *@
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="item-selector" depends-on="bootstrap-select" at="Foot"></script>
+<script asp-name="CrestApps.OrchardCore.Calendars.View" at="Foot"></script>
+
+<div id="calendar-view" class="row g-3" data-config="@Model.ConfigurationJson">
+    <div class="col-lg-4 col-xl-3 col-xxl-2">
+        <div class="card text-bg-theme mb-3">
+            <div class="card-body">
+                @if (Model.Calendars.Any(calendar => calendar.Writable))
+                {
+                    <a class="btn btn-primary w-100 mb-3" asp-controller="CalendarEvents" asp-action="Choose" data-calendar-new-event>
+                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New event"]
+                    </a>
+                }
+                @if (!string.IsNullOrEmpty(Model.ScheduleMode))
+                {
+                    <h2 class="h6 text-uppercase text-muted">@T["Schedule"]</h2>
+                    <p class="mb-2">
+                        @if (Model.ScheduleMode == "people")
+                        {
+                            @T["Showing the calendars of {0} and the events they attend.", string.Join(", ", Model.ScheduleNames)]
+                        }
+                        else
+                        {
+                            @T["Showing everyone's events."]
+                        }
+                    </p>
+                    <p class="text-muted small">@T["Events you can't open show as busy."]</p>
+                    <a class="btn btn-sm btn-outline-secondary w-100" asp-action="Index">@T["Back to my calendars"]</a>
+                }
+                else
+                {
+                <h2 class="h6 text-uppercase text-muted">@T["Calendars"]</h2>
+                @if (Model.Calendars.Count == 0)
+                {
+                    <p class="text-muted small mb-0">@T["You have no calendars yet."]</p>
+                }
+                <ul class="list-unstyled calendar-list mb-0">
+                    @foreach (var calendar in Model.Calendars)
+                    {
+                        <li class="form-check">
+                            <input class="form-check-input" type="checkbox" value="@calendar.Id" id="calendar-@calendar.Id" checked="@calendar.Selected" data-calendar-toggle style="--calendar-color: @calendar.Color" />
+                            <label class="form-check-label" for="calendar-@calendar.Id" title="@calendar.TypeName">
+                                <i class="@calendar.TypeIcon text-secondary me-1" aria-hidden="true"></i>@calendar.Name
+                            </label>
+                        </li>
+                    }
+                </ul>
+                }
+            </div>
+        </div>
+        @if (Model.Categories.Count > 0)
+        {
+            <div class="card text-bg-theme mb-3">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-muted">@T["Categories"]</h2>
+                    <ul class="list-unstyled calendar-list mb-0">
+                        @foreach (var category in Model.Categories)
+                        {
+                            <li class="form-check">
+                                <input class="form-check-input" type="checkbox" value="@category.ItemId" id="category-@category.ItemId" checked data-category-toggle style="--calendar-color: @category.Color" />
+                                <label class="form-check-label" for="category-@category.ItemId">@category.Name</label>
+                            </li>
+                        }
+                        <li class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="category-none" checked data-category-toggle />
+                            <label class="form-check-label text-muted" for="category-none">@T["No category"]</label>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        }
+        @if (Model.CanViewSchedules)
+        {
+            <form class="card text-bg-theme mb-3" method="get" asp-action="Index">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-muted">@T["Whose schedule"]</h2>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-mine" value="" checked="@string.IsNullOrEmpty(Model.ScheduleMode)" />
+                        <label class="form-check-label" for="schedule-mine">@T["My calendars"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-everyone" value="everyone" checked="@(Model.ScheduleMode == "everyone")" />
+                        <label class="form-check-label" for="schedule-everyone">@T["Everyone"]</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-people" value="people" checked="@(Model.ScheduleMode == "people")" />
+                        <label class="form-check-label" for="schedule-people">@T["Choose people"]</label>
+                    </div>
+                    @* Only shown while "Choose people" is picked (see the script below). *@
+                    <div class="mb-2@(Model.ScheduleMode == "people" ? null : " d-none")" data-schedule-people>
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = "schedule-people-picker",
+                            inputName = "people",
+                            endpoint = Url.RouteUrl("CalendarsUserSearch"),
+                            initialItemsJson = Model.SchedulePeopleJson,
+                            multiple = true,
+                            buttonText = T["Choose people"].Value,
+                            searchPlaceholder = T["Search users"].Value,
+                            smallButton = true,
+                        })
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">@T["Show"]</button>
+                </div>
+            </form>
+        }
+        <div class="d-grid gap-2">
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="Calendars" asp-action="Index">@T["Manage calendars"]</a>
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="CalendarCategories" asp-action="Index">@T["Manage categories"]</a>
+        </div>
+    </div>
+    <div class="col-lg-8 col-xl-9 col-xxl-10">
+        <div class="card text-bg-theme">
+            <div class="card-body">
+                <div data-calendar></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="calendar-antiforgery" class="d-none">@Html.AntiForgeryToken()</div>
+
+<div class="modal fade" id="calendar-event-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" data-event-title></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-0" data-event-details></dl>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-primary d-none" data-event-edit>@T["Edit"]</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Close"]</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="calendar-scope-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Move a repeating event"]</h5>
+            </div>
+            <div class="modal-body">
+                <p>@T["Which occurrences do you want to move?"]</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-scope="ThisOccurrence">@T["This occurrence"]</button>
+                <button type="button" class="btn btn-outline-primary" data-scope="ThisAndFollowing">@T["This and following"]</button>
+                <button type="button" class="btn btn-outline-primary" data-scope="AllOccurrences">@T["All occurrences"]</button>
+                <button type="button" class="btn btn-secondary" data-scope="">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="calendar-editor-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" data-editor-title></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body" data-editor-body></div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const people = document.querySelector('[data-schedule-people]');
+
+        if (!people) {
+            return;
+        }
+
+        document.querySelectorAll('input[name="schedule"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                people.classList.toggle('d-none', !document.getElementById('schedule-people').checked);
+            });
+        });
+    })();
+</script>
+
+<template id="calendar-labels">
+    <span data-label="calendar">@T["Calendar"]</span>
+    <span data-label="category">@T["Category"]</span>
+    <span data-label="type">@T["Kind"]</span>
+    <span data-label="location">@T["Location"]</span>
+    <span data-label="status">@T["Status"]</span>
+    <span data-label="attendees">@T["Attendees"]</span>
+    <span data-label="description">@T["Description"]</span>
+    <span data-label="source">@T["Managed by"]</span>
+    <span data-label="busy">@T["You can only see that this time is busy."]</span>
+    <span data-label="moveFailed">@T["The event could not be moved."]</span>
+    <span data-label="day">@T["Day"]</span>
+    <span data-label="week">@T["Week"]</span>
+    <span data-label="month">@T["Month"]</span>
+    <span data-label="agenda">@T["Agenda"]</span>
+    <span data-label="today">@T["Today"]</span>
+    <span data-label="loading">@T["Loading…"]</span>
+    <span data-label="editorFailed">@T["Something went wrong. Try again, or open the event's page."]</span>
+</template>

@@ -14,6 +14,7 @@
     "@sapphi-red/web-noise-suppressor": "0.4.1",
     "@telnyx/webrtc": "2.27.10",
     "chart.js": "^4.5.1",
+    "fullcalendar": "6.1.22",
     "intl-tel-input": "^29.5.5",
     "medium-zoom": "1.1.0",
     "sip.js": "0.21.2"

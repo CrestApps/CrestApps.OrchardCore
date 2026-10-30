@@ -1,0 +1,3 @@
+@model ShapeViewModel<CalendarCategory>
+
+<a asp-controller="CalendarCategories" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this category? Its events stay on the calendar, without a category."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

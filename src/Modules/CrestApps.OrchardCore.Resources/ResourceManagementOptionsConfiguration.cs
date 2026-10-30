@@ -60,6 +60,27 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("2.21.0");
 
         _manifest
+            .DefineScript("fullcalendar")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/index.global.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/index.global.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.22/index.global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.22/index.global.js")
+            .SetVersion("6.1.22");
+
+        _manifest
+            .DefineScript("fullcalendar-locales")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.22/locales-all.global.min.js",
+                "https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.22/locales-all.global.js")
+            .SetDependencies("fullcalendar")
+            .SetVersion("6.1.22");
+
+        _manifest
             .DefineScript("chart.js")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",

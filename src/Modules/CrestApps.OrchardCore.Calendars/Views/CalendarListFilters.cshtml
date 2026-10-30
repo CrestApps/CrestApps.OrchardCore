@@ -1,0 +1,9 @@
+<div class="btn-group filter">
+    <select name="type" form="calendars-filter" class="form-select form-select-sm" aria-label="@T["Type"]" onchange="this.form.submit()">
+        <option value="">@T["All types"]</option>
+        @foreach (var option in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)Model.Types)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

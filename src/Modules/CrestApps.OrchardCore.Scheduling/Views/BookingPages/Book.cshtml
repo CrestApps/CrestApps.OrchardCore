@@ -1,0 +1,27 @@
+@model NewAppointmentViewModel
+
+@{
+    ViewData["Title"] = Model.AppointmentType.Name;
+}
+
+<div class="container my-4" style="max-width: 48rem">
+    @* The breadcrumb also gives the browser tab its title. *@
+    <div class="product-breadcrumb">
+        <breadcrumb name="SchedulingBook" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(Model.AppointmentType.Name))">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <h1 class="h3">@Model.AppointmentType.Name</h1>
+    @if (!string.IsNullOrEmpty(Model.AppointmentType.Description))
+    {
+        <p>@Model.AppointmentType.Description</p>
+    }
+    <p class="text-muted">@T["{0} minutes", Model.AppointmentType.DurationMinutes]@(string.IsNullOrEmpty(Model.AppointmentType.Location) ? string.Empty : " · " + Model.AppointmentType.Location)</p>
+
+    <form method="get" class="d-flex gap-2 mb-3 align-items-end">
+        <div><label class="form-label" for="date">@T["Day"]</label><input id="date" name="date" type="date" value="@Model.Date" class="form-control" /></div>
+        <button type="submit" class="btn btn-secondary">@T["Show times"]</button>
+    </form>
+
+    <partial name="_BookingForm" model="Model" />
+</div>

@@ -1,0 +1,12 @@
+@model EditCalendarEventViewModel
+@{
+    // Shown in the calendar view's modal, without a page around it.
+    Layout = null;
+    ViewData["CalendarModal"] = true;
+}
+
+<h2 class="h5 mb-3" data-calendar-modal-title>@Model.Title</h2>
+<partial name="_CreateEventForm" model="Model" view-data="ViewData" />
+
+<resources type="Stylesheet" />
+<resources type="FootScript" />

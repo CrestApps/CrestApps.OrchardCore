@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Scheduling Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for scheduling on the shared calendar: the stores and indexes, the availability engine and the
+      concurrency-safe booking service.
+    </Description>
+    <PackageTags>$(PackageTags) Scheduling Appointments Calendar Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Core\CrestApps.OrchardCore.Calendars.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

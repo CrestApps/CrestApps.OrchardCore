@@ -21,6 +21,8 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Checkout.Abstractions/CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Customers.Abstractions/CrestApps.OrchardCore.Customers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DataConnectors.Abstractions/CrestApps.OrchardCore.DataConnectors.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
@@ -49,6 +51,8 @@
     <Project Path="src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Calendars.Core/CrestApps.OrchardCore.Calendars.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Scheduling.Core/CrestApps.OrchardCore.Scheduling.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.DataConnectors.Core/CrestApps.OrchardCore.DataConnectors.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Inventory.Core/CrestApps.OrchardCore.Inventory.Core.csproj" />
@@ -153,6 +157,8 @@
     <Project Path="src/Themes/CrestApps.OrchardCore.StorefrontTheme/CrestApps.OrchardCore.StorefrontTheme.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Markets/CrestApps.OrchardCore.Markets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PointOfSale/CrestApps.OrchardCore.PointOfSale.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Calendars/CrestApps.OrchardCore.Calendars.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DataConnectors/CrestApps.OrchardCore.DataConnectors.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DataConnectors.SqlServer/CrestApps.OrchardCore.DataConnectors.SqlServer.csproj" />

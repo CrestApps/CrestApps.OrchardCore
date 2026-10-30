@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventUpdatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+    @T["Calendar Event Updated"]
+</h4>
+<p>@T["Starts when a calendar event or one of its occurrences changes."]</p>

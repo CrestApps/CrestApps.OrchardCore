@@ -20,6 +20,13 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Omnichannel.Managements/scripts/subject-action-assignment-toggle.min.js",
                 "~/CrestApps.OrchardCore.Omnichannel.Managements/scripts/subject-action-assignment-toggle.js")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("omnichannel-activity-calendar")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Omnichannel.Managements/scripts/activity-calendar.min.js",
+                "~/CrestApps.OrchardCore.Omnichannel.Managements/scripts/activity-calendar.js")
+            .SetVersion("1.0.0");
     }
 
     /// <inheritdoc/>

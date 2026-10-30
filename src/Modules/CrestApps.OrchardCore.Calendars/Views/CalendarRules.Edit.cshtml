@@ -1,0 +1,20 @@
+@model CalendarRulesViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="LimitOverlaps" class="form-check-input" />
+            <label asp-for="LimitOverlaps" class="form-check-label">@T["Limit overlapping events"]</label>
+            <span class="hint dashed">@T["Refuse a busy event when the calendar is already full at that time, such as a room that one group uses at a time or an office with a number of desks."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Capacity">
+    <label asp-for="Capacity" class="ocat-label">@T["Events that may overlap"]</label>
+    <div class="ocat-end">
+        <input asp-for="Capacity" type="number" min="1" class="form-control" style="max-width: 10rem" />
+        <span asp-validation-for="Capacity" class="text-danger"></span>
+        <span class="hint">@T["1 for a room; the number of desks for an office."]</span>
+    </div>
+</div>
