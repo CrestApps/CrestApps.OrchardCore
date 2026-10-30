@@ -5,6 +5,12 @@
 }
 
 <div class="container my-4" style="max-width: 48rem">
+    @* The breadcrumb also gives the browser tab its title. *@
+    <div class="product-breadcrumb">
+        <breadcrumb name="SchedulingManage" title="@T["Your appointment"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
     <h1 class="h3">@T["Your appointment"]</h1>
     @if (TempData["SchedulingMessage"] is string message)
     {

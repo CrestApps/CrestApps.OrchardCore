@@ -5,6 +5,12 @@
 }
 
 <div class="container my-4" style="max-width: 48rem">
+    @* The breadcrumb also gives the browser tab its title. *@
+    <div class="product-breadcrumb">
+        <breadcrumb name="SchedulingBook" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(Model.AppointmentType.Name))">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
     <h1 class="h3">@Model.AppointmentType.Name</h1>
     @if (!string.IsNullOrEmpty(Model.AppointmentType.Description))
     {
