@@ -183,7 +183,13 @@ internal sealed class ConnectedDataSetMapper
             _ => value,
         };
 
-        return DataValues.Coerce(value, type);
+        // A date parsed from text, such as a CSV cell, has no kind; it is read as UTC, as an imported row's date is,
+        // so a data set returns the same values live and imported.
+        return DataValues.Coerce(value, type) switch
+        {
+            DateTime { Kind: not DateTimeKind.Utc } date => DateTime.SpecifyKind(date, DateTimeKind.Utc),
+            var coerced => coerced,
+        };
     }
 
     private object[] MapRow(object[] sourceRow, int[] indexes)

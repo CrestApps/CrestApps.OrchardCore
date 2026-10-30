@@ -84,6 +84,23 @@ public sealed class ConnectedDataSetMapperTests
         Assert.Null(ConnectedDataSetMapper.Coerce(DBNull.Value, DataFieldType.Text));
     }
 
+    /// <summary>
+    /// A live read of a CSV file returned its dates with no kind ("2026-10-01") while the same file imported returned
+    /// them as UTC ("2026-10-01T00:00:00Z"), so one data set read differently depending on how it was accessed.
+    /// </summary>
+    [Theory]
+    [InlineData("2026-10-01", DataFieldType.Date)]
+    [InlineData("2026-10-01 08:30:00", DataFieldType.DateTime)]
+    public void Coerce_ADateParsedFromText_IsUtc_AsAnImportedDateIs(string text, DataFieldType type)
+    {
+        // Act
+        var value = Assert.IsType<DateTime>(ConnectedDataSetMapper.Coerce(text, type));
+
+        // Assert
+        Assert.Equal(DateTimeKind.Utc, value.Kind);
+        Assert.Equal(DateTime.Parse(text, System.Globalization.CultureInfo.InvariantCulture), new DateTime(value.Ticks, DateTimeKind.Unspecified));
+    }
+
     [Fact]
     public void ToSourceConditions_KeepsOnlyConditionsOnFieldsThatReadTheSourceType()
     {
