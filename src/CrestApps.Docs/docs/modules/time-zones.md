@@ -14,6 +14,8 @@ user_manual:
 
 Provides friendly named time zone maps so editors can pick labels like `Eastern Time (US & Canada)` instead of scanning the full Orchard Core IANA time zone list.
 
+<YouTube video="time-zones" title="Video overview of friendly time zone names" />
+
 ## Overview
 
 The module adds:

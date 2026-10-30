@@ -16,6 +16,8 @@ Time zone menus normally list hundreds of technical names such as *America/New_Y
 
 <AskYourAdmin />
 
+<YouTube video="time-zones" title="Video overview of friendly time zone names" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of creating a time zone map and selecting it as the site default" start={190} end={218} />
 
 ## How the list works
@@ -34,6 +36,9 @@ Add a map for it. A time zone that has no map on the list cannot be picked anywh
 
 ## Add a time zone
 
+<YouTube video="time-zones" title="Video of browsing the time zone list and adding a time zone map" start={105} end={157} />
+
+
 1. Open **Tools > Time Zones** and click **Add Time Zone Map**.
 2. Enter the **Name** people will see, for example *Mexico City Time*.
 3. Pick the **Time zone** it stands for, for example *America/Mexico_City*.
@@ -45,6 +50,9 @@ The list shows each map's name, its time zone, when it was last changed and who 
 
 ## Set the site's time zone
 
+<YouTube video="time-zones" title="Video of choosing the site default time zone" start={157} end={177} />
+
+
 The site's time zone is used to show dates and times to everyone who has not picked their own.
 
 1. Open **Settings > General**.
@@ -53,4 +61,7 @@ The site's time zone is used to show dates and times to everyone who has not pic
 
 ## Let each person use their own time zone
 
-When your administrator turns on the Orchard Core **User Time Zone** feature, each person can pick their own time zone on their profile, and dates and times are shown to them in that zone. People who do not pick one see the site's time zone. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for the details.
+<YouTube video="time-zones" title="Video of choosing a time zone for one person" start={177} end={210} />
+
+
+When your administrator turns on the Orchard Core **User Time Zone** feature, the edit page of each user (**Access Control > Users**, then **Edit**) gets a **Default Time Zone** menu. It lists the same friendly names, plus **Use site's time zone**. Choose one and save, and dates and times are shown to that person in that zone. People who keep **Use site's time zone** see the site's time zone. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for the details.
