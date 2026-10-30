@@ -28,6 +28,8 @@ The AI profile's instructions can use them. Write a variable's name between doub
 
 To include a sentence only when a value is set, put it between `{% if Variables.balance_due %}` and `{% endif %}`.
 
+A call an AI voice agent answers brings the custom SIP headers it arrived with as variables. A phone system or carrier that forwards a call can add `X-` headers, such as the account number the caller typed or the menu option they chose; `X-Account-Id: 42` becomes the variable `sip_account_id` with the value `42`. They are set before the **AI Conversation Starting** workflows run, so a workflow can choose the profile or look the account up with them. Only `X-` headers are kept, up to 20, each up to 256 characters. Today this works for calls that arrive through Telnyx.
+
 The instructions can also read the conversation itself:
 
 | Write | To get |
@@ -75,10 +77,11 @@ Then create the tool:
 1. Open **Artificial Intelligence > Tool Instances**, click **Add Tool Instance** and choose **Workflow**.
 2. Give it a **Name** and a **Description**. The description is what the AI reads to decide when to call it, so say what it does and when to use it, for example *Finds free appointment times on a date the customer asks for*.
 3. Choose the **Workflow**.
-4. Under **Parameters**, declare what the workflow needs, such as a `date`. For each one choose who fills it: the AI, a value you fix, or the conversation, such as **Customer phone or email** or a conversation variable (type `variables.` followed by its name). Without parameters, the AI sends a short description of what it needs as `request`.
-5. Click **Save**, then add the tool instance to the AI profile under **Capabilities**.
+4. Optionally, set a **Time limit on calls**. On a phone call the AI waits this many seconds for the workflow, then tells the caller it could not get an answer. Leave it empty for 8 seconds, or set 0 to wait as long as the workflow takes.
+5. Under **Parameters**, declare what the workflow needs, such as a `date`. For each one choose who fills it: the AI, a value you fix, or the conversation, such as **Customer phone or email** or a conversation variable (type `variables.` followed by its name). Without parameters, the AI sends a short description of what it needs as `request`.
+6. Click **Save**, then add the tool instance to the AI profile under **Capabilities**.
 
-The tool works in website chats, text threads and on phone calls. A workflow that has to wait for something, such as a timer or someone's approval, keeps running after the AI moves on, and the AI tells the customer the request is in hand.
+The tool works in website chats, text threads and on phone calls. On a phone call, when any tool takes longer than a second and a half, the caller hears a short "One moment, please." so the silence is not taken for a dropped call, and a tool that takes longer than its time limit (8 seconds unless you set one) is stopped. A workflow that has to wait for something, such as a timer or someone's approval, keeps running after the AI moves on, and the AI tells the customer the request is in hand.
 
 :::note[Inside a tool workflow]
 **Set Conversation Variables** in a tool workflow changes the live conversation, so the AI's next answers see the new values.
@@ -93,10 +96,56 @@ The **AI Call Action** task (under **AI Conversations**) acts on a phone call th
 | **Message the AI** | The note, for example *Offer the 10% retention discount*. The AI acts on it in its own words. |
 | **Hand the call to an agent** | The agent's user name. The AI stops and the call rings that agent. |
 | **Transfer the call to a phone number** | The number, with its country code. The AI stops and the caller is connected to whoever answers. |
-| **Answer with another AI profile** | The profile's identifier. It takes over with the same transcript and variables. When the call's own AI runs the workflow through a tool, the new profile answers straight away; otherwise it answers from the caller's next turn. Turn-based calls only. |
+| **Answer with another AI profile** | The profile's identifier. It takes over with the same transcript and variables, in its own voice. When the call's own AI runs the workflow through a tool, the new profile answers straight away; otherwise it answers from the caller's next turn. On a realtime call the caller hears ringing while the call is put through to the new profile. |
 | **End the call** | Nothing. |
 
 **Call** says which call, and defaults to `{{ Workflow.Input.ActivityId }}`: the call the AI conversation event or the AI tool was raised for. So a workflow the AI calls as a tool can transfer its own call, and an **AI Conversation Turn** workflow can hand a caller who says *lawyer* to a person.
+
+### Warm and screened transfers
+
+The **Transfer AI Call** task (under **AI Conversations**) transfers a live AI call to a phone number, and chooses **How**:
+
+- **Cold** connects the caller to whoever answers and the AI drops off, like **Transfer the call to a phone number** above.
+- **Warm** rings the number while the caller holds. Whoever answers hears a private **Briefing** first, which the caller does not hear, and then the two are connected. Leave the briefing empty to have the AI write it from the conversation.
+- **Screened** rings the number the same way, reads the briefing and asks *Press 1 to take the call now, or 2 if you cannot.* On 1 the two are connected.
+
+On a warm or screened transfer, the caller goes back to the AI when the number is busy, nobody answers within **Ring for**, a voicemail answers, or the person presses 2 or hangs up. The AI is told why and offers to take a message or arrange a callback.
+
+| Setting | What it does |
+| --- | --- |
+| **Phone number** | The number to ring, with its country code. Liquid is supported. |
+| **Briefing** | What the person answering hears before they are connected. |
+| **Introduction** | A line spoken once the two are connected, such as *You're through to our billing team now*. |
+| **Ring for** | How long the number rings, 5 to 120 seconds. |
+| **Hold audio** | What the caller hears while they hold: the URL of an MP3 or WAV file, or the name of audio stored with the phone provider. Empty asks the caller to hold. |
+| **Show the caller's number** | The person rung sees the caller's number instead of ours, where the carrier allows it. |
+
+Warm and screened transfers need a phone provider that can place a second call (Telnyx). With another provider, the caller is transferred cold.
+
+## Take a card or account number on the keypad
+
+When the **Secure Capture** feature of the Contact Center is on, AI phone calls can take a card number, expiry date, security code, bank account number or identity number typed on the caller's keypad, without the AI ever hearing it. The AI uses its **Collect digits securely** tool before it asks: from then on the caller's keys go to secure data capture, not to the AI, until they press **#** (or the entry is full), or **\*** to cancel.
+
+The AI is told only that the number was saved and its masked value, such as *ending in 1111*. The token and the masked value are kept as the conversation variables `secure_card_number_token` and `secure_card_number_masked` (and the same for `card_expiry`, `card_security_code`, `bank_account`, `national_id` and `entry`), so a workflow tool can charge the card with the token. The digits are never written to the transcript, the activity or a log. A security code is not kept at all.
+
+## Guide a conversation stage by stage
+
+A **conversation flow** is a workflow that leads the AI through a conversation in stages, such as *verify identity*, then *check the balance*, then *take a promise to pay*, each with its own instructions and its own ways out. Build it in the workflow designer with two activities, under **AI Conversations**:
+
+- **AI Conversation Flow Started** starts the flow when a conversation of the profile takes its first turn. Its input is the conversation, as for the other AI conversation events.
+- **AI Conversation Stage** is one stage: a **Stage name**, **Instructions** (Liquid) added to the profile's instructions while the conversation is in the stage, and **Ways out**, one per line: a name, a colon, and when the AI should take it, for example `Verified: the date of birth matches`. Each way out is an outcome of the activity.
+
+Connect each way out to the next stage, or to any other activity first: **If/Else** to branch on a variable, **Script**, **HTTP Request** to look something up, **Send Text Message**, **Transfer AI Call** or **AI Call Action** to end the call. The flow ends when the workflow finishes without reaching another stage.
+
+While the conversation is in a stage, the AI has a `moveToStage` tool listing the stage's ways out. When it decides one applies, it calls the tool, the workflow goes on by that outcome to the next stage, and the AI gets the new stage's instructions in the same turn.
+
+To use a flow, open the AI profile, and on the **Instructions** tab choose it under **Conversation flow**. Tick **Flexible** to give the AI every stage's instructions at once, so a caller who jumps between tasks is followed; the AI still moves between stages with the ways out.
+
+The stages a conversation went through, the way out it left each by, and how long each move took the workflow are kept on the conversation, in its `AIConversationFlowState`, and returned by the conversations API.
+
+:::note[A collections flow]
+**AI Conversation Flow Started** → stage **Verify identity** (`Verified: the date of birth matches`, `Failed: two wrong tries`). **Verified** → **If/Else** on `{{ Workflow.Input.Variables.balance_due }}` greater than 0 → stage **Discuss balance** (`Promise: the caller commits to a date and an amount`, `Dispute: the caller disputes the debt`, `Agent: the caller asks for a person`). **Promise** → **Set Conversation Variables** and stage **Confirm** (`Done: the caller confirmed`). **Dispute** and **Agent** → **Transfer AI Call**. **Failed** → **AI Call Action** with **End the call**.
+:::
 
 ## React while the conversation is going on
 

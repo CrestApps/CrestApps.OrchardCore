@@ -29,5 +29,6 @@ public sealed class UseAIProfileTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("ProfileId", WorkflowActivitySchemaBuilders.String("The identifier of the AI profile to answer with."));
+        yield return ("ProfileVersion", new JsonSchemaBuilder().Type(SchemaValueType.Integer, SchemaValueType.Null).Minimum(1).Description("The version to answer with; empty for the current one."));
     }
 }

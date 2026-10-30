@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
@@ -50,6 +51,20 @@ internal sealed class FakeVoiceAgentMediaProvider : IVoiceAgentMediaProvider
         return Task.FromResult(true);
     }
 
+    public List<string> Gathered { get; } = [];
+
+    public List<VoiceAgentSideCallRequest> SideCalls { get; } = [];
+
+    public List<(string CallId, string OtherCallId)> Bridges { get; } = [];
+
+    public List<string> HungUpCalls { get; } = [];
+
+    public List<string> PlayedAudio { get; } = [];
+
+    public int AudioStops { get; private set; }
+
+    public bool CanPlaceSideCalls { get; set; } = true;
+
     public List<string> KeysPressed { get; } = [];
 
     public Task<bool> SendDigitsAsync(string providerCallId, string digits, CancellationToken cancellationToken = default)
@@ -60,11 +75,58 @@ internal sealed class FakeVoiceAgentMediaProvider : IVoiceAgentMediaProvider
     }
 
     public Task<bool> GatherAsync(string providerCallId, string text, string validDigits, CancellationToken cancellationToken = default)
-        => Task.FromResult(true);
+    {
+        Gathered.Add(text);
+
+        return Task.FromResult(true);
+    }
+
+    public Task<string> DialSideCallAsync(VoiceAgentSideCallRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!CanPlaceSideCalls)
+        {
+            return Task.FromResult<string>(null);
+        }
+
+        SideCalls.Add(request);
+
+        return Task.FromResult($"side-{SideCalls.Count}");
+    }
+
+    public Task<bool> BridgeAsync(string providerCallId, string otherProviderCallId, CancellationToken cancellationToken = default)
+    {
+        Bridges.Add((providerCallId, otherProviderCallId));
+
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> PlayAudioAsync(string providerCallId, string audio, bool loop = true, CancellationToken cancellationToken = default)
+    {
+        PlayedAudio.Add(audio);
+
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> StopAudioAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        AudioStops++;
+
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> TransferAsync(string providerCallId, string phoneNumber, CancellationToken cancellationToken = default)
+    {
+        Transfers.Add(phoneNumber);
+
+        return Task.FromResult(true);
+    }
+
+    public List<string> Transfers { get; } = [];
 
     public Task<bool> HangupAsync(string providerCallId, CancellationToken cancellationToken = default)
     {
         Hangups++;
+        HungUpCalls.Add(providerCallId);
 
         return Task.FromResult(true);
     }

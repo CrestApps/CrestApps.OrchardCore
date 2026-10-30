@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AITestCasesIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AITestCases" title="@T["AI Tests"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-outline-secondary" asp-action="Runs">@T["All runs"]</a>
+                    <a class="btn btn-secondary create" asp-action="Create">@T["Add test case"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="AITestCases" context="Model.List"
+                bulk-actions="Model.Options.BulkActions"
+                empty-message="@(Model.HasTests ? T["No test cases match your search."] : T["<strong>Nothing here!</strong> A test case plays a simulated customer against an AI profile and judges the conversation. Add one, or open a conversation in AI Chat sessions and choose <strong>Create test</strong>."])">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Result" position="30" title="@T["Latest result"]" width="auto" />
+            <admin-list-column name="LastRun" position="40" title="@T["Last run"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

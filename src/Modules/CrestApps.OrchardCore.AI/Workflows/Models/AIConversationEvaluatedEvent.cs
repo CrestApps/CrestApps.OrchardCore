@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Core.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -85,6 +86,21 @@ public sealed class AIConversationEvaluatedEvent : EventActivity
     /// <param name="logger">The logger a failure is written to.</param>
     internal static async Task TriggerAsync(IServiceProvider serviceProvider, AIConversationEvaluation evaluation, ILogger logger)
     {
+        await AIWebhookPublisher.TryPublishAsync(serviceProvider, AIWebhookEvents.ConversationEvaluated, new
+        {
+            evaluationId = evaluation.ItemId,
+            sessionId = evaluation.SessionId,
+            profileId = evaluation.ProfileId,
+            profileVersion = evaluation.ProfileVersion,
+            label = evaluation.Label,
+            score = evaluation.Score,
+            passed = evaluation.Passed,
+            resolved = evaluation.Resolved,
+            sentiment = evaluation.Sentiment,
+            summary = evaluation.Summary,
+            issues = evaluation.Issues,
+        });
+
         var workflowManager = serviceProvider.GetService<IWorkflowManager>();
 
         if (workflowManager is null)

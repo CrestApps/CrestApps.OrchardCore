@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIContactMemorySettingsViewModel
+
+<div class="mb-3">
+    <label asp-for="Instructions" class="form-label">@T["Memory instructions"]</label>
+    <textarea asp-for="Instructions" rows="7" class="form-control" placeholder="@Model.DefaultInstructions"></textarea>
+    <span class="hint">@T["What the AI follows to rewrite a contact's memory note after each conversation, for profiles that save contact memory. Leave empty for the built-in instructions shown. The note is always kept to 2,000 characters."]</span>
+</div>

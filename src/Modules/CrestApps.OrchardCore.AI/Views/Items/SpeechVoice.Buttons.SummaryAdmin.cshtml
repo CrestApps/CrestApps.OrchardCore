@@ -1,0 +1,10 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SpeechVoice>
+
+@if (!string.IsNullOrEmpty(Model.Value.VoiceSampleUrl))
+{
+    <audio controls preload="none" src="@Model.Value.VoiceSampleUrl" style="height: 2rem; max-width: 14rem;"></audio>
+}
+<button type="button" class="btn btn-sm btn-secondary" onclick="navigator.clipboard.writeText('@Model.Value.Id')">@T["Copy id"]</button>

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,12 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         // A call the AI placed may be answered by a phone menu, which only keys get through.
         AttachTool(orchestration, PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu.");
+
+        // A card or account number the caller types goes to secure data capture, where it is on, not to the model.
+        if (VoiceAgentConversationLoop.OffersSecureKeypad(ShellScope.Services))
+        {
+            AttachTool(orchestration, CollectSecureDigitsTool.ToolName, "Makes the caller's keypad private before they type a card, account or identity number.");
+        }
 
         // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
         // a tool the model is never told about is not used, and guidance without a tool has the model promising
@@ -452,7 +459,12 @@ public sealed partial class RealtimeVoiceConversationRunner
             : await services.ResolvePersonaAsync(context.Profile, cancellationToken);
         var speechLanguage = LanguagePart(persona?.Language);
 
-        var activityVoice = context.Activity?.TextToSpeechVoiceId;
+        // The campaign's voice is the voice of the profile the call started with; one it was handed to has its own.
+        var activityVoice = context.Activity is not null &&
+            context.Activity.TryGet<AIProfileSwitch>(out var profileSwitch) &&
+            AIProfileSwitch.HandedTo(profileSwitch, context.Profile?.ItemId)
+                ? null
+                : context.Activity?.TextToSpeechVoiceId;
 
         if (!string.IsNullOrWhiteSpace(activityVoice))
         {

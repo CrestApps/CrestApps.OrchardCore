@@ -42,6 +42,7 @@ public sealed class AIProfileDataPrivacyDisplayDriver : DisplayDriver<AIProfile>
             var settings = profile.GetSettings<AIProfileDataPrivacySettings>();
             model.StorageMode = settings.StorageMode;
             model.RetentionDays = settings.RetentionDays;
+            model.NamesToKeep = string.Join(Environment.NewLine, settings.NamesToKeep ?? []);
         }).Location("Content:20#Data Processing & Metrics;12");
     }
 
@@ -70,8 +71,27 @@ public sealed class AIProfileDataPrivacyDisplayDriver : DisplayDriver<AIProfile>
 
             settings.StorageMode = model.StorageMode;
             settings.RetentionDays = model.RetentionDays;
+            settings.NamesToKeep = SplitNames(model.NamesToKeep);
         });
 
         return Edit(profile, context);
+    }
+
+    /// <summary>
+    /// Splits the names entered one per line or separated by commas, without blanks or repeats.
+    /// </summary>
+    /// <param name="names">The names as entered.</param>
+    /// <returns>The names.</returns>
+    internal static List<string> SplitNames(string names)
+    {
+        if (string.IsNullOrWhiteSpace(names))
+        {
+            return [];
+        }
+
+        return names
+            .Split([',', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

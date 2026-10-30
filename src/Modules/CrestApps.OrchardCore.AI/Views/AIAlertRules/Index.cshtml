@@ -1,0 +1,36 @@
+@model ListCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIAlertRules" title="@T["Alert Rules"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                                        <a class="btn btn-secondary create" asp-action="Create">@T["Add alert rule"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="AIAlertRules" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> An alert rule watches a metric of the AI conversations, such as the share failing QA or the tool failure rate, and tells you when it crosses a threshold."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

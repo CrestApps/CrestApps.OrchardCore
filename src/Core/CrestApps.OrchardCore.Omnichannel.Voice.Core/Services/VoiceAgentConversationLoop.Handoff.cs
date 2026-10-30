@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -10,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -158,6 +160,11 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken, Action<OmnichannelActivity> mark = null)
     {
+        if (!activity.AiEscalated)
+        {
+            await PublishTransferredAsync(activity, mark);
+        }
+
         // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
 
@@ -198,7 +205,8 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="activity">The call the session was held for.</param>
     /// <param name="voiceEvent">The provider event the session was started from.</param>
     /// <param name="sessionLost">Whether the session was lost with the caller still on the line.</param>
-    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent, bool sessionLost)
+    /// <param name="handoffAnnounced">Whether the assistant told the caller before it asked for the handoff.</param>
+    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent, bool sessionLost, bool handoffAnnounced = false)
     {
         // Read here, while the turns that recorded them are still this scope's. Everything after this point runs
         // somewhere else and can carry nothing but plain values.
@@ -224,6 +232,7 @@ public sealed partial class VoiceAgentConversationLoop
                 ProviderName = voiceEvent.ProviderName,
                 ProviderCallId = voiceEvent.ProviderCallId,
                 HandoffRequested = handoffRequested,
+                HandoffAnnounced = handoffAnnounced,
                 EndCallRequested = endCallRequested,
                 EndCallReason = _endCallTurn.Reason,
                 ReachedVoicemail = _endCallTurn.ReachedVoicemail,
@@ -291,10 +300,11 @@ public sealed partial class VoiceAgentConversationLoop
         };
 
         // The caller asked for a person: seat them in the queue, on the same enqueue-and-offer path the
-        // turn-based loop uses, so a handoff means the same thing on both.
+        // turn-based loop uses, so a handoff means the same thing on both. The connecting line is said when the model
+        // asked for the transfer without telling the caller first.
         if (completion.HandoffRequested)
         {
-            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, announced: true, cancellationToken);
+            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, announced: completion.HandoffAnnounced, cancellationToken);
 
             return;
         }
@@ -375,7 +385,7 @@ public sealed partial class VoiceAgentConversationLoop
         // A transfer to a phone number leaves the platform: the provider rings the number and connects the caller.
         if (takeOverRequest is not null && string.IsNullOrEmpty(takeOverRequest.TargetAgentId) && !string.IsNullOrEmpty(takeOverRequest.TargetPhoneNumber))
         {
-            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest.TargetPhoneNumber, cancellationToken);
+            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest, cancellationToken);
 
             return;
         }
@@ -508,6 +518,25 @@ public sealed partial class VoiceAgentConversationLoop
                 activity.ItemId.SanitizeLogValue(),
                 routed ? "the call was offered to an available agent" : "the call is held while the queue waits for one");
         }
+    }
+
+    private static async Task PublishTransferredAsync(OmnichannelActivity activity, Action<OmnichannelActivity> mark)
+    {
+        // Read from a copy with the mark applied, so the event says where the caller went.
+        var marked = new OmnichannelActivity { ItemId = activity.ItemId };
+        mark?.Invoke(marked);
+        marked.TryGet<AICallTransfer>(out var transfer);
+        activity.TryGet<AITakeOverRequest>(out var takeOver);
+
+        await AIWebhookPublisher.TryPublishAsync(ShellScope.Services, AIWebhookEvents.ConversationTransferred, new
+        {
+            activityId = activity.ItemId,
+            sessionId = activity.AISessionId,
+            profileId = activity.AIProfileId,
+            phoneNumber = transfer?.PhoneNumber ?? takeOver?.TargetPhoneNumber,
+            agentId = takeOver?.TargetAgentId,
+            mode = transfer?.Mode.ToString(),
+        });
     }
 
     /// <summary>

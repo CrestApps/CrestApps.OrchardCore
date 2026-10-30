@@ -59,6 +59,7 @@ public sealed class Startup : StartupBase
         // because the session and the request run in different scopes.
         services.AddSingleton<IAIVoiceCallCommands, AIVoiceCallCommands>();
         services.AddScoped<IAIVoiceCallSupervision, AIVoiceCallSupervision>();
+        services.AddScoped<IAIVoiceCallTransfers, AIVoiceCallTransfers>();
 
         // The AI usage report's per-call summaries. The tracker outlives requests, because a turn-based call's
         // measurements span many of them; the store is the analytics feature's, and records nothing without it.
@@ -74,6 +75,12 @@ public sealed class Startup : StartupBase
             .WithCategory(S["Omnichannel"]);
 
         // Pressing keys is part of every automated call too: the AI may reach a phone menu on the other end.
+        // Secure keypad entry is offered on calls only where secure data capture is on.
+        services.AddCoreAITool<CollectSecureDigitsTool>(CollectSecureDigitsTool.ToolName)
+            .WithTitle(S["Collect digits securely"])
+            .WithDescription(S["Lets an automated call take a card or account number typed on the keypad through secure data capture."])
+            .WithCategory(S["Omnichannel"]);
+
         services.AddCoreAITool<PressKeysTool>(PressKeysTool.ToolName)
             .WithTitle(S["Press keys"])
             .WithDescription(S["Lets an automated call press keys to get through a phone menu."])
@@ -105,5 +112,19 @@ public sealed class RealtimeVoiceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Replace(ServiceDescriptor.Scoped<IRealtimeVoiceConversationRunner, RealtimeVoiceConversationRunner>());
+    }
+}
+
+/// <summary>
+/// Relays commands for live AI calls between the tenant's nodes over Redis, so a supervisor whose request lands on
+/// one node reaches a live session another node holds. Without Redis, commands reach only the node's own calls.
+/// </summary>
+[RequireFeatures("OrchardCore.Redis")]
+public sealed class RedisVoiceCallRelayStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton<IAIVoiceCallMessageBus, RedisAIVoiceCallMessageBus>();
+        services.AddSingleton<IAIVoiceCallCommandRelay, AIVoiceCallCommandRelay>();
     }
 }

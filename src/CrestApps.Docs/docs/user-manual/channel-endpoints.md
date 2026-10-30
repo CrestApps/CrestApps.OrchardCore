@@ -41,6 +41,16 @@ The address list shows each address's kind, what it is used for, its number and 
 
 Numbers that were listed once per channel before addresses had capabilities were merged into one address when the site was upgraded, with the settings of both.
 
+## Buy a Telnyx number
+
+With Telnyx as the phone provider, **Settings → Communication → Telnyx numbers** lists the numbers on the Telnyx account. **Buy a number** searches the numbers for sale by country, area code, city, state or digits, and whether they can text; **Buy** orders one on the voice connection in the Telnyx settings and adds it here as a phone address. On the list, type a **Caller name** and **Set** to change the name the number shows on the phones it calls (up to 15 letters, digits and spaces; carriers take a few days to show it), and **Release** gives a number back to Telnyx. Buying and keeping numbers is billed by Telnyx.
+
+The same is in the [AI API](../ai/conversations-api.md) under `api/ai/v1/carrier-numbers`: search (`GET available`), buy (`POST orders`), list, release and set the caller name.
+
+### Numbers carriers flag as spam
+
+When a carrier's call analytics label a number as spam, its calls are refused with SIP 608, and a person who blocked it as unwanted refuses them with SIP 607. Each refusal of a call placed from one of your numbers is counted, and the Telnyx numbers list shows a **spam rejections** badge on a number refused in the last 30 days, with the count. The API's number list has the same count as `spamRejections`, and `lastSpamRejectionUtc`. A number with rejections reaches fewer people with every call: register it with the carriers' call analytics, or buy another number and stop calling from it.
+
 ## Inbound routing for calls
 
 Calls to a number are routed by the [inbound entry point](entry-points-and-ivr.md) that picks it under **Numbers**. The entry point decides the queue or agent, the opening hours, the phone menu and voicemail.

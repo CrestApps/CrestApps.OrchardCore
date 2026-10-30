@@ -2019,6 +2019,11 @@ public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<StartOmnichannelActivityTaskSchema>()
             .AddWorkflowActivitySchema<CreateAIActivityTaskSchema>()
             .AddWorkflowActivitySchema<AICallActionTaskSchema>()
+            .AddWorkflowActivitySchema<TransferAICallTaskSchema>()
+            .AddWorkflowActivitySchema<AIAlertTriggeredEventSchema>()
+            .AddWorkflowActivitySchema<AIAlertResolvedEventSchema>()
+            .AddWorkflowActivitySchema<AIConversationFlowStartedEventSchema>()
+            .AddWorkflowActivitySchema<AIConversationStageTaskSchema>()
             .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>()
             .AddWorkflowActivitySchema<TransferToAgentTaskSchema>();
     }

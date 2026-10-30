@@ -1,0 +1,29 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIProfileFlowViewModel
+
+<h5>@T["Conversation flow"]</h5>
+
+<div class="ocat-wrapper">
+    <label asp-for="WorkflowTypeId" class="ocat-label">@T["Flow"]</label>
+    <div class="ocat-end">
+        <select asp-for="WorkflowTypeId" asp-items="Model.Flows" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["A workflow that starts with the <strong>AI Conversation Flow Started</strong> event and guides the conversation stage by stage with <strong>AI Conversation Stage</strong> activities. Each stage adds its instructions, and the AI moves on when one of the stage's ways out applies."]</span>
+        @if (Model.Flows.Count == 0)
+        {
+            <span class="hint">@T["No workflow starts with the AI Conversation Flow Started event yet. Create one under Workflows first."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Flexible" />
+            <label class="form-check-label" asp-for="Flexible">@T["Flexible"]</label>
+            <span class="hint dashed">@T["Give the AI every stage's instructions at once, so a caller who jumps between tasks is followed. The AI still moves between stages with the flow's ways out."]</span>
+        </div>
+    </div>
+</div>

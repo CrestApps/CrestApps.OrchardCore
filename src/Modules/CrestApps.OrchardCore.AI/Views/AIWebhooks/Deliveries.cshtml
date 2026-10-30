@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIWebhookDeliveriesViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIWebhooksDeliveries" title="@T["Deliveries of '{0}'", Model.Subscription.Name]">
+        <breadcrumb-item id="AIWebhooks" action="Index" controller="AIWebhooks" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIWebhooks.Name">@T["Webhooks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-break me-auto">@Model.Subscription.Url</span>
+            <button type="submit" class="btn btn-secondary" formaction="@Url.Action("Test", "AIWebhooks", new { area = "CrestApps.OrchardCore.AI", id = Model.Subscription.ItemId })">@T["Send a test event"]</button>
+        </div>
+    </div>
+
+    <admin-list name="AIWebhookDeliveries" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> Nothing has been sent to this webhook yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Event"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

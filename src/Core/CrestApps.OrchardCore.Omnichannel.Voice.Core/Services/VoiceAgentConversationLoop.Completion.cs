@@ -107,6 +107,10 @@ public sealed partial class VoiceAgentConversationLoop
         // or the model never receives them. The SMS handler does the same.
         await AttachCallToolsAsync(context, offerTransfer: transferOffered, cancellationToken);
 
+        // A slow tool must not leave the caller in silence: each tool has a time limit, and the caller hears a short
+        // filler line when one runs long.
+        using var toolFiller = await LimitCallToolsAsync(context, activity, cancellationToken);
+
         var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
         if (deployment is null)
@@ -120,7 +124,15 @@ public sealed partial class VoiceAgentConversationLoop
         _endCallTurn.Reset();
 
         using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
+        var lineUtc = _clock.UtcNow;
+        var modelTime = System.Diagnostics.Stopwatch.StartNew();
         var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
+
+        // A reply to the caller, timed for the call's latency figures; a voicemail message or a briefing is not one.
+        if (string.IsNullOrEmpty(turnGuidance) && activity is not null)
+        {
+            _sessionTracker.TurnBasedAnswer(activity.ItemId, lineUtc, (int)modelTime.ElapsedMilliseconds);
+        }
 
         var reply = completion?.Messages?.FirstOrDefault()?.Text;
         var handoffRequested = handoffService is not null && _handoffTurn.HandoffRequested;

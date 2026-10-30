@@ -15,4 +15,9 @@ public sealed class AICallTransfer
     /// Gets or sets when the call was transferred.
     /// </summary>
     public DateTime TransferredUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the call was transferred.
+    /// </summary>
+    public AICallTransferMode Mode { get; set; }
 }

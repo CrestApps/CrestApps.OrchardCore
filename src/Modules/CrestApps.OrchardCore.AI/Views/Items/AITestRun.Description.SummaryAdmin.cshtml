@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestRun>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Error))
+{
+    <div class="admin-list-secondary text-warning">@Model.Value.Error</div>
+}
+else if (!string.IsNullOrWhiteSpace(Model.Value.Summary))
+{
+    <div class="admin-list-secondary">@Model.Value.Summary</div>
+}

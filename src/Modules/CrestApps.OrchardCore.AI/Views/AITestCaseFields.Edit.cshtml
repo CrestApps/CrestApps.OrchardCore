@@ -1,0 +1,108 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AITestCaseViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProfileId">
+    <label asp-for="ProfileId" class="ocat-label ocat-label-required">@T["AI profile"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+            <option value="">@T["Choose a profile"]</option>
+        </select>
+        <span asp-validation-for="ProfileId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProfileVersion">
+    <label asp-for="ProfileVersion" class="ocat-label">@T["Version"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProfileVersion" type="number" min="1" step="1" class="form-control" />
+        <span asp-validation-for="ProfileVersion" class="text-danger"></span>
+        <span class="hint">@T["Leave empty to test the profile as it is now, or enter a version number from its Versions page."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Scenario">
+    <label asp-for="Scenario" class="ocat-label ocat-label-required">@T["Simulated customer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Scenario" rows="6" class="form-control"></textarea>
+        <span asp-validation-for="Scenario" class="text-danger"></span>
+        <span class="hint">@T["Who the customer is, what they want and how they behave, for example <em>You are Sam, you were charged twice for one order and you are annoyed; you want a refund today</em>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Criteria">
+    <label asp-for="Criteria" class="ocat-label">@T["Success criteria"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Criteria" rows="4" class="form-control"></textarea>
+        <span asp-validation-for="Criteria" class="text-danger"></span>
+        <span class="hint">@T["One per line. The judge marks each one met or not, and the run passes when the score reaches the passing score."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Variables">
+    <label asp-for="Variables" class="ocat-label">@T["Conversation variables"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Variables" rows="3" class="form-control font-monospace"></textarea>
+        <span class="hint">@T["One <code>name: value</code> per line, such as <code>balance_due: 120.50</code>. The AI sees them as it would see real conversation variables."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MockedTools">
+    <label asp-for="MockedTools" class="ocat-label">@T["Mocked tools"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="MockedTools" rows="3" class="form-control font-monospace"></textarea>
+        <span class="hint">@T["One <code>tool name: result</code> per line. The named tool returns the result instead of running, so the test books, charges and sends nothing for real. Other tools run as usual."]</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-6">
+        <div class="ocat-wrapper" asp-validation-class-for="MaxTurns">
+            <label asp-for="MaxTurns" class="ocat-label">@T["Most customer turns"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaxTurns" type="number" min="1" max="50" class="form-control" />
+                <span asp-validation-for="MaxTurns" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="ocat-wrapper" asp-validation-class-for="PassingScore">
+            <label asp-for="PassingScore" class="ocat-label">@T["Passing score"]</label>
+            <div class="ocat-end">
+                <input asp-for="PassingScore" type="number" min="0" max="100" class="form-control" />
+                <span asp-validation-for="PassingScore" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-6">
+        <div class="ocat-wrapper">
+            <label asp-for="CustomerDeploymentName" class="ocat-label">@T["Customer model"]</label>
+            <div class="ocat-end">
+                <select asp-for="CustomerDeploymentName" asp-items="Model.Deployments" class="form-select">
+                    <option value="">@T["Default utility model"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="ocat-wrapper">
+            <label asp-for="JudgeDeploymentName" class="ocat-label">@T["Judge model"]</label>
+            <div class="ocat-end">
+                <select asp-for="JudgeDeploymentName" asp-items="Model.Deployments" class="form-select">
+                    <option value="">@T["Default utility model"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>

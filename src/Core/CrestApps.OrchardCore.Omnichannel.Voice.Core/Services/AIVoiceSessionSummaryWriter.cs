@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -14,7 +15,9 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -37,6 +40,7 @@ internal sealed class AIVoiceSessionSummaryWriter
     private readonly IEnumerable<IAICompletionUsageObserver> _usageObservers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly ISiteService _siteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIVoiceSessionSummaryWriter"/> class.
@@ -50,8 +54,10 @@ internal sealed class AIVoiceSessionSummaryWriter
         IAIVoiceSessionSummaryStore summaries,
         IEnumerable<IAICompletionUsageObserver> usageObservers,
         IClock clock,
-        ILogger<AIVoiceSessionSummaryWriter> logger)
+        ILogger<AIVoiceSessionSummaryWriter> logger,
+        ISiteService siteService = null)
     {
+        _siteService = siteService;
         _activityStore = activityStore;
         _promptStore = promptStore;
         _profileManager = profileManager;
@@ -155,6 +161,12 @@ internal sealed class AIVoiceSessionSummaryWriter
                 : spoken.Count(prompt => prompt.Role == ChatRole.Assistant && string.Equals(prompt.Content.Trim(), VoiceAgentConversationLoop.StillThereLine, StringComparison.Ordinal)),
             EchoHeldMs = measured?.EchoHeldMs,
         };
+
+        AICallMetrics.ApplyLatencies(summary, measured?.ResponseLatenciesMs, measured?.ModelLatenciesMs, measured?.DetectorWaitsMs);
+
+        var costs = _siteService is null ? null : (await _siteService.GetSiteSettingsAsync()).GetOrCreate<AICostSettings>();
+        summary.EstimatedCost = AICallMetrics.EstimateCost(summary, costs);
+        summary.CostCurrency = summary.EstimatedCost is null ? null : costs?.Currency;
 
         await _summaries.SaveAsync(summary, cancellationToken);
 

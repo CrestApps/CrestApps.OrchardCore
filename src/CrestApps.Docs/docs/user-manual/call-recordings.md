@@ -75,6 +75,12 @@ Clicking the time also plays from that line. While the recording plays, the line
 A transcript keeps one time for each line. The silence between lines is worked out from how long each line takes to say, so treat it as a close estimate. For an AI call that was handed to an agent, the AI's part happened before the agent's recording started: those lines show `--:--:--` and have no play button.
 :::
 
+## Share a recording
+
+On a call's page, **Share link** makes a link that plays the recording without signing in, for 24 hours, and shows it in a message to copy. Use it to send a recording to someone outside the admin, such as a customer or an auditor. Making a link needs **Listen to anyone's call recordings**, and each one is kept on the audit trail. The link is signed with the site's keys and stops working when it expires or the recording is erased; anyone holding it can play the recording until then.
+
+Programs make links through the [AI API](../ai/conversations-api.md): `POST /api/ai/v1/recordings/{id}/links`, with `minutes` up to 7 days, and `GET /api/ai/v1/recordings?activityId=` to find a call's recordings.
+
 ## Erase a recording
 
 Only users with the *Delete call recordings* permission see **Erase recording** at the bottom of the call page. No role has it by default except *Administrator*; managing the contact center does not include it.
