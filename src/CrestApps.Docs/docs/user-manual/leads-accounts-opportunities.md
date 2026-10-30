@@ -159,6 +159,8 @@ Every subject action also has a **Set lead status** field. When the activity bel
 
 ## Accounts
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the account page, its contacts and its activities" start={48} end={78} />
+
 An account is the company or household your contacts and opportunities belong to. Open **Interaction Center > Accounts** to list them.
 
 - **Add a contact or opportunity to an account** with the **Account** picker on its editor, or create it from the account's page.
@@ -167,11 +169,27 @@ An account is the company or household your contacts and opportunities belong to
 
 Every contact and opportunity type can join an account without extra setup. Leads never join an account; they get one when they are converted.
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of putting a contact and an opportunity in an account with the Account picker" start={78} end={103} />
+
+If an account's page says *Please specify at least one contained content type*, open **Design > Content Definition > Content Types > Account**, edit its **List** part, tick **Contact** and **Sales Opportunity** (and any other contact or opportunity type you use) as the contained content types, and save. The page then lists the account's contacts and opportunities.
+
 ## Opportunities
 
+<<<<<<< HEAD
 **Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Design > Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
+=======
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the opportunities list and its search terms" start={103} end={130} />
+
+**Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
+>>>>>>> origin/docs/omnichannel-accounts-opportunities-video
 
 Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for example `closed:false`.
+
+<YouTube video="omnichannel-accounts-opportunities" title="Video of adding an opportunity with its stage, amount and primary contact" start={130} end={164} />
+
+To delete an account, use **Actions > Delete** on its row and confirm. Its contacts and opportunities stay, now without an account:
+
+<YouTube video="omnichannel-accounts-opportunities" title="Video of deleting an account while its contacts and opportunities stay" start={164} end={185} />
 
 ## Lead sources
 
@@ -233,6 +251,8 @@ With the **Workflows** feature on, the CRM adds two activities under **Omnichann
 | **Convert Lead** (task) | Converts a lead, for example when a web form or an outside system says it qualified. By default it converts the workflow's content item. Choose the account handling, whether to create an opportunity, and what happens to open activities. It merges into an existing contact only when exactly one shares the lead's number or email. Its outcomes are **Converted**, with the contact's id as the result, and **Failed**. A lead that was already converted counts as **Converted** and does not start **Lead Converted** again. |
 
 ## Reports
+
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the three CRM reports" start={185} end={223} />
 
 Three reports appear under **Reports > CRM & Campaigns**. Each one is filtered by date range only, and needs the **View Omnichannel reports** permission. See [Reports](reports.md) for how to run and export a report.
 

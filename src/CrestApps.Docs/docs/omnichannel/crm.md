@@ -224,4 +224,6 @@ Listing and editing leads, accounts and opportunities uses the ordinary content 
 
 ## Reports
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the three CRM reports" start={185} end={223} />
+
 The feature adds **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** to the Reports area, in the **CRM & Campaigns** category. They read the lead and opportunity indexes, are filtered by date range only, and require **View Omnichannel reports** (`ViewOmnichannelReports`). See the [report catalog](../contact-center/report-catalog.md) for the other CRM reports.
