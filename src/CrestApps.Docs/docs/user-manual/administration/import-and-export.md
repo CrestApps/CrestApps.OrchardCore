@@ -69,6 +69,8 @@ The import runs in the background, so you can leave the page. For each row:
 
 Rows a contact import leaves out on purpose, such as duplicate phone numbers or numbers on a [do-not-call list](do-not-call-lists.md), are counted as errors too, with the reason.
 
+<YouTube video="contact-import-and-export" title="Video of the contact import options: ignoring duplicate phone numbers, what to compare with, and the lead country" start={42} end={117} />
+
 ### Follow an import
 
 <<<<<<< HEAD
@@ -102,7 +104,13 @@ Use the status and sort menus above the list to find an import, and tick several
 
 ## Export content
 
+<<<<<<< HEAD
 <YouTube video="content-transfer" title="Video of exporting content with filters and downloading the file" start={276} end={351} />
+=======
+<YouTube video="contact-import-and-export" title="Video of exporting contacts with their last completed activity" start={117} end={157} />
+
+For a contact type, the export page also shows a **CRM last activity** section. Tick **Include last completed activity information** and choose a **Subject**, and the file appends each contact's most recent completed activity of that subject: the agent's note, the completion date, the disposition, the subject and the subject's fields. Tick **Include only contacts with a last activity record** to leave out the contacts that have none.
+>>>>>>> origin/docs/contact-import-and-export-video
 
 1. Open **Content > Export**. The **Bulk Export** page lists earlier exports.
 2. Click **Export** to open the **Export contents** form.
