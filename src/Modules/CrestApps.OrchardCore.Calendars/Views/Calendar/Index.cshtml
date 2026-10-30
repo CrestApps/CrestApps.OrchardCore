@@ -26,9 +26,9 @@
                 {
                     <h2 class="h6 text-uppercase text-muted">@T["Schedule"]</h2>
                     <p class="mb-2">
-                        @if (Model.ScheduleMode == "person")
+                        @if (Model.ScheduleMode == "people")
                         {
-                            @T["Showing {0}'s calendars and the events they attend.", Model.ScheduleName]
+                            @T["Showing the calendars of {0} and the events they attend.", string.Join(", ", Model.ScheduleNames)]
                         }
                         else
                         {
@@ -73,18 +73,19 @@
                         <label class="form-check-label" for="schedule-everyone">@T["Everyone"]</label>
                     </div>
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="schedule" id="schedule-person" value="person" checked="@(Model.ScheduleMode == "person")" />
-                        <label class="form-check-label" for="schedule-person">@T["One person"]</label>
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-people" value="people" checked="@(Model.ScheduleMode == "people")" />
+                        <label class="form-check-label" for="schedule-people">@T["Choose people"]</label>
                     </div>
-                    <div class="mb-2">
+                    @* Only shown while "Choose people" is picked (see the script below). *@
+                    <div class="mb-2@(Model.ScheduleMode == "people" ? null : " d-none")" data-schedule-people>
                         @await Component.InvokeAsync("ItemSelector", new
                         {
-                            id = "schedule-person-picker",
-                            inputName = "person",
+                            id = "schedule-people-picker",
+                            inputName = "people",
                             endpoint = Url.RouteUrl("CalendarsUserSearch"),
-                            initialItemsJson = Model.SchedulePersonJson,
-                            multiple = false,
-                            buttonText = T["Choose a person"].Value,
+                            initialItemsJson = Model.SchedulePeopleJson,
+                            multiple = true,
+                            buttonText = T["Choose people"].Value,
                             searchPlaceholder = T["Search users"].Value,
                             smallButton = true,
                         })
@@ -156,6 +157,22 @@
         </div>
     </div>
 </div>
+
+<script at="Foot">
+    (function () {
+        const people = document.querySelector('[data-schedule-people]');
+
+        if (!people) {
+            return;
+        }
+
+        document.querySelectorAll('input[name="schedule"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                people.classList.toggle('d-none', !document.getElementById('schedule-people').checked);
+            });
+        });
+    })();
+</script>
 
 <template id="calendar-labels">
     <span data-label="calendar">@T["Calendar"]</span>

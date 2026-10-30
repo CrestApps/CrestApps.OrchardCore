@@ -152,7 +152,7 @@ Office calendars work the same way with their desk count: once that many people 
 
 ## See someone else's schedule
 
-To see what a person has scheduled, such as a manager checking someone's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **One person** and pick them with **Choose a person**, or choose **Everyone**, then **Show**. The calendar shows the events on that person's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
+To see what people have scheduled, such as a manager checking a team's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **Choose people** and pick one or more users in the box that appears, or choose **Everyone**, then **Show**. The calendar shows the events on those people's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
 
 **Whose schedule** only appears for people allowed to see others' schedules. Two pairs of permissions decide this, under **Security > Roles**:
 
@@ -181,7 +181,11 @@ The invitation has **Accept**, **Maybe** and **Decline** links. Guests answer fr
 
 ## Reminders
 
-**Calendar Reminders** runs every minute and notices when events are about to start and when they have ended, once for each occurrence. It sends nothing by itself: it lets workflows act at those moments, such as emailing attendees 15 minutes before a meeting (see [Workflows](#workflows)).
+With **Calendar Reminders** on, an event's **Remind** setting (on its **General** tab) shows a reminder before it starts: when it starts, 5, 10, 15 or 30 minutes, 1 or 2 hours, or a day before. Events that take time remind 10 minutes before unless you change it; all-day events don't remind.
+
+The reminder shows at the top right of every admin page of the calendar's owner (for a personal calendar) and of each invited user who hasn't declined. It stays until you click **Dismiss** or close it, and dismissing it on one page or tab removes it from the others. **Open calendar** opens the calendar on that day. Pages check for reminders every minute while they're open.
+
+Calendar Reminders also runs every minute to notice when events are about to start and when they have ended, once for each occurrence, so workflows can act at those moments, such as emailing attendees 15 minutes before a meeting (see [Workflows](#workflows)).
 
 ## Subscribe from Outlook, Google Calendar or a phone
 

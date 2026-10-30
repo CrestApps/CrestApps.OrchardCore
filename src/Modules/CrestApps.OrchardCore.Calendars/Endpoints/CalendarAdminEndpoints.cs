@@ -103,7 +103,21 @@ internal static class CalendarAdminEndpoints
         return Results.Ok(result);
     }
 
-    // A person's schedule (the events on the calendars they own and the events they attend), or everyone's. Seeing it needs
+    /// <summary>
+    /// Reads user ids separated by commas, without blanks or repeats.
+    /// </summary>
+    /// <param name="value">The text.</param>
+    /// <returns>The user ids.</returns>
+    internal static IReadOnlyList<string> ParseUserIds(string value)
+    {
+        return (value ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal)
+            .Take(50)
+            .ToList();
+    }
+
+    // People's schedules (the events on the calendars they own and the events they attend), or everyone's. Seeing one needs
     // ListCalendarEvents for that schedule; an event's details need ViewCalendarEvents for that event, or it shows as busy.
     private static async Task<IResult> GetScheduleAsync(
         string schedule,
@@ -117,25 +131,34 @@ internal static class CalendarAdminEndpoints
         CalendarViewEventMapper mapper)
     {
         var user = httpContext.User;
-        var target = string.Equals(schedule, EveryoneSchedule, StringComparison.OrdinalIgnoreCase) ? CalendarSchedule.Everyone : new CalendarSchedule(schedule);
+        var everyone = string.Equals(schedule, EveryoneSchedule, StringComparison.OrdinalIgnoreCase);
+        var userIds = everyone ? [] : ParseUserIds(schedule);
 
-        if (!await authorizationService.AuthorizeAsync(user, CalendarPermissions.ListCalendarEvents, target))
+        if (!everyone && userIds.Count == 0)
         {
-            return Results.Forbid();
+            return Results.BadRequest();
+        }
+
+        foreach (var target in everyone ? [CalendarSchedule.Everyone] : userIds.Select(id => new CalendarSchedule(id)))
+        {
+            if (!await authorizationService.AuthorizeAsync(user, CalendarPermissions.ListCalendarEvents, target))
+            {
+                return Results.Forbid();
+            }
         }
 
         var query = new CalendarOccurrenceQuery { FromUtc = fromUtc, ToUtc = toUtc };
 
-        if (target.IsEveryone)
+        if (everyone)
         {
             query.AllCalendars = true;
         }
         else
         {
-            var owned = await calendarService.ListAsync(new CalendarListQuery { OwnerIds = [target.UserId], Limit = 500 });
+            var owned = await calendarService.ListAsync(new CalendarListQuery { OwnerIds = [.. userIds], Limit = 500 });
 
             query.CalendarIds = owned.Where(calendar => calendar.OwnerKind == CalendarOwnerKind.User).Select(calendar => calendar.ItemId).ToList();
-            query.AttendeeUserIds = [target.UserId];
+            query.AttendeeUserIds = [.. userIds];
         }
 
         var occurrences = await queryService.GetOccurrencesAsync(query);

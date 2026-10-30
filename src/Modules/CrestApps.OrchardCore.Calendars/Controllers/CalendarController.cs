@@ -57,29 +57,27 @@ public sealed class CalendarController : Controller
     /// <param name="date">The day to show first, as yyyy-MM-dd.</param>
     /// <param name="view">The view to show first: day, week, month or agenda.</param>
     /// <param name="calendars">The calendars to show, comma separated; the viewer's own calendars when empty.</param>
-    /// <param name="schedule">Whose schedule to show instead of calendars: <c>everyone</c>, <c>person</c> or a user id.</param>
-    /// <param name="person">The user whose schedule to show when <paramref name="schedule"/> is <c>person</c>.</param>
+    /// <param name="schedule">Whose schedule to show instead of calendars: <c>everyone</c>, <c>people</c>, or user ids separated by commas.</param>
+    /// <param name="people">The users whose schedules to show when <paramref name="schedule"/> is <c>people</c>.</param>
     /// <param name="userLookup">The user lookup.</param>
     /// <returns>The page.</returns>
     [Admin("calendar", "CalendarView")]
-    public async Task<IActionResult> Index(string date, string view, string calendars, string schedule, string person, [FromServices] CalendarUserLookup userLookup)
+    public async Task<IActionResult> Index(string date, string view, string calendars, string schedule, string[] people, [FromServices] CalendarUserLookup userLookup)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CalendarPermissions.AccessCalendars))
         {
             return Forbid();
         }
 
-        // The schedule form posts "person" with the picked user; a link can name the user directly.
-        var scheduleUserId = string.Equals(schedule, "person", StringComparison.OrdinalIgnoreCase) ? person : schedule;
-        CalendarSchedule shownSchedule = null;
+        // The schedule form sends "people" with the users picked; a link can name the users directly, separated by commas.
+        var everyone = string.Equals(schedule, CalendarAdminEndpoints.EveryoneSchedule, StringComparison.OrdinalIgnoreCase);
+        var userIds = everyone
+            ? []
+            : CalendarAdminEndpoints.ParseUserIds(string.Equals(schedule, "people", StringComparison.OrdinalIgnoreCase) ? string.Join(',', people ?? []) : schedule);
 
-        if (!string.IsNullOrWhiteSpace(scheduleUserId))
+        foreach (var shown in everyone ? [CalendarSchedule.Everyone] : userIds.Select(id => new CalendarSchedule(id)))
         {
-            shownSchedule = string.Equals(scheduleUserId, CalendarAdminEndpoints.EveryoneSchedule, StringComparison.OrdinalIgnoreCase)
-                ? CalendarSchedule.Everyone
-                : new CalendarSchedule(scheduleUserId.Trim());
-
-            if (!await _authorizationService.AuthorizeAsync(User, CalendarPermissions.ListCalendarEvents, shownSchedule))
+            if (!await _authorizationService.AuthorizeAsync(User, CalendarPermissions.ListCalendarEvents, shown))
             {
                 return Forbid();
             }
@@ -101,17 +99,17 @@ public sealed class CalendarController : Controller
             CanViewSchedules = await _authorizationService.AuthorizeAsync(User, CalendarPermissions.ListCalendarEvents, CalendarSchedule.Everyone),
         };
 
-        if (shownSchedule is not null)
+        if (everyone)
         {
-            model.ScheduleMode = shownSchedule.IsEveryone ? CalendarAdminEndpoints.EveryoneSchedule : "person";
+            model.ScheduleMode = CalendarAdminEndpoints.EveryoneSchedule;
+        }
+        else if (userIds.Count > 0)
+        {
+            var picked = await userLookup.GetAsync(userIds);
 
-            if (!shownSchedule.IsEveryone)
-            {
-                var people = await userLookup.GetAsync([shownSchedule.UserId]);
-
-                model.ScheduleName = people.Count > 0 ? people[0].Text : shownSchedule.UserId;
-                model.SchedulePersonJson = JsonSerializer.Serialize(people.Select(item => new { value = item.Value, text = item.Text }), _jsonOptions);
-            }
+            model.ScheduleMode = "people";
+            model.ScheduleNames = userIds.Select(id => picked.FirstOrDefault(item => item.Value == id)?.Text ?? id).ToList();
+            model.SchedulePeopleJson = JsonSerializer.Serialize(picked.Select(item => new { value = item.Value, text = item.Text }), _jsonOptions);
         }
 
         foreach (var access in accessible.Where(access => access.Calendar.Enabled || access.Level >= CalendarAccessLevel.Manage))
@@ -148,7 +146,7 @@ public sealed class CalendarController : Controller
                 _ => "timeGridWeek",
             },
             locale = System.Globalization.CultureInfo.CurrentUICulture.Name,
-            schedule = shownSchedule is null ? null : shownSchedule.IsEveryone ? CalendarAdminEndpoints.EveryoneSchedule : shownSchedule.UserId,
+            schedule = everyone ? CalendarAdminEndpoints.EveryoneSchedule : userIds.Count > 0 ? string.Join(',', userIds) : null,
             writableCalendars = model.Calendars.Where(calendar => calendar.Writable).Select(calendar => calendar.Id),
         }, _jsonOptions);
 

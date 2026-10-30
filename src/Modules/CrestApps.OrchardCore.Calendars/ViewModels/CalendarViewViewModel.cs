@@ -26,17 +26,17 @@ public class CalendarViewViewModel
     public bool CanViewSchedules { get; set; }
 
     /// <summary>
-    /// Gets or sets whose schedule is shown: empty for the viewer's calendars, <c>everyone</c>, or <c>person</c>.
+    /// Gets or sets whose schedule is shown: empty for the viewer's calendars, <c>everyone</c>, or <c>people</c>.
     /// </summary>
     public string ScheduleMode { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the person whose schedule is shown.
+    /// Gets or sets the names of the people whose schedules are shown.
     /// </summary>
-    public string ScheduleName { get; set; }
+    public IList<string> ScheduleNames { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the person whose schedule is shown, as the user picker's initial items JSON.
+    /// Gets or sets the people whose schedules are shown, as the user picker's initial items JSON.
     /// </summary>
-    public string SchedulePersonJson { get; set; } = "[]";
+    public string SchedulePeopleJson { get; set; } = "[]";
 }
