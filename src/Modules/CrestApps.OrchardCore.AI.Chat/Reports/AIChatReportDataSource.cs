@@ -36,6 +36,11 @@ public sealed class AIChatReportDataSource : RecordDataSource, IDataSource
     public const string VoiceUsageDataSet = "VoiceUsage";
 
     /// <summary>
+    /// The technical name of the conversation evaluations data set.
+    /// </summary>
+    public const string ConversationEvaluationsDataSet = "ConversationEvaluations";
+
+    /// <summary>
     /// The technical name of the session identifier field, which other data sets reference.
     /// </summary>
     public const string SessionIdField = "SessionId";

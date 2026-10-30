@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model SetConversationVariablesTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Variables">
+    <label class="ocat-label ocat-label-required" asp-for="Variables">@T["Variables"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control font-monospace" asp-for="Variables" rows="5" placeholder="first_name: {{ Workflow.Output.Customer.firstName }}"></textarea>
+        <span asp-validation-for="Variables"></span>
+        <span class="hint">@T["One <code>name: value</code> per line. Liquid is supported. A name with no value clears the variable. The AI profile's instructions read them as <code>{{ Variables.name }}</code>, and tool parameters can be filled from them."]</span>
+    </div>
+</div>

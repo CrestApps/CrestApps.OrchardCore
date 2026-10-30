@@ -429,6 +429,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
                 AIChatReportDataSource.ChatSessionMetricsDataSet,
                 AIChatReportDataSource.CompletionUsageDataSet,
                 AIChatReportDataSource.VoiceUsageDataSet,
+                AIChatReportDataSource.ConversationEvaluationsDataSet,
             ],
             withAnalyticsDataSets.Select(dataSet => dataSet.Name));
     }
