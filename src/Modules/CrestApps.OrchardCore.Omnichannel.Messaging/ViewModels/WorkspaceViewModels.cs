@@ -148,6 +148,17 @@ public class InboxViewModel
         ? "favorites"
         : Filter == MessagingInboxFilter.All ? null : Filter.ToString().ToLowerInvariant();
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the list shows only the conversations nobody has read yet.
+    /// </summary>
+    public bool UnreadOnly { get; set; }
+
+    /// <summary>
+    /// Gets the value of the <c>unread</c> route value that keeps the list on unread conversations, or
+    /// <see langword="null"/> so the links stay clean when the filter is off.
+    /// </summary>
+    public bool? UnreadRouteValue => UnreadOnly ? true : null;
+
     public bool HasAgentProfile { get; set; }
 
     /// <summary>

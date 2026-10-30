@@ -154,6 +154,7 @@ public sealed class MessagingWorkspaceBuilder
         AgentProfile currentAgent,
         string show,
         string channel,
+        bool unreadOnly,
         int page,
         string selectedCustomerKey,
         CancellationToken cancellationToken)
@@ -191,6 +192,10 @@ public sealed class MessagingWorkspaceBuilder
             _ => MessagingInboxFilter.All,
         };
 
+        // "Unread only" narrows whichever tab is open, and its counts, to the conversations nobody has read yet. It
+        // has no meaning for the favorites, which list customers rather than conversations.
+        viewModel.UnreadOnly = unreadOnly && !viewModel.ShowFavorites;
+
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab, int skip, int take) => new()
         {
             AgentId = scope.AgentId,
@@ -198,6 +203,7 @@ public sealed class MessagingWorkspaceBuilder
             IncludeAll = scope.IncludeAll,
             Filter = tab,
             Channel = viewModel.ChannelFilter,
+            UnreadOnly = viewModel.UnreadOnly,
             Skip = skip,
             Take = take,
         };
@@ -244,7 +250,26 @@ public sealed class MessagingWorkspaceBuilder
             BuildQuery(filter, (currentPage - 1) * pageSize, pageSize),
             cancellationToken);
 
-        foreach (var group in InboxRowGrouping.Group(conversations))
+        var groups = InboxRowGrouping.Group(conversations).ToList();
+
+        // Opening a conversation marks it read, which would drop it out of an unread-only list while the agent is
+        // still answering it; the open customer keeps their row until the agent moves on.
+        if (viewModel.UnreadOnly &&
+            !string.IsNullOrEmpty(selectedCustomerKey) &&
+            !groups.Any(group => string.Equals(group.CustomerKey, selectedCustomerKey, StringComparison.Ordinal)))
+        {
+            var selectedGroup = await FindSelectedGroupAsync(user, selectedCustomerKey, viewModel.ChannelFilter, cancellationToken);
+
+            if (selectedGroup is not null)
+            {
+                var selectedUtc = selectedGroup.Latest.LastMessageUtc ?? selectedGroup.Latest.CreatedUtc;
+                var index = groups.FindIndex(group => (group.Latest.LastMessageUtc ?? group.Latest.CreatedUtc) < selectedUtc);
+
+                groups.Insert(index < 0 ? groups.Count : index, selectedGroup);
+            }
+        }
+
+        foreach (var group in groups)
         {
             viewModel.Rows.Add(new InboxRow
             {
@@ -261,6 +286,24 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return viewModel;
+    }
+
+    // The open customer's conversations the user may view, on the filtered channel, as one inbox row.
+    private async Task<InboxRowGrouping.CustomerGroup> FindSelectedGroupAsync(ClaimsPrincipal user, string customerKey, string channel, CancellationToken cancellationToken)
+    {
+        var candidates = (await _conversationStore.GetForCustomerAsync(customerKey, cancellationToken)) ?? [];
+        var visible = new List<MessagingConversation>();
+
+        foreach (var conversation in candidates.OrderByDescending(item => item.LastMessageUtc ?? item.CreatedUtc))
+        {
+            if ((channel is null || string.Equals(conversation.Channel, channel, StringComparison.OrdinalIgnoreCase)) &&
+                await AuthorizeAsync(user, conversation, ConversationOperation.View))
+            {
+                visible.Add(conversation);
+            }
+        }
+
+        return InboxRowGrouping.Group(visible).FirstOrDefault();
     }
 
     private async Task<MessagingConversation> FindFavoriteConversationAsync(ClaimsPrincipal user, MessagingFavorite favorite, CancellationToken cancellationToken)
