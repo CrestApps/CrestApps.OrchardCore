@@ -122,6 +122,8 @@ The links open the customer's pages in the admin (**Commerce > My Transactions**
 
 ## Brand your invoices and receipts
 
+<YouTube video="orders" title="Video of the receipt settings" start={331} end={379} />
+
 Invoices and receipts share one set of branding settings.
 
 | | |

@@ -41,7 +41,11 @@ With the [Shipping](shipping.md) feature on, an order with goods shows where it 
 
 ## Finding orders
 
-**Commerce > Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's email, and filter by status:
+This video walks through finding, managing, refunding and creating orders, and the settings and emails around them:
+
+<YouTube video="orders" title="Video overview of orders" />
+
+**Commerce > Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's whole email address, and filter by status. The status drop-down starts on **Placed**, which lists the paid orders and the ones awaiting payment, and also offers **Paid**, **Awaiting payment**, **Canceled**, **Drafts** and **Any status**:
 
 | Status | Meaning |
 | --- | --- |
@@ -80,6 +84,8 @@ Open an order from **Commerce > Orders**. The **Manage** box on the right does w
 
 ### Print an invoice or a packing slip
 
+<YouTube video="orders" title="Video of the order page, with its shipments, invoice, packing slip and notes" start={139} end={188} />
+
 Above the order's details, **Invoice** and **Packing slip** open a page to print, with **Print invoice** or **Print packing slip** at the top. Your browser's print dialog can also save it as a PDF.
 
 - The **invoice** has your store's name, logo, address and contact details, who it's billed to and where it ships, each item with its SKU, quantity and price, the discounts, shipping, tax and total, what was refunded, and the amount still due, with the order's status (*Paid*, *Payment due*, *Refunded* or *Canceled*).
@@ -91,6 +97,8 @@ The store's name, logo, address, contact details and footer come from **Settings
 Buyers print their own invoice too: an **Invoice** button on their order's page, in their account or on the order link a guest has.
 
 ### Refund an order
+
+<YouTube video="orders" title="Video of refunding and canceling an order, and sending its confirmation again" start={188} end={227} />
 
 1. Under **Refund**, enter the **Amount**. It starts at everything that can still be refunded.
 2. Optionally give a **Reason**, such as *Scratched strap*. It is kept with the refund and in the notes.
@@ -132,6 +140,8 @@ Stripe's fraud checks rate every card payment. An order whose payment was rated 
 Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
 
 ## Create an order for a buyer
+
+<YouTube video="orders" title="Video of creating an order for a buyer" start={227} end={267} />
 
 Put an order together for a buyer yourself, such as one taken over the phone, and email them an invoice to pay it online.
 
@@ -178,6 +188,8 @@ With Orchard Core's **Workflows** on, the store tells your workflows what happen
 The other parts of the store add events of their own: **Subscription Started**, **Renewed**, **Past Due**, **Canceled** and **Expired**; **Stripe Payment Received**, **Payment Failed**, **Payment Refunded** and **Dispute Created**, among others; and the setup wizard's **Wizard Started**, **Step Displayed**, **Completed** and **Failed**. To send the same news to another system as soon as it happens, without a workflow, use [Webhooks](webhooks.md). The technical guides list every event with what it carries: [Orders](../../modules/carts-and-orders.md#workflow-events), [Subscriptions](../../modules/subscriptions.md) and [Payments](../../modules/payments.md#workflow-events).
 
 ## Write your own emails
+
+<YouTube video="orders" title="Video of the order settings, the order emails and the receipt settings" start={331} end={379} />
 
 On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.
 

@@ -105,6 +105,10 @@ The carts and wishlists indexes hold no dates, so these data sets have no main d
 
 ## Orders
 
+This video shows the order screens in the admin:
+
+<YouTube video="orders" title="Video overview of orders" />
+
 ### Checking out
 
 The cart page shows **Checkout** when the Orders feature is enabled. Checking out:
