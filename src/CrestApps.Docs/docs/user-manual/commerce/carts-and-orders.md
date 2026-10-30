@@ -168,6 +168,8 @@ In a template, `{{ Content }}` is the email as the store would send it, so a bod
 
 ## Store reports
 
+<YouTube video="commerce-reports-dashboard" title="Store reports" start={84} end={135} />
+
 With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
 
 | Report | Shows |
@@ -194,6 +196,8 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
 
 ### On the dashboard
+
+<YouTube video="commerce-reports-dashboard" title="Reports on the dashboard" start={235} end={298} />
 
 With the **Admin Dashboard** feature on, add the **Sales Summary** widget under **Manage Dashboard**. It shows your sales today, over the last 7 and 30 days, and the orders to ship.
 
