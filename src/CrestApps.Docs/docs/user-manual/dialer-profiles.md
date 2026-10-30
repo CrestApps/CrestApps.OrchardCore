@@ -17,9 +17,15 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-dialer-profiles" title="Video overview of dialer profiles: why they exist, the dialing modes, and creating a profile" />
+
+<YouTube video="contact-center-dialer-pacing" title="Video of dialer pacing: abandoned calls, predictive dialing, what happens to each record, and retries" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a dialer profile and switching between preview, power and progressive modes" start={1001} end={1067} />
 
 ## The dialing modes
+
+<YouTube video="contact-center-dialer-profiles" title="Video of the four dialing modes" start={60} end={113} />
 
 | Mode | Who presses dial | What the agent sees |
 | --- | --- | --- |
@@ -60,6 +66,10 @@ The dialer still looks at every campaign once a minute as well, whatever else is
 
 ## Create a profile
 
+<YouTube video="contact-center-dialer-profiles" title="Video of creating a dialer profile: General, Dialing, Caller ID and Compliance" start={156} end={336} />
+
+The form is made of cards: **General**, **Dialing**, **Caller ID**, **Compliance**, **Abandoned calls** and **Predictive pacing**. **Abandoned calls** appears for the Power, Progressive and Predictive modes, and **Predictive pacing** only for Predictive.
+
 1. Open **Interaction Center > Management > Dialer Profiles** and click **Add Dialer Profile**.
 2. On **General**, enter a **Name**, an optional **Description**, and leave **Enabled** ticked. A disabled profile places no calls, and the records loaded under it aren't offered to agents until you turn it back on.
 3. On **Dialing**, pick the **Mode** and the **Voice call provider** (or *Default provider*). Power, Progressive and Predictive show extra fields:
@@ -71,8 +81,9 @@ The dialer still looks at every campaign once a minute as well, whatever else is
    | **Retry delay (minutes)** | Power, Progressive, Predictive | The wait after an attempt before the next attempt is dialed when the subject flow does not say when, and the shortest wait when it does. See [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 60. |
    | **Ring time (seconds)** | Power, Progressive, Predictive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |
    | **Screen out answering machines** | Power, Progressive, Predictive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
+   | **Show each dial to the agent** | Power, Progressive, Predictive | The agent is *Reserved* while the dialer calls for them, and on a call once a person answers and they are connected. **On**: the agent's screens also show who is being dialed and each step (dialing, screening for a machine, connecting). **Off** (default): they show only that the agent is waiting for a connected call. |
 
-4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID). A **Dial from** number picked when activities are loaded is shown instead for that load's calls, unless **Always show this caller ID** is ticked, and pick the **Default calling region** used for numbers written without a country code. A number typed before caller IDs were picked stays selected until you change it.
+4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID). A **Dial from** number picked when activities are loaded is shown instead for that load's calls, unless **Always show this caller ID** is ticked, and pick the **Default calling region** used for numbers written without a country code (**Auto-detect from the number** by default). A number that still cannot be read is skipped, because it cannot be checked against a do-not-call registry. A number typed before caller IDs were picked stays selected until you change it.
 5. On **Compliance**:
 
    | Field | What it does |
@@ -85,7 +96,7 @@ The dialer still looks at every campaign once a minute as well, whatever else is
 
    | Field | What it does |
    | --- | --- |
-   | **Measured abandonment** | Shown once the profile has placed calls: the abandonment rate over the rolling window and over the last 30 days, with the counts behind it. |
+   | **Measured abandonment** | The abandonment rate over the rolling window and over the last 30 days, with the counts behind it. It reads 0% until the profile has placed calls. |
    | **Enforce an abandonment-rate cap** | Pauses automated dialing while too many answered calls find no agent. Needs the abandoned-call message on. |
    | **Maximum abandonment rate** | The cap, as a share of calls a person answered. Default 3. |
    | **Abandonment sample floor** | How many answered calls are needed in the window before the cap applies. Default 30. |
@@ -96,6 +107,8 @@ The dialer still looks at every campaign once a minute as well, whatever else is
 8. Click **Save**.
 
 ## Predictive dialing
+
+<YouTube video="contact-center-dialer-pacing" title="Video of Predictive pacing: one call per reserved agent, and over-dial" start={134} end={262} />
 
 Predictive dialing is part of the **Contact Center Paced Dialing** feature, like Power and Progressive. Without it the **Predictive** mode is not offered and a Predictive profile cannot be saved.
 
@@ -133,6 +146,8 @@ The settings on the **Predictive pacing** card:
 | **Retry abandoned calls only with an agent reserved** | When the contact is called again after their call was abandoned, an agent is reserved for the call first, so the person is not abandoned twice. This covers the next attempt created by **Try again** or by a workflow too. On by default. |
 
 ## Abandoned calls
+
+<YouTube video="contact-center-dialer-pacing" title="Video of the abandoned-call settings: the cap, the message and the measured rate" start={56} end={134} />
 
 With Power, Progressive and Predictive dialing, the customer is dialed first and the reserved agent is connected once a person answers. A call is **abandoned** when a person answers and no agent is connected to them within two seconds. That happens when the agent's phone does not pick up (the browser was closed, the phone is not registered, the network dropped), when the agent cannot be connected at all, when the agent is connected later than two seconds after the answer, or when the person hangs up after waiting more than two seconds.
 
@@ -190,6 +205,8 @@ An unanswered call rings for the profile's **Ring time** before it is given up, 
 
 ## What happens to each record
 
+<YouTube video="contact-center-dialer-pacing" title="Video of the checks the dialer runs on every record and how a call that ends early is dispositioned" start={262} end={318} />
+
 Before an agent is reserved for a record, the dialer checks that the record is due: its scheduled time and the retry delay after its last call have passed, and it has attempts left. A record that is not due yet waits at the back of the queue, and no agent sees it. Before every call the dialer then checks, in order: the number is valid, the number is not [known to be out of service](numbers-not-in-service.md), the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
 
 - A record with no valid number becomes **Failed**.
@@ -215,6 +232,8 @@ A number not in service is also added to [Numbers Not In Service](numbers-not-in
 The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again).
 
 ### Retries and the attempt limit
+
+<YouTube video="contact-center-dialer-pacing" title="Video of retries and the attempt limit" start={318} end={378} />
 
 The subject flow decides first, and the dialer profile's **Max attempts** is the fallback:
 

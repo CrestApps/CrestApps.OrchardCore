@@ -14,6 +14,10 @@ user_manual:
 
 This phase adds the operational core of the Contact Center: agent presence, work queues, reservations, skill-aware routing, availability-based assignment, and an outbound dialer that routes voice calls through Contact Center Voice providers. Each capability is a separate, feature-gated module so tenants enable only what they need.
 
+<YouTube video="contact-center-dialer-profiles" title="Video overview of dialer profiles" />
+
+<YouTube video="contact-center-dialer-pacing" title="Video of dialer pacing: abandoned calls, predictive dialing and retries" />
+
 ## Features
 
 | Feature | Feature ID | Purpose |
