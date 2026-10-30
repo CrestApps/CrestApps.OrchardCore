@@ -72,6 +72,36 @@ public sealed class ListWorkflowActivitiesToolTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WithWorkflowTypeId_ShouldIgnoreItAndListActivities()
+    {
+        // Arrange
+        var notifyTask = new Mock<ITask>();
+        notifyTask.Setup(x => x.Name).Returns("NotifyTask");
+        notifyTask.Setup(x => x.DisplayText).Returns(new LocalizedString("Notify", "Notify"));
+        notifyTask.Setup(x => x.Category).Returns(new LocalizedString("UI", "UI"));
+
+        var services = CreateServiceProvider(notifyTask.Object);
+
+        var tool = new ListWorkflowActivitiesTool();
+        var arguments = new AIFunctionArguments(new Dictionary<string, object>
+        {
+            ["workflowTypeId"] = "none",
+        })
+        {
+            Services = services,
+        };
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        using var document = JsonDocument.Parse(result.ToString());
+        var activity = Assert.Single(document.RootElement.EnumerateArray());
+
+        Assert.Equal("NotifyTask", activity.GetProperty("Name").GetString());
+    }
+
+    [Fact]
     public async Task InvokeAsync_WithNoActivities_ShouldReturnMessage()
     {
         // Arrange
