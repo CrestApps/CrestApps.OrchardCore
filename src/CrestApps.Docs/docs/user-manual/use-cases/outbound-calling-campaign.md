@@ -19,6 +19,8 @@ When it is done:
 - agents record an outcome, and the subject flow schedules the retry or the follow-up on its own;
 - reports show how far the campaign got and what the outcomes were.
 
+<YouTube video="use-case-outbound-calling-campaign" title="Video overview of running an outbound calling campaign, from the features to turn on to what each person does" />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed" start={225} end={263} />
 
 ## Before you start
@@ -34,25 +36,39 @@ When it is done:
 
 ## Steps
 
+<YouTube video="use-case-outbound-calling-campaign" title="Video of the set-up order: the data and outcomes, the rules, the people and the work" start={91} end={125} />
+
 1. **Get your contacts in.** Set up the contact type once, then import your list under **Content > Import**. Pick the lead country, skip duplicates, and scrub the do-not-call registries. Check the import's result for skipped rows. See [Contacts](../contacts.md). Working with prospects rather than customers? See [Turn leads into deals](leads-to-deals.md).
-2. **Create the subject.** Add an **Outbound** subject, such as *Spring lead drive*, with the fields agents fill in during the call. See [Subjects](../subjects.md).
+2. **Create the subject.** On **Subject Flows**, click **Add Subject** (on a new site, **Create a new content type**), name it, for example *Spring lead drive*, and click **Add & Configure** next to **Omnichannel Subject**. Pick its **Default campaign**, leave **Direction** on **Outbound** and **Require a disposition** on, and add the fields agents fill in during the call. See [Subjects](../subjects.md).
+
+   <YouTube video="use-case-outbound-calling-campaign" title="Video of creating the subject and opening its flow" start={125} end={182} />
 3. **Create the outcomes.** Add the dispositions agents can pick, such as *No answer*, *Call back*, *Interested* and *Not interested*. Add one with the **Number not in service** outcome so dead numbers are handled for you. See [Dispositions](../dispositions.md).
-4. **Decide what happens next.** On the subject's flow, add an action for every disposition: **Finish**, **Try Again** later, or a **New Activity** such as a follow-up call. See [Subject flows](../subject-flows.md).
+4. **Decide what happens next.** On the subject's flow (**Manage Flow > Add Action**), add an action for every disposition: **Finish**, **Try Again** later, or a **New Activity** such as a follow-up call. See [Subject flows](../subject-flows.md).
+   <YouTube video="use-case-outbound-calling-campaign" title="Video of the dispositions, campaign, calling hours, dialer profile and entitlements" start={182} end={228} />
+
 5. **Create the campaign.** Add the campaign, and a campaign group if you want to roll it up in reports. Agents sign in to this campaign to get its calls. See [Campaigns](../campaigns.md).
 6. **Set the calling window.** Create a business hours calendar for the hours you may call. The dialer checks it in each contact's own time zone. See [Business hours](../business-hours.md).
 7. **Choose how to dial.** Create a dialer profile: the mode (**Preview**, **Power** or **Progressive**), the caller ID customers see, the compliance rules with your calling calendar, and, for power and progressive, attempts, retry delay and the abandonment cap. See [Dialer profiles](../dialer-profiles.md).
 8. **Give agents the campaign.** On each agent's entitlement record, add the campaign under **Allowed campaigns**. See [Skills and agent entitlements](../skills-and-entitlements.md).
-9. **Load the work.** Create a **Dialer** activity load with the subject, the dialer profile and the campaign, filter the contacts, and pick a **Dial from** number if this campaign should show its own number. Save, then choose **Actions > Load activities**, and read the load's report of what was loaded and skipped. See [Load activities](../load-inventory.md).
+9. **Load the work.** Click **Add Activity Load** and choose **Dialer**. Enter a **Title**, then pick the **Subject content type**, the **Campaign** and the **Dialer profile**, pick a **Dial from** number if this campaign should show its own number, and pick the **Record type** (your contact type) and filters. Save, then choose **Actions > Load activities**, confirm, and read the load's report of what was loaded and skipped, for example *Loaded 2 of 3 matching records. 1 has only numbers that are not in service.* See [Load activities](../load-inventory.md).
+
+   <YouTube video="use-case-outbound-calling-campaign" title="Video of adding a dialer load and loading the contacts" start={228} end={293} />
 10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power or progressive, the call is placed for them and the record opens as it rings. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
+
+    <YouTube video="use-case-outbound-calling-campaign" title="Video of what agents do: sign in, dial and complete the activity" start={293} end={335} />
 11. **Agents record the outcome.** After the call, the agent completes the activity with a disposition and notes, which ends wrap-up and runs the subject flow. See [Activities](../activities.md).
 12. **Watch and adjust.** Supervisors filter the live dashboard by the campaign. Managers reassign, reschedule or move work to another dialer profile in bulk, and review dead numbers. See [Live dashboard](../live-dashboard.md), [Managing activities in bulk](../bulk-activities.md) and [Numbers not in service](../numbers-not-in-service.md).
+
+    <YouTube video="use-case-outbound-calling-campaign" title="Video of the live dashboard, Manage Activities and the not-in-service list" start={335} end={368} />
 13. **Measure.** Use **Campaign summary**, **Subject inventory**, **Disposition breakdown** and **Agent productivity**, and **Dialer call detail** for the numbers behind the counts: every number that ended as *No answer*, for example. See [Reports](../reports.md).
 
 ## Check that it works
 
+<YouTube video="use-case-outbound-calling-campaign" title="Video of how to check that it works, and tips" start={368} end={400} />
+
 1. After **Load activities**, the load's status reaches *Loaded* and says how many records it loaded. If it loaded none, its report says why.
 2. Sign in to the campaign as a test agent and set yourself **Available**.
-3. With a preview profile, an offer appears in the docked agent bar and **My workspace**: click **Dial**. With a power profile, a call is placed within about a minute.
+3. With a preview profile, an offer appears in the docked agent bar and **My workspace**: click **Dial**. With a power profile, a call is placed as soon as you are **Available**.
 4. Complete the activity with *Call back*, and check on the contact's **List Activities** page that the flow scheduled the next attempt.
 5. Run the **Campaign summary** report for today.
 
