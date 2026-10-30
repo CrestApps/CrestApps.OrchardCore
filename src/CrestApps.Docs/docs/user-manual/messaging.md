@@ -20,8 +20,10 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 
 ## Before you start (administrator)
 
+<YouTube video="messaging-setup" title="Video of setting up text messages from the features to a test text" />
+
 1. Enable **SMS Messaging Channel** under **Tools > Features**. It turns on the Omnichannel Messaging Workspace and everything it needs. Without a channel such as SMS, the inbox has nothing to send or receive on.
-2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)).
+2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)). Each enabled provider adds a tab; **Default SMS provider** on the **Providers** tab chooses the one used by numbers that name none. Send a test text from **Tools > Testing > SMS Test** before your team relies on it.
 3. Add each SMS number under **Interaction Center > Management > Omnichannel Addresses** with **Text messages (SMS)** ticked (see [Omnichannel addresses](channel-endpoints.md)), then add a **Text messages** entry point under **Interaction Center > Management > Inbound entry points** that sends its texts to an agent or a queue. See [Text entry points](entry-points-and-ivr.md#text-entry-points).
 4. Give the roles that staff the inbox the permissions in the table above. The permissions cover every channel; there is no separate permission per channel.
 

@@ -84,6 +84,8 @@ The workspace does **not** require Contact Center Voice, and it does not pull in
 
 ## Setting up SMS
 
+<YouTube video="messaging-setup" title="Video of setting up text messages from the features to a test text" />
+
 1. **Configure an SMS provider.** Enable at least one, for example [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) or Twilio, and pick the tenant **default provider** at **Settings > Communication > SMS**.
 2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Omnichannel Addresses** (see [Omnichannel Addresses](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.
 3. **Add a Text messages entry point** for the numbers under **Interaction Center > Management > Inbound entry points**. It routes to an agent (personal number) or a queue (department number), chooses **Shared pool** or **Routed** queue distribution, and can send an auto-reply (at most once a day per conversation) and a closed auto-reply. The fields are described in [Text entry points](../user-manual/entry-points-and-ivr.md#text-entry-points).
