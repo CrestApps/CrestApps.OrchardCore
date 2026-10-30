@@ -228,7 +228,7 @@ The video covers the timeout, extraction entries, post-session tasks and the met
 | **Post-session tasks** | On the **Tasks** tab, click **Add Task**: a **Name**, a **Type** (**Semantic** for free text such as a summary, or **Predefined Options** to pick from a list such as *Resolved*, *Escalated*, *Abandoned*) and **Instructions**. For **Predefined Options**, add each choice with **Add Option** (a **Value** and a **Description**) and choose **Allow multiple values** if needed. On the **Capabilities** tab, pick tools the AI may use while it analyzes. |
 | **Enable session metrics** | Chat only. Collects the numbers for the chat analytics report, and adds thumbs up and down buttons to answers. |
 | **Enable AI resolution detection** | Chat only. The AI decides whether each closed chat solved the user's problem. |
-| **Enable conversion metrics** | Chat only. The AI scores each closed chat against your goals. Click **Add Goal** for each: a **Name**, a **Description** of what to judge, and a **Min score** and **Max score** (0 to 10 by default). |
+| **Enable conversion metrics** | Chat only. The AI scores each closed chat against your goals. Click **Add Goal** for each: a **Name** (letters, numbers and underscores only, such as `booked_demo`), a **Description** of what to judge, and a **Min score** and **Max score** (0 to 10 by default). |
 
 <YouTube video="ai-data-extraction-post-session" title="Video of extraction entries, post-session tasks and metrics" start={49} end={177} />
 
