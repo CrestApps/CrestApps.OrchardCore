@@ -111,6 +111,7 @@ public sealed class ProfileBuilderStartup : StartupBase
             .AddDataMigration<ProfileBuilderSessionIndexMigrations>()
             .AddScoped<ProfileBuilderCoach>()
             .AddScoped<ProfileBuilderService>()
+            .AddScoped<ProfileBuilderSimulator>()
             .AddDisplayDriver<ProfileBuilderSessionEntry, ProfileBuilderSessionEntryDisplayDriver>()
             .AddNavigationProvider<ProfileBuilderAdminMenu>();
     }

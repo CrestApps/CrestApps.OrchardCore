@@ -30,6 +30,12 @@ have been handed over.
 If none of the dispositions records what happened — the customer made no decision, or hung up before one was made —
 omit DispositionId rather than choosing the closest one.
 
+The dispositions record what happened about the subject goal you are given. A call can turn to another matter: the
+customer brings up something else, or the call is handed to another assistant for it. What was decided about that other
+matter is not an outcome for the subject goal: a service appointment made on a sales call is not a sale. Choose a
+disposition only for what the customer decided about the subject goal, and omit DispositionId when they decided nothing
+about it.
+
 Some outcomes are not a judgement call. If the customer asked not to be called again, asked to be removed from the
 list, said to stop calling, or refused contact in any comparable way, you must choose the disposition that records
 that request — even when the rest of the call went well, and even when the words were brief or partly unclear.

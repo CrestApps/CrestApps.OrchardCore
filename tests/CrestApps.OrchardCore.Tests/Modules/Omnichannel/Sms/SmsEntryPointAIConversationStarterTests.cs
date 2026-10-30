@@ -335,6 +335,7 @@ public sealed class SmsEntryPointAIConversationStarterTests
                 contentManager.Object,
                 localLock.Object,
                 Session.Object,
+                Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelAIConversationStarting>(),
                 clock.Object,
                 NullLogger<SmsEntryPointAIConversationStarter>.Instance);
         }

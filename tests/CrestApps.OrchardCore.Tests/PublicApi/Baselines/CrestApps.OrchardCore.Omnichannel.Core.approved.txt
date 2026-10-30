@@ -1096,6 +1096,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public OmnichannelAutomationOptions() { }
         public int MaxActivitiesPerInvocation { get; set; }
+        public int MaxConcurrentAICalls { get; set; }
         public int MaxProcessingAttempts { get; set; }
         public int ProcessorBatchSize { get; set; }
         public int ProcessorLeaseMilliseconds { get; set; }
@@ -1248,6 +1249,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Reason { get; set; }
         public string ServiceAddress { get; set; }
         public string Summary { get; set; }
+        public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffMessage> Transcript { get; set; }
     }
@@ -1667,6 +1669,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         string Normalize(string phoneNumber);
         System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber>> PageAsync(int page, int pageSize, string search, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IOmnichannelAIConversationStarting
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.AI.Core.Conversations.AIConversationStartingResult> StartingAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IOmnichannelActivityManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>> GetBulkManageableAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.BulkManageActivityFilter filter, System.Threading.CancellationToken cancellationToken = default);
@@ -1704,6 +1710,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetLeadContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOmnichannelConversationContextFactory
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.AI.Core.Conversations.AIConversationContext> CreateAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, CrestApps.Core.AI.Models.AIChatSession session, CrestApps.Core.AI.Models.AIProfile profile, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IOmnichannelHandoffService
     {
@@ -1788,6 +1798,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public string Normalize(string phoneNumber) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber>> PageAsync(int page, int pageSize, string search, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class OmnichannelAIConversationStarting : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelAIConversationStarting
+    {
+        public OmnichannelAIConversationStarting(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelConversationContextFactory contextFactory, CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationStartingService startingService) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.AI.Core.Conversations.AIConversationStartingResult> StartingAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class OmnichannelActivityFollowUps
     {
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity CreateNextAttempt(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.DateTime nowUtc) { }
@@ -1855,6 +1870,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public static class OmnichannelContactPreferences
     {
         public static bool HasOptedOut(OrchardCore.ContentManagement.ContentItem contact, string channel) { }
+    }
+    public sealed class OmnichannelConversationContextFactory : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelConversationContextFactory
+    {
+        public OmnichannelConversationContextFactory(OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignCatalog, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore endpointStore) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.AI.Core.Conversations.AIConversationContext> CreateAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, CrestApps.Core.AI.Models.AIChatSession session, CrestApps.Core.AI.Models.AIProfile profile, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class OmnichannelHandoffHelper
     {
