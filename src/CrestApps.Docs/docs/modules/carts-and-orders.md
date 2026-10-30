@@ -14,6 +14,10 @@ user_manual:
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
+This video shows the cart and the checkout in use:
+
+<YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
+
 **Carts** lets visitors put products sold online in a cart from a listing card or a product page. **Orders** checks the cart out through the [Checkout](checkout) framework and records what was bought. Together they sell goods the way [Subscriptions](subscriptions) sells plans: through the same checkout, payment providers, coupons and taxes.
 
 ## Carts
