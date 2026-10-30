@@ -165,6 +165,8 @@ There are no separate API endpoints for profile document management — everythi
 
 ### Getting Started
 
+<YouTube video="ai-knowledge" title="Video of creating the documents index and uploading a document to a profile" start={95} end={203} />
+
 Enable the `AI Documents for Profiles` feature. Documents are then uploaded on the **Knowledge** tab of the AI Profile editor (**Artificial Intelligence > Profiles**), together with **Document Top N** and **Document retrieval mode**. See [Upload documents to a profile](../../user-manual/ai/knowledge.md#upload-documents-to-a-profile).
 
 ## AI Documents for Chat Sessions
