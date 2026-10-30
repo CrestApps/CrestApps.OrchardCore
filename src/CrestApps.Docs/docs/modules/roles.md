@@ -12,6 +12,8 @@ user_manual:
 | **Feature Name** | Enhanced Roles |
 | **Feature ID** | `CrestApps.OrchardCore.Roles` |
 
+<YouTube video="users-roles" title="Video overview of users, roles, names and avatars" />
+
 Provides a way to enhance the role management experience.
 
 ## RolePickerPart
