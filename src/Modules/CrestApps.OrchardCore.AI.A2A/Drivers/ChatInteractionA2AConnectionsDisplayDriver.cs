@@ -38,7 +38,7 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
 
         return Initialize<ChatInteractionA2AConnectionsViewModel>("ChatInteractionA2AConnections_Edit", model =>
         {
-            model.Connections = connections
+            model.A2AConnections = connections
             .Select(entry => new ToolEntry
             {
                 ItemId = entry.ItemId,
@@ -62,7 +62,7 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+        var ids = model.A2AConnections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         if (ids is null || ids.Length == 0)
         {
