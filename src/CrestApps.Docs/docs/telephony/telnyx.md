@@ -21,13 +21,15 @@ SIP-over-WebSocket registrar and a server-side Call Control API, so — unlike a
 the browser soft phone **carries the call audio itself** (WebRTC) and the Contact Center can **bridge live
 calls to agents server-side** (`ServerSideAcd`), which is what makes true power dialing possible.
 
+<YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings" />
+
 ## Features
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. When Contact Center Voice is also enabled, the Telnyx contact center voice adapter (outbound contact center calls, bridging live calls to agents via `ServerSideAcd`, and their real-time call events) activates automatically — it is integration glue, not a separately selectable feature. |
 | **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [Messaging Workspace](../omnichannel/messaging-workspace.md) or [SMS Automation](../omnichannel/sms.md). Category **Communication**. Depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice provider. See [Telnyx SMS](#telnyx-sms). |
-| **Telnyx AI Voice Agent** | `CrestApps.OrchardCore.Telnyx.AiVoice` | Adds an automated outbound AI voice agent: the **Phone** omnichannel processor dials a contact over Telnyx, converses using Telnyx text-to-speech and real-time transcription driven by an AI chat profile, and settles the omnichannel activity with a summary and disposition. Category **Contact Center**. Depends on **Telnyx**, the **AI** and **AI Chat** features, and **Omnichannel Management**. See [Telnyx AI Voice Agent](#telnyx-ai-voice-agent). |
+| **Telnyx AI Voice Agent** | `CrestApps.OrchardCore.Telnyx.AiVoice` | Adds an automated AI voice agent: the **Phone** omnichannel processor dials a contact over Telnyx (and an inbound entry point can route its calls to the agent), converses using Telnyx text-to-speech and real-time transcription driven by an AI chat profile, and settles the omnichannel activity with a summary and disposition. Category **Contact Center**. Depends on **Telnyx**, **Automated Voice**, the AI services and AI Chat services, and **Omnichannel Management**. The profile's conversation settings and **Review AI conversation** also need the **AI Chat** feature. See [Telnyx AI Voice Agent](#telnyx-ai-voice-agent). |
 
 ## Dependencies
 
@@ -40,8 +42,8 @@ The two add-on features build on the Telnyx provider:
 
 - **Telnyx SMS** depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice
   provider.
-- **Telnyx AI Voice Agent** depends on **Telnyx**, the **AI** and **AI Chat** features, and **Omnichannel
-  Management**.
+- **Telnyx AI Voice Agent** depends on **Telnyx**, **Automated Voice**, the AI services and AI Chat services,
+  and **Omnichannel Management**. Enable **AI Chat** as well for the profile's conversation settings and **Review AI conversation**.
 
 Webhook signature verification uses `BouncyCastle.Cryptography` (Ed25519), referenced by the Telnyx Core
 library.
@@ -707,6 +709,8 @@ The connection identifiers belong to one Telnyx account. Replaying a plan into a
 
 ## Telnyx AI Voice Agent
 
+<YouTube video="contact-center-ai-outbound-calls" title="Video of how an AI voice agent places outbound calls: profile, subject, load, screening and review" />
+
 The **Telnyx AI Voice Agent** feature (`CrestApps.OrchardCore.Telnyx.AiVoice`) is the **voice** counterpart
 to [SMS Automation](../omnichannel/sms.md): instead of a human agent or a text conversation, an **AI agent**
 places an outbound call over Telnyx and talks to the contact. It registers the **Phone**-channel omnichannel
@@ -744,18 +748,16 @@ acts on next:
 - A call **handed to a live agent** is not concluded here at all. The model's leg ends the moment the caller is
   transferred, and the outcome belongs to the agent who took it.
 
-The AI profile, speech-to-text deployment, text-to-speech deployment, voice, update permissions, and reply
-delay are the **automated voice settings** configured on the subject flow (and overridable per activity
-batch), resolved in order **activity batch → subject flow → global AI site settings**. See
+The AI profile, update permissions and reply delay come from the activity load, or from the subject for an inbound subject. The speech-to-text deployment, text-to-speech deployment and voice are settings of an **inbound** automated Phone subject only: an outbound subject and the load have no speech or voice fields, and Telnyx supplies the speech recognition itself, so the speech-to-text deployment is not used on this path. The voice is resolved from the activity or subject, then the persona's voice, then the Telnyx default voice (for a realtime conversation, the profile's **Voice** comes before the persona's). See
 [Subject Flow](../omnichannel/management.md#subject-flow) for where these fields live and how they cascade. The
 **Phone calls** starting points in the **New AI Profile** picker (**Answer calls at the front desk**, **Qualify
 leads by phone**, **Confirm appointments by phone**) create a profile ready for these calls; see
 [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 
-Bidirectional call audio is carried over a Telnyx **media-streaming WebSocket** (`api/telnyx/media/stream`,
+With the **Contact Center Voice Media** feature, bidirectional call audio is carried over a Telnyx **media-streaming WebSocket** (`api/telnyx/media/stream`,
 G.711 mu-law) — the Telnyx equivalent of Asterisk's ARI External Media seam — so the agent both hears the
 contact and injects its spoken audio on the same live leg. That endpoint must be reachable at the tenant's
-public base URL, because Telnyx dials it after the streaming command starts.
+public base URL, because Telnyx dials it after the streaming command starts. Without that feature the conversation is turn-based: each turn is spoken and transcribed with Telnyx commands, and no media stream is used.
 
 ## Telnyx SMS
 

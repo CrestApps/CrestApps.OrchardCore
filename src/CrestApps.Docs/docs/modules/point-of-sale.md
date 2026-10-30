@@ -16,6 +16,8 @@ user_manual: user-manual/commerce/point-of-sale
 
 The **Point of Sale** feature sells at a store's counter from a till app over the [commerce API](commerce-api.md). A sale is an order on the ordinary checkout framework, so prices, coupons, gift cards, tax, stock holds, order events and reports work as they do online. The module adds what a counter needs: registers, shifts with their cash, a cash tender, a payment method for the store's own card terminal, receipts, and returns at the till.
 
+<YouTube video="point-of-sale-till" title="Narrated video of a day at the till and what the manager sees" />
+
 ## Model
 
 Registers and shifts live in the `PointOfSale` YesSql collection.

@@ -545,6 +545,8 @@ automatically, and on the shared `telephony-client` helper script, which exposes
 soft phone and the contact-center clients. ResourceManager resolves both dependencies for you, so you
 only reference `telephony-soft-phone`.
 
+<YouTube video="telephony-soft-phone-administration" title="Video of the soft phone administration and the dial button next to phone numbers" />
+
 ## Phone field click-to-dial
 
 When the soft phone is present on a page, the [Phone Field](../modules/content-fields.md) editor and

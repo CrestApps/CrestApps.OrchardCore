@@ -7,7 +7,7 @@ technical_manual:
   - modules/payments
 ---
 
-The **Point of Sale** feature lets your staff sell at the counter of each of your stores, from a phone, tablet or till computer running a **till app**. The till app talks to your site through the [commerce API](headless-api.md), so a sale at the counter uses the same products, prices, coupons, gift cards, stock and orders as your online store.
+The **Point of Sale** feature lets your staff sell at the counter of each of your stores, from a phone, tablet or till computer running a **till app**. No till app ships with this solution: your developers, or a partner, build one on the commerce API. The site gives the registers, the shifts, the cash drawer and the rules. The till app talks to your site through the [commerce API](headless-api.md), so a sale at the counter uses the same products, prices, coupons, gift cards, stock and orders as your online store.
 
 At each store you set up one or more **registers**. A member of staff opens a **shift** at a register with the cash in its drawer, rings up sales, takes cash, a card or both, prints or emails the receipt, and at the end of the day counts the drawer and closes the shift. You see every shift, what it sold and whether its drawer came out right.
 
@@ -67,9 +67,13 @@ With Stripe in test mode, pair a simulated reader with the registration code *si
 
 Your developers find the requests the till app sends in [Point of Sale](../../modules/point-of-sale.md#pair-a-reader), in the Technical Manual.
 
+This video follows a day at the till, step by step, and shows what each step leaves for the manager in the admin:
+
+<YouTube video="point-of-sale-till" title="Narrated video of a day at the till and what the manager sees" />
+
 ## A day at the till
 
-<YouTube video="point-of-sale" title="Video of a day at the till, in the till app" start={206} end={279} />
+<YouTube video="point-of-sale-till" title="Video of a day at the till, step by step" start={51} end={112} />
 
 Here is a shift as staff work it in the till app. Each step is a call the till app makes to your site; the Technical Manual walks through the same day [call by call](../../modules/point-of-sale.md#a-shift-call-by-call). A till app built as the Technical Manual describes never rings a sale up, or takes a payment, twice, even when its connection drops.
 
@@ -132,6 +136,8 @@ While a shift is open, the till app can show the same at any time, so staff can 
 
 ## The cash drawer
 
+<YouTube video="point-of-sale-till" title="Video of the register, the open shift and closing a shift" start={112} end={170} />
+
 The drawer should hold:
 
 - the **opening float**,
@@ -165,7 +171,7 @@ The note given at the close is shown with it.
 
 ## What a register sale does differently
 
-<YouTube video="point-of-sale" title="Video of register sales in the orders list" start={342} end={381} />
+<YouTube video="point-of-sale-till" title="Video of register sales and returns as orders" start={170} end={199} />
 
 A register sale is an order, like an online one, so it's under **Commerce > Orders**, in your reports, and in the buyer's account when you named a customer with an account. It differs in these ways:
 

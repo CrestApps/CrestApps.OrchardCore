@@ -11,6 +11,8 @@ Every data source gets joins, formulas and aggregation for free. To keep that fa
 
 ## Bounded memory
 
+<YouTube video="report-builder-administration" title="Video of what the limits mean on large data" start={145} end={187} />
+
 A run never holds a whole data set in memory. Its rows stream from the data sources through the joins, calculations, filters and groupings a batch at a time, and every step that must see many rows at once is one of Orchard Core's data operations, which keep up to `MemoryLimitMegabytes` of rows in memory and write the others to temporary files:
 
 - **Joins.** The rows before a join are held in a buffer that writes the rows that don't fit to a temporary file, while the engine collects the keys they hold to read the joined data set for them. Orchard Core's `DataJoin` then matches them: in memory when the joined rows fit, otherwise by sorting both sides in temporary files and merging them.

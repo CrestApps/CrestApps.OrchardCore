@@ -16,9 +16,9 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 <AskYourAdmin />
 
-This video follows a shopper from the cart to the order confirmation, and shows the checkout settings:
+This video shows the buyer's account, checking out as a guest, how a guest finds an order, and how a guest order becomes an account:
 
-<YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
+<YouTube video="buyer-account-guest-orders" title="Narrated video overview of the buyer account and guest orders" />
 
 ## What buyers see
 
@@ -239,6 +239,8 @@ To build your own report, run the **Reports: store reports to adapt** recipe und
 
 ## Wishlists
 
+<YouTube video="buyer-account-guest-orders" title="Video of the buyer's account, with the wishlist" start={81} end={144} />
+
 With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a product's page, and find what they saved under **Wishlist** in their account, each with its **Add to cart**. A product you stop selling drops off their wishlist.
 
 ## The buyer's account
@@ -272,14 +274,47 @@ Under **Settings > Commerce > Orders**, turn on **Email buyers who leave a check
 
 ## Guests and their orders
 
+<YouTube video="buyer-account-guest-orders" title="Video of checking out as a guest, and the order link" start={144} end={204} />
+
 A guest has no account to sign in to, so they reach their order through a **link**:
 
 - The confirmation page and the confirmation email give a guest a link that opens their order: what they bought, the total, the billing address, and a **Pay now** button when something is still owed. A link works for 60 days. A changed or expired link shows *This order link no longer works* and nothing about any order.
 - **Track your order** (`/orders/track` on your site) asks for the order number and the email the order was placed with, and opens the paid order's page, with its shipments and where each parcel is. Both must match, and tries are limited, so a number alone shows nothing. **Find my order** links to it.
 - **Find my order** (`/orders/find` on your site) asks for an email and emails a link to each order placed with it in the last year. It always answers the same way, whether or not there are orders, so it never tells anyone who has bought from you. It is limited to a few requests per visitor and per email.
-- When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+- A guest's order page ends with *Create an account with the same email to see this order and future ones in your account*, with a **Create an account** link, when your site lets visitors register. When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+
+<YouTube video="buyer-account-guest-orders" title="Video of turning a guest order into an account" start={248} end={281} />
 
 Link to **Track your order** and **Find my order** from your site's footer or help page so guests can find them.
+
+<YouTube video="buyer-account-guest-orders" title="Video of Track your order and Find my order" start={204} end={248} />
+
+## Automate with workflows
+
+With **Workflows** on, the moments of your store start workflows, which can send an email, call a web address, change content and more. This video shows the recipes, the editor, turning a workflow on and testing it:
+
+<YouTube video="commerce-automation" title="Narrated video overview of commerce automation" />
+
+| Event | Starts when | Feature |
+| --- | --- | --- |
+| **Order Paid** | An order is paid. | Orders |
+| **Order Canceled** | An order is canceled, with why. | Orders |
+| **Order Refunded** | Money is given back for an order. | Orders |
+| **Low Stock** | A product or variant runs low or sells out. | Inventory |
+| **Shipment Created**, **Shipped**, **Delivered**, **Returned** | A shipment of an order changes. | Shipping |
+| **Stripe** events, such as **Stripe Payment Failed** and **Stripe Dispute Created** | Stripe tells your site. | Stripe |
+
+In a workflow's editor (**Design > Workflows**), **Add Event** shows them under **Commerce** and **Stripe**. Each event's details, such as the order number, total, customer email and the reason, are there for its tasks.
+
+Three recipes under **Tools > Recipes** add workflows to start from: **Automation: thank-you email** (on), **Automation: canceled order alert** and **Automation: low stock alert** (both added off). Run one, then open the workflow, set the address it goes to, and turn it on under **Properties** with **Enabled**. **Delete successfully completed workflows** keeps your list tidy; untick it to keep every run under the workflow's **Instances**.
+
+<YouTube video="commerce-automation" title="Video of the ready-made automation recipes" start={85} end={150} />
+
+<YouTube video="commerce-automation" title="Video of the workflow editor" start={150} end={208} />
+
+<YouTube video="commerce-automation" title="Video of turning a workflow on and testing it" start={208} end={267} />
+
+Workflows act inside your site. To tell another system, such as your accounting software, use [Webhooks](webhooks.md).
 
 ## Order confirmations
 

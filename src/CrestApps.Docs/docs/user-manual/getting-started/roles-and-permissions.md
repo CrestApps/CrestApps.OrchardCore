@@ -16,6 +16,8 @@ What you see in the application depends on who you are. This page explains how t
 - A **role** is a named bundle of permissions, such as *Agent* or *Supervisor*. Your administrator gives each user one or more roles.
 - You get every permission of every role you have. A team lead who also takes calls can have both the Agent and the Supervisor role.
 
+<YouTube video="contact-center-roles-and-permissions" title="Video overview of the Agent and Supervisor roles, the soft phone permission, entitlement records, and the recording, voicemail and report permissions" />
+
 A screen also needs its **feature** to be turned on. A feature is one part of the product, such as *Contact Center Supervision & Live Dashboard*. If a feature is off, nobody sees its screens, whatever their role. Only administrators turn features on; see [Features and settings](features-and-settings.md).
 
 ## Why menus differ between people
@@ -24,7 +26,9 @@ Two people at the same company see different menus because:
 
 1. **Their roles differ.** An agent sees **My workspace** and **Activities**; a manager also sees **Interaction Center > Management**; an administrator also sees **Settings** and **Tools**.
 2. **Features differ by site.** A site that does not use the CRM has no **Leads** menu, and a site without the dialer has no **Dialer Profiles**.
-3. **Some screens also need a setup record.** The [live dashboard](../live-dashboard.md) and [shared voicemail](../voicemail.md) show only the queues on your own [agent entitlement](../skills-and-entitlements.md) record. Without one, the page opens but is empty, even for an administrator.
+3. **Some screens also need a setup record.** The [live dashboard](../live-dashboard.md) and [shared voicemail](../voicemail.md) show only the queues on your own [agent entitlement](../skills-and-entitlements.md) record. Without one, the page opens but is empty, even for an administrator. A supervisor needs one too, with the queues they oversee.
+
+<YouTube video="contact-center-roles-and-permissions" title="Video of why a supervisor needs an agent entitlement record" start={192} end={236} />
 4. **Some tabs and buttons need a site setting.** For example, **Pause recording** in the agent workspace only appears when the administrator allows it in [Contact Center settings](../contact-center-settings.md).
 
 ## The built-in roles
@@ -33,6 +37,8 @@ The product comes with ready-made permission sets for three role names: **Admini
 
 - The **Administrator** role has every permission.
 - When your administrator creates a role named exactly **Agent** or **Supervisor**, it receives the permissions below automatically, for every feature that is turned on. Turning on a feature later adds that feature's permissions to these roles too.
+<YouTube video="contact-center-roles-and-permissions" title="Video of creating the Agent and Supervisor roles" start={55} end={88} />
+
 - There is no built-in *Manager* role. Most companies create one and pick its permissions by hand (see [A role for managers](#a-role-for-managers)).
 
 Your administrator can change any role's permissions at any time, so your site may differ from the lists below.
@@ -41,25 +47,39 @@ Your administrator can change any role's permissions at any time, so your site m
 
 Agents take and place calls, work their activities and answer text messages.
 
+<YouTube video="contact-center-roles-and-permissions" title="Video of what the Agent role gets, and the soft phone permission" start={88} end={130} />
+
 | Area | Permissions the Agent role gets |
 | --- | --- |
+<<<<<<< HEAD
+| Contact center | Sign in to Contact Center queues and campaigns; View interactions; Pause recording on own live interactions; Initiate secure capture on own live interactions; Listen to own call recordings (when Contact Center Call Recording is on) |
+=======
 | Contact center | Sign in to Contact Center queues and campaigns; View interactions; Pause recording on own live interactions; Initiate secure capture on own live interactions |
+| Call recordings | Listen to own call recordings (never anyone else's) |
+>>>>>>> f4b471485 (Roles and permissions: add the call recording, queue group and soft phone permissions, the administrator-only list, and the Contact Center roles video)
 | Activities | List activities; List Contact activities; Complete own activity; Create and edit activities |
 | CRM | Convert leads |
 | Messaging | Use the messaging workspace |
 
 Agents usually also need, added by the administrator:
 
-- **Use the telephony soft phone**, to open the soft phone in the [phone apps](../phone-apps.md). The Agent role does not get it automatically.
+- **Use the telephony soft phone**, to open the soft phone in the [phone apps](../phone-apps.md). The Agent role does not get it automatically: open **Access Control > Roles**, edit the Agent role, find the permission with **Search permissions**, tick it and save, and every agent has the soft phone.
 - The content permissions for your contact type, such as **List content items**, to see and edit [contacts](../contacts.md).
 
 ### Supervisor
 
 Supervisors watch the floor, step into live calls, work the shared voicemail and read reports.
 
+<YouTube video="contact-center-roles-and-permissions" title="Video of what the Supervisor role gets" start={130} end={173} />
+
 | Area | Permissions the Supervisor role gets |
 | --- | --- |
+<<<<<<< HEAD
+| Contact center | Monitor the Contact Center in real time; View interactions; Transfer Contact Center calls externally; View Contact Center reports; Take over, end, transfer and record live Contact Center calls, and set agents' state; Listen to anyone's call recordings (when Contact Center Call Recording is on) |
+=======
 | Contact center | Monitor the Contact Center in real time; View interactions; Transfer Contact Center calls externally; View Contact Center reports; Take over, end, transfer and record live Contact Center calls, and set agents' state |
+| Call recordings | Listen to anyone's call recordings (which includes listening to their own) |
+>>>>>>> f4b471485 (Roles and permissions: add the call recording, queue group and soft phone permissions, the administrator-only list, and the Contact Center roles video)
 | Voicemail | Access shared queue voicemail for entitled queues; Manage shared queue voicemail: delete messages and take over other users' claims |
 | Messaging | Use the messaging workspace; Send group messages; View all messaging conversations; Manage the messaging workspace |
 
@@ -68,6 +88,8 @@ The Supervisor role does not include signing in to queues. A supervisor who also
 ### Administrator
 
 The Administrator role can see and change everything, including **Settings**, **Tools > Features**, users and roles. Keep it for the few people who run the site.
+
+Some permissions go to the Administrator role only, so nobody else has them until an administrator gives them: **Delete call recordings**, **Manage Contact Center queue groups**, **Manage Contact Center queues**, **Manage Contact Center agents**, **Manage Contact Center skills**, **Manage Contact Center business hours**, **Manage the Contact Center dialer**, **Manage the Contact Center voice media library**, **Manage interactions**, **Manage the Contact Center**, **Manage telephony settings**, **Manage telephony extensions** and **Use the telephony soft phone**.
 
 ### A role for managers
 
@@ -83,14 +105,23 @@ Managers build the contact center: contacts, subjects, campaigns, queues and so 
 | [Cadences](../cadences.md) | Manage cadences |
 | [Lead statuses and opportunity stages](../leads-accounts-opportunities.md) | Manage lead statuses; Manage opportunity stages |
 | [Omnichannel addresses](../channel-endpoints.md) | Manage omnichannel addresses |
+<<<<<<< HEAD
+| [Queues](../queues.md) and [entry points](../entry-points-and-ivr.md) | Manage Contact Center queues; Manage Contact Center queue groups (also covered by *Manage Contact Center queues* and by the administrator's full access) |
+=======
 | [Queues](../queues.md) and [entry points](../entry-points-and-ivr.md) | Manage Contact Center queues |
+| [Queue groups](../queues.md) | Manage Contact Center queue groups |
+| [Call recordings](../call-recordings.md) | Listen to own call recordings; Listen to anyone's call recordings; Delete call recordings |
+| [Shared voicemail](../voicemail.md) | Access shared queue voicemail for entitled queues; Manage shared queue voicemail |
+| [Soft phone](../soft-phone.md) | Use the telephony soft phone |
+>>>>>>> f4b471485 (Roles and permissions: add the call recording, queue group and soft phone permissions, the administrator-only list, and the Contact Center roles video)
 | [Skills](../skills-and-entitlements.md) | Manage Contact Center skills |
 | [Agent entitlements](../skills-and-entitlements.md) and [agent states](../agent-states.md) | Manage Contact Center agents |
 | [Business hours](../business-hours.md) | Manage Contact Center business hours |
 | [Dialer profiles](../dialer-profiles.md) | Manage the Contact Center dialer |
 | [Voice media](../voice-media.md) | Manage the Contact Center voice media library |
+| [Call recordings](../call-recordings.md) | Delete call recordings (the Administrator role only, by default) |
 | [Extensions](../extensions.md) | Manage telephony extensions |
-| [Reports](../reports.md) | View Contact Center reports; View Omnichannel reports |
+| [Reports](../reports.md) | View Contact Center reports; View Omnichannel reports; Run 'Phone Number Verifications' Report; Manage report subscriptions |
 | [Report Builder](../report-builder/index.md) | Build reports and manage own custom reports and views; Share custom reports publicly and through share links; Manage all custom reports and views |
 
 Each User Manual page names the permission it needs in the table at the top.
@@ -126,6 +157,24 @@ A settings page under **Settings** opens for anyone who has the permission liste
 | **Settings > User Avatars** | Manage the avatar settings. |
 
 On a page that several features share, such as **Settings > Artificial Intelligence**, each section is shown only to people who have that section's permission. The menu item itself follows the permission shown in the table, so someone who has only one of the other permissions may need the page's address from the administrator.
+
+### Give the roles to users
+
+Open **Access Control > Users**, edit a user, tick the roles in the **Roles** section and save. A team lead who also takes calls gets both the Agent and the Supervisor role.
+
+<YouTube video="contact-center-roles-and-permissions" title="Video of giving roles to users" start={173} end={192} />
+
+### Permissions behind recordings, voicemail and reports
+
+<YouTube video="contact-center-roles-and-permissions" title="Video of the recording, shared voicemail and report permissions" start={236} end={280} />
+
+| Screen | Permissions | Default roles |
+| --- | --- | --- |
+| [Call recordings](../call-recordings.md) | **Listen to own call recordings** | Agent, Supervisor, Administrator |
+| | **Listen to anyone's call recordings** | Supervisor, Administrator |
+| | **Delete call recordings** | Administrator |
+| [Shared voicemail](../voicemail.md) | **Access shared queue voicemail for entitled queues** and **Manage shared queue voicemail** | Supervisor, Administrator |
+| [Reports](../reports.md) | **View Contact Center reports** | Supervisor, Administrator |
 
 ## Ask your administrator for access
 

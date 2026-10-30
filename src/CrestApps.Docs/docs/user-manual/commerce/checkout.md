@@ -156,12 +156,18 @@ When the order is paid, it keeps its own copy of the name, email, phone and bill
 
 ## Your own checkout fields
 
+<YouTube video="customers-guests-privacy" title="Video of adding a required field to Checkout details" start={179} end={215} />
+
 To ask buyers for something of your own, such as a gift message, a delivery date or a purchase order number:
 
 1. Enable the **Checkout details** feature (**Tools > Features**).
 2. Go to **Design > Content Types**, open **Checkout details** and add the fields you need, for example a **Text Field** named *Gift message*. Tick **Required** in a field's settings to make buyers fill it in.
 
-The fields appear under **Order details** on the **Contact** step, in the order the content type lists them. What the buyer enters is kept on the order and shown under **Order details** on the order's page, for you and for the buyer. A field left out while required keeps the buyer on the step with *A value is required for …*. With no fields on the content type, the checkout asks for nothing extra.
+The fields appear under **Order details** on the **Contact** step, in the order the content type lists them. What the buyer enters is kept on the order and shown under **Order details** on the order's page, for you and for the buyer. A field left out while required keeps the buyer on the step with *A value is required for …*.
+
+<YouTube video="customers-guests-privacy" title="Video of what the buyer sees at checkout" start={215} end={237} />
+
+ With no fields on the content type, the checkout asks for nothing extra.
 
 When a buyer picks one of their saved addresses on the **Contact** or **Shipping** step, the form for a new address is hidden until they choose **A new address, entered below**.
 

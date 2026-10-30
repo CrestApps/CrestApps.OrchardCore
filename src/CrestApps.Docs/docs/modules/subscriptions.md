@@ -16,6 +16,8 @@ The **Subscriptions** module lets you sell recurring plans built on ordinary Orc
 
 Subscriptions owns no checkout of its own. Buying a plan runs through the [Checkout](checkout) framework exactly like any other purchase, so there is one path that takes money and one ledger that records it. That is what makes a subscription's revenue reconcilable against the payments the site actually collected.
 
+<YouTube video="selling-sites" title="Narrated video overview of selling sites" />
+
 ## Features
 
 This video shows the subscription screens in the admin:

@@ -17,9 +17,7 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-dialer-profiles" title="Video overview of dialer profiles: why they exist, the dialing modes, and creating a profile" />
-
-<YouTube video="contact-center-dialer-pacing" title="Video of dialer pacing: abandoned calls, predictive dialing, what happens to each record, and retries" />
+<YouTube video="contact-center-dialer-modes-compared" title="Video overview comparing the Preview, Power, Progressive and Predictive dialing modes" />
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a dialer profile and switching between preview, power and progressive modes" start={1001} end={1067} />
 
@@ -29,12 +27,34 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 | Mode | Who presses dial | What the agent sees |
 | --- | --- | --- |
-| **Preview** | The agent. The record is offered to an agent signed in to the campaign; the agent reviews it and clicks **Dial** (or **Skip**). The server then places the call after the compliance checks. | The record opens, then the call starts when they choose Dial. |
-| **Power** | The system. As soon as an agent in the campaign is available, the dialer reserves available agents and places up to **Calls per agent** calls for the campaign, each with its own reserved agent. | The record pops up when the call starts; there is nothing to press. |
-| **Progressive** | The system, like Power, reserving one agent per call, with up to 100 calls per pacing cycle. | Same as Power. |
-| **Predictive** | The system, like Power: every call reserves its own available agent before it is placed, and fewer calls are placed per cycle as the abandonment rate approaches the cap. See [Predictive dialing](#predictive-dialing). | Same as Power. |
+| **Preview** | The agent. The record is offered to an agent signed in to the campaign; the agent reviews it and clicks **Dial** (or **Skip**). The server then places the call after the compliance checks. | The record opens first; the call starts when they choose Dial, and they are on it from the first ring. |
+| **Power** | The system. When an agent in the campaign is available, the dialer reserves that agent and places the call. Each look at the campaign starts up to **Calls per agent** calls (1 to 3), and each call has its own reserved agent. | While the customer's phone rings, the agent is *Reserved* and sees *Waiting for a connected call*. When a person answers and the agent is connected, the record opens on its own; there is nothing to press. |
+| **Progressive** | The system, like Power, reserving one agent per call. A look keeps placing calls until no free agent is left, with a safety limit of 100 calls per look. There is no **Calls per agent**. | Same as Power. |
+| **Predictive** | The system, like Power: with **One call per reserved agent** every call reserves its own available agent before it is placed, and fewer calls are placed per look as the abandonment rate approaches the cap. With **Over-dial** it places more calls than there are free agents. See [Predictive dialing](#predictive-dialing). | Same as Power; with Over-dial there is no *Reserved* state, and the call is connected to the agent when a person answers. |
 
 Older profiles saved as *Manual* are shown and saved as **Preview**.
+
+### Compare the dialing modes
+
+<YouTube video="contact-center-dialer-modes-compared" title="Video of the four dialing modes side by side, and when to choose which" start={314} end={406} />
+
+| | **Preview** | **Power** | **Progressive** | **Predictive** |
+| --- | --- | --- | --- | --- |
+| **Who presses Dial** | The agent | Nobody: the system dials | Nobody | Nobody |
+| **Is an agent held before the customer's phone rings** | Yes: the agent is offered the record, and is on the call from the first ring | Yes: one reserved agent for each call | Yes: one reserved agent for each call | Yes with **One call per reserved agent**; no with **Over-dial** |
+| **How many calls per look at the campaign** | None: the agent decides | Up to **Calls per agent** (1 to 3) | As many as there are free agents, up to 100 | One call (with the cap off) or up to **Calls per agent**, fewer as the abandonment rate nears the cap; with Over-dial, more than the free agents |
+| **Can a call be abandoned** | No: the agent places the call and listens to it | Yes, when a person answers and the agent is not connected within two seconds | Yes, in the same way | Yes, in the same way; with Over-dial also when nobody is free, by design |
+| **Dialing card fields** | **Mode** and **Voice call provider** only | Also **Calls per agent**, **Max attempts**, **Retry delay**, **Ring time**, **Screen out answering machines**, **Show each dial to the agent** | The same, without **Calls per agent** | The same as Power |
+| **Abandoned calls card** | Not shown | Shown | Shown | Shown, plus **Predictive pacing** |
+| **Needs the feature** | Contact Center Outbound Dialer | Contact Center Paced Dialing | Contact Center Paced Dialing | Contact Center Paced Dialing |
+
+A *look* is one time the dialer checks the campaign for waiting records and free agents. **Calls per agent** limits the calls one look may start; it does not multiply the number of agents. Because looks follow each other within about a second (see [When calls are placed](#when-calls-are-placed)), Power with one call per look and Progressive end up placing calls at nearly the same pace. They differ in how fast a burst of free agents is filled, not in who is reserved or what can go wrong. Predictive with **One call per reserved agent** never calls ahead of the free agents: it is Power with an abandonment brake. Only **Over-dial** calls ahead.
+
+A path that works for most teams:
+
+1. Start with **Preview**: agents read every record first, nobody can be abandoned, and it is the easiest to train. Use it for new teams and for high-value lists.
+2. Move to **Progressive** or **Power** when the list is steady and agents wait between calls. Turn on **Enforce an abandonment-rate cap** and **Play a message when a call is abandoned** first.
+3. Choose **Predictive** with one call per reserved agent when you want the brake. Choose **Over-dial** only when you have measured the answer rate and your rules allow abandoned calls, as the cap and the message are required.
 
 ### Preview dialing, start to finish
 
@@ -76,7 +96,7 @@ The form is made of cards: **General**, **Dialing**, **Caller ID**, **Compliance
 
    | Field | Modes | What it does |
    | --- | --- | --- |
-   | **Calls per agent** | Power, Predictive | Calls started each time the dialer looks at the campaign (see [When calls are placed](#when-calls-are-placed)), 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
+   | **Calls per agent** | Power, Predictive | The most calls started each time the dialer looks at the campaign (see [When calls are placed](#when-calls-are-placed)), 1 to 3. It is a limit per look, not per agent: each call reserves its own available agent first, so it never dials more calls than there are available agents. Predictive uses it too, until over-dialing takes over. |
    | **Max attempts** | Power, Progressive, Predictive | The fallback limit on how many attempts one contact may get, counting the first call and every follow-up activity created to try again. It applies when the subject flow sets no maximum of its own; see [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 3. |
    | **Retry delay (minutes)** | Power, Progressive, Predictive | The wait after an attempt before the next attempt is dialed when the subject flow does not say when, and the shortest wait when it does. See [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 60. |
    | **Ring time (seconds)** | Power, Progressive, Predictive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |
@@ -128,12 +148,14 @@ It stops dialing altogether when the abandonment rate cannot be measured at all.
 Agents on an over-dialing campaign do not see an offer before a call: the call is theirs as soon as they are connected. While an agent is **Available** and signed in to a campaign, the soft phone stands by and answers the call it is given at once, with no click; inbound offers still ring for the agent to accept. If the agent's phone does not pick up within a few seconds, the agent is put back to **Available**, the person hears the abandoned-call message and the call counts as abandoned. If they also take inbound calls, an inbound call that reaches them first takes them out of the campaign until it ends.
 :::
 
+<YouTube video="contact-center-dialer-reports" title="Video of the Last pacing decision of a Predictive profile" start={277} end={313} />
+
 The settings on the **Predictive pacing** card:
 
 | Field | What it does |
 | --- | --- |
 | **Measured answer rate** | Shown once a Predictive profile has placed calls: the share of recent calls with an outcome that a person answered, how long people take to answer, and how long agents take to be connected. A call still ringing is left out until it has an outcome. |
-| **Last pacing decision** | Shown once an over-dialing profile has paced a campaign: for each campaign, when the last cycle ran, whether it over-dialed, reserved an agent per call or did not dial and why, how many calls it placed of those allowed, the free agents (plus those about to free up when counted), the calls ringing without an agent, the answer rate and the abandonment rates over the rolling window and the compliance window. Read-only; it changes every cycle. |
+| **Last pacing decision** | Shown once an over-dialing profile has paced a campaign: for each campaign, when the last cycle ran, whether it over-dialed, reserved an agent per call or did not dial and why, how many calls it placed of those allowed, the free agents (plus those about to free up when counted), the calls ringing without an agent, the answer rate and the abandonment rates over the rolling window and the compliance window. Read-only; it changes every cycle. The table has the columns **Campaign**, **When**, **Pacing**, **Placed** (calls placed of those allowed), **Agents**, **In flight**, **Answer rate** and **Abandoned** (the rolling rate, then the compliance-window rate). The **Pacing** cell names the mode (*Over-dialing*, *One call per reserved agent* or *Not dialing*) and the reason: *Measured and paced*, *The abandonment policy does not permit dialing*, *The pacing settings are not valid*, *No answer rate measured*, *Too few calls to trust the answer rate*, *No abandonment rate measured*, *Too few answered calls to trust the abandonment rate*, *No compliance-window abandonment rate measured*, *The compliance-window abandonment rate is at the cap*, *The rolling abandonment rate is at the cap*, *Throttled by the abandonment rate* or *No free agents*. It is written only by over-dialing, so a profile on *One call per reserved agent* shows no table. |
 | **Pacing** | **One call per reserved agent** (the default) or **Over-dial**. Over-dialing needs **Enforce an abandonment-rate cap**, the abandoned-call message and a target below the cap. |
 | **Target abandonment rate** | The rate over-dialing steers toward. Default 2%. For over-dialing it must be lower than the **Maximum abandonment rate**, which stays the hard limit. |
 | **Lines per agent** | The most calls ringing for each free agent, from 1 to 5. Default 2. |
@@ -205,7 +227,7 @@ An unanswered call rings for the profile's **Ring time** before it is given up, 
 
 ## What happens to each record
 
-<YouTube video="contact-center-dialer-pacing" title="Video of the checks the dialer runs on every record and how a call that ends early is dispositioned" start={262} end={318} />
+<YouTube video="contact-center-call-flows" title="Video of the checks an outbound call passes before it dials, and how a call that ends early is recorded" start={217} end={280} />
 
 Before an agent is reserved for a record, the dialer checks that the record is due: its scheduled time and the retry delay after its last call have passed, and it has attempts left. A record that is not due yet waits at the back of the queue, and no agent sees it. Before every call the dialer then checks, in order: the number is valid, the number is not [known to be out of service](numbers-not-in-service.md), the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
 
@@ -248,7 +270,9 @@ When the next attempt is dialed follows the same order. A date picked when the c
 
 The dialer retries this way only calls that rang out, were busy, reached a machine, or were answered and dropped before an agent joined. A call the network failed or the far end rejected, and a number not in service, are dispositioned but not retried. Attempts count across the follow-ups for one contact, so a limit of 3 means the first call and two more.
 
-Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called.
+Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called. The attempt limit, the cool-down between attempts and the number-not-in-service check still apply, and the dialer does not disposition a callback: the agent who takes it does. A callback task runs every minute, queues the callback on the same queue at the queue's default priority, and offers it to an agent like a preview call; the agent accepts, and the platform dials.
+
+<YouTube video="contact-center-call-flows" title="Video of how a callback is created, queued and dialed" start={280} end={320} />
 
 ## Next steps
 

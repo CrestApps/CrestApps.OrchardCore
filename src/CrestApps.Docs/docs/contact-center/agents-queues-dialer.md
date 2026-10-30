@@ -30,7 +30,7 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Paced Dialing | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Compliance-gated Power, Progressive and Predictive strategies, the Predictive pacing statistics and tenant options, paced batch source, and scheduled pacing. Its base Dialer dependency includes the Dialer Profiles UI. |
 | Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
 | Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
-| Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
+| Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Adds executable two-way media for active voice calls, which a realtime AI voice conversation needs; without it, automated calls use the turn-based speak-and-transcribe loop. It is not dependency-only: an administrator turns it on from the Features page. Not to be confused with the **Voice Media** library (hold music and prompts) under **Interaction Center > Management**, which is part of Contact Center. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the workforce availability state. Enabled by dependency only (auto-enabled by Contact Center Voice and Supervision). |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
 
@@ -166,6 +166,8 @@ Inbound offers are local atomic transitions. Assignment does not synchronously q
 A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, activity load definitions, dispositions, and contact context still come from Omnichannel. The profile is a reusable set of dialing settings: which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. It does not name a queue or a campaign. The campaign is chosen when activities are loaded: a **Load Activities** batch with the **Dialer** source picks both the campaign and the dialer profile, and for outbound work the campaign itself acts as the routing queue. Mandatory outbound compliance is part of the base **Contact Center Outbound Dialer**, so Preview, Power, and Progressive attempts cannot run without the eligibility and suppression gates. Enable **Contact Center Paced Dialing** for Power and Progressive profiles; it inherits the **Dialer Profiles** screen and compliance services from the base Dialer feature and paces each campaign as soon as an agent may be free for it or work arrives, with a minute task as the backstop (see [Pacing cadence](#pacing-cadence)). Preview profiles remain agent-driven. Dialer activity loads create **unassigned** activities and enqueue automated work immediately so the selected profile can reserve it without a separate operator enqueue step.
 
 ### Dialing modes and safety
+
+<YouTube video="contact-center-dialer-modes-compared" title="Video of the four dialing modes side by side, and when to choose which" start={314} end={406} />
 
 Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsupported modes are withheld rather than falling through to an unsafe default:
 
@@ -412,6 +414,7 @@ A pacing cycle used to leave no trace of its own: its `RoutingDecisionMade` even
 
 | State | Meaning |
 | --- | --- |
+| `LockNotAcquired` | The latest cycle of the queue could not take the pacing lock, and the run of misses is longer than the larger of the cycle timeout (2 minutes by default) and twice the lock expiration. Every cycle skips itself until the lock is available. It is the most severe state. |
 | `Stalled` | Work has waited longer than `CrestApps:ContactCenter:DialerPacing:StalledAfter` (default 5 minutes) without a cycle of the queue completing. The minute task paces every queue with waiting work, so a healthy dialer completes a cycle at least once a minute even when it finds nothing to do. |
 | `Idle` | The last completed cycle found no agent. |
 | `HeldBack` | The last completed cycle held back. |
@@ -429,7 +432,7 @@ The same state drives three surfaces:
 
 An agent can be left showing **On a call**, Busy or Reserved with nothing on the line: a soft-phone call record the provider can no longer resolve, a Contact Center call the provider reports ended, a reservation or queue item nothing backs. The agent's own *Set Available* repairs Contact Center reservations and queue items but deliberately leaves any call the provider might still hold, so it could not clear this.
 
-The **Live dashboard** flags such an agent with a warning badge on their card, and offers **Free agent** in the card's More menu to a supervisor who holds *Intervene in calls* and oversees the agent's queues. The warning is raised only with evidence:
+The **Live dashboard** flags such an agent with a warning badge on their card, and offers **Free agent** in the card's More menu to a supervisor who holds the permission to *take over, end, transfer and record live Contact Center calls, and set agents' state* and oversees the agent's queues. The warning is raised only with evidence:
 
 - an active soft-phone call the provider says is gone, or cannot resolve for several minutes, or one the browser placed itself that has gone quiet with no live session behind it;
 - a Contact Center call that is not settled although the provider reports its call gone;

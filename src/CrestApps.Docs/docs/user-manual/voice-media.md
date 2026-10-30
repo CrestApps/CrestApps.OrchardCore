@@ -22,6 +22,14 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the voice media library and the upload form" start={194} end={218} />
 
+<<<<<<< HEAD
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video of the two things called Voice Media: the Contact Center Voice Media feature and this library" start={205} end={245} />
+
+The **Voice Media** library on this page is not the **Contact Center Voice Media** feature. That feature (see **Tools > Features**) gives automated calls a live two-way audio path, which an AI voice agent needs for a live conversation. The library is part of the base Contact Center and has no feature of its own.
+=======
+<YouTube video="telephony-recording-storage" title="Video of the voice media master copy and where it is stored" start={112} end={139} />
+>>>>>>> d6b323fd5 (Call recordings: say where recordings are stored and how Azure Blob Storage fits, and add the recording storage video)
+
 ## Add a clip
 
 <YouTube video="contact-center-voice-media" title="Video of adding a clip" start={61} end={114} />
@@ -37,6 +45,16 @@ If the phone provider does not accept the upload, the clip is still saved with i
 
 :::note[About the screencast]
 The demo site is not connected to a phone provider, so the screencast shows the form without uploading a file.
+:::
+
+## Voice media after an export and import
+
+A clip travels in a [deployment plan](administration/import-and-export.md) as its library entry (name, description and format) but the audio does not: the **Contact Center Voice Media Library** step carries no audio. After an import on a site that does not have the file, the clip is listed with its **Master copy** badge, but the audio is not there: open the clip, choose the audio file again and save. The clip keeps its identifier, so the queues, entry points and menus that use it start playing it again. Deleting a clip deletes its master copy and every provider copy, so when two sites share one media store, deleting a clip in one removes the audio the other plays.
+
+<YouTube video="contact-center-configuration-deployment" title="Video of re-uploading the audio of an imported voice media clip" start={207} end={256} />
+
+:::caution[Two things with similar names]
+The **Voice Media** screen under **Interaction Center > Management** is the library of hold music and prompts described on this page. The **Contact Center Voice Media** feature on the **Features** page is a different thing: it adds live two-way audio for calls, such as AI voice conversations. You do not need that feature for hold music and recorded prompts.
 :::
 
 ## What the badges mean

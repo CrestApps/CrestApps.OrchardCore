@@ -90,7 +90,19 @@ The **Diagnostics** tab helps you and your support team find the cause of an aud
 
 Turning the tab on does not change how calls work. Poor call quality is reported to your administrators automatically, even when nobody has the tab open.
 
+## Dial from a phone number
+
+Wherever the soft phone is on the page, a phone number field gets a **dial** button beside it (its tooltip is *Call with the soft phone*), for example on a contact's **Phone Number** in the Contact Methods. Click it to call that number with the soft phone, so nobody has to retype it. With the **Telephony Soft Phone Extension** feature on, the button appears on every admin page, even without the floating phone.
+
+<YouTube video="telephony-soft-phone-administration" title="Video of the dial button next to a phone number" start={142} end={167} />
+
 ## Administrator options
+
+<YouTube video="telephony-soft-phone-administration" title="Video overview of soft phone administration: the Soft Phone tab, the widget, diagnostics and click to dial" />
+
+<YouTube video="telephony-soft-phone-administration" title="Video of the Soft Phone tab" start={38} end={102} />
+
+<YouTube video="telephony-soft-phone-administration" title="Video of the phone on the page and its Diagnostics tab" start={102} end={142} />
 
 Under **Settings > Communication > Telephony**, the **Soft Phone** tab holds:
 

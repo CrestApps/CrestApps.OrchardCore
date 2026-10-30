@@ -11,23 +11,45 @@ technical_manual:
   - omnichannel/crm
 ---
 
-Reports show what happened in your contact center over a period you choose: calls, queues, agents' time, campaigns, leads and AI conversations. Every report lives under the **Reports** menu, grouped by category: *Executive*, *Operations*, *Queue & Routing*, *Agent Performance*, *Workforce & Payroll*, *Billing & Usage*, *CRM & Campaigns*, *Compliance & Audit*, and *Technical & IT*. Reports from other modules can appear under *General*.
+Reports show what happened in your contact center over a period you choose: calls, queues, agents' time, campaigns, leads and AI conversations. Every report lives under the **Reports** menu, grouped by category: *Executive*, *Operations*, *Queue & Routing*, *Agent Performance*, *Workforce & Payroll*, *Billing & Usage*, *CRM & Campaigns*, *Compliance & Audit*, and *Technical & IT*. Reports from other modules can appear under *General*. The menu lists the categories in alphabetical order, and the **Reports** page shows the reports with no category first, without a heading.
 
 | | |
 | --- | --- |
 | **Menu** | Reports > *category* > *report* |
+<<<<<<< HEAD
 | **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators and supervisors have it by default) |
+=======
+| **Permissions** | Each report has the permission of the module that provides it. **View Contact Center reports** opens the Contact Center reports (supervisors and administrators have it by default). **View Omnichannel reports** opens the CRM and campaign reports (administrators have it by default, and so does anyone who may manage activities). A report with its own permission, such as **Run 'Phone Number Verifications' Report**, needs that one. **Manage report subscriptions** opens **Reports > Subscriptions** (administrators have it by default). |
+>>>>>>> 8beb8fc65 (Docs: reports page videos, subscriptions details, permissions, export file names and the capability notice)
 | **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export, and Reports (PDF) adds PDF export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a report, changing the date range and filters, and exporting it" start={802} end={833} />
+<<<<<<< HEAD
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
+=======
+<YouTube video="contact-center-reports" title="Video overview of Contact Center reports: running, filtering, reading and exporting a report" />
 
-You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
+<YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />
+>>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
-To build your own reports with drag and drop, see [Report Builder](report-builder/index.md).
+<YouTube video="reports-run-and-export" title="Video of finding a report in the Reports menu" start={47} end={79} />
+
+You only see the reports your permissions allow.
+
+<YouTube video="reports-run-and-export" title="Video of the permissions that decide which reports you see" start={79} end={121} />
+
+If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
+
+To build your own reports with drag and drop, see [Report Builder](report-builder/build-a-report.md).
 
 ## Run a report
+
+<<<<<<< HEAD
+<YouTube video="reports-run-and-export" title="Video of running a report and choosing its date range" start={121} end={190} />
+=======
+<YouTube video="contact-center-reports" title="Video of running a report and choosing the date range" start={108} end={161} />
+>>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 1. Open **Reports** and pick a category, then a report.
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
@@ -35,29 +57,122 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
 
+<<<<<<< HEAD
+<YouTube video="reports-run-and-export" title="Video of filtering a report" start={190} end={237} />
+=======
+<YouTube video="contact-center-reports" title="Video of filtering a report" start={161} end={192} />
+>>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
+
 How the filters work:
 
 - A filter left on *All* (for example *All queues*) does not narrow the report.
 - Filters combine: picking a queue, an agent, the Voice channel and the Inbound direction shows only what matches all four.
 - Every number, total, percentage and average is worked out again from the filtered records, so it always matches what you picked.
-- An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown.
-- If a report needs a feature your site does not use (for example call transfers or recording), it shows a notice naming that feature instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
+- An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`.
+- If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
-Reports cannot be scheduled or emailed yet; run and export them when you need them.
+<<<<<<< HEAD
+<<<<<<< HEAD
+<YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
+
+Reports of the modules above can be emailed on a schedule (see [Email a report on a schedule](#email-a-report-on-a-schedule)). Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to; to email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
+=======
+The reports of this page can be emailed on a schedule; see [Email a report on a schedule](#email-a-report-on-a-schedule). A report made with the [Report Builder](report-builder/index.md) cannot be subscribed to: use the **Email Report** task of a workflow instead.
+>>>>>>> c70a2ca35 (Document the dialer reports: not pacing state, subscriptions, last pacing decision, and embed the dialer reports video)
+=======
+<YouTube video="contact-center-reports" title="Video of exporting a report to CSV, Excel and PDF" start={257} end={289} />
+
+Any report in this list can also be emailed on a schedule, see [Email a report on a schedule](#email-a-report-on-a-schedule). Reports built with the [Report Builder](report-builder/index.md) cannot be subscribed to; to send one by email, use a workflow with the **Email Report** task.
+
+## What the main numbers mean
+
+The cards at the top of **Executive performance dashboard**, **Call insights** and many other reports use the same definitions everywhere, so a number means the same thing in every report. Every percentage is worked out from counts, never by averaging other percentages.
+
+<YouTube video="contact-center-reports" title="Video of the main numbers on the executive dashboard" start={192} end={257} />
+
+| Number | What it means |
+| --- | --- |
+| **Interactions** | Every call or message in the period. A transfer, consult, conference or callback stays part of the same interaction. |
+| **Inbound offered** | The inbound interactions. |
+| **Inbound answered** and the answer rate | Inbound interactions an agent took, and that count divided by *Inbound offered*. A caller the platform only answered to play the queue or to record a voicemail is not answered. |
+| **Abandoned** and the abandonment rate | Inbound callers who hung up while waiting in a queue or while an agent was being offered the call, before anybody answered. The rate is *Abandoned* divided by *Inbound offered*. Every abandon counts, however short. |
+| **Voicemail** | Inbound calls the platform sent to voicemail instead of connecting: the offer rang out, the queue's maximum wait passed, the entry point was closed, or the queue was full. |
+| **Callback requested** | Inbound callers who accepted the queue's offer of a callback instead of waiting. |
+| **Failed** | Calls that failed for a technical reason: the provider reported an error, or the call could not be placed or bridged. A caller who hangs up before anyone answers is an abandon, never a failure. |
+| **Avg speed of answer** | How long inbound callers waited, from the moment the call was created to the moment an agent answered, averaged over answered inbound calls. |
+| **Avg handle time** | The talk, hold and wrap-up time of a handled call, averaged over answered calls. Abandoned, voicemail and failed calls are left out. |
+| **Transfer rate** | The share of answered calls that were transferred at least once. |
+| **Recording coverage** | The share of answered voice calls that have a recording. |
+| **Service level** (per queue) | Inbound calls answered within the queue's service-level threshold, divided by inbound answered plus abandoned. Voicemail, callback and failed calls are left out. A queue with no threshold shows none. |
+| **Utilization** and **Occupancy** (per agent) | Utilization is busy plus wrap-up time divided by all signed-in time. Occupancy is busy plus wrap-up time divided by the time the agent was available, reserved, busy or in wrap-up. Neither says how well an agent works. |
+
+*Voicemail* and *Callback requested* are neither answered nor abandoned. They count toward *Inbound offered* but not toward the abandonment rate or the service level, and each has its own column.
+>>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 ## Email a report on a schedule
 
-With **Report Subscriptions** on, any report can be emailed every day, week or month, such as your sales every Monday morning.
+With **Report Subscriptions** on, a report can be emailed every day, week or month, such as your queue service level every Monday morning. It is a feature under **Tools > Features**, in the *Reporting* category, and it needs the **Reports** feature and the **Email** feature, which it turns on with it. Report Subscriptions adds **Reports > Subscriptions**, and **Manage report subscriptions** is the permission that opens it (administrators have it by default). A person can only choose a report they may open.
+
+<YouTube video="report-subscriptions" title="Video overview of report subscriptions" />
+
+<YouTube video="report-subscriptions" title="Video of turning on Report Subscriptions and its permission" start={59} end={111} />
+
+**Email must be set up first.** A subscription goes out through your site's email provider. Under **Settings > Email**, the site says *No email providers are currently enabled* until you enable a provider feature, such as the SMTP provider, and enter its settings (sender address, host name, port and, when the server asks for them, credentials). Until then a subscription can be saved, but each send fails, and the list tells you why.
+
+<YouTube video="report-subscriptions" title="Video of setting up the email provider that subscriptions need" start={111} end={164} />
+
+<YouTube video="report-subscriptions" title="Video of adding a subscription" start={164} end={229} />
 
 1. On **Reports > Subscriptions**, click **Add subscription**.
-2. Choose the **Report**, and when to **Send** it: every day for the day before, every week for the 7 days before, or every month for the month before.
-3. Choose the **Day of the week** or **Day of the month**, and the **Hour**, in your site's time zone.
-4. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** to get the report as a file too.
-5. Click **Save**, or **Save and send now** to get one straight away.
+2. Choose the **Report**, listed by category. **Name** is optional; the report's name is used when it is blank.
+3. Choose when to **Send** it: *Every day, for the day before*, *Every week, for the 7 days before*, or *Every month, for the month before*.
+4. Choose the **Day of the week** (for a weekly report) or the **Day of the month**, from 1 to 28 (for a monthly one), and the **Hour**, from 0 to 23, in your site's time zone.
+5. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** (*CSV*, *Excel (.xlsx)* or *PDF*) to get the report as a file too, or leave *No file*. The email shows the report's numbers and tables either way.
+6. Leave **On** ticked, and click **Save**, or **Save and send now** to send it straight away for the period before.
 
-The email shows the report's numbers and tables. If one doesn't go out, such as when your site's email isn't set up, the list shows why. Untick **On** to pause a subscription.
+<YouTube video="report-subscriptions" title="Video of Save and send now and of reading why a send failed" start={229} end={266} />
+
+The list shows each subscription with its schedule, its recipients and when it goes out next, and you can search it by name. A background task checks every five minutes for subscriptions that are due and sends them. If a send fails, such as when the site's email is not set up, the row says *Last run didn't go out* with the reason, and the subscription's page shows when it goes out next and what happened last time. Fix the cause, and save it again with **Save and send now**. Untick **On** to pause a subscription: it stays in the list with an *Off* badge and is not sent. **Delete** removes it.
+
+<YouTube video="report-subscriptions" title="Video of pausing, searching and deleting subscriptions" start={266} end={291} />
+
+Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to. To email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
+
+## Show a report on the dashboard
+
+With the **Admin Dashboard** feature on (under **Tools > Features**), any report you may view can be a widget on the admin dashboard: its figures, tables and charts for a period that moves with the clock, so the numbers are there without opening the report. The **Report** widget shows any report on this page. The **Custom Report** widget, which comes with the Report Builder, shows a report you built (see [Show a report on the dashboard](report-builder/share-and-run.md#show-a-report-on-the-dashboard)).
+
+<YouTube video="reports-dashboard-widgets" title="Video overview of report widgets on the dashboard" />
+
+<YouTube video="reports-dashboard-widgets" title="Video of turning on the Admin Dashboard and opening its editor" start={55} end={85} />
+
+1. Open the admin **Dashboard** and click **Manage Dashboard**, then **Add Widget**, and pick **Report**.
+2. **Position**, **Width** and **Height** place the tile on the dashboard, and **Title** is the name above it.
+3. Choose the **Report**. The list has every report you may view under **Reports**, by category.
+4. Choose the **Period**: *Today*, *Yesterday*, *Last 7 days*, *Last 30 days*, *Last 90 days*, *This month*, *Last month*, *This year*, *Last 12 months*, *All time*, or *Custom dates*, which asks for a **From** and a **To** day. Every period except custom dates moves with the clock: the last 30 days is always the 30 days up to now.
+5. Choose what to **Show**: *Figures and tables*, *Figures only*, *Tables only*, *Charts only* or *Everything*. A report that has only a table shows nothing under *Figures only*.
+6. **Rows per table** limits how many rows of each table appear (it starts at 5), and **Keep for (minutes)** is how long the widget keeps what it shows before it runs the report again (it starts at 30). 0 runs the report on every visit. Saving the widget starts over.
+7. Click **Publish**, then **Close Editor**.
+
+<YouTube video="reports-dashboard-widgets" title="Video of adding a Report widget" start=85 end=154 />
+
+Each tile names its report, says its period in words, says when its result was made, and has an **Open the full report** link that opens the report with its filters and exports.
+
+<YouTube video="reports-dashboard-widgets" title="Video of the dashboard tiles" start=154 end=175 />
+
+Every tile checks the person looking at it. Someone who may open the dashboard but not the report sees *You can't view the report* in its place, instead of numbers, and a widget that has no report chosen says *Choose the report this widget shows by editing it*. If the report cannot run, the tile says so, and the details are in the log. A tile that has nothing for its period says *Nothing to show for this period*.
+
+<YouTube video="reports-dashboard-widgets" title="Video of what each person sees on the dashboard" start=213 end=227 />
+
+The **Access the Admin Dashboard** permission opens the dashboard, and **Manage the Admin Dashboard** opens its editor. The person also needs the permission of each report whose tile they should see.
 
 ## Agent time over long periods
+
+<<<<<<< HEAD
+<YouTube video="reports-run-and-export" title="Video of a period that is too long and of a report whose feature is off" start={313} end={354} />
+=======
+<YouTube video="contact-center-reports" title="Video of the 31-day limit on reports about agents' time" start={289} end={343} />
+>>>>>>> 0c7dbb052 (Reports: add the report catalog by category, what the main numbers mean, the Contact Center report videos, and fix the scheduling and PDF export statements)
 
 The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:
 
@@ -79,6 +194,135 @@ Reports of agents' time over many days are quick because the site keeps a summar
 | **On or after** | Everything from a date and time, with no end. |
 
 The button always shows the range you picked in words, for example *From Jan 1, 2026 to Jan 31, 2026*. Weeks start on the first day of the week for your language settings.
+
+## The reports by category
+
+<YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />
+
+The **Reports** page and the **Reports** menu group the Contact Center reports into the categories below. Each category answers a different kind of question: *Executive* for the whole center at a glance, *Operations* and *Queue & Routing* for how calls and queues performed, *Agent Performance* for people, *Workforce & Payroll* for the time agents spend in each state, *Billing & Usage* for what was used, *Compliance & Audit* for the records behind the totals, and *Technical & IT* for providers and failures. *CRM & Campaigns* holds the campaign and lead reports of the CRM, and the CRM's activity reports sit in *Operations*, *Queue & Routing*, *Agent Performance* and *Compliance & Audit* beside these. The CRM reports are described in [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#reports) and the Omnichannel pages.
+
+### Executive
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Executive reports" start={49} end={78} />
+
+| Report | What it shows |
+| --- | --- |
+| **Executive performance dashboard** | Enterprise KPI cards and interactive charts for interaction demand, accessibility, channel mix, queue service level, agent workload, and operating efficiency. |
+
+### Operations
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Operations reports" start={78} end={121} />
+
+| Report | What it shows |
+| --- | --- |
+| **Call insights** | Inbound and outbound call volume, answered, abandoned, and failed calls, handle time, and a daily trend. |
+| **Call quality** | How calls rated, the agents and network paths poor calls cluster on, their likely cause, and each poor call's measurements. |
+| **Channel performance** | Interaction performance grouped by voice, chat, email, SMS, and other supported channels. |
+| **Day-of-week performance** | Interaction demand, outcomes, and response metrics grouped by weekday. |
+| **Dialer activity and health** | Whether the dialer is dialing, idle, holding back, has nothing to call or has stalled; its last pacing cycle and call per campaign and dialer profile; calls and routing decisions per hour; and suppressed attempts by reason. |
+| **Direction performance** | Inbound and outbound interaction performance with consistent outcome and duration metrics. |
+| **Hour-of-day performance** | Interaction demand, outcomes, and response metrics grouped by UTC hour. |
+| **Interaction lifecycle duration** | Average wait, connected, wrap-up, and end-to-end duration by interaction status. |
+| **Interaction outcome summary** | Interaction volume and response metrics grouped by normalized lifecycle outcome. |
+| **Interaction volume trend** | Daily offered, answered, abandoned, and failed interaction volume. |
+| **Interval performance** | Daily interaction outcomes, answer and abandonment rates, speed of answer, and handle time. |
+
+### Queue & Routing
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Queue & Routing reports" start={121} end={171} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent availability and wait time** | Live, per agent: how long each has waited for a call, today's calls, session health, stale states, and why each queue or campaign is or is not giving them work. |
+| **Dialer decision log** | Every routing decision and dial suppression: the activity, queue, campaign and agents it was about, the outcome and the reason, counts by reason, and queues with work due now that routing has gone quiet on. |
+| **High-wait interaction detail** | Interaction-level audit of customers who waited at least 60 seconds. |
+| **Queue abandonment analysis** | Inbound queue offered, answered, abandoned, abandonment rate, and wait before abandonment. |
+| **Queue handle time analysis** | Total, average, and maximum connected plus wrap-up time by queue. |
+| **Queue performance summary** | Interaction volume, outcomes, answer rate, abandonment, ASA, and AHT by queue. |
+| **Queue service level** | Queue service level calculated from answered-within-threshold interactions and eligible offered interactions. |
+| **Queue transfer performance** | Handled interactions, transferred interactions, transfer events, and transfer rate by queue. |
+| **Queue usage** | Per-queue handled, answered, and abandoned volume, handle time, and current waiting depth. |
+| **Queue wait time analysis** | Total, average, and maximum customer wait time by queue. |
+| **Transfer analysis** | Transfer volume, completion, destination type, result, and completion time. |
+
+### Agent Performance
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Agent Performance reports" start={171} end={213} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent handle time analysis** | Per-agent handled volume, connected time, wrap-up time, and total handle time. |
+| **Agent inbound performance** | Inbound handled volume, outcomes, transfers, recording count, and handle time by agent. |
+| **Agent interaction volume** | Handled, answered, failed, transferred, recorded, and average handle time by agent. |
+| **Agent occupancy** | Busy plus wrap-up time divided by available, reserved, busy, and wrap-up time. |
+| **Agent outbound performance** | Outbound handled volume, outcomes, transfers, recording count, and handle time by agent. |
+| **Agent outcome performance** | Interaction outcomes and average handle time by agent, ordered by failed volume. |
+| **Agent productivity** | Per-agent handled volume, talk time, average handle time, and completed activities. |
+| **Agent transfer performance** | Transfer volume and supporting interaction metrics by agent. |
+| **Agent utilization** | Busy plus wrap-up time divided by total observed signed-in time. |
+| **Agent wrap-up performance** | Per-agent wrap-up starts, completions, completion rate, average duration, and total duration. |
+| **Talk, hold, ring and queue wait** | Talk time with hold taken out, hold, ring time and missed offers by agent, and the real queue wait and abandons by queue, from the calls' recorded changes. |
+
+### Workforce & Payroll
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Workforce & Payroll reports" start={213} end={262} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent break and away analysis** | Break count, total time, average duration, and longest duration by agent. |
+| **Agent time summary** | Observed signed-in, available, busy, wrap-up, break, and other not-ready time by agent. |
+| **Campaign signed-in hours** | Observed signed-in agent time attributed to campaign memberships. |
+| **Daily agent timecard** | Daily observed on-duty, productive presence, working, and break time by agent. |
+| **Payroll timecard inputs** | Observed on-duty, productive presence, break, meeting, training, and other not-ready time for payroll review; pay rates and schedules are not applied. |
+| **Presence reason breakdown** | Observed presence duration and interval count by status and reason. |
+| **Presence status duration** | Total observed duration and share of signed-in time for every presence status. |
+| **Queue signed-in hours** | Observed signed-in agent time attributed to queue memberships. |
+| **Ready versus not-ready time** | Ready, actively working, and not-ready time by agent. |
+| **Reconciled payroll timecard** | Per agent per day, signed-in time beside the time in each state to the second, with a check that flags every day that does not add up. |
+
+### Billing & Usage
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Billing & Usage reports" start={262} end={293} />
+
+| Report | What it shows |
+| --- | --- |
+| **Agent usage for billing** | Interaction counts and measured service time by agent for staffing, payroll, and chargeback support. |
+| **Channel usage for billing** | Interaction counts and measured service time by channel for service allocation and chargeback. |
+| **Daily usage for billing** | Daily interaction counts and measured service time for invoice period reconciliation. |
+| **Provider usage for billing** | Interaction counts and measured service time by communications provider for vendor invoice reconciliation. |
+| **Queue usage for billing** | Interaction counts, connected time, wrap-up, queue wait, transfers, and recordings by queue for invoice support. |
+
+### Compliance & Audit
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Compliance & Audit reports" start={293} end={333} />
+
+| Report | What it shows |
+| --- | --- |
+| **Abandoned interaction detail** | Interaction-level audit of inbound customers who left before answer. |
+| **Agent activity timeline** | Every agent state, offer, connection and call change in order, with start, end, duration and who made each change. |
+| **Agent presence audit** | Detailed auditable presence transitions with status, reason, and membership counts. |
+| **Agent recording coverage** | Recorded interaction volume and supporting performance metrics by agent. |
+| **Interaction detail** | One row per interaction with routing, agent, provider, timing, and transfer details. |
+| **Long interaction detail** | Interaction-level audit of connected sessions lasting at least 15 minutes. |
+| **Recording coverage** | Answered voice interaction recording coverage grouped by provider. |
+
+### Technical & IT
+
+<YouTube video="contact-center-reports-catalog" title="Video of the Technical & IT reports" start={333} end={355} />
+
+| Report | What it shows |
+| --- | --- |
+| **Call leg performance** | Provider call-leg volume, answer state, status, and average duration for technical operations. |
+| **Failed interaction detail** | Interaction-level audit of failed communications. |
+| **Provider performance** | Interaction outcomes and duration metrics grouped by executing communications provider. |
+
+### CRM & Campaigns
+
+| Report | What it shows |
+| --- | --- |
+| **Campaign summary** | Per-campaign completed-versus-pending progress across the activity inventory, with the pending records split by what the dialer can do with them right now. |
+| **Dialer queue inventory** | What each campaign queue holds right now, by the dialer profile its items are stamped with, and why the records that are not being dialed are held back. |
+| **Subject inventory** | Per-subject completed-versus-pending progress across the activity inventory. |
 
 ## Which report answers which question
 
@@ -223,6 +467,10 @@ How it works:
 
 ## Dialer activity and health
 
+<YouTube video="contact-center-dialer-reports" title="Video overview of the dialer reports: activity and health, the decision log, the inventory and the last pacing decision" />
+
+<YouTube video="contact-center-dialer-reports" title="Video of the Dialer activity and health report and what each state means" start={50} end={147} />
+
 **Dialer activity and health**, under *Operations*, tells you what the dialer is doing for each campaign it dials automatically, and what it did over the period you pick. It appears when the Contact Center Paced Dialing feature is on.
 
 A dialer that places no calls can be in three very different situations, and the report keeps them apart:
@@ -231,6 +479,7 @@ A dialer that places no calls can be in three very different situations, and the
 | --- | --- | --- |
 | **Stalled** | Records are waiting but the dialer has not finished a pass over the campaign for several minutes (five, unless your administrator changed it). The report shows the warning *Due work is waiting but no pacing cycle has completed for N minutes*. | Tell your administrator: the dialer has stopped, not run out of work. |
 | **Idle: no agent available** | The dialer keeps checking the campaign and finds records it may call, but no agent is free to take the call. | Sign more agents in to the campaign, or bring agents back from a break. |
+| **Not pacing: pacing lock not acquired** | Records are waiting, but the dialer could not take the lock it needs to pace the campaign, so every pass skips itself. The report shows a warning naming the campaigns and since when. | Tell your administrator: the dialer is not running, and the cause is the lock, not the data. |
 | **Nothing to call** / **Nothing due** | The dialer keeps checking and finds nothing it may call right now: the campaign has no records waiting, or they are scheduled for later or waiting out their retry delay. | Nothing, unless you expected records to be due. Load more records if the campaign has run out. |
 
 Other states are **Dialing** (the last pass placed calls), **Holding back** (the dialer chose not to call: the compliance check refused the numbers, the abandoned-call cap was reached, or calls already ringing cover the free agents) and **Starting** (records arrived a moment ago).
@@ -239,7 +488,7 @@ The report has these sections:
 
 | Section | What it shows |
 | --- | --- |
-| **Dialer right now** | The overall state, how many campaigns have records waiting, and how many are stalled, idle, holding back, dialing or have nothing due. |
+| **Dialer right now** | The overall state, how many campaigns have records waiting, how many have a pacing lock not acquired, and how many are stalled, idle, holding back, dialing or have nothing due. |
 | **Campaign queues** | One row per campaign: its state, when the dialer's last pass started and finished, how it ended (for example *Placed 2*, *No agents* or *Nothing due*, with how many passes in a row ended that way), why, the **Last call placed** and the **Last call assigned** (when, which agent, which record), and how many passes, calls and routing decisions there were in the period. |
 | **Dialer profiles** | One row per dialer profile: its mode, its last pass, the last call placed, and the calls placed, answered and abandoned and the attempts suppressed in the period. |
 | **Calls per hour** | A chart of calls placed, answered by a person and abandoned, hour by hour (day by day for a period longer than a month). |
@@ -249,6 +498,8 @@ The report has these sections:
 The state and the **Last cycle** columns always describe right now, whatever date range you pick; the counts and charts cover the date range. Times are shown in the site's time zone. The same state is shown as a banner on the [live dashboard](live-dashboard.md#dialer-banner).
 
 ## Dialer queue inventory
+
+<YouTube video="contact-center-dialer-reports" title="Video of the Dialer queue inventory" start={260} end={277} />
 
 **Dialer queue inventory**, under *CRM & Campaigns*, shows what the dialer holds right now: what is waiting in each campaign's queue, which dialer profile those records are stamped with, how many can be dialed now, and why the rest are held back. Use it when a campaign has pending records and agents are available but nothing is being dialed. It answers on one screen, without reading logs.
 
@@ -315,6 +566,8 @@ The **Campaigns** table has these columns beside the progress columns (**Total**
 The **Why pending records are not dialing** table lists every reason a campaign's pending records cannot be dialed now, with the number of records and, for records that wait for a time, when the first becomes due.
 
 ## Dialer decision log
+
+<YouTube video="contact-center-dialer-reports" title="Video of the Dialer decision log by reason, by record and by agent, and what each reason means" start={147} end={260} />
 
 **Dialer decision log**, under *Queue & Routing*, lists every decision routing and the dialer made about queued work: each time routing looked for an agent for a record, and each time the dialer refused to call a record. Use it to answer "why was this record not called?" or "why did this agent not get that call?" without asking for the system logs.
 

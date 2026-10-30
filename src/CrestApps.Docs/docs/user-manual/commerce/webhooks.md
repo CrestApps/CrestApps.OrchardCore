@@ -24,11 +24,15 @@ Use webhooks to:
 
 <AskYourAdmin />
 
+This video shows how to add a webhook, the events, how messages are signed and retried, and the deliveries log:
+
+<YouTube video="webhooks" title="Narrated video overview of webhooks" />
+
 The system that receives the messages is called the **receiver**. Whoever builds it needs the address it listens on, and the webhook's **signing secret**, to check that each message really came from your store.
 
 ## Add a webhook
 
-<YouTube video="payments" title="Video of adding a webhook" start={308} end={359} />
+<YouTube video="webhooks" title="Video of adding a webhook" start={81} end={132} />
 
 1. Open **Commerce > Webhooks** and click **Add webhook**.
 2. Fill in the fields (below).
@@ -46,6 +50,8 @@ The system that receives the messages is called the **receiver**. Whoever builds
 **Commerce > Webhooks** lists your webhooks, each with whether it's **On** or **Off** and how many events it sends. Click a webhook's name, or **Edit**, to change it. **Delete**, on its page, removes it and its deliveries log: nothing more is sent to it.
 
 ## The events
+
+<YouTube video="webhooks" title="Video of the events a webhook can send" start={132} end={167} />
 
 Each event has a name, which the receiver reads, and a label you see when choosing events. The events you can choose depend on the commerce features your store has turned on.
 
@@ -86,6 +92,8 @@ Every message has these headers:
 
 ## Check the signature
 
+<YouTube video="webhooks" title="Video of what the receiver checks" start={167} end={200} />
+
 Anybody can post to the receiver's address, so the receiver checks each message's signature before trusting it. The signature is an HMAC-SHA256, keyed with the webhook's signing secret, of the timestamp, a dot and the body, written in lowercase hexadecimal.
 
 1. Read the body exactly as it arrived, before parsing the JSON.
@@ -117,6 +125,8 @@ So the receiver should:
 
 ## The deliveries log
 
+<YouTube video="webhooks" title="Video of the deliveries log, Send a test event, Send again and the retry schedule" start={200} end={294} />
+
 Click **Deliveries**, on the list or on a webhook's page, to see every message sent to the webhook, newest first. Each shows:
 
 | Shown | What it means |
@@ -144,6 +154,8 @@ On the deliveries log, click **Send a test event** to check the receiver is set 
 *The receiver answered 200.* means it was taken. Otherwise the message says why, such as *The receiver didn't take it: 401 Unauthorized*, which usually means the receiver has a different secret. The test is listed in the log like any other message.
 
 ## Change the signing secret
+
+<YouTube video="webhooks" title="Video of a new signing secret and removing a webhook" start={294} end={320} />
 
 On the webhook's page, click **New secret** next to **Signing secret**. *The webhook has a new signing secret. Deliveries are signed with it from now on, so put it in the receiver.* From that moment, every message, including retries of earlier ones, is signed with the new secret. Put it in the receiver straight away; messages it refuses in between are tried again later.
 

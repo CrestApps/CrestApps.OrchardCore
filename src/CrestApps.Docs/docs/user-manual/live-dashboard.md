@@ -18,7 +18,7 @@ The **live dashboard** is the supervisor's real-time view of the contact center:
 
 <AskYourAdmin />
 
-<YouTube video="contact-center-live-dashboard" title="Video overview of the live dashboard: reading it, filtering the agent board, and what a supervisor can do from an agent's card" />
+<YouTube video="contact-center-dashboard-diagnostics" title="Video overview of the live dashboard diagnostics: the dialer banner, why isn't this dialing, call quality alerts and Free agent" />
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the live dashboard summary, queue tiles and agent board filters" start={770} end={799} />
 
@@ -37,7 +37,8 @@ The page updates as events happen and refreshes every 10 seconds. The status at 
 | **Dialer banner** | When the Contact Center Paced Dialing feature is on: one line saying whether the dialer is stalled, idle, holding back, dialing or has nothing to call (see [Dialer banner](#dialer-banner)). |
 | **Why isn't this dialing?** | A panel under the queue tiles that explains why work is not being dispatched. It reads *No work is waiting to be dispatched.* when nothing is due. |
 | **Summary** | Total waiting across your queues, available agents, agents, and queues. |
-| **Call-quality alerts** | An agent whose recent calls were rated poor, with the likely cause (for example packet loss on their network). Dismiss an alert once handled. |
+| **Call-quality alerts** | An agent whose recent calls were rated poor, with the likely cause (for example packet loss on their network). Dismiss an alert once handled. See [Call-quality alerts](#call-quality-alerts). |
+| **Why isn't this dialing?** | One card for each queue or campaign that has work, with how much is dialable and why the rest is held back. See [Why isn't this dialing?](#why-isnt-this-dialing). |
 | **Queue tiles** | For each queue: waiting, signed-in agents, available, busy and not-ready agents, the longest wait, and SLA breaches. A tile turns **amber** when the longest wait passes half the SLA threshold and **red** when there is a breach. |
 | **Agent board** | One card per agent with presence, a status badge, active interactions and action buttons. |
 
@@ -55,18 +56,44 @@ An agent on a call of their own (a number they dialed from the keypad, or an ext
 
 ## Dialer banner
 
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of the dialer banner and its states, and the pacing warnings" start={59} end={113} />
+
 When your site dials campaigns automatically (the Contact Center Paced Dialing feature), a banner above the summary says what the dialer is doing for the campaigns you oversee. It refreshes every 30 seconds, and names up to three campaigns.
 
 | Banner | What it means |
 | --- | --- |
+| Red: *Dialer not pacing: the pacing lock of (campaigns) has not been acquired since (time), so every pacing cycle skips itself. Check the distributed lock.* | The dialer cannot take the lock it needs to pace the campaign, so nothing is dialed. This is a fault: tell your administrator. |
 | Red: *Dialer stalled: due work is waiting but no pacing cycle has completed for N minutes* | Records are waiting, but the dialer has stopped working through the campaign. This is a fault: tell your administrator. |
 | Amber: *Dialer idle: work is due but no agent is available to take it* | The dialer is working, but every agent signed in to the campaign is busy or away. Bring agents back or sign more agents in. |
 | Amber: *Dialer holding back* | The dialer is working but chose not to call: the compliance check refused the numbers, the abandoned-call cap was reached, or calls already ringing cover the free agents. |
 | Blue: *Dialer starting* | Records arrived a moment ago; the dialer has not finished its first pass yet. |
 | Green: *Dialer active: placing calls* | The dialer is placing calls. |
-| Grey: *Nothing to call* | No campaign you oversee has a record the dialer may call right now. |
+| Grey: *Nothing due yet: records wait (campaigns), but the latest pacing cycle found none it may dial now* | The campaign has records, but none is due to be dialed at this moment: they are scheduled for later or waiting out their retry delay. |
+| Grey: *Nothing to call* | No paced campaign has work waiting. |
 
 When several campaigns are in different states, the banner shows the most serious one. The **Dialer activity and health** report gives the details for every campaign: see [Reports](reports.md#dialer-activity-and-health).
+
+## Why isn't this dialing?
+
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of the Why isn't this dialing panel and its reasons" start={113} end={182} />
+
+The **Why isn't this dialing?** panel under the queue tiles explains each queue or campaign that has work waiting. It refreshes every 30 seconds. A card shows how many records are pending, how many are *dialable now* and how many are held back, with each reason and its count, for example *Do not call*, *Outside the calling window*, *Waiting out the retry delay*, *Out of attempts*, *No number to dial*, *On the national do-not-call registry*, *Number not in service*, *Compliance check unavailable* or *Abandonment rate cap reached*. Other reasons point at the setup: *The queue is turned off*, *The queue's business hours are closed*, *The dialer profile is turned off*, *Not in the queue, so routing never sees it* and *Assigned to a user for manual work*.
+
+Notes under the list say how the campaign is paced (for example *Paced by the system*), how many agents are signed in and how many are available, and what routing found the last time it looked, with the reason it could not assign anyone. A card is red when something is wrong (a queue blocker, a routing failure, a pacing fault, or dialable work with no available agent) and amber when records are held back and none is dialable. When a pacing lock is not acquired, or pacing has stalled, the card says so first. The panel also appears for ordinary queues with waiting work, where *dialable now* means ready to be handed out.
+
+## Call-quality alerts
+
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of call quality alerts, their causes and the Dismiss button" start={182} end={231} />
+
+When three of an agent's last five calls were rated poor, the dashboard raises an alert for the supervisors of that agent's queues: *(agent): N of their last M calls rated poor. Likely cause: (cause)*. The cause is one of no audio received, no audio sent from their phone, packet loss on their network, jitter on their network, latency on their network path, the customers' lines, or not determined. An agent raises at most one alert an hour.
+
+Alerts appear only while the dashboard is open: a supervisor who opens it later sees none. The cross on an alert (**Dismiss**) hides it in your browser only; reloading the page brings the dashboard back without it.
+
+## Free agent
+
+<YouTube video="contact-center-dashboard-diagnostics" title="Video of Free agent for an agent stuck on work that is already over" start={231} end={281} />
+
+An agent can look busy while nothing backs it: a call the provider has already ended, a reservation nothing holds, or work still assigned with no call in progress. Their card then shows a warning badge, with a tooltip that says to use **Free agent** in the **⋮** menu. Choose **Free agent…** there: the panel asks *Release what (agent) is holding that nothing backs?*, lists what is held (for example *Marked busy with no call in progress*, *Holds a reservation that nothing backs* or *Work is still assigned with no call in progress*), and releases it when you click **Free agent**. A call the provider confirms is still alive is never ended; if there is one, nothing is released. The action needs the permission to take over calls, and it is recorded in the audit trail.
 
 ## Listen, whisper or barge
 
@@ -146,9 +173,7 @@ A call leaves the list when it ends or a person takes it over.
 | **Message…** | **⋮** menu | Monitor |
 | **Take over** | Agent card | Take over calls |
 | **End call…**, **Transfer…**, **Start recording** / **Stop recording** | **⋮** menu | Take over calls |
-| **Set Available**, **Set Not ready**, **Set Break**, **Sign out of queues** | **⋮** menu | Take over calls |
-| **Follow**, **Listen** on an AI call | **Live AI calls** | Monitor |
-| **Message the AI**, **Take over**, **End call** on an AI call | **Live AI calls** | Take over calls |
+| **Set Available**, **Set Not ready**, **Set Break**, **Sign out of queues**, **Free agent…** | **⋮** menu | Take over calls |
 
 *Monitor* is *Monitor the Contact Center in real time*; *Take over calls* is *Take over, end, transfer and record live Contact Center calls, and set agents' state*. Every action is recorded in the audit trail under your name.
 

@@ -33,7 +33,13 @@ Your developers build the app. This page covers what you set up in the admin so 
 
 <AskYourAdmin />
 
+This video shows what you set up in the admin: the features, the documentation pages, the sign-in server, apps and servers, and a CORS policy:
+
+<YouTube video="headless-api" title="Narrated video overview of the headless commerce API setup" />
+
 ## Turn it on
+
+<YouTube video="headless-api" title="Video of turning on the API features" start={85} end={120} />
 
 Each commerce module has its own **API** feature, under **Tools > Features**, in the **Commerce** category. Turn on the ones your app needs. Each needs its module turned on first.
 
@@ -58,6 +64,8 @@ For a typical headless store, turn on all seven.
 
 ## Show developers the API
 
+<YouTube video="headless-api" title="Video of OpenAPI and its explorers" start={120} end={178} />
+
 Orchard Core's **OpenAPI** feature describes every part of the API, so developers can explore it, try calls, and generate the code their app uses to call it.
 
 1. Under **Tools > Features**, turn on **OpenAPI**.
@@ -77,6 +85,8 @@ Guests need no sign-in: what a shopper does before they have an account works wi
 
 ### Turn on the sign-in server
 
+<YouTube video="headless-api" title="Video of the sign-in server settings" start={178} end={228} />
+
 1. Under **Tools > Features**, turn on **OpenID Authorization Server**, **OpenID Token Validation** and **OpenID Management Interface**.
 2. Open **Security > OpenID Connect > Settings > Authorization Server**, and turn on:
    - the **token endpoint**, and the **authorization endpoint** for apps that sign buyers in;
@@ -86,6 +96,8 @@ Guests need no sign-in: what a shopper does before they have an account works wi
 3. Open **Security > OpenID Connect > Settings > Token Validation**, and choose **this tenant** as the one whose tokens are accepted. Without this, every app that has signed in is still refused.
 
 ### An app that buyers sign in to
+
+<YouTube video="headless-api" title="Video of adding a public application and a confidential application" start={228} end={291} />
 
 A storefront, a phone app or a point of sale signs the person in through your site's own sign-in page. The app never sees their password, and needs no secret of its own.
 
@@ -118,6 +130,8 @@ A back-office system, such as a warehouse or accounting integration, has no pers
 
 ### A storefront on another address
 
+<YouTube video="headless-api" title="Video of a CORS policy" start={291} end={323} />
+
 A storefront that runs in the browser on another address than your site, such as *shop.contoso.com* calling *admin.contoso.com*, needs your site to allow it. Turn on Orchard Core's **CORS** feature, and add a policy under **Configuration > Settings > CORS** for your storefront's address. Your developers know the settings it needs; the [Technical Manual](../../modules/commerce-api.md#cors) lists them. A phone app, a point of sale or a server doesn't need this.
 
 ## What the API can do
@@ -127,6 +141,7 @@ Through the API, an app can do what a buyer does on your storefront, and much of
 - **Shop**: search and list products, priced for whoever is asking, see what's in stock at each store, and fill a cart. A guest's cart can move into their own when they sign in.
 - **Check out**: give the buyer's details, choose shipping or pickup, put on discount codes, gift cards, store credit or points, and pay with the same payment methods as your checkout page. The buyer gets the same confirmation email.
 - **Follow orders**: buyers see their orders, ask for returns and track shipments.
+- **Sell to companies**: with the **Companies** feature on, a company buyer reads their company, enters the purchase order number on the checkout's Company step, and puts the order on the company's account, and a company admin lists and decides the orders waiting for approval. See [Companies](companies.md).
 - **Run the store**: staff, or a server signed in with their permissions, list and find orders, refund and cancel them, ship orders, look up customers, manage coupons, and receive, adjust, count and move stock.
 - **Sell at the counter**, with the [point of sale](point-of-sale.md).
 

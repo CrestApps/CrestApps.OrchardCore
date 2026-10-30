@@ -28,7 +28,7 @@ When it is done:
 | You need | Who sets it up |
 | --- | --- |
 | A phone provider and at least one number to call from | Your administrator; see [Phone and SMS setup](../telephony-settings.md) |
-| The features **Omnichannel Management**, **Contact Center Outbound Dialer** (preview dialing), **Contact Center Paced Dialing** (power and progressive), **Contact Center Agents**, **Contact Center Agent Entitlements**, **Telephony Soft Phone Extension**, **Content Transfer** (to import lists) and **Reports** | Your administrator, in **Tools > Features** |
+| The features **Omnichannel Management**, **Contact Center Outbound Dialer** (preview dialing), **Contact Center Paced Dialing** (power, progressive and predictive), **Contact Center Agents**, **Contact Center Agent Entitlements**, **Telephony Soft Phone Extension**, **Content Transfer** (to import lists) and **Reports** | Your administrator, in **Tools > Features** |
 | A manager role with Manage subject flows, Manage dispositions, Manage campaigns, Manage the Contact Center dialer, Manage Contact Center agents and Manage activity batches | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |
 | The **Agent** role, plus **Use the telephony soft phone**, for the callers | Your administrator |
 
@@ -50,12 +50,8 @@ When it is done:
 6. **Set the calling window.** Create a business hours calendar for the hours you may call. The dialer checks it in each contact's own time zone. See [Business hours](../business-hours.md).
 7. **Choose how to dial.** Create a dialer profile: the mode (**Preview**, **Power** or **Progressive**), the caller ID customers see, the compliance rules with your calling calendar, and, for power and progressive, attempts, retry delay and the abandonment cap. See [Dialer profiles](../dialer-profiles.md).
 8. **Give agents the campaign.** On each agent's entitlement record, add the campaign under **Allowed campaigns**. See [Skills and agent entitlements](../skills-and-entitlements.md).
-9. **Load the work.** Click **Add Activity Load** and choose **Dialer**. Enter a **Title**, then pick the **Subject content type**, the **Campaign** and the **Dialer profile**, pick a **Dial from** number if this campaign should show its own number, and pick the **Record type** (your contact type) and filters. Save, then choose **Actions > Load activities**, confirm, and read the load's report of what was loaded and skipped, for example *Loaded 2 of 3 matching records. 1 has only numbers that are not in service.* See [Load activities](../load-inventory.md).
-
-   <YouTube video="use-case-outbound-calling-campaign" title="Video of adding a dialer load and loading the contacts" start={228} end={293} />
-10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power or progressive, the call is placed for them and the record opens as it rings. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
-
-    <YouTube video="use-case-outbound-calling-campaign" title="Video of what agents do: sign in, dial and complete the activity" start={293} end={335} />
+9. **Load the work.** Create a **Dialer** activity load with the subject, the dialer profile and the campaign, filter the contacts, and pick a **Dial from** number if this campaign should show its own number. Save, then choose **Actions > Load activities**, and read the load's report of what was loaded and skipped. See [Load activities](../load-inventory.md).
+10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power, progressive or predictive, the call is placed for them and the record opens once the customer answers and they are connected. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
 11. **Agents record the outcome.** After the call, the agent completes the activity with a disposition and notes, which ends wrap-up and runs the subject flow. See [Activities](../activities.md).
 12. **Watch and adjust.** Supervisors filter the live dashboard by the campaign. Managers reassign, reschedule or move work to another dialer profile in bulk, and review dead numbers. See [Live dashboard](../live-dashboard.md), [Managing activities in bulk](../bulk-activities.md) and [Numbers not in service](../numbers-not-in-service.md).
 
@@ -74,7 +70,7 @@ When it is done:
 
 ## Tips
 
-- **Start with Preview.** It is the easiest to train, and agents see the record before every call. Move to Power or Progressive once agents are comfortable.
+- **Start with Preview.** It is the easiest to train, and agents see the record before every call. Move to Progressive or Power once agents are comfortable, and to Predictive only when you need its abandonment brake; see [Compare the dialing modes](../dialer-profiles.md#compare-the-dialing-modes).
 - A call that rang out, was busy or reached a machine is dispositioned by the system with that outcome. If the subject flow has a disposition for it, the flow decides whether to call again, through **Try Again** and its **Maximum attempts**. If it has none, the dialer calls the record again after the retry delay, up to the profile's **Max attempts**.
 - Tick **Prevent duplicate activity with the same subject** on the load so contacts who already have an open activity are not loaded twice.
 - A call outside the calling window is not dropped; it is tried again in a later cycle.

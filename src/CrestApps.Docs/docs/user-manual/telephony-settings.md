@@ -27,9 +27,15 @@ Each provider you turn on adds its own tab to **Settings > Communication > Telep
 
 ## Connect Telnyx for calls
 
+<<<<<<< HEAD
+<YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings: connect, noise suppression, answering machine detection and speech" />
+=======
 <YouTube video="telephony" title="Video of connecting Telnyx" start={219} end={289} />
+>>>>>>> origin/videos/video-links
 
 Before you start, create an API key in the Telnyx portal under **Account > Keys & Credentials > API Keys** (a V2 key). Sign in to Telnyx as an account **Owner** or **Admin** when you create it: a key made by a restricted member can read the account but cannot create what **Connect Telnyx** needs, and connecting fails with *Not authorized*.
+
+<YouTube video="telephony-telnyx-settings" title="Video of the Telnyx tab before connecting" start={47} end={92} />
 
 1. Open **Settings > Communication > Telephony** and choose the **Telnyx** tab.
 2. Tick **Enable Telnyx provider**, paste the key into **API key**, and save. The **Connect Telnyx** button appears once the key is stored.
@@ -46,15 +52,27 @@ Before you start, create an API key in the Telnyx portal under **Account > Keys 
 | **Webhook public key** | The key that proves call events really come from Telnyx. It is not a secret you create; you copy it from the portal. Stored encrypted. |
 | **Webhook endpoint** | The address Connect set on your Telnyx account, shown for reference. |
 
+<YouTube video="telephony-telnyx-settings" title="Video of what appears after connecting: caller id and webhook key" start={92} end={121} />
+
+<YouTube video="telephony-telnyx-settings" title="Video of noise suppression, answering machine detection and text-to-speech" start={121} end={166} />
+
 **Noise suppression** asks Telnyx to clean background sound, such as colleagues talking nearby, out of your agents' calls. Pick **Krisp** for a busy floor, then tick whether to clean the agent's voice (what callers hear, on by default), the caller's voice (what the agent hears), or both. The soft phone's voice isolation usually cleans the agent's voice already, so **Clean the caller's voice** is the one that removes the line hiss and background noise your agents hear. **Suppression strength** sets how hard it works: **Balanced** (the default) removes line hiss while keeping the soft endings of words, **Light** sounds the most natural, and **Strong** removes the most noise but can clip the ends of words and make a voice sound too loud. It is a Telnyx beta feature billed for each voice cleaned; see [Background noise suppression](../telephony/telnyx.md#background-noise-suppression).
 
 The **Advanced — browser WebRTC (optional)** section holds settings you rarely change: **Credential lifetime (minutes)**, **Audio test destination** (a number that plays your voice back, used by the soft phone's **Run audio test**), **Calls with no local record** (what to do with a call left over from a restart: **Report** or **End call**), **Answering machine detection** (**Premium**, **Standard** or **Off**; Telnyx bills the first two per call), **Text-to-speech voice** and **Text-to-speech language** for spoken prompts, the SIP and ICE (STUN/TURN) connection settings, **Preferred audio codecs**, **Soft phone region** and an API address override. Every one has a working default. Change them only when Telnyx support tells you to, or when your network needs a relay server. The [Telnyx reference](../telephony/telnyx.md#browser-webrtc-settings) explains each one.
+
+<YouTube video="telephony-telnyx-settings" title="Video of the advanced Telnyx settings" start={166} end={203} />
+
+**Soft phone region** picks the Telnyx region the browser connects to: **Automatic (chosen by Telnyx)**, or one of the regions in the list. Telnyx can also send texts; its SMS settings are under **Settings > Communication > SMS** when Telnyx SMS is on.
 
 **Disconnect** deletes the resources Connect created on Telnyx, after you confirm. To start over, click **Disconnect** and then **Connect Telnyx** again.
 
 ## Connect Asterisk for calls
 
+<<<<<<< HEAD
+<YouTube video="telephony-asterisk-setup" title="Video overview of setting up Asterisk: call control, voicemail, browser audio and capabilities" />
+=======
 <YouTube video="telephony" title="Video of connecting Asterisk" start={153} end={219} />
+>>>>>>> origin/videos/video-links
 
 Use Asterisk when your company runs its own Asterisk phone system. The values come from whoever looks after that system.
 
@@ -64,6 +82,20 @@ Use Asterisk when your company runs its own Asterisk phone system. The values co
 4. Optionally fill in the **Endpoint template**, **Outbound caller id**, **Dial timeout (seconds)** and the voicemail fields.
 5. For call audio in the browser, fill in the browser audio fields (**SIP WebSocket URL**, **SIP domain**, the ICE and TURN fields, **Browser audio codecs** and the PJSIP fields).
 6. Save.
+
+<YouTube video="telephony-asterisk-setup" title="Video of connecting call control: the ARI address, the application name and the endpoint template" start={48} end={110} />
+
+**Voicemail context**, **Voicemail extension template** and **Voicemail priority** say where a ringing call continues when an agent chooses **Send to voicemail**: the dialplan context, the extension (it can use the queue name or the recipient's user name) and the priority to start at. Fill all three, and the soft phone shows its voicemail button; leave them empty and the button stays hidden.
+
+<YouTube video="telephony-asterisk-setup" title="Video of the voicemail settings" start={110} end={140} />
+
+The browser audio fields are **SIP WebSocket URL** (the secure address the browser connects to) and **SIP domain**, both required; **ICE server URLs** (STUN and TURN servers that help audio cross firewalls), **TURN shared secret** (stored encrypted), **ICE transport policy** (direct paths, or force the relay) and **Browser audio codecs** (in order of preference); **PJSIP credential lifetime (minutes)** and **PJSIP contact expiration (seconds)** (how long a browser login and its registration last); and the **PJSIP Realtime provider**, **PJSIP Realtime connection string** (stored encrypted) and **PJSIP Realtime table prefix** that name the database Asterisk reads its endpoints from.
+
+<YouTube video="telephony-asterisk-setup" title="Video of the browser audio fields" start={140} end={199} />
+
+:::note
+AI voice calls, such as the AI voice agent and AI outbound calls, work with Telnyx only: Asterisk cannot place or answer them. The demo site in the videos points Asterisk at an address that nothing answers, so the soft phone shows *Ready* but a call never connects.
+:::
 
 The [Asterisk reference](../telephony/asterisk.md#tenant-configured-asterisk-settings) explains each field. When no default provider is chosen yet, Asterisk becomes the default. Your IT team can also set up a shared Asterisk connection for every site; it then appears as **Default Asterisk** in the **Default telephony provider** list, with no tab of its own.
 

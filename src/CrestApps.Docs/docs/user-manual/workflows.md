@@ -125,18 +125,20 @@ A task only appears in the **Add Task** list when the feature it needs is on. Ev
 | **Enqueue Activity** | Activity, Queue, Priority | Done, Failed | Contact Center Work Distribution |
 | **Hand Off to Live Agent** | Activity, Queue, Reason, Summary | Connected, Waiting In Queue, Callback Scheduled, Failed | Contact Center Work Distribution |
 | **Schedule Callback** | Destination, Delay (minutes), Campaign, Queue, Contact | Done, Failed | Contact Center Outbound Dialer |
+| **Schedule Dialer Retry** | Activity, Delay (minutes) | Scheduled, Exhausted, Failed | Contact Center Outbound Dialer |
 | **Start Call Recording** / **Stop Call Recording** | Interaction | Done, Indeterminate, Failed | Contact Center Call Recording |
 
 The [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#automate-with-workflows) page describes the **Lead Converted** event and the **Convert Lead** task of the Omnichannel CRM feature.
 
 ### What each task does
 
-- **Place Call or Send Message** starts an automated activity right away instead of waiting for the next automatic pass. A Phone activity is dialed; an SMS activity is sent its opening message. It ends in **Already Started** when the activity was already started, so a workflow that fires twice never calls a customer twice.
+- **Place Call or Send Message** starts an automated activity right away instead of waiting for the next automatic pass. A Phone activity is dialed; an SMS activity is sent its opening message. It ends in **Already Started** when the activity was already started, so a workflow that fires twice never calls a customer twice. It does not run the checks the automatic pass runs first (opt-out, numbers not in service, do-not-call lists and the calling window), so use it only for contacts you have already cleared.
 - **Set Agent Presence** puts an agent into a status such as a break, with an optional reason. The **Status** list offers *Offline*, *Available*, *Break*, *Requested break*, *Away*, *Do not disturb*, *Meeting*, *Training* and *After-hours unavailable*. It leaves out the reserved, busy and wrap-up states, because the platform sets those itself while an agent is offered or handling work.
 - **Find Agent Numbers** looks up the numbers an agent calls and texts from. See the example above.
 - **Send Text Message** sends a text from one of your SMS numbers. **Agent** is optional: name an agent so the customer's reply reaches them, or leave it empty for a system text.
 - **Enqueue Activity** puts an activity on a queue for routing. **Priority** is optional; *Use queue default* keeps the queue's own priority. If the activity or the queue does not exist, the task ends in **Failed**.
 - **Hand Off to Live Agent** moves an automated (AI) conversation to people: a live call is put in a queue and offered to an agent, and a text conversation becomes a queue-owned conversation in the messaging workspace. Leave **Queue** empty to use the hand-off queue of the subject flow. **Reason** is shown to the agent who takes it, and **Summary** gives them the conversation so far. It ends in **Connected** (put straight through), **Waiting In Queue**, or **Callback Scheduled** (for example after hours), so you can handle each case differently. It does nothing to a call a person is already handling.
+- **Schedule Dialer Retry** creates the next attempt of a dialer call, as the **Try Again** action of a subject flow does: a new activity in the same campaign with the same dialer profile, due after the **Delay (minutes)** and never sooner than the profile's retry delay. It ends in **Scheduled**, **Exhausted** when the contact has no attempts left, or **Failed**. See [Call a contact again](#call-a-contact-again).
 - **Schedule Callback** schedules a callback to the **Destination** number. **Delay (minutes)** of 0 makes it due now. **Campaign**, **Queue** and **Contact** are optional.
 - **Start Call Recording** and **Stop Call Recording** end in **Indeterminate** when the provider may have made the change but the platform could not confirm it. Use that outcome to alert someone or check the recording, rather than assuming it worked.
 

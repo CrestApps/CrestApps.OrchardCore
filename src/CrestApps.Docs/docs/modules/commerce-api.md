@@ -18,6 +18,8 @@ Each commerce module maps its own endpoints into the shared route group, from it
 
 To have the store push events to another system instead of being polled, use [Commerce Webhooks](commerce-webhooks.md).
 
+<YouTube video="headless-api" title="Narrated video overview of the headless commerce API setup" />
+
 ## Features
 
 | Feature | Name | It needs | Maps |
