@@ -16,9 +16,15 @@ Sell products for other sellers, called vendors. Your store takes the payment, k
 
 <AskYourAdmin />
 
+This video shows the Marketplace and Classifieds modules: the settings, adding a vendor, a vendor's sales and payouts, and posted listings:
+
+<YouTube video="marketplace-classifieds" title="Narrated video overview of the Marketplace and Classifieds modules" />
+
 To try it, run the **Marketplace sample** recipe under **Configuration > Recipes**. It adds a vendor and a Handmade Ceramic Mug sold for it.
 
 ## Set your commission and hold
+
+<YouTube video="marketplace-classifieds" title="Video of the Marketplace settings" start={99} end={145} />
 
 Under **Settings > Commerce > Marketplace**:
 
@@ -26,18 +32,25 @@ Under **Settings > Commerce > Marketplace**:
 - **Days held**: how long a sale is held after it's paid, such as for returns, before the vendor can be paid for it.
 - **Hold a sale of goods until its order is fulfilled**: goods wait for shipping as well as the days held. Services and downloads wait for the days only.
 - **Pay vendors out by themselves**: what's released is paid within the hour. Untick it to pay out from each vendor's page.
+- **Vendors' country**: the country, as two letters such as *US*, that a vendor's payout account is made in when the vendor names none.
 
 ## Add a vendor
 
+<YouTube video="marketplace-classifieds" title="Video of adding a vendor" start={145} end={193} />
+
 1. Under **Commerce > Vendors**, choose **Add vendor**.
-2. Enter its **Name** and **Email**, and under **People who run it**, the usernames of the people who sell through it.
-3. Leave **Commission (%)** empty to use the store's, or enter the vendor's own.
+2. Enter its **Name** and **Email** (where Stripe's setup and the vendor's notices go), and under **People who run it**, the usernames of the people who sell through it.
+3. Leave **Commission (%)** empty to use the store's, or enter the vendor's own. **Country** and **Status** are below it: set the **Status** to suspend a vendor.
 
 On each of its products, choose it under **Vendor**. Add the **Vendor** part to the product's content type first, if it isn't there.
+
+<YouTube video="marketplace-classifieds" title="Video of what the people who run a vendor see" start={252} end={282} />
 
 The people who run a vendor see its sales, what it has earned and its payouts under **Vendor** in their account.
 
 ## Pay vendors
+
+<YouTube video="marketplace-classifieds" title="Video of a vendor's sales and payouts" start={193} end={252} />
 
 Vendors are paid to their own Stripe accounts. Each vendor sets theirs up once, from **Set up payouts** under **Vendor** in their account, through Stripe's own pages.
 
@@ -45,7 +58,7 @@ Vendors are paid to their own Stripe accounts. Each vendor sets theirs up once, 
 Your Stripe account needs **Connect** turned on, in your Stripe dashboard, before vendors can set up payouts.
 :::
 
-A sale is ready to pay once its hold ends and, for goods, its order is fulfilled. To pay one sooner, such as a service already delivered, open the vendor and choose **Release now** next to its order. **Pay out what's ready** pays the vendor everything that's ready.
+A sale is ready to pay once its hold ends and, for goods, its order is fulfilled. To pay one sooner, such as a service already delivered, open the vendor and choose **Release now** next to its order. **Pay out what's ready** pays the vendor everything that's ready. It shows once the vendor has a payout account: until then the vendor's page says it hasn't set up payouts yet.
 
 When you refund an order, the vendor's share of the refund comes off what they're owed.
 
