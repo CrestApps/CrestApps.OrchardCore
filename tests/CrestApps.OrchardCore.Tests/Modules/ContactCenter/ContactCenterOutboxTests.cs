@@ -751,7 +751,7 @@ public sealed class ContactCenterOutboxTests
             session.Object,
             clock.Object,
             NullLogger<ContactCenterOutbox>.Instance,
-            httpContextAccessor);
+            httpContextAccessor ?? new HttpContextAccessor());
 
         return outbox;
     }

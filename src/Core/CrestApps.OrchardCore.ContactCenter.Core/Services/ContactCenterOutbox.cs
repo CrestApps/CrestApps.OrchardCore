@@ -65,7 +65,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ISession session,
         IClock clock,
         ILogger<ContactCenterOutbox> logger,
-        IHttpContextAccessor httpContextAccessor = null)
+        IHttpContextAccessor httpContextAccessor)
     {
         _handlers = ValidateHandlers(handlers);
         _outboxStore = outboxStore;
@@ -399,8 +399,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         // HTTP context then, triggering a workflow failed with a NullReferenceException in Orchard's
         // PreviewTemplatesProvider, which reads HttpContext.Items when the activity library is built, and the workflow
         // never ran. They get a background context for the tenant, as Orchard's own background tasks do.
-        if (_httpContextAccessor is null ||
-            _httpContextAccessor.HttpContext is not null ||
+        if (_httpContextAccessor.HttpContext is not null ||
             ShellScope.Context is null)
         {
             return await RunHandlersInContextAsync(interactionEvent, message, cancellationToken);

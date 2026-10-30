@@ -193,7 +193,8 @@ public sealed class RecordingErasurePersistenceTests
             new TestContactCenterFeatureWorkManager(),
             session,
             new StubClock(_erasedUtc),
-            NullLogger<ContactCenterOutbox>.Instance);
+            NullLogger<ContactCenterOutbox>.Instance,
+            new Microsoft.AspNetCore.Http.HttpContextAccessor());
 
         return new DefaultContactCenterEventPublisher(
             eventStore,
