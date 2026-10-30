@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingExpiredEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Booking Expired"])
+    </h4>
+</header>

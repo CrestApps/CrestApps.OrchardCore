@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Bookings;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Orders.Core;
@@ -24,5 +25,17 @@ using OrchardCore.Modules.Manifest;
         OrderConstants.Features.Orders,
         CustomersConstants.Features.Customers,
         TransactionsConstants.Features.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = BookingsConstants.CalendarFeature,
+    Name = "Bookings Calendar",
+    Description = "Keeps every booking on a Bookings calendar: tentative while held or requested, confirmed once booked, moved when the booking moves and cancelled when it's canceled, so bookings show next to the rest of the calendar and count toward free/busy.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        BookingsConstants.Feature,
+        CalendarsConstants.Features.Calendars,
     ]
 )]

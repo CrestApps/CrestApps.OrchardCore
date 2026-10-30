@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingCanceledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ban" aria-hidden="true"></i>
+    @T["Booking Canceled"]
+</h4>
+<p>@T["Starts when a booking is canceled."]</p>

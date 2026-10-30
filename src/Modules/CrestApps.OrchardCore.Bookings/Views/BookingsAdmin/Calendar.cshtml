@@ -1,4 +1,6 @@
 @using OrchardCore.DisplayManagement.Html
+@using OrchardCore.Environment.Shell
+@inject IShellFeaturesManager ShellFeaturesManager
 @model BookingCalendarViewModel
 
 @{
@@ -17,10 +19,19 @@
     </breadcrumb>
 </zone>
 
-<div class="d-flex gap-2 mb-3">
+<div class="d-flex flex-wrap gap-2 mb-3">
     <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar" asp-route-month="@first.AddMonths(-1).ToString("yyyy-MM", invariant)" aria-label="@T["Previous month"]"><span class="fa-solid fa-chevron-left" aria-hidden="true"></span></a>
     <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar">@T["This month"]</a>
     <a class="btn btn-outline-secondary btn-sm" asp-action="Calendar" asp-route-month="@first.AddMonths(1).ToString("yyyy-MM", invariant)" aria-label="@T["Next month"]"><span class="fa-solid fa-chevron-right" aria-hidden="true"></span></a>
+    @if (await ShellFeaturesManager.IsFeatureEnabledAsync(BookingsConstants.CalendarFeature))
+    {
+        <form class="ms-auto" asp-action="Sync" asp-controller="BookingCalendar" asp-area="@BookingsConstants.Feature" method="post">
+            <button type="submit" class="btn btn-outline-primary btn-sm" title="@T["Adds every booking to the Bookings calendar, or updates its event there."]">
+                <span class="fa-solid fa-rotate" aria-hidden="true"></span>
+                @T["Sync to calendar"]
+            </button>
+        </form>
+    }
 </div>
 
 <div class="table-responsive">

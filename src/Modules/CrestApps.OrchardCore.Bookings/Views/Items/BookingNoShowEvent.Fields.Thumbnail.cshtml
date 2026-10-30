@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingNoShowEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+    @T["Booking No-Show"]
+</h4>
+<p>@T["Starts when a booking is marked as a no-show."]</p>

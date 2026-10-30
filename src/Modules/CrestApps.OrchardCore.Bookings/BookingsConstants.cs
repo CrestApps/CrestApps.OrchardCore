@@ -5,6 +5,11 @@ public static class BookingsConstants
     public const string Feature = "CrestApps.OrchardCore.Bookings";
 
     /// <summary>
+    /// The feature that keeps every booking on a Bookings calendar.
+    /// </summary>
+    public const string CalendarFeature = "CrestApps.OrchardCore.Bookings.Calendar";
+
+    /// <summary>
     /// The YesSql collection that holds dates, bookings and balances.
     /// </summary>
     public const string CollectionName = "Bookings";
