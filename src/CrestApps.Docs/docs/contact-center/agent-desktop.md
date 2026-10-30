@@ -109,6 +109,8 @@ Before publishing a new inbound line, follow the User Manual's [Test a new numbe
 
 ### Building an IVR menu
 
+<YouTube video="contact-center-ivr-menus" title="Video overview of IVR menus: the welcome message, building a menu with keys and submenus, tries and the AI voice agent" />
+
 An entry point can play a phone menu ("press 1 for sales, 2 for support") before the caller is routed. The **IVR menu** field on the entry point editor is a visual editor; building a menu with it is described step by step in the User Manual's [Build an IVR menu](../user-manual/entry-points-and-ivr.md#build-an-ivr-menu).
 
 Each key's action is stored as one of these kinds:
