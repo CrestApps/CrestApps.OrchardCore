@@ -191,6 +191,8 @@ A **Disposition** is the outcome of an activity (e.g. `Completed`, `FollowUp`, `
 Dispositions are a key building block for controlling what happens next via subject actions. Disposition names are unique and become fixed after creation so subject-flow mappings stay stable. A disposition's **Outcome** (`DispositionOutcome`: `None`, `NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine`) marks it for automatic use when a call ends in a way nobody chose; see [Dispositions](../user-manual/dispositions.md#outcomes).
 
 ### Campaign
+
+<YouTube video="contact-center-campaigns" title="Video of campaigns and campaign groups" />
 A **Campaign** is used for **reporting, grouping, and business outcome tracking**.
 
 Campaigns do not define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings live on the subject flow and the activity load, so different subjects inside the same campaign can behave differently. Campaigns cannot be deleted once created.
