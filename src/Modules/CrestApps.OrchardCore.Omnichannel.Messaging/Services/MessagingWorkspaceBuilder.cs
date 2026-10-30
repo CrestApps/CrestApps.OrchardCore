@@ -303,7 +303,9 @@ public sealed class MessagingWorkspaceBuilder
             }
         }
 
-        return InboxRowGrouping.Group(visible).FirstOrDefault();
+        var groups = InboxRowGrouping.Group(visible);
+
+        return groups.Count > 0 ? groups[0] : null;
     }
 
     private async Task<MessagingConversation> FindFavoriteConversationAsync(ClaimsPrincipal user, MessagingFavorite favorite, CancellationToken cancellationToken)
