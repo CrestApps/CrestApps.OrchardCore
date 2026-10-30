@@ -43,7 +43,11 @@ Every content type appears on the import and export screens unless an administra
 
 ## Import a file
 
+<<<<<<< HEAD
 <YouTube video="content-transfer" title="Video of preparing a file and uploading it" start={112} end={197} />
+=======
+<YouTube video="content-transfer-columns" title="Video of the Columns Requirements table of an import and of importing a file" start={43} end={155} />
+>>>>>>> origin/docs/content-transfer-columns-video
 
 1. Open **Content > Import**. The **Bulk Import** page lists earlier imports.
 2. Click **Import** and pick the content type. When only one type can be imported, the button reads **Import** followed by the type's name.
