@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 
 [BackgroundTask(
     Title = "Omnichannel Automated Activities Processor",
-    Schedule = "*/5 * * * *",
+    Schedule = "* * * * *",
     Description = "Processes omnichannel activities.",
     LockTimeout = 5_000,
     LockExpiration = _leaseMilliseconds)]
@@ -78,6 +78,17 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         long documentId = 0;
         var processedCount = 0;
 
+        // AI calls are placed at the pace the tenant can hold: no more ringing or in progress at once than allowed.
+        var maxConcurrentCalls = options.MaxConcurrentAICalls;
+        var liveCalls = maxConcurrentCalls > 0
+            ? await session.QueryIndex<OmnichannelActivityIndex>(x =>
+                    x.InteractionType == ActivityInteractionType.Automated &&
+                    x.Channel == OmnichannelConstants.Channels.Phone &&
+                    (x.Status == ActivityStatus.AwaitingCustomerAnswer || x.Status == ActivityStatus.InProgress),
+                collection: OmnichannelConstants.CollectionName)
+                .CountAsync(cancellationToken)
+            : 0;
+
         while (processedCount < maxActivitiesPerInvocation && clock.UtcNow < deadline)
         {
             // Keyset pagination on the monotonically increasing document id. Combining an OFFSET skip with this
@@ -109,6 +120,14 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 }
 
                 documentId = activity.Id;
+
+                var isCall = string.Equals(activity.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+
+                if (isCall && maxConcurrentCalls > 0 && liveCalls >= maxConcurrentCalls)
+                {
+                    // Left due: the next run places it once a call has finished.
+                    continue;
+                }
 
                 try
                 {
@@ -171,7 +190,43 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                         continue;
                     }
 
+                    // The AI Conversation Starting workflows run before the first message: they can set the
+                    // variables the conversation starts with, choose its AI profile, or decline it.
+                    var starting = await serviceProvider.GetRequiredService<IOmnichannelAIConversationStarting>()
+                        .StartingAsync(activity, cancellationToken);
+
+                    if (starting.Declined)
+                    {
+                        var reason = string.IsNullOrWhiteSpace(starting.DeclineReason)
+                            ? "The conversation was declined before it started."
+                            : starting.DeclineReason;
+
+                        activity.Status = ActivityStatus.Cancelled;
+                        activity.CompletedUtc ??= now;
+                        activity.Notes = string.IsNullOrWhiteSpace(activity.Notes)
+                            ? reason
+                            : activity.Notes + Environment.NewLine + reason;
+
+                        await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
+
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Activity '{ActivityId}' was declined before it started on '{Channel}': {Reason}",
+                                activity.ItemId.SanitizeLogValue(),
+                                activity.Channel.SanitizeLogValue(),
+                                reason.SanitizeLogValue());
+                        }
+
+                        continue;
+                    }
+
                     await processor.StartAsync(activity, cancellationToken);
+
+                    if (isCall)
+                    {
+                        liveCalls++;
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

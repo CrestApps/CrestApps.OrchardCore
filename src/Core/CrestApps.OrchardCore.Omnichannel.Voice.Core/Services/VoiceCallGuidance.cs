@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -22,7 +23,12 @@ internal static class VoiceCallGuidance
     /// <para>
     /// The confirmation rule is here because ending the call is where a wrong one costs: live, a model read an
     /// email address back wrongly, the customer's reply came through garbled, and the model took it for a yes,
-    /// thanked them and hung up with the wrong address.
+    /// thanked them and hung up with the wrong address. It is limited to what the customer gave: live, a model that
+    /// had given the customer a phone number asked them four times whether it was right. That model had also made
+    /// the number up, hence the rule against inventing details. Actions are held to the same rule: live, a profile with
+    /// no booking tool said it would confirm availability and get back to the customer, went silent, and then told
+    /// them the appointment was booked. Asked not to, a profile whose instructions said "you book appointments" still
+    /// said one was set, so the rule says it holds over the profile's own description of its job.
     /// </para>
     /// <para>
     /// The callback rule is here for the same reason: live, a customer said "can you call me later?" and the model
@@ -43,18 +49,73 @@ internal static class VoiceCallGuidance
         "not say you are wrapping up or about to finish first; just say goodbye. The call is hung up for you once you " +
         "have finished speaking and the customer has had a moment to add anything, so do not announce that you " +
         "are hanging up and do not wait for them to do it. Never call it while the customer still has questions " +
-        "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +
-        "confirms them: an answer you could not make out, or one that does not plainly say yes, is not a " +
-        "confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the corrected " +
-        "details back before you go on. If the customer says now is not a good time, offer to call them back " +
+        "or is being transferred to a person. When you read back details the customer gave you to confirm them, " +
+        "only a clear yes confirms them: an answer you could not make out, or one that does not plainly say yes, " +
+        "is not a confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the " +
+        "corrected details back before you go on. Information you give the customer needs no confirmation: say it " +
+        "once, and repeat it only if they ask. Never make up a phone number, address, price or other detail you " +
+        "were not given; if you do not have it, say so. Never tell the customer something is booked, confirmed or " +
+        "done unless one of your tools did it, and never say you will check something and come back to them unless a " +
+        "tool is doing it now: if you cannot do it on this call, say what you have noted and who will follow up. " +
+        "This holds even when your instructions say booking, scheduling or confirming is your job: without a tool " +
+        "that does it, you take the request down and someone confirms it later. " +
+        "If the customer says now is not a good time, offer to call them back " +
         "unless they have made clear they are not interested at all. If they ask to be called back, or accept " +
         "the offer, without saying when, ask once when would suit them before you close, and say that time back " +
         "to them in your goodbye.";
 
     /// <summary>
+    /// How to get past a phone menu or a phone's call screening on a call the AI placed.
+    /// </summary>
+    /// <remarks>
+    /// A business often answers with a menu, and a phone may screen an unknown caller by asking who they are and why
+    /// they are calling before it rings. Neither is the customer, and neither is a voicemail.
+    /// </remarks>
+    public const string PhoneMenusAndScreening =
+        "If an automated phone menu answers, listen to the options, then use the " + PressKeysTool.ToolName + " tool " +
+        "to press the key that gets you to the person or department you need, or to enter an extension you were " +
+        "given, and wait for what the menu says next. Press only that key, once: not also the keys for hearing the menu " +
+        "again or going back. When a person answers after the menu, greet them as you would anybody who answers. If " +
+        "the phone asks who is calling and why before it connects you (call screening), say your name, the business " +
+        "you are calling for and the reason for the call in one " +
+        "short sentence, then wait: the person will usually pick up next.";
+
+    /// <summary>
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.
     /// </summary>
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;
+
+    /// <summary>
+    /// What the model is told on a call that would hand a caller to a person, when nobody can take them now: the queue
+    /// the handoff goes to is closed.
+    /// </summary>
+    /// <remarks>
+    /// Told it may transfer, the model promised the caller a person ("connecting you now") and the call then ended with
+    /// a callback, the queue being closed. So it is not offered the transfer then, and told why, so a caller who asks
+    /// for somebody hears that nobody is there and is offered a message instead.
+    /// </remarks>
+    public const string NobodyToHandTo =
+        "## When the customer asks for a person\n\n" +
+        "Nobody can take this call right now: the people who answer are outside their hours. If the customer asks " +
+        "for a person, say so plainly and offer to take a message -- their name, their number and what they need -- " +
+        "so that someone calls them back. Never say you are connecting or transferring them, and never promise when " +
+        "they will be called.";
+
+    /// <summary>
+    /// What the model is told, with the transfer, when the queue the handoff goes to is closed now but the transfer books
+    /// a callback for when it opens.
+    /// </summary>
+    /// <remarks>
+    /// The transfer's own guidance and reply ask the model to say it is connecting the customer, which after hours is
+    /// not what happens: the customer is called back later. So it is told what the transfer does now, to say it in the
+    /// call's language, rather than the fixed English line the provider would read.
+    /// </remarks>
+    public const string CallbackInsteadOfPerson =
+        "## Outside the office's hours\n\n" +
+        "The people who answer are outside their hours right now, so nobody can take this call. If the customer asks " +
+        "for a person, call the " + OmnichannelHandoffHelper.TransferToAgentToolName + " tool anyway: right now it books " +
+        "a callback for when the office opens. Tell the customer someone will call them back then -- not that you are " +
+        "connecting them, whatever the tool replies -- and never promise an exact time.";
 
     /// <summary>
     /// What the model is told when the call was answered by voicemail or an answering machine and the time has come
@@ -105,6 +166,54 @@ internal static class VoiceCallGuidance
             "next reply with the whole sentence again. Once you have said the whole sentence, never say it again, " +
             "even if the customer spoke while you were saying it or while you went on; if they ask whether the call " +
             "is recorded, simply tell them that it is.";
+    }
+
+    /// <summary>
+    /// Tells the model the name of the person it is calling, and to greet them by their first name.
+    /// </summary>
+    /// <remarks>
+    /// A contact's name is stored whole, and a model given it greets with all of it: live, "Hi Mike Demo". And a model
+    /// given no name does not go without one, it invents one.
+    /// </remarks>
+    /// <param name="contactName">The contact's name, or <see langword="null"/> when it is not known.</param>
+    /// <returns>The guidance.</returns>
+    public static string WhoYouAreCalling(string contactName)
+    {
+        var name = contactName?.Trim();
+
+        if (string.IsNullOrEmpty(name))
+        {
+            return "You do not know the name of the person you are calling. Do not use a name, and never guess or " +
+                "invent one; ask who you are speaking with if you need it.";
+        }
+
+        var firstName = name.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+
+        return $"You are calling {name}. That is the only name you may use for them. Never use any other name, and " +
+            "never guess or invent one — if the person says they are somebody else, believe them and adjust. " +
+            (firstName == name
+                ? $"Greet them as {name}."
+                : $"Greet them and speak to them by their first name, {firstName}, never by their full name, unless " +
+                  "you need to check you are speaking to the right person.");
+    }
+
+    /// <summary>
+    /// What a live session's opening response is asked for when the call is recorded: the disclosure first, word for
+    /// word, then the rest of the opening.
+    /// </summary>
+    /// <param name="disclosure">The disclosure text, exactly as the tenant configured it.</param>
+    /// <returns>The instruction, or <see langword="null"/> when there is no disclosure to give.</returns>
+    public static string OpeningWithDisclosure(string disclosure)
+    {
+        if (string.IsNullOrWhiteSpace(disclosure))
+        {
+            return null;
+        }
+
+        return
+            "Give your opening line now. Its first words must be exactly these, with nothing before them and nothing " +
+            "changed: \"" + disclosure.Trim() + "\" Then, in the same breath, greet the customer and introduce " +
+            "yourself as your instructions describe.";
     }
 
     /// <summary>

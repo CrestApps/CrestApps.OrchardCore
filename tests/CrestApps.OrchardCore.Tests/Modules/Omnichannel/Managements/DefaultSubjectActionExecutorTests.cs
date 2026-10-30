@@ -217,6 +217,63 @@ public sealed class DefaultSubjectActionExecutorTests
     [InlineData(ContactResolutionStatus.Unknown)]
     [InlineData(ContactResolutionStatus.Unresolved)]
     [InlineData(ContactResolutionStatus.Ambiguous)]
+    public async Task ExecuteAsync_AutomatedCallFromAnUnmatchedCaller_StillCreatesTheNewActivity(ContactResolutionStatus resolutionStatus)
+    {
+        // Arrange
+        // A message an AI call took from a number no contact matched was deferred until someone resolved the
+        // contact, and nobody resolves the contact of a call the AI concluded, so the message reached nobody.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.NewActivity, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.ContactResolutionStatus = resolutionStatus;
+        context.Activity.Source = ActivitySources.Inbound;
+        context.Activity.InteractionType = ActivityInteractionType.Automated;
+        context.Activity.PreferredDestination = "+19305550100";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal("+19305550100", savedActivity.PreferredDestination);
+        Assert.Equal(resolutionStatus, savedActivity.ContactResolutionStatus);
+        Assert.Null(savedActivity.ContactContentItemId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AutomatedCallFromAnUnmatchedCaller_LeavesActionsThatNeedTheContactDeferred()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotCall = true;
+        var session = new Mock<ISession>();
+        var executor = CreateExecutor(action, session);
+        var contact = new ContentItem();
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Unresolved;
+        context.Activity.Source = ActivitySources.Inbound;
+        context.Activity.InteractionType = ActivityInteractionType.Automated;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        session.Verify(
+            x => x.SaveAsync(It.IsAny<object>(), false, OmnichannelConstants.CollectionName, It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.False(contact.TryGet<OmnichannelContactPart>(out _));
+    }
+
+    [Theory]
+    [InlineData(ContactResolutionStatus.Unknown)]
+    [InlineData(ContactResolutionStatus.Unresolved)]
+    [InlineData(ContactResolutionStatus.Ambiguous)]
     public async Task ExecuteAsync_UnresolvedOrAmbiguousContact_SkipsContactPreferenceMutation(
         ContactResolutionStatus resolutionStatus)
     {
@@ -392,6 +449,39 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Null(savedActivity.AISessionId);
         Assert.Equal(0, savedActivity.ReEngagementAttempts);
         Assert.Null(savedActivity.LastReEngagementUtc);
+    }
+
+    [Theory]
+    [InlineData(null, "The caller left a message: call back about a new water heater.")]
+    [InlineData("Ask about the boiler first.", "Ask about the boiler first.")]
+    public async Task ExecuteAsync_AutomatedCall_NewActivityCarriesTheCallSummaryUnlessNotesWereGiven(string preparationNote, string expected)
+    {
+        // Arrange
+        // A message an AI call took reached its owner as an activity with a number and nothing else: the summary of the call,
+        // where the message is, stayed on the completed call.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.NewActivity, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+        context.Activity.InteractionType = ActivityInteractionType.Automated;
+        context.Activity.Notes = " The caller left a message: call back about a new water heater. ";
+
+        if (preparationNote is not null)
+        {
+            context.ActionPreparationNotes = new Dictionary<string, string> { [action.ItemId] = preparationNote };
+        }
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal(expected, savedActivity.Instructions);
     }
 
     [Fact]

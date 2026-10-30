@@ -32,6 +32,11 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 .Location("ActionsMenu:5")
                 .RenderWhen(async () => profile.Type == AIProfileType.Chat &&
                 await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile)),
+            // The destructive items go last, just before deleting the profile itself (10).
+            View("AIProfile_DeleteChatHistoryActionsMenu_SummaryAdmin", profile)
+                .Location("ActionsMenu:9")
+                .RenderWhen(async () => profile.Type == AIProfileType.Chat &&
+                await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile)),
             View("AIProfile_TestActionsMenu_SummaryAdmin", profile)
                 .Location("ActionsMenu:5")
                 .RenderWhen(async () => (profile.Type == AIProfileType.Utility || profile.Type == AIProfileType.Agent) &&
