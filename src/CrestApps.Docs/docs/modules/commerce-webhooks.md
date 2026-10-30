@@ -18,6 +18,10 @@ The modules that raise events don't depend on this one: they resolve the publish
 
 ## Model
 
+This video shows adding a webhook in the admin:
+
+<YouTube video="payments" title="Video overview of payments" />
+
 Both documents live in the `Webhooks` YesSql collection.
 
 - **`WebhookSubscription`** (`WebhookSubscriptionIndex`): `Name`, `Url`, `ProtectedSecret`, `Events` (event names, or `*` for every event, those added later included), `IsEnabled`, `CreatedUtc` and `ModifiedUtc`. `Takes(eventName)` says whether an enabled subscription wants an event.

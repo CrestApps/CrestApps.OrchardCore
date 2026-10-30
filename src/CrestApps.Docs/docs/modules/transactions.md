@@ -24,6 +24,10 @@ Because the ledger is generic, one report, one customer statement, and one remin
 
 ## What it does
 
+This video shows the transaction screens in the admin:
+
+<YouTube video="payments" title="Video overview of payments" />
+
 <YouTube video="commerce" title="Narrated video of the Transactions report, a transaction, and the reminder settings" start={408} end={454} />
 
 - Records outstanding obligations as durable **`Transaction`** ledger entries, persisted in the tenant database so they survive cache eviction and node failure.

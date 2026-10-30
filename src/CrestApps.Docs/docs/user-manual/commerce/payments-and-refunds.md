@@ -60,6 +60,8 @@ The buttons on the right:
 
 ## Refund a payment
 
+<YouTube video="payments" title="Video of the payments list and a refund" start={266} end={308} />
+
 1. Open **Commerce > Payments** and find the payment. Picking **Succeeded** in the **Any state** list helps.
 2. Click **Refund**. The **Refund payment** page shows the **Method**, the provider's **Payment** reference, how much was **Collected**, and how much is **Already refunded**.
 3. Check **Amount to refund**. It starts at everything that can still be refunded. Lower it for a partial refund.
