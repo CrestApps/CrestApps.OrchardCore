@@ -18,6 +18,8 @@ technical_manual:
 
 <AskYourAdmin />
 
+<YouTube video="omnichannel-load-activities" title="Video of the sources of an activity load" start={40} end={74} />
+
 There are three sources:
 
 | Source | Creates | Used for |
@@ -30,6 +32,8 @@ The **Load Activities** list shows the newest loads first. A load does nothing w
 
 ## Manual loads
 
+<YouTube video="omnichannel-load-activities" title="Video of creating a manual load, counting its matches and saving it" start={74} end={150} />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a manual activity load for two agents, loading it, and finding the new activities on Manage Activities" start={1110} end={1178} />
 
 1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Manual**.
@@ -39,6 +43,8 @@ The **Load Activities** list shows the newest loads first. A load does nothing w
 Once a load has started it can no longer be edited. While it is *Started* or *Loading* it cannot be deleted either.
 
 ### Clone a load
+
+<YouTube video="omnichannel-load-activities" title="Video of loading a load, reading its report, cloning it and deleting it" start={150} end={204} />
 
 To run a load again, or a load much like it, open its **Actions** menu and choose **Clone**. This works whatever the load's status. The copy has every setting of the original -- subject, campaign, channel, AI options, filters, limit and schedule -- and is named after it with *(copy)* added. It starts as *New* with nothing loaded, and opens for editing so you can adjust it before you load it.
 
@@ -115,6 +121,8 @@ The automatic source adds AI fields; see [Automated AI SMS and voice](automated-
 - **Exact match** finds the number however it was stored: `5555550123`, `15555550123` and `+15555550123` all find the same contact. A ten-digit number is read as a North American number.
 
 ## What a load reports
+
+<YouTube video="omnichannel-load-activities" title="Video of the reasons a load skips a contact and how an interrupted load recovers" start={204} end={247} />
 
 When a load finishes, its row in the list and the top of its page say how many of the matching records were loaded, for example *Loaded 0 of 2 matching records. 2 already have an open activity for this subject.* Every matching record that was not loaded is counted against one reason:
 
