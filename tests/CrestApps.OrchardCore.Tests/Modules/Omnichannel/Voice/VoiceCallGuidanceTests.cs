@@ -18,6 +18,19 @@ public sealed class VoiceCallGuidanceTests
     }
 
     [Fact]
+    public void AConfirmedDetail_IsNotReadBackAgain_AndAGoodbyeGetsAGoodbye()
+    {
+        // Live, a customer said yes to their email being read back; when they then said "Bye." the model read the email
+        // back and asked again instead of saying goodbye.
+        Assert.Contains("Once the customer has said yes to a detail, it is confirmed: never read it back or ask about it again", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+        Assert.Contains("When the customer says goodbye, the conversation has finished: say goodbye back and end the call", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+        Assert.Contains("do not ask them another question", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+
+        // The yes that confirms it is still only a clear one.
+        Assert.Contains("only a clear yes", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WhatTheModelSays_NeedsNoConfirmation_AndIsNeverMadeUp()
     {
         // Live, a model gave the customer a phone number it had made up, then asked four times whether it was right.
