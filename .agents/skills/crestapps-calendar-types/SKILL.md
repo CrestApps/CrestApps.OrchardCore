@@ -241,6 +241,17 @@ every handler: handlers run for every calendar.
 read-only, removing events that disappeared. Only the iCalendar address provider (`ics`) exists today; Google Calendar
 and Microsoft 365 providers are not built.
 
+## 10. Check who may see a schedule or an event
+
+Check only the broad permission with the resource; `CalendarEventAuthorizationHandler` grants it through the Own permission
+for the user's own schedule or event, and through calendar sharing for events on calendars the user can read. Never check the
+Own permission yourself.
+
+```csharp
+await authorizationService.AuthorizeAsync(User, CalendarPermissions.ListCalendarEvents, new CalendarSchedule(userId)); // or CalendarSchedule.Everyone
+await authorizationService.AuthorizeAsync(User, CalendarPermissions.ViewCalendarEvents, calendarEvent); // false: show it as busy
+```
+
 ## Pitfalls
 
 - **`Calendar` clashes with `System.Globalization.Calendar`.** Any file that imports `System.Globalization` (for

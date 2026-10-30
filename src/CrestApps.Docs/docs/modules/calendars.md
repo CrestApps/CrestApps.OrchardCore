@@ -46,8 +46,29 @@ Two-way providers for Google Calendar and Microsoft 365 are not available yet. T
 | Create calendars | `CreateCalendars` | Editor | Create calendars of the creatable types; the creator gets **Manage** on the new calendar |
 | View all calendars | `ViewAllCalendars` | Administrator | **Read** on every calendar |
 | Manage all calendars | `ManageAllCalendars` | Administrator | **Manage** on every calendar |
+| List anyone's calendar events | `ListCalendarEvents` | Administrator | See anyone's schedule, or everyone's, in the calendar view (**Whose schedule**) |
+| List own calendar events | `ListOwnCalendarEvents` | (with Use calendars) | See one's own schedule |
+| View anyone's calendar events | `ViewCalendarEvents` | Administrator | See the details of any event instead of a busy block |
+| View own calendar events | `ViewOwnCalendarEvents` | (with Use calendars) | See the details of events one created, attends, or that are on one's own calendar |
 
-`ManageAllCalendars` implies the other three; `ViewAllCalendars` and `CreateCalendars` imply `AccessCalendars`.
+`ManageAllCalendars` implies the other three; `ViewAllCalendars` and `CreateCalendars` imply `AccessCalendars`. `ViewAllCalendars` implies `ListCalendarEvents` and `ViewCalendarEvents`, each of which implies its Own permission, and `AccessCalendars` implies both Own permissions.
+
+### Schedules and event details
+
+Code only checks the broad permission, with the resource, and `CalendarEventAuthorizationHandler` (an `AuthorizationHandler<PermissionRequirement>`) grants it through the Own permission when the resource is the user's:
+
+```csharp
+// May the user see this person's schedule? (CalendarSchedule.Everyone for everyone's.)
+await authorizationService.AuthorizeAsync(User, CalendarPermissions.ListCalendarEvents, new CalendarSchedule(userId));
+
+// May the user see this event's details, or only that the time is busy?
+await authorizationService.AuthorizeAsync(User, CalendarPermissions.ViewCalendarEvents, calendarEvent);
+```
+
+- `ListCalendarEvents` with a `CalendarSchedule` succeeds through `ListOwnCalendarEvents` when the schedule is the user's own.
+- `ViewCalendarEvents` with a `CalendarEvent` succeeds through `ViewOwnCalendarEvents` when the user created the event (`CreatedBy`), attends it, or owns its calendar. It also succeeds when the user can read the event's calendar (**Read**, or **Write** for a private event), so calendar sharing and the event permissions give the same answer.
+
+A person's schedule is the events on the calendars they own and the events they attend on any calendar; everyone's is every event. The calendar view's occurrences endpoint takes `schedule` (a user id or `everyone`) instead of `calendars`; it answers 403 without `ListCalendarEvents` for that schedule and returns each event the viewer can't `ViewCalendarEvents` as a busy block.
 
 What a user can do with one calendar is a `CalendarAccessLevel`, worked out by `ICalendarAccessService` from the global permissions, ownership, sharing and visibility. Each level includes the ones below it:
 

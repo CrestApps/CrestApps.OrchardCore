@@ -142,6 +142,21 @@ With Resource Calendars on, add a **Room** or **Equipment** calendar for each ro
 
 Office calendars work the same way with their desk count: once that many people are in the office or have booked a desk at the same time, the next one is refused.
 
+## See someone else's schedule
+
+To see what a person has scheduled, such as a manager checking someone's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **One person** and pick them with **Choose a person**, or choose **Everyone**, then **Show**. The calendar shows the events on that person's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
+
+**Whose schedule** only appears for people allowed to see others' schedules. Two pairs of permissions decide this, under **Security > Roles**:
+
+| Permission | What it allows |
+| --- | --- |
+| List anyone's calendar events | See anyone's schedule, or everyone's. |
+| List own calendar events | See your own schedule. Everyone who can use calendars has it. |
+| View anyone's calendar events | Open any event, instead of seeing it as busy. |
+| View own calendar events | Open events you created, attend, or that are on your own calendar. Everyone who can use calendars has it. |
+
+Being able to read a calendar, because it's shared with you or visible to everyone, also lets you open its events (private events need the right to change the calendar). **View all calendars** includes both "anyone's" permissions.
+
 ## See when your team is free
 
 With Team Calendars on, open **Calendars > Team Availability**. Choose the team's **Calendar**, the **Day** and the **Meeting length (minutes)**, then **Show**. Each member of the team's role gets a row showing when they are **Busy**, **Tentative** or **Free**, from all of their calendars. **When everyone is free** lists the gaps long enough for the meeting that everyone shares.

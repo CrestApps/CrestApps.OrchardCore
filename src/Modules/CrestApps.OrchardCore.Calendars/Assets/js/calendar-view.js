@@ -137,14 +137,58 @@ function initialize() {
     const selectedCalendars = () => toggles.filter((toggle) => toggle.checked).map((toggle) => toggle.value);
     const writable = new Set(config.writableCalendars || []);
 
-    const calendar = new FullCalendar.Calendar(root.querySelector('[data-calendar]'), {
-        initialView: config.initialView,
+    const element = /** @type {HTMLElement} */ (root.querySelector('[data-calendar]'));
+
+    // Below this width the calendar shows one day at a time, with a compact toolbar whose view buttons move to the bottom.
+    const narrowWidth = 576;
+    const isNarrow = () => element.clientWidth < narrowWidth;
+
+    /**
+     * Returns the toolbars for a wide or a narrow calendar.
+     * @param {boolean} narrow
+     */
+    const toolbars = (narrow) => narrow
+        ? {
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'today' },
+            footerToolbar: { center: 'timeGridDay,dayGridMonth,listWeek' },
+        }
+        : {
+            headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek' },
+            footerToolbar: false,
+        };
+
+    let narrow = isNarrow();
+
+    root.classList.toggle('calendar-narrow', narrow);
+
+    const calendar = new FullCalendar.Calendar(element, {
+        // A week of seven columns can't be read on a phone, so a narrow calendar opens on the day instead.
+        initialView: narrow && config.initialView === 'timeGridWeek' ? 'timeGridDay' : config.initialView,
         initialDate: config.initialDate,
         locale: config.locale,
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek',
+        ...toolbars(narrow),
+        views: {
+            timeGridWeek: { dayHeaderFormat: { weekday: 'short', day: 'numeric' } },
+            dayGridMonth: { dayHeaderFormat: { weekday: narrow ? 'narrow' : 'short' } },
+        },
+        windowResize: () => {
+            const nowNarrow = isNarrow();
+
+            if (nowNarrow === narrow) {
+                return;
+            }
+
+            narrow = nowNarrow;
+            root.classList.toggle('calendar-narrow', narrow);
+
+            const layout = toolbars(narrow);
+
+            calendar.setOption('headerToolbar', layout.headerToolbar);
+            calendar.setOption('footerToolbar', layout.footerToolbar);
+
+            if (narrow && calendar.view.type === 'timeGridWeek') {
+                calendar.changeView('timeGridDay');
+            }
         },
         buttonText: {
             today: labels.today,
@@ -170,7 +214,8 @@ function initialize() {
         events: (info, success, failure) => {
             const calendars = selectedCalendars();
 
-            if (calendars.length === 0) {
+            // A person's or everyone's schedule comes from their calendars and the events they attend, not the ticked list.
+            if (!config.schedule && calendars.length === 0) {
                 success([]);
 
                 return;
@@ -180,7 +225,12 @@ function initialize() {
 
             url.searchParams.set('start', info.start.toISOString());
             url.searchParams.set('end', info.end.toISOString());
-            url.searchParams.set('calendars', calendars.join(','));
+
+            if (config.schedule) {
+                url.searchParams.set('schedule', config.schedule);
+            } else {
+                url.searchParams.set('calendars', calendars.join(','));
+            }
 
             fetch(url.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
                 .then((response) => {

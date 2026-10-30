@@ -9,7 +9,7 @@
 <script asp-name="CrestApps.OrchardCore.Calendars.View" at="Foot"></script>
 
 <div id="calendar-view" class="row g-3" data-config="@Model.ConfigurationJson">
-    <div class="col-lg-3 col-xl-2">
+    <div class="col-lg-4 col-xl-3 col-xxl-2">
         <div class="card text-bg-theme mb-3">
             <div class="card-body">
                 @if (Model.Calendars.Any(calendar => calendar.Writable))
@@ -18,6 +18,24 @@
                         <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New event"]
                     </a>
                 }
+                @if (!string.IsNullOrEmpty(Model.ScheduleMode))
+                {
+                    <h2 class="h6 text-uppercase text-muted">@T["Schedule"]</h2>
+                    <p class="mb-2">
+                        @if (Model.ScheduleMode == "person")
+                        {
+                            @T["Showing {0}'s calendars and the events they attend.", Model.ScheduleName]
+                        }
+                        else
+                        {
+                            @T["Showing everyone's events."]
+                        }
+                    </p>
+                    <p class="text-muted small">@T["Events you can't open show as busy."]</p>
+                    <a class="btn btn-sm btn-outline-secondary w-100" asp-action="Index">@T["Back to my calendars"]</a>
+                }
+                else
+                {
                 <h2 class="h6 text-uppercase text-muted">@T["Calendars"]</h2>
                 @if (Model.Calendars.Count == 0)
                 {
@@ -34,13 +52,48 @@
                         </li>
                     }
                 </ul>
+                }
             </div>
         </div>
+        @if (Model.CanViewSchedules)
+        {
+            <form class="card text-bg-theme mb-3" method="get" asp-action="Index">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-muted">@T["Whose schedule"]</h2>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-mine" value="" checked="@string.IsNullOrEmpty(Model.ScheduleMode)" />
+                        <label class="form-check-label" for="schedule-mine">@T["My calendars"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-everyone" value="everyone" checked="@(Model.ScheduleMode == "everyone")" />
+                        <label class="form-check-label" for="schedule-everyone">@T["Everyone"]</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="schedule" id="schedule-person" value="person" checked="@(Model.ScheduleMode == "person")" />
+                        <label class="form-check-label" for="schedule-person">@T["One person"]</label>
+                    </div>
+                    <div class="mb-2">
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = "schedule-person-picker",
+                            inputName = "person",
+                            endpoint = Url.RouteUrl("CalendarsUserSearch"),
+                            initialItemsJson = Model.SchedulePersonJson,
+                            multiple = false,
+                            buttonText = T["Choose a person"].Value,
+                            searchPlaceholder = T["Search users"].Value,
+                            smallButton = true,
+                        })
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">@T["Show"]</button>
+                </div>
+            </form>
+        }
         <div class="d-grid gap-2">
             <a class="btn btn-sm btn-outline-secondary" asp-controller="Calendars" asp-action="Index">@T["Manage calendars"]</a>
         </div>
     </div>
-    <div class="col-lg-9 col-xl-10">
+    <div class="col-lg-8 col-xl-9 col-xxl-10">
         <div class="card text-bg-theme">
             <div class="card-body">
                 <div data-calendar></div>

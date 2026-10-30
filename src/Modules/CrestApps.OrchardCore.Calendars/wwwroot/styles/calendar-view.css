@@ -27,6 +27,45 @@
   font-size: 1.25rem;
 }
 
+#calendar-view .fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Day names and numbers read as headings, not as blue links. */
+#calendar-view .fc .fc-col-header-cell-cushion,
+#calendar-view .fc .fc-daygrid-day-number,
+#calendar-view .fc .fc-list-day-cushion a {
+  color: var(--bs-body-color);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+#calendar-view .fc .fc-col-header-cell-cushion:hover,
+#calendar-view .fc .fc-daygrid-day-number:hover {
+  text-decoration: underline;
+}
+
+/* A narrow calendar (see calendar-view.js) gets a smaller title, buttons and headers. */
+#calendar-view.calendar-narrow .fc .fc-toolbar-title {
+  font-size: 1rem;
+}
+
+#calendar-view.calendar-narrow .fc .fc-button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+#calendar-view.calendar-narrow .fc .fc-col-header-cell-cushion {
+  padding: 2px;
+  font-size: 0.875rem;
+}
+
+#calendar-view.calendar-narrow .fc .fc-timegrid-slot-label-cushion,
+#calendar-view.calendar-narrow .fc .fc-timegrid-axis-cushion {
+  font-size: 0.75rem;
+}
+
 .calendar-availability td {
   min-width: 0.9rem;
   padding: 0;

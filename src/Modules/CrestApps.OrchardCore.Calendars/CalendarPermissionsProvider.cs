@@ -11,6 +11,10 @@ internal sealed class CalendarPermissionsProvider : IPermissionProvider
         CalendarPermissions.ViewAllCalendars,
         CalendarPermissions.CreateCalendars,
         CalendarPermissions.AccessCalendars,
+        CalendarPermissions.ListCalendarEvents,
+        CalendarPermissions.ListOwnCalendarEvents,
+        CalendarPermissions.ViewCalendarEvents,
+        CalendarPermissions.ViewOwnCalendarEvents,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

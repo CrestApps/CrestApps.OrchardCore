@@ -36,13 +36,20 @@ internal static class CalendarAdminEndpoints
         return routes;
     }
 
+    /// <summary>
+    /// The schedule value that shows everyone's schedule.
+    /// </summary>
+    internal const string EveryoneSchedule = "everyone";
+
     private static async Task<IResult> GetOccurrencesAsync(
         string start,
         string end,
         string calendars,
+        string schedule,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         ICalendarAccessService accessService,
+        ICalendarService calendarService,
         ICalendarQueryService queryService,
         ICalendarTypeManager typeManager,
         IStringLocalizerFactory localizerFactory,
@@ -56,6 +63,14 @@ internal static class CalendarAdminEndpoints
         if (!TryParseInstant(start, out var fromUtc) || !TryParseInstant(end, out var toUtc) || toUtc <= fromUtc)
         {
             return Results.BadRequest();
+        }
+
+        var S = localizerFactory.Create(typeof(CalendarAdminEndpoints));
+        var mapper = new CalendarViewEventMapper(httpContext, typeManager, localizerFactory, linkGenerator, S);
+
+        if (!string.IsNullOrWhiteSpace(schedule))
+        {
+            return await GetScheduleAsync(schedule.Trim(), fromUtc, toUtc, httpContext, authorizationService, accessService, calendarService, queryService, mapper);
         }
 
         var requested = (calendars ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
@@ -77,59 +92,77 @@ internal static class CalendarAdminEndpoints
             IncludeEventSources = true,
         });
 
-        var S = localizerFactory.Create(typeof(CalendarAdminEndpoints));
+        var result = new List<CalendarViewEvent>(occurrences.Count);
+
+        foreach (var occurrence in occurrences)
+        {
+            accessible.TryGetValue(occurrence.Event.CalendarId ?? string.Empty, out var access);
+            result.Add(mapper.Map(occurrence, access));
+        }
+
+        return Results.Ok(result);
+    }
+
+    // A person's schedule (the events on the calendars they own and the events they attend), or everyone's. Seeing it needs
+    // ListCalendarEvents for that schedule; an event's details need ViewCalendarEvents for that event, or it shows as busy.
+    private static async Task<IResult> GetScheduleAsync(
+        string schedule,
+        DateTime fromUtc,
+        DateTime toUtc,
+        HttpContext httpContext,
+        IAuthorizationService authorizationService,
+        ICalendarAccessService accessService,
+        ICalendarService calendarService,
+        ICalendarQueryService queryService,
+        CalendarViewEventMapper mapper)
+    {
+        var user = httpContext.User;
+        var target = string.Equals(schedule, EveryoneSchedule, StringComparison.OrdinalIgnoreCase) ? CalendarSchedule.Everyone : new CalendarSchedule(schedule);
+
+        if (!await authorizationService.AuthorizeAsync(user, CalendarPermissions.ListCalendarEvents, target))
+        {
+            return Results.Forbid();
+        }
+
+        var query = new CalendarOccurrenceQuery { FromUtc = fromUtc, ToUtc = toUtc };
+
+        if (target.IsEveryone)
+        {
+            query.AllCalendars = true;
+        }
+        else
+        {
+            var owned = await calendarService.ListAsync(new CalendarListQuery { OwnerIds = [target.UserId], Limit = 500 });
+
+            query.CalendarIds = owned.Where(calendar => calendar.OwnerKind == CalendarOwnerKind.User).Select(calendar => calendar.ItemId).ToList();
+            query.AttendeeUserIds = [target.UserId];
+        }
+
+        var occurrences = await queryService.GetOccurrencesAsync(query);
+        var calendarIds = occurrences.Select(occurrence => occurrence.Event.CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
+        var accessByCalendar = new Dictionary<string, CalendarAccess>(StringComparer.Ordinal);
+
+        foreach (var calendar in calendarIds.Count > 0 ? await calendarService.GetAsync(calendarIds) : [])
+        {
+            accessByCalendar[calendar.ItemId] = new CalendarAccess(calendar, await accessService.GetAccessLevelAsync(user, calendar));
+        }
+
+        var canView = new Dictionary<string, bool>(StringComparer.Ordinal);
         var result = new List<CalendarViewEvent>(occurrences.Count);
 
         foreach (var occurrence in occurrences)
         {
             var calendarEvent = occurrence.Event;
-            accessible.TryGetValue(calendarEvent.CalendarId ?? string.Empty, out var access);
 
-            var calendar = access?.Calendar;
-            var eventType = calendar is null ? null : typeManager.FindEventType(calendar.Type, calendarEvent.EventType);
-            var canChange = calendar is not null && !occurrence.BusyOnly && calendarEvent.Editable && !string.IsNullOrEmpty(calendarEvent.ItemId) && access.Level >= CalendarAccessLevel.Write;
-            var editUrl = canChange
-                ? linkGenerator.GetPathByAction(httpContext, "Edit", "CalendarEvents", new
-                {
-                    area = CalendarsConstants.Features.Calendars,
-                    id = occurrence.IsOverride ? calendarEvent.ItemId : occurrence.SeriesId,
-                    occurrence = occurrence.IsRecurring && !occurrence.IsOverride ? FormatInstant(occurrence.OriginalStartUtc) : null,
-                })
-                : null;
-
-            result.Add(new CalendarViewEvent
+            if (!canView.TryGetValue(calendarEvent.ItemId, out var visible))
             {
-                Id = occurrence.GetOccurrenceId(),
-                EventId = calendarEvent.ItemId,
-                CalendarId = calendarEvent.CalendarId,
-                Title = occurrence.BusyOnly ? S["Busy"].Value : calendarEvent.Title,
-                AllDay = calendarEvent.AllDay,
-                Start = calendarEvent.AllDay ? occurrence.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : FormatInstant(occurrence.StartUtc),
-                End = calendarEvent.AllDay ? occurrence.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : FormatInstant(occurrence.EndUtc),
-                Color = occurrence.BusyOnly ? "#868e96" : calendarEvent.Color ?? eventType?.Color ?? calendar?.Color,
-                Editable = canChange,
-                Details = new CalendarViewEventDetails
-                {
-                    BusyOnly = occurrence.BusyOnly,
-                    Calendar = calendar?.Name,
-                    EventType = occurrence.BusyOnly || eventType is null ? null : localizerFactory.Localize(eventType.DisplayName).Value,
-                    Location = occurrence.BusyOnly ? null : calendarEvent.Location,
-                    Description = occurrence.BusyOnly ? null : calendarEvent.Description,
-                    Status = calendarEvent.Status switch
-                    {
-                        CalendarEventStatus.Tentative => S["Tentative"].Value,
-                        CalendarEventStatus.Cancelled => S["Cancelled"].Value,
-                        _ => S["Confirmed"].Value,
-                    },
-                    Recurring = occurrence.IsRecurring,
-                    OriginalStart = occurrence.IsRecurring ? FormatInstant(occurrence.OriginalStartUtc) : null,
-                    Source = calendarEvent.Source,
-                    Attendees = occurrence.BusyOnly
-                        ? []
-                        : calendarEvent.Attendees.Select(attendee => attendee.Name ?? attendee.Email ?? attendee.ResourceCalendarId).Where(name => !string.IsNullOrEmpty(name)).ToList(),
-                    EditUrl = editUrl,
-                },
-            });
+                visible = await authorizationService.AuthorizeAsync(user, CalendarPermissions.ViewCalendarEvents, calendarEvent);
+                canView[calendarEvent.ItemId] = visible;
+            }
+
+            occurrence.BusyOnly = !visible;
+            accessByCalendar.TryGetValue(calendarEvent.CalendarId ?? string.Empty, out var access);
+            result.Add(mapper.Map(occurrence, access));
         }
 
         return Results.Ok(result);
