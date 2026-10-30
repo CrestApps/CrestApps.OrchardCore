@@ -285,6 +285,8 @@ When an automated AI conversation completes, the activity stores the AI session 
 An automated voice call whose live (speech-to-speech) session is lost partway through is not concluded as the model reads the cut-off transcript. The platform first opens a new session that is given the conversation so far, up to two times. When that does not work, the caller is handed to a live agent if the subject allows handoff. Otherwise the caller hears a short apology and the call ends. The activity then takes the disposition the subject's **Try again** action is wired to, so the contact is called again, and its notes say the conversation was cut short. A subject with no **Try again** action keeps the reviewed disposition. The activity's terminal reason is `ai_session_lost`.
 
 ### Load Activities
+
+<YouTube video="contact-center-numbers-not-in-service" title="Video of numbers not in service" />
 A **Load Activities** definition (an activity batch) stores filters to find contacts and then **loads activities in the background**.
 
 The loader runs as a background process to avoid overloading the system and to allow large loads to run safely. A load does not start on save; **Actions > Load activities** or the form's **Save & Load activities** button starts it, and **Actions > Clone** copies a load's settings into a new one. The **Load Activities** list is ordered by creation date with the newest activity loads first, is paged, and supports the standard admin bulk-selection controls. The form, the three sources (**Manual**, **Automatic**, **Dialer**) and the load report are described in [Load activities](../user-manual/load-inventory.md); automatic AI loads in [Automated AI SMS and voice](../user-manual/automated-ai.md).
