@@ -15,8 +15,10 @@ public sealed class TaxJurisdictionDeploymentStep : DeploymentStep
     public override string Name => TaxationDeploymentSteps.TaxJurisdiction;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

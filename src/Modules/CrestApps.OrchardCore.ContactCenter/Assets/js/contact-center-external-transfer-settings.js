@@ -37,6 +37,10 @@
 
     function initialize(root) {
         var config = parseConfig(root);
+        // The editor posts back under a field prefix; rows added here must use the same one, or they do not bind.
+        var prefix = root.getAttribute('data-prefix');
+        var namePrefix = encodeAttribute(prefix ? prefix + '.' : '');
+        var idPrefix = namePrefix.replace(/\./g, '_');
         var strings = config.strings;
         var displayNamePlaceholder = encodeAttribute(strings.displayName);
         var removeDestinationTitle = encodeAttribute(strings.removeDestination);
@@ -71,17 +75,17 @@
             tr.className = 'cc-dest-row';
             tr.innerHTML =
                 '<td>' +
-                    '<input type="hidden" name="Destinations[' + idx + '].Id" value="" />' +
-                    '<input name="Destinations[' + idx + '].DisplayName" id="Destinations_' + idx + '__DisplayName"' +
+                    '<input type="hidden" name="' + namePrefix + 'Destinations[' + idx + '].Id" value="" />' +
+                    '<input name="' + namePrefix + 'Destinations[' + idx + '].DisplayName" id="' + idPrefix + 'Destinations_' + idx + '__DisplayName"' +
                         ' class="form-control form-control-sm" placeholder="' + displayNamePlaceholder + '" />' +
                 '</td>' +
                 '<td>' +
-                    '<input name="Destinations[' + idx + '].E164Address" id="Destinations_' + idx + '__E164Address"' +
+                    '<input name="' + namePrefix + 'Destinations[' + idx + '].E164Address" id="' + idPrefix + 'Destinations_' + idx + '__E164Address"' +
                         ' class="form-control form-control-sm" placeholder="' + addressPlaceholder + '" autocomplete="off" />' +
                 '</td>' +
                 '<td><code class="text-muted small">&mdash;</code></td>' +
                 '<td class="text-center">' +
-                    '<input type="checkbox" name="Destinations[' + idx + '].Enabled" id="Destinations_' + idx + '__Enabled"' +
+                    '<input type="checkbox" name="' + namePrefix + 'Destinations[' + idx + '].Enabled" id="' + idPrefix + 'Destinations_' + idx + '__Enabled"' +
                         ' class="form-check-input" value="true" checked />' +
                 '</td>' +
                 '<td>' +

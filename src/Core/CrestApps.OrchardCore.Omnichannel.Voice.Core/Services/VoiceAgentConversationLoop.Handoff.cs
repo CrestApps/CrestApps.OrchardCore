@@ -20,6 +20,42 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// </summary>
 public sealed partial class VoiceAgentConversationLoop
 {
+    /// <summary>
+    /// What the model is offered about handing the caller to a person, from whether the queue the handoff goes to can
+    /// take them now: the transfer when it is open; the transfer, told it books a callback, when it is closed and a
+    /// callback is booked; no transfer, and told nobody can take the call, when it is closed and nothing would be booked.
+    /// </summary>
+    /// <remarks>
+    /// Offered regardless of the queue's hours, the model promised a person after hours ("connecting you now"), and the
+    /// call then ended with a callback, or, with nothing to book one, with none at all. A service that cannot say whether
+    /// the queue is open (it does not implement <see cref="IOmnichannelHandoffAvailability"/>) is taken to be open, as
+    /// before.
+    /// </remarks>
+    /// <param name="service">The phone handoff service, or <see langword="null"/> when this call has none.</param>
+    /// <param name="flowSettings">The subject's flow settings, which name the handoff queue.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal static async Task<(bool TransferOffered, string Guidance)> OfferHandoffAsync(
+        IOmnichannelHandoffService service,
+        SubjectFlowSettings flowSettings,
+        CancellationToken cancellationToken)
+    {
+        if (service is null)
+        {
+            return (false, null);
+        }
+
+        var availability = service is IOmnichannelHandoffAvailability seam
+            ? await seam.GetAvailabilityAsync(flowSettings?.HandoffQueueId, cancellationToken)
+            : HandoffAvailability.Open;
+
+        return availability switch
+        {
+            HandoffAvailability.Unavailable => (false, VoiceCallGuidance.NobodyToHandTo),
+            HandoffAvailability.CallbackOnly => (true, OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings) + "\n\n" + VoiceCallGuidance.CallbackInsteadOfPerson),
+            _ => (true, OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings)),
+        };
+    }
+
     // Resolves the phone handoff service and this subject's flow settings, returning a non-null service only when
     // handoff is both configured (enabled with a target queue) and a channel implementation is registered. The flow
     // settings are always returned so callers can read the target queue.

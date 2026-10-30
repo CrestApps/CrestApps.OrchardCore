@@ -121,8 +121,9 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             // Migrate AI profiles to use the new RAG metadata
             foreach (var profile in await profileStore.GetAllAsync())
             {
-                var dataSourceId = (profile.Properties?["AIProfileDataSourceMetadata"] as JsonNode)?["DataSourceId"]?.GetValue<string>()
-                ?? (profile.Properties?["DataSourceMetadata"] as JsonNode)?["DataSourceId"]?.GetValue<string>();
+                var profileProperties = ToJsonObject(profile.Properties);
+                var dataSourceId = profileProperties?["AIProfileDataSourceMetadata"]?["DataSourceId"]?.GetValue<string>()
+                ?? profileProperties?["DataSourceMetadata"]?["DataSourceId"]?.GetValue<string>();
                 if (string.IsNullOrEmpty(dataSourceId))
                 {
                     continue;

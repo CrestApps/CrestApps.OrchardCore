@@ -194,7 +194,8 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             new TestContactCenterFeatureWorkManager(),
             session,
             clock.Object,
-            NullLogger<ContactCenterOutbox>.Instance);
+            NullLogger<ContactCenterOutbox>.Instance,
+            new Microsoft.AspNetCore.Http.HttpContextAccessor());
 
         return new DefaultContactCenterEventPublisher(
             eventStore,

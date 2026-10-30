@@ -15,8 +15,10 @@ public sealed class OmnichannelMessageTemplateDeploymentStep : DeploymentStep
     public override string Name => MessagingDeploymentSteps.MessageTemplate;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }
