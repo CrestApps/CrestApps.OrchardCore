@@ -188,6 +188,16 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Reports.Pdf` | Reports (PDF) | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.Builder` | Report Builder | [Report Builder](./modules/report-builder/) |
 
+## Data connectors
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.DataConnectors` | Data Connectors | [Data Connectors](./modules/data-connectors) |
+| `CrestApps.OrchardCore.DataConnectors.Http` | HTTP API Data Connector | [Data Connectors](./modules/data-connectors#http-api) |
+| `CrestApps.OrchardCore.DataConnectors.Elasticsearch` | Elasticsearch Data Connector | [Data Connectors](./modules/data-connectors#elasticsearch) |
+| `CrestApps.OrchardCore.DataConnectors.Files` | Media Files Data Connector | [Data Connectors](./modules/data-connectors#media-files) |
+| `CrestApps.OrchardCore.DataConnectors.SqlServer` | SQL Server Data Connector | [Data Connectors](./modules/data-connectors#sql-server) |
+
 ## Commerce
 
 | Feature ID | Name | Docs |

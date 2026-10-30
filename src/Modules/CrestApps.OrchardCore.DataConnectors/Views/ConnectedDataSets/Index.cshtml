@@ -1,0 +1,80 @@
+@model ConnectedDataSetsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ConnectedDataSets" title="@T["Data Sets"]" />
+</zone>
+
+@* The form is necessary to generate an antiforgery token for the row actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddDataSet">@T["Add Data Set"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="ConnectedDataSets" context="Model.List" show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no data sets yet. Add one to read a resource of a connection."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Source" position="30" title="@T["Access and connection"]" width="auto" />
+            <admin-list-column name="Refresh" position="40" title="@T["Last refresh"]" />
+            <admin-list-column name="Modified" position="50" title="@T["Last modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">@T["Your search returned no results."]</div>
+</form>
+
+<div class="modal fade" id="modalAddDataSet" tabindex="-1" role="dialog" aria-labelledby="available-connections-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="available-connections-title">@T["Read a data set from"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                @if (Model.Connections.Count == 0)
+                {
+                    <div class="alert alert-warning mb-0" role="alert">
+                        @T["There is no connection to read from yet."]
+                        <a asp-action="Index" asp-controller="DataConnections">@T["Add a connection first."]</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var connection in Model.Connections)
+                        {
+                            <a class="list-group-item list-group-item-action" asp-action="Create" asp-route-id="@connection.ItemId">
+                                <strong>@connection.DisplayText</strong>
+                                @if (!string.IsNullOrEmpty(connection.Description))
+                                {
+                                    <div class="hint">@connection.Description</div>
+                                }
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script asp-name="list-management-ui" at="Foot"></script>

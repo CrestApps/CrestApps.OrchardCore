@@ -1,0 +1,116 @@
+@using CrestApps.OrchardCore.DataConnectors.SqlServer
+@model CrestApps.OrchardCore.DataConnectors.SqlServer.ViewModels.SqlServerConnectionViewModel
+
+@{
+    var authenticationId = Html.IdFor(model => model.Authentication);
+    var sectionId = authenticationId + "_Section";
+}
+
+<div id="@sectionId">
+    <div class="ocat-wrapper">
+        <label asp-for="Server" class="ocat-label ocat-label-required">@T["Server"]</label>
+        <div class="ocat-end">
+            <input asp-for="Server" class="form-control" placeholder="sql.example.com,1433" />
+            <span asp-validation-for="Server" class="text-danger"></span>
+            <span class="hint">@T["A host name, host,port or host\\instance, such as myserver.database.windows.net. A server on the site's own network is refused unless the site's configuration allows it (CrestApps:DataConnectors:Network)."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Database" class="ocat-label ocat-label-required">@T["Database"]</label>
+        <div class="ocat-end">
+            <input asp-for="Database" class="form-control" />
+            <span asp-validation-for="Database" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Authentication" class="ocat-label">@T["Sign in with"]</label>
+        <div class="ocat-end">
+            <select asp-for="Authentication" class="form-select">
+                <option value="@nameof(SqlServerAuthenticationType.SqlLogin)">@T["A SQL Server login"]</option>
+                <option value="@nameof(SqlServerAuthenticationType.Integrated)">@T["The site's Windows account"]</option>
+                <option value="@nameof(SqlServerAuthenticationType.EntraServicePrincipal)">@T["A Microsoft Entra service principal"]</option>
+                <option value="@nameof(SqlServerAuthenticationType.EntraManagedIdentity)">@T["The managed identity of the site's host"]</option>
+                <option value="@nameof(SqlServerAuthenticationType.EntraDefault)">@T["The default Microsoft Entra credential of the site's host"]</option>
+            </select>
+            <span class="hint">@T["Use a login that can only read what the data sets need: data sets read with the connection's rights."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-sign-in="SqlLogin EntraServicePrincipal EntraManagedIdentity">
+        <label asp-for="UserName" class="ocat-label">@T["Login or client ID"]</label>
+        <div class="ocat-end">
+            <input asp-for="UserName" class="form-control" autocomplete="off" />
+            <span asp-validation-for="UserName" class="text-danger"></span>
+            <span class="hint">@T["The SQL login, the service principal's client ID, or the client ID of a user-assigned managed identity (empty for the system-assigned one)."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-sign-in="SqlLogin EntraServicePrincipal">
+        <label asp-for="Password" class="ocat-label">@T["Password or client secret"]</label>
+        <div class="ocat-end">
+            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasPassword ? T["Saved. Leave empty to keep it."].Value : string.Empty)" />
+            <span asp-validation-for="Password" class="text-danger"></span>
+            <span class="hint">@T["Stored encrypted with the site's data protection keys and never shown again."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Encrypt" class="form-check-input" type="checkbox" />
+                <label asp-for="Encrypt" class="form-check-label">@T["Encrypt the connection"]</label>
+                <span class="hint dashed">@T["Required by Azure SQL; recommended everywhere."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="TrustServerCertificate" class="form-check-input" type="checkbox" />
+                <label asp-for="TrustServerCertificate" class="form-check-label">@T["Trust the server's certificate"]</label>
+                <span class="hint dashed">@T["Accepts a self-signed certificate without checking it. Use it only for a server you control."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="ReadOnlyIntent" class="form-check-input" type="checkbox" />
+                <label asp-for="ReadOnlyIntent" class="form-check-label">@T["Read from a read-only replica when there is one"]</label>
+                <span class="hint dashed">@T["Sends ApplicationIntent=ReadOnly, so reports don't load the primary of an availability group or a Business Critical database."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ConnectTimeoutSeconds" class="ocat-label">@T["Connect timeout (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="ConnectTimeoutSeconds" type="number" min="1" max="300" class="form-control" />
+            <span asp-validation-for="ConnectTimeoutSeconds" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const section = document.getElementById('@sectionId');
+        const authentication = document.getElementById('@authenticationId');
+
+        if (!section || !authentication) {
+            return;
+        }
+
+        const refresh = function () {
+            section.querySelectorAll('[data-sign-in]').forEach(function (element) {
+                element.classList.toggle('d-none', !element.getAttribute('data-sign-in').split(' ').includes(authentication.value));
+            });
+        };
+
+        authentication.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

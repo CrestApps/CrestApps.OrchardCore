@@ -1,0 +1,204 @@
+@using CrestApps.OrchardCore.DataConnectors.Http
+@model HttpConnectionViewModel
+
+@{
+    var authTypeId = Html.IdFor(model => model.AuthenticationType);
+    var grantTypeId = Html.IdFor(model => model.GrantType);
+    var sectionId = authTypeId + "_Section";
+    var savedPlaceholder = T["Saved. Leave empty to keep it."].Value;
+}
+
+<div id="@sectionId">
+    <div class="ocat-wrapper">
+        <label asp-for="BaseUrl" class="ocat-label ocat-label-required">@(Model.IsElasticsearch ? T["Cluster URL"] : T["Base URL"])</label>
+        <div class="ocat-end">
+            <input asp-for="BaseUrl" class="form-control" placeholder="@(Model.IsElasticsearch ? "https://search.example.com:9200" : "https://api.example.com/v1")" />
+            <span asp-validation-for="BaseUrl" class="text-danger"></span>
+            <span class="hint">@T["Every request of this connection starts with this address. Requests to the site's own network are refused unless the site's configuration allows them (CrestApps:DataConnectors:Network)."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication"]</label>
+        <div class="ocat-end">
+            <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select"></select>
+            <span asp-validation-for="AuthenticationType" class="text-danger"></span>
+            <span class="hint">@T["Credentials are stored encrypted with the site's data protection keys and are never shown again."]</span>
+        </div>
+    </div>
+
+    <div data-auth="ApiKey">
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKeyLocation" class="ocat-label">@T["Send the key in"]</label>
+            <div class="ocat-end">
+                <select asp-for="ApiKeyLocation" class="form-select">
+                    <option value="@nameof(HttpApiKeyLocation.Header)">@T["A request header"]</option>
+                    <option value="@nameof(HttpApiKeyLocation.Query)">@T["A query string parameter"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKeyName" class="ocat-label ocat-label-required">@T["Header or parameter name"]</label>
+            <div class="ocat-end">
+                <input asp-for="ApiKeyName" class="form-control" placeholder="X-API-Key" />
+                <span asp-validation-for="ApiKeyName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKeyPrefix" class="ocat-label">@T["Prefix"]</label>
+            <div class="ocat-end">
+                <input asp-for="ApiKeyPrefix" class="form-control" />
+                <span class="hint">@T["Text sent before the key in its header, such as \"ApiKey \" for Elasticsearch. Leave empty to send the key alone."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+            <div class="ocat-end">
+                <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? savedPlaceholder : string.Empty)" />
+                <span asp-validation-for="ApiKey" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div data-auth="Basic OAuth2 OpenIdConnect">
+        <div class="ocat-wrapper" data-auth="Basic" data-grant="Password">
+            <label asp-for="UserName" class="ocat-label">@T["User name"]</label>
+            <div class="ocat-end">
+                <input asp-for="UserName" class="form-control" autocomplete="off" />
+                <span asp-validation-for="UserName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" data-auth="Basic" data-grant="Password">
+            <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+            <div class="ocat-end">
+                <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasPassword ? savedPlaceholder : string.Empty)" />
+            </div>
+        </div>
+    </div>
+
+    <div data-auth="Bearer">
+        <div class="ocat-wrapper">
+            <label asp-for="BearerToken" class="ocat-label">@T["Bearer token"]</label>
+            <div class="ocat-end">
+                <input asp-for="BearerToken" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasBearerToken ? savedPlaceholder : string.Empty)" />
+                <span asp-validation-for="BearerToken" class="text-danger"></span>
+                <span class="hint">@T["Sent as \"Authorization: Bearer &lt;token&gt;\" with every request. Use OAuth 2.0 or OpenID Connect instead when the token expires."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div data-auth="OAuth2 OpenIdConnect">
+        <div class="ocat-wrapper" data-auth="OAuth2">
+            <label asp-for="TokenUrl" class="ocat-label ocat-label-required">@T["Token endpoint"]</label>
+            <div class="ocat-end">
+                <input asp-for="TokenUrl" class="form-control" placeholder="https://login.example.com/oauth2/token" />
+                <span asp-validation-for="TokenUrl" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" data-auth="OpenIdConnect">
+            <label asp-for="Authority" class="ocat-label ocat-label-required">@T["Issuer (authority)"]</label>
+            <div class="ocat-end">
+                <input asp-for="Authority" class="form-control" placeholder="https://login.example.com/tenant-id/v2.0" />
+                <span asp-validation-for="Authority" class="text-danger"></span>
+                <span class="hint">@T["The token endpoint is read from the issuer's discovery document (/.well-known/openid-configuration)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="GrantType" class="ocat-label">@T["Grant"]</label>
+            <div class="ocat-end">
+                <select asp-for="GrantType" class="form-select">
+                    <option value="@nameof(OAuthGrantType.ClientCredentials)">@T["Client credentials (machine to machine)"]</option>
+                    <option value="@nameof(OAuthGrantType.Password)">@T["Password (resource owner)"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ClientId" class="ocat-label ocat-label-required">@T["Client ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientId" class="form-control" autocomplete="off" />
+                <span asp-validation-for="ClientId" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ClientSecret" class="ocat-label">@T["Client secret"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientSecret" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasClientSecret ? savedPlaceholder : string.Empty)" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ClientAuthentication" class="ocat-label">@T["Client authentication"]</label>
+            <div class="ocat-end">
+                <select asp-for="ClientAuthentication" class="form-select">
+                    <option value="@nameof(OAuthClientAuthentication.BasicHeader)">@T["Basic authorization header (client_secret_basic)"]</option>
+                    <option value="@nameof(OAuthClientAuthentication.RequestBody)">@T["Request body (client_secret_post)"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Scope" class="ocat-label">@T["Scopes"]</label>
+            <div class="ocat-end">
+                <input asp-for="Scope" class="form-control" placeholder="api.read" />
+                <span class="hint">@T["Separated by spaces. Leave empty when the server needs none."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Audience" class="ocat-label">@T["Audience"]</label>
+            <div class="ocat-end">
+                <input asp-for="Audience" class="form-control" />
+                <span class="hint">@T["Sent as the audience parameter, for servers that need one. Leave empty otherwise."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Headers" class="ocat-label">@T["Headers"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Headers" class="form-control font-monospace" rows="3" placeholder="Accept-Language: en-US"></textarea>
+            <span asp-validation-for="Headers" class="text-danger"></span>
+            <span class="hint">@T["Extra headers sent with every request, one \"Name: value\" per line."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="TimeoutSeconds" class="ocat-label">@T["Timeout (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="TimeoutSeconds" type="number" min="1" max="3600" class="form-control" />
+            <span asp-validation-for="TimeoutSeconds" class="text-danger"></span>
+            <span class="hint">@T["How long one request may take. Throttled and failed requests are tried again up to three times."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const section = document.getElementById('@sectionId');
+        const authType = document.getElementById('@authTypeId');
+        const grantType = document.getElementById('@grantTypeId');
+
+        if (!section || !authType) {
+            return;
+        }
+
+        const refresh = function () {
+            const auth = authType.value;
+            const grant = grantType ? grantType.value : '';
+
+            section.querySelectorAll('[data-auth]').forEach(function (element) {
+                const types = element.getAttribute('data-auth').split(' ');
+                const grants = (element.getAttribute('data-grant') || '').split(' ').filter(Boolean);
+                const usesTokens = auth === 'OAuth2' || auth === 'OpenIdConnect';
+                const visible = types.includes(auth) || (usesTokens && grants.includes(grant));
+
+                element.classList.toggle('d-none', !visible);
+            });
+        };
+
+        authType.addEventListener('change', refresh);
+
+        if (grantType) {
+            grantType.addEventListener('change', refresh);
+        }
+
+        refresh();
+    })();
+</script>
