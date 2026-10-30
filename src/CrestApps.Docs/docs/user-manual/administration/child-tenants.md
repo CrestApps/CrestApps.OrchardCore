@@ -42,7 +42,8 @@ Open **Child tenants > All child tenants**. Each row shows the name, the address
 | **Suspended** | Nobody can use the site, including its own staff, until you resume it. |
 | **Removal scheduled** | The site is suspended and is removed when its waiting period ends. You can still restore it. |
 | **Removing** | The site and its data are being removed. |
-| **Setup failed** | The site could not be created. Click **Retry**, or **Remove from list** to take it off the list. |
+| **Setup failed** | The site could not be created. Click **Retry**, or **Discard** to give up on it. Its address becomes free again. |
+| **Changed by platform** | Your platform administrator removed this site or moved it to another organization. Click **Remove from list** to clear it. |
 
 Your plan sets how many child tenants you may have. When you reach it, **Add child tenant** is greyed out, and pointing at it tells you the limit. Use the search box to find one by name or address, and the **State** and **Sort** menus to narrow and order the list.
 
@@ -98,7 +99,7 @@ Open **Child tenants > All child tenants**, click **Manage** next to the child t
 | **Suspend** | Closes the child tenant to everybody until you **Resume** it. Its address then shows that the site is not available. |
 | **Remove** | Only for a suspended child tenant. See below. |
 
-To change several child tenants at once, tick them in the list and use the bulk action menu.
+To change several child tenants at once, tick them in the list and use the bulk action menu: **Suspend**, **Resume**, **Reload** and **Remove** (a child tenant must be suspended before it can be removed).
 
 ### Remove a child tenant
 
@@ -152,7 +153,7 @@ Your platform may host many organizations, each with its own child tenants. They
 | --- | --- |
 | **Add child tenant** is greyed out | You reached the number of child tenants your plan allows. Point at the button to see the limit, and ask your platform administrator to raise it, or remove a child tenant you no longer need. |
 | **This address is already in use** or **This address is reserved** | Another of your child tenants uses the address, or it is kept for the system. Pick another one. |
-| **Setup failed** | The site could not be created. Click **Retry**. If it fails again, click **Remove from list** and tell your platform administrator. |
+| **Setup failed** | The site could not be created. Click **Retry**. If it fails again, click **Discard** and tell your platform administrator. |
 | **You cannot open this** | You have no access rule for the child tenant, it is suspended, or it is not one of yours. Ask the person who manages access in your organization. |
 | **Two-factor sign-in required** | Your organization requires it before you open a child tenant. Sign out of your own site, and sign in again with two-factor authentication. |
 | You are signed out of a child tenant | Your session ended: you were idle too long, it reached its maximum length, you signed out of your own site, or your access rule changed. Open the child tenant again from your site. |
