@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -392,6 +393,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.ResponseCompleted:
                         ResponseInFlight(false);
+                        OpeningResponseCompleted();
 
                         // The line is over: fade it out and send its last, padded packet, rather than stopping dead
                         // on whatever sample it ended on -- which was heard as a click as the assistant finished.
@@ -448,7 +450,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                             media,
                             conversation,
                             bargeIn,
-                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested || OnAMachine(),
+                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested || OnAMachine() ||
+                                OpeningMayNotBeTalkedOver(DateTime.UtcNow.Ticks),
                             activityId,
                             cancellationToken);
 
@@ -477,6 +480,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                         {
                             assistantLineStartedUtc = null;
                             ResponseInFlight(true);
+
+                            // The placeholder asked for after a refused request: the line is open to it again.
+                            ThePlaceholderIsStarting();
 
                             // The response asked for once a machine's greeting ended is the message, and the one
                             // line the machine is let hear -- whatever the model decided before it, including
@@ -534,6 +540,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // turn-based one is: everything downstream reads the transcript, not the audio.
                         await StorePromptAsync(context, ChatRole.User, conversationEvent.Text, callerLineStartedUtc, cancellationToken);
                         callerLineStartedUtc = null;
+
+                        // Checked beside the call, so an ordinary turn is not held up: see the Guardrails partial.
+                        if (!OnAMachine())
+                        {
+                            GuardCallerLine(media, conversation, context, conversationEvent.Text, cancellationToken);
+                        }
 
                         break;
 
@@ -604,6 +616,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         }
 
                         await StorePromptAsync(context, ChatRole.Assistant, spoken, lineStartedUtc, cancellationToken);
+                        AssistantLineHeard();
 
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
@@ -742,6 +755,12 @@ public sealed partial class RealtimeVoiceConversationRunner
         // blocked agent presence heartbeats and other webhook deliveries until they timed out. Flushing per turn
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
+
+        await _turnNotifier.NotifyAsync(
+            context.Session,
+            role == ChatRole.User ? AIConversationTurn.CustomerRole : AIConversationTurn.AssistantRole,
+            content,
+            cancellationToken);
     }
 
     // Whether the model ended the call on voicemail, where its message is the closing line.

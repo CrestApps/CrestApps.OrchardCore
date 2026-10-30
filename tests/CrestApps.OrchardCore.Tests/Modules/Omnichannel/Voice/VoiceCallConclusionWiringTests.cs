@@ -11,6 +11,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -67,6 +68,43 @@ public sealed class VoiceCallConclusionWiringTests
         Assert.Same(harness.Activity, run.Activity);
         Assert.Equal("disposition-callback", run.Disposition.ItemId);
         Assert.Same(harness.Contact, run.Contact);
+    }
+
+    [Fact]
+    public async Task AConcludedCall_ClosesItsAIConversationAtOnce()
+    {
+        // Arrange
+        // The call is over, so its conversation is too: closing it now runs the analysis, the contact's memory and
+        // the closed workflows straight away, rather than after the profile's inactivity timeout.
+        var harness = new ConclusionHarness();
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        harness.Closer.Verify(closer => closer.CloseAsync("session-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ACallWhoseConversationCouldNotBeClosed_IsStillConcluded()
+    {
+        // Arrange
+        // The inactivity close picks the conversation up later, so a failure here must not undo the conclusion.
+        var harness = new ConclusionHarness();
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote.");
+        harness.Closer
+            .Setup(closer => closer.CloseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The store is unavailable."));
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(ActivityStatus.Completed, harness.Activity.Status);
+        Assert.Single(harness.Executor.Runs);
     }
 
     [Fact]
@@ -690,6 +728,7 @@ public sealed class VoiceCallConclusionWiringTests
                 .AddSingleton(templateService.Object)
                 .AddSingleton(personaResolver.Object)
                 .AddSingleton<ISubjectActionExecutor>(Executor)
+                .AddSingleton(Closer.Object)
                 .AddSingleton(Options.Create(_documentJsonOptions))
                 .AddSingleton<IClock>(new StubClock(_now))
                 .AddSingleton(Mock.Of<ISession>())
@@ -723,9 +762,13 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IVoiceAgentMediaProviderResolver>(),
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ITurnBasedSilenceWatchdog>(),
+                Mock.Of<ITurnBasedCallerKeys>(),
                 Mock.Of<IAIVoiceSessionTracker>(),
                 new FakeAIVoiceCallShutdown(),
                 Mock.Of<ILiquidTemplateManager>(),
+                Mock.Of<CrestApps.Core.AI.Tooling.IToolRegistry>(),
+                new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(ContentManager.Object, Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
+                new CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommands(), Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(), null,
                 ContentManager.Object,
                 new StubClock(_now),
                 NullLogger<VoiceAgentConversationLoop>.Instance,
@@ -748,6 +791,8 @@ public sealed class VoiceCallConclusionWiringTests
         public List<SubjectAction> SubjectActions { get; } = [];
 
         public RecordingSubjectActionExecutor Executor { get; } = new();
+
+        public Mock<IAIChatSessionCloser> Closer { get; } = new();
 
         public StubChatClient Model { get; } = new();
 

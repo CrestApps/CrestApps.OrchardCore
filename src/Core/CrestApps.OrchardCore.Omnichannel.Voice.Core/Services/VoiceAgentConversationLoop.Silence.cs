@@ -166,6 +166,33 @@ public sealed partial class VoiceAgentConversationLoop
         await SpeakAsync(media, silence.ProviderCallId, activity, SilentLineGoodbye, cancellationToken);
     }
 
+    /// <summary>
+    /// Whether the caller said something new while the reply to their last line was being written.
+    /// </summary>
+    /// <remarks>
+    /// The newer line is answered by its own turn, which sees everything said before it. Speaking this reply as well
+    /// queued one answer behind another: live, a caller who pressed five keys heard five replies in a row, and what
+    /// they said in between was answered after those, so the assistant talked over itself for half a minute.
+    /// </remarks>
+    /// <param name="voiceEvent">The caller's line this reply answers.</param>
+    /// <param name="heard">How many caller lines the call had heard once that line arrived.</param>
+    private bool ReplyWasOvertaken(VoiceAgentEvent voiceEvent, long heard)
+    {
+        if (_silenceWatchdog.HeardCount(voiceEvent.ActivityId) == heard)
+        {
+            return false;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The caller on automated call activity '{ActivityId}' said something new while the reply to their last line was being written, so that reply is left unsaid.",
+                voiceEvent.ActivityId.SanitizeLogValue());
+        }
+
+        return true;
+    }
+
     private Task WatchForSilenceAsync(VoiceAgentEvent voiceEvent, int promptCount, TimeSpan? wait = null)
         => _silenceWatchdog.ArmAsync(new TurnBasedSilence
         {

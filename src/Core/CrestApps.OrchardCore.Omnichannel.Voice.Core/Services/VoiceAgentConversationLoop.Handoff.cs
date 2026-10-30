@@ -120,7 +120,7 @@ public sealed partial class VoiceAgentConversationLoop
     /// </summary>
     /// <param name="activity">The activity being handed off.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken, Action<OmnichannelActivity> mark = null)
     {
         // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
@@ -129,8 +129,9 @@ public sealed partial class VoiceAgentConversationLoop
         {
             var cleared = current.Properties.Remove(nameof(PendingVoiceHandoff));
 
-            if (cleared || !current.AiEscalated)
+            if (cleared || !current.AiEscalated || mark is not null)
             {
+                mark?.Invoke(current);
                 current.AiEscalated = true;
                 await _activityStore.UpdateAsync(current, cancellationToken);
             }
@@ -139,6 +140,7 @@ public sealed partial class VoiceAgentConversationLoop
         // Also on the in-memory copy the caller is still holding, so a second pass inside this same scope sees
         // the call as handed over rather than re-reading it from a row it has not reloaded.
         activity.Properties?.Remove(nameof(PendingVoiceHandoff));
+        mark?.Invoke(activity);
         activity.AiEscalated = true;
     }
 
@@ -328,6 +330,25 @@ public sealed partial class VoiceAgentConversationLoop
 
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
+        // A supervisor taking the call over is rung directly, whatever the subject's handoff settings say: the person
+        // asked for the caller, and the subject's queue may not exist at all.
+        var takeOver = activity.TryGet<AITakeOverRequest>(out var takeOverRequest) && !string.IsNullOrEmpty(takeOverRequest.TargetAgentId)
+            ? takeOverRequest
+            : null;
+
+        // A transfer to a phone number leaves the platform: the provider rings the number and connects the caller.
+        if (takeOverRequest is not null && string.IsNullOrEmpty(takeOverRequest.TargetAgentId) && !string.IsNullOrEmpty(takeOverRequest.TargetPhoneNumber))
+        {
+            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest.TargetPhoneNumber, cancellationToken);
+
+            return;
+        }
+
+        if (takeOver is not null)
+        {
+            handoffService = _handoffServices?.FirstOrDefault(candidate => candidate.CanHandle(OmnichannelConstants.Channels.Phone));
+        }
+
         if (handoffService is null)
         {
             _logger.LogWarning("An AI voice handoff was requested for Activity {ActivityId} but no handoff destination is available; ending the call.", activity.ItemId.SanitizeLogValue());
@@ -343,8 +364,11 @@ public sealed partial class VoiceAgentConversationLoop
             result = await handoffService.RequestHandoffAsync(new OmnichannelHandoffRequest
             {
                 Activity = activity,
-                TargetQueueId = flowSettings.HandoffQueueId,
-                Reason = "The automated assistant escalated the call to a live agent.",
+                TargetQueueId = takeOver is null ? flowSettings?.HandoffQueueId : null,
+                TargetAgentId = takeOver?.TargetAgentId,
+                Reason = takeOver is null
+                    ? "The automated assistant escalated the call to a live agent."
+                    : SupervisorTookOverReason,
                 ContactAddress = activity.PreferredDestination,
                 ProviderName = voiceEvent.ProviderName,
                 ProviderCallId = voiceEvent.ProviderCallId,
