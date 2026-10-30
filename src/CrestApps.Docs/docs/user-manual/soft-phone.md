@@ -17,6 +17,8 @@ The **soft phone** makes and takes calls in the browser. Agents usually run it i
 
 <AskYourAdmin />
 
+<YouTube video="telephony" title="Video of the soft phone: the Keypad, extension dialing, Recent and Voicemail tabs" start={405} end={468} />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the soft phone window: the Keypad, Recent, Voicemail and Work tabs, the presence menu and the audio settings" start={81} end={104} />
 
 ## The header
