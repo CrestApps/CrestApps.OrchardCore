@@ -139,26 +139,34 @@ You can also click the **Send SMS** button beside any phone field on admin pages
 
 ## Templates
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of creating a message template and sending a broadcast" start={642} end={692} />
+<YouTube video="messaging-templates-broadcasts" title="Video of creating a message template and inserting it into a reply" start={53} end={108} />
 
 Templates are canned responses agents insert into a reply. Use them for answers you give often, such as your opening hours.
 
 1. Open **Messaging > Templates** and click **Add template**.
-2. Enter a **Name** agents will recognize and the **Body** text, then save.
+2. Enter a **Name** agents will recognize and the **Body** text, then click **Save**.
+
+In the inbox, the list **Insert a canned response...** above the message box shows the templates. Pick one and its text fills the message box as a draft, which you can change before you send it. Anyone who can use the messaging workspace can insert a template; adding and changing them needs the **Manage the messaging workspace** permission.
 
 Your administrator can copy templates to another site through a deployment plan.
 
 ## Broadcasts
 
+<YouTube video="messaging-templates-broadcasts" title="Video of sending a broadcast" start={108} end={230} />
+
 A broadcast sends the same message to many people; each recipient gets their own one-to-one thread and cannot see the others, and replies come back to the inbox.
 
 1. Open **Messaging > Broadcasts** and click **New broadcast**.
-2. Enter a **Name**, pick **Send from** (the address decides the channel), choose **Recipients (contacts)** and add **Additional addresses** (one per line or comma-separated).
+2. Enter a **Name**, pick **Send from** (the address decides the channel), choose **Recipients** (search your contacts and leads by name or number; only people with an address on that channel are offered) and add **Additional addresses** for numbers that are not in your contacts (one per line or comma-separated, in international format such as `+12015550123`).
 3. Type the **Message** and click **Queue broadcast**.
 
-The list shows each broadcast's channel, sending address, status, recipients, and how many messages were sent and failed. A queued broadcast cannot be cancelled.
+The list shows each broadcast's channel, sending address, status, recipients, and how many messages were sent and failed. A broadcast starts as **Queued**, because the messages are sent in the background, and becomes **Completed** when every recipient has been handled. **Failed** counts the messages the provider refused and the people who opted out. A queued broadcast cannot be cancelled, so read it twice before you queue it.
+
+A message the provider does not accept is tried again after 1, 5, 15 and 60 minutes before it counts as failed. A broadcast does not wait for the channel's quiet hours and does not check the do-not-call registry, so send it only to people who agreed to hear from you. A person who opted out of SMS never receives it.
 
 ## Keywords customers can send
+
+<YouTube video="messaging-templates-broadcasts" title="Video of the STOP, START and HELP keywords" start={230} end={293} />
 
 The SMS channel always answers these carrier keywords, and a keyword never triggers the entry point's auto-reply.
 
