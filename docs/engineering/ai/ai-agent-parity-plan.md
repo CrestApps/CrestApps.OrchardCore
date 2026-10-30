@@ -826,14 +826,15 @@ calls or accounts, is listed after the slices.
   (text, number, yes/no, date, choice, list) and writing extracted fields to the contact (replace, fill if empty, or
   add).
 - Phase 5: an editable contact memory prompt and a rebuild of a contact's memory from their past conversations;
-  webhook subscriptions with signed deliveries, retries and a delivery log; integrations (HubSpot and Salesforce,
-  Google Drive, Microsoft 365, Notion) with OAuth sign-in, a CRM lookup tool and the **Log to CRM** task; Google
-  Drive, SharePoint/OneDrive and Notion file sources.
+  webhook subscriptions with signed deliveries, retries and a delivery log.
 - Calendar booking moved to the Bookings tools plan (`docs/engineering/ai/ai-booking-tools-plan.md`, decision BD3): the
   AI books through the Bookings module, and a future Calendar module owns Google and Microsoft 365 sync. The
-  `checkCalendarAvailability` and `bookCalendarAppointment` tools built here, the profile's calendar and appointment
-  length, and the connections' calendar, time zone and working hours were removed; the Google and Microsoft 365
-  connections now ask only for file access.
+  `checkCalendarAvailability` and `bookCalendarAppointment` tools built here were removed.
+- The outside connectors moved to the `claude/ai-integrations-connectors` branch, because none of them can be tested
+  without real accounts: the **AI Integrations** feature (HubSpot, Salesforce, Google, Microsoft 365 and Notion
+  connections with OAuth sign-in, the `findCrmContact` tool and the **Log to CRM** task) and the Google Drive,
+  SharePoint/OneDrive and Notion file sources. Until it lands, CRMs and booking services are connected through
+  workflows, as the user manual describes.
 - Phase 6: the profile's **Voice & Speech** settings (rate, emotion, pronunciations, fallback voice, boosted keywords,
   recognition languages, interruption sensitivity, backchanneling, allowed and starting languages) on the Core
   speech seams; ElevenLabs and Cartesia features and a voice library page (search, sample, clone); Telnyx number
@@ -861,12 +862,11 @@ Checked on a test site (SQLite tenant, outbound traffic blocked except ElevenLab
   account; the OpenAPI document lists 38 `/api/ai` paths, and the Kiota script generated TypeScript and Python
   clients from it.
 - The ElevenLabs voice library listed the account's voices from a deployment declared in the tenant's settings.
-- The API keys, integrations, Telnyx numbers, call recordings and voice library admin pages render.
+- The API keys, Telnyx numbers, call recordings and voice library admin pages render.
 - Live testing found the Create AI Activity task failing to resolve its starter when CRM activities were on without
   the Managements default feature (every page that activated workflows failed); fixed in its own commit.
 
-Needs accounts or real calls: the OAuth integrations (Google, Microsoft 365, HubSpot, Salesforce, Notion) and the
-cloud file sources; Telnyx number search, purchase, release and caller name; ElevenLabs speech on a call and voice
+Needs accounts or real calls: Telnyx number search, purchase, release and caller name; ElevenLabs speech on a call and voice
 cloning; Cartesia; switching profiles on a real realtime call; bleeping a real call recording; the Custom LLM
 provider against a real server; warm and screened transfers on real calls; a real 607/608 refusal being counted, and
 a real PBX's `X-` headers arriving as variables.

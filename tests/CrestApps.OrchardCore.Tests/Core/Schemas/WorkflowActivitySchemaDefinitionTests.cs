@@ -68,7 +68,6 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "JoinTask",
         "LiquidTask",
         "LogTask",
-        "LogToCrmTask",
         "NotifyContentOwnerTask",
         "NotifyTask",
         "NotifyUserTask",

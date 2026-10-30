@@ -214,7 +214,6 @@ Let the assistant do things beyond answering. See [Tools and agents](tools-and-a
 | **Agents** | Agent profiles on this site the assistant may call. **Select All Agents** picks all of them. |
 | **Tools** | Built-in actions, grouped by category. Search with **Search tools...**, or use **Select All Tools** and **Select All in** *category*. |
 | **Tool Instances** | Tools your team set up, such as a call to your order system. |
-| **Integrations** | With **AI Integrations** on: the **Calendar** the calendar tools check and book, the **Appointment length**, and the **CRM** the **Find CRM Contact** tool looks customers up in. See [Contact memory and integrations](contact-memory-and-integrations.md#integrations). |
 
 A user can only use a tool their role is allowed to use, even when the profile has it. See [Who can use tools](tools-and-agents.md#who-can-use-tools).
 

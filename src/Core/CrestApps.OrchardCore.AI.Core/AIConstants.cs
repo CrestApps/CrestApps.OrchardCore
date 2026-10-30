@@ -68,8 +68,6 @@ public static class AIConstants
         public const string Webhooks = "CrestApps.OrchardCore.AI.Webhooks";
 
         public const string CustomLlm = "CrestApps.OrchardCore.AI.CustomLlm";
-
-        public const string Integrations = "CrestApps.OrchardCore.AI.Integrations";
     }
 
     /// <summary>
