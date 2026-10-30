@@ -28,6 +28,12 @@ public sealed class CalendarOptions
     public int MaxQueryDays { get; set; } = 400;
 
     /// <summary>
+    /// Gets or sets how many minutes before the start new events that take time remind their people, unless their event type
+    /// says otherwise; a negative number for no reminder. All-day events have none.
+    /// </summary>
+    public int DefaultReminderMinutes { get; set; } = 10;
+
+    /// <summary>
     /// Gets the calendar type with the given name, adding it when it isn't registered yet, so a feature can extend a type
     /// another feature registered.
     /// </summary>

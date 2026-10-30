@@ -57,6 +57,12 @@ public sealed class CalendarEventTypeDescriptor
     public int DefaultDurationMinutes { get; set; } = 60;
 
     /// <summary>
+    /// Gets or sets how many minutes before the start new events of the type remind their people; <see langword="null"/> for
+    /// <see cref="CalendarOptions.DefaultReminderMinutes"/>, and a negative number for no reminder.
+    /// </summary>
+    public int? DefaultReminderMinutes { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a new event of the type waits for approval: it is created tentative and someone who can manage the
     /// calendar confirms it.
     /// </summary>

@@ -48,6 +48,18 @@ public sealed class CalendarEventTypeBuilder
     }
 
     /// <summary>
+    /// Sets how many minutes before the start new events of the type remind their people.
+    /// </summary>
+    /// <param name="minutes">The minutes, one of <see cref="CalendarReminders.Choices"/>; a negative number for no reminder.</param>
+    /// <returns>The builder.</returns>
+    public CalendarEventTypeBuilder RemindBefore(int minutes)
+    {
+        Descriptor.DefaultReminderMinutes = minutes;
+
+        return this;
+    }
+
+    /// <summary>
     /// Makes new events of the type take time.
     /// </summary>
     /// <returns>The builder.</returns>

@@ -86,7 +86,8 @@ public sealed class CalendarReminderService
             }
         }
 
-        var maxOffset = offsets.Count == 0 ? TimeSpan.Zero : offsets.Max();
+        // An event's own reminders count too, so the window reaches as far as the longest one an event can have.
+        var maxOffset = TimeSpan.FromMinutes(Math.Max(CalendarReminders.MaxMinutes, offsets.Count == 0 ? 0 : offsets.Max().TotalMinutes));
         var occurrences = await _queryService.GetOccurrencesAsync(new CalendarOccurrenceQuery
         {
             AllCalendars = true,
@@ -99,7 +100,11 @@ public sealed class CalendarReminderService
 
         foreach (var occurrence in occurrences.Where(occurrence => !string.IsNullOrEmpty(occurrence.Event.ItemId)))
         {
-            foreach (var offset in offsets)
+            var eventOffsets = occurrence.Event.ReminderMinutes
+                .Where(CalendarReminders.IsChoice)
+                .Select(minutes => TimeSpan.FromMinutes(minutes));
+
+            foreach (var offset in offsets.Union(eventOffsets))
             {
                 var due = occurrence.StartUtc - offset;
 

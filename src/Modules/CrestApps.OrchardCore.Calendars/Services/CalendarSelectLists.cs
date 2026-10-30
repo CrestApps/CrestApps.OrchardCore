@@ -68,6 +68,34 @@ internal static class CalendarSelectLists
     }
 
     /// <summary>
+    /// Builds the reminder list: none, or one of <see cref="CalendarReminders.Choices"/>.
+    /// </summary>
+    /// <param name="S">The string localizer.</param>
+    /// <param name="selected">The selected value.</param>
+    /// <returns>The options.</returns>
+    public static List<SelectListItem> Reminders(IStringLocalizer S, string selected)
+    {
+        var options = new List<SelectListItem> { new(S["No reminder"], string.Empty) };
+
+        foreach (var minutes in CalendarReminders.Choices)
+        {
+            var text = minutes switch
+            {
+                0 => S["When it starts"],
+                < 60 => S["{0} minutes before", minutes],
+                60 => S["1 hour before"],
+                < 1440 => S["{0} hours before", minutes / 60],
+                _ => S["1 day before"],
+            };
+            var value = minutes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            options.Add(new SelectListItem(text, value, value == selected));
+        }
+
+        return options;
+    }
+
+    /// <summary>
     /// Builds the busy/free list.
     /// </summary>
     /// <param name="S">The string localizer.</param>

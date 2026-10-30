@@ -18,6 +18,11 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
     /// </summary>
     public const string ViewStyle = "CrestApps.OrchardCore.Calendars.View";
 
+    /// <summary>
+    /// The script that shows the calendar reminders on every admin page.
+    /// </summary>
+    public const string RemindersScript = "CrestApps.OrchardCore.Calendars.Reminders";
+
     private static readonly ResourceManifest _manifest;
 
     static CalendarResourceConfiguration()
@@ -30,6 +35,13 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-view.min.js",
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-view.js")
             .SetDependencies("fullcalendar")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript(RemindersScript)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Calendars/scripts/calendar-reminders.min.js",
+                "~/CrestApps.OrchardCore.Calendars/scripts/calendar-reminders.js")
             .SetVersion("1.0.0");
 
         _manifest

@@ -69,6 +69,23 @@ public class CalendarEventGeneralViewModel
     public string Transparency { get; set; }
 
     /// <summary>
+    /// Gets or sets how many minutes before the start the event reminds its people, or empty for no reminder.
+    /// </summary>
+    public string ReminderMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether reminders are on, so the reminder can be chosen.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool RemindersEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reminders to choose from.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<SelectListItem> ReminderOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets who sees the details.
     /// </summary>
     public string Visibility { get; set; }

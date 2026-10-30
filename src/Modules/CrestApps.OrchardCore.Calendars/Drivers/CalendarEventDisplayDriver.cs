@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Calendars.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -25,6 +26,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
     private readonly ICalendarTypeManager _typeManager;
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly IClock _clock;
+    private readonly IShellFeaturesManager _shellFeaturesManager;
 
     internal readonly IStringLocalizer S;
 
@@ -33,12 +35,14 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         ICalendarTypeManager typeManager,
         IStringLocalizerFactory localizerFactory,
         IClock clock,
+        IShellFeaturesManager shellFeaturesManager,
         IStringLocalizer<CalendarEventDisplayDriver> stringLocalizer)
     {
         _calendarService = calendarService;
         _typeManager = typeManager;
         _localizerFactory = localizerFactory;
         _clock = clock;
+        _shellFeaturesManager = shellFeaturesManager;
         S = stringLocalizer;
     }
 
@@ -47,6 +51,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         var calendar = await _calendarService.FindByIdAsync(calendarEvent.CalendarId);
         var type = calendar is null ? null : _typeManager.FindType(calendar.Type);
         var eventTypes = calendar is null ? [] : _typeManager.ListEventTypes(calendar.Type);
+        var remindersEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(CalendarsConstants.Features.Reminders);
 
         return Initialize<CalendarEventGeneralViewModel>("CalendarEventGeneral_Edit", model =>
         {
@@ -69,6 +74,8 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
             model.Description = calendarEvent.Description;
             model.Status = calendarEvent.Status.ToString();
             model.Transparency = calendarEvent.Transparency.ToString();
+            model.ReminderMinutes = calendarEvent.ReminderMinutes.Count > 0 ? calendarEvent.ReminderMinutes[0].ToString(CultureInfo.InvariantCulture) : string.Empty;
+            model.RemindersEnabled = remindersEnabled;
             model.Visibility = calendarEvent.Visibility.ToString();
             model.UseColor = !string.IsNullOrEmpty(calendarEvent.Color);
             model.Color = calendarEvent.Color ?? _typeManager.FindEventType(calendar?.Type, calendarEvent.EventType)?.Color ?? calendar?.Color ?? "#1971c2";
@@ -80,6 +87,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
             model.TimeZoneOptions = CalendarSelectLists.TimeZones(_clock, calendarEvent.TimeZoneId);
             model.StatusOptions = CalendarSelectLists.Statuses(S);
             model.TransparencyOptions = CalendarSelectLists.Transparencies(S);
+            model.ReminderOptions = CalendarSelectLists.Reminders(S, model.ReminderMinutes);
             model.VisibilityOptions = CalendarSelectLists.EventVisibilities(S);
         }).Location("Content:1%General;1");
     }
@@ -105,6 +113,14 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         if (Enum.TryParse<CalendarEventStatus>(model.Status, out var status))
         {
             calendarEvent.Status = status;
+        }
+
+        // Without Calendar Reminders the field isn't shown, so the event keeps what it had.
+        if (await _shellFeaturesManager.IsFeatureEnabledAsync(CalendarsConstants.Features.Reminders))
+        {
+            calendarEvent.ReminderMinutes = int.TryParse(model.ReminderMinutes, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes) && CalendarReminders.IsChoice(minutes)
+                ? [minutes]
+                : [];
         }
 
         if (Enum.TryParse<CalendarTransparency>(model.Transparency, out var transparency))

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -31,6 +32,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly CalendarOptions _options;
 
     internal readonly IStringLocalizer S;
 
@@ -59,6 +61,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
         ISiteService siteService,
         IClock clock,
         ILogger<DefaultCalendarEventManager> logger,
+        IOptions<CalendarOptions> options,
         IStringLocalizer<DefaultCalendarEventManager> stringLocalizer)
     {
         _eventStore = eventStore;
@@ -71,6 +74,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
         _siteService = siteService;
         _clock = clock;
         _logger = logger;
+        _options = options.Value;
         S = stringLocalizer;
     }
 
@@ -93,6 +97,9 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
             TimeZoneId = timeZoneId,
             AllDay = descriptor.AllDayByDefault,
             Transparency = descriptor.DefaultTransparency,
+            ReminderMinutes = !descriptor.AllDayByDefault && CalendarReminders.IsChoice(descriptor.DefaultReminderMinutes ?? _options.DefaultReminderMinutes)
+                ? [descriptor.DefaultReminderMinutes ?? _options.DefaultReminderMinutes]
+                : [],
             Status = descriptor.RequiresApproval ? CalendarEventStatus.Tentative : CalendarEventStatus.Confirmed,
         };
 

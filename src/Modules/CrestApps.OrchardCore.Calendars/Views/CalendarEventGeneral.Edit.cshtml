@@ -85,6 +85,17 @@
     </div>
 </div>
 
+@if (Model.RemindersEnabled)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="ReminderMinutes" class="ocat-label">@T["Remind"]</label>
+        <div class="ocat-end">
+            <select asp-for="ReminderMinutes" asp-items="Model.ReminderOptions" class="form-select" style="max-width: 16rem"></select>
+            <span class="hint">@T["Shows a reminder on the screen of the calendar's owner and the users invited, until they dismiss it."]</span>
+        </div>
+    </div>
+}
+
 <div class="ocat-wrapper">
     <label asp-for="Transparency" class="ocat-label">@T["Show as"]</label>
     <div class="ocat-end">

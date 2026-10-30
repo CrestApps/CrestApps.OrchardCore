@@ -91,6 +91,12 @@ public sealed class CalendarEvent : CatalogItem
     public string Color { get; set; }
 
     /// <summary>
+    /// Gets or sets how many minutes before the start the event's people are reminded (with Calendar Reminders on); empty for
+    /// no reminder. The people are the owner of a personal calendar and the users invited who haven't declined.
+    /// </summary>
+    public IList<int> ReminderMinutes { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the people and resources invited to the event.
     /// </summary>
     public IList<CalendarAttendee> Attendees { get; set; } = [];

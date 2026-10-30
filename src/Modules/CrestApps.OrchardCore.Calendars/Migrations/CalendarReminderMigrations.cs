@@ -22,4 +22,23 @@ internal sealed class CalendarReminderMigrations : DataMigration
 
         return 1;
     }
+
+    // The reminders shown to users, one per person an event reminds.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<CalendarUserReminderIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("UserId", column => column.WithLength(26))
+            .Column<bool>("Dismissed")
+            .Column<DateTime>("CreatedUtc"),
+            collection: CalendarsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<CalendarUserReminderIndex>(table =>
+        {
+            table.CreateIndex("IDX_CalendarUserReminderIndex_User", "UserId", "Dismissed", "CreatedUtc");
+            table.CreateIndex("IDX_CalendarUserReminderIndex_ItemId", "ItemId");
+        }, collection: CalendarsConstants.CollectionName);
+
+        return 2;
+    }
 }
