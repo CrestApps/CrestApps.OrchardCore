@@ -46,6 +46,10 @@ The video above shows an administrator indexing content, creating the knowledge 
 
 The User Manual page [Knowledge](../../user-manual/ai/knowledge.md) has a screencast of the full Elasticsearch-backed RAG flow: reviewing the **Articles** content index and the **AI RAG Knowledge Base** index, creating an **AI Data Source** that maps the Articles index to the knowledge base, syncing the embeddings, creating an AI profile that is **restricted to the indexed data**, and asking a question that is answered strictly from the indexed articles with the source article as a linked reference. The same page describes every field of the data source editor and of the profile's **Knowledge** tab.
 
+<YouTube video="ai-data-sources-external" title="Video of the Elasticsearch, Azure AI Search and PostgreSQL data sources" />
+
+The video above shows the external source types: an Elasticsearch data source from the first field to a real answer, and the Azure AI Search and PostgreSQL forms.
+
 The data source list now follows the deployments-style creation flow. **Add Data Source** opens a modal that lists the available source types. Built-in options include:
 
 - **Search Index Profile** — the existing Orchard-managed source-index flow
