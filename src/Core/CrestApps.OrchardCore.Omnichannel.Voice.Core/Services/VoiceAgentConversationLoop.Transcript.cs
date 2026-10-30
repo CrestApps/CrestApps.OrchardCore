@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.AI;
@@ -45,6 +46,12 @@ public sealed partial class VoiceAgentConversationLoop
 
         session.LastActivityUtc = now;
         await _chatSessionManager.SaveAsync(session, cancellationToken);
+
+        await _turnNotifier.NotifyAsync(
+            session,
+            role == ChatRole.User ? AIConversationTurn.CustomerRole : AIConversationTurn.AssistantRole,
+            content?.Replace(HangupMarker, string.Empty),
+            cancellationToken);
     }
 
     /// <summary>

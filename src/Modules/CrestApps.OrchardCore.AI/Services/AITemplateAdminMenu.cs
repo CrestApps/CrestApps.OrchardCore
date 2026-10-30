@@ -1,4 +1,7 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -28,6 +31,28 @@ public sealed class AITemplateAdminMenu : AdminNavigationProvider
                     .AddClass("ai-templates")
                     .Id("aiTemplates")
                     .Action("Index", "AITemplates", AIConstants.Feature.Area)
+                    .Permission(AIPermissions.ManageAIProfileTemplates)
+                    .LocalNav()
+                )
+                .Add(S["Speaking Styles"], S["Speaking Styles"].PrefixPosition(), styles => styles
+                    .AddClass("ai-speaking-styles")
+                    .Id("aiSpeakingStyles")
+                    .Action("Index", "AITemplates", new RouteValueDictionary
+                    {
+                        { "area", AIConstants.Feature.Area },
+                        { "category", AISpeakingStyles.Category },
+                    })
+                    .Permission(AIPermissions.ManageAIProfileTemplates)
+                    .LocalNav()
+                )
+                .Add(S["Guardrail Topics"], S["Guardrail Topics"].PrefixPosition(), topics => topics
+                    .AddClass("ai-guardrail-topics")
+                    .Id("aiGuardrailTopics")
+                    .Action("Index", "AITemplates", new RouteValueDictionary
+                    {
+                        { "area", AIConstants.Feature.Area },
+                        { "category", AIGuardrailTopics.Category },
+                    })
                     .Permission(AIPermissions.ManageAIProfileTemplates)
                     .LocalNav()
                 )

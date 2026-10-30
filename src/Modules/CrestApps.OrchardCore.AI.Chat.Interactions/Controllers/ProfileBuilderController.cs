@@ -423,6 +423,69 @@ public sealed class ProfileBuilderController : Controller
     }
 
     /// <summary>
+    /// Saves how the session runs simulated conversations.
+    /// </summary>
+    /// <param name="id">The session identifier.</param>
+    /// <param name="request">The simulation settings.</param>
+    [HttpPost]
+    public async Task<IActionResult> SimulationSettings(string id, [FromBody] ProfileBuilderSimulationSettings request)
+    {
+        var (session, interaction, denied) = await LoadAsync(id);
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        if (request is null)
+        {
+            return BadRequest();
+        }
+
+        session.SimulationSettings = ProfileBuilderSimulator.Normalize(request);
+        await _builderService.SaveAsync(session);
+
+        return Json(new { succeeded = true, state = await BuildStateAsync(session, interaction) });
+    }
+
+    /// <summary>
+    /// Runs one round of simulated conversations against the current instructions, and has the coach rewrite them
+    /// when a conversation fails. The page calls it again with the run until the run is finished.
+    /// </summary>
+    /// <param name="id">The session identifier.</param>
+    /// <param name="runId">The run to continue, or <see langword="null"/> to start one.</param>
+    /// <param name="simulator">The simulator.</param>
+    [HttpPost]
+    public async Task<IActionResult> Simulate(string id, string runId, [FromServices] ProfileBuilderSimulator simulator)
+    {
+        var (session, interaction, denied) = await LoadAsync(id);
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var round = await simulator.RunRoundAsync(session, interaction, runId, HttpContext.RequestAborted);
+
+        if (round.Error is not null)
+        {
+            return Json(new { succeeded = false, error = round.Error, finished = true });
+        }
+
+        return Json(new
+        {
+            succeeded = true,
+            round.RunId,
+            round.Round,
+            round.AllPassed,
+            round.Finished,
+            revisionNumber = round.Revision?.Number,
+            revisionSummary = round.Revision?.Summary,
+            state = await BuildStateAsync(session, interaction),
+        });
+    }
+
+    /// <summary>
     /// Saves the session's own settings: the opening instruction and the coach deployment.
     /// </summary>
     /// <param name="id">The session identifier.</param>
@@ -581,6 +644,21 @@ public sealed class ProfileBuilderController : Controller
                 revision.FeedbackId,
                 revision.CreatedUtc,
                 revision.Settings,
+            }),
+            simulationSettings = ProfileBuilderSimulator.Normalize(session.SimulationSettings),
+            simulations = session.Simulations.Select(simulation => new
+            {
+                simulation.RunId,
+                simulation.Round,
+                simulation.RevisionNumber,
+                simulation.Scenario,
+                simulation.Score,
+                simulation.Passed,
+                simulation.Summary,
+                simulation.Problems,
+                simulation.Error,
+                simulation.CreatedUtc,
+                transcript = simulation.Transcript.Select(turn => new { turn.Role, turn.Text }),
             }),
             lastReplay = session.LastReplay is null ? null : new
             {

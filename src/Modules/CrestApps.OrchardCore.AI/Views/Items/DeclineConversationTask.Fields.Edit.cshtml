@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model DeclineConversationTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label class="ocat-label" asp-for="Reason">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Reason" />
+        <span asp-validation-for="Reason"></span>
+        <span class="hint">@T["Optional. Why the conversation is declined, kept on the record. Liquid is supported. An outbound call or text is not sent, and an inbound call is refused."]</span>
+    </div>
+</div>

@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -13,6 +14,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -29,8 +31,13 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly ISession _session;
+    private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
+    private readonly IAIVoiceCallCommands _voiceCallCommands;
+    private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IShellHost _shellHost;
+    private readonly ShellSettings _shellSettings;
 
     /// <summary>
     /// The length of one ambience frame, in milliseconds. Matches the packet size a phone call is carried in.
@@ -231,22 +238,37 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="promptStore">The transcript store.</param>
     /// <param name="chatSessionManager">The chat session manager.</param>
     /// <param name="session">The document session, flushed after each turn so the call does not hold a write transaction open.</param>
+    /// <param name="conversationContextFactory">Describes the call as a conversation for the system message, tools and workflows.</param>
+    /// <param name="voiceCallCommands">Delivers a supervisor's notes to the session holding the call.</param>
+    /// <param name="turnNotifier">Tells the conversation turn handlers about each saved turn.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="shellHost">The shell host, which gives the guardrail check a scope of its own.</param>
+    /// <param name="shellSettings">The tenant the call belongs to.</param>
     public RealtimeVoiceConversationRunner(
         IRealtimeOrchestrator orchestrator,
         IContactCenterVoiceMediaProviderResolver mediaResolver,
         IAIChatSessionPromptStore promptStore,
         IAIChatSessionManager chatSessionManager,
         ISession session,
+        IOmnichannelConversationContextFactory conversationContextFactory,
+        IAIVoiceCallCommands voiceCallCommands,
+        IAIConversationTurnNotifier turnNotifier,
         IClock clock,
-        ILogger<RealtimeVoiceConversationRunner> logger)
+        ILogger<RealtimeVoiceConversationRunner> logger,
+        IShellHost shellHost = null,
+        ShellSettings shellSettings = null)
     {
+        _shellHost = shellHost;
+        _shellSettings = shellSettings;
         _orchestrator = orchestrator;
         _mediaResolver = mediaResolver;
         _promptStore = promptStore;
         _chatSessionManager = chatSessionManager;
         _session = session;
+        _conversationContextFactory = conversationContextFactory;
+        _voiceCallCommands = voiceCallCommands;
+        _turnNotifier = turnNotifier;
         _clock = clock;
         _logger = logger;
     }
@@ -266,6 +288,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // ending it and handing it to a person. Refused meant the call fell back to the turn-based loop, so the
         // symptom was not an error on the line but an assistant that could not hear the caller while it spoke.
         using var invocationScope = AIInvocationScope.Begin();
+
+        // The conversation, current for the whole call: the system message is rendered with its values and the
+        // profile's tools read the caller, the contact and the variables from it.
+        using var conversationScope = AIConversationScope.Begin(context.Activity is null
+            ? new AIConversationContext { Channel = AIConversationChannels.Phone, Session = context.Session, Profile = context.Profile }
+            : await _conversationContextFactory.CreateAsync(context.Activity, context.Session, context.Profile, cancellationToken));
 
         // Which call this is, from the call itself, for the tools the profile gives the session.
         PutCallIdentity(AIInvocationScope.Current?.Items, context.Activity);
@@ -312,6 +340,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // session is lost with the caller still there it is replaced, and everything that talks to the model reads
         // it from here rather than keeping the one it started with.
         await using var live = new LiveConversation(first, callScope.Token);
+
+        // A supervisor's note reaches the session holding the call, which acts on it at the next quiet moment.
+        using var supervisorNotes = context.Activity is null
+            ? null
+            : _voiceCallCommands.Register(context.Activity.ItemId, command => AcceptSupervisorNoteAsync(live, command, callScope.Token));
 
         // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
         _meter?.Start(answeredTicks);
@@ -498,9 +531,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 }
 
                 var now = DateTime.UtcNow.Ticks;
+
+                // A caller turn the provider opened and has not committed is the caller talking now. Live, a caller
+                // ten seconds into a long question was asked whether they were still there.
                 var quietFor = now - Math.Max(
-                    Interlocked.Read(ref _lastAssistantAudioTicks),
-                    Interlocked.Read(ref _lastCallerSpeechTicks));
+                    Math.Max(Interlocked.Read(ref _lastAssistantAudioTicks), Interlocked.Read(ref _lastCallerSpeechTicks)),
+                    ProviderHeardCallerTicks(now));
 
                 // No session to ask while one that was lost is being replaced; the replacement speaks first anyway.
                 var conversation = live.Current;

@@ -1,0 +1,36 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.Models
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model AICallActionTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Action">
+    <label class="ocat-label ocat-label-required" asp-for="Action">@T["Action"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Action">
+            <option value="@AICallActions.Message">@T["Message the AI"]</option>
+            <option value="@AICallActions.TakeOver">@T["Hand the call to an agent"]</option>
+            <option value="@AICallActions.TransferToNumber">@T["Transfer the call to a phone number"]</option>
+            <option value="@AICallActions.SwitchProfile">@T["Answer with another AI profile"]</option>
+            <option value="@AICallActions.End">@T["End the call"]</option>
+        </select>
+        <span asp-validation-for="Action"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Value">
+    <label class="ocat-label" asp-for="Value">@T["Value"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Value" />
+        <span asp-validation-for="Value"></span>
+        <span class="hint">@T["Liquid is supported. For <strong>Message the AI</strong>, the note; for <strong>Hand the call to an agent</strong>, the agent's user name; for <strong>Transfer</strong>, the phone number with its country code; for <strong>Answer with another AI profile</strong>, the profile's identifier. Leave it empty to end the call."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ActivityId">
+    <label class="ocat-label ocat-label-required" asp-for="ActivityId">@T["Call"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ActivityId" />
+        <span asp-validation-for="ActivityId"></span>
+        <span class="hint">@T["A Liquid expression resolving the call's activity. The default, <code>{{ Workflow.Input.ActivityId }}</code>, is the call an AI conversation event or an AI tool was raised for. Another AI profile can take over turn-based calls only."]</span>
+    </div>
+</div>

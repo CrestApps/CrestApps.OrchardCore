@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Chat.Handlers;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -48,6 +49,9 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 
         foreach (var field in changeSet.NewFields)
         {
+            // What the AI captured is a conversation variable too, so the next tool call and the workflows read it.
+            context.ChatSession.SetConversationVariable(field.FieldName, ToVariableValue(field.Value));
+
             await TriggerFieldExtractedEventAsync(context, field, now);
         }
 
@@ -58,6 +62,16 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
             await TriggerSessionClosedEventAsync(context, context.ChatSession.ClosedAtUtc ?? now);
         }
     }
+
+    // An extracted value as a conversation variable: text as is, and several values as a comma-separated list.
+    private static string ToVariableValue(object value)
+        => value switch
+        {
+            null => null,
+            string text => text,
+            IEnumerable<string> values => string.Join(", ", values),
+            _ => value.ToString(),
+        };
 
     private async Task TriggerFieldExtractedEventAsync(
         ChatMessageCompletedContext context,
@@ -77,6 +91,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 { "IsMultiple", field.IsMultiple },
                 { "Timestamp", now },
             };
+
+            AIConversationTranscript.AddTo(input, context.ChatSession, prompts: null);
 
             await _workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionFieldExtractedEvent),
@@ -103,6 +119,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 { "Profile", context.Profile },
                 { "ClosedAtUtc", now },
             };
+
+            AIConversationTranscript.AddTo(input, context.ChatSession, context.Prompts);
 
             await _workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionClosedEvent),

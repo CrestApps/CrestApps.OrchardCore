@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIConversationStartingEventViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Channel">@T["Channel"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Channel" asp-items="Model.Channels">
+            <option value="">@T["Any channel"]</option>
+        </select>
+        <span class="hint">@T["Optionally run this workflow only for conversations on one channel."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ProfileId">@T["Profile"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+            <option value="">@T["Any profile"]</option>
+        </select>
+        <span class="hint">@T["Optionally run this workflow only for one AI profile. The conversation waits for the workflow: up to 3 seconds for a call or text the customer started, and up to 30 seconds for one we start. The workflow reads the conversation from <code>Workflow.Input</code>, for example <code>CustomerAddress</code>, <code>ContactName</code> or <code>Variables</code>."]</span>
+    </div>
+</div>

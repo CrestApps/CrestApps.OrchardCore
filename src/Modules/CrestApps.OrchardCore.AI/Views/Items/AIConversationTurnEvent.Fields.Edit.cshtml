@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIConversationTurnEventViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Role">@T["Turns"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Role" asp-items="Model.Roles">
+            <option value="">@T["Both sides"]</option>
+        </select>
+        <span class="hint">@T["Which turns start the workflow. The turn is in <code>Workflow.Input.Text</code> and who said it in <code>Workflow.Input.Role</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Channel">@T["Channel"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Channel" asp-items="Model.Channels">
+            <option value="">@T["Any channel"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ProfileId">@T["Profile"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+            <option value="">@T["Any profile"]</option>
+        </select>
+        <span class="hint">@T["The workflow runs between turns while the conversation is going on, so keep it short: a slow one delays the AI's next reply."]</span>
+    </div>
+</div>

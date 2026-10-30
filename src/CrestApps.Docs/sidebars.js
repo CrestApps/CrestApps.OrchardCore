@@ -69,6 +69,10 @@ const sidebars = {
                 'user-manual/ai/memory',
                 'user-manual/ai/analytics',
                 'user-manual/ai/workflows',
+                'user-manual/ai/conversation-workflows',
+                'user-manual/ai/conversation-quality',
+                'user-manual/ai/contact-memory-and-integrations',
+                'user-manual/ai/speaking-style-guardrails-and-privacy',
             ],
         },
         {
@@ -258,6 +262,11 @@ const sidebars = {
                 'ai/realtime-voice',
                 'ai/file-sources',
                 'ai/workflows',
+                'ai/conversation-workflows',
+                'ai/conversation-quality',
+                'ai/contact-memory-and-integrations',
+                'ai/speaking-style-guardrails-and-privacy',
+                'ai/conversations-api',
                 {
                     type: 'category',
                     label: 'A2A (Agent-to-Agent)',
