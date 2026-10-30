@@ -18,6 +18,22 @@
 		return labels;
 	}
 	/**
+	* Builds a safe same-origin navigation URL with query parameters.
+	* @param {string} candidate
+	* @param {string} queryString
+	* @returns {string}
+	*/
+	function toSafeNavigationUrl(candidate, queryString) {
+		try {
+			const url = new URL(candidate || "", window.location.origin);
+			if (!(url.protocol === "http:" || url.protocol === "https:") || url.origin !== window.location.origin) return "#";
+			url.search = queryString;
+			return url.toString();
+		} catch {
+			return "#";
+		}
+	}
+	/**
 	* Formats a date as yyyy-MM-dd in local time.
 	* @param {Date} date
 	* @returns {string}
@@ -232,8 +248,8 @@
 				}
 				if (shown.length === 1) {
 					params.set("calendarId", shown[0]);
-					window.location.href = `${config.createUrl}?${params.toString()}`;
-				} else window.location.href = `${config.chooseUrl}?${params.toString()}`;
+					window.location.href = toSafeNavigationUrl(config.createUrl, params.toString());
+				} else window.location.href = toSafeNavigationUrl(config.chooseUrl, params.toString());
 			},
 			eventDrop: (info) => move(info),
 			eventResize: (info) => move(info)
