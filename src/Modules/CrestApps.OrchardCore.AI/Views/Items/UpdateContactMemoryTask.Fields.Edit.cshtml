@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model UpdateContactMemoryTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="SessionId">
+    <label class="ocat-label ocat-label-required" asp-for="SessionId">@T["Conversation"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control font-monospace" asp-for="SessionId" />
+        <span asp-validation-for="SessionId"></span>
+        <span class="hint">@T["A Liquid expression for the AI session to remember. The default is the session the AI Chat Session Closed or Post-Processed event was raised for."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ContactId">@T["Contact"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control font-monospace" asp-for="ContactId" />
+        <span class="hint">@T["Optional. A Liquid expression for the contact's content item ID. Leave it empty for the contact the call or text was with. The new note is in <code>Workflow.Output.ContactMemory</code>."]</span>
+    </div>
+</div>

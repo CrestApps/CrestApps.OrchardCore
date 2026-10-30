@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Handlers;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Handlers;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -70,6 +71,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 { "Results", context.ChatSession.PostSessionResults },
                 { "Timestamp", _clock.UtcNow },
             };
+
+            AIConversationTranscript.AddTo(input, context.ChatSession, context.Prompts);
 
             await _workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionPostProcessedEvent),

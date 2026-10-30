@@ -2,11 +2,11 @@
   "name": "crestapps.orchardcore.resources",
   "private": true,
   "devDependencies": {
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "easymde": "2.21.0",
     "flatpickr": "4.6.13",
     "highlight.js": "^11.12.0",
-    "marked": "^18.1.0"
+    "marked": "^18.1.1"
   },
   "dependencies": {
     "@crestapps/ai-chat-ui": "2.0.0-preview.226",
@@ -14,7 +14,7 @@
     "@sapphi-red/web-noise-suppressor": "0.4.1",
     "@telnyx/webrtc": "2.27.10",
     "chart.js": "^4.5.1",
-    "intl-tel-input": "^29.5.3",
+    "intl-tel-input": "^29.5.5",
     "medium-zoom": "1.1.0",
     "sip.js": "0.21.2"
   }

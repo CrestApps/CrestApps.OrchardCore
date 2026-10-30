@@ -78,6 +78,14 @@ Extra fields on **Try Again** and **New Activity**:
 | **Assign to user** | The owner when **Specific owner** is chosen. Required then. |
 | **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
 
+## When no contact matches the caller
+
+The actions act on the activity's contact, so they run only once it has one. On an inbound call from a number that matches no contact, or more than one, the agent picks the contact on the Complete page.
+
+A call the AI concludes on its own has nobody to pick the contact, so its **New Activity** actions run anyway: the new activity carries the caller's number and the unmatched contact to its owner, who can match it there. The other actions do not run, since each needs the contact. This is how a message an AI call takes from a new caller reaches the person who calls back.
+
 ## What the agent sees
 
 When the agent picks a disposition on the Complete page, a preview lists the actions that will run, with a **Schedule at** date and **Preparation notes** for each follow-up. The notes become the instructions of the new activity. See [Activities](activities.md#complete-an-activity).
+
+A call the AI concludes on its own has no Complete page, so a **New Activity** it creates takes the AI's summary of the call as its instructions: the follow-up's owner reads what the call was about, and the message when the caller left one.
