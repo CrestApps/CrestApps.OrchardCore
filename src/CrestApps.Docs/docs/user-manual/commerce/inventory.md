@@ -18,6 +18,10 @@ technical_manual:
 
 ## Start counting a product
 
+This video walks through counting stock, changing it, importing counts, locations, purchase orders and what shoppers see:
+
+<YouTube video="inventory" title="Video overview of inventory" />
+
 Stock is counted for content types that have the **Inventory** part:
 
 1. Under **Design > Content Definition > Content Types**, edit your product type and add the **Inventory** part.
@@ -48,6 +52,8 @@ Each line shows:
 
 ## Change stock
 
+<YouTube video="inventory" title="Video of receiving, adjusting and counting stock" start={120} end={169} />
+
 Open a line to change it. Each change needs only a number and, if you like, a reason:
 
 - **Received** records stock that arrived, such as a delivery. Enter how many came in.
@@ -59,6 +65,8 @@ The history lists every change, newest first, with when it happened, what it was
 Two people changing the same line at once can't overwrite each other: the second is asked to try again.
 
 ## Stock in several locations
+
+<YouTube video="inventory" title="Video of the inventory settings and locations" start={232} end={274} />
 
 Keep stock in more than one place, such as a warehouse and a shop, under **Settings > Commerce > Inventory**, **Locations**:
 
@@ -79,7 +87,11 @@ The list and the labels shoppers see count every location together.
 
 ## Order stock from suppliers
 
+<<<<<<< HEAD
 <YouTube video="purchase-orders-and-stock-alerts" title="Starting a purchase order from low stock" start={84} end={115} />
+=======
+<YouTube video="inventory" title="Video of a purchase order" start={274} end={323} />
+>>>>>>> origin/videos/inventory-docs
 
 With the **Purchase Orders** feature on, **Commerce > Purchase orders** keeps the stock you order from suppliers, and receives it into a location.
 
@@ -95,6 +107,8 @@ When stock arrives, enter what came under **Arrived now**, and click **Receive w
 The supplier isn't emailed: send them the order yourself.
 
 ## Export and import counts
+
+<YouTube video="inventory" title="Video of importing counts from a CSV file" start={169} end={201} />
 
 **Export CSV** downloads every product and variant counted, one per line, with its **Sku**, **Title**, **ContentItemId**, **VariantId**, **OnHand**, **Reserved**, **Available** and **LowStockThreshold**. It opens in any spreadsheet program.
 
@@ -120,6 +134,8 @@ With **Workflows** enabled, the **Low Stock** event starts a workflow at the sam
 With **Product Listing** enabled, a listing can offer an **In stock** filter that shows only products some of which can be bought now. A product with variants is in stock when any variant is. A product on backorder isn't, and a product you don't count always is. Listings that offer every filter show it on their own; for a listing whose filters you chose, tick **In stock** under **Choose filters**. A product that sells out leaves the filtered list right away, and comes back when you receive more.
 
 ## What shoppers see
+
+<YouTube video="inventory" title="Video of low stock and out of stock on the shop" start={323} end={339} />
 
 On product pages and listing cards, under the **Add to cart** button, shoppers see one of these:
 
