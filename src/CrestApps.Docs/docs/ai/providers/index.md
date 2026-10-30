@@ -11,6 +11,10 @@ user_manual:
 
 AI providers are modules that connect the CrestApps AI infrastructure to specific AI services. Each provider knows how to create chat clients, embedding generators, image generators, and other provider-specific runtime services for its platform.
 
+<YouTube video="ai-connections-deployments" title="Video overview of connections, deployments and default models" />
+
+The video shows how an administrator adds a connection, adds deployments and chooses the default models in the admin.
+
 ## What Is a Provider?
 
 A provider is a module that implements the connection layer between CrestApps AI Services and a specific AI platform. Providers handle:
