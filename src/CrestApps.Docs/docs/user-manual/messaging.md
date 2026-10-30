@@ -76,6 +76,12 @@ You do not have to keep the inbox open to hear about new work.
 
 Browsing other admin pages does not count as being at the inbox: queues set to routed distribution only hand new conversations to agents whose **Inbox** is open.
 
+### Shared pool and routed distribution
+
+<YouTube video="messaging-routing-and-transfers" title="Video of how a queue hands out conversations" start={90} end={131} />
+
+The **Queue distribution** of a text entry point decides who is given a new conversation. With **Shared pool (claim to own)**, every agent of the queue sees it and the first to claim it owns it. With **Routed**, the conversation is pushed to one available agent whose inbox is open and who has the fewest conversations. If that agent does not pick it up within five minutes, it is routed to another agent; after two such re-routes it returns to the shared pool, so it is never lost.
+
 ### Send and receive attachments
 
 Each channel accepts its own kinds of files. SMS takes pictures (JPEG, PNG, GIF and WebP); hover over the attach button to see what the conversation's channel accepts. Anything else is refused.
@@ -102,6 +108,8 @@ Your favorites are your own, up to 100 customers; other agents do not see them.
 If the provider does not accept a message, it is tried again after 1, 5, 15 and 60 minutes before it is marked failed. A message refused because the customer opted out is marked failed at once, and the contact is marked **Do not SMS**.
 
 ## Transfer a conversation
+
+<YouTube video="messaging-routing-and-transfers" title="Video of transferring a conversation to a person and back to a queue" start={131} end={203} />
 
 Transferring keeps the same conversation, so its whole history goes with it. The customer is not told.
 
