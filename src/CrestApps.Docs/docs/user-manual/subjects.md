@@ -79,6 +79,8 @@ When the AI features are enabled, more settings appear:
 | **No-response timeout (minutes)**, **Response delay (seconds)**, **Opt-out keywords** | Inbound automated SMS | When to give up on a silent customer, the minimum pause before each reply, and the words that opt the customer out (STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT by default; one per line or separated by commas). |
 | **Allow the AI to hand off to a live agent**, **Handoff queue**, **Escalate when** | Inbound automated, and every outbound subject | Lets the AI pass the conversation to a person in the chosen queue when **The customer asks for a human**, **The customer is a qualified, ready lead**, or **The customer is frustrated or the AI cannot help**. Handoff only happens when a queue is picked and at least one condition is ticked. Handing off an SMS conversation needs the [Messaging workspace](messaging.md). |
 
+<YouTube video="omnichannel-ai-handoff" title="Video overview of live agent handoff: the queue, the subject settings and what the agent reads" />
+
 Only the settings that apply to the chosen direction, type and channel are shown. The AI settings change as soon as you change the direction, interaction type or channel. The **Live agent handoff** card follows the saved settings, so save after changing the direction or interaction type to show or hide it. Hidden settings keep their values, so switching back and forth loses nothing.
 
 The Subject Flows list shows a badge for each subject's direction, an **Automated** badge with the channel, and **Missing flow** until you add at least one action. Next, [configure the subject flow](subject-flows.md).
