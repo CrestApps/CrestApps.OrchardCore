@@ -99,6 +99,8 @@ Every intervention is audited under the supervisor's name: `SupervisorTookOver`,
 
 ## For contact center managers: inbound routing runbook
 
+<YouTube video="contact-center-entry-points-ivr" title="Video overview of inbound entry points: numbers, routing, closed hours, voicemail, personal lines, text entry points and cloning" />
+
 Before publishing a new inbound line, follow the User Manual's [Test a new number before you publish it](../user-manual/entry-points-and-ivr.md#test-a-new-number-before-you-publish-it) checklist: the channel endpoint, the queue and its business hours, the inbound entry point, then a test call with a signed-in agent while watching the Live dashboard. In addition:
 
 - Configure the Subject Flow for the endpoint so inbound activities get the right subject, campaign, disposition list, required-disposition policy, and follow-up subject actions.

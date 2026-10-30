@@ -12,6 +12,8 @@ user_manual:
 
 # Voice Routing Architecture
 
+<YouTube video="contact-center-entry-points-ivr" title="Video overview of inbound entry points, which decide how inbound calls and texts are routed" />
+
 This guide explains how the Contact Center routes **inbound** and **outbound** voice work, how it stays synchronized with the telephony server, and how it recovers when the Orchard Core application or tenant restarts.
 
 The key rule is constant across every flow:
