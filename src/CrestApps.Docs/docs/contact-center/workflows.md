@@ -12,6 +12,8 @@ The **Workflows** bridge exposes the Contact Center to the Orchard Core [Workflo
 
 The bridge is not a separate feature. Simply enable `OrchardCore.Workflows` alongside Contact Center and the event activity becomes available automatically. The task activities are additionally gated on the capability that owns the underlying service, so an activity only appears in the editor when its capability is enabled and its service is guaranteed to be resolvable.
 
+<YouTube video="omnichannel-workflows" title="Video overview of contact center and CRM workflows" />
+
 How to build a workflow in the designer, with worked examples (recording connected calls, texting a customer the dialer could not reach, texting from the agent's own number), is in [Contact Center Workflows](../user-manual/workflows.md) in the User Manual. The Omnichannel CRM feature adds a **Lead Converted** event and a **Convert Lead** task; see [Workflows](../omnichannel/crm.md#workflows) on the CRM page.
 
 ## Contact Center Event

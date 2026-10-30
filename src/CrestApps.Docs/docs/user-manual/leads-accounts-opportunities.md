@@ -237,6 +237,8 @@ When you export a lead type, **Leave out converted leads** is on by default, bec
 
 ## Automate with workflows
 
+<YouTube video="omnichannel-workflows" title="Video of the Lead Converted event and the Convert Lead task" start={268} end={294} />
+
 With the **Workflows** feature on, the CRM adds two activities under **Omnichannel CRM** in the workflow editor (see [Contact Center Workflows](workflows.md) for how to build a workflow):
 
 | Activity | What it does |
