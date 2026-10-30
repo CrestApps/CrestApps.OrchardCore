@@ -9,7 +9,9 @@
  * - posts feedback, then writes the rewritten settings into the settings panel so its autosave keeps them,
  * - for "feedback & regenerate", removes the rejected reply and the message it answered from the chat and sends
  *   that message again, so the new instructions answer it,
- * - shows the feedback ledger, the revision history and the replay results, and saves the result as a profile.
+ * - shows the feedback ledger, the revision history and the replay results, and saves the result as a profile,
+ * - runs simulated conversations round by round: each round is one request, and when the coach rewrote the
+ *   instructions after a round, the next round tests them, until the run is finished or the author stops it.
  */
 (function (window, document) {
     'use strict';
@@ -32,6 +34,8 @@
     var selectedIndex = null;
     var busy = false;
     var refreshTimer = null;
+    var simulationFormFilled = false;
+    var stopSimulation = false;
 
     function parseConfig(raw) {
         try {
@@ -262,6 +266,7 @@
             ? strings.regenerateOnlyLatest
             : regenerateButton.getAttribute('data-default-title');
         byId('pb-replay').disabled = busy;
+        byId('pb-sim-run').disabled = busy;
     }
 
     // ----- Settings panel -----
@@ -446,10 +451,206 @@
         });
     }
 
+    function fillSimulationForm() {
+        var settings = state && state.simulationSettings;
+
+        if (!settings || simulationFormFilled) {
+            return;
+        }
+
+        simulationFormFilled = true;
+        byId('pb-sim-scenarios').value = (settings.scenarios || []).join('\n\n');
+        byId('pb-sim-criteria').value = (settings.criteria || []).join('\n');
+        byId('pb-sim-customer-deployment').value = settings.customerDeploymentName || '';
+        byId('pb-sim-judge-deployment').value = settings.judgeDeploymentName || '';
+        byId('pb-sim-turns').value = settings.maxTurns;
+        byId('pb-sim-rounds').value = settings.rounds;
+        byId('pb-sim-passing-score').value = settings.passingScore;
+        byId('pb-sim-improve').checked = settings.improve !== false;
+    }
+
+    function readSimulationForm() {
+        var number = function (id, fallback) {
+            var value = parseInt(byId(id).value, 10);
+
+            return isNaN(value) ? fallback : value;
+        };
+
+        return {
+            scenarios: byId('pb-sim-scenarios').value.split(/\n\s*\n/).map(function (text) { return text.trim(); }).filter(Boolean),
+            criteria: byId('pb-sim-criteria').value.split('\n').map(function (text) { return text.trim(); }).filter(Boolean),
+            customerDeploymentName: byId('pb-sim-customer-deployment').value || null,
+            judgeDeploymentName: byId('pb-sim-judge-deployment').value || null,
+            maxTurns: number('pb-sim-turns', 8),
+            rounds: number('pb-sim-rounds', 3),
+            passingScore: number('pb-sim-passing-score', 70),
+            improve: byId('pb-sim-improve').checked,
+        };
+    }
+
+    function renderSimulations() {
+        var list = byId('pb-sim-results');
+        list.replaceChildren();
+
+        var simulations = (state && state.simulations) || [];
+
+        if (simulations.length === 0) {
+            list.appendChild(create('div', 'text-muted', strings.noSimulations));
+
+            return;
+        }
+
+        // Newest round first, so the latest results are on top.
+        simulations.slice().reverse().forEach(function (simulation) {
+            var tone = simulation.error ? 'is-feedback' : simulation.passed ? 'is-approved' : 'is-rejected';
+            var item = create('div', 'profile-builder-item ' + tone);
+            var header = create('div', 'd-flex justify-content-between align-items-center gap-2');
+            var title = create('span', 'fw-semibold', format(strings.round, simulation.round));
+
+            title.appendChild(create('span', 'badge text-bg-light ms-2', format(strings.revision, simulation.revisionNumber)));
+            header.appendChild(title);
+
+            if (!simulation.error) {
+                header.appendChild(create('span', 'badge ' + (simulation.passed ? 'text-bg-success' : 'text-bg-danger'),
+                    (simulation.passed ? strings.pass : strings.fail) + ' · ' + format(strings.score, simulation.score)));
+            }
+
+            item.appendChild(header);
+            item.appendChild(create('div', 'text-muted profile-builder-quote', truncate(simulation.scenario, 300)));
+
+            if (simulation.error) {
+                item.appendChild(create('div', 'text-danger', simulation.error));
+            }
+
+            if (simulation.summary) {
+                item.appendChild(create('div', '', simulation.summary));
+            }
+
+            if (simulation.problems && simulation.problems.length > 0) {
+                var problems = create('ul', 'mb-1 ps-3');
+
+                simulation.problems.forEach(function (problem) {
+                    problems.appendChild(create('li', '', problem));
+                });
+
+                item.appendChild(problems);
+            }
+
+            if (simulation.transcript && simulation.transcript.length > 0) {
+                var details = create('details', 'mt-1');
+                details.appendChild(create('summary', 'text-muted', strings.transcript));
+
+                simulation.transcript.forEach(function (turn) {
+                    var line = create('div', 'profile-builder-quote mb-1');
+                    var assistant = String(turn.role || '').toLowerCase() === 'assistant';
+
+                    line.appendChild(create('span', 'fw-semibold', (assistant ? strings.assistant : strings.customer) + ': '));
+                    line.appendChild(document.createTextNode(turn.text || ''));
+                    details.appendChild(line);
+                });
+
+                item.appendChild(details);
+            }
+
+            list.appendChild(item);
+        });
+    }
+
+    function setSimulationStatus(text, tone) {
+        setStatus('pb-sim-status', text, tone);
+    }
+
+    async function runSimulation() {
+        if (busy) {
+            return;
+        }
+
+        var form = readSimulationForm();
+
+        if (form.scenarios.length === 0) {
+            setSimulationStatus(strings.scenarioRequired, 'danger');
+
+            return;
+        }
+
+        busy = true;
+        stopSimulation = false;
+        updateButtons();
+        byId('pb-sim-stop').classList.remove('d-none');
+
+        var runId = null;
+        var round = 1;
+
+        try {
+            await flushSettings(getChatApp());
+
+            var saved = await request(config.urls.simulationSettings, 'POST', form);
+
+            if (!saved.succeeded) {
+                setSimulationStatus(saved.error || strings.error, 'danger');
+
+                return;
+            }
+
+            state = saved.state;
+
+            while (true) {
+                setSimulationStatus(format(strings.simulating, round), 'muted');
+
+                var url = config.urls.simulate + (runId ? (config.urls.simulate.indexOf('?') >= 0 ? '&' : '?') + 'runId=' + encodeURIComponent(runId) : '');
+                var result = await request(url, 'POST', {});
+
+                if (!result.succeeded) {
+                    setSimulationStatus(result.error || strings.error, 'danger');
+
+                    break;
+                }
+
+                state = result.state;
+                runId = result.runId;
+
+                // The coach saved new instructions on the server; the settings panel shows them so its autosave
+                // keeps them rather than writing the old ones back.
+                applySettings(state.settings);
+                render();
+
+                if (result.allPassed) {
+                    setSimulationStatus(format(strings.simulationPassed, result.round), 'success');
+
+                    break;
+                }
+
+                if (result.finished) {
+                    setSimulationStatus(format(strings.simulationFinished, result.round), 'warning');
+
+                    break;
+                }
+
+                if (stopSimulation) {
+                    setSimulationStatus(format(strings.simulationStopped, result.round), 'muted');
+
+                    break;
+                }
+
+                setSimulationStatus(format(format(strings.simulationImproved, result.round).replace('{1}', '{0}'), result.revisionNumber), 'muted');
+                round = result.round + 1;
+            }
+        } catch (error) {
+            console.error('Profile Builder: the simulation failed.', error);
+            setSimulationStatus(strings.error, 'danger');
+        } finally {
+            busy = false;
+            byId('pb-sim-stop').classList.add('d-none');
+            updateButtons();
+        }
+    }
+
     function render() {
+        fillSimulationForm();
         renderFeedback();
         renderRevisions();
         renderReplay();
+        renderSimulations();
         syncMessages();
         updateButtons();
     }
@@ -755,6 +956,10 @@
         });
 
         byId('pb-replay').addEventListener('click', runReplay);
+        byId('pb-sim-run').addEventListener('click', runSimulation);
+        byId('pb-sim-stop').addEventListener('click', function () {
+            stopSimulation = true;
+        });
         byId('pb-save-settings').addEventListener('click', saveSessionSettings);
         byId('pb-send-opening').addEventListener('click', sendOpening);
         byId('pb-copy-system-message').addEventListener('click', copySystemMessage);

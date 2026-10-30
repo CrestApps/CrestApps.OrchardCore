@@ -1,5 +1,7 @@
 using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
@@ -23,6 +25,12 @@ internal sealed class AIProfileTemplateModelParametersDisplayDriver : DisplayDri
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
+        // Model parameters belong to profile templates; a System Prompt template has no deployment to tune.
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         return Initialize<ModelParameterEditorViewModel>("AIModelParameters_Edit", async model =>
         {
             template.TryGet<AIDeploymentParametersMetadata>(out var metadata);
@@ -39,6 +47,11 @@ internal sealed class AIProfileTemplateModelParametersDisplayDriver : DisplayDri
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new ModelParameterEditorViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

@@ -203,6 +203,45 @@
         </div>
     </div>
 
+    @* The calls an AI voice agent is holding right now (see Endpoints/SupervisorAICallsEndpoints.cs). *@
+    <div class="cc-panel mb-3" data-cc-ai-calls-panel data-url="@Url.Content("~/Admin/contact-center/dashboard/ai-calls")" data-token="@antiForgeryToken">
+        <div class="cc-panel__header d-flex align-items-center justify-content-between gap-2">
+            <span id="ccDashboardAICalls">@T["Live AI calls"]</span>
+            <span class="small text-body-secondary fw-normal" data-cc-ai-calls-count role="status" aria-live="polite"></span>
+        </div>
+        <div class="cc-panel__body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" aria-labelledby="ccDashboardAICalls">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Customer"]</th>
+                            <th scope="col">@T["AI profile"]</th>
+                            <th scope="col">@T["Direction"]</th>
+                            <th scope="col">@T["Duration"]</th>
+                            <th scope="col" class="text-end">@T["Actions"]</th>
+                        </tr>
+                    </thead>
+                    <tbody data-cc-ai-calls></tbody>
+                </table>
+            </div>
+            <p class="text-body-secondary small mb-0 mt-2" data-cc-ai-calls-empty hidden>@T["The AI is not on any call right now."]</p>
+
+            <div class="border rounded p-2 mt-3" data-cc-ai-call-detail hidden>
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <strong data-cc-ai-call-title></strong>
+                    <button type="button" class="btn btn-sm btn-link" data-cc-ai-call-close>@T["Close"]</button>
+                </div>
+                <div class="cc-ai-transcript small overflow-auto mb-2" style="max-height: 18rem;" data-cc-ai-transcript role="log" aria-live="polite"></div>
+                <form class="d-flex gap-2" data-cc-ai-note-form>
+                    <label class="visually-hidden" for="ccAINote">@T["Message the AI"]</label>
+                    <input type="text" class="form-control form-control-sm" id="ccAINote" data-cc-ai-note maxlength="1000" placeholder="@T["Tell the AI what to do, for example: offer the 10% retention discount"]" autocomplete="off" />
+                    <button type="submit" class="btn btn-sm btn-primary text-nowrap">@T["Message the AI"]</button>
+                </form>
+                <div class="small mt-2" data-cc-ai-call-status role="status" aria-live="polite"></div>
+            </div>
+        </div>
+    </div>
+
     @* The confirm and form panels a supervisor's intervention opens (see Assets/js/supervisor-interventions.js). *@
     <div data-cc-intervention-panel hidden></div>
     <div class="visually-hidden" data-cc-intervention-status role="status" aria-live="polite"></div>
@@ -298,3 +337,210 @@
         })();
     </script>
 }
+
+<script at="Foot">
+    (function () {
+        var panel = document.querySelector('[data-cc-ai-calls-panel]');
+
+        if (!panel) {
+            return;
+        }
+
+        var baseUrl = panel.dataset.url;
+        var token = panel.dataset.token;
+        var rows = panel.querySelector('[data-cc-ai-calls]');
+        var empty = panel.querySelector('[data-cc-ai-calls-empty]');
+        var count = panel.querySelector('[data-cc-ai-calls-count]');
+        var detail = panel.querySelector('[data-cc-ai-call-detail]');
+        var title = panel.querySelector('[data-cc-ai-call-title]');
+        var transcript = panel.querySelector('[data-cc-ai-transcript]');
+        var noteForm = panel.querySelector('[data-cc-ai-note-form]');
+        var noteInput = panel.querySelector('[data-cc-ai-note]');
+        var status = panel.querySelector('[data-cc-ai-call-status]');
+        var strings = {
+            follow: @Html.Raw(JsonSerializer.Serialize(T["Follow"].Value)),
+            listen: @Html.Raw(JsonSerializer.Serialize(T["Listen"].Value)),
+            takeOver: @Html.Raw(JsonSerializer.Serialize(T["Take over"].Value)),
+            end: @Html.Raw(JsonSerializer.Serialize(T["End call"].Value)),
+            confirmEnd: @Html.Raw(JsonSerializer.Serialize(T["End this call for the customer?"].Value)),
+            confirmTakeOver: @Html.Raw(JsonSerializer.Serialize(T["Take this call over? The AI stops and the call rings on your phone."].Value)),
+            count: @Html.Raw(JsonSerializer.Serialize(T["{0} live"].Value)),
+            customer: @Html.Raw(JsonSerializer.Serialize(T["Customer"].Value)),
+            assistant: @Html.Raw(JsonSerializer.Serialize(T["AI"].Value)),
+            ended: @Html.Raw(JsonSerializer.Serialize(T["The AI is no longer on this call."].Value)),
+            failed: @Html.Raw(JsonSerializer.Serialize(T["The request could not be completed."].Value)),
+            inbound: @Html.Raw(JsonSerializer.Serialize(T["Inbound"].Value)),
+            outbound: @Html.Raw(JsonSerializer.Serialize(T["Outbound"].Value))
+        };
+        var selected = null;
+        var shownTurns = 0;
+        var canIntervene = false;
+
+        function formatDuration(seconds) {
+            var minutes = Math.floor(seconds / 60);
+            var rest = seconds % 60;
+
+            return minutes + ':' + (rest < 10 ? '0' : '') + rest;
+        }
+
+        function button(text, css, onClick) {
+            var element = document.createElement('button');
+            element.type = 'button';
+            element.className = 'btn btn-sm ' + css;
+            element.textContent = text;
+            element.addEventListener('click', onClick);
+
+            return element;
+        }
+
+        function post(activityId, action, body) {
+            var data = new URLSearchParams(body || {});
+            data.append('__RequestVerificationToken', token);
+
+            return fetch(baseUrl + '/' + encodeURIComponent(activityId) + '/' + action, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: data
+            }).then(function (response) {
+                return response.ok ? response.json() : { succeeded: false, message: strings.failed };
+            }).catch(function () {
+                return { succeeded: false, message: strings.failed };
+            });
+        }
+
+        function act(call, action, confirmText) {
+            if (confirmText && !window.confirm(confirmText)) {
+                return;
+            }
+
+            open(call);
+            post(call.activityId, action).then(function (result) {
+                status.textContent = result.message || '';
+                refreshCalls();
+            });
+        }
+
+        function open(call) {
+            if (!selected || selected.activityId !== call.activityId) {
+                selected = call;
+                shownTurns = 0;
+                transcript.replaceChildren();
+                status.textContent = '';
+            }
+
+            title.textContent = (call.contactName || call.customerAddress || '') + (call.profileName ? ' · ' + call.profileName : '');
+            noteForm.hidden = !canIntervene;
+            detail.hidden = false;
+            refreshTranscript();
+        }
+
+        function renderCalls(data) {
+            canIntervene = !!data.canIntervene;
+            rows.replaceChildren();
+
+            (data.calls || []).forEach(function (call) {
+                var row = document.createElement('tr');
+                var who = document.createElement('td');
+                who.textContent = call.contactName ? call.contactName + ' (' + call.customerAddress + ')' : call.customerAddress;
+                var profile = document.createElement('td');
+                profile.textContent = call.profileName || '';
+                var direction = document.createElement('td');
+                direction.textContent = call.direction === 'Inbound' ? strings.inbound : strings.outbound;
+                var duration = document.createElement('td');
+                duration.textContent = formatDuration(call.durationSeconds || 0);
+                var actions = document.createElement('td');
+                actions.className = 'text-end text-nowrap';
+                actions.append(button(strings.follow, 'btn-outline-primary', function () { open(call); }));
+                actions.append(' ', button(strings.listen, 'btn-outline-secondary', function () { act(call, 'listen'); }));
+
+                if (canIntervene) {
+                    actions.append(' ', button(strings.takeOver, 'btn-outline-success', function () { act(call, 'take-over', strings.confirmTakeOver); }));
+                    actions.append(' ', button(strings.end, 'btn-outline-danger', function () { act(call, 'end', strings.confirmEnd); }));
+                }
+
+                row.append(who, profile, direction, duration, actions);
+                rows.append(row);
+            });
+
+            var total = (data.calls || []).length;
+            empty.hidden = total > 0;
+            count.textContent = total > 0 ? strings.count.replace('{0}', total) : '';
+        }
+
+        function refreshCalls() {
+            fetch(baseUrl, { headers: { 'Accept': 'application/json' } })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (data) {
+                    if (data) {
+                        renderCalls(data);
+                    }
+                })
+                .catch(function () {
+                    // A missed refresh keeps the last list on screen; the next one tries again.
+                });
+        }
+
+        function refreshTranscript() {
+            if (!selected) {
+                return;
+            }
+
+            var activityId = selected.activityId;
+
+            fetch(baseUrl + '/' + encodeURIComponent(activityId) + '/transcript?after=' + shownTurns, { headers: { 'Accept': 'application/json' } })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (data) {
+                    if (!data || !selected || selected.activityId !== activityId) {
+                        return;
+                    }
+
+                    (data.turns || []).forEach(function (turn) {
+                        var line = document.createElement('div');
+                        line.className = 'mb-1';
+                        var who = document.createElement('strong');
+                        who.textContent = (turn.role === 'Customer' ? strings.customer : strings.assistant) + ': ';
+                        line.append(who, document.createTextNode(turn.text));
+                        transcript.append(line);
+                    });
+
+                    shownTurns = data.total;
+                    transcript.scrollTop = transcript.scrollHeight;
+
+                    if (!data.live) {
+                        status.textContent = strings.ended;
+                        noteForm.hidden = true;
+                    }
+                })
+                .catch(function () {
+                    // Tried again on the next tick.
+                });
+        }
+
+        noteForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var note = noteInput.value.trim();
+
+            if (!note || !selected) {
+                return;
+            }
+
+            post(selected.activityId, 'note', { Note: note }).then(function (result) {
+                status.textContent = result.message || '';
+
+                if (result.succeeded) {
+                    noteInput.value = '';
+                }
+            });
+        });
+
+        panel.querySelector('[data-cc-ai-call-close]').addEventListener('click', function () {
+            selected = null;
+            detail.hidden = true;
+        });
+
+        refreshCalls();
+        setInterval(refreshCalls, 5000);
+        setInterval(refreshTranscript, 2000);
+    })();
+</script>

@@ -1,6 +1,8 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using Microsoft.Extensions.AI;
 
@@ -33,6 +35,24 @@ public sealed class VoiceCallConclusionPolicyTests
 
         // Act & Assert
         Assert.False(VoiceCallConclusionPolicy.ShouldConclude(activity));
+    }
+
+    [Fact]
+    public void ACallTransferredToANumber_IsConcludedWhenTheLineHangsUp()
+    {
+        // Arrange
+        // No agent is behind a number: live, a transferred call was left in progress, holding a slot of the
+        // concurrent AI call limit until the orphan sweep failed it.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Status = ActivityStatus.InProgress,
+            AiEscalated = true,
+        };
+        activity.Put(new AICallTransfer { PhoneNumber = "+15551234567" });
+
+        // Act & Assert
+        Assert.True(VoiceCallConclusionPolicy.ShouldConclude(activity));
     }
 
     [Fact]
