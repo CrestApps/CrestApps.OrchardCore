@@ -165,6 +165,12 @@ The buyer accepts the quote by paying it, from the email or their orders, before
 
 Sending a quote needs your site's email to be set up.
 
+## Do something when an order is paid
+
+With Orchard Core's **Workflows** on, the store tells your workflows what happens, so you can email someone, call another system or add a note without code. Start a workflow from **Order Paid**, **Order Canceled** or **Order Refunded**. Orders also adds two ready-made workflows under **Tools > Recipes**: **Automation: thank-you email** (turned on) and **Automation: canceled order alert** (turned off until you set the address it goes to).
+
+The other parts of the store add events of their own: **Subscription Started**, **Renewed**, **Past Due**, **Canceled** and **Expired**; **Stripe Payment Received**, **Payment Failed**, **Payment Refunded** and **Dispute Created**, among others; and the setup wizard's **Wizard Started**, **Step Displayed**, **Completed** and **Failed**. To send the same news to another system as soon as it happens, without a workflow, use [Webhooks](webhooks.md). The technical guides list every event with what it carries: [Orders](../../modules/carts-and-orders.md#workflow-events), [Subscriptions](../../modules/subscriptions.md) and [Payments](../../modules/payments.md#workflow-events).
+
 ## Write your own emails
 
 On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.

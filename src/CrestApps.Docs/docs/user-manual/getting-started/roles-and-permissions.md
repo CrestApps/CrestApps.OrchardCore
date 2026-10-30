@@ -105,6 +105,16 @@ A settings page under **Settings** opens for anyone who has the permission liste
 | **Settings > Commerce > Transactions** | Manage transaction settings |
 | **Settings > Commerce > Offline payments** | Manage transaction settings |
 | **Settings > Commerce > Receipts** | Manage receipt settings |
+| **Settings > Commerce > Orders**, **Emails** and **Returns** | Manage orders |
+| **Settings > Commerce > Checkout** | Manage checkout settings |
+| **Settings > Commerce > Customers**, **Rewards** and **Referrals** | Manage customers |
+| **Settings > Commerce > Inventory** | Manage inventory |
+| **Settings > Commerce > Downloads** | Manage digital files and downloads |
+| **Settings > Commerce > Reviews** | Moderate product reviews |
+| **Settings > Commerce > Product feeds** | Manage product feeds |
+| **Settings > Commerce > Fundraising** | Manage fundraising |
+| **Settings > Commerce > Marketplace** | Manage the marketplace |
+| **Settings > Address suggestions** | Manage address suggestions |
 | **Settings > Subscriptions** | Manage subscriptions settings |
 | **Settings > Communication > Telephony** | Manage telephony settings |
 | **Settings > Communication > SMS** (the Telnyx section, when Telnyx SMS is on) | Manage SMS Settings |
