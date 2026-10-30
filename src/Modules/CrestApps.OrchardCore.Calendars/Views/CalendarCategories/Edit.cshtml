@@ -1,0 +1,48 @@
+@model CalendarCategoryEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarCategoriesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Category"] : T["Edit '{0}' Category", Model.Name])">
+        <breadcrumb-item id="CalendarCategories" action="Index" controller="CalendarCategories" area="CrestApps.OrchardCore.Calendars">@T["Categories"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Edit" method="post" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-limited">
+            <input asp-for="Name" class="form-control" maxlength="100" autofocus />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Color">
+        <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+        <div class="ocat-limited">
+            <input asp-for="Color" type="color" class="form-control form-control-color" />
+            <span class="hint">@T["Events in the category show in this color, unless an event picks its own."]</span>
+        </div>
+    </div>
+
+    @if (Model.CanShare)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Shared" class="form-check-input" />
+                    <label asp-for="Shared" class="form-check-label">@T["Everyone can use it"]</label>
+                    <span class="hint dashed">@T["Otherwise only you see and use it."]</span>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

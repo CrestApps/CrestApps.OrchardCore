@@ -370,6 +370,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Orchard Core's `AdminList` shape and `<admin-list>` tag helpers, in the List or Grid layout the site and the user
   pick: the row display driver, the row template, the controller's `AdminListContext`, the view and its columns.
   Never hand-write a `<ul class="list-group">` listing.
+- **Example**: `.agents/skills/crestapps-calendar-types` — how another module builds on the Calendars module:
+  registering a calendar type and its event types with `AddCalendarType` (owner kind, capacity, `ManagedByCode`),
+  creating and keeping events in step with the module's own records, busy-time and event sources, handlers and
+  after-commit observers, and the naming and wall-clock time traps.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

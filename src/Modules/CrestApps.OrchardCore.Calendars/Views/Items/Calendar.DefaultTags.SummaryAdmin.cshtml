@@ -1,0 +1,48 @@
+@model CalendarRowViewModel
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Calendar type"]">
+    <i class="@Model.TypeIcon text-secondary me-1" aria-hidden="true"></i>@Model.TypeName
+</span>
+
+@if (!string.IsNullOrEmpty(Model.OwnerName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Team"]">
+        <i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.OwnerName
+    </span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Visibility"]">
+    @switch (Model.Calendar.Visibility)
+    {
+        case CalendarVisibility.Public:
+            <i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>@T["Public"]
+            break;
+        case CalendarVisibility.Shared:
+            <i class="fa-solid fa-user-group text-secondary me-1" aria-hidden="true"></i>@T["Free/busy shared"]
+            break;
+        default:
+            <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["Private"]
+            break;
+    }
+</span>
+
+@if (Model.Calendar.ConflictPolicy == CalendarConflictPolicy.LimitConcurrent)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Events that may overlap"]">
+        <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@Model.Calendar.Capacity
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Calendar.Source))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Managed by"]">
+        <i class="fa-solid fa-gears text-secondary me-1" aria-hidden="true"></i>@Model.Calendar.Source
+    </span>
+}
+
+@if (!Model.Calendar.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

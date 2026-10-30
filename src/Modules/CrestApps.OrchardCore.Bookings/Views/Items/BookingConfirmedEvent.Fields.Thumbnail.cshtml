@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingConfirmedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Booking Confirmed"]
+</h4>
+<p>@T["Starts when a booking is confirmed, such as when its order is paid or the store accepts a request."]</p>

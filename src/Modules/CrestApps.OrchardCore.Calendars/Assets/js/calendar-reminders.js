@@ -1,0 +1,213 @@
+// @ts-check
+// Shows the signed-in user's calendar reminders on every admin page, as notices that stay until they are dismissed. The page
+// asks for them when it opens, every minute, and when it comes back into view; dismissing one dismisses it on every page.
+
+(function () {
+    const settings = /** @type {HTMLElement | null} */ (document.querySelector('[data-calendar-reminders]'));
+    const container = /** @type {HTMLElement | null} */ (document.querySelector('[data-calendar-reminders-container]'));
+
+    if (!settings || !container) {
+        return;
+    }
+
+    const data = settings.dataset;
+    const tokenInput = /** @type {HTMLInputElement | null} */ (settings.querySelector('input[name="__RequestVerificationToken"]'));
+    const pollMs = 60000;
+
+    /** @type {Map<string, HTMLElement>} */
+    const shown = new Map();
+
+    /**
+     * Fills a sentence's {0} placeholder.
+     * @param {string | undefined} text
+     * @param {string | number} value
+     * @returns {string}
+     */
+    const format = (text, value) => (text || '').replace('{0}', String(value));
+
+    /**
+     * Says when the event starts, from now.
+     * @param {any} reminder
+     * @returns {string}
+     */
+    const describeStart = (reminder) => {
+        const minutes = Math.round((new Date(reminder.start).getTime() - Date.now()) / 60000);
+
+        if (minutes < -1) {
+            return data.startedText || '';
+        }
+
+        if (minutes <= 1) {
+            return data.nowText || '';
+        }
+
+        if (minutes < 120) {
+            return format(data.inMinutesText, minutes);
+        }
+
+        if (minutes < 1440) {
+            return format(data.inHoursText, Math.round(minutes / 60));
+        }
+
+        return data.tomorrowText || '';
+    };
+
+    /**
+     * Returns a same-origin calendar address that opens the event's day.
+     * @param {any} reminder
+     * @returns {string}
+     */
+    const calendarUrl = (reminder) => {
+        try {
+            const url = new URL(data.calendarUrl || '', window.location.origin);
+
+            if (url.origin !== window.location.origin) {
+                return '#';
+            }
+
+            url.searchParams.set('date', String(reminder.start).slice(0, 10));
+
+            return url.toString();
+        } catch {
+            return '#';
+        }
+    };
+
+    /**
+     * Tells the server the reminder was dismissed, and removes it here.
+     * @param {string} id
+     */
+    const dismiss = async (id) => {
+        const element = shown.get(id);
+
+        shown.delete(id);
+        element?.remove();
+
+        try {
+            const url = new URL((data.dismissUrl || '').replace('__ID__', encodeURIComponent(id)), window.location.origin);
+
+            if (url.origin !== window.location.origin) {
+                return;
+            }
+
+            await fetch(url.toString(), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { RequestVerificationToken: tokenInput ? tokenInput.value : '' },
+            });
+        } catch {
+            // The reminder comes back on the next page if the dismissal didn't reach the server.
+        }
+    };
+
+    /**
+     * Shows a reminder as a notice that doesn't hide by itself.
+     * @param {any} reminder
+     */
+    const show = (reminder) => {
+        const toast = document.createElement('div');
+
+        toast.className = 'toast show';
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+
+        const header = document.createElement('div');
+        const icon = document.createElement('i');
+        const heading = document.createElement('strong');
+        const when = document.createElement('small');
+        const close = document.createElement('button');
+
+        header.className = 'toast-header';
+        icon.className = 'fa-solid fa-bell text-primary me-2';
+        icon.setAttribute('aria-hidden', 'true');
+        heading.className = 'me-auto';
+        heading.textContent = data.titleText || '';
+        when.className = 'text-body-secondary';
+        when.textContent = describeStart(reminder);
+        close.type = 'button';
+        close.className = 'btn-close';
+        close.setAttribute('aria-label', data.closeText || '');
+        close.addEventListener('click', () => dismiss(reminder.id));
+        header.append(icon, heading, when, close);
+
+        const body = document.createElement('div');
+        const title = document.createElement('div');
+        const details = document.createElement('div');
+        const actions = document.createElement('div');
+        const open = document.createElement('a');
+        const done = document.createElement('button');
+        const start = new Date(reminder.start);
+
+        body.className = 'toast-body';
+        title.className = 'fw-semibold';
+        title.textContent = reminder.title || '';
+        details.className = 'small text-body-secondary';
+        details.textContent = [
+            reminder.allDay ? start.toLocaleDateString() : start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+            reminder.location,
+            reminder.calendar,
+        ].filter(Boolean).join(' · ');
+        actions.className = 'mt-2 d-flex gap-2';
+        open.className = 'btn btn-primary btn-sm';
+        open.href = calendarUrl(reminder);
+        open.textContent = data.openText || '';
+        done.type = 'button';
+        done.className = 'btn btn-secondary btn-sm';
+        done.textContent = data.dismissText || '';
+        done.addEventListener('click', () => dismiss(reminder.id));
+        actions.append(open, done);
+        body.append(title, details, actions);
+
+        toast.append(header, body);
+        container.append(toast);
+        shown.set(reminder.id, toast);
+    };
+
+    const refresh = async () => {
+        try {
+            const url = new URL(data.listUrl || '', window.location.origin);
+
+            if (url.origin !== window.location.origin) {
+                return;
+            }
+
+            const response = await fetch(url.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const reminders = /** @type {any[]} */ (await response.json());
+            const current = new Set(reminders.map((reminder) => reminder.id));
+
+            // Dismissed on another page: gone here too.
+            shown.forEach((element, id) => {
+                if (!current.has(id)) {
+                    element.remove();
+                    shown.delete(id);
+                }
+            });
+
+            reminders.forEach((reminder) => {
+                if (!shown.has(reminder.id)) {
+                    show(reminder);
+                }
+            });
+        } catch {
+            // Offline or signed out; the next round tries again.
+        }
+    };
+
+    refresh();
+    window.setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            refresh();
+        }
+    }, pollMs);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            refresh();
+        }
+    });
+})();

@@ -63,6 +63,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
         public AISubjectFlowStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.AISubjectFlowStartup> stringLocalizer, OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Calendars"})]
+    public sealed class CalendarStartup : OrchardCore.Modules.StartupBase
+    {
+        public CalendarStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "CrestApps.OrchardCore.AI.Chat.Api"})]
@@ -228,6 +236,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
         public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Calendar
+{
+    public sealed class ActivityCalendarLink
+    {
+        public ActivityCalendarLink() { }
+        public string CalendarId { get; set; }
+        public string EventId { get; set; }
+    }
+    public sealed class ActivityCalendarService
+    {
+        public const int DurationMinutes = 15;
+        public const string Source = "OmnichannelActivity";
+        public ActivityCalendarService(CrestApps.OrchardCore.Calendars.Services.ICalendarService calendarService, CrestApps.OrchardCore.Calendars.Services.ICalendarEventManager eventManager, OrchardCore.ContentManagement.IContentManager contentManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Calendar.ActivityCalendarService> stringLocalizer) { }
+        public System.Threading.Tasks.Task DeleteEventAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Calendars.Models.CalendarEvent> PlaceAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, string userId, string userName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SyncEventAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
 {
     [OrchardCore.Admin.Admin(null, null)]
@@ -267,7 +293,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.ActionName("Complete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/complete/{id}", null)]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionAddToCalendar")] System.Collections.Generic.Dictionary<string, bool> actionAddToCalendar = null) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create(string contentItemId) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/create-inbound/{contentItemId}", null)]
@@ -275,7 +301,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.ActionName("CreateInbound")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/create-inbound/{contentItemId}", null)]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreateInboundPost(string contentItemId, string subjectContentType, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreateInboundPost(string contentItemId, string subjectContentType, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionAddToCalendar")] System.Collections.Generic.Dictionary<string, bool> actionAddToCalendar = null) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]

@@ -682,7 +682,8 @@ public sealed class ActivitiesController : Controller
         string contentItemId,
         string subjectContentType,
         [Bind(Prefix = "ActionScheduleDates")] Dictionary<string, DateTime?> actionScheduleDates,
-        [Bind(Prefix = "ActionPreparationNotes")] Dictionary<string, string> actionPreparationNotes)
+        [Bind(Prefix = "ActionPreparationNotes")] Dictionary<string, string> actionPreparationNotes,
+        [Bind(Prefix = "ActionAddToCalendar")] Dictionary<string, bool> actionAddToCalendar = null)
     {
         var contact = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
 
@@ -758,6 +759,7 @@ public sealed class ActivitiesController : Controller
                 DispositionId = activity.DispositionId,
                 ActionScheduleDates = actionScheduleDates,
                 ActionPreparationNotes = actionPreparationNotes,
+                ActionsToCalendar = ToActionSet(actionAddToCalendar),
                 Source = ActivityDispositionSource.Agent,
                 ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
                 ActorDisplayName = await GetCurrentUserDisplayNameAsync(),
@@ -1000,7 +1002,8 @@ public sealed class ActivitiesController : Controller
         string id,
         string returnUrl,
         [Bind(Prefix = "ActionScheduleDates")] Dictionary<string, DateTime?> actionScheduleDates,
-        [Bind(Prefix = "ActionPreparationNotes")] Dictionary<string, string> actionPreparationNotes)
+        [Bind(Prefix = "ActionPreparationNotes")] Dictionary<string, string> actionPreparationNotes,
+        [Bind(Prefix = "ActionAddToCalendar")] Dictionary<string, bool> actionAddToCalendar = null)
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
@@ -1067,6 +1070,7 @@ public sealed class ActivitiesController : Controller
                 DispositionId = activity.DispositionId,
                 ActionScheduleDates = actionScheduleDates,
                 ActionPreparationNotes = actionPreparationNotes,
+                ActionsToCalendar = ToActionSet(actionAddToCalendar),
                 Source = ActivityDispositionSource.Agent,
                 ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
                 ActorDisplayName = await GetCurrentUserDisplayNameAsync(),
@@ -2075,5 +2079,13 @@ public sealed class ActivitiesController : Controller
         var displayName = await _displayNameProvider.GetAsync(user, HttpContext.RequestAborted);
 
         return string.IsNullOrWhiteSpace(displayName) ? S["Unknown user"].Value : displayName;
+    }
+
+    // The ids of the follow-up actions whose box was ticked.
+    private static HashSet<string> ToActionSet(Dictionary<string, bool> values)
+    {
+        return values is null
+            ? []
+            : values.Where(pair => pair.Value).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal);
     }
 }

@@ -1,0 +1,9 @@
+@model ChooseCalendarViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarEventsChoose" title="@T["New Event"]">
+        <breadcrumb-item id="CalendarView" action="Index" controller="Calendar" area="CrestApps.OrchardCore.Calendars">@T["Calendar"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_ChooseCalendar" model="Model" />

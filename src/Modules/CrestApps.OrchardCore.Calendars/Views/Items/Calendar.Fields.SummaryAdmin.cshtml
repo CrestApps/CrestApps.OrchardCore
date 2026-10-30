@@ -1,0 +1,11 @@
+@model CalendarRowViewModel
+
+<span class="calendar-swatch me-1" style="background-color: @(Model.Calendar.Color ?? "#1971c2")" aria-hidden="true"></span>
+@if (Model.Level >= CalendarAccessLevel.Manage)
+{
+    <a asp-action="Edit" asp-route-id="@Model.Calendar.ItemId">@Model.Calendar.Name</a>
+}
+else
+{
+    <a asp-controller="Calendar" asp-action="Index" asp-route-calendars="@Model.Calendar.ItemId">@Model.Calendar.Name</a>
+}

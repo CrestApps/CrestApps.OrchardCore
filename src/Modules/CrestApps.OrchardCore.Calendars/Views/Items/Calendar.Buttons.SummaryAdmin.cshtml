@@ -1,0 +1,7 @@
+@model CalendarRowViewModel
+
+<a asp-controller="Calendar" asp-action="Index" asp-route-calendars="@Model.Calendar.ItemId" class="btn btn-secondary btn-sm">@T["Open"]</a>
+@if (Model.Level >= CalendarAccessLevel.Manage)
+{
+    <a asp-action="Edit" asp-route-id="@Model.Calendar.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

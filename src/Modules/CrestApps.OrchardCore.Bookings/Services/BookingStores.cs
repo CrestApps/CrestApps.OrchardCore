@@ -1,7 +1,9 @@
+using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Bookings.Indexes;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using YesSql;
 using YesSql.Services;
 
@@ -102,10 +104,53 @@ public interface IBookingStore : ICatalog<Booking>
 
 public sealed class BookingStore : DocumentCatalog<Booking, BookingIndex>, IBookingStore
 {
-    public BookingStore(ISession session)
+    private readonly IServiceProvider _serviceProvider;
+
+    private IBookingHandler[] _handlers;
+
+    public BookingStore(ISession session, IServiceProvider serviceProvider)
         : base(session)
     {
         CollectionName = BookingsConstants.CollectionName;
+        _serviceProvider = serviceProvider;
+    }
+
+    // The handlers are resolved on first use, so a handler may depend on services that depend on this store.
+    private IBookingHandler[] Handlers => _handlers ??= [.. _serviceProvider.GetServices<IBookingHandler>()];
+
+    protected override async ValueTask SavingAsync(Booking record)
+    {
+        var known = record.TryGet<BookingChangeMarker>(out var marker);
+        var context = new BookingSavingContext
+        {
+            Booking = record,
+
+            // A booking saved before its changes were followed has no marker, but it isn't new once it was changed after being made.
+            IsNew = !known && record.ModifiedUtc - record.CreatedUtc < TimeSpan.FromSeconds(1),
+            PreviousStatus = known ? marker.Status : null,
+            PreviousStartsUtc = known ? marker.StartsUtc : null,
+            PreviousEndsUtc = known ? marker.EndsUtc : null,
+        };
+
+        foreach (var handler in Handlers)
+        {
+            await handler.SavingAsync(context);
+        }
+
+        record.Put(new BookingChangeMarker
+        {
+            Status = record.Status,
+            StartsUtc = record.StartsUtc,
+            EndsUtc = record.EndsUtc,
+        });
+    }
+
+    protected override async ValueTask DeletingAsync(Booking model)
+    {
+        foreach (var handler in Handlers)
+        {
+            await handler.DeletingAsync(model);
+        }
     }
 
     public async Task<IReadOnlyList<Booking>> ListByOrderAsync(string orderId, CancellationToken cancellationToken = default)

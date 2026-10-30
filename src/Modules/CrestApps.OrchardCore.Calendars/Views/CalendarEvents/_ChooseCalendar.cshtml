@@ -1,0 +1,33 @@
+@model ChooseCalendarViewModel
+@{
+    var modal = ViewData["CalendarModal"] is true;
+    string modalRoute = modal ? "true" : null;
+}
+
+@if (Model.Calendars.Count == 0)
+{
+    <div class="alert alert-info">@T["You can't add events to any calendar. Ask the owner of a calendar to share it with you, or create one."]</div>
+}
+else
+{
+    <p>@T["Choose the calendar and the kind of event to add."]</p>
+    <div class="row g-3">
+        @foreach (var calendar in Model.Calendars)
+        {
+            <div class="@(modal ? "col-md-6" : "col-md-6 col-xl-4")">
+                <div class="card text-bg-theme h-100">
+                    <div class="card-header">
+                        <span class="calendar-swatch me-1" style="background-color: @(calendar.Color ?? "#1971c2")" aria-hidden="true"></span>
+                        <i class="@calendar.Icon text-secondary me-1" aria-hidden="true"></i>@calendar.Name
+                    </div>
+                    <div class="list-group list-group-flush">
+                        @foreach (var eventType in calendar.EventTypes)
+                        {
+                            <a class="list-group-item list-group-item-action" asp-action="Create" asp-route-calendarId="@calendar.Id" asp-route-eventType="@eventType.Key" asp-route-start="@Model.Start" asp-route-end="@Model.End" asp-route-allDay="@Model.AllDay" asp-route-modal="@modalRoute" data-calendar-modal-link>@eventType.Value</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

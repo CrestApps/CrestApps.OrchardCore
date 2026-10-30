@@ -122,6 +122,8 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
             };
 
             await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);
+
+            request.CreatedActivities = executionContext.CreatedActivities;
         }
 
         foreach (var handler in _handlers)

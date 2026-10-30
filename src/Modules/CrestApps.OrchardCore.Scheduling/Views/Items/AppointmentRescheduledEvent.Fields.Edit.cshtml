@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+
+@model AppointmentEventActivityViewModel
+
+@if (Model.HasMinutesBefore)
+{
+    <div class="mb-3">
+        <label asp-for="MinutesBefore" class="form-label">@T["Minutes before the start"]</label>
+        <input asp-for="MinutesBefore" type="number" min="0" class="form-control" style="max-width: 10rem" />
+    </div>
+}
+
+<div class="mb-3">
+    <label asp-for="AppointmentTypeIds" class="form-label">@T["Appointment types"]</label>
+    <select asp-for="AppointmentTypeIds" asp-items="Model.TypeOptions" class="form-select" multiple size="5"></select>
+    <span class="hint">@T["Leave empty for every appointment type. The workflow input holds Appointment (its fields), AppointmentId, AppointmentTypeName, StartUtc, EndUtc, CustomerName, CustomerEmail, CustomerPhone, Status and ManageToken."]</span>
+</div>

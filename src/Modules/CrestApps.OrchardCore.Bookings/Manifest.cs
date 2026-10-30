@@ -26,3 +26,4 @@ using OrchardCore.Modules.Manifest;
         TransactionsConstants.Features.Area,
     ]
 )]
+

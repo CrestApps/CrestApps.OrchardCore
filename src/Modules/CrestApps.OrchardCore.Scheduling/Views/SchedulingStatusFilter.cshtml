@@ -1,0 +1,9 @@
+<div class="btn-group filter">
+    <select name="status" form="appointments-filter" class="form-select form-select-sm" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="">@T["All statuses"]</option>
+        @foreach (var option in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)Model.Options)
+        {
+            <option value="@option.Value" selected="@(option.Value == (string)Model.Selected)">@option.Text</option>
+        }
+    </select>
+</div>

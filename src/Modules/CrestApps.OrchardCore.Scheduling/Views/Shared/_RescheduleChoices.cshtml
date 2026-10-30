@@ -1,0 +1,28 @@
+@model AppointmentDetailViewModel
+
+@if (Model.Appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed)
+{
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="me-auto">@T["Move to another time on {0}", Model.Date]</span>
+            <input type="date" class="form-control form-control-sm" style="max-width: 12rem" value="@Model.Date" onchange="window.location.search = '?date=' + this.value" aria-label="@T["Day"]" />
+        </div>
+        <div class="card-body">
+            @if (Model.Slots.Count == 0)
+            {
+                <p class="text-muted mb-0">@T["There are no open times on this day."]</p>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @foreach (var slot in Model.Slots)
+                    {
+                        <input type="radio" class="btn-check" name="start" id="move-@slot.Key" value="@slot.Key" autocomplete="off" />
+                        <label class="btn btn-outline-primary" for="move-@slot.Key">@slot.Value</label>
+                    }
+                </div>
+                <button type="submit" name="operation" value="Reschedule" class="btn btn-primary">@T["Move"]</button>
+            }
+        </div>
+    </div>
+}

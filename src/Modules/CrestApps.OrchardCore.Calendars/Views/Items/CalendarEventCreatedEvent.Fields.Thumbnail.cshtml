@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+    @T["Calendar Event Created"]
+</h4>
+<p>@T["Starts when a calendar event is created."]</p>

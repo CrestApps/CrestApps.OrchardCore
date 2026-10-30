@@ -24,6 +24,7 @@ public sealed class BookingCapacityService
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IBookingSlotFilter[] _slotFilters;
 
     private TimeZoneInfo _timeZone;
 
@@ -34,7 +35,8 @@ public sealed class BookingCapacityService
         IDistributedLock distributedLock,
         ISiteService siteService,
         IClock clock,
-        ILogger<BookingCapacityService> logger)
+        ILogger<BookingCapacityService> logger,
+        IEnumerable<IBookingSlotFilter> slotFilters = null)
     {
         _slots = slots;
         _bookings = bookings;
@@ -43,6 +45,7 @@ public sealed class BookingCapacityService
         _siteService = siteService;
         _clock = clock;
         _logger = logger;
+        _slotFilters = slotFilters?.ToArray() ?? [];
     }
 
     /// <summary>
@@ -88,12 +91,13 @@ public sealed class BookingCapacityService
 
         var slots = await _slots.ListAsync(contentItemId, slotKeys, cancellationToken);
         var own = await _bookings.ListHeldByCartAsync(cartId, contentItemId, cancellationToken);
+        var closed = await GetClosedKeysAsync(contentItemId, part, slotKeys, cancellationToken);
         var remaining = int.MaxValue;
 
         foreach (var key in slotKeys)
         {
             var slot = slots.FirstOrDefault(candidate => string.Equals(candidate.SlotKey, key, StringComparison.Ordinal));
-            var left = slot is null
+            var left = closed.Contains(key) ? 0 : slot is null
                 ? part.Kind == BookingKind.Departure ? 0 : Math.Max(0, part.Capacity)
                 : slot.Closed ? 0 : slot.Remaining + own.Where(booking => booking.SlotKeys.Contains(key)).Sum(booking => booking.Seats);
 
@@ -120,6 +124,11 @@ public sealed class BookingCapacityService
 
         await using (locker)
         {
+            if ((await GetClosedKeysAsync(booking.ContentItemId, part, booking.SlotKeys, cancellationToken)).Count > 0)
+            {
+                return false;
+            }
+
             var slots = (await _slots.ListAsync(booking.ContentItemId, booking.SlotKeys, cancellationToken)).ToList();
             var timeZone = await GetTimeZoneAsync();
             var created = new List<BookingSlot>();
@@ -179,6 +188,26 @@ public sealed class BookingCapacityService
         }
 
         return true;
+    }
+
+    // The dates and times another feature closes, such as the Bookings Calendar feature closing what's busy on a calendar.
+    private async Task<HashSet<string>> GetClosedKeysAsync(string contentItemId, BookingPart part, IReadOnlyList<string> slotKeys, CancellationToken cancellationToken)
+    {
+        var closed = new HashSet<string>(StringComparer.Ordinal);
+
+        if (_slotFilters.Length == 0)
+        {
+            return closed;
+        }
+
+        var timeZone = await GetTimeZoneAsync();
+
+        foreach (var filter in _slotFilters)
+        {
+            closed.UnionWith(await filter.GetClosedSlotKeysAsync(contentItemId, part, slotKeys, timeZone, cancellationToken));
+        }
+
+        return closed;
     }
 
     /// <summary>

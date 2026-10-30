@@ -259,5 +259,26 @@
     ],
     "dest": "wwwroot/vendors/intl-tel-input/img/",
     "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar",
+    "source": [
+      "node_modules/fullcalendar/index.global.js",
+      "node_modules/fullcalendar/index.global.min.js",
+      "node_modules/fullcalendar/LICENSE.md"
+    ],
+    "dest": "wwwroot/vendors/fullcalendar/",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar-locales",
+    "source": [
+      "node_modules/@fullcalendar/core/locales-all.global.js",
+      "node_modules/@fullcalendar/core/locales-all.global.min.js"
+    ],
+    "dest": "wwwroot/vendors/fullcalendar/",
+    "tags": ["vendor"]
   }
 ]

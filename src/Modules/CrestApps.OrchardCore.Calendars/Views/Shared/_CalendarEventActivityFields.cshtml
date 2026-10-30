@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+
+@model CalendarEventActivityViewModel
+
+@if (Model.HasMinutesBefore)
+{
+    <div class="mb-3">
+        <label asp-for="MinutesBefore" class="form-label">@T["Minutes before the start"]</label>
+        <input asp-for="MinutesBefore" type="number" min="0" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["Needs the Calendar Reminders feature. Each occurrence starts the workflow once."]</span>
+    </div>
+}
+
+<div class="mb-3">
+    <label asp-for="CalendarIds" class="form-label">@T["Calendars"]</label>
+    <select asp-for="CalendarIds" asp-items="Model.CalendarOptions" class="form-select" multiple size="5"></select>
+    <span class="hint">@T["Leave empty for every calendar."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="CalendarTypes" class="form-label">@T["Calendar types"]</label>
+    <select asp-for="CalendarTypes" asp-items="Model.TypeOptions" class="form-select" multiple size="5"></select>
+    <span class="hint">@T["Leave empty for every calendar type."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="EventTypes" class="form-label">@T["Kinds of events"]</label>
+    <input asp-for="EventTypes" class="form-control" placeholder="Meeting, Shift" />
+    <span class="hint">@T["The technical names of the kinds of events, separated by commas. Leave empty for every kind."]</span>
+</div>
+
+<div class="mb-3 form-check">
+    <input asp-for="IgnoreWorkflowChanges" class="form-check-input" />
+    <label asp-for="IgnoreWorkflowChanges" class="form-check-label">@T["Ignore changes made by workflows"]</label>
+    <span class="hint dashed">@T["Keeps a workflow that changes events from starting itself again."]</span>
+</div>
+
+<p class="text-muted small">@T["The workflow input holds CalendarEvent (the event's fields), EventId, CalendarId, CalendarName, CalendarType, EventType, Title, StartUtc, EndUtc, Source and SourceId, and for attendee events Attendee, AttendeeEmail and AttendeeResponse."]</p>
