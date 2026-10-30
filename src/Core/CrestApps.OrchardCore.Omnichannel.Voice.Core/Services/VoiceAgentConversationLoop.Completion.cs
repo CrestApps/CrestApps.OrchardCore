@@ -63,15 +63,11 @@ public sealed partial class VoiceAgentConversationLoop
         // When a live agent is available, enable the transfer tool for this turn and guide the model on when to
         // escalate. Guidance is injected as a leading system message so the persona system prompt is preserved.
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
+        var (transferOffered, handoffGuidance) = await OfferHandoffAsync(handoffService, flowSettings, cancellationToken);
 
-        if (handoffService is not null)
+        if (!string.IsNullOrEmpty(handoffGuidance))
         {
-            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
-
-            if (!string.IsNullOrEmpty(handoffInstructions))
-            {
-                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
-            }
+            transcript.Insert(0, new ChatMessage(ChatRole.System, handoffGuidance));
         }
 
         // The same thing the live session is told, because a turn-based call is the same call: somebody has to
@@ -109,7 +105,7 @@ public sealed partial class VoiceAgentConversationLoop
         // Attach the profile's tools and the call's own once the context exists. The automated conversation calls
         // the completion service directly rather than through the tool orchestrator, so the tools must be added here
         // or the model never receives them. The SMS handler does the same.
-        await AttachCallToolsAsync(context, offerTransfer: handoffService is not null, cancellationToken);
+        await AttachCallToolsAsync(context, offerTransfer: transferOffered, cancellationToken);
 
         var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
