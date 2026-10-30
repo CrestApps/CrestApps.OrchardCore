@@ -23,10 +23,11 @@
 			return node.innerHTML.replace(/"/g, "&quot;");
 		}
 		function initialize(root) {
-			var strings = parseConfig(root).strings;
+			var config = parseConfig(root);
 			var prefix = root.getAttribute("data-prefix");
 			var namePrefix = prefix ? prefix + "." : "";
 			var idPrefix = namePrefix.replace(/\./g, "_");
+			var strings = config.strings;
 			var displayNamePlaceholder = encodeAttribute(strings.displayName);
 			var removeDestinationTitle = encodeAttribute(strings.removeDestination);
 			var addressPlaceholder = encodeAttribute(strings.addressExample || "+15551234567");
