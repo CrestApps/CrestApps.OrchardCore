@@ -16,11 +16,11 @@
 <div class="ocat-wrapper" asp-validation-class-for="Treatment.HoldMusicMediaId">
     <label asp-for="Treatment.HoldMusicMediaId" class="ocat-label">@T["Hold music"]</label>
     <div class="ocat-end">
-        <select asp-for="Treatment.HoldMusicMediaId" asp-items="Model.HoldMusicMediaOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a recording"]" title="@T["The provider's default"]">
-            <option value="">@T["The provider's default"]</option>
+        <select asp-for="Treatment.HoldMusicMediaId" asp-items="Model.HoldMusicMediaOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a recording"]" title="@T["Ringing tone"]">
+            <option value="">@T["Ringing tone"]</option>
         </select>
         <span asp-validation-for="Treatment.HoldMusicMediaId" class="text-danger"></span>
-        <span class="hint">@T["A voice media recording looped while the caller waits. Leave empty for the provider's default. Recordings are added under Voice media."]</span>
+        <span class="hint">@T["A voice media recording looped while the caller waits. Leave empty and callers hear a ringing tone. Recordings are added under Voice media."]</span>
     </div>
 </div>
 
@@ -57,7 +57,7 @@
     <div class="ocat-end">
         <input asp-for="Treatment.AverageHandleTimeSeconds" class="form-control" />
         <span asp-validation-for="Treatment.AverageHandleTimeSeconds" class="text-danger"></span>
-        <span class="hint">@T["Used by the estimated-wait announcement. Leave at 0 and no estimate is announced."]</span>
+        <span class="hint">@T["Used by the estimated-wait announcement. Set to 0 and no estimate is spoken. An estimate is also only spoken while at least one agent is available."]</span>
     </div>
 </div>
 
