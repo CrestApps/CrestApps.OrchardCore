@@ -55,7 +55,7 @@ The part's behavior is configured per content type through **`ProductPartSetting
 
 ## Attaching the Product part
 
-You can attach the part from the admin UI (**Content Definition → Content Types → *your type* → Add Parts → Product**) or in a migration:
+You can attach the part from the admin UI (**Design → Content Definition → Content Types → *your type* → Add Parts → Product**) or in a migration:
 
 ```csharp
 internal sealed class ProductContentTypeMigrations : DataMigration

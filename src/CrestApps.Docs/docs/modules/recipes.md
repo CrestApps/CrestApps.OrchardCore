@@ -3,12 +3,16 @@ sidebar_label: Recipes
 sidebar_position: 6
 title: CrestApps Recipes
 description: JSON-Schema support for Orchard Core recipes with per-step validation and AI guidance.
+user_manual: user-manual/administration/recipes
 ---
 
 | | |
 | --- | --- |
 | **Feature Name** | CrestApps Recipes |
 | **Feature ID** | `CrestApps.OrchardCore.Recipes` |
+
+
+<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
 
 Provides recipe steps for all modules.
 
