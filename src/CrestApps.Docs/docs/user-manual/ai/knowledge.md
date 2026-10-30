@@ -96,9 +96,15 @@ Attached files belong to one chat only. How users attach them is described in [C
 
 ## Data sources
 
+<YouTube video="ai-data-sources" title="Video overview of data sources" />
+
+The video shows how a content index, a knowledge base index and a data source fit together, each step below, and a real answer with its source.
+
 A data source connects the assistant to a knowledge base built from a search index or a database. Use it for large or changing content, such as all the articles on your site.
 
 ### Create a data source
+
+<YouTube video="ai-data-sources" title="Video of indexing content and creating a data source" start={85} end={187} />
 
 1. Open **Artificial Intelligence > Data Sources** and click **Add Data Source**.
 2. In **Available Source Types**, click **Add** on the type you need:
@@ -112,11 +118,13 @@ A data source connects the assistant to a knowledge base built from a search ind
 5. For every type except **Files** and **Web**, fill in the **Field Mapping**: the **Content field** to search, an optional **Title field** for the source list, and a **Key field** that identifies each entry. Ask your technical team which fields to use.
 6. Click **Save**.
 
-The data source fills its knowledge base and keeps it in step with the source. To rebuild it by hand, open the data source's **Actions** menu and choose **Sync index**.
+The data source fills its knowledge base and keeps it in step with the source. To rebuild it by hand, open the data source's **Actions** menu and choose **Sync index**. When you pick the **Source index**, the **Content field**, **Title field** and **Key field** are filled in with sensible defaults, such as the full text of a content item, its display text and its content item id.
+
+<YouTube video="ai-data-sources" title="Video of syncing a data source" start={187} end={207} />
 
 ### Use a data source in a profile
 
-<YouTube video="ai-file-sources" title="Video of choosing a data source on a profile" start={303} end={335} />
+<YouTube video="ai-data-sources" title="Video of choosing a data source on a profile" start={207} end={244} />
 
 On the profile's **Knowledge** tab:
 
@@ -129,6 +137,8 @@ On the profile's **Knowledge** tab:
 | **Retrieved documents** | From 3 to 20. How many passages are retrieved for each question. Empty uses the site default. |
 
 The site defaults are under **Settings > Artificial Intelligence > Data Sources**: **Default strictness** and **Default top documents**.
+
+<YouTube video="ai-data-sources" title="Video of an answer with its source and the site-wide defaults" start={244} end={287} />
 
 With a data source chosen, an answer carries small numbers on the statements that come from your files, and a numbered list of sources under it.
 
