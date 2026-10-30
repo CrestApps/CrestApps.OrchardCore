@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIConversationEvaluatedEventViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ProfileId">@T["Profile"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+            <option value="">@T["Any profile"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnlyFailures" />
+            <label class="form-check-label" asp-for="OnlyFailures">@T["Only conversations that failed"]</label>
+            <span class="hint dashed">@T["The evaluation is in <code>Workflow.Input.Evaluation</code>: its <code>Score</code>, <code>Passed</code>, <code>Summary</code>, <code>Criteria</code> and <code>Issues</code>."]</span>
+        </div>
+    </div>
+</div>

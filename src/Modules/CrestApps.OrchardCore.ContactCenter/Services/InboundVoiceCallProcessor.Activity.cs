@@ -15,7 +15,8 @@ public sealed partial class InboundVoiceCallProcessor
         string fromAddress,
         IReadOnlyList<string> contactItemIds,
         DateTime now,
-        string aiProfileId = null)
+        string aiProfileId = null,
+        Func<OmnichannelActivity, Task> prepare = null)
     {
         var activity = await _activityManager.NewAsync();
         activity.Kind = ActivityKind.Call;
@@ -74,6 +75,12 @@ public sealed partial class InboundVoiceCallProcessor
             {
                 ContactCenterWorkStateProjector.Apply(activity, workState);
             }
+        }
+
+        // Last changes before the first write, such as what an AI conversation's starting workflows decided.
+        if (prepare is not null)
+        {
+            await prepare(activity);
         }
 
         await _activityManager.CreateAsync(activity);

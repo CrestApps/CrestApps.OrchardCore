@@ -23,4 +23,30 @@ public interface ITurnBasedSilenceWatchdog
     /// </remarks>
     /// <param name="silence">The listening turn to watch.</param>
     Task ArmAsync(TurnBasedSilence silence);
+
+    /// <summary>
+    /// Records that the caller has just been heard, so no watch armed before now takes the line for silent.
+    /// </summary>
+    /// <remarks>
+    /// Called as soon as the caller's words arrive, not once they are stored. The turn that stores them commits
+    /// when its webhook request ends, after the reply has been generated; a watch that fired in between found no
+    /// line from the caller. Live, a caller who said hello was taken for a voicemail 30 ms before their line was
+    /// saved, was left a message and was hung up on.
+    /// </remarks>
+    /// <param name="activityId">The call's activity.</param>
+    /// <returns>How many caller lines the call has heard, this one included.</returns>
+    long CallerHeard(string activityId);
+
+    /// <summary>
+    /// Gets how many caller lines the call has heard, so a turn can tell whether the caller has said something since.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <returns>The count, or zero for a call nothing has been heard on.</returns>
+    long HeardCount(string activityId);
+
+    /// <summary>
+    /// Forgets what was heard on a call that has ended.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    void Forget(string activityId);
 }

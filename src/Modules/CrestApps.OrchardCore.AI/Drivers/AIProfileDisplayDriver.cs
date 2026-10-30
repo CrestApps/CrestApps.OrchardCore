@@ -83,6 +83,9 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
             View("AIProfile_CloneActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:5")
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile)),
+            // After the chat items (5), before deleting chat history (9) and the profile (10).
+            View("AIProfile_VersionsActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:7")
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile)),
             View("AIProfile_ActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:10")
             .RenderWhen(async () => profile.GetSettings<AIProfileSettings>().IsRemovable && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
         );

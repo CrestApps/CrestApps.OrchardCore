@@ -134,6 +134,13 @@ public sealed class RealtimeVoiceConversationContext
     public CancellationToken MachineGreetingEnded { get; set; }
 
     /// <summary>
+    /// Gets or sets a token that is cancelled when the assistant presses keys on the call. The machine that answered
+    /// is then a phone menu, not a voicemail: no message is left on it, and the conversation carries on with whoever
+    /// the menu puts the call through to.
+    /// </summary>
+    public CancellationToken PhoneMenuReached { get; set; }
+
+    /// <summary>
     /// Gets or sets what is told when the session has left its message on the machine, or has given up on one, so
     /// the call is ended exactly as the end-call tool ends it with voicemail reported: <see cref="EndCallRequested"/>
     /// fires and <see cref="ReachedVoicemail"/> reads <see langword="true"/>.
@@ -158,6 +165,12 @@ public sealed class RealtimeVoiceConversationContext
     /// talked to by the assistant instead.
     /// </remarks>
     public string HandoffInstructions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the guidance for a call that would hand the caller to a person but cannot now, the queue being
+    /// closed, or <see langword="null"/> otherwise. It is given without the transfer tool.
+    /// </summary>
+    public string NoHandoffInstructions { get; set; }
 
     /// <summary>
     /// Gets or sets the deployment this call is held on.
