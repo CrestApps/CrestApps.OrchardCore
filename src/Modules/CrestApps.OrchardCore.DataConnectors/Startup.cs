@@ -2,19 +2,23 @@ using CrestApps.OrchardCore.DataConnectors.BackgroundTasks;
 using CrestApps.OrchardCore.DataConnectors.Connectors.Elasticsearch;
 using CrestApps.OrchardCore.DataConnectors.Connectors.Files;
 using CrestApps.OrchardCore.DataConnectors.Connectors.Http;
+using CrestApps.OrchardCore.DataConnectors.Deployments;
 using CrestApps.OrchardCore.DataConnectors.Drivers;
 using CrestApps.OrchardCore.DataConnectors.Indexes;
 using CrestApps.OrchardCore.DataConnectors.Migrations;
 using CrestApps.OrchardCore.DataConnectors.Models;
+using CrestApps.OrchardCore.DataConnectors.Recipes;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.DataConnectors;
@@ -104,5 +108,33 @@ public sealed class FilesStartup : StartupBase
         services.AddDataConnector<MediaFilesDataConnector>();
         services.AddDisplayDriver<DataConnection, MediaFilesConnectionDisplayDriver>();
         services.AddDisplayDriver<ConnectedDataSet, MediaFileDataSetDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe steps that import connections and data sets.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<DataConnectionStep>();
+        services.AddRecipeExecutionStep<ConnectedDataSetStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment steps that export connections and data sets.
+/// </summary>
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<DataConnectionDeploymentSource, DataConnectionDeploymentStep, DataConnectionDeploymentStepDisplayDriver>();
+        services.AddDeployment<ConnectedDataSetDeploymentSource, ConnectedDataSetDeploymentStep, ConnectedDataSetDeploymentStepDisplayDriver>();
     }
 }

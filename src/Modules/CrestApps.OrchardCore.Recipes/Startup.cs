@@ -1919,6 +1919,19 @@ public sealed class McpServerRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers the schemas of the Data Connectors recipe steps.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.DataConnectors")]
+public sealed class DataConnectorsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, DataConnectionRecipeStep>();
+        services.AddScoped<IRecipeStep, ConnectedDataSetRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the A2A recipe feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.AI.A2A")]

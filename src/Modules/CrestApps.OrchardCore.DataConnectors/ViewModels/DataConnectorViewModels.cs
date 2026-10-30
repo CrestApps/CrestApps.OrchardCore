@@ -733,3 +733,40 @@ public class ConnectedDataSetRowViewModel
     /// </summary>
     public DataConnection Connection { get; set; }
 }
+
+/// <summary>
+/// The editor of a deployment step that exports connections or data sets.
+/// </summary>
+public class DataConnectorDeploymentStepViewModel
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether every record is exported.
+    /// </summary>
+    public bool IncludeAll { get; set; }
+
+    /// <summary>
+    /// Gets or sets the records to choose from.
+    /// </summary>
+    public DataConnectorDeploymentEntryViewModel[] Entries { get; set; } = [];
+}
+
+/// <summary>
+/// A record a deployment step can export.
+/// </summary>
+public class DataConnectorDeploymentEntryViewModel
+{
+    /// <summary>
+    /// Gets or sets the record's identifier.
+    /// </summary>
+    public string ItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record's name.
+    /// </summary>
+    public string DisplayText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the record is exported.
+    /// </summary>
+    public bool IsSelected { get; set; }
+}

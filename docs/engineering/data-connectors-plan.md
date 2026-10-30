@@ -167,3 +167,6 @@ Typed per-data-set tables, cross-source federation, write-back, change data capt
 - **Custom SQL queries run as a derived table**, which is what makes "one SELECT" enforceable (a second statement or a CTE can't be wrapped); the text check rejects unbalanced parentheses, `;` and `--` outside quotes.
 - Records carry a YesSql `Id` so a record saved after a commit in the same scope updates its row rather than inserting a second one.
 
+- **Recipes and deployment plans carry definitions, not data.** The `DataConnection` and `ConnectedDataSet` steps import connections and data sets; their deployment steps export them in the same shape. Secrets are left out of exports (they are protected with the exporting tenant's keys) and accepted in clear text by recipes; imported rows and refresh history stay behind, and a data set with no rows is queued for its first import on the importing site.
+- **Recipe entries keep a readable `ItemId`** (up to 26 letters, digits, `-` or `_`), so a hand-written recipe can name a connection and its data sets refer to it; data sets also carry `ConnectionName`, so they find a connection created by hand.
+- **Deployment step overrides repeat `[JsonIgnore]`** on `Category` and `Title`: System.Text.Json reads the override's attributes, not the base property's, and a plan step that serialized them failed to save.

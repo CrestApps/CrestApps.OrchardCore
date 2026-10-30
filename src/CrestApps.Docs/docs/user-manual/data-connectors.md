@@ -137,6 +137,29 @@ Live data sets are listed under **Connected data (live)** and imported ones unde
 
 You only see a data set there when your role has **Read every connected data set**, or **Read the connected data set** with that data set's name. This is the same for live and imported data sets, so importing data never shows it to more people. Ask your administrator to grant the permission in **Access Control > Roles**.
 
+## Copy connections and data sets to another site
+
+You can move your connections and data sets to another site, such as from a staging site to the live one, with a deployment plan.
+
+1. Go to **Configuration > Import/Export > Deployment Plans** and create a plan, or open one.
+2. Click **Add Step**, open the **Data** group, and add **Data Connections**. Then add **Connected Data Sets**. Keep the connections first: each data set needs its connection on the other site.
+3. In each step, leave **Include all connections** (or **Include all data sets**) ticked, or clear it and tick the ones to copy.
+4. Run the plan to download its file, or send it to the other site, and import it there with **Configuration > Import/Export > Package Import**.
+
+On the other site:
+
+- A connection or data set with the same identifier or technical name is updated; the others are created.
+- **Passwords, keys and secrets are not copied**, because they are encrypted for this site only. Open each copied connection, type its secrets, and click **Save and test**. Your administrator can also put them in the import file.
+- **Imported data sets don't bring their rows.** Each one starts its first import on the other site within a minute, from its own connection.
+- The other site needs the same connector features enabled, and must be able to reach the systems.
+
+Your administrator can also create connections and data sets with a setup or import recipe; the [Technical Manual](../modules/data-connectors.md#recipes-and-deployment-plans) describes its steps.
+
+| | |
+| --- | --- |
+| **Permissions** | Manage deployment plans and Export data on this site; Import data on the other site |
+| **Features** | Deployment, and Recipes on the importing site |
+
 ## Troubleshooting
 
 | Problem | What to do |

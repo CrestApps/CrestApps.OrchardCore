@@ -51,6 +51,12 @@ By default a connector can't reach the site's own network (loopback, private, li
 - A data set is listed and read only for a user holding its read permission, whether it is live or imported, so an import made with the connection's credentials never shows its rows to someone who couldn't read the live data set. No user reads nothing.
 - Secrets are stored protected with the tenant's data protection keys, are write-only in the editors, and are never logged.
 
+## Recipes and deployment plans
+
+- The `DataConnection` and `ConnectedDataSet` recipe steps create or update connections and data sets, matched by `ItemId`, then by `Name`. Secrets are given in clear text under `Secrets` and stored protected.
+- The **Data Connections** and **Connected Data Sets** deployment steps export them in the same shape, without secrets (they are protected with this tenant's keys) and without imported rows (the importing site queues its own first import).
+- With **CrestApps Recipes** enabled, both steps have JSON schemas.
+
 ## Writing a connector
 
 Implement `IDataConnector` (static `Name`, `DisplayName`, `Description`, `Capabilities`; `TestAsync`, `DiscoverAsync`, `DescribeAsync`, `ReadAsync`), register it with `services.AddDataConnector<TConnector>()` in your module's startup, and add display drivers for `DataConnection` and `ConnectedDataSet` that edit its settings. A relational database is a few members on `RelationalDataConnector`. See the documentation site for the full guide.

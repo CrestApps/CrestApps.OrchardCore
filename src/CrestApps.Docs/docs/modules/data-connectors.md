@@ -164,6 +164,81 @@ OrchardCore__CrestApps__DataConnectors__Network__AllowPrivateNetworks=true
 
 In a tenant's own `App_Data/Sites/{tenant}/appsettings.json`, leave out the `OrchardCore` wrapper.
 
+## Recipes and deployment plans
+
+Connections and data sets move between sites with two recipe steps, and a deployment plan exports them in the same shape.
+
+| Recipe step | Deployment step | Registered when | Exports and imports |
+| --- | --- | --- | --- |
+| `DataConnection` | **Data Connections** (category **Data**) | `OrchardCore.Recipes.Core` / `OrchardCore.Deployment` is enabled | Connections, matched by `ItemId`, then by `Name`. |
+| `ConnectedDataSet` | **Connected Data Sets** (category **Data**) | `OrchardCore.Recipes.Core` / `OrchardCore.Deployment` is enabled | Data sets, matched by `ItemId`, then by `Name`. |
+
+Both deployment steps export every record, or only the ones ticked in the step. When the **CrestApps Recipes** feature (`CrestApps.OrchardCore.Recipes`) is enabled with Data Connectors, the JSON schemas of both steps are registered too (`DataConnectionRecipeStep` and `ConnectedDataSetRecipeStep`), so recipe editors and the AI recipe tools validate them and suggest their members.
+
+What is left out of an export:
+
+- **Secrets.** They are encrypted with the exporting tenant's data protection keys, which no other site can read. Give them to the importing recipe in clear text under `Secrets`, keyed by name (`Password`, `ApiKey`, `BearerToken`, `ClientSecret`); they are encrypted as they are stored. An empty or missing secret keeps the one the connection already stores, as an empty box does in the editor. Keep a recipe that holds secrets out of source control, or read them from the site's configuration with `[js: configuration('Warehouse:Password')]`, as the example does.
+- **Rows and refresh history.** The importing site imports an imported data set itself: a data set that holds no rows yet is queued (`Import.RefreshRequestedUtc`), and the refresh task imports it within a minute.
+
+```json
+{
+  "steps": [
+    {
+      "name": "DataConnection",
+      "Connections": [
+        {
+          "ItemId": "warehouse-db",
+          "Name": "Warehouse",
+          "DisplayText": "Warehouse database",
+          "Connector": "SqlServer",
+          "Properties": {
+            "SqlServerConnectionSettings": {
+              "Server": "sql01.example.com",
+              "Database": "Warehouse",
+              "Authentication": "SqlLogin",
+              "UserName": "reports_reader",
+              "Encrypt": true
+            }
+          },
+          "Secrets": { "Password": "[js: configuration('Warehouse:Password')]" }
+        }
+      ]
+    },
+    {
+      "name": "ConnectedDataSet",
+      "DataSets": [
+        {
+          "Name": "Orders",
+          "DisplayText": "Orders",
+          "ConnectionName": "Warehouse",
+          "Resource": "sales.Orders",
+          "AccessMode": "Imported",
+          "Refresh": { "Mode": "Incremental", "IncrementalField": "ModifiedUtc", "IntervalMinutes": 60, "SchemaChangePolicy": "Accept" },
+          "Fields": [
+            { "Name": "OrderId", "SourceName": "OrderId", "Type": "Integer", "IsIdentifier": true },
+            { "Name": "Total", "SourceName": "Total", "Type": "Decimal" },
+            { "Name": "ModifiedUtc", "SourceName": "ModifiedUtc", "Type": "DateTime" }
+          ],
+          "DefaultDateField": "ModifiedUtc"
+        }
+      ]
+    }
+  ]
+}
+```
+
+| Member | Rule |
+| --- | --- |
+| `ItemId` | Kept when it is at most 26 letters, digits, `-` or `_`, so other steps that name it keep resolving; otherwise a new identifier is made. |
+| `Name` | The technical name: a letter, then letters, digits and underscores. Made from `DisplayText` when left out. A data set's name can't change once it exists, because reports, pipelines and its read permission store it; a connection's can. |
+| `Connector` | Its feature must be enabled. An existing connection's connector can't change. |
+| `Properties` | The connector's settings, keyed by the name of their type (`HttpConnectionSettings`, `SqlServerConnectionSettings`, `MediaFilesConnectionSettings` on a connection; `RelationalDataSetSettings`, `HttpApiDataSetSettings`, `ElasticsearchDataSetSettings`, `MediaFileDataSetSettings` on a data set). Members a recipe leaves out are kept. Choices are written by name, such as `"SqlLogin"` or `"OpenIdConnect"`; export a configured site for the exact shape. |
+| `ConnectionId`, `ConnectionName` | The data set's connection, by identifier, then by technical name, so a data set finds a connection that was created by hand on the importing site. Export the connections first, or create them before the data sets. |
+| `Fields` | Checked as the editor checks them. When a new data set has none, the step reads them from the source; when the source can't be reached, an imported data set reads them at its first refresh, and a live one when **Discover fields** is clicked in its editor. |
+| `AccessMode`, `Refresh` | Checked against the connector's capabilities, with the editor's rules: the interval is 1 minute to one year, and an incremental refresh needs an identifier field and a growing date or number field. |
+
+A recipe entry that breaks a rule is reported as a recipe error, and the others are still imported.
+
 ## Write a connector
 
 A connector is a class in any module; nothing in the Data Connectors modules changes.
