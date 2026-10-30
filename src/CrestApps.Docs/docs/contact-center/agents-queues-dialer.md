@@ -95,6 +95,8 @@ Every sign-in, sign-out, and presence transition is stored as a durable Contact 
 
 ## Agent state reason codes
 
+<YouTube video="contact-center-agent-states" title="Video overview of agent states and reason codes" />
+
 Administrators define **reason codes** from **Interaction Center → Management → Agent states** so agents pick an auditable, standardized reason when they go not ready. A reason code has a unique name, an optional description, the presence state it places the agent in (`AppliesTo` — `Break`, `Away`, `DoNotDisturb`, `Meeting`, `Training`, or `AfterHoursUnavailable`), a sort order, and an enabled flag. The catalog is managed with the same display-driver CRUD pattern as Skills and queues, and the `ManageContactCenterAgents` permission gates it.
 
 When reason codes are configured, the soft-phone presence dropdown lists them (ordered by sort order) in place of the fixed not-ready states. A reason that applies to `Break` submits a break request with that reason, so the break starts at once when the agent is idle, or when the current work ends if work is holding them. Any other reason sets the agent's presence to the reason's `AppliesTo` state directly. Either way the reason is recorded on the agent profile and the `AgentPresenceChanged` event. If no reason codes exist, the dropdown falls back to the built-in not-ready states. **Available** and **Offline** are always listed.
