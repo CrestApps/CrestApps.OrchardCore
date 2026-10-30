@@ -64,6 +64,8 @@ An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **
 
 ## Offer one more thing at checkout
 
+<YouTube video="orders-quotes-disputes" title="The order bump" start={51} end={88} />
+
 Under **Settings > Commerce > Orders**, **Order bump** offers a product on the payment step, such as a small item that goes with most orders. Choose the **Product offered**, an optional **Discount** and a **Headline**. Buyers tick one box to add it, and the total changes before they pay. It isn't offered on orders that already have it, or while it's out of stock. Clear the product to stop the offer.
 
 ## Manage an order
@@ -109,6 +111,8 @@ Click **Send the confirmation again** to email the order confirmation to the cus
 
 ### Disputes
 
+<YouTube video="orders-quotes-disputes" title="Disputes and risky payments" start={249} end={294} />
+
 When a buyer disputes a card payment with their bank (a chargeback), Stripe tells your site and the order shows it: a red **Disputed** box under the items, with the amount, why the buyer disputed it (for example *they don't recognize the payment*) and its status, such as *needs your response*. The orders list marks the order **Disputed** while it is open, and a note records each change.
 
 Answer a dispute from your Stripe dashboard before its deadline, with evidence such as the shipping tracking: otherwise the money goes back to the buyer. When it is decided, the box says *won, the money stays with you* or *lost, the money went back to the payer*. It needs Stripe's webhook, which Stripe Connect sets up.
@@ -142,9 +146,13 @@ Sending the invoice needs your site's email to be set up; the draft's editor war
 
 ### Add items to a paid order
 
+<YouTube video="orders-quotes-disputes" title="Add items to a paid order" start={194} end={221} />
+
 A paid order can't be changed, but on its page **Add items** starts a new order for the same buyer, marked *These items are added to order ...*. Fill it in and send its invoice like any other; its page links back to the paid order. To take items off a paid order, refund them, or let the buyer [return them](returns.md).
 
 ## Quotes
+
+<YouTube video="orders-quotes-disputes" title="Quotes" start={88} end={110} />
 
 Let signed-in buyers ask for a quote instead of checking out, such as for a large or trade order.
 
