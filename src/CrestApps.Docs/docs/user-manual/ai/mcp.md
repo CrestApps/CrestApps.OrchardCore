@@ -25,7 +25,7 @@ The **Model Context Protocol (MCP)** is a common standard for sharing tools and 
 
 <YouTube video="ai-mcp" title="Video overview of the Model Context Protocol" />
 
-The video covers why a common standard for AI tools helps, how the MCP client and server fit together, and each task below except sharing resources.
+The video covers why a common standard for AI tools helps, how the MCP client and server fit together, and each task below except sharing resources, which has [its own video](#share-resources).
 
 Each part is its own feature, so you only see the menus of the features that are turned on: **MCP Hosts** comes with the client, and **Prompts** and **Resources** come with the server.
 
@@ -123,18 +123,51 @@ A **prompt** is a ready-made instruction that other AI apps can offer to their u
 
 ## Share resources
 
-A **resource** is a file or other data that an app can read.
+A **resource** is a file or other data that an app can read. With a resource, the app asks your site for the file when it needs it, so it always reads the current version instead of a pasted copy.
 
-1. Open **Artificial Intelligence > Model Context Protocol > Resources** and click **Add Resource**.
-2. In **Available Resource Types**, click **Add** on a type:
-   - **File** reads from the site's file providers.
-   - **Media** shares files of the media library.
-   - **FTP/FTPS** and **SFTP** read from a file server. They are available when the FTP or SFTP resource feature is on.
-   - **Recipe**, **Recipe Schema** and **Recipe Step Schema** share the site's recipes with developer tools.
-3. Enter a **Display Text**, a **Name**, a **Path** and a **Description**. The **MIME Type** tells the app what kind of content it is, for example `text/plain`.
-4. Click **Save**.
+<YouTube video="ai-mcp-resources" title="Video overview of MCP resources" />
 
-The **Path** can contain placeholders in curly braces, which turn one resource into many; the **Full URI** line under the field shows the address an app uses. An **SFTP** resource adds the **Host**, **Port** and **Username** of the file server and either a **Password** or a **Private Key** with an optional **Passphrase**, plus optional **Proxy Settings** and timeouts. An **FTP/FTPS** resource has the **Host**, **Port**, **Username** and **Password**, an **Encryption Mode**, a **Data Connection Type** and timeouts. Passwords and keys are stored securely.
+The video shows what resources are, the types below, and how to add a File, a Media, an SFTP and an FTP resource.
+
+### The resource types
+
+<YouTube video="ai-mcp-resources" title="Video of the resource types" start={57} end={99} />
+
+Open **Artificial Intelligence > Model Context Protocol > Resources** and click **Add Resource**. **Available Resource Types** lists:
+
+- **File** reads from the site's file providers.
+- **Media** shares files of the media library.
+- **FTP/FTPS** and **SFTP** read from a file server. They are available when the FTP or SFTP resource feature is on.
+- **Recipe**, **Recipe Schema** and **Recipe Step Schema** share the site's recipes with developer tools. You do not need them for everyday documents.
+
+### Share a file
+
+<YouTube video="ai-mcp-resources" title="Video of adding a File resource" start={99} end={142} />
+
+1. Click **Add** on **File**.
+2. Enter a **Display Text** (the name in the list) and a **Name** (how apps identify the resource).
+3. Add a **Description** that says what the file holds. AI apps read it to decide whether the resource is useful.
+4. Leave the **MIME Type**, which tells the app what kind of content it is, on `text/plain` or change it to match the file.
+5. Enter the **Path**. The **Full URI** line under the field shows the address an app uses. A placeholder in curly braces, such as `{fileName}`, turns one resource into many: the app fills in the file it wants.
+6. Click **Save**. The resource is listed with its type.
+
+### Share media
+
+<YouTube video="ai-mcp-resources" title="Video of adding a Media resource" start={142} end={172} />
+
+Click **Add** on **Media** and fill in the same fields. In the **Path**, the placeholder `{path}` stands for the location of a file in the media library, so an app can ask for any file. To share a single file instead, replace the placeholder with its location. Click **Save**.
+
+### Share files from a file server
+
+<YouTube video="ai-mcp-resources" title="Video of adding SFTP and FTP resources" start={172} end={234} />
+
+1. Click **Add** on **SFTP**, then enter a **Display Text**, a **Name** and a **Description**.
+2. Enter the **Host**, the **Port** (22 by default) and the **Username** of the file server.
+3. Sign in with a **Password**, or with a **Private Key** and its **Passphrase**. Both are stored securely and never shown again.
+4. **Proxy Settings**, a **Connection Timeout (seconds)** and a **Keep-Alive Interval (seconds)** are optional, and help with firewalls and slow networks.
+5. Click **Save**.
+
+An **FTP/FTPS** resource has the same **Host**, **Port**, **Username** and **Password**, plus an **Encryption Mode** (**None (Plain FTP)**, **Explicit (STARTTLS)**, **Implicit (Port 990)** or **Auto Detect**), a **Data Connection Type**, **Accept Any Certificate** and timeouts. Saving only stores the settings, so try each resource from an AI app before you rely on it.
 
 ## Use cases
 

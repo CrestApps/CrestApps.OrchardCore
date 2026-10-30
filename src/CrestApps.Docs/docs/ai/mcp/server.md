@@ -267,7 +267,7 @@ Prompts are managed under **Artificial Intelligence** → **Model Context Protoc
 - **Arguments**: optional named arguments (name, title, description, required) that clients supply; message content can reference them as `{{argName}}`
 - **Messages**: one or more messages, each with a **Role** (**User** or **Assistant**) and **Content**. Messages are returned in order when a client calls `GetPrompt`
 
-See also [Share your tools with other AI apps](../../user-manual/ai/tools-and-agents.md#share-your-tools-with-other-ai-apps) in the User Manual.
+See also [Share prompts](../../user-manual/ai/mcp.md#share-prompts) and [Share your tools with other AI apps](../../user-manual/ai/mcp.md#share-your-tools-with-other-ai-apps) in the User Manual.
 
 Prompts can also be registered programmatically in code or imported via recipes.
 
@@ -284,6 +284,8 @@ Resources can be:
 - Discovered and accessed by external MCP clients
 
 ### Managing Resources via Admin UI
+
+<YouTube video="ai-mcp-resources" title="Video overview of MCP resources in the admin" />
 
 Resources are managed under **Artificial Intelligence** → **Model Context Protocol** → **Resources** (permission `ManageMcpResources`; the menu appears only when the MCP Server feature is enabled). **Add Resource** opens **Available Resource Types**; each type defines what kind of data the resource serves and which URI variables are available. The editor then has:
 
