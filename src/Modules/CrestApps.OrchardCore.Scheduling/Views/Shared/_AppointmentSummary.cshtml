@@ -1,0 +1,27 @@
+@model AppointmentDetailViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <h2 class="h5">@Model.AppointmentType?.Name</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["When"]</dt>
+            <dd class="col-sm-9">@Model.LocalStart.ToString("f") - @Model.LocalEnd.ToString("t") (@Model.TimeZoneId)</dd>
+            <dt class="col-sm-3">@T["With"]</dt>
+            <dd class="col-sm-9">@Model.ResourceNames</dd>
+            <dt class="col-sm-3">@T["Status"]</dt>
+            <dd class="col-sm-9">@Model.Appointment.Status</dd>
+            <dt class="col-sm-3">@T["Customer"]</dt>
+            <dd class="col-sm-9">@Model.Appointment.CustomerName @Model.Appointment.CustomerEmail @Model.Appointment.CustomerPhone</dd>
+            @if (!string.IsNullOrEmpty(Model.AppointmentType?.Location))
+            {
+                <dt class="col-sm-3">@T["Where"]</dt>
+                <dd class="col-sm-9">@Model.AppointmentType.Location</dd>
+            }
+            @if (!string.IsNullOrEmpty(Model.Appointment.Notes))
+            {
+                <dt class="col-sm-3">@T["Notes"]</dt>
+                <dd class="col-sm-9">@Model.Appointment.Notes</dd>
+            }
+        </dl>
+    </div>
+</div>

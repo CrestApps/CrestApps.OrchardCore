@@ -20,6 +20,7 @@ using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
+using YesSql.Indexes;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using Calendar = CrestApps.OrchardCore.Calendars.Models.Calendar;
@@ -52,20 +53,33 @@ internal sealed class CalendarTestHarness : IAsyncDisposable
 
     public static DateTime Now { get; } = new(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc);
 
-    public static async Task<CalendarTestHarness> CreateAsync()
+    public static async Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> createSchema = null, IIndexProvider[] indexProviders = null, string[] collections = null)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"calendars-{Guid.NewGuid():N}.db");
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
 
-        store.RegisterIndexes([new CalendarIndexProvider(), new CalendarEventIndexProvider()]);
+        store.RegisterIndexes(new IIndexProvider[] { new CalendarIndexProvider(), new CalendarEventIndexProvider() }.Concat(indexProviders ?? []).ToArray());
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(CalendarsConstants.CollectionName, TestContext.Current.CancellationToken);
+
+        foreach (var collection in collections ?? [])
+        {
+            await store.InitializeCollectionAsync(collection, TestContext.Current.CancellationToken);
+        }
 
         await using (var session = store.CreateSession())
         {
             var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-            await CalendarIndexSchema.CreateAsync(new SchemaBuilder(store.Configuration, transaction));
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+
+            await CalendarIndexSchema.CreateAsync(schemaBuilder);
+
+            if (createSchema is not null)
+            {
+                await createSchema(schemaBuilder);
+            }
+
             await transaction.CommitAsync(TestContext.Current.CancellationToken);
         }
 
@@ -105,6 +119,8 @@ internal sealed class CalendarTestHarness : IAsyncDisposable
             .WithOwner(CalendarOwnerKind.Role)
             .AddEventType("Shift", new LocalizationSource("Shift"), e => e.RequiresAttendee())
             .AddEventType("TimeOff", new LocalizationSource("Time off"), e => e.AllDayByDefault().NeedsApproval()));
+
+        configure?.Invoke(services);
 
         return new CalendarTestHarness(databasePath, store, services.BuildServiceProvider());
     }

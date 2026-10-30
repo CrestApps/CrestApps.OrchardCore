@@ -1,0 +1,34 @@
+@model AppointmentDetailViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SchedulingAppointmentsDetail" title="@T["Appointment with {0}", Model.Appointment.CustomerName]">
+        <breadcrumb-item id="SchedulingAppointments" action="Index" controller="Appointments" area="CrestApps.OrchardCore.Scheduling">@T["Appointments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_AppointmentSummary" model="Model" />
+
+@if (!string.IsNullOrEmpty(Model.ManageUrl))
+{
+    <p class="small text-muted">@T["The customer's manage link"]: <code>@Model.ManageUrl</code></p>
+}
+
+<form method="post" asp-action="Do" asp-route-id="@Model.Appointment.ItemId" class="no-multisubmit">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        @if (Model.Appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested)
+        {
+            <button type="submit" name="operation" value="Confirm" class="btn btn-success">@T["Confirm"]</button>
+        }
+        @if (Model.Appointment.Status is AppointmentStatus.Confirmed or AppointmentStatus.Requested)
+        {
+            <button type="submit" name="operation" value="Complete" class="btn btn-primary">@T["Took place"]</button>
+            <button type="submit" name="operation" value="NoShow" class="btn btn-outline-secondary">@T["No-show"]</button>
+        }
+        @if (Model.Appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed)
+        {
+            <input type="text" name="reason" class="form-control" style="max-width: 18rem" placeholder="@T["Reason (optional)"]" />
+            <button type="submit" name="operation" value="Cancel" class="btn btn-danger">@T["Cancel appointment"]</button>
+        }
+    </div>
+    <partial name="_RescheduleChoices" model="Model" />
+</form>

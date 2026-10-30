@@ -1,0 +1,43 @@
+@model AppointmentTypeViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SchedulingAppointmentTypesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Appointment Type"] : T["Edit '{0}' Appointment Type", Model.Name])">
+        <breadcrumb-item id="SchedulingAppointmentTypes" action="Index" controller="AppointmentTypes" area="CrestApps.OrchardCore.Scheduling">@T["Appointment Types"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["General"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="2"></textarea></div></div>
+        <div class="ocat-wrapper"><label asp-for="Location" class="ocat-label">@T["Location"]</label><div class="ocat-end"><input asp-for="Location" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Color" class="ocat-label">@T["Color"]</label><div class="ocat-end"><input asp-for="Color" type="color" class="form-control form-control-color" /></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Can be booked"]</label></div></div></div>
+    </div></div>
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Time"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="DurationMinutes" class="ocat-label">@T["Length (minutes)"]</label><div class="ocat-end"><input asp-for="DurationMinutes" type="number" min="5" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="SlotIntervalMinutes" class="ocat-label">@T["Start times every (minutes)"]</label><div class="ocat-end"><input asp-for="SlotIntervalMinutes" type="number" min="5" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="BufferBeforeMinutes" class="ocat-label">@T["Free time before (minutes)"]</label><div class="ocat-end"><input asp-for="BufferBeforeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="BufferAfterMinutes" class="ocat-label">@T["Free time after (minutes)"]</label><div class="ocat-end"><input asp-for="BufferAfterMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+    </div></div>
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Who"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="ResourceIds" class="ocat-label">@T["Resources"]</label><div class="ocat-end"><select asp-for="ResourceIds" asp-items="Model.ResourceOptions" class="selectpicker show-tick" multiple data-live-search="true" title="@T["Choose resources"]"></select><span class="hint">@T["The staff, rooms and equipment that take this appointment."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Assignment" class="ocat-label">@T["Pick"]</label><div class="ocat-end"><select asp-for="Assignment" asp-items="Model.AssignmentOptions" class="form-select" style="max-width: 22rem"></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="Capacity" class="ocat-label">@T["Places per appointment"]</label><div class="ocat-end"><input asp-for="Capacity" type="number" min="1" class="form-control" style="max-width: 10rem" /><span class="hint">@T["More than 1 makes it a class or group session that several customers book."]</span></div></div>
+    </div></div>
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Booking rules"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="MinimumNoticeMinutes" class="ocat-label">@T["Minimum notice (minutes)"]</label><div class="ocat-end"><input asp-for="MinimumNoticeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="HorizonDays" class="ocat-label">@T["Book up to (days ahead)"]</label><div class="ocat-end"><input asp-for="HorizonDays" type="number" min="1" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxPerDay" class="ocat-label">@T["Most per resource per day"]</label><div class="ocat-end"><input asp-for="MaxPerDay" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["0 for no limit."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="HoldMinutes" class="ocat-label">@T["Hold a time for (minutes)"]</label><div class="ocat-end"><input asp-for="HoldMinutes" type="number" min="1" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="RequiresConfirmation" class="form-check-input" /><label asp-for="RequiresConfirmation" class="form-check-label">@T["Bookings wait for someone to confirm them"]</label></div></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="AllowSelfService" class="form-check-input" /><label asp-for="AllowSelfService" class="form-check-label">@T["Customers can book it themselves"]</label><span class="hint dashed">@T["On the public booking page (with the Scheduling Self-Service feature) and through the scheduling AI tools."]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="Slug" class="ocat-label">@T["Booking page address"]</label><div class="ocat-end"><div class="input-group" style="max-width: 28rem"><span class="input-group-text">/book/</span><input asp-for="Slug" class="form-control" /></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

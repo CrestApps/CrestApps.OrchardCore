@@ -100,6 +100,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Calendars/CrestApps.OrchardCore.Calendars.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Products/CrestApps.OrchardCore.Products.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Products.AzureAI/CrestApps.OrchardCore.Products.AzureAI.csproj" PrivateAssets="none" />

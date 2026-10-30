@@ -1,0 +1,27 @@
+@model AppointmentDetailViewModel
+
+@{
+    ViewData["Title"] = T["Your appointment"];
+}
+
+<div class="container my-4" style="max-width: 48rem">
+    <h1 class="h3">@T["Your appointment"]</h1>
+    @if (TempData["SchedulingMessage"] is string message)
+    {
+        <div class="alert alert-info">@message</div>
+    }
+    @if (Model.Appointment.Status == AppointmentStatus.Requested)
+    {
+        <div class="alert alert-warning">@T["Your request has been received. You will hear back once it is confirmed."]</div>
+    }
+    <partial name="_AppointmentSummary" model="Model" />
+    <p class="small text-muted">@T["Keep this page's address to move or cancel your appointment."]</p>
+
+    <form method="post" class="no-multisubmit">
+        @if (Model.Appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed)
+        {
+            <button type="submit" name="operation" value="Cancel" class="btn btn-danger mb-3" onclick="return confirm('@T["Cancel your appointment?"]')">@T["Cancel my appointment"]</button>
+        }
+        <partial name="_RescheduleChoices" model="Model" />
+    </form>
+</div>

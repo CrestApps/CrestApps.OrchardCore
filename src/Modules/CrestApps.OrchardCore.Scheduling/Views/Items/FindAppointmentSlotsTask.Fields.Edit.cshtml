@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+
+@model AppointmentTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="AppointmentTypeId" class="form-label">@T["Appointment type id"]</label>
+    <input asp-for="AppointmentTypeId" class="form-control code" />
+</div>
+<div class="mb-3">
+    <label asp-for="From" class="form-label">@T["From (ISO 8601)"]</label>
+    <input asp-for="From" class="form-control code" />
+</div>
+<div class="mb-3">
+    <label asp-for="To" class="form-label">@T["To (ISO 8601)"]</label>
+    <input asp-for="To" class="form-control code" />
+</div>
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control" />
+</div>

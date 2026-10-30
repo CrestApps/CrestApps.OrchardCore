@@ -1,0 +1,32 @@
+@model SchedulingResourceViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SchedulingResourcesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Resource"] : T["Edit '{0}' Resource", Model.Name])">
+        <breadcrumb-item id="SchedulingResources" action="Index" controller="SchedulingResources" area="CrestApps.OrchardCore.Scheduling">@T["Scheduling Resources"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Kind" class="ocat-label">@T["Kind"]</label><div class="ocat-end"><select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="UserId" class="ocat-label">@T["User"]</label><div class="ocat-end">
+            @await Component.InvokeAsync("ItemSelector", new { id = "UserId", inputName = "UserId", endpoint = "/Admin/api/calendars/users/search", initialItemsJson = Model.InitialUserJson, multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
+            <span class="hint">@T["For a staff member: the user, whose own calendar time also counts as busy."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="CalendarId" class="ocat-label">@T["Calendar"]</label><div class="ocat-end"><select asp-for="CalendarId" asp-items="Model.CalendarOptions" class="selectpicker show-tick" data-live-search="true"><option value="">@T["Make a new calendar"]</option></select><span class="hint">@T["Appointments go on this calendar, and its events make the resource busy."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="selectpicker show-tick" data-live-search="true"></select></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Takes appointments"]</label></div></div></div>
+    </div></div>
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Hours"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="AvailabilityMode" class="ocat-label">@T["Hours come from"]</label><div class="ocat-end"><select asp-for="AvailabilityMode" class="form-select" style="max-width: 22rem"><option value="WorkingHours">@T["Working hours below"]</option><option value="Shifts">@T["Shifts on a workforce calendar"]</option></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="WorkingHours" class="ocat-label">@T["Working hours"]</label><div class="ocat-end"><textarea asp-for="WorkingHours" class="form-control font-monospace" rows="7"></textarea><span class="hint">@T["One line per day, such as: Monday 09:00-12:00, 13:00-17:00. The gaps are breaks."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="DateOverrides" class="ocat-label">@T["Days off and changed days"]</label><div class="ocat-end"><textarea asp-for="DateOverrides" class="form-control font-monospace" rows="3"></textarea><span class="hint">@T["One per line, such as: 2026-12-24 closed, or 2026-12-31 09:00-12:00."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="ShiftCalendarId" class="ocat-label">@T["Shift calendar"]</label><div class="ocat-end"><select asp-for="ShiftCalendarId" asp-items="Model.CalendarOptions" class="form-select"><option value="">@T["None"]</option></select><span class="hint">@T["For hours from shifts: the workforce calendar whose Shift events name this staff member."]</span></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>
