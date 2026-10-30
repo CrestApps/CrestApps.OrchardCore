@@ -83,6 +83,10 @@ The assistant uses the documents quietly; it does not tell users that it has att
 
 <YouTube video="ai-knowledge" title="Video of letting people attach files to a chat" start={241} end={286} />
 
+<YouTube video="ai-documents" title="Video overview of attaching documents to a chat" />
+
+The second video shows a person attaching a file to a chat and asking about it, and the assistant reading a chart inside a PDF report.
+
 To let people attach documents or pictures to a chat, open the profile's **Knowledge** tab and tick:
 
 | Field | What it does |
@@ -93,6 +97,18 @@ To let people attach documents or pictures to a chat, open the profile's **Knowl
 | **Describe figures in uploaded documents** | Whether the AI describes charts and pictures inside attached documents, so it can answer about them. This uses a vision model and costs more. **Use site default**, **Describe figures** or **Do not describe figures**. |
 
 Attached files belong to one chat only. How users attach them is described in [Chat with an AI assistant](chat.md#attach-files-to-a-chat).
+
+<YouTube video="ai-documents" title="Video of the site settings and of allowing uploads on a profile" start={87} end={179} />
+
+The site-wide defaults are under **Settings > Artificial Intelligence**, in the **Documents** section: the **Index profile** that stores every attachment, **Document retrieval mode**, **Allow document uploads in chat interactions**, **Allow image uploads in chat interactions**, **Largest document that can be indexed** and **Describe figures in uploaded documents**. Pictures and figures need a **Default vision deployment**, in the **Deployments** section of the same page. A profile can use the site default or choose its own.
+
+<YouTube video="ai-documents" title="Video of attaching a file to a chat and asking about it" start={179} end={208} />
+
+### Ask about a chart
+
+<YouTube video="ai-documents" title="Video of asking about a chart inside a PDF report" start={208} end={239} />
+
+With **Describe figures in uploaded documents** on and a vision deployment chosen, the site describes the charts and pictures of an attached PDF, so the assistant can answer a question such as which quarter sold the most units. A figure is described when it has a caption, such as "Figure 1: Unit sales by quarter", or when the text refers to it; a picture with neither is treated as decoration and skipped. Describing figures takes longer, so an attachment with figures is slower to prepare.
 
 ## Data sources
 
