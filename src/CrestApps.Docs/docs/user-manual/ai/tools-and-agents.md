@@ -13,6 +13,8 @@ technical_manual:
 
 Out of the box an assistant can only talk. **Tools** let it act: look up an order, search your documentation, list content items, send a notification. **Agents** are specialist assistants it can hand a job to. **Connections** bring in tools and agents from outside the site. You give an assistant any of these on the **Capabilities** tab of its [profile](profiles.md#capabilities-tab), and the AI decides by itself when to use them.
 
+<YouTube video="ai-tools-and-tool-instances" title="Video overview of tools and tool instances" />
+
 | | |
 | --- | --- |
 | **Menu** | Artificial Intelligence > Tool Instances; Artificial Intelligence > Model Context Protocol > MCP Hosts; Artificial Intelligence > Agent to Agent Hosts |
@@ -23,7 +25,7 @@ Out of the box an assistant can only talk. **Tools** let it act: look up an orde
 
 ## Built-in tools
 
-<YouTube video="ai-walkthroughs" title="Video of enabling AI Agents and creating an agent profile with Orchard-aware tools" start={388} end={422} />
+<YouTube video="ai-tools-and-tool-instances" title="Video of giving a profile its built-in tools" start={59} end={107} />
 
 With the **Orchard Core AI Agent** feature on, the **Tools** section of the **Capabilities** tab lists actions the AI can take on this site, grouped by category. Some only appear when the matching site feature is on.
 
@@ -50,6 +52,8 @@ The full list of tools and what each does is in the [Technical Manual](../../ai/
 
 ## Who can use tools
 
+<YouTube video="ai-tools-and-tool-instances" title="Video of who can use a tool, and granting the permissions" start={107} end={170} />
+
 Using a profile and using its tools are two separate permissions. A person can only use a tool when their role has **Access any AI tool**, or the permission for that one tool, **Access AI tool - *tool name***. A tool the person may not use is quietly left out, and the assistant answers without it. That often looks like a vague answer or "I can't do that".
 
 When an assistant works for an administrator but not for someone else, check that person's role under **Access Control > Roles**. **Access any AI tool** is a powerful permission and is given only to administrators by default; prefer granting the individual tools.
@@ -58,7 +62,7 @@ When an assistant works for an administrator but not for someone else, check tha
 
 A tool instance is a tool that you set up yourself, from a ready-made kind, without code. For example, an *Order lookup* that calls your order system's web service, or a *Product docs search* that searches your public documentation site. Each instance becomes its own tool, with its own permission.
 
-<YouTube video="ai-walkthroughs" title="Video of enabling AI Tool Instances and creating an HTTP API Request instance" start={354} end={385} />
+<YouTube video="ai-tools-and-tool-instances" title="Video of creating an HTTP API Request tool instance" start={170} end={249} />
 
 ### Create a tool instance
 
@@ -72,6 +76,8 @@ A tool instance is a tool that you set up yourself, from a ready-made kind, with
 | **Description** | Tells the AI what this tool is for and when to use it. Be specific: "Looks up the status of a customer's order by order number". When several instances are of the same kind, the description is the only way the AI tells them apart. |
 
 ### Kinds of tool instances
+
+<YouTube video="ai-tools-and-tool-instances" title="Video of the kinds of tool instances" start={265} end={326} />
 
 | Kind | Use it to | Fields to fill in |
 | --- | --- | --- |
@@ -89,6 +95,8 @@ A data source search tool cannot force the AI to answer only from your data. Whe
 :::
 
 ### Use a tool instance
+
+<YouTube video="ai-tools-and-tool-instances" title="Video of giving a tool instance to a profile" start={249} end={265} />
 
 Tick the instance under **Tool Instances** on the **Capabilities** tab of a profile, a profile template or a chat interaction, and save. People also need permission to use it (see [Who can use tools](#who-can-use-tools)).
 
@@ -149,4 +157,4 @@ With the **Model Context Protocol (MCP) Server** feature on, AI apps outside the
 
 You need the **Manage the MCP Server settings** permission. How outside apps connect is described in the [Technical Manual](../../ai/mcp/server.md).
 
-The server can also share reusable prompts and data with those apps. Manage them under **Artificial Intelligence > Model Context Protocol > Prompts** (**Add Prompt**: a **Title**, a **Name**, a **Description**, optional **Arguments**, and the **Messages** with their **Role** and **Content**) and **Resources** (**Add Resource**, then a type such as **File**, **Content Item** or **Media**, and a **Display Text**, **Name**, **Path**, **Description** and **MIME Type**). These menus appear only with the MCP Server feature on.
+The server can also share reusable prompts and data with those apps. Manage them under **Artificial Intelligence > Model Context Protocol > Prompts** (**Add Prompt**: a **Title**, a **Name**, a **Description**, optional **Arguments**, and the **Messages** with their **Role** and **Content**) and **Resources** (**Add Resource**, then a type (**File**, **Content Item**, **Content Type**, **Media**, **Recipe**, **Recipe Schema** or **Recipe Step Schema**, and **FTP** or **SFTP** when their features are on), and a **Display Text**, **Name**, **Path**, **Description** and **MIME Type**). These menus appear only with the MCP Server feature on.
