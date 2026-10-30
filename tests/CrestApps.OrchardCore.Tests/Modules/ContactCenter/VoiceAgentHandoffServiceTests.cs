@@ -180,6 +180,42 @@ public class VoiceAgentHandoffServiceTests
     }
 
     [Fact]
+    public async Task RequestHandoff_ToOneAgent_RingsThatAgentDirectly_WhateverTheQueue()
+    {
+        // A supervisor taking an AI call over: the call is carried under the direct-routing queue, tagged for them.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Channel = "Phone",
+            PreferredDestination = "+15551112222",
+            InteractionType = ActivityInteractionType.Automated,
+            Status = ActivityStatus.InProgress,
+        };
+
+        var harness = new Harness(activity, offeredUserId: "u1");
+        harness.OfferService
+            .Setup(o => o.OfferToAgentAsync("act1", ContactCenterConstants.DirectRouting.QueueId, "agent-7", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("supervisor-user");
+
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = activity,
+            TargetAgentId = "agent-7",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-abc",
+            ContactAddress = "+15551112222",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ContactCenterConstants.DirectRouting.QueueId, harness.CreatedInteraction.QueueId);
+        Assert.Equal("agent-7", harness.CreatedInteraction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey]);
+
+        harness.QueueService.Verify(q => q.EnqueueAsync("act1", ContactCenterConstants.DirectRouting.QueueId, It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Once);
+        harness.OfferService.Verify(o => o.OfferToAgentAsync("act1", ContactCenterConstants.DirectRouting.QueueId, "agent-7", null, It.IsAny<CancellationToken>()), Times.Once);
+        harness.OfferService.Verify(o => o.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task RequestHandoff_RecordsTheInteractionItCreated_AndTheHandoff_ByTheAiAgent()
     {
         // Arrange

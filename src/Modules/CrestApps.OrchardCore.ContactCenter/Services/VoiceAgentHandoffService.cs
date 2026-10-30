@@ -148,7 +148,12 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
             return OmnichannelHandoffResult.Failure("A handoff requires an activity.");
         }
 
-        var queueId = string.IsNullOrWhiteSpace(request.TargetQueueId) ? null : request.TargetQueueId.Trim();
+        // Someone taking the conversation over is rung directly: the call is carried under the direct-routing queue,
+        // tagged for that one agent, like a personal line.
+        var targetAgentId = string.IsNullOrWhiteSpace(request.TargetAgentId) ? null : request.TargetAgentId.Trim();
+        var queueId = targetAgentId is not null
+            ? ContactCenterConstants.DirectRouting.QueueId
+            : string.IsNullOrWhiteSpace(request.TargetQueueId) ? null : request.TargetQueueId.Trim();
 
         if (string.IsNullOrEmpty(queueId))
         {
@@ -176,7 +181,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
         // After-hours gate: if the destination queue is closed right now, do not seat the caller in a queue nobody
         // is staffing. Schedule a callback for when it re-opens and tell the caller, rather than leaving them
         // waiting or hanging up bluntly.
-        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+        var queue = targetAgentId is null ? await _queueManager.FindByIdAsync(queueId, cancellationToken) : null;
 
         if (!await IsOpenAsync(queue, cancellationToken))
         {
@@ -204,6 +209,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
             interaction.CustomerAddress = activity.PreferredDestination;
             interaction.QueueId = queueId;
             ApplyHandoffContext(interaction, request);
+            ApplyDirectTarget(interaction, targetAgentId);
 
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
             await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, new ContactCenterActor(ContactCenterActorType.AiAgent), cancellationToken);
@@ -212,6 +218,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
         {
             interaction.QueueId = queueId;
             ApplyHandoffContext(interaction, request);
+            ApplyDirectTarget(interaction, targetAgentId);
 
             if (string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
             {
@@ -247,7 +254,9 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
 
         await _queueService.EnqueueAsync(activity.ItemId, queueId, priority: null, cancellationToken);
 
-        var offeredUserId = await _offerService.OfferNextAsync(queueId, cancellationToken);
+        var offeredUserId = targetAgentId is null
+            ? await _offerService.OfferNextAsync(queueId, cancellationToken)
+            : await _offerService.OfferToAgentAsync(activity.ItemId, queueId, targetAgentId, ringTimeoutSeconds: null, cancellationToken);
 
         // Start what the caller hears now, rather than leaving it to the periodic sweep. The sweep runs in bursts
         // with a gap between them, so a caller seated during that gap heard nothing at all — and a transferred
@@ -274,6 +283,18 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
         return string.IsNullOrEmpty(offeredUserId)
             ? OmnichannelHandoffResult.WaitingInQueue("The caller is waiting in the queue for the next agent.")
             : OmnichannelHandoffResult.Success("The caller was offered to an available agent.", offeredToUserId: offeredUserId);
+    }
+
+    // Tags the call for the one agent who takes it over, with the standard ring window of a direct offer.
+    private static void ApplyDirectTarget(Interaction interaction, string targetAgentId)
+    {
+        if (targetAgentId is null)
+        {
+            return;
+        }
+
+        interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey] = targetAgentId;
+        interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.RingTimeoutMetadataKey] = ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
     }
 
     private Task RecordHandoffRequestedAsync(
