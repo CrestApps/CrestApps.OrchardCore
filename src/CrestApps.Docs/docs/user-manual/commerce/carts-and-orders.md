@@ -199,7 +199,11 @@ Amounts in different currencies are never added together: each currency gets its
 
 <YouTube video="commerce-reports-dashboard" title="Reports on the dashboard" start={235} end={298} />
 
-With the **Admin Dashboard** feature on, add the **Sales Summary** widget under **Manage Dashboard**. It shows your sales today, over the last 7 and 30 days, and the orders to ship.
+With the **Admin Dashboard** feature on, open **Manage Dashboard > Add Widget**. Each report above has a ready-made widget, such as **Sales Overview**, **Sales Trend**, **Top Selling Products**, **Orders to Ship**, **Refunds**, **Payment Disputes** and **Low Stock**, and the **Report** widget shows any report you may view. Set the widget's **Period** (last 30 days moves with the clock), what to **Show** (figures, tables or charts), how many **Rows per table**, and **Keep for (minutes)**, how long it keeps what it shows. A person sees a widget only when they may view its report.
+
+The **Sales Summary** widget shows your sales today, over the last 7 and 30 days, and the orders to ship.
+
+To build your own report, run the **Reports: store reports to adapt** recipe under **Tools > Recipes**. It adds the order reports to **Reports > Report Builder**, in the **Store** group, where you can run, change and save them as your own.
 
 ## Wishlists
 
