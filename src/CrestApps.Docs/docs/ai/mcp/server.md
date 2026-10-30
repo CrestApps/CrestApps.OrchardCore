@@ -4,6 +4,7 @@ sidebar_position: 4
 title: MCP Server
 description: Expose Orchard Core AI tools, prompts, and resources through the Model Context Protocol.
 user_manual:
+  - user-manual/ai/mcp
   - user-manual/ai/tools-and-agents
 ---
 
