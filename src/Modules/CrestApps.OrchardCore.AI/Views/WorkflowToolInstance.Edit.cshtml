@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.AI.Workflows.Tools
+
+@model WorkflowToolInstanceViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="WorkflowTypeId">
+    <label asp-for="WorkflowTypeId" class="ocat-label ocat-label-required">@T["Workflow"]</label>
+    <div class="ocat-end">
+        <select asp-for="WorkflowTypeId" asp-items="Model.WorkflowTypes" class="form-select">
+            <option value="">@T["Choose a workflow"]</option>
+        </select>
+        <span asp-validation-for="WorkflowTypeId" class="text-danger"></span>
+        <span class="hint">@T["The workflow that runs when the AI calls this tool. It starts with the <strong>AI Tool Called</strong> event, reads the arguments from <code>Workflow.Input.Arguments</code> and the conversation from <code>Workflow.Input</code> (for example <code>CustomerAddress</code> or <code>Variables</code>), and answers with <strong>Set Output</strong>."]</span>
+        @if (Model.WorkflowTypes.Count == 0)
+        {
+            <span class="hint">@T["No workflow starts with the AI Tool Called event yet. Create one under Workflows first."]</span>
+        }
+    </div>
+</div>

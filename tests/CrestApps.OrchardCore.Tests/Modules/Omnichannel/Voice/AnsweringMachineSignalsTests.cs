@@ -61,6 +61,25 @@ public sealed class AnsweringMachineSignalsTests
     }
 
     [Fact]
+    public void PhoneMenuReached_IsReportedOnItsOwnToken()
+    {
+        // Arrange
+        // Live, the assistant pressed the key for the person it was calling, the menu was taken for a voicemail, and
+        // a message was left and the call hung up on. Pressing keys has to reach the session watching the call.
+        var signals = new AnsweringMachineSignals(new AdvanceableClock(_now));
+        signals.MachineDetected("Fake", "call-1");
+        var signal = signals.Watch("Fake", "call-1");
+
+        // Act
+        signals.PhoneMenuReached("Fake", "call-1");
+
+        // Assert
+        Assert.True(signal.PhoneMenuReached.IsCancellationRequested);
+        Assert.False(signal.GreetingEnded.IsCancellationRequested);
+        Assert.False(signals.Watch("Fake", "call-2").PhoneMenuReached.IsCancellationRequested);
+    }
+
+    [Fact]
     public void Forget_DropsTheCall_SoALaterWatchStartsClean()
     {
         // Arrange

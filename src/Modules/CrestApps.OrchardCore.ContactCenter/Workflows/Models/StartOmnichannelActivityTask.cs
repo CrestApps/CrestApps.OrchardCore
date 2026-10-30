@@ -25,6 +25,7 @@ public sealed class StartOmnichannelActivityTask : TaskActivity<StartOmnichannel
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IEnumerable<IOmnichannelProcessor> _processors;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
+    private readonly IOmnichannelAIConversationStarting _conversationStarting;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -35,18 +36,21 @@ public sealed class StartOmnichannelActivityTask : TaskActivity<StartOmnichannel
     /// <param name="activityManager">The activity manager used to resolve the CRM activity.</param>
     /// <param name="processors">The registered channel processors, one of which starts the activity.</param>
     /// <param name="expressionEvaluator">The workflow expression evaluator used to resolve Liquid fields.</param>
+    /// <param name="conversationStarting">Runs the AI Conversation Starting workflows of an automated activity.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this task.</param>
     public StartOmnichannelActivityTask(
         IOmnichannelActivityManager activityManager,
         IEnumerable<IOmnichannelProcessor> processors,
         IWorkflowExpressionEvaluator expressionEvaluator,
+        IOmnichannelAIConversationStarting conversationStarting,
         ILogger<StartOmnichannelActivityTask> logger,
         IStringLocalizer<StartOmnichannelActivityTask> stringLocalizer)
     {
         _activityManager = activityManager;
         _processors = processors;
         _expressionEvaluator = expressionEvaluator;
+        _conversationStarting = conversationStarting;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -74,6 +78,7 @@ public sealed class StartOmnichannelActivityTask : TaskActivity<StartOmnichannel
             new Outcome(S["Done"]),
             new Outcome(S["Already Started"]),
             new Outcome(S["Failed"]),
+            new Outcome(S["Declined"]),
         ];
     }
 
@@ -129,6 +134,23 @@ public sealed class StartOmnichannelActivityTask : TaskActivity<StartOmnichannel
                 _logger.LogWarning("The Place Call or Send Message task found no processor for the '{Channel}' channel.", activity.Channel.SanitizeLogValue());
 
                 return WorkflowOutcomeResults.From("Failed");
+            }
+
+            // An AI conversation's starting workflows run before its first message, and may decline it.
+            if (activity.InteractionType == ActivityInteractionType.Automated)
+            {
+                var starting = await _conversationStarting.StartingAsync(activity, CancellationToken.None);
+
+                if (starting?.Declined == true)
+                {
+                    activity.Status = ActivityStatus.Cancelled;
+                    activity.Notes = string.IsNullOrWhiteSpace(starting.DeclineReason)
+                        ? "The conversation was declined before it started."
+                        : starting.DeclineReason;
+                    await _activityManager.UpdateAsync(activity);
+
+                    return WorkflowOutcomeResults.From("Declined");
+                }
             }
 
             await processor.StartAsync(activity, CancellationToken.None);

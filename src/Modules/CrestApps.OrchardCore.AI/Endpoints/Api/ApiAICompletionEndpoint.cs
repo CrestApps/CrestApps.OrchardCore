@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -37,7 +38,10 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
             .DisableAntiforgery()
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
+            .WithTags(AIConversationsApiEndpoints.ChatTag)
+            .WithName("CompleteAIChat")
+            .WithSummary("Sends a prompt to a chat AI profile and returns its reply, in a new or an existing session.");
 
         return builder;
     }

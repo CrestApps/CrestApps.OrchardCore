@@ -1,3 +1,5 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.ViewModels
 
 @model AIProfileTemplateFieldsViewModel
@@ -38,8 +40,12 @@
 <div class="ocat-wrapper">
     <label asp-for="Category" class="ocat-label">@T["Category"]</label>
     <div class="ocat-end">
-        <input asp-for="Category" class="form-control" />
-        <span class="hint">@T["A category for grouping templates."]</span>
+        <input asp-for="Category" class="form-control" list="@Html.IdFor(m => m.Category)_Suggestions" />
+        <datalist id="@Html.IdFor(m => m.Category)_Suggestions">
+            <option value="@AISpeakingStyles.Category"></option>
+            <option value="@AIGuardrailTopics.Category"></option>
+        </datalist>
+        <span class="hint">@T["A category for grouping templates. A System Prompt template in the <em>{0}</em> category is offered as a speaking style on AI profiles, and one in the <em>{1}</em> category as a guardrail topic, with its text as the topic's definition.", AISpeakingStyles.Category, AIGuardrailTopics.Category]</span>
     </div>
 </div>
 

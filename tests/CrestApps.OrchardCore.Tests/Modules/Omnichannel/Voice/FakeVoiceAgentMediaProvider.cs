@@ -50,6 +50,15 @@ internal sealed class FakeVoiceAgentMediaProvider : IVoiceAgentMediaProvider
         return Task.FromResult(true);
     }
 
+    public List<string> KeysPressed { get; } = [];
+
+    public Task<bool> SendDigitsAsync(string providerCallId, string digits, CancellationToken cancellationToken = default)
+    {
+        KeysPressed.Add(digits);
+
+        return Task.FromResult(true);
+    }
+
     public Task<bool> GatherAsync(string providerCallId, string text, string validDigits, CancellationToken cancellationToken = default)
         => Task.FromResult(true);
 

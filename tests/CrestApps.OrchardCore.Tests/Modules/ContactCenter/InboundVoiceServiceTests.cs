@@ -1454,6 +1454,8 @@ public sealed partial class InboundVoiceServiceTests
 
         public List<IRecordingDisclosureProvider> DisclosureProviders { get; } = [];
 
+        public Mock<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelAIConversationStarting> ConversationStarting { get; } = new();
+
         public Mock<IInboundAIVoiceAnswererDispatcher> AIVoiceDispatcher { get; } = new();
 
         public Harness()
@@ -1556,6 +1558,7 @@ public sealed partial class InboundVoiceServiceTests
                 new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance),
                 AIVoiceAnswerers,
                 DisclosureProviders,
+                ConversationStarting.Object,
                 new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()),

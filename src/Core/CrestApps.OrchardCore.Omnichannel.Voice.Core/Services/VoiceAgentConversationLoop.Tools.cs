@@ -1,10 +1,8 @@
 using CrestApps.Core.AI.Completions;
-using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -13,43 +11,29 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// </summary>
 public sealed partial class VoiceAgentConversationLoop
 {
-    // Attaches the transfer-to-agent tool to this single completion. The automated conversation calls the completion
-    // service directly rather than through the tool orchestrator, so the scoped-tool key the function-invocation
-    // service handler reads is otherwise never populated and no tools reach the model. We register the transfer tool
-    // as a scoped system-tool entry for this turn only (the context is built per turn and never persisted). Enabling
-    // it through the profile's tool-name list does not work: the profile tool provider reads the names snapshotted
-    // when the context was built and, either way, skips system tools — which the transfer tool is.
-    private static void AttachCallTools(AICompletionContext context, bool offerTransfer)
+    // The call's own tools, offered alongside the profile's. The automated conversation calls the completion service
+    // directly rather than through the orchestrator, so the tools are attached to the context for this turn only:
+    // the profile's tools, tool instances, MCP connections and agents come from the same registry the orchestrator
+    // reads (see AIConversationTools), and the call's system tools are added after them. The profile's own tool list
+    // skips system tools, which these are, so they could never be enabled through it.
+    private Task<IReadOnlyList<ToolRegistryEntry>> AttachCallToolsAsync(AICompletionContext context, bool offerTransfer, CancellationToken cancellationToken)
     {
         // The end-call tool is offered on every turn, and the transfer tool only when this call has somewhere to
         // transfer to. Ending the call needs no such condition: the model can always be finished talking, and a
         // call it cannot end is one that ends when the customer works out that nobody is going to hang up.
-        var entries = new List<ToolRegistryEntry>
+        var systemTools = new List<ToolRegistryEntry>
         {
-            new()
-            {
-                Id = EndCallTool.ToolName,
-                Name = EndCallTool.ToolName,
-                Description = "Ends the phone call once the conversation has genuinely finished.",
-                Source = ToolRegistryEntrySource.System,
-                CreateAsync = serviceProvider => ValueTask.FromResult(
-                    serviceProvider.GetKeyedService<AITool>(EndCallTool.ToolName)),
-            },
+            AIConversationTools.SystemTool(EndCallTool.ToolName, "Ends the phone call once the conversation has genuinely finished."),
+            AIConversationTools.SystemTool(PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu."),
         };
 
         if (offerTransfer)
         {
-            entries.Add(new ToolRegistryEntry
-            {
-                Id = OmnichannelHandoffHelper.TransferToAgentToolName,
-                Name = OmnichannelHandoffHelper.TransferToAgentToolName,
-                Description = "Transfers the current conversation to a live human agent.",
-                Source = ToolRegistryEntrySource.System,
-                CreateAsync = serviceProvider => ValueTask.FromResult(
-                    serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
-            });
+            systemTools.Add(AIConversationTools.SystemTool(
+                OmnichannelHandoffHelper.TransferToAgentToolName,
+                "Transfers the current conversation to a live human agent."));
         }
 
-        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = entries;
+        return AIConversationTools.AttachAsync(_toolRegistry, context, systemTools, cancellationToken);
     }
 }

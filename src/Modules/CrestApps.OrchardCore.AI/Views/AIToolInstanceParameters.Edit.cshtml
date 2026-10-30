@@ -6,6 +6,7 @@
 @{
     var capabilities = Model.ParameterCapabilities ?? new Dictionary<string, AIToolInstanceParameterCapabilities>();
     var contextKeys = Model.ContextKeys ?? [];
+    var contextKeysListId = Html.IdFor(m => m.ContextKeys) + "-list";
     var capableSources = capabilities.Count > 0
         ? string.Join(",", capabilities.Keys)
         : "__none__";
@@ -144,14 +145,8 @@
                     <div class="row g-2 mt-1 fill-context">
                         <div class="col-12 col-xl-8">
                             <label class="form-label small mb-1">@T["Context key"] <span class="text-danger">*</span></label>
-                            <select name="@(namePrefix)Parameters[@i].ContextKey" class="form-select form-select-sm param-context">
-                                <option value="">@T["Choose…"]</option>
-                                @foreach (var key in contextKeys)
-                                {
-                                    <option value="@key.Key" title="@key.Description" selected="@(string.Equals(parameter.ContextKey, key.Key, StringComparison.OrdinalIgnoreCase))">@key.DisplayName</option>
-                                }
-                            </select>
-                            <div class="form-text">@T["Resolved on the server for every call. The model never sees or supplies this value."]</div>
+                            <input name="@(namePrefix)Parameters[@i].ContextKey" value="@parameter.ContextKey" list="@(contextKeysListId)" class="form-control form-control-sm param-context" autocomplete="off" placeholder="@T["Choose or type a key"]" />
+                            <div class="form-text">@T["Resolved on the server for every call. The model never sees or supplies this value. Pick a key from the list, or type <code>variables.</code> followed by a conversation variable's name."]</div>
                         </div>
                     </div>
 
@@ -284,14 +279,8 @@
             <div class="row g-2 mt-1 fill-context">
                 <div class="col-12 col-xl-8">
                     <label class="form-label small mb-1">@T["Context key"] <span class="text-danger">*</span></label>
-                    <select name="@(namePrefix)Parameters[__index__].ContextKey" class="form-select form-select-sm param-context">
-                        <option value="">@T["Choose…"]</option>
-                        @foreach (var key in contextKeys)
-                        {
-                            <option value="@key.Key" title="@key.Description">@key.DisplayName</option>
-                        }
-                    </select>
-                    <div class="form-text">@T["Resolved on the server for every call. The model never sees or supplies this value."]</div>
+                    <input name="@(namePrefix)Parameters[__index__].ContextKey" list="@(contextKeysListId)" class="form-control form-control-sm param-context" autocomplete="off" placeholder="@T["Choose or type a key"]" />
+                    <div class="form-text">@T["Resolved on the server for every call. The model never sees or supplies this value. Pick a key from the list, or type <code>variables.</code> followed by a conversation variable's name."]</div>
                 </div>
             </div>
 
@@ -308,3 +297,10 @@
         </div>
     </div>
 </template>
+
+<datalist id="@contextKeysListId">
+    @foreach (var key in contextKeys)
+    {
+        <option value="@key.Key" label="@key.DisplayName"></option>
+    }
+</datalist>

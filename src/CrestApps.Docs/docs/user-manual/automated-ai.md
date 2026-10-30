@@ -56,7 +56,13 @@ While the conversation runs:
 
 Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
 
-### When a voicemail answers
+### Phone menus, keys and call screening
+
+On every AI phone call the AI can press keys. When a business answers with an automated menu, the AI listens to the options and presses the key, or enters the extension it was given, that gets it to the right person. When a phone screens the call by asking who is calling and why, the AI says its name, the business and the reason in one sentence, and waits.
+
+When the caller presses keys on their phone, the AI hears them as part of the conversation, for example when it asks them to enter an account number.
+
+## When a voicemail answers
 
 When a voicemail or answering machine answers, the AI does not talk to the recording. It lets the greeting and the tone finish, leaves one short message (who is calling, why, and that it will try again, with no questions) and hangs up. On a profile that holds the call as a live conversation, the message is spoken in the same voice and the same language as the rest of the call. The activity is completed with the disposition for the *Answering machine* outcome when the subject flow has one (see [Dispositions](dispositions.md#outcomes)), and its notes say the call reached voicemail and left a message.
 
@@ -128,4 +134,4 @@ If the AI's live voice connection drops in the middle of a call, the platform fi
 
 If the subject allows **live agent handoff**, the AI can pass the customer to the handoff queue when they ask for a person, look like a qualified lead, or are frustrated. SMS conversations appear in the [Messaging workspace](messaging.md); calls ring an agent in the queue.
 
-On a call, the AI tells the caller in its own words that it is connecting them. When nobody in the queue is free, the caller then hears that they are in the queue; when the queue is closed and a callback is booked instead, they hear that someone will call them back, and the call ends. Those two lines are English, read by the telephony provider's voice, so they are said only when the profile's [AI persona](../ai/personas.md) speaks English or names no language; on a call held in another language the caller hears only the AI's own words.
+When the handoff queue is closed (outside its business hours) as the call begins, the AI tells a caller who asks for a person that nobody can take the call now. With paced dialing on, the transfer then books a callback for when the queue opens, and the AI says someone will call back; without it, nothing could be booked, so the AI is not offered the transfer and offers to take a message instead. Otherwise, on a call, the AI tells the caller in its own words that it is connecting them. When nobody in the queue is free, the caller then hears that they are in the queue; when the queue is closed and a callback is booked instead, they hear that someone will call them back, and the call ends. Those two lines are English, read by the telephony provider's voice, so they are said only when the profile's [AI persona](../ai/personas.md) speaks English or names no language; on a call held in another language the caller hears only the AI's own words.
