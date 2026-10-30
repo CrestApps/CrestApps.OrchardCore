@@ -15,6 +15,10 @@ user_manual:
 | **Feature ID** | `CrestApps.OrchardCore.Products` |
 | **Category** | Content Management |
 
+This video shows the product screens in the admin:
+
+<YouTube video="products" title="Video overview of products, prices and listings" />
+
 The **Products** module turns any Orchard Core content type into a purchasable product by attaching a reusable **`ProductPart`**. It provides the shared pricing and product-type metadata that other modules — most notably [Subscriptions](subscriptions) — build on top of, without prescribing how a product is sold. It also manages the shared **Commerce → Currencies** catalog that product and subscription editors use for currency dropdowns.
 
 ## Overview

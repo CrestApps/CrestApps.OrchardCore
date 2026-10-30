@@ -16,6 +16,10 @@ A **product listing** is a page of your site that lists products: a shop, a page
 
 <AskYourAdmin />
 
+This video walks through the product screens, including the listing page that shoppers see:
+
+<YouTube video="products" title="Video overview of products, prices and listings" />
+
 Setting up a listing takes three steps: decide which of your products' fields visitors can filter and sort by, create the listing page, and lay out each product's own page.
 
 ## Decide what visitors can filter on
@@ -46,7 +50,11 @@ The price, the product's type, whether it can be bought online and whether it is
 
 ## Create a listing page
 
+<<<<<<< HEAD
 <YouTube video="product-listings-and-attributes" title="Setting up the listing page" start={160} end={211} />
+=======
+<YouTube video="products" title="Video of a product listing page's settings and the shop" start={331} end={387} />
+>>>>>>> origin/videos/products-docs
 
 1. Open **Commerce > Product Listings** and click **New**.
 2. Enter a **Title**, and a **Permalink** such as *shop* or *homes* for the page's address.
@@ -134,7 +142,11 @@ Every combination of filters has its own address, so visitors can bookmark it, s
 
 ## Recommend products
 
+<<<<<<< HEAD
 <YouTube video="product-bundles-and-recommendations" title="Recommend products" start={194} end={257} />
+=======
+<YouTube video="products" title="Video of comparison, upsells, cross-sells, grouped products and bundles" start={387} end={435} />
+>>>>>>> origin/videos/products-docs
 
 With the **Product Recommendations** feature, each product's editor has **Upsells** and **Cross-sells** pickers:
 
@@ -155,9 +167,13 @@ On a site with several languages, translate your products and listing pages with
 
 ## Search with Elasticsearch, Lucene or Azure AI Search
 
+<<<<<<< HEAD
 Watch the video for the three steps: the feature, the index and the listing.
 
 <YouTube video="product-search-indexes" title="Product search indexes in CrestApps for Orchard Core" />
+=======
+<YouTube video="products" title="Video of product feeds and the product search features" start={435} end={476} />
+>>>>>>> origin/videos/products-docs
 
 Listings search your database by default, which suits most catalogs. A large catalog, or one where keyword search should rank the best matches first, can search a search server instead.
 

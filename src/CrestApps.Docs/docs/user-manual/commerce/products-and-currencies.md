@@ -11,6 +11,8 @@ Anything you sell on your site is a content item with a price. You set this up i
 
 ## Manage currencies
 
+<YouTube video="products" title="Video of adding a currency" start={108} end={140} />
+
 The currencies you add here are the ones offered in every currency drop-down of the product editors. Add only the currencies you actually sell in. To sell to other countries in their currency without pricing every product again, use [Markets](markets.md), which convert your prices at an exchange rate.
 
 | | |
@@ -20,6 +22,10 @@ The currencies you add here are the ones offered in every currency drop-down of 
 | **Feature** | Products |
 
 <AskYourAdmin />
+
+This video walks through the product screens, from currencies and a first product to sales, listings, bundles and feeds:
+
+<YouTube video="products" title="Video overview of products, prices and listings" />
 
 ### Add a currency
 
@@ -40,6 +46,8 @@ The currencies you add here are the ones offered in every currency drop-down of 
 When the list is empty it shows *Nothing here! There are no managed currencies at the moment.* Use the **Search** box to find a currency by code or name.
 
 ## Make a content type sellable
+
+<YouTube video="products" title="Video of the Product part's settings on a content type" start={274} end={331} />
 
 You add the **Product** part to the content type that describes what you sell, for example *Course* or *Plan*. Every item of that type then gets a price. Content types are edited in the browser like any other content setting.
 
@@ -69,6 +77,8 @@ You add the **Product** part to the content type that describes what you sell, f
 The same part's settings also lay out each product's own page and its inquiry button; see [Product listings](product-listings.md#lay-out-the-product-pages).
 
 ### Price an item
+
+<YouTube video="products" title="Video of adding a product with a price, a SKU and pictures" start={140} end={205} />
 
 When you create or edit an item of the type, the **Product** part adds:
 
@@ -142,6 +152,8 @@ When you change the values later, a variant keeps its SKU and prices while its c
 In listings, a product whose variants are priced differently shows **From** its lowest price, a filter on an option finds the product when any variant on sale has that value, and keyword search matches the variants' SKUs. On the product's card and page, **Add to cart** offers one list per option, such as **Size** and **Finish**. A value that makes no variant on sale with the others picked can't be chosen. On the product's page, the price, the SKU and the photo change to the chosen variant's. Without JavaScript, a single **Choose** list of the variants on sale, with their prices, is offered instead.
 
 ## Put a product on sale
+
+<YouTube video="products" title="Video of a sale price, quantity limits, volume and role discounts, and add-ons" start={205} end={274} />
 
 On the product's editor, enter a **Sale price** and, optionally, when the sale runs under **Sale runs**, in your site's time zone. During the sale the product sells at the sale price, with its regular price struck through, on its card, its page and in the cart. Listings switch to and from the sale price within a minute of the times you set. Leave the dates empty for a sale that runs until you clear the sale price. A variant can have its own sale price in the variants table.
 
