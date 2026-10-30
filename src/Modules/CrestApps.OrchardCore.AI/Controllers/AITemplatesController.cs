@@ -1,7 +1,11 @@
 ﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -72,16 +76,21 @@ public sealed class AITemplatesController : Controller
     /// Displays a paginated list of AI profile templates.
     /// </summary>
     /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="category">Only the System Prompt templates of this category, such as the speaking styles or the
+    /// guardrail topics, or <see langword="null"/> for every template.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="templateService">The template service, for the templates of the category that modules ship.</param>
     /// <returns>The index view with the list of templates.</returns>
     [Admin("ai/templates", "AITemplatesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
+        string category,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] ITemplateService templateService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
         {
@@ -89,14 +98,44 @@ public sealed class AITemplatesController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Sorted = true,
-            Name = options.Search,
-        });
-
         var routeData = new RouteData();
+        IEnumerable<AIProfileTemplate> entries;
+        int count;
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+            {
+                Sorted = true,
+                Name = options.Search,
+            });
+
+            entries = result.Entries;
+            count = result.Count;
+        }
+        else
+        {
+            // A category holds a handful of templates, so they are filtered here rather than by the store.
+            category = category.Trim();
+            var matches = (await _manager.GetAllAsync())
+                .Where(template => template.Source == AITemplateSources.SystemPrompt &&
+                    string.Equals(template.Category?.Trim(), category, StringComparison.OrdinalIgnoreCase) &&
+                    (string.IsNullOrWhiteSpace(options.Search) ||
+                        template.Name?.Contains(options.Search, StringComparison.OrdinalIgnoreCase) == true ||
+                        template.DisplayText?.Contains(options.Search, StringComparison.OrdinalIgnoreCase) == true))
+                .OrderBy(template => template.DisplayText ?? template.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            entries = matches.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList();
+            count = matches.Count;
+            routeData.Values.TryAdd(nameof(category), category);
+
+            ViewData["Category"] = category;
+            ViewData["ShippedTemplates"] = (await templateService.ListByCategoryAsync(category, HttpContext.RequestAborted))
+                .Where(template => template.Source != AIProfileSystemPromptTemplateProvider.ProviderSource)
+                .Select(AITemplateCategoryExtensions.GetTitle)
+                .ToList();
+        }
 
         if (!string.IsNullOrEmpty(options.Search))
         {
@@ -106,14 +145,14 @@ public sealed class AITemplatesController : Controller
         var viewModel = new ListSourceCatalogEntryViewModel<AIProfileTemplate>
         {
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, count, routeData),
             Sources = _aiOptions.TemplateSources.Select(x => x.Key).Order(),
         };
 
         // The admin-list tag builds a row per template, in the layout (List or Grid) the site or the user picked.
         viewModel.List = new AdminListContext<AIProfileTemplate>
         {
-            Source = result.Entries,
+            Source = entries,
             Pager = (IShape)viewModel.Pager,
         };
 
@@ -135,7 +174,7 @@ public sealed class AITemplatesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/templates", "AITemplatesIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, string category, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
         {
@@ -145,6 +184,7 @@ public sealed class AITemplatesController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { nameof(category), string.IsNullOrWhiteSpace(category) ? null : category },
             { "pageSize", pagerParameters.PageSize },
         });
     }
@@ -153,9 +193,11 @@ public sealed class AITemplatesController : Controller
     /// Displays the form for creating a new AI profile template.
     /// </summary>
     /// <param name="source">The template source identifier.</param>
+    /// <param name="category">A category to start the template in, such as a speaking style or a guardrail topic,
+    /// which also keeps it out of the system prompt picker.</param>
     /// <returns>The create view with the editor form.</returns>
     [Admin("ai/template/create/{source}", "AITemplatesCreate")]
-    public async Task<ActionResult> Create(string source)
+    public async Task<ActionResult> Create(string source, string category = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
         {
@@ -176,6 +218,12 @@ public sealed class AITemplatesController : Controller
             await _notifier.ErrorAsync(H["Unable to create a new template."]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            template.Category = category.Trim();
+            template.IsListable = false;
         }
 
         var model = new EditCatalogEntryViewModel
@@ -230,7 +278,7 @@ public sealed class AITemplatesController : Controller
 
             await _notifier.SuccessAsync(H["Template has been created successfully."]);
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToIndex(template);
         }
 
         return View(model);
@@ -299,7 +347,7 @@ public sealed class AITemplatesController : Controller
 
             await _notifier.SuccessAsync(H["Template has been updated successfully."]);
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToIndex(template);
         }
 
         return View(model);
@@ -392,5 +440,16 @@ public sealed class AITemplatesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // A speaking style or a guardrail topic goes back to the list of its own kind, which is where it was added from.
+    private RedirectToActionResult RedirectToIndex(AIProfileTemplate template)
+    {
+        var category = template.Category?.Trim();
+
+        return string.Equals(category, AISpeakingStyles.Category, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(category, AIGuardrailTopics.Category, StringComparison.OrdinalIgnoreCase)
+            ? RedirectToAction(nameof(Index), new { category })
+            : RedirectToAction(nameof(Index));
     }
 }

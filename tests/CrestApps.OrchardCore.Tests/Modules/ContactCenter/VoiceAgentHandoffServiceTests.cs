@@ -180,6 +180,42 @@ public class VoiceAgentHandoffServiceTests
     }
 
     [Fact]
+    public async Task RequestHandoff_ToOneAgent_RingsThatAgentDirectly_WhateverTheQueue()
+    {
+        // A supervisor taking an AI call over: the call is carried under the direct-routing queue, tagged for them.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Channel = "Phone",
+            PreferredDestination = "+15551112222",
+            InteractionType = ActivityInteractionType.Automated,
+            Status = ActivityStatus.InProgress,
+        };
+
+        var harness = new Harness(activity, offeredUserId: "u1");
+        harness.OfferService
+            .Setup(o => o.OfferToAgentAsync("act1", ContactCenterConstants.DirectRouting.QueueId, "agent-7", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("supervisor-user");
+
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = activity,
+            TargetAgentId = "agent-7",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-abc",
+            ContactAddress = "+15551112222",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ContactCenterConstants.DirectRouting.QueueId, harness.CreatedInteraction.QueueId);
+        Assert.Equal("agent-7", harness.CreatedInteraction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey]);
+
+        harness.QueueService.Verify(q => q.EnqueueAsync("act1", ContactCenterConstants.DirectRouting.QueueId, It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Once);
+        harness.OfferService.Verify(o => o.OfferToAgentAsync("act1", ContactCenterConstants.DirectRouting.QueueId, "agent-7", null, It.IsAny<CancellationToken>()), Times.Once);
+        harness.OfferService.Verify(o => o.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task RequestHandoff_RecordsTheInteractionItCreated_AndTheHandoff_ByTheAiAgent()
     {
         // Arrange
@@ -284,6 +320,40 @@ public class VoiceAgentHandoffServiceTests
         harness.CallbackService.Verify(c => c.ScheduleAsync(
             It.Is<CallbackRequest>(r => r.Destination == "+15551112222" && r.QueueId == "queue-1"),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, "queue-1", HandoffAvailability.CallbackOnly)]
+    [InlineData(false, "queue-1", HandoffAvailability.Open)]
+    [InlineData(true, "", HandoffAvailability.Open)]
+    [InlineData(true, null, HandoffAvailability.Open)]
+    public async Task GetAvailabilityAsync_IsClosedOnlyForAQueueClosedNow(bool afterHours, string queueId, HandoffAvailability expected)
+    {
+        // Arrange
+        // Asked before an automated call is offered a transfer. A queue that keeps no hours, or no queue named, is left
+        // to the handoff as before; a closed one with a callback service books a callback.
+        var harness = new Harness(new OmnichannelActivity { ItemId = "act1" }, offeredUserId: "u1", afterHours: afterHours);
+
+        // Act
+        var availability = await harness.Service.GetAvailabilityAsync(queueId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, availability);
+    }
+
+    [Fact]
+    public async Task GetAvailabilityAsync_WhenTheQueueIsClosedAndNoCallbackCanBeBooked_IsUnavailable()
+    {
+        // Arrange
+        // Without the Dialer the callback service books nothing: the after-hours handoff would end the call with no
+        // callback, so nobody can take the caller.
+        var harness = new Harness(new OmnichannelActivity { ItemId = "act1" }, offeredUserId: "u1", afterHours: true, callbackService: new NoCallbackService());
+
+        // Act
+        var availability = await harness.Service.GetAvailabilityAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HandoffAvailability.Unavailable, availability);
     }
 
     [Fact]
@@ -631,7 +701,7 @@ public class VoiceAgentHandoffServiceTests
 
         public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
 
-        public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false, IQueueTreatmentProvider treatmentProvider = null)
+        public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false, IQueueTreatmentProvider treatmentProvider = null, ICallbackService callbackService = null)
         {
             var activityManager = new Mock<IOmnichannelActivityManager>();
             activityManager.Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -698,7 +768,7 @@ public class VoiceAgentHandoffServiceTests
                 queueManager.Object,
                 clock.Object,
                 businessHoursGate.Object,
-                CallbackService.Object,
+                callbackService ?? CallbackService.Object,
                 DistributedLock,
                 new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions()),
                 treatmentService,

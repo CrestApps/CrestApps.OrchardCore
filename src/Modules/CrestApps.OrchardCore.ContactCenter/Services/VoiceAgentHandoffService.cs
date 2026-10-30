@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// reservation, and voicemail handling all apply. The live call is represented by a Contact Center interaction
 /// carrying the provider call identifier so the offer/connect pipeline can bridge an agent onto it.
 /// </summary>
-public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
+public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmnichannelHandoffAvailability
 {
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
@@ -82,6 +82,30 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         => string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A closed queue books a callback only when the callback service is a real one: without the Dialer it is
+    /// <see cref="NoCallbackService"/>, which books nothing, and the handoff would end the call with no callback.
+    /// </remarks>
+    public async Task<HandoffAvailability> GetAvailabilityAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(queueId) ||
+            await IsOpenAsync(await _queueManager.FindByIdAsync(queueId.Trim(), cancellationToken), cancellationToken))
+        {
+            return HandoffAvailability.Open;
+        }
+
+        return _callbackService is NoCallbackService
+            ? HandoffAvailability.Unavailable
+            : HandoffAvailability.CallbackOnly;
+    }
+
+    // Closed only when the queue keeps hours and they are not now: a queue that is missing, or keeps no hours, takes calls.
+    private async Task<bool> IsOpenAsync(ActivityQueue queue, CancellationToken cancellationToken)
+        => queue is null ||
+            string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId) ||
+            await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<OmnichannelHandoffResult> RequestHandoffAsync(OmnichannelHandoffRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -124,7 +148,12 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
             return OmnichannelHandoffResult.Failure("A handoff requires an activity.");
         }
 
-        var queueId = string.IsNullOrWhiteSpace(request.TargetQueueId) ? null : request.TargetQueueId.Trim();
+        // Someone taking the conversation over is rung directly: the call is carried under the direct-routing queue,
+        // tagged for that one agent, like a personal line.
+        var targetAgentId = string.IsNullOrWhiteSpace(request.TargetAgentId) ? null : request.TargetAgentId.Trim();
+        var queueId = targetAgentId is not null
+            ? ContactCenterConstants.DirectRouting.QueueId
+            : string.IsNullOrWhiteSpace(request.TargetQueueId) ? null : request.TargetQueueId.Trim();
 
         if (string.IsNullOrEmpty(queueId))
         {
@@ -152,18 +181,13 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         // After-hours gate: if the destination queue is closed right now, do not seat the caller in a queue nobody
         // is staffing. Schedule a callback for when it re-opens and tell the caller, rather than leaving them
         // waiting or hanging up bluntly.
-        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+        var queue = targetAgentId is null ? await _queueManager.FindByIdAsync(queueId, cancellationToken) : null;
 
-        if (queue is not null && !string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId))
+        if (!await IsOpenAsync(queue, cancellationToken))
         {
-            var open = await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
+            await ScheduleAfterHoursCallbackAsync(activity, queueId, cancellationToken);
 
-            if (!open)
-            {
-                await ScheduleAfterHoursCallbackAsync(activity, queueId, cancellationToken);
-
-                return OmnichannelHandoffResult.CallbackScheduled("The destination queue is closed; a callback was scheduled.");
-            }
+            return OmnichannelHandoffResult.CallbackScheduled("The destination queue is closed; a callback was scheduled.");
         }
 
         // The live call needs a Contact Center interaction so the offer/connect pipeline can bridge an agent onto
@@ -185,6 +209,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
             interaction.CustomerAddress = activity.PreferredDestination;
             interaction.QueueId = queueId;
             ApplyHandoffContext(interaction, request);
+            ApplyDirectTarget(interaction, targetAgentId);
 
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
             await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, new ContactCenterActor(ContactCenterActorType.AiAgent), cancellationToken);
@@ -193,6 +218,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         {
             interaction.QueueId = queueId;
             ApplyHandoffContext(interaction, request);
+            ApplyDirectTarget(interaction, targetAgentId);
 
             if (string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
             {
@@ -228,7 +254,9 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
 
         await _queueService.EnqueueAsync(activity.ItemId, queueId, priority: null, cancellationToken);
 
-        var offeredUserId = await _offerService.OfferNextAsync(queueId, cancellationToken);
+        var offeredUserId = targetAgentId is null
+            ? await _offerService.OfferNextAsync(queueId, cancellationToken)
+            : await _offerService.OfferToAgentAsync(activity.ItemId, queueId, targetAgentId, ringTimeoutSeconds: null, cancellationToken);
 
         // Start what the caller hears now, rather than leaving it to the periodic sweep. The sweep runs in bursts
         // with a gap between them, so a caller seated during that gap heard nothing at all — and a transferred
@@ -255,6 +283,18 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         return string.IsNullOrEmpty(offeredUserId)
             ? OmnichannelHandoffResult.WaitingInQueue("The caller is waiting in the queue for the next agent.")
             : OmnichannelHandoffResult.Success("The caller was offered to an available agent.", offeredToUserId: offeredUserId);
+    }
+
+    // Tags the call for the one agent who takes it over, with the standard ring window of a direct offer.
+    private static void ApplyDirectTarget(Interaction interaction, string targetAgentId)
+    {
+        if (targetAgentId is null)
+        {
+            return;
+        }
+
+        interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey] = targetAgentId;
+        interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.RingTimeoutMetadataKey] = ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
     }
 
     private Task RecordHandoffRequestedAsync(
