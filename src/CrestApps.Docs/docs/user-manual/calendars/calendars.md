@@ -182,6 +182,10 @@ With Resource Calendars on, add a **Room** or **Equipment** calendar for each ro
 
 Office calendars work the same way with their desk count: once that many people are in the office or have booked a desk at the same time, the next one is refused.
 
+<YouTube video="calendars-office" title="Video of setting up an office, booking desks and visitors, and closing the office" />
+
+An **In office** event lasts the whole day, a **Desk booking** lasts four hours by default, and both must name a person. A **Visitor** needs no person. **In office**, **Desk booking** and **Visitor** each take one desk; **Office closed** leaves the time free and never takes a desk. A new event uses the office's own time zone.
+
 ## Color-code with categories
 
 <YouTube video="calendars-categories-and-colors" title="Video of how an event gets its color" start={19} end={44} />
@@ -223,10 +227,19 @@ With Team Calendars on, open **Calendars > Team Availability**. Choose the team'
 With **Calendar Invitations** on, attendees with an email address are emailed:
 
 - an invitation, with a calendar file they can add to Outlook, Google Calendar or their phone, when they are invited;
-- an update when the event's title, time or place changes;
+- an update, to the people already invited, when the event's title, time, place or repeat pattern changes;
 - a cancellation when the event is cancelled or deleted.
 
-The invitation has **Accept**, **Maybe** and **Decline** links. Guests answer from those links without signing in, and their answer shows under **Answers**. It needs the site's email to be set up.
+The organizer and anyone who declined are not emailed. The invitation has **Accept**, **Maybe** and **Decline** links. Guests answer from those links without signing in, and their answer shows under **Answers**.
+
+<YouTube video="calendars-invitations" title="Video of setting up email, inviting people, answering from the email, and updates and cancellations" />
+
+Invitations need two things besides the feature:
+
+- **Email that works.** Open **Settings > Communication > Email** and set up a provider. To try it without sending anything, choose the **Specified pickup directory** delivery method on the **SMTP** tab: each message is written to a folder instead.
+- **The site's Base url**, under **Settings > General**. The **Accept**, **Maybe** and **Decline** links point to it, so without it the email has no links (its calendar file still works).
+
+If email isn't set up or a message fails, the event is still saved; the failure is only written to the site's log.
 
 ## Reminders
 
@@ -234,27 +247,35 @@ With **Calendar Reminders** on, an event's **Remind** setting (in its **General*
 
 The reminder shows at the top right of every admin page of the calendar's owner (for a personal calendar) and of each invited user who hasn't declined. It stays until you click **Dismiss** or close it, and dismissing it on one page or tab removes it from the others. **Open calendar** opens the calendar on that day. Pages check for reminders every minute while they're open.
 
+<YouTube video="calendars-reminders" title="Video of setting a reminder, and the reminder on screen" />
+
 Calendar Reminders also runs every minute to notice when events are about to start and when they have ended, once for each occurrence, so workflows can act at those moments, such as emailing attendees 15 minutes before a meeting (see [Workflows](#workflows)).
 
 ## Subscribe from Outlook, Google Calendar or a phone
+
+<YouTube video="calendars-feeds-and-subscriptions" title="Video of the subscription address, and exporting and importing a calendar file" />
 
 With **Calendar Feeds** on, a calendar's menu on **Manage Calendars** has:
 
 - **Subscription address**: choose **Make an address**, then **Copy** it. Add it to Google Calendar (**Other calendars > From URL**), Outlook (**Add calendar > Subscribe from web**) or a phone, and they show the calendar's events and keep them up to date. Anyone with the address can see the events, so share it only with people you trust; private events show as busy time. **Make a new address** stops the old one working, and **Remove the address** turns it off.
 - **Export .ics** downloads the calendar as a file.
-- **Import .ics** adds the events of an iCalendar file, such as one exported from Google Calendar or Outlook. Events already in the calendar with the same identifier are updated instead of added again, so importing the same file twice is safe.
+- **Import .ics** adds the events of an iCalendar file, such as one exported from Google Calendar or Outlook. Events already in the calendar with the same identifier are updated instead of added again, so importing the same file twice is safe. A message says how many events were added, changed and left unchanged. An event counts as unchanged only when the file gives it the same sequence number and a modified time that isn't newer, as calendar apps' exports do; a file without those is counted as changed every time.
 
 ## Show an external calendar here
 
-With **External Calendars** on, the calendar editor has a **Subscription** tab. Tick **Keep this calendar in step with an external calendar**, keep the **Provider** on the iCalendar address, and paste the external calendar's secret iCalendar **Address**, such as the one Google Calendar or Outlook shows under the calendar's settings. It must start with https://, http:// or webcal://. **Every (minutes)** sets how often it is read (at least 5).
+<YouTube video="calendars-external" title="Video of subscribing a calendar to an iCalendar address" />
 
-The external calendar's events are copied here and kept up to date, and events removed there are removed here. They can't be changed here. **Last synchronized** shows when it last worked, or why it didn't; when the address keeps failing, the site waits longer between tries.
+With **External Calendars** on, the calendar editor has a **Subscription** section. Tick **Keep this calendar in step with an external calendar**, keep the **Provider** on the iCalendar address, and paste the external calendar's secret iCalendar **Address**, such as the one Google Calendar or Outlook shows under the calendar's settings. It must start with https://, http:// or webcal://. **Every (minutes)** sets how often it is read (at least 5).
+
+The external calendar's events are copied here and kept up to date, and events removed there are removed here. They can't be changed here. **Last synchronized** shows when it last worked, or why it didn't; when the address keeps failing, the site waits longer between tries (up to 32 times the interval), and the events already in the calendar stay. The address must be reachable from the internet: addresses on a private or local network are refused, and **Last synchronized** says so.
 
 :::note[Google Calendar and Microsoft 365]
 Signing in to Google Calendar or Microsoft 365 to keep calendars in step both ways is not available yet. Use the subscription address and the iCalendar address described above.
 :::
 
 ## Workflows
+
+<YouTube video="calendars-workflows-and-ai" title="Video of the calendar's workflow activities and AI tools" />
 
 With the **Workflows** feature on, the **Calendar** category of the workflow editor has:
 
@@ -263,17 +284,25 @@ With the **Workflows** feature on, the **Calendar** category of the workflow edi
 
 For example: when an **Out of office** event is created on a team calendar, email the team lead; or when a meeting is starting soon, send its attendees the room and the agenda. The values each event hands to the next steps are listed in the [Technical Manual](../../modules/calendars.md#workflows).
 
+## Ask an AI assistant
+
+With the AI features on, an AI profile can use calendar tools. Edit the profile (**Artificial Intelligence > Profiles**), open its **Capabilities** tab and tick the tools in the **Calendar** group: **List calendars**, **Find calendar events**, **Find free time**, **Create calendar event**, **Move calendar event** and **Cancel calendar event**. The assistant can then answer what's on your calendar, find a time when you and others are free, and book, move or cancel events. The tools act for the person who is signed in, with that person's access to each calendar, and refuse anyone who isn't signed in.
+
 ## Copy calendars to another site
 
-Calendars, their events and the categories travel between sites with a deployment plan (**Configuration > Import/Export > Deployment Plans**, with the **Deployment** feature on):
+<YouTube video="calendars-deployment-and-features" title="Video of the calendar features and copying calendars with a deployment plan" />
+
+Calendars, their events and the categories travel between sites with a deployment plan (**Tools > Deployments > Plans**, with the **Deployment** feature on):
 
 1. Open or create a deployment plan and choose **Add Step**.
 2. Under **Calendar**, add **Calendars**. Tick **Include events** to take every calendar's events (up to 10,000 per calendar) and **Include categories** (on by default) to take everyone's categories, so the events keep their colors.
-3. **Execute** the plan to download it, then import the file on the other site (**Import/Export > Package Import**), or send it with a remote deployment.
+3. **Execute** the plan to download it, then import the file on the other site (**Tools > Deployments > Package Import**), or send it with a remote deployment.
 
-The import creates what's missing and updates what's already there, matched by each record's id, so importing the same file twice doesn't duplicate anything. A calendar needs its kind's feature to be on in the other site (for example **Resource Calendars** for rooms). Imported events don't send invitations and aren't checked for overlaps.
+The import creates what's missing and updates what's already there, matched by each record's id, so importing the same file twice doesn't duplicate anything. A calendar needs its kind's feature to be on in the other site (for example **Resource Calendars** for rooms). Imported events don't send invitations and aren't checked for overlaps. A recipe with the `Calendars` step behaves the same way; to get its exact shape, export a plan first and start from that file.
 
 ## Which feature to turn on
+
+Features are turned on under **Tools > Features** (search for *Calendars*); each one lists what it depends on.
 
 | You want to... | Ask your administrator to turn on |
 | --- | --- |
