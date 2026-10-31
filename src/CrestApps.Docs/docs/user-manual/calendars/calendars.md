@@ -26,6 +26,8 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 <YouTube video="calendars-schedules-and-team" title="Video of seeing schedules and finding a time with Team Availability" />
 
+<YouTube video="calendars-rooms-and-equipment" title="Video of booking meeting rooms and equipment" />
+
 ## Kinds of calendars
 
 <YouTube video="calendars-getting-started" title="Video of the kinds of calendars" start={21} end={72} />
@@ -180,7 +182,13 @@ A kind of event that needs approval, such as time off on a calendar of employees
 
 ## Book rooms and equipment
 
-With Resource Calendars on, add a **Room** or **Equipment** calendar for each room or item. To book one, invite it under **Rooms and equipment** on any event, or add a **Booking** directly on the room's calendar. A room takes one booking at a time, so a second booking for the same time is refused with a message saying the room is already booked. A booking that the room has declined doesn't count.
+<YouTube video="calendars-rooms-and-equipment" title="Video of adding a room and equipment" start={19} end={86} />
+
+<YouTube video="calendars-rooms-and-equipment" title="Video of booking a room" start={85} end={148} />
+
+<YouTube video="calendars-rooms-and-equipment" title="Video of booking or closing a room on its own calendar" start={147} end={176} />
+
+With Resource Calendars on, add a **Room** or **Equipment** calendar for each room or item. To book one, invite it under **Rooms and equipment** on any event, or add a **Booking** directly on the room's calendar. A room takes one booking at a time, so a second booking for the same time is refused, and the editor stays open with a message that names the room and the time that is taken, such as "Boardroom is already booked at 11/10/2026 10:30 AM." A booking that the room has declined doesn't count.
 
 Office calendars work the same way with their desk count: once that many people are in the office or have booked a desk at the same time, the next one is refused.
 
