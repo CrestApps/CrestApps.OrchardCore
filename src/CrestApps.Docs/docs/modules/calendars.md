@@ -488,3 +488,4 @@ The `UpdateFrom2Async` migration step adds the database index events are read th
 
 - [Scheduling](./scheduling.md) puts appointments on `Appointments` calendars and reads free/busy time from the calendar.
 - [Bookings](./bookings.md#bookings-on-the-calendar), with Calendars on, keeps every booking on a `Bookings` calendar and closes booking dates that are busy on a chosen calendar.
+- [Contact Center](../contact-center/agents-queues-dialer.md#callbacks-on-the-calendar), with the Outbound Dialer on, shows the open callbacks reserved for an agent on the agent's personal calendar, read-only, through the `ContactCenter.Callbacks` event source.

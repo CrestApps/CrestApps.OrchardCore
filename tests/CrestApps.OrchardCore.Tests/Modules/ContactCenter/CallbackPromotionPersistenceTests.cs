@@ -148,7 +148,8 @@ public sealed class CallbackPromotionPersistenceTests
             .Column<int>("Status")
             .Column<DateTime>("ScheduledUtc")
             .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable())
-            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable())
+            .Column<string>("AgentId", column => column.Nullable().WithLength(26)),
             collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

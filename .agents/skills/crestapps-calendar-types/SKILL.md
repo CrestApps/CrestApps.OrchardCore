@@ -227,6 +227,20 @@ services.AddCalendarEventSource<FleetEventSource>();
 Use a source when the records already live elsewhere and must not be duplicated; use real events (section 4) when they
 need overlap checks, invitations, feeds or workflows.
 
+The reference implementation is the Contact Center's `CallbackCalendarEventSource`
+(`src/Modules/CrestApps.OrchardCore.ContactCenter/Services/`, registered by `DialerCalendarStartup` with
+`[RequireFeatures(CalendarsConstants.Features.Calendars)]`). Things it shows you must handle yourself, since
+`DefaultCalendarQueryService` applies none of them to a source's occurrences:
+
+- `query.Viewer` access: the service only reduces stored events to busy time. Decide what the viewer may see, and hide
+  details (such as a phone number in the title) from viewers who may not.
+- `query.Sources` and `query.EventTypes`: return nothing when they are set and don't name your source or event type.
+- Which records the query is about: the calendar view passes `CalendarIds` (map them to your records, such as the
+  owners of personal calendars, and set `CalendarId` so the view draws the occurrence on that calendar); other callers
+  pass `AttendeeUserIds` or `AllCalendars`. Read your records through an index bounded by the range and
+  `CalendarOptions.MaxEventsPerQuery`, never all of them.
+- A source that throws is logged and skipped, so failures don't break the calendar, but they also go unnoticed.
+
 ## 8. Validate and react
 
 | Contract | When it runs | Use it for |
