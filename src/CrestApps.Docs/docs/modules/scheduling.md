@@ -53,7 +53,7 @@ All records live in the `Scheduling` collection.
 
 1. The window is cut to the type's minimum notice and booking horizon.
 2. For each eligible resource, the open hours are its weekly working hours less its date overrides, in the resource's time zone, or in `Shifts` mode the **Shift** events on its shift calendar (`ShiftCalendarId`, any calendar that holds a `Shift` event type, such as one a workforce management module registers) that name its user as an attendee.
-3. Busy time comes from `ICalendarAvailabilityService.GetBusyAsync` for the resource's calendar and its user, which includes every [busy-time source](./calendars.md#extension-points). Each busy interval is widened by the type's buffers.
+3. Busy time comes from `ICalendarAvailabilityService.GetBusyAsync` for the resource's calendar and its user, which includes every [busy-time source](./calendars.md#extension-points). Each busy interval is widened by the type's buffers. An appointment already booked also keeps the free time its own type asks for before and after it, so a time that falls in it isn't offered (a group session's own start still is, while it has places).
 4. Start times step by `SlotIntervalMinutes`. A time is offered when the whole appointment fits, the daily limit isn't reached, and, for a group session, the session has places left.
 5. With `AllTogether`, a time is offered only when every resource is free.
 
