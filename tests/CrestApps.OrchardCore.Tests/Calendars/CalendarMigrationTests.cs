@@ -31,7 +31,7 @@ public sealed class CalendarMigrationTests
             var remindersCreated = await reminders.CreateAsync();
             var remindersUpgraded = await reminders.UpdateFrom1Async();
 
-            Assert.Equal(2, calendars);
+            Assert.Equal(3, calendars);
             Assert.Equal(1, remindersCreated);
             Assert.Equal(2, remindersUpgraded);
             Assert.True(await ExistsAsync(schemaBuilder, typeof(CalendarIndex), "IDX_CalendarIndex_FeedToken"));
