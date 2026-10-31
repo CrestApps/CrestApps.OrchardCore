@@ -37,7 +37,7 @@ internal static class SchedulingApiEndpoints
         return routes;
     }
 
-    private static async Task<IResult> ListTypesAsync(HttpContext httpContext, IAuthorizationService authorizationService, AppointmentTypeStore typeStore)
+    internal static async Task<IResult> ListTypesAsync(HttpContext httpContext, IAuthorizationService authorizationService, AppointmentTypeStore typeStore)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, SchedulingPermissions.ViewAppointments))
         {
@@ -56,11 +56,16 @@ internal static class SchedulingApiEndpoints
         }));
     }
 
-    private static async Task<IResult> ListSlotsAsync(string id, DateTimeOffset from, DateTimeOffset to, string resourceId, HttpContext httpContext, IAuthorizationService authorizationService, AppointmentTypeStore typeStore, ISchedulingAvailabilityService availabilityService)
+    internal static async Task<IResult> ListSlotsAsync(string id, DateTimeOffset from, DateTimeOffset to, string resourceId, HttpContext httpContext, IAuthorizationService authorizationService, AppointmentTypeStore typeStore, ISchedulingAvailabilityService availabilityService)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, SchedulingPermissions.ViewAppointments))
         {
             return Results.Forbid();
+        }
+
+        if (to <= from)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["from"] = ["Give from and to as ISO 8601 times, with to after from."] });
         }
 
         var type = await typeStore.FindByIdAsync(id);
@@ -81,11 +86,16 @@ internal static class SchedulingApiEndpoints
         }));
     }
 
-    private static async Task<IResult> BookAsync(AppointmentRequest request, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
+    internal static async Task<IResult> BookAsync(AppointmentRequest request, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, SchedulingPermissions.ManageAppointments))
         {
             return Results.Forbid();
+        }
+
+        if (request is null)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { [string.Empty] = ["Send the appointment to book."] });
         }
 
         request.Source = "Api";
@@ -94,7 +104,7 @@ internal static class SchedulingApiEndpoints
         return ToResult(await appointmentService.BookAsync(request), created: true);
     }
 
-    private static async Task<IResult> GetAsync(string id, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
+    internal static async Task<IResult> GetAsync(string id, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, SchedulingPermissions.ViewAppointments))
         {
@@ -106,17 +116,19 @@ internal static class SchedulingApiEndpoints
         return appointment is null ? Results.NotFound() : Results.Ok(AppointmentWorkflowInput.ToDictionary(appointment, null));
     }
 
-    private static Task<IResult> ConfirmAsync(string id, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
+    internal static Task<IResult> ConfirmAsync(string id, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
     {
         return ChangeAsync(id, httpContext, authorizationService, appointmentService, appointment => appointmentService.ConfirmAsync(appointment, httpContext.User.Identity?.Name));
     }
 
-    private static Task<IResult> RescheduleAsync(string id, AppointmentRescheduleInput input, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
+    internal static Task<IResult> RescheduleAsync(string id, AppointmentRescheduleInput input, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
     {
-        return ChangeAsync(id, httpContext, authorizationService, appointmentService, appointment => appointmentService.RescheduleAsync(appointment, input.StartUtc.UtcDateTime, input.ResourceId, httpContext.User.Identity?.Name));
+        return ChangeAsync(id, httpContext, authorizationService, appointmentService, appointment => input is null
+            ? Task.FromResult(new AppointmentResult { Appointment = appointment, Errors = { "Give the new start time." } })
+            : appointmentService.RescheduleAsync(appointment, input.StartUtc.UtcDateTime, input.ResourceId, httpContext.User.Identity?.Name));
     }
 
-    private static Task<IResult> CancelAsync(string id, AppointmentCancelInput input, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
+    internal static Task<IResult> CancelAsync(string id, AppointmentCancelInput input, HttpContext httpContext, IAuthorizationService authorizationService, IAppointmentService appointmentService)
     {
         return ChangeAsync(id, httpContext, authorizationService, appointmentService, appointment => appointmentService.CancelAsync(appointment, input?.Reason, httpContext.User.Identity?.Name));
     }

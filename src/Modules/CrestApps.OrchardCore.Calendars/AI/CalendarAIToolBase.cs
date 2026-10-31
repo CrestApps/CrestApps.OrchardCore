@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,13 @@ public abstract class CalendarAIToolBase : AIFunction
         if (user?.Identity?.IsAuthenticated != true)
         {
             return "The calendar can only be used by a signed-in person.";
+        }
+
+        // The same permission every calendar screen and the calendars API ask for: without it, a tool must not even create
+        // the person's own calendar or read anyone's busy time.
+        if (!await arguments.Services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, CalendarPermissions.AccessCalendars))
+        {
+            return "The user isn't allowed to use calendars.";
         }
 
         return await InvokeAsync(arguments, arguments.Services, user, cancellationToken);

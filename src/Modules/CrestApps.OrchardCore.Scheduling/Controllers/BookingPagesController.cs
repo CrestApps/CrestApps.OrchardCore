@@ -186,6 +186,6 @@ public sealed class BookingPagesController : Controller
     {
         var appointment = await _appointmentService.FindByIdAsync(id);
 
-        return appointment is not null && !string.IsNullOrEmpty(token) && string.Equals(appointment.ManageToken, token, StringComparison.Ordinal) ? appointment : null;
+        return AppointmentManageToken.Matches(appointment, token) ? appointment : null;
     }
 }

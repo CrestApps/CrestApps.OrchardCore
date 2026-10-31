@@ -67,11 +67,23 @@ public sealed class ChangeAppointmentTool : SchedulingAIToolBase
         return result is null ? "Say cancel, or move with a newStartUtc." : result.Succeeded ? "Done." : "Not changed: " + string.Join(" ", result.Errors);
     }
 
-    private static bool Matches(Appointment appointment, string proof)
+    internal static bool Matches(Appointment appointment, string proof)
     {
-        return !string.IsNullOrEmpty(proof) &&
-            (string.Equals(proof, appointment.ManageToken, StringComparison.Ordinal) ||
-             string.Equals(proof, appointment.CustomerEmail, StringComparison.OrdinalIgnoreCase) ||
-             (!string.IsNullOrEmpty(appointment.CustomerPhone) && new string(proof.Where(char.IsDigit).ToArray()) == new string(appointment.CustomerPhone.Where(char.IsDigit).ToArray())));
+        if (string.IsNullOrEmpty(proof))
+        {
+            return false;
+        }
+
+        if (AppointmentManageToken.Matches(appointment, proof) ||
+            (!string.IsNullOrEmpty(appointment.CustomerEmail) && string.Equals(proof, appointment.CustomerEmail, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // A phone number proves it only when it has digits to compare: proof without digits must not match a number
+        // saved without any.
+        var phoneDigits = new string((appointment.CustomerPhone ?? string.Empty).Where(char.IsDigit).ToArray());
+
+        return phoneDigits.Length > 0 && string.Equals(new string(proof.Where(char.IsDigit).ToArray()), phoneDigits, StringComparison.Ordinal);
     }
 }

@@ -126,6 +126,16 @@ public sealed class DefaultAppointmentService : IAppointmentService
 
         try
         {
+            // A request sent again, such as an API call retried after a timeout, must not take a second place: in a group
+            // session the time would still look open, so the customer's own booking of it is looked for first.
+            if (await HasBookedAsync(type, start, request))
+            {
+                result.Errors.Add(S["This customer has already booked that time."]);
+                result.Conflict = true;
+
+                return result;
+            }
+
             var slot = (await _availabilityService.FindSlotsAsync(type, start, start.AddMinutes(1), request.ResourceId, 1, cancellationToken: cancellationToken)).FirstOrDefault(item => item.StartUtc == start);
 
             if (slot is null)
@@ -345,9 +355,17 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
+        var status = noShow ? AppointmentStatus.NoShow : AppointmentStatus.Completed;
+
+        // Marking it the same way again, such as a retried request, changes nothing and raises no second event.
+        if (appointment.Status == status)
+        {
+            return result;
+        }
+
         var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
-        appointment.Status = noShow ? AppointmentStatus.NoShow : AppointmentStatus.Completed;
+        appointment.Status = status;
         appointment.ModifiedUtc = _clock.UtcNow;
 
         await _appointmentStore.UpdateAsync(appointment, cancellationToken);
@@ -537,6 +555,28 @@ public sealed class DefaultAppointmentService : IAppointmentService
         {
             await _eventManager.UpdateAsync(calendarEvent, target => target.Status = status, new CalendarChangeOptions { Actor = actor ?? SchedulingConstants.EventSource, SkipConflictCheck = true });
         }
+    }
+
+    private async Task<bool> HasBookedAsync(AppointmentType type, DateTime startUtc, AppointmentRequest request)
+    {
+        var email = string.IsNullOrWhiteSpace(request.CustomerEmail) ? null : request.CustomerEmail.Trim();
+        var phone = string.IsNullOrWhiteSpace(request.CustomerPhone) ? null : request.CustomerPhone.Trim();
+        var userId = string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId;
+
+        if (email is null && phone is null && userId is null)
+        {
+            return false;
+        }
+
+        var booked = await _appointmentStore.ListForResourcesAsync(type.ResourceIds, startUtc, startUtc.AddMinutes(1));
+
+        return booked.Any(appointment =>
+            appointment.AppointmentTypeId == type.ItemId &&
+            appointment.StartUtc == startUtc &&
+            appointment.Status != AppointmentStatus.Completed &&
+            ((email is not null && string.Equals(appointment.CustomerEmail, email, StringComparison.OrdinalIgnoreCase)) ||
+             (phone is not null && string.Equals(appointment.CustomerPhone, phone, StringComparison.Ordinal)) ||
+             (userId is not null && string.Equals(appointment.UserId, userId, StringComparison.Ordinal))));
     }
 
     private async Task<List<string>> ChooseResourcesAsync(AppointmentType type, AppointmentSlot slot)

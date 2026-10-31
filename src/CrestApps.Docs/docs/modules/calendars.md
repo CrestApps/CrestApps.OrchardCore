@@ -349,7 +349,7 @@ Task changes are made with the actor `workflow`.
 
 ## HTTP API
 
-The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard Core's `Api` scheme and without antiforgery. Every endpoint checks the caller's access to each calendar it touches.
+The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard Core's `Api` scheme and without antiforgery. Every endpoint checks the caller's access to each calendar it touches, with the same rules as the calendar screens. `GET calendars`, `GET events`, `free-busy` and `free-time` answer `403` to a caller without **Use calendars** (`AccessCalendars`).
 
 | Method and route | Does | Access |
 | --- | --- | --- |
@@ -364,13 +364,13 @@ The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard C
 | `POST free-busy` | Busy intervals for `calendarIds` and `userIds` (up to 50) between `from` and `to` (at most 62 days). | FreeBusy, and **Use calendars** |
 | `POST free-time` | Windows of `durationMinutes` (5 to 1,440, default 30) when everyone is free, up to 50. | FreeBusy, and **Use calendars** |
 
-An overlap refusal returns `409 Conflict` as Problem Details; other validation errors return `400` with the field errors.
+An overlap refusal returns `409 Conflict` as Problem Details; other validation errors, including a missing body or a range whose end is not after its start, return `400` with the field errors. Cancelling an event that is already cancelled, or sending the same answer to an invitation again, succeeds without a change, so a retried request raises no second **Event Cancelled**, **Event Updated** or **Response Received** workflow event.
 
 The admin calendar view uses its own endpoints under `Admin/api/calendars` (`occurrences`, `occurrences/move` and `users/search`), which are not a public API.
 
 ## AI tools
 
-With `CrestApps.OrchardCore.AI` enabled, Calendars registers these tools in the **Calendar** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers.
+With `CrestApps.OrchardCore.AI` enabled, Calendars registers these tools in the **Calendar** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers and callers without **Use calendars** (`AccessCalendars`). Without that permission, `createCalendarEvent` doesn't create the person's personal calendar either.
 
 | Function | Title | Description |
 | --- | --- | --- |

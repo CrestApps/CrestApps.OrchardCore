@@ -61,6 +61,8 @@ All records live in the `Scheduling` collection.
 
 `IAppointmentService` is the one way to change appointments. `BookAsync(AppointmentRequest)` books (or with `Hold = true` holds for the type's `HoldMinutes`), `ConfirmAsync` confirms a held or requested appointment, `RescheduleAsync` moves one, `CancelAsync` cancels one, `CompleteAsync(appointment, noShow)` records that it took place or that the customer didn't come, and `ExpireHoldsAsync` ends holds that ran out. Results are `AppointmentResult` (`Succeeded`, `Errors`, and `Conflict` when the time was taken).
 
+A request sent twice takes effect once. `BookAsync` refuses, with `Conflict`, a booking for a customer (same email, phone or user) who already has an appointment of that type at that time, so a retried request can't take a second place in a group session. Confirming or cancelling twice fails the second time, and `CompleteAsync` with the outcome the appointment already has succeeds without raising a second change.
+
 Every booking and reschedule:
 
 1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on each candidate resource, in id order so two requests never deadlock.
@@ -160,7 +162,7 @@ The Scheduling API feature maps `/api/scheduling/v1`, authenticated with Orchard
 | `POST appointments/{id}/reschedule` | Move it: `{ "startUtc": "...", "resourceId": null }`. | Manage appointments |
 | `POST appointments/{id}/cancel` | Cancel it: `{ "reason": "..." }`. | Manage appointments |
 
-A time that was taken returns `409 Conflict`.
+A time that was taken, or a booking the customer already has, returns `409 Conflict` as Problem Details. A missing body, or a slot range whose end is not after its start, returns `400`.
 
 ## AI tools
 
@@ -171,6 +173,6 @@ With `CrestApps.OrchardCore.AI` enabled, Scheduling registers these tools in the
 | `listAppointmentTypes` | List appointment types | Lists the kinds of appointments that can be booked. |
 | `findAppointmentSlots` | Find appointment slots | Finds open times for an appointment. |
 | `bookAppointment` | Book appointment | Books an appointment for the customer at a `startUtc` that `findAppointmentSlots` returned. |
-| `changeAppointment` | Change appointment | Cancels or moves a customer's appointment. The caller proves it is theirs with the manage code, or the email or phone number on the appointment, unless it has **Manage appointments**. |
+| `changeAppointment` | Change appointment | Cancels or moves a customer's appointment. The caller proves it is theirs with the manage code, or the email or phone number on the appointment (a phone number only when the saved one has digits), unless it has **Manage appointments**. |
 
 See [AI Tools](../ai/tools.md#scheduling-tools).
