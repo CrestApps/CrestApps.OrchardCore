@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Workforce</RootNamespace>
+    <Title>CrestApps OrchardCore Workforce Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for workforce management: workers (with or without a user account), the team hierarchy, activity
+      codes, availability preferences, shift data on the Workforce calendar and manager scoping.
+    </Description>
+    <PackageTags>$(PackageTags) Workforce Scheduling Shifts Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

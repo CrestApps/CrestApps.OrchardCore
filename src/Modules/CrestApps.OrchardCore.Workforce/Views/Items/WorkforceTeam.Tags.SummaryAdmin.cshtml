@@ -1,0 +1,26 @@
+@model TeamRowViewModel
+
+@{
+    var kind = Model.Team.Kind switch
+    {
+        TeamKind.Organization => T["Organization"],
+        TeamKind.Region => T["Region"],
+        TeamKind.Site => T["Site"],
+        TeamKind.Department => T["Department"],
+        TeamKind.Crew => T["Crew"],
+        _ => T["Team"],
+    };
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Kind"]"><i class="fa-solid fa-sitemap text-secondary me-1" aria-hidden="true"></i>@kind</span>
+@if (!string.IsNullOrEmpty(Model.ParentName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Part of"]"><i class="fa-solid fa-turn-up fa-rotate-90 text-secondary me-1" aria-hidden="true"></i>@Model.ParentName</span>
+}
+@if (!string.IsNullOrEmpty(Model.Team.TimeZoneId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Time zone"]"><i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>@Model.Team.TimeZoneId</span>
+}
+@if (!Model.Team.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

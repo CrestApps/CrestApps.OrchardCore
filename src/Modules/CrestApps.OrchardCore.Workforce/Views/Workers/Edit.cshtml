@@ -1,0 +1,132 @@
+@model WorkerEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkersEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Worker"] : T["Edit '{0}'", Model.DisplayName])">
+        <breadcrumb-item id="Workers" action="Index" controller="Workers" area="CrestApps.OrchardCore.Workforce">@T["Workers"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Worker"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="DisplayName" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="UserId" class="ocat-label">@T["User account"]</label><div class="ocat-end">
+            @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
+            <span class="hint">@T["Optional. A worker with no account can still be scheduled, but can't sign in to see their schedule."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="JobTitle" class="ocat-label">@T["Job title"]</label><div class="ocat-end"><input asp-for="JobTitle" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Email" class="ocat-label">@T["Email"]</label><div class="ocat-end"><input asp-for="Email" type="email" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Phone" class="ocat-label">@T["Phone"]</label><div class="ocat-end"><input asp-for="Phone" type="tel" class="form-control" style="max-width: 18rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="EmployeeNumber" class="ocat-label">@T["Employee number"]</label><div class="ocat-end"><input asp-for="EmployeeNumber" class="form-control" style="max-width: 14rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="ExternalId" class="ocat-label">@T["HR or payroll id"]</label><div class="ocat-end"><input asp-for="ExternalId" class="form-control" style="max-width: 14rem" /></div></div>
+    </div></div>
+
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Employment"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="EmploymentType" class="ocat-label">@T["Employment"]</label><div class="ocat-end"><select asp-for="EmploymentType" asp-items="Model.EmploymentTypeOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="Status" class="ocat-label">@T["Status"]</label><div class="ocat-end"><select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 18rem"></select><span class="hint">@T["Only active workers are scheduled."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="HireDate" class="ocat-label">@T["Hire date"]</label><div class="ocat-end"><input asp-for="HireDate" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="SeniorityDate" class="ocat-label">@T["Seniority date"]</label><div class="ocat-end"><input asp-for="SeniorityDate" type="date" class="form-control" style="max-width: 12rem" /><span class="hint">@T["When seniority counts from, if not the hire date. Used to award open shifts by seniority."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="TerminationDate" class="ocat-label">@T["Last day worked"]</label><div class="ocat-end"><input asp-for="TerminationDate" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+        @if (Model.CanSeeSensitive)
+        {
+            <div class="ocat-wrapper"><label asp-for="DateOfBirth" class="ocat-label">@T["Date of birth"]</label><div class="ocat-end"><input asp-for="DateOfBirth" type="date" class="form-control" style="max-width: 12rem" /><span class="hint">@T["Only used for the rules about young workers."]</span></div></div>
+        }
+    </div></div>
+
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Teams"]</div><div class="card-body">
+        <div class="row g-2 fw-semibold small mb-1"><div class="col-md-5">@T["Team"]</div><div class="col-md-3">@T["Role"]</div><div class="col-md-2">@T["From"]</div><div class="col-md-2">@T["Until"]</div></div>
+        @for (var i = 0; i < Model.Memberships.Count; i++)
+        {
+            var row = Model.Memberships[i];
+            <div class="row g-2 mb-2">
+                <div class="col-md-5">
+                    <select name="@Html.NameFor(m => m.Memberships[i].TeamId)" class="form-select" aria-label="@T["Team"]">
+                        <option value="">@T["(none)"]</option>
+                        @foreach (var option in Model.TeamOptions)
+                        {
+                            <option value="@option.Value" selected="@(option.Value == row.TeamId)">@option.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="@Html.NameFor(m => m.Memberships[i].Role)" class="form-select" aria-label="@T["Role"]">
+                        <option value="Member" selected="@(row.Role == "Member")">@T["Member"]</option>
+                        <option value="Lead" selected="@(row.Role == "Lead")">@T["Lead"]</option>
+                        <option value="Scheduler" selected="@(row.Role == "Scheduler")">@T["Scheduler"]</option>
+                        <option value="Manager" selected="@(row.Role == "Manager")">@T["Manager"]</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><input type="date" name="@Html.NameFor(m => m.Memberships[i].EffectiveFrom)" value="@row.EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
+                <div class="col-md-2"><input type="date" name="@Html.NameFor(m => m.Memberships[i].EffectiveTo)" value="@row.EffectiveTo?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["Until"]" /></div>
+            </div>
+        }
+        <span class="hint">@T["The first team is the worker's main team. Managers and schedulers of a team see and plan its workers, and those of the teams under it. Save to get more empty rows."]</span>
+    </div></div>
+
+    <div class="card text-bg-theme mb-3"><div class="card-header">@T["Hours and availability"]</div><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select" style="max-width: 22rem"><option value="">@T["The main team's time zone"]</option></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="ContractedHoursPerWeek" class="ocat-label">@T["Contracted hours a week"]</label><div class="ocat-end"><input asp-for="ContractedHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="MinHoursPerWeek" class="ocat-label">@T["Fewest hours a week"]</label><div class="ocat-end"><input asp-for="MinHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxHoursPerWeek" class="ocat-label">@T["Most hours a week"]</label><div class="ocat-end"><input asp-for="MaxHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxHoursPerDay" class="ocat-label">@T["Most hours a day"]</label><div class="ocat-end"><input asp-for="MaxHoursPerDay" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Availability" class="ocat-label">@T["Availability"]</label><div class="ocat-end"><textarea asp-for="Availability" class="form-control font-monospace" rows="5"></textarea><span class="hint">@T["One line per day, such as: Monday 09:00-17:00, or Tuesday 08:00-12:00 preferred, 13:00-17:00, or Saturday unavailable. Leave it empty when the worker can work any time."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="HomeBase" class="ocat-label">@T["Home base"]</label><div class="ocat-end"><input asp-for="HomeBase" class="form-control" /><span class="hint">@T["Where a field worker starts and ends the day."]</span></div></div>
+    </div></div>
+
+    @if (Model.Skills.Count > 0)
+    {
+        <div class="card text-bg-theme mb-3"><div class="card-header">@T["Skills"]</div><div class="card-body">
+            @for (var i = 0; i < Model.Skills.Count; i++)
+            {
+                var skill = Model.Skills[i];
+                <div class="row g-2 align-items-center mb-1">
+                    <input type="hidden" name="@Html.NameFor(m => m.Skills[i].SkillId)" value="@skill.SkillId" />
+                    <label class="col-sm-4 col-form-label" for="@Html.IdFor(m => m.Skills[i].Proficiency)">@skill.Name</label>
+                    <div class="col-sm-4">
+                        <select class="form-select form-select-sm" id="@Html.IdFor(m => m.Skills[i].Proficiency)" name="@Html.NameFor(m => m.Skills[i].Proficiency)">
+                            <option value="0" selected="@(skill.Proficiency == 0)">@T["Doesn't hold it"]</option>
+                            <option value="1" selected="@(skill.Proficiency == 1)">@T["1 - Trainee"]</option>
+                            <option value="2" selected="@(skill.Proficiency == 2)">@T["2 - Basic"]</option>
+                            <option value="3" selected="@(skill.Proficiency == 3)">@T["3 - Competent"]</option>
+                            <option value="4" selected="@(skill.Proficiency == 4)">@T["4 - Advanced"]</option>
+                            <option value="5" selected="@(skill.Proficiency == 5)">@T["5 - Expert"]</option>
+                        </select>
+                    </div>
+                </div>
+            }
+        </div></div>
+    }
+
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.Id))
+{
+    <div class="card text-bg-theme my-3"><div class="card-header">@T["Certificates"]</div><div class="card-body">
+        @if (Model.Certificates.Count == 0)
+        {
+            <p class="hint">@T["No certificates yet."]</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-3">
+                @foreach (var certificate in Model.Certificates)
+                {
+                    <li><a href="@Url.Content("~/Admin/certificates/edit/" + certificate.Id)">@(certificate.CertificationName ?? T["Unknown certification"].Value)</a> @certificate.Number <span class="badge ta-badge fw-normal">@certificate.Status</span> @if (certificate.ExpiresOn is { } expires) { <span class="hint">@T["valid until {0}", expires.ToString("d")]</span> }</li>
+                }
+            </ul>
+        }
+        @if (Model.CertificationOptions.Count > 0)
+        {
+            <form method="post" asp-action="AddCertificate" class="row g-2 align-items-end">
+                <input type="hidden" name="WorkerId" value="@Model.Id" />
+                <div class="col-md-3"><label class="form-label" for="NewCertificationId">@T["Certification"]</label><select id="NewCertificationId" name="CertificationId" class="form-select" asp-items="Model.CertificationOptions"></select></div>
+                <div class="col-md-2"><label class="form-label" for="NewNumber">@T["Number"]</label><input id="NewNumber" name="Number" class="form-control" /></div>
+                <div class="col-md-2"><label class="form-label" for="NewIssuedOn">@T["Issued on"]</label><input id="NewIssuedOn" name="IssuedOn" type="date" class="form-control" /></div>
+                <div class="col-md-2"><label class="form-label" for="NewExpiresOn">@T["Valid until"]</label><input id="NewExpiresOn" name="ExpiresOn" type="date" class="form-control" /></div>
+                <div class="col-md-2"><div class="form-check"><input id="NewChecked" name="Checked" type="checkbox" value="true" class="form-check-input" /><label class="form-check-label" for="NewChecked">@T["Checked"]</label></div></div>
+                <div class="col-md-1"><button type="submit" class="btn btn-secondary">@T["Add"]</button></div>
+            </form>
+        }
+    </div></div>
+}

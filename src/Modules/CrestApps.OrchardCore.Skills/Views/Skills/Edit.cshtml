@@ -1,0 +1,20 @@
+@model SkillEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SkillsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Skill"] : T["Edit '{0}' Skill", Model.Name])">
+        <breadcrumb-item id="Skills" action="Index" controller="Skills" area="CrestApps.OrchardCore.Skills">@T["Skills"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /><span asp-validation-for="Name"></span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Category" class="ocat-label">@T["Category"]</label><div class="ocat-end"><input asp-for="Category" class="form-control" style="max-width: 22rem" /><span class="hint">@T["A group the skill is listed under, such as Languages or Electrical."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="3"></textarea></div></div>
+        <div class="ocat-wrapper"><label asp-for="RequiredCertificationId" class="ocat-label">@T["Required certification"]</label><div class="ocat-end"><select asp-for="RequiredCertificationId" asp-items="Model.CertificationOptions" class="form-select" style="max-width: 22rem"><option value="">@T["None"]</option></select><span class="hint">@T["When set, the skill only counts for a person on days they hold a valid certificate of this certification."]</span></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label><span class="hint dashed">@T["Disabled skills can't be given to people, and the people who hold them don't count as holding them."]</span></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

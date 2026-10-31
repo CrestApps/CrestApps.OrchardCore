@@ -1,0 +1,126 @@
+@model RotationEditViewModel
+@{
+    var days = new[] { T["Mon"], T["Tue"], T["Wed"], T["Thu"], T["Fri"], T["Sat"], T["Sun"] };
+}
+
+<zone Name="Title">
+    <breadcrumb name="RotationsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Rotation"] : T["Edit '{0}' Rotation", Model.Name])">
+        <breadcrumb-item id="Rotations" action="Index" controller="Rotations" area="CrestApps.OrchardCore.Workforce">@T["Rotations"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit" id="rotation-editor">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem" data-reload-param="teamId" disabled="@(!string.IsNullOrEmpty(Model.Id) ? "disabled" : null)">
+                    <option value="">@T["Choose a team"]</option>
+                </select>
+                @if (!string.IsNullOrEmpty(Model.Id))
+                {
+                    <input type="hidden" asp-for="TeamId" />
+                }
+                else
+                {
+                    <span class="hint">@T["Choosing a team reloads the page with its workers and templates."]</span>
+                }
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="WeekCount" class="ocat-label ocat-label-required">@T["Weeks"]</label>
+            <div class="ocat-end">
+                <input asp-for="WeekCount" type="number" min="1" max="12" class="form-control" style="max-width: 7rem" />
+                <span class="hint">@T["The pattern repeats after this many weeks."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Pattern"]</span>
+            <div class="ocat-end">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Week"]</th>
+                                @foreach (var day in days)
+                                {
+                                    <th scope="col">@day</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var week = 0; week < 12; week++)
+                            {
+                                <tr data-week="@week" class="@(week >= Model.WeekCount ? "d-none" : null)">
+                                    <th scope="row">@(week + 1)</th>
+                                    @for (var day = 0; day < 7; day++)
+                                    {
+                                        var index = (week * 7) + day;
+                                        var selected = Model.Slots != null && index < Model.Slots.Length ? Model.Slots[index] : null;
+                                        <td>
+                                            <select name="Slots[@index]" class="form-select form-select-sm" aria-label="@T["Week {0}, {1}", week + 1, days[day]]">
+                                                <option value="">@T["Off"]</option>
+                                                @foreach (var option in Model.TemplateOptions)
+                                                {
+                                                    <option value="@option.Value" selected="@(option.Value == selected)">@option.Text</option>
+                                                }
+                                            </select>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="WorkerIds" class="ocat-label">@T["Workers"]</label>
+            <div class="ocat-end">
+                <select asp-for="WorkerIds" asp-items="Model.WorkerOptions" class="form-select" multiple size="8"></select>
+                @if (Model.Workers.Count > 0)
+                {
+                    <ul class="list-unstyled small text-muted mt-2 mb-0">
+                        @foreach (var worker in Model.Workers)
+                        {
+                            <li>@T["{0} started week 1 on {1}", worker.Name, worker.StartDate.ToString("d")]</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="StartDate" class="ocat-label">@T["New workers start"]</label>
+            <div class="ocat-end">
+                <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
+                <span class="hint">@T["The day workers you add now start week 1. Workers already following it keep their day."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index" asp-route-teamId="@Model.TeamId">@T["Cancel"]</a></div></div>
+</form>
+
+<script at="Foot">
+    (function () {
+        const form = document.getElementById('rotation-editor');
+        const weeks = form.querySelector('[name="WeekCount"]');
+        const team = form.querySelector('[data-reload-param]');
+
+        weeks.addEventListener('input', function () {
+            const count = Math.min(12, Math.max(1, parseInt(weeks.value, 10) || 1));
+            form.querySelectorAll('tr[data-week]').forEach(function (row) {
+                row.classList.toggle('d-none', parseInt(row.dataset.week, 10) >= count);
+            });
+        });
+
+        team.addEventListener('change', function () {
+            const url = new URL(window.location.href);
+            url.searchParams.set(team.dataset.reloadParam, team.value);
+            window.location.href = url.toString();
+        });
+    })();
+</script>

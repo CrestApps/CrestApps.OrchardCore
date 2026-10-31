@@ -1,0 +1,10 @@
+@model ShapeViewModel<ScheduleChangeRowViewModel>
+@{
+    var change = Model.Value.Change;
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Published version"]"><i class="fa-solid fa-code-branch text-secondary me-1" aria-hidden="true"></i>@T["Version {0}", change.PublishedVersion]</span>
+@if (!string.IsNullOrEmpty(change.ChangedBy))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Published by"]"><i class="fa-solid fa-user-pen text-secondary me-1" aria-hidden="true"></i>@change.ChangedBy</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Published"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(change.ChangedUtc, Model.Value.TimeZoneId).ToString("g")</span>

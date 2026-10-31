@@ -1,0 +1,23 @@
+@model TeamEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTeamsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Team"] : T["Edit '{0}' Team", Model.Name])">
+        <breadcrumb-item id="WorkforceTeams" action="Index" controller="Teams" area="CrestApps.OrchardCore.Workforce">@T["Teams"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Kind" class="ocat-label">@T["Kind"]</label><div class="ocat-end"><select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 18rem"></select><span class="hint">@T["A crew is sent out as one unit for field work."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="ParentId" class="ocat-label">@T["Part of"]</label><div class="ocat-end"><select asp-for="ParentId" asp-items="Model.ParentOptions" class="form-select" style="max-width: 28rem"><option value="">@T["Nothing (top level)"]</option></select><span class="hint">@T["The managers of a team also manage the teams under it."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="2"></textarea></div></div>
+        <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select" style="max-width: 22rem"><option value="">@T["The site's time zone"]</option></select><span class="hint">@T["Where the team works. Its days start and end at midnight in this time zone."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Address" class="ocat-label">@T["Address"]</label><div class="ocat-end"><input asp-for="Address" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="LinkedRoleName" class="ocat-label">@T["Role that can read the calendar"]</label><div class="ocat-end"><input asp-for="LinkedRoleName" class="form-control" style="max-width: 22rem" /><span class="hint">@T["Optional. Users in this role can read the team's Workforce calendar, as its members can."]</span></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

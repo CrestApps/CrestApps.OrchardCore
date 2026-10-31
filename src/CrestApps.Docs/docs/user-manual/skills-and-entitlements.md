@@ -27,6 +27,10 @@ technical_manual:
 
 A disabled skill stays on the agents and queues that already use it, but it can no longer be picked for new ones.
 
+:::tip[One skill list for the whole site]
+When the **Skills** feature is on, these are the same skills as the ones under **Workforce > Skills**, and an agent's skills are the same as the skills in their user's **Skills** section. A skill added or changed on either screen shows on the other. See [Skills and Certifications](./workforce/skills-and-certifications.md).
+:::
+
 ## Grant an agent queues, campaigns and skills
 
 1. Open **Interaction Center > Management > Agent entitlements** and click **Add agent entitlements**.

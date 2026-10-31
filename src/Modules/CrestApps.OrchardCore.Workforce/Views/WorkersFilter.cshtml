@@ -1,0 +1,21 @@
+@{
+    var filters = (WorkforceListViewModel)Model.ViewModel;
+}
+<div class="btn-group filter">
+    <select name="teamId" form="workers-filter" class="form-select form-select-sm" aria-label="@T["Team"]" onchange="this.form.submit()">
+        <option value="">@T["All teams"]</option>
+        @foreach (var option in filters.TeamOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="status" form="workers-filter" class="form-select form-select-sm" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="">@T["All statuses"]</option>
+        @foreach (var option in filters.StatusOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

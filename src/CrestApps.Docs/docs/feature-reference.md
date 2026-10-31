@@ -205,6 +205,14 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling Self-Service | [Scheduling](./modules/scheduling#self-service) |
 | `CrestApps.OrchardCore.Scheduling.Api` | Scheduling API | [Scheduling](./modules/scheduling#http-api) |
 
+## Workforce
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
+| `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |

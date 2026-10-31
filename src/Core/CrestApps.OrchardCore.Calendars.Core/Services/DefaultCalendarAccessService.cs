@@ -8,7 +8,9 @@ namespace CrestApps.OrchardCore.Calendars.Core.Services;
 /// <summary>
 /// Works out what a user can do with a calendar. In order: calendar administrators manage every calendar; a user manages the
 /// calendars they own; members of a team role write to the team's calendars; sharing entries grant what they say; people who
-/// may view all calendars read them; and a shared or public calendar shows its busy time or details to every user of calendars.
+/// may view all calendars read them; a shared or public calendar shows its busy time or details to every user of calendars; and
+/// every <see cref="ICalendarAccessContributor"/> can raise the level, such as for the members of a team a module keeps a
+/// calendar for.
 /// </summary>
 public sealed class DefaultCalendarAccessService : ICalendarAccessService
 {
@@ -17,6 +19,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
     private readonly IAuthorizationService _authorizationService;
     private readonly ICalendarStore _calendarStore;
     private readonly ICalendarTypeManager _typeManager;
+    private readonly IEnumerable<ICalendarAccessContributor> _contributors;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultCalendarAccessService"/> class.
@@ -24,14 +27,17 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="calendarStore">The calendar store.</param>
     /// <param name="typeManager">The calendar type manager.</param>
+    /// <param name="contributors">The contributors that grant access for reasons the calendar doesn't record.</param>
     public DefaultCalendarAccessService(
         IAuthorizationService authorizationService,
         ICalendarStore calendarStore,
-        ICalendarTypeManager typeManager)
+        ICalendarTypeManager typeManager,
+        IEnumerable<ICalendarAccessContributor> contributors)
     {
         _authorizationService = authorizationService;
         _calendarStore = calendarStore;
         _typeManager = typeManager;
+        _contributors = contributors;
     }
 
     /// <inheritdoc />
@@ -46,7 +52,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
 
         var grants = await GetGrantsAsync(user);
 
-        return GetLevel(user, calendar, grants);
+        return await WithContributionsAsync(user, calendar, grants, GetLevel(user, calendar, grants), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -94,6 +100,20 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
 
             Add(candidates, await _calendarStore.ListSharedWithAsync(userId, roles, MaxCalendars, cancellationToken));
             Add(candidates, await _calendarStore.ListVisibleToEveryoneAsync(MaxCalendars, cancellationToken));
+
+            var contributed = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var contributor in _contributors)
+            {
+                contributed.UnionWith(await contributor.GetCalendarIdsAsync(user, cancellationToken));
+            }
+
+            contributed.ExceptWith(candidates.Keys);
+
+            if (contributed.Count > 0)
+            {
+                Add(candidates, await _calendarStore.GetAsync(contributed.Take(MaxCalendars), cancellationToken));
+            }
         }
 
         var result = new List<CalendarAccess>();
@@ -105,7 +125,7 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
                 continue;
             }
 
-            var level = GetLevel(user, calendar, grants);
+            var level = await WithContributionsAsync(user, calendar, grants, GetLevel(user, calendar, grants), cancellationToken);
 
             if (level >= minimum && level > CalendarAccessLevel.None)
             {
@@ -225,6 +245,26 @@ public sealed class DefaultCalendarAccessService : ICalendarAccessService
             CalendarVisibility.Shared => Max(level, CalendarAccessLevel.FreeBusy),
             _ => level,
         };
+
+        return level;
+    }
+
+    private async Task<CalendarAccessLevel> WithContributionsAsync(ClaimsPrincipal user, Calendar calendar, Grants grants, CalendarAccessLevel level, CancellationToken cancellationToken)
+    {
+        if (!grants.Access)
+        {
+            return level;
+        }
+
+        foreach (var contributor in _contributors)
+        {
+            if (level == CalendarAccessLevel.Manage)
+            {
+                break;
+            }
+
+            level = Max(level, await contributor.GetAccessLevelAsync(user, calendar, cancellationToken));
+        }
 
         return level;
     }

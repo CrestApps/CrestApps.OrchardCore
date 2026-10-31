@@ -1,0 +1,50 @@
+@model CoverageEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceCoverageEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Coverage Requirement"] : T["Edit '{0}' Coverage Requirement", Model.Name])">
+        <breadcrumb-item id="WorkforceCoverage" action="Index" controller="Coverage" area="CrestApps.OrchardCore.Workforce" route-teamId="@Model.TeamId">@T["Coverage"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Choose a team"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="SkillId" class="ocat-label">@T["Skill"]</label>
+            <div class="ocat-end">
+                <select asp-for="SkillId" asp-items="Model.SkillOptions" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Anyone on the team"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Rows" class="ocat-label ocat-label-required">@T["Rows"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Rows" class="form-control font-monospace" rows="8" placeholder="Monday 09:00-17:00 2 3&#10;Saturday 10:00-14:00 1 1&#10;2026-12-24 08:00-12:00 1 2 4"></textarea>
+                <span class="hint">@T["One per line: a weekday or a date (yyyy-MM-dd), a time range, then the minimum, the target and, if you want one, the maximum number of people. A date replaces that weekday's rows. Use 24:00 for midnight."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="EffectiveFrom" class="ocat-label">@T["Applies"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["From"]" />
+                    <span>@T["to"]</span>
+                    <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
+                </div>
+                <span class="hint">@T["Leave empty to apply always."]</span>
+            </div>
+        </div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index" asp-route-teamId="@Model.TeamId">@T["Cancel"]</a></div></div>
+</form>

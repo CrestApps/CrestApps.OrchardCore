@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Deployments
+@model WorkforceDeploymentStepViewModel
+
+<h5>@T["Workforce teams and workers"]</h5>
+<p class="hint">@T["Exports the activity codes and every team."]</p>
+<div class="mb-3 form-check">
+    <input asp-for="IncludeWorkers" class="form-check-input" />
+    <label asp-for="IncludeWorkers" class="form-check-label">@T["Include the workers"]</label>
+    <span class="hint dashed">@T["Sensitive details, such as the date of birth, are left out."]</span>
+</div>

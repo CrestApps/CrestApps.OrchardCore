@@ -1,0 +1,23 @@
+@model ActivityCodeEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ActivityCodesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Activity Code"] : T["Edit '{0}' Activity Code", Model.Name])">
+        <breadcrumb-item id="ActivityCodes" action="Index" controller="ActivityCodes" area="CrestApps.OrchardCore.Workforce">@T["Activity Codes"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Code" class="ocat-label">@T["Short code"]</label><div class="ocat-end"><input asp-for="Code" class="form-control" style="max-width: 8rem" /><span class="hint">@T["Shown on schedules where there is little room, such as BRK."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Kind" class="ocat-label">@T["Kind"]</label><div class="ocat-end"><select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="Color" class="ocat-label">@T["Color"]</label><div class="ocat-end"><input asp-for="Color" type="color" class="form-control form-control-color" /></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="IsPaid" class="form-check-input" /><label asp-for="IsPaid" class="form-check-label">@T["Paid"]</label></div></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="CountsAsWork" class="form-check-input" /><label asp-for="CountsAsWork" class="form-check-label">@T["Counts as work"]</label><span class="hint dashed">@T["Counts toward hours rules, such as the most hours a week."]</span></div></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="CountsTowardCoverage" class="form-check-input" /><label asp-for="CountsTowardCoverage" class="form-check-label">@T["Counts toward staffing"]</label><span class="hint dashed">@T["The worker counts as available to take work during it."]</span></div></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>
