@@ -1,0 +1,7 @@
+@model ShapeViewModel<Certification>
+
+<a asp-controller="Certifications" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="hint">@Model.Value.Description</div>
+}

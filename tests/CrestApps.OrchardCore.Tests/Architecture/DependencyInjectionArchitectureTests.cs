@@ -91,6 +91,9 @@ public sealed class DependencyInjectionArchitectureTests
             "DialerAttemptFinalizer",
             "It runs from event handlers and the recovery sweep, and what it completes with belongs to features it cannot depend on: the disposition completers of activity management and the call reconciliation of Voice. Those, and the queue services, also record through the event publisher whose outbox constructs every event handler."),
         new DependencyInjectionException(
+            "SharedAgentSkillsHandler",
+            "The skill assignment service constructs every assignment handler, and the agent profile manager (whose handlers write back to the shared catalog) and the skills sync both lead back to the assignment service, so injecting them would close an assignment-service-to-handler construction cycle."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

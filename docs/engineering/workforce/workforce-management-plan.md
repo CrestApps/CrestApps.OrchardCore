@@ -987,3 +987,15 @@ Three pull requests (WD21), each a commit (or a few) per slice. Each slice is us
 ## 26. Progress
 
 - 2026-10-30: plan written. Decisions WD1 to WD12 agreed with the product owner. Nothing built yet; waiting on PR #1222.
+- 2026-10-30: PR #1222 merged into main. PR A is built on the plan's branch (PR #1229).
+- A1 built (Skills module, `CrestApps.OrchardCore.Skills`, with Abstractions and Core). It differs from §5.1 in these ways:
+  - The proficiency scale is fixed at 1 to 5 (`SkillProficiency`), the scale Contact Center already used, instead of an admin-defined `ProficiencyScale`.
+  - A person holds each skill once. An assignment has one effective date range, not a history of ranges.
+  - Contact Center does **not** depend on Skills, and there is no migration. Two startups with `[RequireFeatures(Skills)]` share the catalog instead:
+    - `SharedSkillsStartup` on the Queues feature replaces `IContactCenterSkillStore` with a store over the shared catalog. Missing Contact Center skills are copied on first read, with the same ids. `ContactCenterSkillMirrorHandler` mirrors every catalog change back into the Contact Center store, so disabling Skills loses nothing.
+    - `SharedAgentSkillsStartup` on the Agents feature keeps `AgentProfile.SkillProficiencies` (keyed by skill **name**, as Contact Center routing uses) and the user's assignments in step both ways. A fingerprint on the profile keeps presence-only saves free. A background task backfills agents saved earlier.
+    - A migration could not be used, because it could run before the Skills tables exist: Queues doesn't depend on Skills.
+  - `SharedAgentSkillsHandler` resolves its collaborators lazily, which breaks an assignment-service-to-handler construction cycle. It is listed in `DependencyInjectionArchitectureTests`.
+  - Skills depends on CrestApps Resources, which the user picker needs.
+  - "Create a worker profile for every agent" (§5.2) moves to `Workforce.ContactCenter` in PR B, because Workforce must not reference Contact Center.
+  - Not verified locally: the docs site build. The `@swc/html` native binding can't load, because of an ACL on `%LOCALAPPDATA%`; `npm run check:manuals` passes. The Contact Center side was covered by tests, not exercised live.
