@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Calendars.Core
+@model ShapeViewModel<ScheduleChangeRowViewModel>
+@{
+    var row = Model.Value;
+    var change = row.Change;
+    string Local(DateTime? utc) => utc.HasValue ? CalendarTime.ToLocal(utc.Value, row.TimeZoneId).ToString("ddd d MMM HH:mm") : null;
+    string Range(DateTime? start, DateTime? end) => start.HasValue ? $"{Local(start)}–{(end.HasValue ? CalendarTime.ToLocal(end.Value, row.TimeZoneId).ToString("HH:mm") : null)}" : null;
+}
+<strong>
+    @switch (change.Kind)
+    {
+        case ScheduleChangeKind.Added:
+            @T["Added"]
+            break;
+        case ScheduleChangeKind.Removed:
+            @T["Removed"]
+            break;
+        case ScheduleChangeKind.Moved:
+            @T["Moved"]
+            break;
+        case ScheduleChangeKind.Reassigned:
+            @T["Reassigned"]
+            break;
+        default:
+            @T["Breaks changed"]
+            break;
+    }
+</strong>
+<span class="ms-1">@row.WorkerName</span>
+@if (change.Kind == ScheduleChangeKind.Reassigned && !string.IsNullOrEmpty(row.PreviousWorkerName))
+{
+    <span class="text-muted">@T["(was {0})", row.PreviousWorkerName]</span>
+}
+<span class="ms-1 text-muted">
+    @if (change.Kind == ScheduleChangeKind.Removed)
+    {
+        @Range(change.BeforeStartUtc, change.BeforeEndUtc)
+    }
+    else if (change.Kind == ScheduleChangeKind.Moved)
+    {
+        @T["{0} to {1}", Range(change.BeforeStartUtc, change.BeforeEndUtc), Range(change.AfterStartUtc, change.AfterEndUtc)]
+    }
+    else
+    {
+        @Range(change.AfterStartUtc, change.AfterEndUtc)
+    }
+</span>

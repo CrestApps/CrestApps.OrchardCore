@@ -20,7 +20,8 @@ public static class WorkforceCoreServiceCollectionExtensions
 
     /// <summary>
     /// Registers the worker, team and activity code stores and managers, manager scoping, team calendars, calendar
-    /// access by team, the busy time of breaks inside shifts, and the Workforce calendar type.
+    /// access by team, the busy time of breaks inside shifts, shift templates, rotations, coverage, schedule planning and
+    /// publishing, and the Workforce calendar type.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -43,6 +44,21 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.AddCalendarAccessContributor<WorkforceCalendarAccessContributor>();
         services.AddCalendarBusyTimeSource<ShiftSegmentBusyTimeSource>();
 
+        services.TryAddScoped<TeamTimeZoneResolver>();
+        services.TryAddScoped<ShiftTemplateStore>();
+        services.TryAddScoped<ShiftPatternStore>();
+        services.TryAddScoped<CoverageRequirementStore>();
+        services.TryAddScoped<SchedulePeriodStore>();
+        services.TryAddScoped<ScheduleScenarioStore>();
+        services.TryAddScoped<DraftShiftStore>();
+        services.TryAddScoped<ScheduleChangeStore>();
+        services.TryAddScoped<IShiftTemplateManager, ShiftTemplateManager>();
+        services.TryAddScoped<IShiftPatternManager, ShiftPatternManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ShiftTemplate>, ShiftTemplateCatalogHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ShiftPattern>, ShiftPatternCatalogHandler>());
+        services.TryAddScoped<ICoverageService, DefaultCoverageService>();
+        services.TryAddScoped<ISchedulePlanningService, DefaultSchedulePlanningService>();
+
         services.AddCalendarType(WorkforceConstants.CalendarType, type => type
             .WithDisplayName(LocalizationSource.Create("Workforce", _source))
             .WithDescription(LocalizationSource.Create("A team's published shifts, approved time off, training and meetings. Workforce creates one for each team.", _source))
@@ -51,7 +67,7 @@ public static class WorkforceCoreServiceCollectionExtensions
             .WithOwner(CalendarOwnerKind.None)
             .WithPosition(60)
             .ManagedByCode()
-            .AddEventType(WorkforceConstants.EventTypes.Shift, LocalizationSource.Create("Shift", _source), e => e.Color("#2b8a3e").Free().RequiresAttendee().IgnoresCapacity())
+            .AddEventType(WorkforceConstants.EventTypes.Shift, LocalizationSource.Create("Shift", _source), e => e.Color("#2b8a3e").Free().IgnoresCapacity())
             .AddEventType(WorkforceConstants.EventTypes.TimeOff, LocalizationSource.Create("Time off", _source), e => e.Color("#e8590c").Busy().AllDayByDefault().RequiresAttendee())
             .AddEventType(WorkforceConstants.EventTypes.Training, LocalizationSource.Create("Training", _source), e => e.Color("#1971c2").Busy())
             .AddEventType(WorkforceConstants.EventTypes.Meeting, LocalizationSource.Create("Meeting", _source), e => e.Color("#6741d9").Busy())

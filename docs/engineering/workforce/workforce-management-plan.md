@@ -1005,3 +1005,12 @@ Three pull requests (WD21), each a commit (or a few) per slice. Each slice is us
   - The team list shows each team's parent as a badge instead of indenting, so it pages correctly.
   - Worker workflow events (§18.1) move to A9, with the API and AI tools.
   - Not verified locally: the docs site build. The `@swc/html` native binding can't load, because of an ACL on `%LOCALAPPDATA%`; `npm run check:manuals` passes. The Contact Center side was covered by tests, not exercised live.
+- A3 built (the **Workforce Shift Planning** feature, `CrestApps.OrchardCore.Workforce.ShiftPlanning`): shift templates with segments, rotations, coverage requirements, schedule periods with a primary scenario, draft shifts, apply rotations, copy from another period, coverage by interval against a draft or the published shifts, publish and republish by shift key, and the change log. It differs from §6 in these ways:
+  - The planner board is a server-rendered week grid (workers by days, with a coverage row), not a vis-timeline board. Shifts are edited on their own page. A drag-and-drop board can come later without changing the services.
+  - Publishing runs in the request, not as a chunked background job, and the 500-workers-by-a-week acceptance test isn't written yet. It touches only the shifts that changed, so a republish is cheap.
+  - Notifying workers when a schedule is published is left to the Portal slice (A7). `ISchedulePublishHandler` is the seam it will use.
+  - Only the primary scenario has screens. The model and services already take a scenario id for what-if drafts.
+  - `Locked` exists but nothing sets it yet; the time clock slice (A8) locks periods with approved timesheets.
+  - A coverage requirement for a skill only narrows the requirements; the scheduled count doesn't yet check the workers' skills. The solver slice (A4) adds that.
+  - `Shift` events no longer require an attendee, because a worker without a user account or an email can't be one. The worker is named in `ShiftData`, and is the attendee when they have an account or an email. The UI pass found this: every shift of such a worker was refused.
+  - A publish where every shift fails still raises the version. With the attendee fix, nothing is known to fail this way.

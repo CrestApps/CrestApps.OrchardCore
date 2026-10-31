@@ -1,0 +1,10 @@
+@model SchedulePeriodRowViewModel
+
+@if (Model.Period.PublishedVersion > 0)
+{
+    <a asp-controller="Schedules" asp-action="Changes" asp-route-id="@Model.Period.ItemId" class="dropdown-item">@T["Change log"]</a>
+}
+else
+{
+    <a asp-controller="Schedules" asp-action="Delete" asp-route-id="@Model.Period.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this schedule and its draft shifts?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

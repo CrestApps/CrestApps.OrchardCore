@@ -167,6 +167,7 @@ const sidebars = {
             className: icon('users'),
             items: [
                 'user-manual/workforce/workers-and-teams',
+                'user-manual/workforce/shift-planning',
                 'user-manual/workforce/skills-and-certifications',
             ],
         },

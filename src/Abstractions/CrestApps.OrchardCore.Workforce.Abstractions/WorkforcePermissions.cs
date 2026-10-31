@@ -37,4 +37,19 @@ public static class WorkforcePermissions
     /// Add, change and remove activity codes.
     /// </summary>
     public static readonly Permission ManageActivityCodes = new("ManageActivityCodes", LocalizationSource.Create("Manage activity codes", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Add, change and remove shift templates.
+    /// </summary>
+    public static readonly Permission ManageShiftTemplates = new("ManageShiftTemplates", LocalizationSource.Create("Manage shift templates", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Publish the schedules of the teams the user manages.
+    /// </summary>
+    public static readonly Permission PublishSchedules = new("PublishWorkforceSchedules", LocalizationSource.Create("Publish team schedules", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Plan the schedules, rotations and coverage of the teams the user manages.
+    /// </summary>
+    public static readonly Permission ManageSchedules = new("ManageWorkforceSchedules", LocalizationSource.Create("Plan team schedules", typeof(WorkforcePermissions)), [PublishSchedules]);
 }

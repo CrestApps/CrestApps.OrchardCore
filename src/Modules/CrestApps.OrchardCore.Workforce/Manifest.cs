@@ -22,3 +22,14 @@ using OrchardCore.Modules.Manifest;
         SkillsConstants.Features.Skills,
     ]
 )]
+
+[assembly: Feature(
+    Id = WorkforceConstants.Features.ShiftPlanning,
+    Name = "Workforce Shift Planning",
+    Description = "Shift templates with breaks, rotations, coverage requirements, and team schedules planned as drafts and published to the team calendar, with a log of every change after publishing.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceConstants.Features.Workforce,
+    ]
+)]
