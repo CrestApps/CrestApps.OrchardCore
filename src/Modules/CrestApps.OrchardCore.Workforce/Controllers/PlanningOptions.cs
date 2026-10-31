@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using CrestApps.OrchardCore.Workforce.Models;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -18,6 +20,21 @@ internal static class PlanningOptions
             .Where(item => scope.Covers(item.Team.ItemId))
             .Select(item => new SelectListItem(new string(' ', item.Depth * 4) + item.Team.Name, item.Team.ItemId, item.Team.ItemId == selected))
             .ToList();
+    }
+
+    /// <summary>
+    /// Returns a team's time zone, else the site's, else UTC.
+    /// </summary>
+    public static async Task<string> TimeZoneOfAsync(WorkforceTeam team, ISiteService siteService)
+    {
+        if (!string.IsNullOrEmpty(team?.TimeZoneId))
+        {
+            return team.TimeZoneId;
+        }
+
+        var timeZoneId = (await siteService.GetSiteSettingsAsync()).TimeZoneId;
+
+        return string.IsNullOrEmpty(timeZoneId) ? "UTC" : timeZoneId;
     }
 
     /// <summary>

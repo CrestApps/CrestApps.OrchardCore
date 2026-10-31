@@ -172,15 +172,30 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
         return result;
     }
 
+    /// <summary>
+    /// Returns the calendars whose shifts a resource works: its list, and the single calendar resources saved before
+    /// the list had.
+    /// </summary>
+    private static string[] ShiftCalendarIds(SchedulingResource resource)
+    {
+        return (resource.ShiftCalendarIds ?? [])
+            .Append(resource.ShiftCalendarId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private async Task<List<CalendarTimeWindow>> GetWindowsAsync(SchedulingResource resource, DateTime fromUtc, DateTime toUtc)
     {
         var windows = new List<CalendarTimeWindow>();
 
-        if (resource.AvailabilityMode == SchedulingAvailabilityMode.Shifts && !string.IsNullOrEmpty(resource.ShiftCalendarId))
+        var shiftCalendarIds = ShiftCalendarIds(resource);
+
+        if (resource.AvailabilityMode == SchedulingAvailabilityMode.Shifts && shiftCalendarIds.Length > 0)
         {
             var shifts = await _queryService.GetOccurrencesAsync(new CalendarOccurrenceQuery
             {
-                CalendarIds = [resource.ShiftCalendarId],
+                CalendarIds = shiftCalendarIds,
                 FromUtc = fromUtc,
                 ToUtc = toUtc,
                 EventTypes = ["Shift"],

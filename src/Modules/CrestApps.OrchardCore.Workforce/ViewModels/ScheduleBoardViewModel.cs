@@ -63,6 +63,11 @@ public class ScheduleBoardViewModel
     public bool CanPublish { get; set; }
 
     /// <summary>
+    /// Gets or sets what the last auto-schedule run did.
+    /// </summary>
+    public CrestApps.OrchardCore.Workforce.Models.ScheduleSolverRun LastRun { get; set; }
+
+    /// <summary>
     /// Gets or sets the team's other schedules to copy from.
     /// </summary>
     public IList<SelectListItem> CopySourceOptions { get; set; } = [];

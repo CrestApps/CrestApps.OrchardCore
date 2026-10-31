@@ -21,7 +21,8 @@ public static class WorkforceCoreServiceCollectionExtensions
     /// <summary>
     /// Registers the worker, team and activity code stores and managers, manager scoping, team calendars, calendar
     /// access by team, the busy time of breaks inside shifts, shift templates, rotations, coverage, schedule planning and
-    /// publishing, and the Workforce calendar type.
+    /// publishing, the built-in schedule solver, open shifts, shift trades and the checks they run, and the Workforce
+    /// calendar type.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -58,6 +59,21 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ShiftPattern>, ShiftPatternCatalogHandler>());
         services.TryAddScoped<ICoverageService, DefaultCoverageService>();
         services.TryAddScoped<ISchedulePlanningService, DefaultSchedulePlanningService>();
+
+        services.AddOptions<ShiftPlanningOptions>();
+        services.TryAddScoped<OpenShiftStore>();
+        services.TryAddScoped<ShiftTradeStore>();
+        services.TryAddScoped<WorkerShiftReader>();
+        services.TryAddScoped<WorkerLocks>();
+        services.TryAddScoped<TeamPlanningPolicy>();
+        services.TryAddScoped<ShiftAssignmentContexts>();
+        services.TryAddScoped<OpenShiftPosting>();
+        services.TryAddScoped<ScheduleAutoScheduler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IShiftScheduleSolver, DefaultShiftScheduleSolver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IShiftAssignmentValidator, DefaultShiftAssignmentValidator>());
+        services.TryAddScoped<IShiftService, DefaultShiftService>();
+        services.TryAddScoped<IOpenShiftService, DefaultOpenShiftService>();
+        services.TryAddScoped<IShiftTradeService, DefaultShiftTradeService>();
 
         services.AddCalendarType(WorkforceConstants.CalendarType, type => type
             .WithDisplayName(LocalizationSource.Create("Workforce", _source))

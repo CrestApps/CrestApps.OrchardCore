@@ -1,0 +1,16 @@
+@model OpenShiftStatus
+@switch (Model)
+{
+    case OpenShiftStatus.Claimed:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-hourglass-half text-warning me-1" aria-hidden="true"></i>@T["Claimed"]</span>
+        break;
+    case OpenShiftStatus.Filled:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Filled"]</span>
+        break;
+    case OpenShiftStatus.Canceled:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Canceled"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-user-plus text-warning me-1" aria-hidden="true"></i>@T["Open"]</span>
+        break;
+}

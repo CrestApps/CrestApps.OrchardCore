@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Workforce.BackgroundTasks;
+using OrchardCore.BackgroundTasks;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
@@ -15,7 +17,8 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Workforce;
 
 /// <summary>
-/// Registers shift templates, rotations, coverage and team schedules, and their admin screens.
+/// Registers shift templates, rotations, coverage, team schedules, open shifts and shift trades, and their admin
+/// screens.
 /// </summary>
 [Feature(WorkforceConstants.Features.ShiftPlanning)]
 public sealed class ShiftPlanningStartup : StartupBase
@@ -30,13 +33,18 @@ public sealed class ShiftPlanningStartup : StartupBase
             .AddIndexProvider<SchedulePeriodIndexProvider>()
             .AddIndexProvider<ScheduleScenarioIndexProvider>()
             .AddIndexProvider<DraftShiftIndexProvider>()
-            .AddIndexProvider<ScheduleChangeIndexProvider>();
+            .AddIndexProvider<ScheduleChangeIndexProvider>()
+            .AddIndexProvider<OpenShiftIndexProvider>()
+            .AddIndexProvider<ShiftTradeIndexProvider>();
 
         services.AddDisplayDriver<ShiftTemplate, ShiftTemplateRowDisplayDriver>();
         services.AddDisplayDriver<ShiftPattern, ShiftPatternRowDisplayDriver>();
         services.AddDisplayDriver<CoverageRequirement, CoverageRequirementRowDisplayDriver>();
         services.AddDisplayDriver<SchedulePeriod, SchedulePeriodRowDisplayDriver>();
         services.AddDisplayDriver<ScheduleChangeRowViewModel, ScheduleChangeRowDisplayDriver>();
+        services.AddDisplayDriver<OpenShiftRowViewModel, OpenShiftRowDisplayDriver>();
+        services.AddDisplayDriver<ShiftTradeRowViewModel, ShiftTradeRowDisplayDriver>();
+        services.AddSingleton<IBackgroundTask, OpenShiftAwardBackgroundTask>();
         services.AddPermissionProvider<ShiftPlanningPermissionsProvider>();
         services.AddNavigationProvider<ShiftPlanningAdminMenu>();
     }

@@ -29,4 +29,14 @@ public enum ScheduleChangeKind
     /// Only the breaks or activities inside a shift changed.
     /// </summary>
     SegmentsChanged,
+
+    /// <summary>
+    /// Two workers exchanged shifts.
+    /// </summary>
+    Swapped,
+
+    /// <summary>
+    /// An open shift was given to a worker.
+    /// </summary>
+    OpenShiftFilled,
 }

@@ -28,7 +28,7 @@ public sealed class PlanningPublishResult
     public int Removed { get; set; }
 
     /// <summary>
-    /// Gets or sets how many draft shifts have nobody and were left off the calendar.
+    /// Gets or sets how many draft shifts have nobody, were left off the calendar and are offered as open shifts.
     /// </summary>
     public int Open { get; set; }
 

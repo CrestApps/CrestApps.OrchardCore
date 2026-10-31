@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -25,6 +26,7 @@ public sealed class TeamsController : Controller
     private readonly ITeamManager _teamManager;
     private readonly IWorkerManager _workerManager;
     private readonly IClock _clock;
+    private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -37,6 +39,7 @@ public sealed class TeamsController : Controller
     /// <param name="teamManager">The team manager.</param>
     /// <param name="workerManager">The worker manager.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -45,6 +48,7 @@ public sealed class TeamsController : Controller
         ITeamManager teamManager,
         IWorkerManager workerManager,
         IClock clock,
+        IShellFeaturesManager shellFeaturesManager,
         INotifier notifier,
         IHtmlLocalizer<TeamsController> htmlLocalizer,
         IStringLocalizer<TeamsController> stringLocalizer)
@@ -53,6 +57,7 @@ public sealed class TeamsController : Controller
         _teamManager = teamManager;
         _workerManager = workerManager;
         _clock = clock;
+        _shellFeaturesManager = shellFeaturesManager;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -122,6 +127,8 @@ public sealed class TeamsController : Controller
             ParentId = string.IsNullOrEmpty(id) ? parentId : team.ParentId,
             Description = team.Description,
             LinkedRoleName = team.LinkedRoleName,
+            OpenShiftClaimPolicy = team.OpenShiftClaimPolicy?.ToString(),
+            ShiftTradesNeedApproval = team.ShiftTradesNeedApproval.HasValue ? (team.ShiftTradesNeedApproval.Value ? "true" : "false") : null,
             TimeZoneId = team.TimeZoneId,
             Address = team.Location?.Address,
             Enabled = team.Enabled,
@@ -163,6 +170,12 @@ public sealed class TeamsController : Controller
         team.Description = model.Description;
         team.LinkedRoleName = model.LinkedRoleName;
         team.TimeZoneId = model.TimeZoneId;
+
+        if (await IsShiftPlanningOnAsync())
+        {
+            team.OpenShiftClaimPolicy = Enum.TryParse<OpenShiftClaimPolicy>(model.OpenShiftClaimPolicy, out var policy) ? policy : null;
+            team.ShiftTradesNeedApproval = bool.TryParse(model.ShiftTradesNeedApproval, out var needsApproval) ? needsApproval : null;
+        }
         team.Location = string.IsNullOrWhiteSpace(model.Address) ? null : new WorkforceLocation { Address = model.Address.Trim(), Latitude = team.Location?.Latitude, Longitude = team.Location?.Longitude };
         team.Enabled = model.Enabled;
 
@@ -244,6 +257,12 @@ public sealed class TeamsController : Controller
             .ToList();
         model.KindOptions = TeamKindOptions(S, model.Kind);
         model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
+        model.ShowShiftPlanning = await IsShiftPlanningOnAsync();
+    }
+
+    private async Task<bool> IsShiftPlanningOnAsync()
+    {
+        return (await _shellFeaturesManager.GetEnabledFeaturesAsync()).Any(feature => feature.Id == WorkforceConstants.Features.ShiftPlanning);
     }
 
     internal static IList<SelectListItem> TeamKindOptions(IStringLocalizer S, string selected)

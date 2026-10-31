@@ -10,6 +10,8 @@ internal sealed class ShiftPlanningPermissionsProvider : IPermissionProvider
         WorkforcePermissions.ManageShiftTemplates,
         WorkforcePermissions.ManageSchedules,
         WorkforcePermissions.PublishSchedules,
+        WorkforcePermissions.ManageOpenShifts,
+        WorkforcePermissions.ApproveShiftTrades,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

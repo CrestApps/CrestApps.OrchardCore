@@ -31,7 +31,8 @@ public sealed class CoverageQuery
     public string ScenarioId { get; set; }
 
     /// <summary>
-    /// Gets or sets a skill to limit the requirements to; <see langword="null"/> for every requirement of the team.
+    /// Gets or sets a skill to limit the requirements to, counting only the workers who hold it on the day;
+    /// <see langword="null"/> for every requirement of the team, counting everyone.
     /// </summary>
     public string SkillId { get; set; }
 }

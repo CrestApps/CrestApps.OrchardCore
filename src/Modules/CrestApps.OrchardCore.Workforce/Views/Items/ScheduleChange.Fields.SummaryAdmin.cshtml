@@ -21,13 +21,19 @@
         case ScheduleChangeKind.Reassigned:
             @T["Reassigned"]
             break;
+        case ScheduleChangeKind.Swapped:
+            @T["Swapped"]
+            break;
+        case ScheduleChangeKind.OpenShiftFilled:
+            @T["Open shift filled"]
+            break;
         default:
             @T["Breaks changed"]
             break;
     }
 </strong>
 <span class="ms-1">@row.WorkerName</span>
-@if (change.Kind == ScheduleChangeKind.Reassigned && !string.IsNullOrEmpty(row.PreviousWorkerName))
+@if (change.Kind is ScheduleChangeKind.Reassigned or ScheduleChangeKind.Swapped && !string.IsNullOrEmpty(row.PreviousWorkerName))
 {
     <span class="text-muted">@T["(was {0})", row.PreviousWorkerName]</span>
 }

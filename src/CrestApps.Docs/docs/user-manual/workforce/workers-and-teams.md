@@ -31,6 +31,7 @@ Open **Workforce > Teams** and choose **Add team**. Start at the top, such as yo
 | **Time zone** | Where the team works. Its days start and end at midnight in this time zone. |
 | **Address** | Where the team works, for a site. |
 | **Role that can read the calendar** | Optional. Users in this role can read the team's Workforce calendar, as the team's members can. |
+| **Open shifts go to**, **Shift trades** | Shown when Shift Planning is on. See [Team settings](./shift-planning.md#team-settings). |
 | **In use** | Untick to stop using a team without deleting it. |
 
 A team that still has teams under it, or current members, can't be deleted. Move them first. Deleting a team keeps its calendar.
@@ -106,4 +107,4 @@ An activity code says what a worker does during part of a shift: work, a break, 
 
 ## Shifts and appointments
 
-When **Scheduling** is on, a staff member whose hours come from **Shifts on a calendar** can use their team's Workforce calendar as the **Shift calendar**. They can then be booked during their shifts, but not during the breaks, meals, meetings and training inside them.
+When **Scheduling** is on, a staff member whose hours come from **Shifts on a calendar** can use their team's Workforce calendar as a **Shift calendar**; someone on two teams picks both teams' calendars. They can then be booked during their shifts, but not during the breaks, meals, meetings and training inside them.

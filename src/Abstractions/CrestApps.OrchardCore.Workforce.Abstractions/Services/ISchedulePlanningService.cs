@@ -47,6 +47,14 @@ public interface ISchedulePlanningService
     Task<bool> DeletePeriodAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds a scenario.
+    /// </summary>
+    /// <param name="id">The scenario id.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The scenario, or <see langword="null"/>.</returns>
+    Task<ScheduleScenario> FindScenarioAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the draft shifts of a scenario, by day and start.
     /// </summary>
     /// <param name="scenarioId">The scenario.</param>
@@ -95,7 +103,19 @@ public interface ISchedulePlanningService
     Task<int> CopyFromPeriodAsync(string scenarioId, string sourcePeriodId, string actor, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Publishes a period's primary scenario to the team's calendar. Shifts with nobody stay off the calendar.
+    /// Adds shifts to a scenario with an <see cref="IShiftScheduleSolver"/>, to cover the team's coverage
+    /// requirements. The shifts already in the scenario stay and count. The run is recorded on the scenario.
+    /// </summary>
+    /// <param name="scenarioId">The scenario.</param>
+    /// <param name="options">How to run.</param>
+    /// <param name="actor">Who ran it.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What the run did, or why it couldn't run.</returns>
+    Task<AutoScheduleResult> AutoScheduleAsync(string scenarioId, AutoScheduleOptions options, string actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Publishes a period's primary scenario to the team's calendar. Shifts with nobody stay off the calendar and are
+    /// posted as open shifts instead.
     /// </summary>
     /// <param name="periodId">The period.</param>
     /// <param name="actor">Who published.</param>

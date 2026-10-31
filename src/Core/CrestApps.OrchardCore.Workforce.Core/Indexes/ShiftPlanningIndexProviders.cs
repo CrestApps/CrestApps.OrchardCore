@@ -22,6 +22,8 @@ public static class ShiftPlanningIndexProviders
             new ScheduleScenarioIndexProvider(),
             new DraftShiftIndexProvider(),
             new ScheduleChangeIndexProvider(),
+            new OpenShiftIndexProvider(),
+            new ShiftTradeIndexProvider(),
         ];
     }
 }

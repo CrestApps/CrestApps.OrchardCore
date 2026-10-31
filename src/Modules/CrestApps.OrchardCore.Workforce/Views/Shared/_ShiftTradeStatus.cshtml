@@ -1,0 +1,22 @@
+@model ShiftTradeStatus
+@switch (Model)
+{
+    case ShiftTradeStatus.Accepted:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-hourglass-half text-warning me-1" aria-hidden="true"></i>@T["Waiting for approval"]</span>
+        break;
+    case ShiftTradeStatus.Approved:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Approved"]</span>
+        break;
+    case ShiftTradeStatus.Declined:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-xmark text-danger me-1" aria-hidden="true"></i>@T["Declined"]</span>
+        break;
+    case ShiftTradeStatus.Rejected:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-xmark text-secondary me-1" aria-hidden="true"></i>@T["Turned down"]</span>
+        break;
+    case ShiftTradeStatus.Canceled:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Canceled"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-right-left text-warning me-1" aria-hidden="true"></i>@T["Offered"]</span>
+        break;
+}

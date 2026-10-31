@@ -17,6 +17,32 @@
         <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select" style="max-width: 22rem"><option value="">@T["The site's time zone"]</option></select><span class="hint">@T["Where the team works. Its days start and end at midnight in this time zone."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="Address" class="ocat-label">@T["Address"]</label><div class="ocat-end"><input asp-for="Address" class="form-control" /></div></div>
         <div class="ocat-wrapper"><label asp-for="LinkedRoleName" class="ocat-label">@T["Role that can read the calendar"]</label><div class="ocat-end"><input asp-for="LinkedRoleName" class="form-control" style="max-width: 22rem" /><span class="hint">@T["Optional. Users in this role can read the team's Workforce calendar, as its members can."]</span></div></div>
+        @if (Model.ShowShiftPlanning)
+        {
+            <h5 class="mt-3">@T["Shift planning"]</h5>
+            <div class="ocat-wrapper">
+                <label asp-for="OpenShiftClaimPolicy" class="ocat-label">@T["Open shifts go to"]</label>
+                <div class="ocat-end">
+                    <select asp-for="OpenShiftClaimPolicy" class="form-select" style="max-width: 22rem">
+                        <option value="">@T["As the parent team (a manager approves)"]</option>
+                        <option value="ManagerApproves">@T["Whoever a manager approves"]</option>
+                        <option value="FirstCome">@T["The first eligible worker to claim"]</option>
+                        <option value="BySeniority">@T["The most senior claimant, after a day"]</option>
+                    </select>
+                    <span class="hint">@T["How the team's open shifts are given to the workers who claim them."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ShiftTradesNeedApproval" class="ocat-label">@T["Shift trades"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ShiftTradesNeedApproval" class="form-select" style="max-width: 22rem">
+                        <option value="">@T["As the parent team (a manager approves)"]</option>
+                        <option value="true">@T["A manager approves them"]</option>
+                        <option value="false">@T["They apply when the colleague accepts"]</option>
+                    </select>
+                </div>
+            </div>
+        }
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
     </div></div>
     <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>

@@ -108,5 +108,57 @@ public static class ShiftPlanningIndexSchema
             table.CreateIndex("IDX_ScheduleChangeIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_ScheduleChangeIndex_Lookup", "PeriodId", "TeamId");
         }, collection: collection);
+
+        await CreateMarketplaceTablesAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the open shift and shift trade index tables, which the second version of the schema added.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateMarketplaceTablesAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        const string collection = WorkforceConstants.CollectionName;
+
+        await schemaBuilder.CreateMapIndexTableAsync<OpenShiftIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("TeamId", column => column.Nullable().WithLength(26))
+            .Column<string>("PeriodId", column => column.Nullable().WithLength(26))
+            .Column<string>("ShiftKey", column => column.Nullable().WithLength(26))
+            .Column<int>("Date")
+            .Column<DateTime>("StartUtc")
+            .Column<OpenShiftStatus>("Status")
+            .Column<OpenShiftClaimPolicy>("ClaimPolicy")
+            .Column<DateTime>("ClaimDeadlineUtc", column => column.Nullable()),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<OpenShiftIndex>(table =>
+        {
+            table.CreateIndex("IDX_OpenShiftIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_OpenShiftIndex_Lookup", "TeamId", "Status", "StartUtc");
+            table.CreateIndex("IDX_OpenShiftIndex_Period", "PeriodId", "ShiftKey");
+        }, collection: collection);
+
+        await schemaBuilder.CreateMapIndexTableAsync<ShiftTradeIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("TeamId", column => column.Nullable().WithLength(26))
+            .Column<ShiftTradeStatus>("Status")
+            .Column<string>("OfferedByWorkerId", column => column.Nullable().WithLength(26))
+            .Column<string>("TargetWorkerId", column => column.Nullable().WithLength(26))
+            .Column<string>("ShiftEventId", column => column.Nullable().WithLength(26))
+            .Column<string>("TargetShiftEventId", column => column.Nullable().WithLength(26))
+            .Column<DateTime>("ShiftStartUtc")
+            .Column<DateTime>("CreatedUtc"),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<ShiftTradeIndex>(table =>
+        {
+            table.CreateIndex("IDX_ShiftTradeIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_ShiftTradeIndex_Lookup", "TeamId", "Status", "CreatedUtc");
+            table.CreateIndex("IDX_ShiftTradeIndex_Shift", "ShiftEventId", "TargetShiftEventId");
+        }, collection: collection);
     }
 }

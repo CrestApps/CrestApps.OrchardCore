@@ -344,6 +344,67 @@ public sealed class WorkforceTests
         Assert.Equal(["9:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"], slots.Select(slot => CalendarTime.ToLocal(slot.StartUtc, "America/New_York").ToString("H:mm", null)));
     }
 
+    [Fact]
+    public async Task AStaffMemberOnTwoTeams_GetsHoursFromTheShiftsOnBothTeamCalendars()
+    {
+        // Arrange (09:00-12:00 at the clinic, 13:00-17:00 at the lab)
+        await using var harness = await CreateAsync();
+        var clinic = await AddTeamAsync(harness, "Clinic", TeamKind.Team);
+        var lab = await AddTeamAsync(harness, "Lab", TeamKind.Team);
+        var worker = await AddWorkerAsync(harness, "Dr. Shift", w =>
+        {
+            w.UserId = "staff-1";
+            w.TeamMemberships.Add(new TeamMembership { TeamId = clinic.ItemId });
+            w.TeamMemberships.Add(new TeamMembership { TeamId = lab.ItemId });
+        });
+
+        var calendarIds = new List<string>();
+
+        foreach (var (team, from, to) in new[] { (clinic, 9, 12), (lab, 13, 17) })
+        {
+            var calendarId = await harness.RunAsync(async services => (await services.GetRequiredService<ICalendarService>().FindBySourceAsync(WorkforceConstants.Source, team.ItemId)).ItemId, commit: false);
+            var shift = await harness.CreateEventAsync(calendarId, _day.AddHours(from), _day.AddHours(to), calendarEvent =>
+            {
+                calendarEvent.EventType = WorkforceConstants.EventTypes.Shift;
+                calendarEvent.Attendees.Add(new CalendarAttendee { UserId = "staff-1", Name = "Dr. Shift" });
+                calendarEvent.Put(new ShiftData { WorkerId = worker.ItemId, TeamId = team.ItemId });
+            });
+
+            Assert.True(shift.Succeeded, string.Join(" ", shift.Errors.Select(error => error.Message)));
+            calendarIds.Add(calendarId);
+        }
+
+        var ownCalendar = await harness.CreateCalendarAsync(CalendarTestHarness.General, "Dr. Shift appointments");
+        var resource = new SchedulingResource
+        {
+            Name = "Dr. Shift",
+            UserId = "staff-1",
+            CalendarId = ownCalendar.ItemId,
+            TimeZoneId = "America/New_York",
+            AvailabilityMode = SchedulingAvailabilityMode.Shifts,
+            ShiftCalendarIds = calendarIds,
+        };
+
+        await harness.RunAsync(services => services.GetRequiredService<SchedulingResourceStore>().CreateAsync(resource).AsTask());
+
+        var type = new AppointmentType
+        {
+            Name = "Consultation",
+            DurationMinutes = 60,
+            SlotIntervalMinutes = 60,
+            HorizonDays = 30,
+            ResourceIds = [resource.ItemId],
+        };
+
+        await harness.RunAsync(services => services.GetRequiredService<AppointmentTypeStore>().CreateAsync(type).AsTask());
+
+        // Act
+        var slots = await harness.RunAsync(services => services.GetRequiredService<ISchedulingAvailabilityService>().FindSlotsAsync(type, Utc(_day), Utc(_day.AddDays(1))), commit: false);
+
+        // Assert
+        Assert.Equal(["9:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"], slots.Select(slot => CalendarTime.ToLocal(slot.StartUtc, "America/New_York").ToString("H:mm", null)));
+    }
+
     internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         return CalendarTestHarness.CreateAsync(

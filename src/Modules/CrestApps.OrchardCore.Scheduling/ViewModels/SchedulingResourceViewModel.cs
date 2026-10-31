@@ -29,8 +29,8 @@ public class SchedulingResourceViewModel
     /// <summary>Gets or sets where the hours come from.</summary>
     public string AvailabilityMode { get; set; }
 
-    /// <summary>Gets or sets the workforce calendar for shifts.</summary>
-    public string ShiftCalendarId { get; set; }
+    /// <summary>Gets or sets the workforce calendars for shifts.</summary>
+    public string[] ShiftCalendarIds { get; set; } = [];
 
     /// <summary>Gets or sets the weekly hours, one line per day, such as Monday 09:00-12:00, 13:00-17:00.</summary>
     public string WorkingHours { get; set; }
@@ -48,6 +48,10 @@ public class SchedulingResourceViewModel
     /// <summary>Gets or sets the calendars to choose from.</summary>
     [BindNever]
     public IList<SelectListItem> CalendarOptions { get; set; } = [];
+
+    /// <summary>Gets or sets the calendars to choose shift calendars from.</summary>
+    [BindNever]
+    public IList<SelectListItem> ShiftCalendarOptions { get; set; } = [];
 
     /// <summary>Gets or sets the kinds to choose from.</summary>
     [BindNever]

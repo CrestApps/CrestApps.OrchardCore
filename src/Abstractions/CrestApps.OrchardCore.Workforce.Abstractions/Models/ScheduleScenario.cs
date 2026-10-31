@@ -26,4 +26,9 @@ public sealed class ScheduleScenario : CatalogItem
     /// Gets or sets when it was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the last auto-schedule run did; <see langword="null"/> when it never ran.
+    /// </summary>
+    public ScheduleSolverRun LastRun { get; set; }
 }

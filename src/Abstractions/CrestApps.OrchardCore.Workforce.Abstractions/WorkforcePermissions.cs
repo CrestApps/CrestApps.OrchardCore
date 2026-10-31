@@ -52,4 +52,15 @@ public static class WorkforcePermissions
     /// Plan the schedules, rotations and coverage of the teams the user manages.
     /// </summary>
     public static readonly Permission ManageSchedules = new("ManageWorkforceSchedules", LocalizationSource.Create("Plan team schedules", typeof(WorkforcePermissions)), [PublishSchedules]);
+
+    /// <summary>
+    /// Post, assign and cancel the open shifts of the teams the user manages, and decide on claims.
+    /// </summary>
+    public static readonly Permission ManageOpenShifts = new("ManageWorkforceOpenShifts", LocalizationSource.Create("Manage open shifts", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Approve or decline the shift trades of the teams the user manages, and offer or accept trades on a worker's
+    /// behalf.
+    /// </summary>
+    public static readonly Permission ApproveShiftTrades = new("ApproveWorkforceShiftTrades", LocalizationSource.Create("Approve shift trades", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 }

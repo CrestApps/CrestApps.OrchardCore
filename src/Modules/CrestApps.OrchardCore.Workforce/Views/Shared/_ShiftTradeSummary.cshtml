@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Calendars.Core
+@model ShiftTradeRowViewModel
+@{
+    var trade = Model.Trade;
+    string Range(DateTime? start, DateTime? end) => start.HasValue && end.HasValue
+        ? $"{CalendarTime.ToLocal(start.Value, Model.TimeZoneId):ddd d MMM HH:mm}–{CalendarTime.ToLocal(end.Value, Model.TimeZoneId):HH:mm}"
+        : null;
+}
+@if (trade.Kind == ShiftTradeKind.Swap)
+{
+    @T["{0} swaps {1} for {2}'s {3}", Model.OfferedByName, Range(trade.ShiftStartUtc, trade.ShiftEndUtc), Model.TargetName, Range(trade.TargetShiftStartUtc, trade.TargetShiftEndUtc)]
+}
+else if (!string.IsNullOrEmpty(Model.TargetName))
+{
+    @T["{0} gives {1} to {2}", Model.OfferedByName, Range(trade.ShiftStartUtc, trade.ShiftEndUtc), Model.TargetName]
+}
+else
+{
+    @T["{0} gives away {1}", Model.OfferedByName, Range(trade.ShiftStartUtc, trade.ShiftEndUtc)]
+}

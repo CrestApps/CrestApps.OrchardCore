@@ -1,0 +1,52 @@
+@model ShiftTradeCreateViewModel
+@{
+    var swap = Model.Kind == "Swap";
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceShiftTradesCreate" title="@T["Offer a Trade"]">
+        <breadcrumb-item id="WorkforceShiftTrades" action="Index" controller="ShiftTrades" area="CrestApps.OrchardCore.Workforce">@T["Shift Trades"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Create" class="no-multisubmit" id="trade-form">
+    <input type="hidden" name="refresh" value="false" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <p class="text-muted small">@T["Offer one of a worker's published shifts on their behalf, such as when they ask by phone."]</p>
+        <div class="ocat-wrapper"><label asp-for="WorkerId" class="ocat-label ocat-label-required">@T["Worker"]</label><div class="ocat-end"><select asp-for="WorkerId" asp-items="Model.WorkerOptions" class="form-select" style="max-width: 24rem" data-refresh><option value="">@T["Choose a worker"]</option></select></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="Kind" class="ocat-label">@T["Trade"]</label>
+            <div class="ocat-end">
+                <select asp-for="Kind" class="form-select" style="max-width: 18rem" data-refresh>
+                    <option value="GiveAway">@T["Give the shift away"]</option>
+                    <option value="Swap">@T["Swap it for a colleague's shift"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="ShiftEventId" class="ocat-label ocat-label-required">@T["Shift"]</label><div class="ocat-end"><select asp-for="ShiftEventId" asp-items="Model.ShiftOptions" class="form-select" style="max-width: 24rem"><option value="">@(string.IsNullOrEmpty(Model.WorkerId) ? T["Choose a worker first"] : Model.ShiftOptions.Count == 0 ? T["No upcoming shifts"] : T["Choose a shift"])</option></select><span class="hint">@T["Their published shifts in the next 60 days."]</span></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TargetWorkerId" class="ocat-label @(swap ? "ocat-label-required" : null)">@T["Colleague"]</label>
+            <div class="ocat-end">
+                <select asp-for="TargetWorkerId" asp-items="Model.TargetOptions" class="form-select" style="max-width: 24rem" data-refresh><option value="">@T["Anyone who can take it"]</option></select>
+                <span class="hint">@T["Leave it as anyone for a shift any eligible colleague can pick up."]</span>
+            </div>
+        </div>
+        @if (swap)
+        {
+            <div class="ocat-wrapper"><label asp-for="TargetShiftEventId" class="ocat-label ocat-label-required">@T["Their shift"]</label><div class="ocat-end"><select asp-for="TargetShiftEventId" asp-items="Model.TargetShiftOptions" class="form-select" style="max-width: 24rem"><option value="">@(string.IsNullOrEmpty(Model.TargetWorkerId) ? T["Choose a colleague first"] : T["Choose a shift"])</option></select></div></div>
+        }
+        <div class="ocat-wrapper"><label asp-for="Note" class="ocat-label">@T["Note"]</label><div class="ocat-end"><textarea asp-for="Note" class="form-control" rows="2"></textarea></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Offer"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>
+
+<script at="Foot">
+    document.querySelectorAll('#trade-form [data-refresh]').forEach(function (select) {
+        select.addEventListener('change', function () {
+            var form = document.getElementById('trade-form');
+            form.elements['refresh'].value = 'true';
+            form.submit();
+        });
+    });
+</script>

@@ -33,7 +33,7 @@ Open **Calendars > Scheduling Resources** and choose **Add resource**.
 | **Hours come from** | **Working hours below**, or **Shifts on a calendar** (a calendar that holds **Shift** events, such as one a workforce management module adds). |
 | **Working hours** | One line per day, such as *Monday 09:00-12:00, 13:00-17:00*. The gaps are breaks. A day that isn't listed is a day off. |
 | **Days off and changed days** | One per line, such as *2026-12-24 closed*, or *2026-12-31 09:00-12:00* for shorter hours that day. |
-| **Shift calendar** | For hours from shifts: the calendar whose **Shift** events name this staff member, such as one a workforce management module provides. They can then only be booked during their shifts. |
+| **Shift calendars** | For hours from shifts: the calendars whose **Shift** events name this staff member, such as one for each team a workforce management module provides. Hold Ctrl to choose more than one. They can then only be booked during their shifts. |
 
 The resource's calendar is an **Appointments** calendar. Like any calendar, you can open it in **Calendars > Calendar**, and anything you add to it there, such as a **Blocked time** event, keeps that time from being booked.
 
@@ -161,4 +161,4 @@ With **Scheduling** and **AI Services** both on, an AI assistant can list the ap
 
 - **No times are offered.** Check that the appointment type has **Resources**, that they **Take appointments**, that their working hours cover the day, and that the day is within the **Minimum notice** and **Book up to** limits. Something busy on the resource's calendar, or on a staff member's own calendar, also closes those times.
 - **The booking page isn't found.** The appointment type needs **Can be booked**, **Customers can book it themselves** and a **Booking page address**, and the Scheduling Self-Service feature must be on.
-- **A staff member with shifts is never offered.** Their **Shift calendar** must be chosen, and the **Shift** events there must name them as an attendee.
+- **A staff member with shifts is never offered.** Their **Shift calendars** must be chosen, and the **Shift** events there must name them as an attendee.

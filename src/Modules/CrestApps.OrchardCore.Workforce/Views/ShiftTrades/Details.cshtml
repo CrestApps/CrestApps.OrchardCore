@@ -1,0 +1,99 @@
+@model ShiftTradeDetailsViewModel
+@{
+    var row = Model.Row;
+    var trade = row.Trade;
+    var open = trade.Status is ShiftTradeStatus.Offered or ShiftTradeStatus.Accepted;
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceShiftTradesDetails" title="@T["Shift Trade"]">
+        <breadcrumb-item id="WorkforceShiftTrades" action="Index" controller="ShiftTrades" area="CrestApps.OrchardCore.Workforce">@T["Shift Trades"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <div class="fw-semibold mb-1"><partial name="_ShiftTradeSummary" model="row" /></div>
+                <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@row.TeamName</span>
+                <partial name="_ShiftTradeStatus" model="trade.Status" />
+                @if (trade.RequiresApproval)
+                {
+                    <span class="badge ta-badge fw-normal">@T["A manager approves it"]</span>
+                }
+                @if (!string.IsNullOrEmpty(row.AcceptedByName))
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-handshake text-secondary me-1" aria-hidden="true"></i>@T["Accepted by {0}", row.AcceptedByName]</span>
+                }
+            </div>
+            @if (open)
+            {
+                <div class="col-auto d-flex flex-wrap gap-2">
+                    @if (trade.Status == ShiftTradeStatus.Accepted)
+                    {
+                        <form method="post" asp-action="Approve" asp-route-id="@trade.ItemId" class="no-multisubmit">
+                            <button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button>
+                        </form>
+                    }
+                    @if (trade.Status == ShiftTradeStatus.Offered && !string.IsNullOrEmpty(trade.TargetWorkerId))
+                    {
+                        <form method="post" asp-action="Reject" asp-route-id="@trade.ItemId" class="no-multisubmit">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn down for {0}", row.TargetName]</button>
+                        </form>
+                    }
+                    <form method="post" asp-action="Cancel" asp-route-id="@trade.ItemId" class="no-multisubmit">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take back for {0}", row.OfferedByName]</button>
+                    </form>
+                    <form method="post" asp-action="Decline" asp-route-id="@trade.ItemId" class="no-multisubmit d-flex gap-1">
+                        <input type="text" name="note" class="form-control form-control-sm" placeholder="@T["Why (optional)"]" aria-label="@T["Why"]" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button>
+                    </form>
+                </div>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(trade.Note))
+        {
+            <p class="mb-0 mt-2 small">@T["Note: {0}", trade.Note]</p>
+        }
+        @if (!string.IsNullOrEmpty(trade.DecisionNote))
+        {
+            <p class="mb-0 mt-2 small">@T["Decision: {0}", trade.DecisionNote]</p>
+        }
+    </div>
+</div>
+
+@if (trade.Status == ShiftTradeStatus.Offered)
+{
+    <div class="card text-bg-theme">
+        <div class="card-body">
+            <h5 class="card-title">@(string.IsNullOrEmpty(trade.TargetWorkerId) ? T["Who can pick it up"] : T["Accept for the colleague"])</h5>
+            @if (Model.Candidates.Count == 0)
+            {
+                <p class="mb-0 text-muted">@T["Nobody else is on the team that day."]</p>
+            }
+            <ul class="list-group list-group-flush">
+                @foreach (var candidate in Model.Candidates)
+                {
+                    <li class="list-group-item px-0">
+                        <div class="d-flex align-items-center gap-2">
+                            <strong>@candidate.Name</strong>
+                            @if (candidate.Problems.Count == 0)
+                            {
+                                <span class="badge text-bg-success fw-normal">@T["Can take it"]</span>
+                                <form method="post" asp-action="Accept" asp-route-id="@trade.ItemId" class="no-multisubmit ms-auto">
+                                    <input type="hidden" name="workerId" value="@candidate.WorkerId" />
+                                    <button type="submit" class="btn btn-primary btn-sm">@T["Accept for {0}", candidate.Name]</button>
+                                </form>
+                            }
+                        </div>
+                        @foreach (var problem in candidate.Problems)
+                        {
+                            <div class="small text-danger mt-1"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@problem</div>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}

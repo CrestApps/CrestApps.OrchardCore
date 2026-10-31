@@ -55,6 +55,17 @@ public sealed class WorkforceTeam : CatalogItem, INameAwareModel, IModifiedUtcAw
     public string LeadWorkerId { get; set; }
 
     /// <summary>
+    /// Gets or sets how the team's open shifts are given; <see langword="null"/> to use the parent team's.
+    /// </summary>
+    public OpenShiftClaimPolicy? OpenShiftClaimPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a manager approves shift trades once a colleague accepts; <see langword="null"/> to use
+    /// the parent team's.
+    /// </summary>
+    public bool? ShiftTradesNeedApproval { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the team is in use.
     /// </summary>
     public bool Enabled { get; set; } = true;

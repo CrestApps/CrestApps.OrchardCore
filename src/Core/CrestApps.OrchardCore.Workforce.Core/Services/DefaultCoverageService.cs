@@ -2,6 +2,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Skills.Models;
+using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -21,6 +23,7 @@ internal sealed class DefaultCoverageService : ICoverageService
     private readonly ActivityCodeStore _activityCodeStore;
     private readonly ICalendarQueryService _queryService;
     private readonly TeamTimeZoneResolver _timeZones;
+    private readonly ISkillAssignmentService _skillAssignments;
 
     internal readonly IStringLocalizer S;
 
@@ -31,6 +34,7 @@ internal sealed class DefaultCoverageService : ICoverageService
         ActivityCodeStore activityCodeStore,
         ICalendarQueryService queryService,
         TeamTimeZoneResolver timeZones,
+        ISkillAssignmentService skillAssignments,
         IStringLocalizer<DefaultCoverageService> stringLocalizer)
     {
         _requirementStore = requirementStore;
@@ -39,6 +43,7 @@ internal sealed class DefaultCoverageService : ICoverageService
         _activityCodeStore = activityCodeStore;
         _queryService = queryService;
         _timeZones = timeZones;
+        _skillAssignments = skillAssignments;
         S = stringLocalizer;
     }
 
@@ -80,7 +85,7 @@ internal sealed class DefaultCoverageService : ICoverageService
                 result.Fail(S["Every row needs a weekday or a date."]);
             }
 
-            if (EndMinute(row) <= StartMinute(row))
+            if (CoverageRows.EndMinute(row) <= CoverageRows.StartMinute(row))
             {
                 result.Fail(S["Every row must end after it starts."]);
             }
@@ -152,13 +157,27 @@ internal sealed class DefaultCoverageService : ICoverageService
         var shifts = string.IsNullOrEmpty(query.ScenarioId)
             ? await ListPublishedAsync(team, query, timeZoneId, cancellationToken)
             : await ListDraftsAsync(query.ScenarioId, timeZoneId, cancellationToken);
+
+        if (!string.IsNullOrEmpty(query.SkillId))
+        {
+            // Only the workers who hold the skill on the shift's day count for it.
+            var holders = new Dictionary<(string WorkerId, DateOnly Date), bool>();
+
+            foreach (var key in shifts.Select(shift => (shift.WorkerId, shift.Date)).Distinct())
+            {
+                holders[key] = key.WorkerId is not null
+                    && await _skillAssignments.HoldsAsync(SkillSubject.Worker(key.WorkerId), query.SkillId, 0, key.Date, cancellationToken);
+            }
+
+            shifts = shifts.Where(shift => holders[(shift.WorkerId, shift.Date)]).ToArray();
+        }
         var intervals = new List<CoverageInterval>();
 
         for (var date = query.From; date <= query.To; date = date.AddDays(1))
         {
             var rows = requirements
-                .Where(requirement => (requirement.EffectiveFrom is null || requirement.EffectiveFrom <= date) && (requirement.EffectiveTo is null || requirement.EffectiveTo >= date))
-                .SelectMany(requirement => RowsOn(requirement, date))
+                .Where(requirement => CoverageRows.AppliesOn(requirement, date))
+                .SelectMany(requirement => CoverageRows.RowsOn(requirement, date))
                 .ToArray();
 
             for (var minute = 0; minute < 24 * 60; minute += intervalMinutes)
@@ -170,7 +189,7 @@ internal sealed class DefaultCoverageService : ICoverageService
                 var maximum = 0;
                 var hasMaximum = false;
 
-                foreach (var row in rows.Where(row => StartMinute(row) <= minute && EndMinute(row) >= end))
+                foreach (var row in rows.Where(row => CoverageRows.StartMinute(row) <= minute && CoverageRows.EndMinute(row) >= end))
                 {
                     interval.Minimum += row.Minimum;
                     interval.Target += row.Target;
@@ -191,22 +210,6 @@ internal sealed class DefaultCoverageService : ICoverageService
         return intervals;
     }
 
-    private static IEnumerable<CoverageRow> RowsOn(CoverageRequirement requirement, DateOnly date)
-    {
-        var dated = requirement.Rows.Where(row => row.Date == date).ToArray();
-
-        // A row for the date replaces the weekday's rows of the same requirement.
-        return dated.Length > 0
-            ? dated
-            : requirement.Rows.Where(row => row.Date is null && row.Day == date.DayOfWeek);
-    }
-
-    private static int StartMinute(CoverageRow row)
-        => (row.Start.Hour * 60) + row.Start.Minute;
-
-    private static int EndMinute(CoverageRow row)
-        => row.End == TimeOnly.MinValue ? 24 * 60 : (row.End.Hour * 60) + row.End.Minute;
-
     private async Task<IReadOnlyList<ScheduledSpan>> ListDraftsAsync(string scenarioId, string timeZoneId, CancellationToken cancellationToken)
     {
         var excluded = await ExcludedCodesAsync(cancellationToken);
@@ -215,6 +218,8 @@ internal sealed class DefaultCoverageService : ICoverageService
         return drafts
             .Where(draft => draft.WorkerId is not null)
             .Select(draft => new ScheduledSpan(
+                draft.WorkerId,
+                draft.Date,
                 CalendarTime.ToUtc(draft.Start, timeZoneId),
                 CalendarTime.ToUtc(draft.End, timeZoneId),
                 draft.Segments
@@ -244,14 +249,15 @@ internal sealed class DefaultCoverageService : ICoverageService
             .Where(occurrence => occurrence.Event.Status != CalendarEventStatus.Cancelled)
             .Select(occurrence =>
             {
-                var segments = occurrence.Event.TryGet<ShiftData>(out var data)
+                var hasData = occurrence.Event.TryGet<ShiftData>(out var data);
+                var segments = hasData
                     ? data.Segments
                         .Where(segment => segment.ActivityCodeId is not null && excluded.Contains(segment.ActivityCodeId))
                         .Select(segment => (segment.StartUtc, segment.EndUtc))
                         .ToArray()
                     : [];
 
-                return new ScheduledSpan(occurrence.StartUtc, occurrence.EndUtc, segments);
+                return new ScheduledSpan(hasData ? data.WorkerId : null, DateOnly.FromDateTime(CalendarTime.ToLocal(occurrence.StartUtc, timeZoneId)), occurrence.StartUtc, occurrence.EndUtc, segments);
             })
             .ToArray();
     }
@@ -264,7 +270,7 @@ internal sealed class DefaultCoverageService : ICoverageService
             .ToHashSet(StringComparer.Ordinal);
     }
 
-    private sealed record ScheduledSpan(DateTime StartUtc, DateTime EndUtc, IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)> Away)
+    private sealed record ScheduledSpan(string WorkerId, DateOnly Date, DateTime StartUtc, DateTime EndUtc, IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)> Away)
     {
         public bool Covers(DateTime fromUtc, DateTime toUtc)
             => StartUtc <= fromUtc && EndUtc >= toUtc && !Away.Any(away => away.StartUtc < toUtc && away.EndUtc > fromUtc);

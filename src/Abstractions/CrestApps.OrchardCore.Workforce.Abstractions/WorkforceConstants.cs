@@ -26,6 +26,11 @@ public static class WorkforceConstants
     public const string RecipeStepName = "Workforce";
 
     /// <summary>
+    /// The name of the built-in shift schedule solver.
+    /// </summary>
+    public const string DefaultSolver = "Default";
+
+    /// <summary>
     /// The event types of the Workforce calendar.
     /// </summary>
     public static class EventTypes

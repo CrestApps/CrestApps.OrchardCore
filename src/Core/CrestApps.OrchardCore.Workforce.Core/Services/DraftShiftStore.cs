@@ -25,6 +25,18 @@ internal sealed class DraftShiftStore : DocumentCatalog<DraftShift, DraftShiftIn
         return shifts.OrderBy(shift => shift.Date).ThenBy(shift => shift.Start).ToArray();
     }
 
+    /// <summary>
+    /// Finds the draft shift of a period with a shift key, on the day it belongs to.
+    /// </summary>
+    public async Task<DraftShift> FindByShiftKeyAsync(string periodId, DateOnly date, string shiftKey, CancellationToken cancellationToken = default)
+    {
+        var dateKey = WorkforceDates.ToKey(date);
+        var shifts = await Session.Query<DraftShift, DraftShiftIndex>(index => index.PeriodId == periodId && index.Date == dateKey, collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return shifts.FirstOrDefault(shift => shift.ShiftKey == shiftKey);
+    }
+
     public void Delete(DraftShift shift)
     {
         Session.Delete(shift, CollectionName);

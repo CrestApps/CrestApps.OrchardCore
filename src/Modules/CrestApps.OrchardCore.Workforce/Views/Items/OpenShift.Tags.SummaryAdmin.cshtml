@@ -1,0 +1,30 @@
+@model ShapeViewModel<OpenShiftRowViewModel>
+@{
+    var shift = Model.Value.Shift;
+    var pending = shift.Claims.Count(claim => claim.Status == OpenShiftClaimStatus.Pending);
+}
+@if (!string.IsNullOrEmpty(Model.Value.TeamName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Team"]"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.Value.TeamName</span>
+}
+<partial name="_OpenShiftStatus" model="shift.Status" />
+@if (pending > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Claims waiting for a decision"]"><i class="fa-solid fa-hand text-warning me-1" aria-hidden="true"></i>@T.Plural(pending, "1 claim", "{0} claims", pending)</span>
+}
+@switch (shift.ClaimPolicy)
+{
+    case OpenShiftClaimPolicy.FirstCome:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["How it is given"]"><i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["First to claim"]</span>
+        break;
+    case OpenShiftClaimPolicy.BySeniority:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["How it is given"]"><i class="fa-solid fa-medal text-secondary me-1" aria-hidden="true"></i>@T["By seniority"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["How it is given"]"><i class="fa-solid fa-user-check text-secondary me-1" aria-hidden="true"></i>@T["Manager approves"]</span>
+        break;
+}
+@if (string.IsNullOrEmpty(shift.PeriodId))
+{
+    <span class="badge ta-badge fw-normal">@T["Posted on its own"]</span>
+}

@@ -1,0 +1,47 @@
+@model OpenShiftEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceOpenShiftsCreate" title="@T["Post an Open Shift"]">
+        <breadcrumb-item id="WorkforceOpenShifts" action="Index" controller="OpenShifts" area="CrestApps.OrchardCore.Workforce">@T["Open Shifts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Create" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label><div class="ocat-end"><select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Choose a team"]</option></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="Date" class="ocat-label ocat-label-required">@T["Day"]</label><div class="ocat-end"><input asp-for="Date" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TemplateId" class="ocat-label">@T["Template"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <select asp-for="TemplateId" asp-items="Model.TemplateOptions" class="form-select" style="max-width: 24rem">
+                        <option value="">@T["None"]</option>
+                    </select>
+                    <button type="submit" name="applyTemplate" value="true" class="btn btn-outline-secondary btn-sm text-nowrap">@T["Use its times"]</button>
+                </div>
+                <span class="hint">@T["A worker needs the template's skills to take the shift."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Start" class="ocat-label ocat-label-required">@T["Hours"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <input asp-for="Start" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["Starts"]" />
+                    <span>@T["to"]</span>
+                    <input asp-for="End" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["Ends"]" />
+                </div>
+                <span class="hint">@T["An end at or before the start is on the next day."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Segments" class="ocat-label">@T["Breaks and activities"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Segments" class="form-control font-monospace" rows="3" placeholder="13:00-13:30 Meal"></textarea>
+                <span class="hint">@T["One per line: a time range, then an activity code. The codes are: {0}.", string.Join(", ", Model.ActivityNames)]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="Notes" class="ocat-label">@T["Notes"]</label><div class="ocat-end"><textarea asp-for="Notes" class="form-control" rows="2"></textarea><span class="hint">@T["Shown to the workers it is offered to, and on the calendar once filled."]</span></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Post"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

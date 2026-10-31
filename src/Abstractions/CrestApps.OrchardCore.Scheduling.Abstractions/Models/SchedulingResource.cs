@@ -38,9 +38,16 @@ public sealed class SchedulingResource : CatalogItem
     public SchedulingAvailabilityMode AvailabilityMode { get; set; }
 
     /// <summary>
-    /// Gets or sets the workforce calendar whose shifts the resource works, for the Shifts mode.
+    /// Gets or sets the workforce calendar whose shifts the resource works, for the Shifts mode. Kept for resources
+    /// saved before <see cref="ShiftCalendarIds"/>; both are read.
     /// </summary>
     public string ShiftCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workforce calendars whose shifts the resource works, for the Shifts mode, such as one for
+    /// each team a staff member is on.
+    /// </summary>
+    public IList<string> ShiftCalendarIds { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the weekly working hours.

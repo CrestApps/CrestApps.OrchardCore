@@ -9,6 +9,13 @@ internal sealed class ShiftPlanningMigrations : DataMigration
     {
         await ShiftPlanningIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 1;
+        return 2;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await ShiftPlanningIndexSchema.CreateMarketplaceTablesAsync(SchemaBuilder);
+
+        return 2;
     }
 }

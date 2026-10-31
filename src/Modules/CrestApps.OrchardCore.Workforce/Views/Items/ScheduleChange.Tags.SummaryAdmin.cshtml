@@ -8,3 +8,11 @@
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Published by"]"><i class="fa-solid fa-user-pen text-secondary me-1" aria-hidden="true"></i>@change.ChangedBy</span>
 }
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Published"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(change.ChangedUtc, Model.Value.TimeZoneId).ToString("g")</span>
+@if (change.InitiatedBy == ScheduleChangeInitiator.Worker)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Asked for by a worker, such as a trade or a claim"]"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T["Worker's request"]</span>
+}
+@if (!string.IsNullOrEmpty(change.Reason))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Reason"]">@change.Reason</span>
+}

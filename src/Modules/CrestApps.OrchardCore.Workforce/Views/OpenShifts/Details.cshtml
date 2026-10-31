@@ -1,0 +1,148 @@
+@model OpenShiftDetailsViewModel
+@{
+    var shift = Model.Shift;
+    var open = shift.Status is OpenShiftStatus.Open or OpenShiftStatus.Claimed;
+    var title = new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(shift.Start.ToString("ddd d MMM HH:mm") + "–" + shift.End.ToString("HH:mm"));
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceOpenShiftsDetails" title="@title">
+        <breadcrumb-item id="WorkforceOpenShifts" action="Index" controller="OpenShifts" area="CrestApps.OrchardCore.Workforce">@T["Open Shifts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.TeamName</span>
+                <partial name="_OpenShiftStatus" model="shift.Status" />
+                @if (!string.IsNullOrEmpty(Model.TemplateName))
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-clone text-secondary me-1" aria-hidden="true"></i>@Model.TemplateName</span>
+                }
+                @foreach (var skill in Model.SkillNames)
+                {
+                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Skill needed"]"><i class="fa-solid fa-star text-secondary me-1" aria-hidden="true"></i>@skill</span>
+                }
+                @if (shift.ClaimPolicy == OpenShiftClaimPolicy.BySeniority && shift.ClaimDeadlineUtc.HasValue && open)
+                {
+                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The most senior eligible claimant gets it then"]"><i class="fa-solid fa-medal text-secondary me-1" aria-hidden="true"></i>@T["Awarded {0}", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(shift.ClaimDeadlineUtc.Value, shift.TimeZoneId).ToString("g")]</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.FilledWorkerName))
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user-check text-success me-1" aria-hidden="true"></i>@T["Given to {0}", Model.FilledWorkerName]</span>
+                }
+            </div>
+            @if (open)
+            {
+                <div class="col-auto">
+                    <form method="post" asp-action="Cancel" asp-route-id="@shift.ItemId" class="no-multisubmit">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Stop offering"]</button>
+                    </form>
+                </div>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(shift.Notes))
+        {
+            <p class="mb-0 mt-2 small">@shift.Notes</p>
+        }
+    </div>
+</div>
+
+@if (open)
+{
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@T["Give it to someone"]</h5>
+            @if (Model.EligibleOptions.Count == 0)
+            {
+                <p class="mb-0 text-muted">@T["Nobody on the team can take this shift: they are off the team that day, lack a skill it needs, already work then, or would rest too little or work too many hours."]</p>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <form method="post" asp-action="Assign" asp-route-id="@shift.ItemId" class="no-multisubmit d-flex gap-2" id="assign-form">
+                        <select name="workerId" class="form-select" style="max-width: 20rem" aria-label="@T["Worker"]">
+                            @foreach (var option in Model.EligibleOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-primary text-nowrap">@T["Give the shift"]</button>
+                        <button type="submit" formaction="@Url.Action("Claim", new { id = shift.ItemId })" class="btn btn-outline-secondary text-nowrap">@T["Record a claim"]</button>
+                    </form>
+                </div>
+                <span class="hint">@T["Only the workers who can take it are listed. Recording a claim on someone's behalf follows the shift's policy."]</span>
+            }
+        </div>
+    </div>
+}
+
+<div class="card text-bg-theme">
+    <div class="card-body">
+        <h5 class="card-title">@T["Claims"]</h5>
+        @if (Model.Claims.Count == 0)
+        {
+            <p class="mb-0 text-muted">@T["Nobody has claimed this shift."]</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var row in Model.Claims)
+                {
+                    <li class="list-group-item px-0">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <strong>@row.WorkerName</strong>
+                            @switch (row.Claim.Status)
+                            {
+                                case OpenShiftClaimStatus.Approved:
+                                    <span class="badge text-bg-success fw-normal">@T["Got the shift"]</span>
+                                    break;
+                                case OpenShiftClaimStatus.Declined:
+                                    <span class="badge text-bg-secondary fw-normal">@T["Declined"]</span>
+                                    break;
+                                case OpenShiftClaimStatus.Withdrawn:
+                                    <span class="badge text-bg-secondary fw-normal">@T["Withdrawn"]</span>
+                                    break;
+                                default:
+                                    <span class="badge text-bg-warning fw-normal">@T["Waiting"]</span>
+                                    break;
+                            }
+                            <span class="text-muted small">@T["Claimed {0}", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(row.Claim.ClaimedUtc, shift.TimeZoneId).ToString("g")]</span>
+                            @if (row.SeniorityDate.HasValue)
+                            {
+                                <span class="text-muted small">@T["Seniority {0}", row.SeniorityDate.Value.ToString("d")]</span>
+                            }
+                            @if (open && row.Claim.Status == OpenShiftClaimStatus.Pending)
+                            {
+                                <div class="ms-auto d-flex gap-2">
+                                    @if (row.Problems.Count == 0)
+                                    {
+                                        <form method="post" asp-action="Assign" asp-route-id="@shift.ItemId" class="no-multisubmit">
+                                            <input type="hidden" name="workerId" value="@row.Claim.WorkerId" />
+                                            <button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button>
+                                        </form>
+                                    }
+                                    <form method="post" asp-action="Decline" asp-route-id="@shift.ItemId" class="no-multisubmit d-flex gap-1">
+                                        <input type="hidden" name="workerId" value="@row.Claim.WorkerId" />
+                                        <input type="text" name="note" class="form-control form-control-sm" placeholder="@T["Why (optional)"]" aria-label="@T["Why"]" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(row.Claim.Note))
+                        {
+                            <div class="small text-muted mt-1">@row.Claim.Note</div>
+                        }
+                        @foreach (var problem in row.Problems)
+                        {
+                            <div class="small text-danger mt-1"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@problem</div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

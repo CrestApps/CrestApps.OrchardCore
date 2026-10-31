@@ -1,0 +1,19 @@
+@{
+    var filters = (WorkforceListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+<div class="btn-group filter gap-2">
+    <select name="teamId" form="@formId" class="form-select form-select-sm" aria-label="@T["Team"]" onchange="this.form.submit()">
+        <option value="">@T["All teams"]</option>
+        @foreach (var option in filters.TeamOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+    <select name="status" form="@formId" class="form-select form-select-sm" aria-label="@T["Status"]" onchange="this.form.submit()">
+        @foreach (var option in filters.StatusOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

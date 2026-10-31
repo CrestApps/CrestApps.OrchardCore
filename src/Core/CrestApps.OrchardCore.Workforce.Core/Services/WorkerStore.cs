@@ -73,6 +73,24 @@ internal sealed class WorkerStore : DocumentCatalog<WorkerProfile, WorkerIndex>
         return (count, page.ToArray());
     }
 
+    /// <summary>
+    /// Lists the workers on a team on any day of a range.
+    /// </summary>
+    public async Task<IReadOnlyList<WorkerProfile>> ListByTeamInRangeAsync(string teamId, int fromKey, int toKey, CancellationToken cancellationToken = default)
+    {
+        var workers = await Session.Query<WorkerProfile, WorkerTeamMembershipIndex>(
+            index => index.TeamId == teamId
+                && (index.EffectiveFrom == null || index.EffectiveFrom <= toKey)
+                && (index.EffectiveTo == null || index.EffectiveTo >= fromKey),
+            collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return workers
+            .DistinctBy(worker => worker.ItemId)
+            .OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
     public async Task<IReadOnlyList<WorkerProfile>> ListByTeamAsync(string teamId, int dateKey, CancellationToken cancellationToken = default)
     {
         var workers = await Session.Query<WorkerProfile, WorkerTeamMembershipIndex>(

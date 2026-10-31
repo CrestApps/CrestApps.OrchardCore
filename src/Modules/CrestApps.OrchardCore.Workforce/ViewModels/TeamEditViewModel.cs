@@ -39,6 +39,23 @@ public class TeamEditViewModel
     public string LinkedRoleName { get; set; }
 
     /// <summary>
+    /// Gets or sets how the team's open shifts are given; empty to use the parent team's.
+    /// </summary>
+    public string OpenShiftClaimPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a manager approves the team's shift trades: <c>true</c>, <c>false</c>, or empty to use the
+    /// parent team's.
+    /// </summary>
+    public string ShiftTradesNeedApproval { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether shift planning is on, so its settings are shown.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool ShowShiftPlanning { get; set; }
+
+    /// <summary>
     /// Gets or sets the time zone.
     /// </summary>
     public string TimeZoneId { get; set; }

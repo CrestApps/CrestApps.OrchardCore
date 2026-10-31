@@ -233,6 +233,7 @@ public sealed class SchedulesController : Controller
             ShiftCount = drafts.Count,
             OpenCount = drafts.Count(draft => draft.WorkerId is null),
             CanPublish = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.PublishSchedules),
+            LastRun = (await _planningService.FindScenarioAsync(period.PrimaryScenarioId, HttpContext.RequestAborted))?.LastRun,
         };
 
         var members = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
@@ -515,6 +516,42 @@ public sealed class SchedulesController : Controller
     }
 
     /// <summary>
+    /// Adds shifts to a schedule with the schedule solver, to cover the team's coverage requirements.
+    /// </summary>
+    /// <param name="id">The schedule id.</param>
+    /// <returns>A redirect to the planner board.</returns>
+    [HttpPost]
+    [Admin("workforce/schedules/auto-schedule/{id}", "WorkforceSchedulesAutoSchedule")]
+    public async Task<IActionResult> AutoSchedule(string id)
+    {
+        var (period, _, denied) = await AuthorizePeriodAsync(id);
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var result = await _planningService.AutoScheduleAsync(period.PrimaryScenarioId, new AutoScheduleOptions(), User.Identity?.Name, HttpContext.RequestAborted);
+
+        foreach (var error in result.Errors)
+        {
+            await _notifier.WarningAsync(H["{0}", error]);
+        }
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(H.Plural(result.Run.ShiftsAdded, "1 shift was added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", "{0} shifts were added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", result.Run.ShiftsAdded, result.Run.CoverageScore, result.Run.MinimumScore));
+
+            if (result.Run.TimedOut)
+            {
+                await _notifier.InformationAsync(H["The scheduler stopped at its time limit; running it again may add more."]);
+            }
+        }
+
+        return RedirectToAction(nameof(Plan), new { id });
+    }
+
+    /// <summary>
     /// Copies the shifts of another schedule of the team into a schedule.
     /// </summary>
     /// <param name="id">The schedule id.</param>
@@ -581,7 +618,7 @@ public sealed class SchedulesController : Controller
 
         if (result.Open > 0)
         {
-            await _notifier.InformationAsync(H["{0} open shifts have nobody and stay off the calendar.", result.Open]);
+            await _notifier.InformationAsync(H.Plural(result.Open, "1 shift has nobody: it stays off the calendar and is offered under Open Shifts.", "{0} shifts have nobody: they stay off the calendar and are offered under Open Shifts.", result.Open));
         }
 
         return RedirectToAction(nameof(Plan), new { id });

@@ -32,6 +32,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     private readonly ICalendarService _calendars;
     private readonly TeamTimeZoneResolver _timeZones;
     private readonly IEnumerable<ISchedulePublishHandler> _publishHandlers;
+    private readonly ScheduleAutoScheduler _autoScheduler;
+    private readonly OpenShiftPosting _openShiftPosting;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -52,6 +54,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         ICalendarService calendars,
         TeamTimeZoneResolver timeZones,
         IEnumerable<ISchedulePublishHandler> publishHandlers,
+        ScheduleAutoScheduler autoScheduler,
+        OpenShiftPosting openShiftPosting,
         IClock clock,
         IStringLocalizer<DefaultSchedulePlanningService> stringLocalizer)
     {
@@ -70,6 +74,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         _calendars = calendars;
         _timeZones = timeZones;
         _publishHandlers = publishHandlers;
+        _autoScheduler = autoScheduler;
+        _openShiftPosting = openShiftPosting;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -154,6 +160,11 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         }
 
         return await _periodStore.DeleteAsync(period, cancellationToken);
+    }
+
+    public async Task<ScheduleScenario> FindScenarioAsync(string id, CancellationToken cancellationToken = default)
+    {
+        return string.IsNullOrEmpty(id) ? null : await _scenarioStore.FindByIdAsync(id, cancellationToken);
     }
 
     public async Task<IReadOnlyList<DraftShift>> ListDraftShiftsAsync(string scenarioId, CancellationToken cancellationToken = default)
@@ -270,7 +281,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
 
     public async Task<int> ApplyPatternsAsync(string scenarioId, string actor, CancellationToken cancellationToken = default)
     {
-        var (scenario, period) = await FindScenarioAsync(scenarioId, cancellationToken);
+        var (scenario, period) = await FindScenarioAndPeriodAsync(scenarioId, cancellationToken);
 
         if (period is null || period.Status == SchedulePeriodStatus.Locked)
         {
@@ -333,7 +344,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
 
     public async Task<int> CopyFromPeriodAsync(string scenarioId, string sourcePeriodId, string actor, CancellationToken cancellationToken = default)
     {
-        var (scenario, period) = await FindScenarioAsync(scenarioId, cancellationToken);
+        var (scenario, period) = await FindScenarioAndPeriodAsync(scenarioId, cancellationToken);
         var source = await FindPeriodAsync(sourcePeriodId, cancellationToken);
 
         if (period is null || source is null || period.Status == SchedulePeriodStatus.Locked)
@@ -382,6 +393,9 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         return copied;
     }
 
+    public Task<AutoScheduleResult> AutoScheduleAsync(string scenarioId, AutoScheduleOptions options, string actor, CancellationToken cancellationToken = default)
+        => _autoScheduler.RunAsync(scenarioId, options, actor, cancellationToken);
+
     public async Task<PlanningPublishResult> PublishAsync(string periodId, string actor, CancellationToken cancellationToken = default)
     {
         var result = new PlanningPublishResult();
@@ -416,12 +430,18 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         var published = await ListPublishedAsync(calendarId, period, timeZoneId, cancellationToken);
         var options = new CalendarChangeOptions { Actor = actor ?? WorkforceConstants.Source, SendInvitations = false, SkipConflictCheck = true };
         var calendar = await _calendars.FindByIdAsync(calendarId, cancellationToken);
+        var openDrafts = new List<DraftShift>();
 
         foreach (var draft in drafts)
         {
             if (draft.WorkerId is null || !workers.TryGetValue(draft.WorkerId, out var worker))
             {
                 result.Open++;
+
+                if (draft.WorkerId is null)
+                {
+                    openDrafts.Add(draft);
+                }
 
                 continue;
             }
@@ -523,6 +543,9 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
             }
         }
 
+        // The shifts with nobody are offered to the team as open shifts.
+        await _openShiftPosting.SyncAsync(period, openDrafts, timeZoneId, actor, cancellationToken);
+
         foreach (var change in result.Changes)
         {
             await _changeStore.CreateAsync(change, cancellationToken);
@@ -578,7 +601,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         return published;
     }
 
-    private async Task<(ScheduleScenario Scenario, SchedulePeriod Period)> FindScenarioAsync(string scenarioId, CancellationToken cancellationToken)
+    private async Task<(ScheduleScenario Scenario, SchedulePeriod Period)> FindScenarioAndPeriodAsync(string scenarioId, CancellationToken cancellationToken)
     {
         var scenario = string.IsNullOrEmpty(scenarioId) ? null : await _scenarioStore.FindByIdAsync(scenarioId, cancellationToken);
         var period = scenario is null ? null : await _periodStore.FindByIdAsync(scenario.PeriodId, cancellationToken);
@@ -586,7 +609,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         return (scenario, period);
     }
 
-    private static DraftShift FromTemplate(ScheduleScenario scenario, SchedulePeriod period, string workerId, DateOnly date, ShiftTemplate template, string timeZoneId)
+    internal static DraftShift FromTemplate(ScheduleScenario scenario, SchedulePeriod period, string workerId, DateOnly date, ShiftTemplate template, string timeZoneId)
     {
         var start = date.ToDateTime(template.Start);
 
@@ -613,49 +636,10 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     }
 
     internal static ShiftData ToShiftData(DraftShift draft, SchedulePeriod period, int version, IReadOnlyDictionary<string, ActivityCode> codes, string timeZoneId)
-    {
-        return new ShiftData
-        {
-            WorkerId = draft.WorkerId,
-            TeamId = draft.TeamId ?? period.TeamId,
-            ScheduleId = period.ItemId,
-            ShiftTemplateId = draft.TemplateId,
-            ShiftKey = draft.ShiftKey,
-            PublishedVersion = version,
-            Segments = draft.Segments.Select(segment => new ShiftSegment
-            {
-                ActivityCodeId = segment.ActivityCodeId,
-                Kind = segment.ActivityCodeId is not null && codes.TryGetValue(segment.ActivityCodeId, out var code) ? code.Kind : ActivityKind.Break,
-                StartUtc = CalendarTime.ToUtc(segment.Start, timeZoneId),
-                EndUtc = CalendarTime.ToUtc(segment.End, timeZoneId),
-            }).ToList(),
-        };
-    }
+        => ShiftEvents.ToShiftData(draft.WorkerId, draft.TeamId ?? period.TeamId, period.ItemId, draft.TemplateId, draft.ShiftKey, version, draft.Segments, codes, timeZoneId);
 
     private static void Apply(CalendarEvent calendarEvent, DraftShift draft, WorkerProfile worker, ShiftData data, string timeZoneId)
-    {
-        calendarEvent.Title = worker.DisplayName;
-        calendarEvent.AllDay = false;
-        calendarEvent.TimeZoneId = timeZoneId;
-        calendarEvent.Start = draft.Start;
-        calendarEvent.End = draft.End;
-        calendarEvent.Description = draft.Notes;
-        // A worker without a user account or an email can't be an attendee; the shift data still names them.
-        calendarEvent.Attendees = string.IsNullOrEmpty(worker.UserId) && string.IsNullOrEmpty(worker.Email)
-            ? []
-            :
-            [
-                new CalendarAttendee
-                {
-                    UserId = worker.UserId,
-                    Email = worker.Email,
-                    Name = worker.DisplayName,
-                    Role = CalendarAttendeeRole.Required,
-                    Response = CalendarAttendeeResponse.Accepted,
-                },
-            ];
-        calendarEvent.Put(data);
-    }
+        => ShiftEvents.Apply(calendarEvent, worker, draft.Start, draft.End, draft.Notes, data, timeZoneId);
 
     private static bool SameSegments(ShiftData before, ShiftData after)
     {

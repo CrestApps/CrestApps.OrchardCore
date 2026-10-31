@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Workforce.Navigation;
 
 /// <summary>
-/// Adds the Schedules, Shift Templates, Rotations and Coverage items to the Workforce menu.
+/// Adds the Schedules, Open Shifts, Shift Trades, Rotations, Coverage and Shift Templates items to the Workforce menu.
 /// </summary>
 public sealed class ShiftPlanningAdminMenu : AdminNavigationProvider
 {
@@ -27,6 +27,16 @@ public sealed class ShiftPlanningAdminMenu : AdminNavigationProvider
                 .Id("workforceSchedules")
                 .Action("Index", "Schedules", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ManageSchedules)
+                .LocalNav())
+            .Add(S["Open Shifts"], S["Open Shifts"].PrefixPosition("21"), openShifts => openShifts
+                .Id("workforceOpenShifts")
+                .Action("Index", "OpenShifts", WorkforceConstants.Features.Workforce)
+                .Permission(WorkforcePermissions.ManageOpenShifts)
+                .LocalNav())
+            .Add(S["Shift Trades"], S["Shift Trades"].PrefixPosition("22"), trades => trades
+                .Id("workforceShiftTrades")
+                .Action("Index", "ShiftTrades", WorkforceConstants.Features.Workforce)
+                .Permission(WorkforcePermissions.ApproveShiftTrades)
                 .LocalNav())
             .Add(S["Rotations"], S["Rotations"].PrefixPosition("30"), rotations => rotations
                 .Id("workforceRotations")

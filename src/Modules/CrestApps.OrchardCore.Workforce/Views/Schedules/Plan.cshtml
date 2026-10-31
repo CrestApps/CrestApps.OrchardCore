@@ -37,8 +37,15 @@
                 {
                     <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user-plus text-warning me-1" aria-hidden="true"></i>@T.Plural(Model.OpenCount, "1 open", "{0} open", Model.OpenCount)</span>
                 }
+                @if (Model.LastRun is not null)
+                {
+                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last auto-schedule: {0} shifts added by {1} on {2}", Model.LastRun.ShiftsAdded, Model.LastRun.RunBy, Model.LastRun.RunUtc.ToString("g")]"><i class="fa-solid fa-wand-magic-sparkles text-secondary me-1" aria-hidden="true"></i>@T["{0:P0} of target", Model.LastRun.CoverageScore]</span>
+                }
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
+                <form method="post" asp-action="AutoSchedule" asp-route-id="@period.ItemId" class="no-multisubmit">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="@T["Add shifts from the templates to cover the team's coverage requirements. The shifts already here stay."]"><i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Auto-schedule"]</button>
+                </form>
                 <form method="post" asp-action="ApplyRotations" asp-route-id="@period.ItemId" class="no-multisubmit">
                     <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Apply rotations"]</button>
                 </form>
