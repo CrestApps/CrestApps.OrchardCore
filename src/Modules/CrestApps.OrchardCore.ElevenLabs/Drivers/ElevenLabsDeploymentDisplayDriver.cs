@@ -74,7 +74,7 @@ internal sealed class ElevenLabsDeploymentDisplayDriver : DisplayDriver<AIDeploy
 
         if (!hasNewKey && string.IsNullOrEmpty(GetProperty(deployment, ApiKeyProperty)))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required."]);
         }
 
         if (hasNewKey)

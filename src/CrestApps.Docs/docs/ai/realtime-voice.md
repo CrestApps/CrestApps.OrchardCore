@@ -245,7 +245,7 @@ Realtime turns are dispatched through `IRealtimeOrchestrator` rather than the st
 
 ## Voice library
 
-Under **Artificial Intelligence → Voice library**, choose a text-to-speech deployment whose provider has a voice library (ElevenLabs or Cartesia) to search its voices by name and language, hear a sample, and copy a voice's id to a profile's or persona's voice. Where the provider clones voices, **Clone a voice** makes a new voice from a recording of one speaker that you have the right to use; the provider keeps it. Add an ElevenLabs or Cartesia deployment by enabling the **ElevenLabs** or **Cartesia** feature, then adding a speech deployment with the provider's API key.
+Under **Artificial Intelligence → Voice library**, choose a text-to-speech deployment whose provider has a voice library (ElevenLabs or Cartesia) to search its voices by name and language, hear a sample, and copy a voice's id to a profile's or persona's voice. Where the provider clones voices, **Clone a voice** makes a new voice from a recording of one speaker that you have the right to use; the provider keeps it.
 
 To add an ElevenLabs or Cartesia deployment, enable the provider's feature. Then go to **Artificial Intelligence → Deployments → Add Deployment** and pick **ElevenLabs** or **Cartesia**. Give the model name (for example `eleven_flash_v2_5` or `sonic-2`) and the account's API key; the key is stored encrypted, and leaving the field blank later keeps it. Fill in the endpoint only for a regional endpoint, such as ElevenLabs' `https://api.eu.residency.elevenlabs.io`.
 
