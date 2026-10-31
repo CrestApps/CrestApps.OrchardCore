@@ -144,7 +144,8 @@ public sealed class BookingRetryTests
             emails,
             clock.Object,
             NullLogger<BookingService>.Instance,
-            new PassThroughStringLocalizer<BookingService>());
+            new PassThroughStringLocalizer<BookingService>(),
+            Array.Empty<IBookingPaymentHandler>());
     }
 
     private BookingCapacityService CreateCapacity(ISiteService siteService, IClock clock)
