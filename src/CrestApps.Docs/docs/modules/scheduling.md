@@ -41,8 +41,9 @@ Workflow activities are registered when `OrchardCore.Workflows` is enabled; **Ap
 All records live in the `Scheduling` collection.
 
 - **`SchedulingResource`**: `Name`, `Kind` (`Staff`, `Room`, `Equipment`, `Other`), `UserId` (a staff member's user, whose own calendars also make them busy), `CalendarId` (the calendar appointments go on, and whose events make the resource busy), `TimeZoneId`, `AvailabilityMode` (`WorkingHours` or `Shifts`), `ShiftCalendarId`, `WorkingHours` (`SchedulingWorkingHours`: `Day`, `Start`, `End` as `HH:mm`; several per day, so breaks are the gaps), `DateOverrides` (`SchedulingDateOverride`: `Date`, `Closed`, `Start`, `End`), `Enabled` and `BookingVersion`. Saving a resource without a calendar creates one of the `Appointments` type with `Source = Scheduling` and `SourceId` set to the resource.
-- **`AppointmentType`**: `Name`, `Description`, `Slug` (the booking page address), `DurationMinutes` (30), `SlotIntervalMinutes` (30), `BufferBeforeMinutes`, `BufferAfterMinutes`, `MinimumNoticeMinutes` (60), `HorizonDays` (60), `MaxPerDay` (0 for no limit), `MaxPerWeek` (0 for no limit), `MaxUpcomingPerCustomer` (0 for no limit), `CancelNoticeMinutes` (0 for any time), `RescheduleNoticeMinutes` (0 for any time), `Capacity` (1; more makes a group session), `ResourceIds`, `Assignment`, `RequiresConfirmation`, `HoldMinutes` (10), `AllowSelfService`, `Location`, `Color`, `Enabled`.
-- **`AppointmentAssignment`**: `AnyAvailable` (the first free resource in the list), `RoundRobin` (the free resource with the fewest recent appointments) or `AllTogether` (every resource of the type at once, such as a doctor and a room).
+- **`AppointmentType`**: `Name`, `Description`, `Slug` (the booking page address), `DurationMinutes` (30), `SlotIntervalMinutes` (30), `BufferBeforeMinutes`, `BufferAfterMinutes`, `MinimumNoticeMinutes` (60), `HorizonDays` (60), `MaxPerDay` (0 for no limit), `MaxPerWeek` (0 for no limit), `MaxUpcomingPerCustomer` (0 for no limit), `CancelNoticeMinutes` (0 for any time), `RescheduleNoticeMinutes` (0 for any time), `Capacity` (1; more makes a group session), `ResourceIds`, `Assignment`, `ResourceRequirements`, `RequiresConfirmation`, `HoldMinutes` (10), `AllowSelfService`, `Location`, `Color`, `Enabled`.
+- **`AppointmentAssignment`**: `AnyAvailable` (the first free resource in the list), `RoundRobin` (the free resource with the fewest recent appointments for its weight) or `AllTogether` (every resource of the list at once, such as a doctor and a nurse).
+- **`AppointmentResourceRequirement`**: one group of resources each appointment needs: `Name` (such as `Staff` or `Room`), `ResourceIds` (in order of preference), `Assignment` and `Weights` (round-robin weight by resource id; 1 when not listed). See [Resource requirements](#resource-requirements).
 - **`Appointment`**: `AppointmentTypeId`, `ResourceIds`, `StartUtc`, `EndUtc`, `TimeZoneId`, `Status`, `HoldExpiresUtc`, `CustomerName`, `CustomerEmail`, `CustomerPhone`, `UserId`, `Notes`, `CalendarEventId`, `ManageToken` (the secret in the manage link), `Source` (`Admin`, `SelfService`, `Api`, `AI` or `Workflow`), `CancelReason`, created and modified stamps.
 - **`AppointmentStatus`**: `Held`, `Requested`, `Confirmed`, `Completed`, `NoShow`, `Cancelled`, `Expired`.
 - **`WaitlistEntry`**: `AppointmentTypeId`, `FromUtc`, `ToUtc`, `CustomerName`, `CustomerEmail`, `CustomerPhone`, `Status` (`Waiting`, `Notified`, `Booked`, `Removed`), `CreatedUtc`, `NotifiedUtc`.
@@ -55,7 +56,26 @@ All records live in the `Scheduling` collection.
 2. For each eligible resource, the open hours are its weekly working hours less its date overrides, in the resource's time zone, or in `Shifts` mode the **Shift** events on its shift calendar (`ShiftCalendarId`, any calendar that holds a `Shift` event type, such as one a workforce management module registers) that name its user as an attendee.
 3. Busy time comes from `ICalendarAvailabilityService.GetBusyAsync` for the resource's calendar and its user, which includes every [busy-time source](./calendars.md#extension-points). Each busy interval is widened by the type's buffers. An appointment already booked also keeps the free time its own type asks for before and after it, so a time that falls in it isn't offered (a group session's own start still is, while it has places).
 4. Start times step by `SlotIntervalMinutes`. A time is offered when the whole appointment fits, the resource's daily (`MaxPerDay`) and weekly (`MaxPerWeek`, Monday to Sunday in the resource's time zone) limits for the type aren't reached, and, for a group session, the session has places left.
-5. With `AllTogether`, a time is offered only when every resource is free.
+5. A time is offered only when every resource requirement can be met: a free resource in each group, or with `AllTogether` every resource of that group. A booked appointment makes each of its resources busy, not only the one whose calendar holds its event.
+
+## Resource requirements
+
+An appointment can need more than one kind of resource, such as one person from the staff and one room. `AppointmentType.ResourceRequirements` lists the groups, each with its own way of picking:
+
+```json
+"resourceRequirements": [
+  { "name": "Staff", "resourceIds": [ "drsmith00000001", "drjones00000001" ], "assignment": "RoundRobin", "weights": { "drsmith00000001": 2 } },
+  { "name": "Room", "resourceIds": [ "room1000000001", "room2000000001" ], "assignment": "AnyAvailable" }
+]
+```
+
+- **Availability** is the intersection of the groups: a time is offered only when every group can be met at that time. `AppointmentSlot.ResourceIds` lists the free resources of every group.
+- **Picking** runs group by group and never takes the same resource twice: `AnyAvailable` takes the first free resource in the group's list, `RoundRobin` the free one with the fewest appointments in the last 30 days divided by its weight (ties go to the one listed first), and `AllTogether` every resource of the group. The appointment's `ResourceIds` hold the picks in group order, and its calendar event goes on the first one's calendar.
+- **A chosen resource** (`AppointmentRequest.ResourceId`, `resourceId` on the slots endpoint) narrows only the group it belongs to, so a customer can pick their staff member and still get any free room.
+- **Moving** an appointment keeps its resources when they are all free at the new time and still meet every group (and no group takes all its resources); otherwise it picks again.
+- **Compatibility**: a type with no `ResourceRequirements` has one requirement made of its `ResourceIds` and `Assignment`, so types saved before requirements existed work as they did; nothing is migrated. `AppointmentTypeExtensions.GetResourceRequirements()` returns the requirements either way, and `GetAllResourceIds()` every resource they can take. The editor saves one unnamed group without weights the old way, and several groups as `ResourceRequirements`, with every resource in `ResourceIds` too and the first group's assignment in `Assignment`.
+
+A resource should be in only one group of a type; the editor refuses to save one in two groups.
 
 ## Booking and concurrency
 
@@ -65,10 +85,10 @@ A request sent twice takes effect once. `BookAsync` refuses, with `Conflict`, a 
 
 Every booking and reschedule:
 
-1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on each candidate resource, in id order so two requests never deadlock.
+1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on every resource it could take, from every resource requirement (narrowed by a chosen resource), in ordinal key order so two requests never deadlock. With a per-customer limit, the customer's `SCHEDULING_CUSTOMER_...` keys join the same ordered set.
 2. Checks availability again under the locks.
-3. Picks the resource by the type's assignment.
-4. Raises each chosen resource's `BookingVersion` and saves it with YesSql's concurrency check, so two nodes can't book the same resource for the same time.
+3. Picks a resource (or all of them) from each requirement.
+4. Raises the `BookingVersion` of every resource it took, in every group, and saves them with YesSql's concurrency check, so two nodes can't book the same staff member, room or piece of equipment for the same time even when their bookings share only one resource.
 5. Writes the appointment and its calendar event (`Source = Scheduling`, `SourceId` = the appointment; tentative while held or requested, confirmed once booked) in the same session. The calendar write uses `SkipConflictCheck`, because Scheduling has already checked under its own locks.
 
 ## Booking policies
@@ -176,9 +196,9 @@ The Scheduling API feature maps `/api/scheduling/v1`, authenticated with Orchard
 
 | Method and route | Does | Permission |
 | --- | --- | --- |
-| `GET types` | The appointment types: `id`, `name`, `description`, `durationMinutes`, `capacity`, `requiresConfirmation`, `enabled`. | View appointments |
-| `GET types/{id}/slots?from=&to=&resourceId=` | Open times between two ISO 8601 times (at most 31 days): `startUtc`, `endUtc`, `resourceIds`, `remaining`. | View appointments |
-| `POST appointments` | Book from an `AppointmentRequest` (`appointmentTypeId`, `startUtc`, `resourceId`, `customerName`, `customerEmail`, `customerPhone`, `userId`, `notes`, `timeZoneId`, `hold`). Returns `201`. | Manage appointments |
+| `GET types` | The appointment types: `id`, `name`, `description`, `durationMinutes`, `capacity`, `requiresConfirmation`, `enabled`, and `resourceRequirements` (`name`, `resourceIds`, `assignment`, `weights`; one entry for a type with a single resource list). | View appointments |
+| `GET types/{id}/slots?from=&to=&resourceId=` | Open times between two ISO 8601 times (at most 31 days): `startUtc`, `endUtc`, `resourceIds` (the free resources of every requirement), `remaining`. `resourceId` narrows the requirement it belongs to. | View appointments |
+| `POST appointments` | Book from an `AppointmentRequest` (`appointmentTypeId`, `startUtc`, `resourceId`, `customerName`, `customerEmail`, `customerPhone`, `userId`, `notes`, `timeZoneId`, `hold`). `resourceId` picks the resource of its own requirement; the others are picked by their assignment. Returns `201`. | Manage appointments |
 | `GET appointments/{id}` | One appointment. | View appointments |
 | `POST appointments/{id}/confirm` | Confirm a held or requested appointment. | Manage appointments |
 | `POST appointments/{id}/reschedule` | Move it: `{ "startUtc": "...", "resourceId": null }`. | Manage appointments |
@@ -194,7 +214,7 @@ With `CrestApps.OrchardCore.AI` enabled, Scheduling registers these tools in the
 | --- | --- | --- |
 | `listAppointmentTypes` | List appointment types | Lists the kinds of appointments that can be booked. |
 | `findAppointmentSlots` | Find appointment slots | Finds open times for an appointment. |
-| `bookAppointment` | Book appointment | Books an appointment for the customer at a `startUtc` that `findAppointmentSlots` returned. |
+| `bookAppointment` | Book appointment | Books an appointment for the customer at a `startUtc` that `findAppointmentSlots` returned. The result names the staff, rooms and equipment it is `with`. |
 | `changeAppointment` | Change appointment | Cancels or moves a customer's appointment. The caller proves it is theirs with the manage code, or the email or phone number on the appointment (a phone number only when the saved one has digits), unless it has **Manage appointments**. |
 
 Customers using the tools are held to the type's [booking policies](#booking-policies); a caller with **Manage appointments** isn't.

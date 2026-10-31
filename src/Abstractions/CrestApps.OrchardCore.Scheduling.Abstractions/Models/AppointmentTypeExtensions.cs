@@ -33,6 +33,58 @@ public static class AppointmentTypeExtensions
         return IsOutsideNotice(appointmentType?.RescheduleNoticeMinutes ?? 0, appointment.StartUtc, nowUtc);
     }
 
+    /// <summary>
+    /// Gets the groups of resources each appointment of the type needs. A type without <see cref="AppointmentType.ResourceRequirements"/>
+    /// has one requirement made of its <see cref="AppointmentType.ResourceIds"/> and <see cref="AppointmentType.Assignment"/>.
+    /// </summary>
+    /// <param name="appointmentType">The appointment type.</param>
+    /// <returns>The requirements, each with at least one resource.</returns>
+    public static IReadOnlyList<AppointmentResourceRequirement> GetResourceRequirements(this AppointmentType appointmentType)
+    {
+        ArgumentNullException.ThrowIfNull(appointmentType);
+
+        var requirements = (appointmentType.ResourceRequirements ?? [])
+            .Where(requirement => requirement?.ResourceIds?.Any(id => !string.IsNullOrEmpty(id)) == true)
+            .Select(requirement => new AppointmentResourceRequirement
+            {
+                Name = requirement.Name,
+                ResourceIds = requirement.ResourceIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList(),
+                Assignment = requirement.Assignment,
+                Weights = requirement.Weights ?? new Dictionary<string, int>(StringComparer.Ordinal),
+            })
+            .ToList();
+
+        if (requirements.Count > 0)
+        {
+            return requirements;
+        }
+
+        return
+        [
+            new AppointmentResourceRequirement
+            {
+                ResourceIds = (appointmentType.ResourceIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList(),
+                Assignment = appointmentType.Assignment,
+            },
+        ];
+    }
+
+    /// <summary>
+    /// Gets every resource any requirement of the type can take.
+    /// </summary>
+    /// <param name="appointmentType">The appointment type.</param>
+    /// <returns>The resource ids, without duplicates, in requirement order.</returns>
+    public static IReadOnlyList<string> GetAllResourceIds(this AppointmentType appointmentType)
+    {
+        ArgumentNullException.ThrowIfNull(appointmentType);
+
+        return appointmentType.GetResourceRequirements()
+            .SelectMany(requirement => requirement.ResourceIds)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
     private static bool IsOutsideNotice(int noticeMinutes, DateTime startUtc, DateTime nowUtc)
     {
         return noticeMinutes <= 0 || startUtc - nowUtc >= TimeSpan.FromMinutes(noticeMinutes);

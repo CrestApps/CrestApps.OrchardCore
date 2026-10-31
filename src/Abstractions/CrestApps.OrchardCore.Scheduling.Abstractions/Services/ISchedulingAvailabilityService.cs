@@ -4,7 +4,9 @@ namespace CrestApps.OrchardCore.Scheduling.Services;
 
 /// <summary>
 /// Works out the start times an appointment type can be booked at: the resources' working hours (or shifts), less their
-/// busy calendar time with the type's buffers, within the type's notice and horizon and its daily and weekly limits.
+/// busy calendar time with the type's buffers, within the type's notice and horizon and its daily and weekly limits. With
+/// several resource requirements, a time is offered only when every requirement has a free resource (or, for one that takes
+/// all its resources, when all of them are free).
 /// </summary>
 public interface ISchedulingAvailabilityService
 {
@@ -14,7 +16,7 @@ public interface ISchedulingAvailabilityService
     /// <param name="appointmentType">The appointment type.</param>
     /// <param name="fromUtc">The start of the range.</param>
     /// <param name="toUtc">The end of the range.</param>
-    /// <param name="resourceId">A resource to limit the times to, or <see langword="null"/>.</param>
+    /// <param name="resourceId">A resource to limit the times to, or <see langword="null"/>. It narrows only the requirement it belongs to.</param>
     /// <param name="maxResults">The most times to return.</param>
     /// <param name="excludeAppointmentId">An appointment whose own time doesn't count as busy, for a reschedule.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>

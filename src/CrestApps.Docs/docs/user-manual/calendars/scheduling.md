@@ -64,8 +64,11 @@ Open **Calendars > Appointment Types** and choose **Add appointment type**.
 
 | Field | What it does |
 | --- | --- |
-| **Resources** | The staff, rooms and equipment that take this appointment. |
-| **Pick** | **Any free resource** (the first one free in the list), **Share out (round robin)** (the free one with the fewest recent appointments, so work is shared out), or **All resources together** (every resource at once, such as a doctor and a room). |
+| **Group 1**, **Group 2**, ... | The staff, rooms and equipment that take this appointment, in groups. Most appointment types need one group. When an appointment needs one of each kind, such as a person and a room, put the staff in one group and the rooms in another: a time is only offered when every group has someone or something free. Choose **Add a group** for another. |
+| **Name** | What the group is, such as *Staff* or *Room*. |
+| **Resources** | The staff, rooms or equipment in the group. |
+| **Pick** | **Any free resource** (the first one free in the list), **Share out (round robin)** (the free one with the fewest recent appointments, so work is shared out), or **All resources together** (every resource of the group at once, such as a doctor and a nurse). |
+| **Share of appointments** | With round robin: how much work each resource takes. A resource with 2 gets about twice as many appointments as one with 1. |
 | **Places per appointment** | More than 1 makes it a class or group session that several customers book. The time stays open until it is full. |
 
 **Booking rules**
@@ -98,7 +101,7 @@ A time is offered when the whole appointment, with its free time before and afte
 - after the minimum notice and before the booking limit;
 - without going over the most per day or per week, or for a group session, while places are left.
 
-With **All resources together**, every resource must be free at that time.
+With several groups, each group needs a free resource at that time, and with **All resources together** every resource of that group must be free. An appointment keeps every resource it took busy, so a room booked with one staff member can't be booked with another at the same time.
 
 ## Book an appointment for a customer
 

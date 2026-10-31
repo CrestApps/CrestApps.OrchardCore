@@ -98,6 +98,17 @@ public sealed class SchedulingRecipeTests
             MaxUpcomingPerCustomer = 2,
             CancelNoticeMinutes = 1440,
             RescheduleNoticeMinutes = 720,
+            ResourceRequirements =
+            [
+                new AppointmentResourceRequirement
+                {
+                    Name = "Staff",
+                    ResourceIds = ["res-1", "res-2"],
+                    Assignment = AppointmentAssignment.RoundRobin,
+                    Weights = new Dictionary<string, int> { ["res-1"] = 2 },
+                },
+                new AppointmentResourceRequirement { Name = "Room", ResourceIds = ["room-1"], Assignment = AppointmentAssignment.AnyAvailable },
+            ],
         }).AsTask());
 
         // Act
@@ -109,11 +120,53 @@ public sealed class SchedulingRecipeTests
 
         // Assert
         Assert.Empty(errors);
+        Assert.Equal("RoundRobin", step["AppointmentTypes"][0]["resourceRequirements"][0]["assignment"].GetValue<string>());
         Assert.Equal(3, type.MaxPerDay);
         Assert.Equal(8, type.MaxPerWeek);
         Assert.Equal(2, type.MaxUpcomingPerCustomer);
         Assert.Equal(1440, type.CancelNoticeMinutes);
         Assert.Equal(720, type.RescheduleNoticeMinutes);
+        Assert.Collection(
+            type.ResourceRequirements,
+            staff =>
+            {
+                Assert.Equal("Staff", staff.Name);
+                Assert.Equal(["res-1", "res-2"], staff.ResourceIds);
+                Assert.Equal(AppointmentAssignment.RoundRobin, staff.Assignment);
+                Assert.Equal(2, staff.GetWeight("res-1"));
+                Assert.Equal(1, staff.GetWeight("res-2"));
+            },
+            room =>
+            {
+                Assert.Equal("Room", room.Name);
+                Assert.Equal(["room-1"], room.ResourceIds);
+            });
+    }
+
+    [Fact]
+    public async Task SchedulingStep_ReadsAnOlderTypeWithoutResourceRequirements()
+    {
+        // Arrange (an appointment type written before resource groups existed)
+        await using var harness = await CreateAsync();
+        var step = JsonNode.Parse("""
+            {
+              "name": "Scheduling",
+              "AppointmentTypes": [
+                { "itemId": "type-1", "name": "Exam", "resourceIds": [ "doctor", "room" ], "assignment": 2, "enabled": true }
+              ]
+            }
+            """).AsObject();
+
+        // Act
+        var errors = await RunAsync(harness, step);
+        var type = await harness.RunAsync(async services => await services.GetRequiredService<AppointmentTypeStore>().FindByIdAsync("type-1"), commit: false);
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Empty(type.ResourceRequirements);
+        var requirement = Assert.Single(type.GetResourceRequirements());
+        Assert.Equal(["doctor", "room"], requirement.ResourceIds);
+        Assert.Equal(AppointmentAssignment.AllTogether, requirement.Assignment);
     }
 
     [Fact]

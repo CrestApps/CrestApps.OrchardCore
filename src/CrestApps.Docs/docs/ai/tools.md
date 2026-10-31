@@ -212,13 +212,13 @@ These tools act for the signed-in person using the AI, with that person's access
 
 **Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on
 
-These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**. See [Scheduling](../modules/scheduling.md#ai-tools).
+These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**, and hold customers to the appointment type's booking policies. See [Scheduling](../modules/scheduling.md#ai-tools).
 
 | Function | Description |
 | --- | --- |
 | `listAppointmentTypes` | Lists the kinds of appointments that can be booked. |
 | `findAppointmentSlots` | Finds open times for an appointment. |
-| `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned. |
+| `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned, and says which staff, rooms and equipment it is with. |
 | `changeAppointment` | Cancels or moves a customer's appointment. The customer proves it is theirs with the manage code, or the email or phone number on the appointment. |
 
 ## Tool permissions

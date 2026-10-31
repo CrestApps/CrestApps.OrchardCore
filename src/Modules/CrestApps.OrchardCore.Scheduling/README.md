@@ -2,8 +2,10 @@
 
 Appointment booking on top of the shared calendar (`CrestApps.OrchardCore.Calendars`). Staff, rooms and equipment have
 weekly working hours, date overrides or shifts read from a calendar's `Shift` events; appointment types set the length, start-time
-interval, buffers, notice, horizon, daily limit, group size and how resources are picked. Open times are working hours
-less busy calendar time, and `IAppointmentService` books under a distributed lock per resource with a concurrency check,
+interval, buffers, notice, horizon, daily and weekly limits, customer booking policies, group size and the resources each
+appointment needs (one group, or several such as one person and one room, each with its own way of picking). Open times are working hours
+less busy calendar time, and `IAppointmentService` books under a distributed lock on every resource it could take, with a
+concurrency check on every resource it takes,
 so a resource can never be booked twice. Every appointment is an event on the resource's **Appointments** calendar.
 
 ## Features

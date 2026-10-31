@@ -87,14 +87,22 @@ public sealed class AppointmentType : CatalogItem
     public int Capacity { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the resources that take the appointment.
+    /// Gets or sets the resources that take the appointment. With <see cref="ResourceRequirements"/>, it holds every resource of
+    /// every requirement, for code that only needs to know who can be involved.
     /// </summary>
     public IList<string> ResourceIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets how resources are picked.
+    /// Gets or sets how resources are picked, when the type has no <see cref="ResourceRequirements"/>.
     /// </summary>
     public AppointmentAssignment Assignment { get; set; }
+
+    /// <summary>
+    /// Gets or sets the groups of resources each appointment needs, such as one person from the staff and one room, each with
+    /// its own way of picking. When empty, <see cref="ResourceIds"/> and <see cref="Assignment"/> make the only requirement. Use
+    /// <see cref="AppointmentTypeExtensions.GetResourceRequirements(AppointmentType)"/> to read them either way.
+    /// </summary>
+    public IList<AppointmentResourceRequirement> ResourceRequirements { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether a booking waits for someone to confirm it.

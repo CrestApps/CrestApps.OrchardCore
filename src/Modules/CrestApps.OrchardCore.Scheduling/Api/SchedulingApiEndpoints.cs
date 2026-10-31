@@ -53,6 +53,13 @@ internal static class SchedulingApiEndpoints
             capacity = type.Capacity,
             requiresConfirmation = type.RequiresConfirmation,
             enabled = type.Enabled,
+            resourceRequirements = type.GetResourceRequirements().Select(requirement => new
+            {
+                name = requirement.Name,
+                resourceIds = requirement.ResourceIds,
+                assignment = requirement.Assignment.ToString(),
+                weights = requirement.Weights,
+            }),
         }));
     }
 

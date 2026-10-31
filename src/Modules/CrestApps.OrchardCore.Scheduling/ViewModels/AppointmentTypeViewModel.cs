@@ -56,11 +56,12 @@ public class AppointmentTypeViewModel
     /// <summary>Gets or sets how many customers share one appointment.</summary>
     public int Capacity { get; set; } = 1;
 
-    /// <summary>Gets or sets the resources.</summary>
-    public string[] ResourceIds { get; set; } = [];
+    /// <summary>Gets or sets the groups of resources each appointment needs, such as one person from the staff and one room.</summary>
+    public IList<AppointmentResourceRequirementViewModel> Requirements { get; set; } = [];
 
-    /// <summary>Gets or sets how resources are picked.</summary>
-    public string Assignment { get; set; }
+    /// <summary>Gets or sets how many of <see cref="Requirements"/> are shown when the page opens; the rest wait to be added.</summary>
+    [BindNever]
+    public int VisibleRequirements { get; set; } = 1;
 
     /// <summary>Gets or sets whether bookings wait for confirmation.</summary>
     public bool RequiresConfirmation { get; set; }
