@@ -41,6 +41,18 @@ public class AppointmentTypeViewModel
     /// <summary>Gets or sets the most per resource per day.</summary>
     public int MaxPerDay { get; set; }
 
+    /// <summary>Gets or sets the most per resource per week.</summary>
+    public int MaxPerWeek { get; set; }
+
+    /// <summary>Gets or sets the most upcoming appointments one customer may book themselves.</summary>
+    public int MaxUpcomingPerCustomer { get; set; }
+
+    /// <summary>Gets or sets how soon before the start a customer can still cancel, in minutes.</summary>
+    public int CancelNoticeMinutes { get; set; }
+
+    /// <summary>Gets or sets how soon before the start a customer can still move it, in minutes.</summary>
+    public int RescheduleNoticeMinutes { get; set; }
+
     /// <summary>Gets or sets how many customers share one appointment.</summary>
     public int Capacity { get; set; } = 1;
 

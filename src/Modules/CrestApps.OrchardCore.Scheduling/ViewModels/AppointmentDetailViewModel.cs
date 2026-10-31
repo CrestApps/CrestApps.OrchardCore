@@ -36,4 +36,10 @@ public class AppointmentDetailViewModel
 
     /// <summary>Gets or sets the manage link, on the staff page.</summary>
     public string ManageUrl { get; set; }
+
+    /// <summary>Gets or sets whether the customer can still cancel it themselves, on the public page.</summary>
+    public bool CustomerCanCancel { get; set; } = true;
+
+    /// <summary>Gets or sets whether the customer can still move it themselves, on the public page.</summary>
+    public bool CustomerCanReschedule { get; set; } = true;
 }

@@ -41,7 +41,7 @@ Workflow activities are registered when `OrchardCore.Workflows` is enabled; **Ap
 All records live in the `Scheduling` collection.
 
 - **`SchedulingResource`**: `Name`, `Kind` (`Staff`, `Room`, `Equipment`, `Other`), `UserId` (a staff member's user, whose own calendars also make them busy), `CalendarId` (the calendar appointments go on, and whose events make the resource busy), `TimeZoneId`, `AvailabilityMode` (`WorkingHours` or `Shifts`), `ShiftCalendarId`, `WorkingHours` (`SchedulingWorkingHours`: `Day`, `Start`, `End` as `HH:mm`; several per day, so breaks are the gaps), `DateOverrides` (`SchedulingDateOverride`: `Date`, `Closed`, `Start`, `End`), `Enabled` and `BookingVersion`. Saving a resource without a calendar creates one of the `Appointments` type with `Source = Scheduling` and `SourceId` set to the resource.
-- **`AppointmentType`**: `Name`, `Description`, `Slug` (the booking page address), `DurationMinutes` (30), `SlotIntervalMinutes` (30), `BufferBeforeMinutes`, `BufferAfterMinutes`, `MinimumNoticeMinutes` (60), `HorizonDays` (60), `MaxPerDay` (0 for no limit), `Capacity` (1; more makes a group session), `ResourceIds`, `Assignment`, `RequiresConfirmation`, `HoldMinutes` (10), `AllowSelfService`, `Location`, `Color`, `Enabled`.
+- **`AppointmentType`**: `Name`, `Description`, `Slug` (the booking page address), `DurationMinutes` (30), `SlotIntervalMinutes` (30), `BufferBeforeMinutes`, `BufferAfterMinutes`, `MinimumNoticeMinutes` (60), `HorizonDays` (60), `MaxPerDay` (0 for no limit), `MaxPerWeek` (0 for no limit), `MaxUpcomingPerCustomer` (0 for no limit), `CancelNoticeMinutes` (0 for any time), `RescheduleNoticeMinutes` (0 for any time), `Capacity` (1; more makes a group session), `ResourceIds`, `Assignment`, `RequiresConfirmation`, `HoldMinutes` (10), `AllowSelfService`, `Location`, `Color`, `Enabled`.
 - **`AppointmentAssignment`**: `AnyAvailable` (the first free resource in the list), `RoundRobin` (the free resource with the fewest recent appointments) or `AllTogether` (every resource of the type at once, such as a doctor and a room).
 - **`Appointment`**: `AppointmentTypeId`, `ResourceIds`, `StartUtc`, `EndUtc`, `TimeZoneId`, `Status`, `HoldExpiresUtc`, `CustomerName`, `CustomerEmail`, `CustomerPhone`, `UserId`, `Notes`, `CalendarEventId`, `ManageToken` (the secret in the manage link), `Source` (`Admin`, `SelfService`, `Api`, `AI` or `Workflow`), `CancelReason`, created and modified stamps.
 - **`AppointmentStatus`**: `Held`, `Requested`, `Confirmed`, `Completed`, `NoShow`, `Cancelled`, `Expired`.
@@ -54,7 +54,7 @@ All records live in the `Scheduling` collection.
 1. The window is cut to the type's minimum notice and booking horizon.
 2. For each eligible resource, the open hours are its weekly working hours less its date overrides, in the resource's time zone, or in `Shifts` mode the **Shift** events on its shift calendar (`ShiftCalendarId`, any calendar that holds a `Shift` event type, such as one a workforce management module registers) that name its user as an attendee.
 3. Busy time comes from `ICalendarAvailabilityService.GetBusyAsync` for the resource's calendar and its user, which includes every [busy-time source](./calendars.md#extension-points). Each busy interval is widened by the type's buffers. An appointment already booked also keeps the free time its own type asks for before and after it, so a time that falls in it isn't offered (a group session's own start still is, while it has places).
-4. Start times step by `SlotIntervalMinutes`. A time is offered when the whole appointment fits, the daily limit isn't reached, and, for a group session, the session has places left.
+4. Start times step by `SlotIntervalMinutes`. A time is offered when the whole appointment fits, the resource's daily (`MaxPerDay`) and weekly (`MaxPerWeek`, Monday to Sunday in the resource's time zone) limits for the type aren't reached, and, for a group session, the session has places left.
 5. With `AllTogether`, a time is offered only when every resource is free.
 
 ## Booking and concurrency
@@ -70,6 +70,28 @@ Every booking and reschedule:
 3. Picks the resource by the type's assignment.
 4. Raises each chosen resource's `BookingVersion` and saves it with YesSql's concurrency check, so two nodes can't book the same resource for the same time.
 5. Writes the appointment and its calendar event (`Source = Scheduling`, `SourceId` = the appointment; tentative while held or requested, confirmed once booked) in the same session. The calendar write uses `SkipConflictCheck`, because Scheduling has already checked under its own locks.
+
+## Booking policies
+
+An appointment type can hold customers who book for themselves to stricter rules than staff. These rules are enforced inside `IAppointmentService`, so the public booking page, the AI tools, the API and workflows all get the same answer; they apply only when the call is marked as self-service: `AppointmentRequest.SelfService = true` for a booking, and `selfService: true` on `CancelAsync` and `RescheduleAsync`.
+
+| Property | Self-service rule | Error |
+| --- | --- | --- |
+| `MaxUpcomingPerCustomer` | A customer can hold at most this many held, requested or confirmed appointments of the type that haven't started yet. Customers are matched by user id, email (in any case) or phone number. The check runs under a lock on the customer (`SCHEDULING_CUSTOMER_{typeId}_{identifier}`), so two bookings at once can't both slip under the limit. | Not a conflict; the message says how many the customer already has. |
+| `CancelNoticeMinutes` | A customer can't cancel within this many minutes of the start. | The message says how much notice is needed. |
+| `RescheduleNoticeMinutes` | A customer can't move the appointment once it is within this many minutes of its start. The new time still has to be open. | The message says how much notice is needed. |
+
+Who counts as self-service:
+
+| Caller | Self-service |
+| --- | --- |
+| Public booking page and manage link | Always |
+| AI tools | Unless the signed-in user has **Manage appointments** |
+| Admin screens, HTTP API (which needs **Manage appointments**) and workflows | Never: staff and automations aren't held to these rules |
+
+`AppointmentTypeExtensions.CustomerCanCancel` and `CustomerCanReschedule` tell a page whether to offer those actions; the manage page hides them, with a note, once the notice has passed.
+
+`MinimumNoticeMinutes`, `HorizonDays`, `MaxPerDay` and `MaxPerWeek` shape the open times themselves, so they apply to everyone.
 
 A group session (`Capacity` > 1) shares one calendar event per time, with `SourceId = session:...`. A new booking is `Confirmed`, or `Requested` when the type asks for confirmation. Cancelling or moving an appointment frees its time: the oldest waiting `WaitlistEntry` whose range covers that time is marked `Notified` and the **Waitlist Slot Available** change is raised.
 
@@ -174,5 +196,7 @@ With `CrestApps.OrchardCore.AI` enabled, Scheduling registers these tools in the
 | `findAppointmentSlots` | Find appointment slots | Finds open times for an appointment. |
 | `bookAppointment` | Book appointment | Books an appointment for the customer at a `startUtc` that `findAppointmentSlots` returned. |
 | `changeAppointment` | Change appointment | Cancels or moves a customer's appointment. The caller proves it is theirs with the manage code, or the email or phone number on the appointment (a phone number only when the saved one has digits), unless it has **Manage appointments**. |
+
+Customers using the tools are held to the type's [booking policies](#booking-policies); a caller with **Manage appointments** isn't.
 
 See [AI Tools](../ai/tools.md#scheduling-tools).

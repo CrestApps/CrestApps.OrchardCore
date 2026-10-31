@@ -114,6 +114,10 @@ public sealed partial class AppointmentTypesController : Controller
             MinimumNoticeMinutes = type.MinimumNoticeMinutes,
             HorizonDays = type.HorizonDays,
             MaxPerDay = type.MaxPerDay,
+            MaxPerWeek = type.MaxPerWeek,
+            MaxUpcomingPerCustomer = type.MaxUpcomingPerCustomer,
+            CancelNoticeMinutes = type.CancelNoticeMinutes,
+            RescheduleNoticeMinutes = type.RescheduleNoticeMinutes,
             Capacity = type.Capacity,
             ResourceIds = type.ResourceIds.ToArray(),
             Assignment = type.Assignment.ToString(),
@@ -186,6 +190,10 @@ public sealed partial class AppointmentTypesController : Controller
         type.MinimumNoticeMinutes = Math.Max(0, model.MinimumNoticeMinutes);
         type.HorizonDays = Math.Clamp(model.HorizonDays, 1, 730);
         type.MaxPerDay = Math.Max(0, model.MaxPerDay);
+        type.MaxPerWeek = Math.Max(0, model.MaxPerWeek);
+        type.MaxUpcomingPerCustomer = Math.Max(0, model.MaxUpcomingPerCustomer);
+        type.CancelNoticeMinutes = Math.Max(0, model.CancelNoticeMinutes);
+        type.RescheduleNoticeMinutes = Math.Max(0, model.RescheduleNoticeMinutes);
         type.Capacity = Math.Max(1, model.Capacity);
         type.ResourceIds = (model.ResourceIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
         type.Assignment = Enum.TryParse<AppointmentAssignment>(model.Assignment, out var assignment) ? assignment : AppointmentAssignment.AnyAvailable;

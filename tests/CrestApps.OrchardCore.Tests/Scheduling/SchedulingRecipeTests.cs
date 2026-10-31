@@ -6,10 +6,13 @@ using CrestApps.OrchardCore.Scheduling;
 using CrestApps.OrchardCore.Scheduling.Core;
 using CrestApps.OrchardCore.Scheduling.Core.Indexes;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
+using CrestApps.OrchardCore.Scheduling.Deployments;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Recipes;
 using CrestApps.OrchardCore.Tests.Calendars;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using OrchardCore.Deployment;
 using OrchardCore.Recipes.Models;
 
 namespace CrestApps.OrchardCore.Tests.Scheduling;
@@ -80,6 +83,40 @@ public sealed class SchedulingRecipeTests
     }
 
     [Fact]
+    public async Task DeploymentStep_RoundTripsTheBookingPolicies()
+    {
+        // Arrange
+        await using var source = await CreateAsync();
+
+        await source.RunAsync(services => services.GetRequiredService<AppointmentTypeStore>().CreateAsync(new AppointmentType
+        {
+            ItemId = "type-1",
+            Name = "Consultation",
+            ResourceIds = ["res-1"],
+            MaxPerDay = 3,
+            MaxPerWeek = 8,
+            MaxUpcomingPerCustomer = 2,
+            CancelNoticeMinutes = 1440,
+            RescheduleNoticeMinutes = 720,
+        }).AsTask());
+
+        // Act
+        var step = await ExportAsync(source);
+
+        await using var target = await CreateAsync();
+        var errors = await RunAsync(target, step);
+        var type = await target.RunAsync(async services => await services.GetRequiredService<AppointmentTypeStore>().FindByIdAsync("type-1"), commit: false);
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Equal(3, type.MaxPerDay);
+        Assert.Equal(8, type.MaxPerWeek);
+        Assert.Equal(2, type.MaxUpcomingPerCustomer);
+        Assert.Equal(1440, type.CancelNoticeMinutes);
+        Assert.Equal(720, type.RescheduleNoticeMinutes);
+    }
+
+    [Fact]
     public async Task CalendarsStep_ImportsCategories()
     {
         // Arrange
@@ -120,6 +157,18 @@ public sealed class SchedulingRecipeTests
             SchedulingIndexSchema.CreateAsync,
             [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider()],
             [SchedulingConstants.CollectionName]);
+    }
+
+    private static Task<JsonObject> ExportAsync(CalendarTestHarness harness)
+    {
+        return harness.RunAsync(async services =>
+        {
+            var result = new DeploymentPlanResult(Mock.Of<IFileBuilder>(), new RecipeDescriptor());
+
+            await ActivatorUtilities.CreateInstance<SchedulingDeploymentSource>(services).ProcessDeploymentStepAsync(new SchedulingDeploymentStep(), result);
+
+            return Assert.Single(result.Steps).AsObject();
+        }, commit: false);
     }
 
     private static Task<IList<string>> RunAsync(CalendarTestHarness harness, JsonObject step)

@@ -58,6 +58,30 @@ public sealed class AppointmentType : CatalogItem
     public int MaxPerDay { get; set; }
 
     /// <summary>
+    /// Gets or sets the most appointments of this type one resource takes in a week (Monday to Sunday in the resource's time
+    /// zone), or 0 for no limit.
+    /// </summary>
+    public int MaxPerWeek { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most upcoming appointments of this type one customer may hold when booking it themselves, or 0 for no
+    /// limit. Customers are matched by user id, email or phone number. Staff who manage appointments aren't limited.
+    /// </summary>
+    public int MaxUpcomingPerCustomer { get; set; }
+
+    /// <summary>
+    /// Gets or sets how soon before the start a customer can still cancel the appointment themselves, or 0 for any time before it.
+    /// Staff who manage appointments can always cancel.
+    /// </summary>
+    public int CancelNoticeMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how soon before the start a customer can still move the appointment themselves, or 0 for any time before it.
+    /// Staff who manage appointments can always move it.
+    /// </summary>
+    public int RescheduleNoticeMinutes { get; set; }
+
+    /// <summary>
     /// Gets or sets how many customers share one appointment, for a class or group session.
     /// </summary>
     public int Capacity { get; set; } = 1;

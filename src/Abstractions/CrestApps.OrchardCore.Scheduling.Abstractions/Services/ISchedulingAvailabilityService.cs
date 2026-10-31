@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Scheduling.Services;
 
 /// <summary>
 /// Works out the start times an appointment type can be booked at: the resources' working hours (or shifts), less their
-/// busy calendar time with the type's buffers, within the type's notice and horizon and its daily limit.
+/// busy calendar time with the type's buffers, within the type's notice and horizon and its daily and weekly limits.
 /// </summary>
 public interface ISchedulingAvailabilityService
 {

@@ -71,7 +71,9 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             return [];
         }
 
-        var appointments = await _appointmentStore.ListForResourcesAsync(resources.Select(resource => resource.ItemId), earliest.AddDays(-1), latest.AddDays(1));
+        // A weekly limit counts the whole week around each time, so the appointments of the weeks on both sides are read too.
+        var reach = appointmentType.MaxPerWeek > 0 ? 7 : 1;
+        var appointments = await _appointmentStore.ListForResourcesAsync(resources.Select(resource => resource.ItemId), earliest.AddDays(-reach), latest.AddDays(reach));
         var excludeEvents = appointments.Where(appointment => appointment.ItemId == excludeAppointmentId || (appointmentType.Capacity > 1 && appointment.AppointmentTypeId == appointmentType.ItemId))
             .Select(appointment => appointment.CalendarEventId)
             .Where(id => id is not null)
@@ -132,6 +134,20 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
                             .Count();
 
                         if (count >= appointmentType.MaxPerDay && !mine.Any(appointment => appointment.AppointmentTypeId == appointmentType.ItemId && appointment.StartUtc == start))
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (appointmentType.MaxPerWeek > 0)
+                    {
+                        var week = WeekStart(CalendarTime.ToLocal(start, resource.TimeZoneId).Date);
+                        var count = mine.Where(appointment => appointment.AppointmentTypeId == appointmentType.ItemId && WeekStart(CalendarTime.ToLocal(appointment.StartUtc, resource.TimeZoneId).Date) == week)
+                            .Select(appointment => appointment.StartUtc)
+                            .Distinct()
+                            .Count();
+
+                        if (count >= appointmentType.MaxPerWeek && !mine.Any(appointment => appointment.AppointmentTypeId == appointmentType.ItemId && appointment.StartUtc == start))
                         {
                             continue;
                         }
@@ -287,6 +303,12 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     public static bool TryParse(string value, out TimeSpan time)
     {
         return TimeSpan.TryParseExact(value, @"hh\:mm", CultureInfo.InvariantCulture, out time);
+    }
+
+    // Weeks run Monday to Sunday.
+    private static DateTime WeekStart(DateTime day)
+    {
+        return day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
     }
 
     private static DateTime Max(DateTime first, DateTime second)

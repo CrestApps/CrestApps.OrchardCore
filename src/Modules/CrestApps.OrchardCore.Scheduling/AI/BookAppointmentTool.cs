@@ -70,6 +70,7 @@ public sealed class BookAppointmentTool : SchedulingAIToolBase
             Notes = Read(arguments, "notes"),
             Source = "AI",
             Actor = "AI",
+            SelfService = !await CanManageAsync(arguments.Services),
         }, cancellationToken);
 
         if (!result.Succeeded)
