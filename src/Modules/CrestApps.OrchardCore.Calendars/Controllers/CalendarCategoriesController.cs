@@ -153,8 +153,9 @@ public sealed class CalendarCategoriesController : Controller
         category.Name = model.Name.Trim();
         category.Color = model.Color.Trim().ToLowerInvariant();
 
-        // Only a calendar manager decides whether a category is everyone's; anyone else's categories are their own.
-        category.OwnerId = canShare && model.Shared ? null : category.IsShared && !canShare ? null : CalendarUser.GetId(User);
+        // Only a calendar manager decides whether a category is everyone's; anyone else's categories are their own. A new
+        // category has no owner yet, so it must not be mistaken for a shared one.
+        category.OwnerId = canShare && model.Shared ? null : CalendarUser.GetId(User);
 
         await _categoryService.SaveAsync(category, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The category has been saved."]);
