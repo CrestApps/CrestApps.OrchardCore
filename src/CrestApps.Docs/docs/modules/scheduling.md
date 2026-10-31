@@ -190,6 +190,22 @@ The `Scheduling` recipe step reads the same shape back: `Resources`, `Appointmen
 
 With the **CrestApps Recipes** feature on, the module describes the `Scheduling` recipe step (`SchedulingRecipeStepSchema`) and the deployment step's settings (`SchedulingDeploymentStepSchema`) to it.
 
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Scheduling adds the **Scheduling** data source (`Scheduling`) to the Report Builder and to Orchard Core data pipelines. **Appointments**, **Appointment resources**, **Appointment types** and **Scheduling resources** need **View appointments** (`ViewAppointments`); **Waitlist** needs **Manage appointments** (`ManageAppointments`), as the waitlist screen does. The customer's notes, the reason an appointment was canceled, the link that lets a customer change it, and resources' working hours are never exposed.
+
+| Data set | Rows | Fields |
+| --- | --- | --- |
+| `Appointments` (**Appointments**) | One per appointment, newest first by **Starts**, the default date | `ItemId`, `Status` (`Held`, `Requested`, `Confirmed`, `Completed`, `NoShow`, `Cancelled`, `Expired`), `IsCancelled`, `IsNoShow`, `AppointmentTypeId` (references `AppointmentTypes`), `ResourceIds` (comma separated), `ResourceCount`, `Source` (`Admin`, `SelfService`, `Api`, `AI` or `Workflow`), `CalendarEventId` (references `Calendars` > `CalendarEvents`), `CustomerName`, `CustomerEmail`, `CustomerPhone`, `UserId` (references `Users`), `StartUtc`, `EndUtc`, `DurationMinutes`, `TimeZoneId`, `CreatedUtc` (booked), `LeadTimeMinutes` (from booking to start), `HoldExpiresUtc`, `ModifiedUtc` |
+| `AppointmentResources` (**Appointment resources**) | One per resource an appointment books, so appointments can be counted by staff member or room | `AppointmentId` (references `Appointments`), `ResourceId` (references `SchedulingResources`), `Position`, `AppointmentTypeId`, `Status`, `StartUtc`, `EndUtc`, `DurationMinutes` |
+| `AppointmentTypes` (**Appointment types**) | One per appointment type | `ItemId`, `Name`, `Slug`, `Location`, `Enabled`, `AllowSelfService`, `RequiresConfirmation`, `Assignment`, `ResourceIds`, `ResourceCount`, `DurationMinutes`, `SlotIntervalMinutes`, `BufferBeforeMinutes`, `BufferAfterMinutes`, `MinimumNoticeMinutes`, `HorizonDays`, `MaxPerDay`, `Capacity`, `HoldMinutes` |
+| `SchedulingResources` (**Scheduling resources**) | One per staff member, room, piece of equipment or other resource | `ItemId`, `Name`, `Kind`, `UserId` (references `Users`), `CalendarId` and `ShiftCalendarId` (reference `Calendars` > `Calendars`), `AvailabilityMode`, `TimeZoneId`, `Enabled` |
+| `WaitlistEntries` (**Waitlist**) | One per waitlist entry, newest first by when the customer joined | `ItemId`, `Status` (`Waiting`, `Notified`, `Booked`, `Removed`), `AppointmentTypeId`, `CustomerName`, `CustomerEmail`, `CustomerPhone`, `CreatedUtc`, `FromUtc`, `ToUtc`, `NotifiedUtc` |
+
+Date ranges on the default date, joins on the record, appointment type and customer user IDs, and status filters are applied in the database. Simple groups and totals of appointments are counted there too, except by the customer's name, email address or phone number, which the index does not keep exactly. Appointments do not record how many times they were moved or when they were canceled, so neither is reported; **Last changed** is the last change of any kind.
+
+The `UpdateFrom1Async` migration step adds the database indexes appointments (`StartUtc`, `Id`) and waitlist entries (`CreatedUtc`, `Id`) are read through.
+
 ## HTTP API
 
 The Scheduling API feature maps `/api/scheduling/v1`, authenticated with Orchard Core's `Api` scheme.

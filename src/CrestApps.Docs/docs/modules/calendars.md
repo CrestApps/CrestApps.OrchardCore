@@ -427,6 +427,63 @@ Property names are camelCase and enums are written by name (a number is read too
 
 With the **CrestApps Recipes** feature on, the module describes the `Calendars` recipe step (`CalendarsRecipeStepSchema`, an `IRecipeStep`) and the deployment step's settings (`CalendarsDeploymentStepSchema`) to it, from `RecipesSchemaStartup` (`[RequireFeatures("CrestApps.OrchardCore.Recipes")]`), so recipes can be checked and written with help.
 
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Calendars adds the **Calendars** data source (`Calendars`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Use calendars** (`AccessCalendars`) and follow the same rules as the calendar view, for the report's owner (the user whose principal runs the report):
+
+- Only calendars the owner can **read** are reported: calendars they own, are in the team role of, are shared with at **Read** or above, or that are public, and every calendar with **View all calendars**. A calendar the owner can only see as free/busy time, and the events on it, are left out completely rather than reported as busy blocks.
+- A private event on a calendar the owner can read but not change is reported with its time, type and status, but its **Title** and **Attendees** are empty and **Details hidden** is `true`, as it shows as busy time on the calendar. **View all calendars** reads every calendar but changes none, so private events stay hidden; **Manage all calendars** shows them.
+- An event the owner is only invited to, on a calendar they can't read, is not reported.
+- Descriptions, locations, attendees' names and email addresses, answer links, feed tokens and links to external calendars are never exposed.
+
+Grouping and totals are left to the report engine, since a grouping statement in the database would read every calendar.
+
+The **Calendars** data set (`Calendars`) has one row per calendar.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Calendar ID | Identifies the calendar. |
+| `Name` | Name | |
+| `Type` | Type | Such as `General`, `Personal`, `Team`, `Room` or `Office`. |
+| `OwnerKind` | Owner kind | `None`, `User`, `Role` or `Resource`. |
+| `OwnerId` | Owner | The user ID, role name or resource it belongs to. |
+| `OwnerUserId` | Owner user ID | The owner when a user owns it; references `Users`. |
+| `Visibility` | Visibility | `Private`, `Shared` or `Public`. |
+| `ShareCount` | Shared with | How many users and roles it is shared with. |
+| `Enabled` | Enabled | |
+| `TimeZoneId` | Time zone | |
+| `ConflictPolicy` | Conflicts | What happens when events overlap. |
+| `Capacity` | Capacity | How many events may overlap when the calendar limits them. |
+| `Source` | Source | The module that owns it, such as `Scheduling`. |
+| `CreatedUtc`, `ModifiedUtc` | Created, Last changed | |
+| `CreatedBy` | Created by | References `Users`. |
+
+The **Calendar events** data set (`CalendarEvents`) has one row per stored event: a one-time event, a repeating event (one row for the whole series, at its first occurrence), or a changed occurrence of one (with its `SeriesId`). Occurrences of a repeating event are not expanded into rows. Rows come newest first by **Starts**, the default date. Date ranges on it, joins on the event and calendar IDs, and filters on **Status** and **Busy or free** are applied in the database.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Event ID | Identifies the event. |
+| `EventType` | Event type | Such as `Event`, `Meeting`, `Shift` or `Appointment`. |
+| `Title` | Title | Empty when the details are hidden. |
+| `Status` | Status | `Confirmed`, `Tentative` or `Cancelled`. |
+| `Visibility` | Visibility | `Default`, `Public` or `Private`. |
+| `DetailsHidden` | Details hidden | Whether the title and attendees are hidden from the report's owner. |
+| `Transparency` | Busy or free | `Busy`, or `Free` when the event leaves the time free. |
+| `AttendeeCount` | Attendees | How many people, rooms and equipment are invited; empty when the details are hidden. |
+| `IsRecurring` | Repeats | |
+| `SeriesId` | Series ID | The repeating event a changed occurrence belongs to; references `CalendarEvents`. |
+| `Source`, `SourceId` | Source, Source ID | The module that owns the event, such as `Scheduling`, and its record. |
+| `CalendarId` | Calendar ID | References `Calendars`. |
+| `CalendarType` | Calendar type | |
+| `StartUtc`, `EndUtc` | Starts, Ends | For a repeating event, its first occurrence. |
+| `AllDay` | All day | |
+| `DurationMinutes` | Duration (minutes) | |
+| `TimeZoneId` | Time zone | |
+| `CreatedUtc`, `ModifiedUtc` | Created, Last changed | |
+| `CreatedBy` | Created by | References `Users`. |
+
+The `UpdateFrom2Async` migration step adds the database index events are read through (`StartUtc`, `Id`).
+
 ## Building on the calendar
 
 - [Scheduling](./scheduling.md) puts appointments on `Appointments` calendars and reads free/busy time from the calendar.
