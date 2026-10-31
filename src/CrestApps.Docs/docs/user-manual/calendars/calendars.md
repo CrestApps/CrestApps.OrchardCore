@@ -22,6 +22,8 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 <YouTube video="calendars-create-and-share" title="Video of creating a calendar and sharing it" />
 
+<YouTube video="calendars-categories-and-colors" title="Video of color-coding events with categories" />
+
 ## Kinds of calendars
 
 <YouTube video="calendars-getting-started" title="Video of the kinds of calendars" start={21} end={72} />
@@ -182,12 +184,18 @@ Office calendars work the same way with their desk count: once that many people 
 
 ## Color-code with categories
 
+<YouTube video="calendars-categories-and-colors" title="Video of how an event gets its color" start={19} end={44} />
+
+<YouTube video="calendars-categories-and-colors" title="Video of making categories and putting events in them" start={43} end={132} />
+
 Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps you read your week at a glance. Open **Calendars > Categories**, choose **Add category**, give it a **Name** and a **Color**, and **Save**. Then pick it as an event's **Category** in the event editor.
 
-- An event shows in its category's color, unless the event picks its own color under **Color**.
+- An event is drawn in the first color that applies: the event's own color (**Use its own color**), then its category's color, then the color of its kind of event, and last its calendar's color.
 - The calendar view lists your categories under **Categories**, with **No category** at the end. Untick a category to hide its events; your choice is remembered in this browser.
 - Your categories are only yours. People who can manage all calendars can also tick **Everyone can use it**, to make a category everyone sees and uses (such as "Company holiday").
-- Deleting a category keeps its events; they show again in their kind's color.
+- Deleting a category (**Actions > Delete**) keeps its events; they show again in the color of their kind of event or their calendar, unless they have a color of their own.
+
+<YouTube video="calendars-categories-and-colors" title="Video of filtering by category and deleting a category" start={131} end={176} />
 
 ## See someone else's schedule
 
