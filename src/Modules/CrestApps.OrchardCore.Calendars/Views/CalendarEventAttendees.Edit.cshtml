@@ -1,0 +1,70 @@
+@model CalendarEventAttendeesViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["People"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(m => m.UserIds),
+            inputName = Html.NameFor(m => m.UserIds).ToString(),
+            endpoint = Url.RouteUrl("CalendarsUserSearch"),
+            initialItemsJson = Model.InitialUsersJson,
+            multiple = true,
+            buttonText = T["Invite users"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            smallButton = false,
+        })
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Guests">
+    <label asp-for="Guests" class="ocat-label">@T["Guests"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Guests" class="form-control" rows="2" placeholder="Jane Doe &lt;jane@contoso.com&gt;"></textarea>
+        <span asp-validation-for="Guests" class="text-danger"></span>
+        <span class="hint">@T["People outside the site, one per line, as an email address or a name followed by the address in angle brackets."]</span>
+    </div>
+</div>
+
+@if (Model.ResourceOptions.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="ResourceIds" class="ocat-label">@T["Rooms and equipment"]</label>
+        <div class="ocat-end">
+            <select asp-for="ResourceIds" asp-items="Model.ResourceOptions" class="selectpicker show-tick" multiple data-live-search="true" title="@T["None"]"></select>
+            <span class="hint">@T["Booking a room or a piece of equipment fails when it is already booked at that time."]</span>
+        </div>
+    </div>
+}
+
+@if (Model.Attendees.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Answers"]</span>
+        <div class="ocat-end">
+            <ul class="list-unstyled mb-0">
+                @foreach (var attendee in Model.Attendees)
+                {
+                    <li>
+                        @switch (attendee.Response)
+                        {
+                            case CalendarAttendeeResponse.Accepted:
+                                <i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>
+                                break;
+                            case CalendarAttendeeResponse.Declined:
+                                <i class="fa-solid fa-circle-xmark text-danger me-1" aria-hidden="true"></i>
+                                break;
+                            case CalendarAttendeeResponse.Tentative:
+                                <i class="fa-solid fa-circle-question text-warning me-1" aria-hidden="true"></i>
+                                break;
+                            default:
+                                <i class="fa-regular fa-circle text-secondary me-1" aria-hidden="true"></i>
+                                break;
+                        }
+                        @(attendee.Name ?? attendee.Email ?? attendee.ResourceCalendarId)
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}

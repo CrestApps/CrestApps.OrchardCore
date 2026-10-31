@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventUpdatedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Calendar Event Updated"])
+    </h4>
+</header>

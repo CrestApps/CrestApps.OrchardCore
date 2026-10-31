@@ -196,4 +196,50 @@ public sealed class AIVoiceSessionSummary
     /// Gets or sets the input tokens served from the provider's cache, when the provider reports them.
     /// </summary>
     public long? CachedInputTokens { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many answers the latency figures are measured over.
+    /// </summary>
+    public int LatencySamples { get; set; }
+
+    /// <summary>
+    /// Gets or sets the median time from the caller's turn to the AI's first audio, in milliseconds.
+    /// </summary>
+    public int? ResponseLatencyP50Ms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the 90th percentile of the time from the caller's turn to the AI's first audio, in milliseconds.
+    /// </summary>
+    public int? ResponseLatencyP90Ms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the 95th percentile of the time from the caller's turn to the AI's first audio, in milliseconds.
+    /// </summary>
+    public int? ResponseLatencyP95Ms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the longest time from the caller's turn to the AI's first audio, in milliseconds.
+    /// </summary>
+    public int? ResponseLatencyMaxMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the median model time per answer, in milliseconds.
+    /// </summary>
+    public int? ModelLatencyP50Ms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the median time the turn detector waited after the caller stopped, in milliseconds.
+    /// </summary>
+    public int? DetectorWaitP50Ms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the estimated cost of the call: the carrier's minutes and the AI's minutes or tokens, at the prices
+    /// in the AI settings.
+    /// </summary>
+    public decimal? EstimatedCost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency of <see cref="EstimatedCost"/>.
+    /// </summary>
+    public string CostCurrency { get; set; }
 }

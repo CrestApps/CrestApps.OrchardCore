@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.Scheduling.Deployments
+@model ShapeViewModel<SchedulingDeploymentStep>
+
+<h5>@T["Scheduling"]</h5>
+<span class="hint">
+    @T["Exports appointment types and resources."]
+    @if (Model.Value.IncludeAppointments)
+    {
+        @T["With the appointments."]
+    }
+    @if (Model.Value.IncludeWaitlist)
+    {
+        @T["With the waitlist."]
+    }
+</span>

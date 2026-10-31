@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -9,14 +11,17 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxVoiceAgentMediaProvider : IVoiceAgentMediaProvider
 {
     private readonly TelnyxApiClient _apiClient;
+    private readonly IOptionsMonitor<TelnyxOptions> _options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxVoiceAgentMediaProvider"/> class.
     /// </summary>
     /// <param name="apiClient">The typed Telnyx client.</param>
-    public TelnyxVoiceAgentMediaProvider(TelnyxApiClient apiClient)
+    /// <param name="options">The Telnyx options, for the connection and caller ID a side call is placed with.</param>
+    public TelnyxVoiceAgentMediaProvider(TelnyxApiClient apiClient, IOptionsMonitor<TelnyxOptions> options)
     {
         _apiClient = apiClient;
+        _options = options;
     }
 
     /// <inheritdoc/>
@@ -162,6 +167,90 @@ public sealed class TelnyxVoiceAgentMediaProvider : IVoiceAgentMediaProvider
         }
 
         var result = await _apiClient.TransferAsync(providerCallId, phoneNumber.Trim(), cancellationToken: cancellationToken);
+
+        return result.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> DialSideCallAsync(VoiceAgentSideCallRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var options = _options.CurrentValue;
+
+        if (!options.IsConfigured || string.IsNullOrWhiteSpace(request.PhoneNumber) || string.IsNullOrWhiteSpace(request.ProviderCallId))
+        {
+            return null;
+        }
+
+        var originate = new TelnyxOriginateRequest
+        {
+            ConnectionId = options.ConnectionId,
+            To = request.PhoneNumber.Trim(),
+            From = string.IsNullOrWhiteSpace(request.CallerId) ? options.DefaultOutboundCallerId : request.CallerId.Trim(),
+            TimeoutSeconds = request.RingTimeoutSeconds > 0 ? request.RingTimeoutSeconds : 30,
+            ClientState = new TelnyxOutboundBridgeState
+            {
+                Intent = TelnyxOutboundBridgeState.AiTransferLegIntent,
+                ActivityId = request.ActivityId,
+                PeerCallControlId = request.ProviderCallId,
+                Destination = request.PhoneNumber.Trim(),
+            }.ToClientStateJson(),
+        };
+
+        // A voicemail must not be briefed and bridged to the caller as if it were a person.
+        if (request.DetectAnsweringMachine)
+        {
+            originate.AdditionalFields["answering_machine_detection"] = "detect";
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.OutboundVoiceProfileId))
+        {
+            originate.AdditionalFields["outbound_voice_profile_id"] = options.OutboundVoiceProfileId;
+        }
+
+        var result = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+        return result.Succeeded && !string.IsNullOrWhiteSpace(result.CallControlId)
+            ? result.CallControlId
+            : null;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> BridgeAsync(string providerCallId, string otherProviderCallId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(otherProviderCallId))
+        {
+            return false;
+        }
+
+        var result = await _apiClient.BridgeAsync(providerCallId, otherProviderCallId, cancellationToken);
+
+        return result.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> PlayAudioAsync(string providerCallId, string audio, bool loop = true, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(audio))
+        {
+            return false;
+        }
+
+        var result = await _apiClient.PlaybackAsync(providerCallId, audio.Trim(), loop, cancellationToken);
+
+        return result.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> StopAudioAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return false;
+        }
+
+        var result = await _apiClient.StopPlaybackAsync(providerCallId, cancellationToken);
 
         return result.Succeeded;
     }

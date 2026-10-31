@@ -1,0 +1,29 @@
+@model NewAppointmentViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SchedulingAppointmentsNew" title="@T["Book an Appointment"]">
+        <breadcrumb-item id="SchedulingAppointments" action="Index" controller="Appointments" area="CrestApps.OrchardCore.Scheduling">@T["Appointments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.TypeOptions.Count == 0)
+{
+    <div class="alert alert-info">@T["Add an appointment type and its resources first."]</div>
+    return;
+}
+
+<form method="get" asp-action="New" class="card text-bg-theme mb-3">
+    <div class="card-body row gx-2 gy-2 align-items-end">
+        <div class="col-md-6">
+            <label class="form-label" for="AppointmentTypeId">@T["Appointment type"]</label>
+            <select id="AppointmentTypeId" name="AppointmentTypeId" asp-items="Model.TypeOptions" class="form-select"></select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="Date">@T["Day"]</label>
+            <input id="Date" name="Date" type="date" value="@Model.Date" class="form-control" />
+        </div>
+        <div class="col-md-2"><button type="submit" class="btn btn-secondary w-100">@T["Show times"]</button></div>
+    </div>
+</form>
+
+<partial name="_BookingForm" model="Model" />

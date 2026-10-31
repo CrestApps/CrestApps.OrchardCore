@@ -382,6 +382,7 @@ html[data-manual='technical'] .navbar__link--active {
 }
 
 .sidebar-icon--book-a { --sidebar-icon: url('/img/icons/book-a.svg'); }
+.sidebar-icon--calendar-days { --sidebar-icon: url('/img/icons/calendar-days.svg'); }
 .sidebar-icon--boxes { --sidebar-icon: url('/img/icons/boxes.svg'); }
 .sidebar-icon--code-xml { --sidebar-icon: url('/img/icons/code-xml.svg'); }
 .sidebar-icon--compass { --sidebar-icon: url('/img/icons/compass.svg'); }

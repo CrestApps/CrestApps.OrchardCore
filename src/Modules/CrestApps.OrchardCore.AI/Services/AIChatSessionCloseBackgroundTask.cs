@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -166,6 +167,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         AIChatSession chatSession,
         ILogger logger)
     {
+        await AIWebhookPublisher.TryPublishAsync(serviceProvider, AIWebhookEvents.ConversationAnalyzed, AIWebhookPayloads.Analyzed(chatSession, profile));
+
         var workflowManager = serviceProvider.GetService<IWorkflowManager>();
 
         if (workflowManager is null)

@@ -153,4 +153,9 @@ public sealed class TelnyxCallEvent
     /// that could not be kept open.
     /// </summary>
     public string FailureReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the custom SIP headers the call arrived with, as name and value, in the order Telnyx listed them.
+    /// </summary>
+    public IReadOnlyList<KeyValuePair<string, string>> CustomHeaders { get; set; } = [];
 }

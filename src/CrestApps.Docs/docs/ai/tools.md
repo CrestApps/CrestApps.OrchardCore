@@ -42,6 +42,20 @@ This catalog only lists functions registered in code. Functions created by admin
 | `listTimeZones` | Retrieves a list of the available time zones in the system. |
 | `listAIProfiles` | Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing. |
 | `viewAIProfile` | Retrieves detailed configuration for a specific AI profile by ID or name. |
+| `listAIConversations` | Lists AI conversations on every channel, newest first, by profile, status and time. |
+| `viewAIConversation` | Reads a conversation's transcript, variables, extracted fields, analysis, evaluations and flow stages. |
+| `getAIContactMemory` | Reads what the AI remembers about a contact. |
+
+### AI quality tools
+
+With the **AI Quality** feature on, the admin AI agent can also look at QA results and run tests, so an admin can ask questions such as "why did calls fail yesterday?" and get proposed fixes to review.
+
+| Function | Description |
+| --- | --- |
+| `summarizeAIQuality` | Sums up QA evaluations over a period: count, average score, pass rate, resolution, sentiment, the most common issues, the questions asked most and the trend by day. |
+| `listAITestCases` | Lists the simulation test cases. |
+| `runAITests` | Queues test cases to run in the background and returns the batch. |
+| `listAIAlerts` | Lists the alert rules and which are open. |
 
 ### Recipe tools
 
@@ -178,6 +192,34 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | List User Memories | Enumerates the current user's existing memories. |
 | Save User Memory | Creates or updates a named memory entry for the current user. |
 | Remove User Memory | Removes a saved memory entry when it should be forgotten. |
+
+### Calendar tools
+
+**Available when:** `CrestApps.OrchardCore.Calendars` with `CrestApps.OrchardCore.AI` on
+
+These tools act for the signed-in person using the AI, with that person's access to each calendar, and refuse anonymous callers. See [Calendars](../modules/calendars.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `listCalendars` | Lists the calendars the user can see. |
+| `findCalendarEvents` | Lists the events on the user's calendars between two times (at most 62 days apart). |
+| `findFreeTime` | Finds times when the user and others are free, optionally together with calendars such as a room (at most 31 days). |
+| `createCalendarEvent` | Adds an event to one of the user's calendars, or to their personal calendar when none is named. |
+| `moveCalendarEvent` | Moves an event, or one occurrence of a repeating event, to another time. |
+| `cancelCalendarEvent` | Cancels an event, or one occurrence of a repeating event. |
+
+### Scheduling tools
+
+**Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on
+
+These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**. See [Scheduling](../modules/scheduling.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `listAppointmentTypes` | Lists the kinds of appointments that can be booked. |
+| `findAppointmentSlots` | Finds open times for an appointment. |
+| `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned. |
+| `changeAppointment` | Cancels or moves a customer's appointment. The customer proves it is theirs with the manage code, or the email or phone number on the appointment. |
 
 ## Tool permissions
 

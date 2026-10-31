@@ -957,6 +957,26 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task ACallWhoseQueueIsClosed_IsToldNobodyIsThere_AndOffersNoTransfer()
+    {
+        // Arrange
+        // Offered the transfer after hours, the model told the caller it was connecting them, and the call then ended
+        // with a callback: nobody was there to take it.
+        var harness = new RealtimeHarness();
+        harness.HandoffInstructions = null;
+        harness.NoHandoffInstructions = VoiceCallGuidance.NobodyToHandTo;
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var orchestration = harness.Orchestrator.Contexts.Single();
+
+        Assert.DoesNotContain(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.MustIncludeTools);
+        Assert.Contains(VoiceCallGuidance.NobodyToHandTo, orchestration.SystemMessageBuilder.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TheSessionIsToldWhoItIsCalling()
     {
         // Arrange
@@ -1350,7 +1370,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.True(harness.Media.Stopped);
     }
 
-    private sealed class RealtimeHarness
+    private sealed partial class RealtimeHarness
     {
         /// <summary>
         /// The instant the harness clock reports, so a test can assert a turn was stamped with it.
@@ -1408,7 +1428,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(Mock.Of<global::OrchardCore.ContentManagement.IContentManager>(), Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
                 Commands, Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(),
                 clock.Object,
-                NullLogger<RealtimeVoiceConversationRunner>.Instance);
+                NullLogger<RealtimeVoiceConversationRunner>.Instance, profileManager: ProfileManager.Object);
         }
 
         public Mock<ISession> DocumentSession { get; }
@@ -1539,6 +1559,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public string HandoffInstructions { get; set; }
 
         /// <summary>
+        /// What the loop passes instead when the call's handoff queue is closed now.
+        /// </summary>
+        public string NoHandoffInstructions { get; set; }
+
+        /// <summary>
         /// Who the call is to, as the loop resolves it from the contact.
         /// </summary>
         public string ContactName { get; set; }
@@ -1575,6 +1600,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 PhoneMenuReached = PhoneMenuReached,
                 EndCallOnVoicemail = EndCallOnVoicemail,
                 HandoffInstructions = HandoffInstructions,
+                NoHandoffInstructions = NoHandoffInstructions,
                 ContactName = ContactName,
                 RecordingDisclosure = RecordingDisclosure,
 
@@ -1602,7 +1628,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.NotNull(harness.Orchestrator.InvocationScopeAtStart);
     }
 
-    private sealed class RecordingRealtimeOrchestrator : IRealtimeOrchestrator
+    private sealed partial class RecordingRealtimeOrchestrator : IRealtimeOrchestrator
     {
         private readonly IRealtimeConversation _conversation;
 

@@ -28,7 +28,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 /// Assembles what the workspace page shows: the customer list, and the open conversation with a tab per channel.
 /// Kept out of the controller so the controller stays about requests and the channel logic stays in one place.
 /// </summary>
-public sealed class MessagingWorkspaceBuilder
+public sealed partial class MessagingWorkspaceBuilder
 {
     /// <summary>
     /// The most bubbles one page of a thread loads.
@@ -154,6 +154,7 @@ public sealed class MessagingWorkspaceBuilder
         AgentProfile currentAgent,
         string show,
         string channel,
+        bool unreadOnly,
         int page,
         string selectedCustomerKey,
         CancellationToken cancellationToken)
@@ -191,6 +192,10 @@ public sealed class MessagingWorkspaceBuilder
             _ => MessagingInboxFilter.All,
         };
 
+        // "Unread only" narrows whichever tab is open, and its counts, to the conversations nobody has read yet. It
+        // has no meaning for the favorites, which list customers rather than conversations.
+        viewModel.UnreadOnly = unreadOnly && !viewModel.ShowFavorites;
+
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab, int skip, int take) => new()
         {
             AgentId = scope.AgentId,
@@ -198,6 +203,7 @@ public sealed class MessagingWorkspaceBuilder
             IncludeAll = scope.IncludeAll,
             Filter = tab,
             Channel = viewModel.ChannelFilter,
+            UnreadOnly = viewModel.UnreadOnly,
             Skip = skip,
             Take = take,
         };
@@ -244,7 +250,26 @@ public sealed class MessagingWorkspaceBuilder
             BuildQuery(filter, (currentPage - 1) * pageSize, pageSize),
             cancellationToken);
 
-        foreach (var group in InboxRowGrouping.Group(conversations))
+        var groups = InboxRowGrouping.Group(conversations).ToList();
+
+        // Opening a conversation marks it read, which would drop it out of an unread-only list while the agent is
+        // still answering it; the open customer keeps their row until the agent moves on.
+        if (viewModel.UnreadOnly &&
+            !string.IsNullOrEmpty(selectedCustomerKey) &&
+            !groups.Any(group => string.Equals(group.CustomerKey, selectedCustomerKey, StringComparison.Ordinal)))
+        {
+            var selectedGroup = await FindSelectedGroupAsync(user, selectedCustomerKey, viewModel.ChannelFilter, cancellationToken);
+
+            if (selectedGroup is not null)
+            {
+                var selectedUtc = selectedGroup.Latest.LastMessageUtc ?? selectedGroup.Latest.CreatedUtc;
+                var index = groups.FindIndex(group => (group.Latest.LastMessageUtc ?? group.Latest.CreatedUtc) < selectedUtc);
+
+                groups.Insert(index < 0 ? groups.Count : index, selectedGroup);
+            }
+        }
+
+        foreach (var group in groups)
         {
             viewModel.Rows.Add(new InboxRow
             {
@@ -261,80 +286,6 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return viewModel;
-    }
-
-    private async Task<MessagingConversation> FindFavoriteConversationAsync(ClaimsPrincipal user, MessagingFavorite favorite, CancellationToken cancellationToken)
-    {
-        var candidates = (await _conversationStore.GetForCustomerAsync(favorite.CustomerKey, cancellationToken))?.ToList() ?? [];
-
-        // A customer starred by their number, who has since been linked to a contact, is found by the number.
-        if (candidates.Count == 0 && !string.IsNullOrEmpty(favorite.Channel) && !string.IsNullOrEmpty(favorite.ContactAddress))
-        {
-            var byAddress = await _conversationStore.FindByContactAsync(favorite.Channel, favorite.ContactAddress, cancellationToken);
-
-            if (byAddress is not null)
-            {
-                candidates.Add(byAddress);
-            }
-        }
-
-        foreach (var conversation in candidates.OrderByDescending(item => item.LastMessageUtc ?? item.CreatedUtc))
-        {
-            if (await AuthorizeAsync(user, conversation, ConversationOperation.View))
-            {
-                return conversation;
-            }
-        }
-
-        return null;
-    }
-
-    // The starred customers, named by their contact record as it reads now, and by the name they were starred under
-    // when the record is gone.
-    private async Task<IList<FavoriteViewModel>> BuildFavoritesAsync(IReadOnlyList<MessagingFavorite> favorites, string selectedCustomerKey)
-    {
-        if (favorites.Count == 0)
-        {
-            return [];
-        }
-
-        var contactIds = favorites
-            .Select(favorite => favorite.ContactContentItemId)
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        var contacts = contactIds.Length == 0
-            ? new Dictionary<string, ContentItem>(StringComparer.Ordinal)
-            : (await _contentManager.GetAsync(contactIds, VersionOptions.Latest))
-                .Where(item => item is not null)
-                .GroupBy(item => item.ContentItemId, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-
-        var result = new List<FavoriteViewModel>();
-
-        foreach (var favorite in favorites)
-        {
-            var channel = _channelResolver.Get(favorite.Channel);
-            var addressDisplay = channel?.FormatAddress(favorite.ContactAddress) ?? favorite.ContactAddress;
-            var contactName = !string.IsNullOrEmpty(favorite.ContactContentItemId) && contacts.TryGetValue(favorite.ContactContentItemId, out var contact)
-                ? contact.DisplayText
-                : null;
-
-            result.Add(new FavoriteViewModel
-            {
-                Favorite = favorite,
-                Name = !string.IsNullOrWhiteSpace(contactName)
-                    ? contactName
-                    : !string.IsNullOrWhiteSpace(favorite.DisplayName) ? favorite.DisplayName : addressDisplay,
-                AddressDisplay = addressDisplay,
-                ChannelIconCssClass = channel?.IconCssClass,
-                IsSelected = !string.IsNullOrEmpty(selectedCustomerKey) &&
-                    string.Equals(favorite.CustomerKey, selectedCustomerKey, StringComparison.Ordinal),
-            });
-        }
-
-        return result;
     }
 
     /// <summary>

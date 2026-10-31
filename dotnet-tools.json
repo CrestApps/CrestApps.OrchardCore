@@ -8,6 +8,13 @@
         "dotnet-coverage"
       ],
       "rollForward": false
+    },
+    "microsoft.openapi.kiota": {
+      "version": "1.36.0",
+      "commands": [
+        "kiota"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -1,0 +1,106 @@
+.calendar-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+  vertical-align: middle;
+}
+
+.calendar-list .form-check-input:checked {
+  background-color: var(--calendar-color, var(--bs-primary));
+  border-color: var(--calendar-color, var(--bs-primary));
+}
+
+.calendar-list .form-check-input {
+  border-color: var(--calendar-color, var(--bs-border-color));
+}
+
+#calendar-view .fc {
+  --fc-border-color: var(--bs-border-color);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bs-tertiary-bg);
+  --fc-list-event-hover-bg-color: var(--bs-tertiary-bg);
+  --fc-today-bg-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+#calendar-picker-modal .fc {
+  --fc-border-color: var(--bs-border-color);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bs-tertiary-bg);
+  --fc-today-bg-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+#calendar-picker-modal .fc .fc-toolbar-title {
+  font-size: 1.1rem;
+}
+
+#calendar-view .fc .fc-toolbar-title {
+  font-size: 1.25rem;
+}
+
+/* While a period's events load. */
+#calendar-view.calendar-loading .fc-view-harness {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+#calendar-view .fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Day names and numbers read as headings, not as blue links. */
+#calendar-view .fc .fc-col-header-cell-cushion,
+#calendar-view .fc .fc-daygrid-day-number,
+#calendar-view .fc .fc-list-day-cushion a {
+  color: var(--bs-body-color);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+#calendar-view .fc .fc-col-header-cell-cushion:hover,
+#calendar-view .fc .fc-daygrid-day-number:hover {
+  text-decoration: underline;
+}
+
+/* A narrow calendar (see calendar-view.js) gets a smaller title, buttons and headers. */
+#calendar-view.calendar-narrow .fc .fc-toolbar-title {
+  font-size: 1rem;
+}
+
+#calendar-view.calendar-narrow .fc .fc-button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+#calendar-view.calendar-narrow .fc .fc-col-header-cell-cushion {
+  padding: 2px;
+  font-size: 0.875rem;
+}
+
+#calendar-view.calendar-narrow .fc .fc-timegrid-slot-label-cushion,
+#calendar-view.calendar-narrow .fc .fc-timegrid-axis-cushion {
+  font-size: 0.75rem;
+}
+
+.calendar-availability td {
+  min-width: 0.9rem;
+  padding: 0;
+  border-left: 1px solid var(--bs-border-color);
+}
+
+.calendar-availability td.busy,
+.calendar-availability-key.busy {
+  background-color: var(--bs-danger);
+}
+
+.calendar-availability td.tentative,
+.calendar-availability-key.tentative {
+  background-color: var(--bs-warning);
+}
+
+.calendar-availability td.free,
+.calendar-availability-key.free {
+  background-color: rgba(var(--bs-success-rgb), 0.25);
+  color: var(--bs-body-color);
+}

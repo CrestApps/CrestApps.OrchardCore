@@ -1,0 +1,25 @@
+@model ShapeViewModel<DataSetRefreshRun>
+
+@{
+    var run = Model.Value;
+    var duration = run.CompletedUtc is { } completed ? completed - run.StartedUtc : (TimeSpan?)null;
+}
+
+<div class="admin-list-secondary">
+    <span>@T["{0} rows read; {1} rows published.", run.RowsRead, run.Status == DataSetRefreshStatus.Succeeded ? run.RowCount : 0]</span>
+
+    @if (duration is { } took)
+    {
+        <span class="text-muted">@T["Took {0:0.#} s.", took.TotalSeconds]</span>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(run.SchemaChanges))
+    {
+        <div class="text-warning mt-1"><i class="fa-solid fa-table-columns me-1" aria-hidden="true"></i>@T["The source's fields changed. {0}", run.SchemaChanges]</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(run.Error))
+    {
+        <div class="text-danger mt-1"><i class="fa-solid fa-circle-exclamation me-1" aria-hidden="true"></i>@run.Error</div>
+    }
+</div>

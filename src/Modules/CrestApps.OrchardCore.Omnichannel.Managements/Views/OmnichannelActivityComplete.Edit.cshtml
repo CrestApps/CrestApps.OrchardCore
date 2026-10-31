@@ -283,12 +283,20 @@
                         card.appendChild(cardBody);
                         actionsList.appendChild(card);
 
+                        let dateInput = null;
+
                         if (action.requiresScheduleDate) {
-                            const dateInput = card.querySelector('.schedule-date-input');
+                            dateInput = card.querySelector('.schedule-date-input');
                             if (dateInput) {
                                 initFlatpickr(dateInput);
                             }
                         }
+
+                        // Other features add to a follow-up card (such as placing it on the agent's calendar).
+                        actionsList.dispatchEvent(new CustomEvent('omnichannel:followup-card', {
+                            bubbles: true,
+                            detail: { card: card, cardBody: cardBody, action: action, dateInput: dateInput }
+                        }));
                     });
 
                     previewContainer.classList.remove("d-none");

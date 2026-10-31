@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestRun>
+
+@switch (Model.Value.Status)
+{
+    case AITestRunStatus.Passed:
+        <span class="badge ta-badge fw-normal text-bg-success" data-bs-toggle="tooltip" title="@T["Result"]"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Passed"]</span>
+        break;
+    case AITestRunStatus.Failed:
+        <span class="badge ta-badge fw-normal text-bg-danger" data-bs-toggle="tooltip" title="@T["Result"]"><i class="fa-solid fa-circle-xmark me-1" aria-hidden="true"></i>@T["Failed"]</span>
+        break;
+    case AITestRunStatus.Error:
+        <span class="badge ta-badge fw-normal text-bg-warning" data-bs-toggle="tooltip" title="@T["Result"]"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["Error"]</span>
+        break;
+    case AITestRunStatus.Running:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Result"]"><i class="fa-solid fa-spinner fa-spin text-secondary me-1" aria-hidden="true"></i>@T["Running"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Result"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@T["Queued"]</span>
+        break;
+}
+
+@if (Model.Value.Score is { } score)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Score out of 100"]"><i class="fa-solid fa-gauge text-secondary me-1" aria-hidden="true"></i>@score</span>
+}
+
+@if (Model.Value.ProfileVersion is { } version)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Profile version"]"><i class="fa-solid fa-code-branch text-secondary me-1" aria-hidden="true"></i>@T["Version {0}", version]</span>
+}

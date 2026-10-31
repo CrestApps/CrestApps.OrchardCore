@@ -38,6 +38,10 @@ internal sealed class AIVoiceSessionMeter
     private int _idlePrompts;
     private long? _echoHeldMilliseconds;
     private bool _failed;
+    private readonly List<int> _responseLatencies = [];
+    private readonly List<int> _modelLatencies = [];
+    private readonly List<int> _detectorWaits = [];
+    private (long LineTicks, int ModelMs)? _pendingAnswer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIVoiceSessionMeter"/> class.
@@ -118,6 +122,51 @@ internal sealed class AIVoiceSessionMeter
         lock (_lock)
         {
             _assistantOpenedTicks ??= ticks;
+
+            // The first audio of an answer to the caller's line: the whole wait they heard.
+            if (_pendingAnswer is { } pending && ticks >= pending.LineTicks)
+            {
+                _responseLatencies.Add(ToWholeMilliseconds(ticks - pending.LineTicks));
+                _modelLatencies.Add(pending.ModelMs);
+                _pendingAnswer = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The assistant answered a turn: how long the caller waited for its first audio, and the parts of it seen.
+    /// </summary>
+    /// <param name="responseMs">From the caller's turn to the first audio.</param>
+    /// <param name="modelMs">The model's part, if seen.</param>
+    /// <param name="detectorWaitMs">The turn detector's wait after the caller stopped, if seen.</param>
+    public void TurnAnswered(int responseMs, int? modelMs, int? detectorWaitMs)
+    {
+        lock (_lock)
+        {
+            _responseLatencies.Add(Math.Max(0, responseMs));
+
+            if (modelMs is { } model)
+            {
+                _modelLatencies.Add(Math.Max(0, model));
+            }
+
+            if (detectorWaitMs is { } wait)
+            {
+                _detectorWaits.Add(Math.Max(0, wait));
+            }
+        }
+    }
+
+    /// <summary>
+    /// A turn-based answer to the caller's line was written; its latency is counted when its speech starts to play.
+    /// </summary>
+    /// <param name="lineTicks">When the caller's line was taken, in UTC ticks.</param>
+    /// <param name="modelMs">How long the model took.</param>
+    public void CallerLineAnswered(long lineTicks, int modelMs)
+    {
+        lock (_lock)
+        {
+            _pendingAnswer = (lineTicks, Math.Max(0, modelMs));
         }
     }
 
@@ -272,6 +321,9 @@ internal sealed class AIVoiceSessionMeter
                 BargeIns = _bargeIns,
                 IdlePrompts = _idlePrompts,
                 EchoHeldMs = _echoHeldMilliseconds,
+                ResponseLatenciesMs = [.. _responseLatencies],
+                ModelLatenciesMs = [.. _modelLatencies],
+                DetectorWaitsMs = [.. _detectorWaits],
             };
         }
     }
@@ -313,4 +365,7 @@ internal sealed class AIVoiceSessionMeter
 
     private static long? ToMilliseconds(long? ticks)
         => ticks.HasValue ? ToMilliseconds(ticks.Value) : null;
+
+    private static int ToWholeMilliseconds(long ticks)
+        => (int)Math.Min(int.MaxValue, ticks / TimeSpan.TicksPerMillisecond);
 }

@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentHoldExpiredEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> @T["Reservation Hold Expired"]</h4>
+<p>@T["Starts when a held time runs out before the booking is finished."]</p>

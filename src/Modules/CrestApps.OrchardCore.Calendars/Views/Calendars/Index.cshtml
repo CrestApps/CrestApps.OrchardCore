@@ -1,0 +1,53 @@
+@model CalendarListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarsIndex" title="@T["Calendars"]" />
+</zone>
+
+<form asp-action="Index" method="get" class="no-multisubmit" id="calendars-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" name="search" value="@Model.Search" class="form-control" placeholder="@T["Search"]" type="search" autocomplete="off" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CreatableTypes.Count > 0)
+                {
+                    <div class="col-auto">
+                        <div class="dropdown">
+                            <button class="btn btn-secondary create dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">@T["Add calendar"]</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @foreach (var type in Model.CreatableTypes)
+                                {
+                                    <li>
+                                        <a class="dropdown-item" asp-action="Create" asp-route-type="@type.Name" title="@type.Description">
+                                            <i class="@type.Icon text-secondary me-1" aria-hidden="true"></i>@type.DisplayName
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+@{
+    var filters = await New.CalendarListFilters(Types: Model.TypeOptions, Selected: Model.Type);
+    Model.List.ToolbarActions = filters;
+}
+
+<admin-list name="Calendars" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> There are no calendars at the moment."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Type" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

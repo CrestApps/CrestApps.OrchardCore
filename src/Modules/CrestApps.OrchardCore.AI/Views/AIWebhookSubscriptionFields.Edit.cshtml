@@ -1,0 +1,68 @@
+@using CrestApps.OrchardCore.AI.Core.Webhooks
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIWebhookSubscriptionViewModel
+
+@{
+    var descriptions = new Dictionary<string, string>
+    {
+        [AIWebhookEvents.ConversationStarted] = T["An AI conversation started, on any channel."].Value,
+        [AIWebhookEvents.ConversationEnded] = T["An AI conversation ended."].Value,
+        [AIWebhookEvents.ConversationAnalyzed] = T["A conversation's analysis finished: its extracted fields and results."].Value,
+        [AIWebhookEvents.ConversationTransferred] = T["An AI call was handed to a person or transferred to a number."].Value,
+        [AIWebhookEvents.ConversationEvaluated] = T["A conversation was scored, by a QA cohort, a test or a workflow."].Value,
+        [AIWebhookEvents.AlertTriggered] = T["An AI alert rule crossed its threshold."].Value,
+        [AIWebhookEvents.AlertResolved] = T["An AI alert rule is back within its threshold."].Value,
+    };
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Url">
+    <label asp-for="Url" class="ocat-label ocat-label-required">@T["URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="Url" type="url" class="form-control" placeholder="https://" />
+        <span asp-validation-for="Url" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Secret">
+    <label asp-for="Secret" class="ocat-label @(Model.HasSecret ? "" : "ocat-label-required")">@T["Signing secret"]</label>
+    <div class="ocat-end">
+        <input asp-for="Secret" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
+        <span asp-validation-for="Secret" class="text-danger"></span>
+        <span class="hint">@(Model.HasSecret ? T["A secret is saved. Leave this empty to keep it."] : T["Each request carries X-Webhook-Signature: v1= and the hex HMAC-SHA256 of \"{{timestamp}}.{{body}}\" keyed with this secret, and X-Webhook-Timestamp. Check both before trusting the request."])</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Events">
+    <label class="ocat-label ocat-label-required">@T["Events"]</label>
+    <div class="ocat-end">
+        @foreach (var eventName in AIWebhookEvents.All)
+        {
+            var id = "event-" + eventName.Replace('.', '-');
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Events)" value="@eventName" id="@id" checked="@Model.Events.Contains(eventName)" />
+                <label class="form-check-label" for="@id"><span class="font-monospace">@eventName</span></label>
+                <span class="hint dashed">@descriptions[eventName]</span>
+            </div>
+        }
+        <span asp-validation-for="Events" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Send events"]</label>
+            <span class="hint dashed">@T["Failed deliveries are tried again after 1, 5 and 30 minutes, 2 and 12 hours. A refusal (4xx other than 408 and 429) is not retried."]</span>
+        </div>
+    </div>
+</div>

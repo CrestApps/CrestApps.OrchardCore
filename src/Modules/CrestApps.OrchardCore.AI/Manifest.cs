@@ -80,3 +80,36 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.Quality,
+    Name = "AI Quality",
+    Description = "Simulation test cases you run against AI profiles from the admin or a CI pipeline, QA cohorts that score a sample of real conversations, a QA dashboard, and alert rules that watch the AI's metrics.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.CustomLlm,
+    Name = "Custom LLM (WebSocket)",
+    Description = "A provider that sends each turn to your own server over a WebSocket and streams its reply back, for a model or agent you host that does not speak an OpenAI-compatible API.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.Webhooks,
+    Name = "AI Webhooks",
+    Description = "Posts signed AI events (a conversation starting, ending, analyzed, transferred or scored, an alert triggering or resolving) to outside addresses, with retries and a delivery log.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]

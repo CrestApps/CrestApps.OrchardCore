@@ -63,15 +63,11 @@ public sealed partial class VoiceAgentConversationLoop
         // When a live agent is available, enable the transfer tool for this turn and guide the model on when to
         // escalate. Guidance is injected as a leading system message so the persona system prompt is preserved.
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
+        var (transferOffered, handoffGuidance) = await OfferHandoffAsync(handoffService, flowSettings, cancellationToken);
 
-        if (handoffService is not null)
+        if (!string.IsNullOrEmpty(handoffGuidance))
         {
-            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
-
-            if (!string.IsNullOrEmpty(handoffInstructions))
-            {
-                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
-            }
+            transcript.Insert(0, new ChatMessage(ChatRole.System, handoffGuidance));
         }
 
         // The same thing the live session is told, because a turn-based call is the same call: somebody has to
@@ -109,7 +105,11 @@ public sealed partial class VoiceAgentConversationLoop
         // Attach the profile's tools and the call's own once the context exists. The automated conversation calls
         // the completion service directly rather than through the tool orchestrator, so the tools must be added here
         // or the model never receives them. The SMS handler does the same.
-        await AttachCallToolsAsync(context, offerTransfer: handoffService is not null, cancellationToken);
+        await AttachCallToolsAsync(context, offerTransfer: transferOffered, cancellationToken);
+
+        // A slow tool must not leave the caller in silence: each tool has a time limit, and the caller hears a short
+        // filler line when one runs long.
+        using var toolFiller = await LimitCallToolsAsync(context, activity, cancellationToken);
 
         var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
@@ -124,7 +124,15 @@ public sealed partial class VoiceAgentConversationLoop
         _endCallTurn.Reset();
 
         using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
+        var lineUtc = _clock.UtcNow;
+        var modelTime = System.Diagnostics.Stopwatch.StartNew();
         var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
+
+        // A reply to the caller, timed for the call's latency figures; a voicemail message or a briefing is not one.
+        if (string.IsNullOrEmpty(turnGuidance) && activity is not null)
+        {
+            _sessionTracker.TurnBasedAnswer(activity.ItemId, lineUtc, (int)modelTime.ElapsedMilliseconds);
+        }
 
         var reply = completion?.Messages?.FirstOrDefault()?.Text;
         var handoffRequested = handoffService is not null && _handoffTurn.HandoffRequested;

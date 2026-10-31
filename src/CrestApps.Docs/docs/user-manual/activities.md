@@ -40,6 +40,16 @@ Narrow the list with the filters: **Urgency**, **Subject**, **Channel**, **Time 
 5. Check the preview of what happens next, for example **Try Again** with its date, or a **New Activity** for another subject. Change a follow-up's **Schedule at** or add **Preparation notes** for whoever works it. The notes become the instructions of the follow-up activity.
 6. Click **Complete**. The subject flow runs straight away.
 
+### Put a follow-up on your calendar
+
+With **Calendars** on, each follow-up with a **Schedule at** time also has **Add to my calendar**. Tick it when you've agreed a time with the person, such as "call back tomorrow at 10", so you don't miss it:
+
+1. Tick **Add to my calendar**.
+2. Optionally click **Choose on my calendar**. Your calendar opens with your events on it, so you can see when you're free. Click (or drag across) the time you want; it goes into **Schedule at**.
+3. Click **Complete**. The follow-up goes on the calendar of the person it's assigned to (you, unless the subject flow assigns it to someone else) as a 15-minute event, with the contact's name, number and your preparation notes.
+
+The activity and its event then stay at the same time: rescheduling the activity moves the event, and dragging the event on the calendar reschedules the activity while it hasn't been worked yet. Cancelling the activity cancels the event. Cancelling or deleting the event takes the activity off the calendar but leaves the activity as it is. The event reminds you before it starts, like any calendar event.
+
 In the screencast, the agent completes an activity with *No Answer*, and the subject flow's **Try Again** action schedules the next try.
 
 If the activity is already finished, you are sent back to where you came from with the warning *This activity was already completed, so your disposition was not recorded.* The outcome already on record is kept. This is normal, not an error: someone else may have completed it, or an automated call that handed the customer to you, or a caller who reached voicemail, may have closed it while you were still wrapping up.

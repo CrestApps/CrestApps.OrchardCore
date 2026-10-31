@@ -46,7 +46,7 @@ public sealed class AICompletionWithConfigA2AConnectionsDisplayDriver : DisplayD
         {
             var interaction = activity.Interaction;
 
-            model.Connections = connections
+            model.A2AConnections = connections
                 .Select(entry => new ToolEntry
                 {
                     ItemId = entry.ItemId,
@@ -70,7 +70,7 @@ public sealed class AICompletionWithConfigA2AConnectionsDisplayDriver : DisplayD
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+        var ids = model.A2AConnections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         var interaction = activity.Interaction;
 

@@ -58,4 +58,19 @@ public sealed class AIVoiceSessionMeasurements
     /// Gets or sets how much caller audio was held back as the assistant's echo, in milliseconds.
     /// </summary>
     public long? EchoHeldMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets each answer's time from the caller's turn to the assistant's first audio, in milliseconds.
+    /// </summary>
+    public List<int> ResponseLatenciesMs { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets each answer's model time, in milliseconds.
+    /// </summary>
+    public List<int> ModelLatenciesMs { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how long the turn detector waited after the caller stopped, per answer where it was seen.
+    /// </summary>
+    public List<int> DetectorWaitsMs { get; set; } = [];
 }

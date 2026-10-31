@@ -1,0 +1,9 @@
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@model DataConnectorDeploymentStepViewModel
+
+<partial name="_DataConnectorDeploymentStepFields" model="Model" view-data='new ViewDataDictionary(ViewData)
+{
+    ["Label"] = T["Connected Data Sets"],
+    ["IncludeAllLabel"] = T["Include all data sets"],
+    ["Hint"] = T["The data sets to export. The rows of imported data sets stay behind: the importing site imports them itself."],
+}' />

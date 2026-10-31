@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -40,6 +41,10 @@ internal static class VoiceCallGuidance
     /// was followed by "let me just wrap this up with you" and a two-sentence goodbye, twelve seconds of talking
     /// before the line could drop.
     /// </para>
+    /// <para>
+    /// A confirmed detail stays confirmed: live, a customer said yes to their email being read back, and when they
+    /// then said "Bye." the model read the email back and asked again, leaving them a question instead of a goodbye.
+    /// </para>
     /// </remarks>
     public const string EndingTheCall =
         "You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
@@ -51,7 +56,10 @@ internal static class VoiceCallGuidance
         "or is being transferred to a person. When you read back details the customer gave you to confirm them, " +
         "only a clear yes confirms them: an answer you could not make out, or one that does not plainly say yes, " +
         "is not a confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the " +
-        "corrected details back before you go on. Information you give the customer needs no confirmation: say it " +
+        "corrected details back before you go on. Once the customer has said yes to a detail, it is confirmed: never " +
+        "read it back or ask about it again, not even as you close. When the customer says goodbye, the conversation " +
+        "has finished: say goodbye back and end the call, and do not ask them another question. " +
+        "Information you give the customer needs no confirmation: say it " +
         "once, and repeat it only if they ask. Never make up a phone number, address, price or other detail you " +
         "were not given; if you do not have it, say so. Never tell the customer something is booked, confirmed or " +
         "done unless one of your tools did it, and never say you will check something and come back to them unless a " +
@@ -83,6 +91,38 @@ internal static class VoiceCallGuidance
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.
     /// </summary>
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;
+
+    /// <summary>
+    /// What the model is told on a call that would hand a caller to a person, when nobody can take them now: the queue
+    /// the handoff goes to is closed.
+    /// </summary>
+    /// <remarks>
+    /// Told it may transfer, the model promised the caller a person ("connecting you now") and the call then ended with
+    /// a callback, the queue being closed. So it is not offered the transfer then, and told why, so a caller who asks
+    /// for somebody hears that nobody is there and is offered a message instead.
+    /// </remarks>
+    public const string NobodyToHandTo =
+        "## When the customer asks for a person\n\n" +
+        "Nobody can take this call right now: the people who answer are outside their hours. If the customer asks " +
+        "for a person, say so plainly and offer to take a message -- their name, their number and what they need -- " +
+        "so that someone calls them back. Never say you are connecting or transferring them, and never promise when " +
+        "they will be called.";
+
+    /// <summary>
+    /// What the model is told, with the transfer, when the queue the handoff goes to is closed now but the transfer books
+    /// a callback for when it opens.
+    /// </summary>
+    /// <remarks>
+    /// The transfer's own guidance and reply ask the model to say it is connecting the customer, which after hours is
+    /// not what happens: the customer is called back later. So it is told what the transfer does now, to say it in the
+    /// call's language, rather than the fixed English line the provider would read.
+    /// </remarks>
+    public const string CallbackInsteadOfPerson =
+        "## Outside the office's hours\n\n" +
+        "The people who answer are outside their hours right now, so nobody can take this call. If the customer asks " +
+        "for a person, call the " + OmnichannelHandoffHelper.TransferToAgentToolName + " tool anyway: right now it books " +
+        "a callback for when the office opens. Tell the customer someone will call them back then -- not that you are " +
+        "connecting them, whatever the tool replies -- and never promise an exact time.";
 
     /// <summary>
     /// What the model is told when the call was answered by voicemail or an answering machine and the time has come

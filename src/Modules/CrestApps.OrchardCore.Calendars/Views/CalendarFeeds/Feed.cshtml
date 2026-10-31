@@ -1,0 +1,32 @@
+@model CalendarFeedViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarsFeedAddress" title="@T["Subscription address of '{0}'", Model.Name]">
+        <breadcrumb-item id="CalendarsIndex" action="Index" controller="Calendars" area="CrestApps.OrchardCore.Calendars">@T["Calendars"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme">
+    <div class="card-body">
+        <p>@T["Anyone with this secret address can see the calendar's events, so share it only with people you trust. Private events show as busy time. Add it to Google Calendar (Other calendars > From URL), Outlook (Add calendar > Subscribe from web) or a phone."]</p>
+        @if (string.IsNullOrEmpty(Model.FeedUrl))
+        {
+            <p class="text-muted">@T["The calendar has no subscription address yet."]</p>
+        }
+        else
+        {
+            <div class="input-group mb-3">
+                <input type="text" readonly class="form-control font-monospace" value="@Model.FeedUrl" id="feed-url" aria-label="@T["Subscription address"]" />
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value)">@T["Copy"]</button>
+            </div>
+        }
+        <form method="post" asp-action="Feed" asp-route-id="@Model.Id" class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">@(string.IsNullOrEmpty(Model.FeedUrl) ? T["Make an address"] : T["Make a new address"])</button>
+            @if (!string.IsNullOrEmpty(Model.FeedUrl))
+            {
+                <button type="submit" name="remove" value="true" class="btn btn-danger">@T["Remove the address"]</button>
+            }
+            <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Back"]</a>
+        </form>
+    </div>
+</div>

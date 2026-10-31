@@ -185,6 +185,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         try
         {
+            // A warm or screened transfer's side call, or the caller holding for one.
+            if (await HandleAttendedTransferEventAsync(voiceEvent, media, cancellationToken))
+            {
+                return;
+            }
+
             switch (voiceEvent.Kind)
             {
                 case VoiceAgentEventKind.Answered:
@@ -282,6 +288,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             // the guidance about when to escalate, and the tool that does it, have to be in place before the
             // caller says a word. The turn-based loop below re-reads this on every turn instead.
             var (realtimeHandoffService, realtimeFlowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
+            var (transferOffered, handoffGuidance) = await OfferHandoffAsync(realtimeHandoffService, realtimeFlowSettings, cancellationToken);
 
             // The provider's word on who answered arrives on a webhook request of its own while this one holds the
             // call, so it reaches the session through these signals rather than through the activity it also marks.
@@ -356,11 +363,11 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     EndCallOnVoicemail = () => _endCallTurn.RequestEndCall(VoicemailMessageLeftReason, reachedVoicemail: true),
                     EndCallOnSilence = () => _endCallTurn.RequestEndCall(SilentLineEndedReason),
 
-                    // Only when this call actually has an agent to reach. Telling a model it may transfer, on a
-                    // call where nothing can receive the caller, promises the caller a person who is not coming.
-                    HandoffInstructions = realtimeHandoffService is null
-                        ? null
-                        : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
+                    // Only when this call actually has an agent to reach, now. Telling a model it may transfer, on a
+                    // call where nothing can receive the caller, promises the caller a person who is not coming; a
+                    // closed queue is told to the model instead (see OfferHandoffAsync).
+                    HandoffInstructions = transferOffered ? handoffGuidance : null,
+                    NoHandoffInstructions = transferOffered ? null : handoffGuidance,
 
                     // The deployment the live session is held on, resolved above by capability.
                     RealtimeDeploymentName = realtimeDeploymentName,
@@ -396,7 +403,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 // down with the request -- still fails after the model has told the caller a person is coming and
                 // the tool has recorded it. Leaving that to the success path put the caller on an open, silent
                 // line with nothing queued and nobody coming.
-                await FinishTheCallElsewhereAsync(activity, voiceEvent, sessionLost: realtime?.SessionLost == true);
+                await FinishTheCallElsewhereAsync(activity, voiceEvent, sessionLost: realtime?.SessionLost == true, handoffAnnounced: realtime?.HandoffAnnounced == true);
                 await RecordRealtimeSessionAsync(voiceEvent, meter, realtimeDeploymentName, sessionHeldTheCall);
 
                 // The session was only told to give the disclosure, so what it actually said is checked. A call the
@@ -509,6 +516,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
     private async Task OnSpeakEndedAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, CancellationToken cancellationToken)
     {
+        // A filler line spoken while a tool was running ended; the reply that follows ends the turn.
+        if (TurnBasedToolFillers.TryClaim(voiceEvent.ProviderCallId, _clock.UtcNow))
+        {
+            return;
+        }
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         if (activity is null || string.IsNullOrWhiteSpace(activity.AISessionId))

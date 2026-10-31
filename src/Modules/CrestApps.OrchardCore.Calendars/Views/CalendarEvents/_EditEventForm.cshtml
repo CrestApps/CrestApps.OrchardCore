@@ -1,0 +1,75 @@
+@model EditCalendarEventViewModel
+@{
+    var modal = ViewData["CalendarModal"] is true;
+    string modalRoute = modal ? "true" : null;
+}
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" asp-route-modal="@modalRoute" class="no-multisubmit" data-calendar-editor-form>
+    <input type="hidden" asp-for="Occurrence" />
+    <p class="text-muted"><i class="fa-solid fa-calendar me-1" aria-hidden="true"></i>@Model.CalendarName</p>
+    @Html.ValidationSummary()
+
+    @if (!string.IsNullOrEmpty(Model.MyResponse))
+    {
+        <div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
+            <span class="me-auto">@T["You are invited. Your answer: {0}", Model.MyResponse]</span>
+            <button type="submit" class="btn btn-sm btn-success" formaction="@Url.Action("Respond", new { id = Model.Id, response = "Accepted", modal = modalRoute })">@T["Accept"]</button>
+            <button type="submit" class="btn btn-sm btn-warning" formaction="@Url.Action("Respond", new { id = Model.Id, response = "Tentative", modal = modalRoute })">@T["Maybe"]</button>
+            <button type="submit" class="btn btn-sm btn-danger" formaction="@Url.Action("Respond", new { id = Model.Id, response = "Declined", modal = modalRoute })">@T["Decline"]</button>
+        </div>
+    }
+
+    @if (Model.IsOccurrence)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-body">
+                <span class="me-2">@T["Apply the changes, or the cancellation, to"]</span>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" asp-for="Scope" value="ThisOccurrence" id="scope-this" />
+                    <label class="form-check-label" for="scope-this">@T["This occurrence"]</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" asp-for="Scope" value="ThisAndFollowing" id="scope-following" />
+                    <label class="form-check-label" for="scope-following">@T["This and following"]</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" asp-for="Scope" value="AllOccurrences" id="scope-all" />
+                    <label class="form-check-label" for="scope-all">@T["All occurrences"]</label>
+                </div>
+            </div>
+        </div>
+    }
+
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            @if (Model.CanConfirm)
+            {
+                <button class="btn btn-success" type="submit" formaction="@Url.Action("Confirm", new { id = Model.Id, modal = modalRoute })">@T["Confirm"]</button>
+            }
+            <button class="btn btn-warning" type="submit" formaction="@Url.Action("Cancel", new { id = Model.Id, occurrence = Model.Occurrence, modal = modalRoute })">@(Model.IsOccurrence ? T["Cancel"] : T["Cancel event"])</button>
+            <button class="btn btn-danger" type="submit" formaction="@Url.Action("Delete", new { id = Model.Id, modal = modalRoute })" data-confirm-message="@T["Delete this event, with every occurrence if it repeats?"]">@T["Delete"]</button>
+            @if (modal)
+            {
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Close"]</button>
+                <a class="btn btn-link" asp-action="Edit" asp-route-id="@Model.Id" asp-route-occurrence="@Model.Occurrence">@T["Open full page"]</a>
+            }
+            else
+            {
+                <a class="btn btn-secondary cancel" role="button" asp-controller="Calendar" asp-action="Index">@T["Back"]</a>
+            }
+        </div>
+    </div>
+</form>
+
+<script at="Foot">
+    document.querySelectorAll('[data-confirm-message]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            if (!window.confirm(button.getAttribute('data-confirm-message'))) {
+                event.preventDefault();
+            }
+        });
+    });
+</script>

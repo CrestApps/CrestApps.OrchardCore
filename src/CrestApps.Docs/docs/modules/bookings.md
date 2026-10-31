@@ -1,16 +1,17 @@
 ---
 sidebar_label: Bookings
 title: Bookings
-description: "Bookings: products sold by date as fixed departures, nightly stays or time slots, capacity per date held like stock, occupancy pricing, deposits whose balance is charged to the saved card, cancellation policies, requests the store confirms, travelers' details, date search and a calendar."
+description: "Bookings: products sold by date as fixed departures, nightly stays or time slots, capacity per date held like stock, occupancy pricing, deposits whose balance is charged to the saved card, cancellation policies, requests the store confirms, travelers' details, date search, a calendar, booking hooks and workflow events, and bookings on the shared calendar when Calendars is on."
 user_manual: user-manual/commerce/bookings
 ---
 
 | | |
 | --- | --- |
-| **Feature** | `CrestApps.OrchardCore.Bookings` (Bookings) |
+| **Features** | `CrestApps.OrchardCore.Bookings` (Bookings) |
 | **Category** | Commerce |
-| **Depends on** | Commerce, Orders, Customers, Transactions |
-| **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders), `ICheckoutTenderProvider` and two `CheckoutFlowDisplayDriver`s (Checkout), `ICartActionProvider` (Carts) |
+| **Depends on** | Commerce, Orders, Customers, Transactions; with Calendars (`CrestApps.OrchardCore.Calendars`) also on, bookings go on the calendar |
+| **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders), `ICheckoutTenderProvider` and two `CheckoutFlowDisplayDriver`s (Checkout), `ICartActionProvider` (Carts); with Calendars on, a calendar type and `ICalendarAvailabilityService` (Calendars) |
+| **Seams it offers** | `IBookingHandler`, `IBookingSlotFilter` |
 
 <YouTube video="bookings" title="Narrated video overview of Bookings" />
 
@@ -128,6 +129,80 @@ A declined card is tried again the next day, three times in all. The charger rea
 - Times on the first day.
 
 Each result links to the product with its date. **Commerce > Bookings > Calendar** shows each day's dates with what's taken.
+
+## Booking hooks
+
+`IBookingHandler` lets other features follow bookings. `BookingStore` runs every handler when a `Booking` is about to be saved (`SavingAsync(BookingSavingContext)`) or deleted (`DeletingAsync(Booking)`). A handler runs inside the save, so what it writes is committed with the booking; for work that must only happen after the commit, add a `ShellScope` deferred task, as the workflow handler does.
+
+`BookingSavingContext` holds the `Booking`, `IsNew`, and what it was when it was last saved: `PreviousStatus`, `PreviousStartsUtc` and `PreviousEndsUtc`, with `StatusChanged` and `Rescheduled` worked out from them. The store keeps that snapshot on the booking itself (`BookingChangeMarker` in its properties) after each save. A booking saved before the hooks existed has no snapshot, so its previous values are `null` on its first save.
+
+The store resolves the handlers on first use, so a handler may depend on services that depend on the store.
+
+```csharp
+internal sealed class BookingAuditHandler : IBookingHandler
+{
+    public Task SavingAsync(BookingSavingContext context, CancellationToken cancellationToken = default)
+    {
+        if (context.StatusChanged && context.Booking.Status == BookingStatus.Canceled)
+        {
+            // React to a cancellation, inside the same session.
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+}
+
+// In a startup:
+services.AddScoped<IBookingHandler, BookingAuditHandler>();
+```
+
+`IBookingSlotFilter` closes some of a product's dates or times for a reason Bookings doesn't track itself. `GetClosedSlotKeysAsync(contentItemId, part, slotKeys, timeZone)` returns which of the slot keys (`yyyy-MM-dd` or `yyyy-MM-ddTHH:mm`, in the given time zone) are closed. `BookingCapacityService` asks every filter in `GetRemainingAsync`, so a closed date shows as full, and again in `HoldAsync`, so it can't be held.
+
+## Workflow events
+
+With `OrchardCore.Workflows` enabled, Bookings adds these events in the **Commerce** category. `BookingWorkflowHandler` (an `IBookingHandler`) picks them when a booking is saved and triggers them in a deferred task once the session commits, correlated by the booking id. A save can raise more than one, such as **Booking Created** and **Booking Confirmed** for a booking paid at once.
+
+| Event | Raised when |
+| --- | --- |
+| Booking Created (`BookingCreatedEvent`) | A booking is made (held, requested or confirmed). |
+| Booking Confirmed (`BookingConfirmedEvent`) | A booking becomes `Confirmed`, such as when its order is paid. |
+| Booking Rescheduled (`BookingRescheduledEvent`) | A booking moves to other dates. |
+| Booking Canceled (`BookingCanceledEvent`) | A booking becomes `Canceled`. |
+| Booking Completed (`BookingCompletedEvent`) | A booking is marked complete. |
+| Booking No-Show (`BookingNoShowEvent`) | A booking is marked as a no-show. |
+| Booking Expired (`BookingExpiredEvent`) | A hold or request runs out. |
+
+The input of every event:
+
+| Key | Value |
+| --- | --- |
+| `Booking` | The `Booking` record. |
+| `BookingId` | Its id. |
+| `OrderId`, `OrderNumber` | The order it belongs to. |
+| `ContentItemId`, `Title` | The product. |
+| `StartsUtc`, `EndsUtc` | When it starts and ends. |
+| `Status`, `PreviousStatus` | Its status now and at its last save. |
+| `CustomerName`, `CustomerEmail` | The buyer. |
+
+## Bookings on the calendar
+
+Whenever Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) are both on, Bookings puts bookings on the shared [calendar](./calendars.md) and lets a calendar close booking dates. There is no separate feature to enable: `CalendarStartup` belongs to the Bookings feature and carries `[RequireFeatures(CalendarsConstants.Features.Calendars)]`, so it runs only while Calendars is on.
+
+**One calendar for every booking.** Bookings registers the `Bookings` calendar type, managed by code (`ManagedByCode()`, so it isn't in **Add calendar**), with one event type, `Booking`. `BookingCalendarHandler` is an `IBookingHandler`: on every booking save it creates, moves or cancels the booking's calendar event on the **Bookings** calendar, which it creates the first time (`Source = Bookings`, `SourceId = Bookings`, found again with `ICalendarService.FindBySourceAsync`). The event:
+
+- has `Source = Bookings`, `SourceId` = the booking id and `Editable = false`, so it can only be changed by Bookings;
+- is titled with the product and the buyer's name, starts and ends with the booking, is busy, and names the buyer as an attendee;
+- is `Tentative` while the booking is held or requested, `Confirmed` once booked, and `Cancelled` when the booking is canceled or expires;
+- is deleted with the booking.
+
+The handler writes with `SkipConflictCheck` (Bookings checks capacity itself) and `SendInvitations = false`, inside the booking's session. The calendar is private by default, so only calendar administrators and the people it is shared with see it.
+
+**Sync to calendar.** `BookingCalendarController.Sync` (`bookings-calendar/sync` in the admin, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before Calendars was on. It answers `404` while Calendars is off. It changes only what differs, so running it again is harmless. **Commerce > Bookings > Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
+
+**Block with calendar.** With Calendars on, Bookings adds a **Block with calendar** setting to the Booking part (`BookingPart.BlockingCalendarId`, edited by `BookingPartCalendarDisplayDriver`), listing every calendar except the Bookings calendar itself. `BookingCalendarSlotFilter` is its `IBookingSlotFilter`: it reads busy time on that calendar through `ICalendarAvailabilityService.GetBusyAsync`, tentative events included and busy-time sources left out. A time slot is closed when anything busy overlaps it; a departure date or a night is closed when anything busy falls on that day. Use it to keep a room, a guide or a vehicle from being sold twice across products, or to close dates that a team calendar marks as out of office.
 
 ## Recipes
 

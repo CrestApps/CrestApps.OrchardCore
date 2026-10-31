@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Scheduling.Deployments
+@model SchedulingDeploymentStepViewModel
+
+<h5>@T["Scheduling"]</h5>
+<p class="hint">@T["Exports appointment types and scheduling resources. Add the Calendars step too, so the resources' calendars come along."]</p>
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="IncludeAppointments" class="form-check-input" />
+        <label asp-for="IncludeAppointments" class="form-check-label">@T["Include appointments"]</label>
+        <span class="hint dashed">@T["With the customers' names, emails and phone numbers. Manage links aren't exported; imported appointments get new ones."]</span>
+    </div>
+    <div class="form-check">
+        <input asp-for="IncludeWaitlist" class="form-check-input" />
+        <label asp-for="IncludeWaitlist" class="form-check-label">@T["Include the waitlist"]</label>
+    </div>
+</div>

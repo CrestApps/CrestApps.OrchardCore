@@ -26,4 +26,14 @@ public interface IAIVoiceCallCommands
     /// <param name="command">The command.</param>
     /// <returns><see langword="true"/> when a session acted on it.</returns>
     Task<bool> SendAsync(string activityId, AIVoiceCallCommand command);
+
+    /// <summary>
+    /// Sends a command to the live session holding a call on any of the tenant's nodes: this node first, then the
+    /// others through the relay when one is registered (with Redis). Use it only for a call a live session holds
+    /// (<c>AILiveCall.IsRealtime</c>), since a call nobody holds waits for the relay to give up.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <param name="command">The command.</param>
+    /// <returns><see langword="true"/> when a session acted on it.</returns>
+    Task<bool> RelayAsync(string activityId, AIVoiceCallCommand command);
 }

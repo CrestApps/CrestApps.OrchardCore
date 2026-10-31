@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Navigation;
 using OrchardCore.Security;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module.ReportDesignerPrincipals;
@@ -119,7 +118,6 @@ public sealed class ReportDesignerAdminMenuTests
         var navigationManager = new NavigationManager(
             [provider],
             NullLogger<NavigationManager>.Instance,
-            new ShellSettings(),
             urlHelperFactory.Object,
             authorizationService);
 

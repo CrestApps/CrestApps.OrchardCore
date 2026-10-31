@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIAlertTriggeredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-bell" aria-hidden="true"></i>
+    @T["AI Alert Triggered"]
+</h4>
+<p>@T["Runs when an AI alert rule crosses its threshold."]</p>

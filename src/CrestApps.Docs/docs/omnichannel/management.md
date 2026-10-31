@@ -321,6 +321,15 @@ Then configure the CRM in this order. Each step is a browser task documented in 
 
 To provision a tenant from another environment instead of clicking through these screens, use the deployment steps in [Exporting and importing configuration](#exporting-and-importing-configuration).
 
+## Follow-ups on the calendar
+
+With the **Calendars** feature on, `CalendarStartup` (Activities feature, `RequireFeatures` Calendars) lets an agent put a follow-up activity on their calendar while completing an activity:
+
+- The completion page's follow-up cards raise `omnichannel:followup-card` (with `card`, `cardBody`, `action` and `dateInput`), so features can add to them. The calendar integration adds an **Add to my calendar** box (`ActionAddToCalendar[actionId]`) and a button that opens `CrestAppsCalendarPicker`.
+- `SubjectActionExecutionContext.CreatedActivities` maps each action's id to the follow-up it created; `DefaultActivityDispositionService` copies it to `ActivityDispositionRequest.CreatedActivities`, next to `ActionsToCalendar`. `ActivityCalendarDispositionHandler` places each ticked follow-up on its assignee's personal calendar (`ActivityCalendarService.PlaceAsync`) and keeps an `ActivityCalendarLink` on the activity.
+- `ActivityCalendarEntryHandler` (an activity catalog handler) moves the event when the activity is rescheduled, cancels it when the activity is cancelled or purged, and deletes it with the activity. `ActivityCalendarEventHandler` (a calendar event handler) reschedules a not-started activity when its event moves, and unlinks the activity when the event is cancelled or deleted. Changes the integration makes carry the actor `OmnichannelActivity`, so they don't echo back.
+- Writes that bypass `IOmnichannelActivityManager` (direct session saves) don't move the event.
+
 ## Extending activity load sources
 
 Activity loading is extensible. Each activity load has a **source**, and the source controls how it resolves and loads activities. There are two layers of extensibility:

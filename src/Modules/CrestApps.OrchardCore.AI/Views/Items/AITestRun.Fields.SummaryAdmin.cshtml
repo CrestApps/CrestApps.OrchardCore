@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestRun>
+
+<a asp-action="RunDetails" asp-controller="AITestCases" asp-route-id="@Model.Value.ItemId">@Model.Value.TestCaseName</a>

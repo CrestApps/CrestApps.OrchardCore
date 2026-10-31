@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentCompletedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i> @T["Appointment Completed"]</h4>
+<p>@T["Starts when an appointment is marked as taken place."]</p>

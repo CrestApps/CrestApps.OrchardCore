@@ -41,6 +41,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
 {
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI.Chat.Api"})]
+    public sealed class AIActivitiesApiStartup : OrchardCore.Modules.StartupBase
+    {
+        public AIActivitiesApiStartup() { }
+        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Workflows"})]
     public sealed class AIActivityWorkflowsStartup : OrchardCore.Modules.StartupBase
     {
@@ -53,6 +62,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     {
         public AISubjectFlowStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.AISubjectFlowStartup> stringLocalizer, OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Calendars"})]
+    public sealed class CalendarStartup : OrchardCore.Modules.StartupBase
+    {
+        public CalendarStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI.Chat.Api"})]
+    public sealed class ChannelEndpointsApiStartup : OrchardCore.Modules.StartupBase
+    {
+        public ChannelEndpointsApiStartup() { }
+        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
     public sealed class ChannelEndpointsStartup : OrchardCore.Modules.StartupBase
@@ -211,6 +236,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
         public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Calendar
+{
+    public sealed class ActivityCalendarLink
+    {
+        public ActivityCalendarLink() { }
+        public string CalendarId { get; set; }
+        public string EventId { get; set; }
+    }
+    public sealed class ActivityCalendarService
+    {
+        public const int DurationMinutes = 15;
+        public const string Source = "OmnichannelActivity";
+        public ActivityCalendarService(CrestApps.OrchardCore.Calendars.Services.ICalendarService calendarService, CrestApps.OrchardCore.Calendars.Services.ICalendarEventManager eventManager, OrchardCore.ContentManagement.IContentManager contentManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Calendar.ActivityCalendarService> stringLocalizer) { }
+        public System.Threading.Tasks.Task DeleteEventAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Calendars.Models.CalendarEvent> PlaceAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, string userId, string userName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SyncEventAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
 {
     [OrchardCore.Admin.Admin(null, null)]
@@ -250,7 +293,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.ActionName("Complete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/complete/{id}", null)]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionAddToCalendar")] System.Collections.Generic.Dictionary<string, bool> actionAddToCalendar = null) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create(string contentItemId) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/create-inbound/{contentItemId}", null)]
@@ -258,7 +301,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.ActionName("CreateInbound")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/create-inbound/{contentItemId}", null)]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreateInboundPost(string contentItemId, string subjectContentType, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreateInboundPost(string contentItemId, string subjectContentType, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionAddToCalendar")] System.Collections.Generic.Dictionary<string, bool> actionAddToCalendar = null) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]
@@ -596,57 +639,73 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps
     public sealed class CadenceDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public CadenceDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class LeadStatusDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public LeadStatusDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelCampaignDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelCampaignGroupDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignGroupDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelChannelEndpointDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelChannelEndpointDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelDispositionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelDispositionDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OmnichannelSubjectActionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelSubjectActionDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
     public sealed class OpportunityStageDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OpportunityStageDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
 }
@@ -677,6 +736,69 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
         public OmnichannelReportFilterDisplayDriver(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, CrestApps.OrchardCore.Reports.Services.IReportManager reportManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityChannelOptions> activityChannelOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelReportFilterDisplayDriver> stringLocalizer) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Reports.Models.ReportFilter filter, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Reports.Models.ReportFilter filter, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api
+{
+    public sealed class AIApiActivityBatch
+    {
+        public AIApiActivityBatch() { }
+        public System.Collections.Generic.List<string> ActivityIds { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public long Id { get; set; }
+        public string ProfileId { get; set; }
+    }
+    public sealed class ApiAIActivity : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api.ApiAIActivity>
+    {
+        public ApiAIActivity(string Id, string Kind, string Status, string ProfileId, string To, string ContactId, string ConversationId, string DispositionId, System.DateTime ScheduledUtc, System.DateTime? CompletedUtc) { }
+        public System.DateTime? CompletedUtc { get; init; }
+        public string ContactId { get; init; }
+        public string ConversationId { get; init; }
+        public string DispositionId { get; init; }
+        public string Id { get; init; }
+        public string Kind { get; init; }
+        public string ProfileId { get; init; }
+        public System.DateTime ScheduledUtc { get; init; }
+        public string Status { get; init; }
+        public string To { get; init; }
+    }
+    public sealed class ApiAIActivityBatch : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api.ApiAIActivityBatch>
+    {
+        public ApiAIActivityBatch(string Id, System.DateTime CreatedUtc, System.Collections.Generic.IReadOnlyDictionary<string, int> Counts, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api.ApiAIActivity> Activities) { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api.ApiAIActivity> Activities { get; init; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, int> Counts { get; init; }
+        public System.DateTime CreatedUtc { get; init; }
+        public string Id { get; init; }
+    }
+    public sealed class ApiAIActivityBatchItem
+    {
+        public ApiAIActivityBatchItem() { }
+        public string ContactId { get; set; }
+        public string To { get; set; }
+        public System.Collections.Generic.Dictionary<string, string> Variables { get; set; }
+    }
+    public sealed class ApiAIActivityBatchRequest
+    {
+        public const int MaxItems = 1000;
+        public ApiAIActivityBatchRequest() { }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string FromEndpointId { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api.ApiAIActivityBatchItem> Items { get; set; }
+        public string ProfileId { get; set; }
+        public System.DateTime? ScheduledUtc { get; set; }
+    }
+    public sealed class ApiAIActivityRequest
+    {
+        public ApiAIActivityRequest() { }
+        public string CampaignId { get; set; }
+        public string ContactId { get; set; }
+        public string FromEndpointId { get; set; }
+        public string ProfileId { get; set; }
+        public System.DateTime? ScheduledUtc { get; set; }
+        public string SubjectContentType { get; set; }
+        public string To { get; set; }
+        public System.Collections.Generic.Dictionary<string, string> Variables { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
@@ -1062,6 +1184,31 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Schemas
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
 {
+    public sealed class AIActivityStartRequest
+    {
+        public AIActivityStartRequest() { }
+        public string AIProfileId { get; set; }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string Destination { get; set; }
+        public System.DateTime? ScheduledUtc { get; set; }
+        public string Source { get; set; }
+        public string SubjectContentType { get; set; }
+        public System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, string>> Variables { get; set; }
+    }
+    public sealed class AIActivityStarter
+    {
+        public AIActivityStarter(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> StartAsync(CrestApps.OrchardCore.Omnichannel.Managements.Services.AIActivityStartRequest request) { }
+    }
+    public sealed class AIContactFieldMapper : CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationClosedHandler
+    {
+        public AIContactFieldMapper(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.AIContactFieldMapper> logger) { }
+        public System.Threading.Tasks.Task ClosedAsync(CrestApps.Core.AI.Models.AIProfile profile, CrestApps.Core.AI.Models.AIChatSession session, System.Threading.CancellationToken cancellationToken = default) { }
+        public static bool Apply(System.Text.Json.Nodes.JsonObject content, string path, string fieldType, string value, CrestApps.OrchardCore.AI.Core.Conversations.AIContactFieldMappingMode mode) { }
+    }
     public sealed class AIContactMemoryLeadConversionRepointer : CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionRepointer
     {
         public AIContactMemoryLeadConversionRepointer(CrestApps.OrchardCore.AI.Core.Services.IAIContactMemoryStore store, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.AIContactMemoryLeadConversionRepointer> logger) { }
@@ -1945,6 +2092,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public OmnichannelContactMemoryViewModel() { }
         public string AIMemory { get; set; }
+        public bool Rebuild { get; set; }
     }
     public class OmnichannelContactPartSettingsViewModel
     {
@@ -2172,7 +2320,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
     }
     public sealed class CreateAIActivityTask : OrchardCore.Workflows.Activities.TaskActivity<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask>
     {
-        public CreateAIActivityTask(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask> stringLocalizer) { }
+        public CreateAIActivityTask(CrestApps.OrchardCore.Omnichannel.Managements.Services.AIActivityStarter starter, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask> stringLocalizer) { }
         public string AIProfileId { get; set; }
         public string CampaignId { get; set; }
         public override Microsoft.Extensions.Localization.LocalizedString Category { get; }

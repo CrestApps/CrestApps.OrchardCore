@@ -441,6 +441,59 @@ public sealed class SmsInboxQueryTests
         agentProfiles.Verify(manager => manager.CreateAsync(It.IsAny<AgentProfile>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task BuildInboxAsync_UnreadOnly_ListsAndCountsOnlyTheUnreadConversationsOfTheTab()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(harness.Store, null, MessagingPermissions.ViewAllConversations);
+        var agent = new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] };
+
+        var inbox = await builder.BuildInboxAsync(User(), agent, "mine", null, unreadOnly: true, 1, null, TestContext.Current.CancellationToken);
+
+        Assert.True(inbox.UnreadOnly);
+        Assert.Equal(true, inbox.UnreadRouteValue);
+
+        // Mine and unread (open or closed) and the transfer to me; the one I already read is left out.
+        Assert.Equal(["mine-closed", "mine-unread", "transferred-to-me"], inbox.Rows.Select(row => row.Conversation.ItemId).Order());
+        Assert.Equal(3, inbox.MineCount);
+        Assert.Equal(3, inbox.TotalCount);
+    }
+
+    // Opening a conversation marks it read; it must not vanish from the unread list while the agent answers it.
+    [Fact]
+    public async Task BuildInboxAsync_UnreadOnly_KeepsTheOpenCustomerAfterTheirConversationIsRead()
+    {
+        await using var harness = await Harness.CreateAsync();
+        var seed = AttentionSeed();
+        await harness.SeedAsync(seed);
+
+        var (builder, _) = CreateBuilder(harness.Store, null, MessagingPermissions.ViewAllConversations);
+        var agent = new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] };
+        var selected = seed.Single(conversation => conversation.ItemId == "mine-read").GetCustomerKey();
+
+        var inbox = await builder.BuildInboxAsync(User(), agent, "mine", null, unreadOnly: true, 1, selected, TestContext.Current.CancellationToken);
+
+        Assert.Contains(inbox.Rows, row => row.Conversation.ItemId == "mine-read");
+        Assert.Equal(4, inbox.Rows.Count);
+    }
+
+    [Fact]
+    public async Task BuildInboxAsync_Favorites_IgnoresUnreadOnly()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(harness.Store, null, MessagingPermissions.ViewAllConversations);
+        var agent = new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] };
+
+        var inbox = await builder.BuildInboxAsync(User(), agent, "favorites", null, unreadOnly: true, 1, null, TestContext.Current.CancellationToken);
+
+        Assert.False(inbox.UnreadOnly);
+        Assert.Null(inbox.UnreadRouteValue);
+    }
+
     // What agent-1, serving q-1, has around them.
     private static MessagingConversation[] AttentionSeed()
     {
@@ -508,7 +561,7 @@ public sealed class SmsInboxQueryTests
             Mock.Of<IMessageTemplateManager>(),
             agentProfiles.Object,
             new PermissiveAgentEntitlementPolicy(),
-            Mock.Of<IMessagingAvailabilityService>(),
+            Mock.Of<IMessagingAvailabilityService>(service => service.Get(It.IsAny<AgentProfile>()) == new MessagingAgentAvailability()),
             Mock.Of<IMessagingAgentNameProvider>(),
             new MessagingFavoritesService(Mock.Of<IAgentProfileManager>(), Mock.Of<IClock>()),
             [],

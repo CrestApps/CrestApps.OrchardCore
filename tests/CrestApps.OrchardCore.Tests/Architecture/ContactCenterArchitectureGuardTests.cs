@@ -50,6 +50,11 @@ public sealed class ContactCenterArchitectureGuardTests
             null,
             "Records which node holds a WebSocket rendezvous, through the Orchard Core IRedisService connection. It needs an atomic set-if-absent with an expiry so two nodes cannot claim one correlation key, and no higher-level Orchard primitive offers that: the distributed lock is exclusivity without an owner, and this has to be able to name the node that holds the key."),
         new ArchitectureAllowlistEntry(
+            RawRedisRule,
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Voice/Services/RedisAIVoiceCallMessageBus.cs",
+            null,
+            "Carries a supervisor's command for a live AI call to the node whose realtime session holds it, as a request the holding node answers on a reply channel of its own, through the Orchard Core IRedisService connection. It needs tenant-prefixed request and per-node reply channels; the Orchard signal and distributed cache carry no payload back to the sender."),
+        new ArchitectureAllowlistEntry(
             StaticMutableStateRule,
             "src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/ContentTransferPermissions.cs",
             "_permissionsByType",

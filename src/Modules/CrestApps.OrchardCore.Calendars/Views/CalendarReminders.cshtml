@@ -1,0 +1,21 @@
+@* Carried by every admin page of a user who uses calendars (see CalendarRemindersFilter). The script reads its addresses
+   and the sentences it completes for each reminder from here. *@
+<div class="d-none"
+     data-calendar-reminders
+     data-list-url="@Url.RouteUrl("CalendarsReminders")"
+     data-dismiss-url="@Url.RouteUrl("CalendarsDismissReminder", new { id = "__ID__" })"
+     data-calendar-url="@Url.Action("Index", "Calendar", new { area = CalendarsConstants.Features.Calendars })"
+     data-title-text="@T["Reminder"]"
+     data-now-text="@T["Starting now"]"
+     data-in-minutes-text="@T["Starts in {0} minutes"].Value"
+     data-in-hours-text="@T["Starts in {0} hours"].Value"
+     data-tomorrow-text="@T["Starts tomorrow"]"
+     data-started-text="@T["Started"]"
+     data-open-text="@T["Open calendar"]"
+     data-dismiss-text="@T["Dismiss"]"
+     data-close-text="@T["Close"]">
+    @Html.AntiForgeryToken()
+</div>
+
+@* Top right, under the admin bar, clear of the messaging notices at the bottom. *@
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090; margin-top: 3.5rem;" data-calendar-reminders-container></div>

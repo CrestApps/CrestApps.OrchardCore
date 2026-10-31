@@ -1,0 +1,26 @@
+@using OrchardCore.Admin
+@using OrchardCore.DisplayManagement
+@* The row of the List layout, the same template every admin list uses. *@
+<div class="row g-0 align-items-center">
+    <div class="col">
+        <div class="title d-flex align-items-center">
+            <div class="summary d-flex flex-column flex-md-row list-item-search-text">
+                <div class="me-2">
+                    @if (Model.Content != null)
+                    {
+                        @await DisplayAsync(Model.Content)
+                    }
+                </div>
+                @if (Model.Tags != null)
+                {
+                    <div class="tags me-1">
+                        @await DisplayAsync(Model.Tags)
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-auto d-flex justify-content-end ps-2">
+        @await DisplayAsync(await Factory.CreateAdminListActionsAsync((IShape)Model))
+    </div>
+</div>

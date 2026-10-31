@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIWebhooksEdit" title="@T["Edit '{0}' webhook", Model.DisplayName]">
+        <breadcrumb-item id="AIWebhooks" action="Index" controller="AIWebhooks" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIWebhooks.Name">@T["Webhooks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

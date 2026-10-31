@@ -1,0 +1,4 @@
+@model ShapeViewModel<CalendarCategory>
+
+<span class="calendar-swatch me-1" style="background-color: @Model.Value.Color" aria-hidden="true"></span>
+<a asp-controller="CalendarCategories" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>

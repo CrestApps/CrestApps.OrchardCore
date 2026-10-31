@@ -84,6 +84,8 @@ If `ItemId` is omitted, the import step resolves an existing template by the com
 
 The Recipes feature now also exports dedicated step schemas for `AIDataSource`, `McpConnection`, `McpPrompt`, `McpResource`, and `A2AConnection`. Their `Properties` objects document the known built-in metadata envelopes such as `SseMcpConnectionMetadata`, `StdioMcpConnectionMetadata`, `FtpConnectionMetadata`, `SftpConnectionMetadata`, and `A2AConnectionMetadata`, while still allowing extra keys for future extensions.
 
+With **Data Connectors** enabled, the feature also exports the `DataConnection` and `ConnectedDataSet` step schemas: connections with their connector settings and clear-text `Secrets`, and data sets with their fields, access mode and refresh settings. See [Data Connectors](data-connectors#recipes-and-deployment-plans).
+
 With **AI Personas** enabled, the feature also exports the `AIPersonas` step schema and the schema of the **AI Personas** deployment step (`AIPersonaDeploymentStep`), and the `AIProfile` step schema describes the top-level `PersonaId` and the `AIPersonaMetadata` property. See [AI Personas](../ai/personas#importing-and-exporting).
 
 For `AIDataSource`, the schema also derives the `Source` enum from the currently registered `AIDataSourceSourceOptions` entries, so recipe tooling can suggest only the source types that are actually enabled for the tenant. Recipe imports honor that same `Source` value and still default to `SearchIndexProfile` when older payloads omit it.

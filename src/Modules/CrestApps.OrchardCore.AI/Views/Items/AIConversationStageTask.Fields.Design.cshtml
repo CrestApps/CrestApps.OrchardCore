@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIConversationStageTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-signs-post" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["AI Conversation Stage"])
+    </h4>
+</header>
+@if (!string.IsNullOrWhiteSpace(Model.Activity.StageName))
+{
+    <p class="mb-0">@Model.Activity.StageName</p>
+}

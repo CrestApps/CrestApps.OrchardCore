@@ -252,3 +252,13 @@ Realtime turns are dispatched through `IRealtimeOrchestrator` rather than the st
 - [AI Usage Analytics](usage-analytics.md) — talk time, silence, barge-ins and outcomes of automated voice calls held by a realtime session.
 - [Model Capabilities](model-capabilities.md) — declaring the `realtime` feature on a deployment.
 - [AI Chat](chat.md) and [AI Chat Interactions](chat-interactions.md) — the two chat surfaces that support realtime.
+
+## Voice library
+
+Under **Artificial Intelligence → Voice library**, choose a text-to-speech deployment whose provider has a voice library (ElevenLabs or Cartesia) to search its voices by name and language, hear a sample, and copy a voice's id to a profile's or persona's voice. Where the provider clones voices, **Clone a voice** makes a new voice from a recording of one speaker that you have the right to use; the provider keeps it.
+
+To add an ElevenLabs or Cartesia deployment, enable the provider's feature. Then go to **Artificial Intelligence → Deployments → Add Deployment** and pick **ElevenLabs** or **Cartesia**. Give the model name (for example `eleven_flash_v2_5` or `sonic-2`) and the account's API key; the key is stored encrypted, and leaving the field blank later keeps it. Fill in the endpoint only for a regional endpoint, such as ElevenLabs' `https://api.eu.residency.elevenlabs.io`.
+
+## Switching profiles during a call
+
+A supervisor can switch a live AI call to another profile from the live dashboard, with the AI Call Action task or through the API, and the call's own AI can do it through a tool. On a realtime call it is a transfer: the first profile finishes what it was saying, the caller hears ringing, and a new session of the second profile picks the call up and greets them. That session has the second profile's own deployment, voice and instructions, the call's own guidance (who is being called, the recording notice, ending the call, phone menus, the handoff) and the conversation so far, and it does not repeat the recording notice. A session that cannot open leaves the call with the first profile. On a turn-based call, the new profile answers straight away when a tool on the AI's turn switched it, otherwise from the caller's next turn. Either way the new profile speaks in its own voice from then on, even when the call started with a voice chosen on the activity or its subject flow.

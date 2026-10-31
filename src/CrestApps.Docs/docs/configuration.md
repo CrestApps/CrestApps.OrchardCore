@@ -602,6 +602,38 @@ OrchardCore__CrestApps__AI__FileSources__MaxItemsPerRun=500
 
 See [File Sources](ai/file-sources.md).
 
+## Data connectors
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:DataConnectors` |
+| **Controls** | The limits of refreshes and live reads, and which hosts connectors may reach |
+
+Keys: `RefreshTimeout` (default `00:30:00`), `LiveReadTimeout` (`00:05:00`), `ImportBatchSize` (`1000`), `RefreshRunsKept` (`25`), `MaxRefreshesPerRun` (`10`) and `PreviewRows` (`20`). Under `Network`: `AllowPrivateNetworks` (`false`), `AllowedHosts` (none) and `MaxResponseBytes` (`104857600`). By default a connector refuses hosts on the site's own network.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "DataConnectors": {
+        "RefreshTimeout": "01:00:00",
+        "Network": {
+          "AllowedHosts": [ "sql01.corp.example.com" ]
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__DataConnectors__RefreshTimeout=01:00:00
+OrchardCore__CrestApps__DataConnectors__Network__AllowedHosts__0=sql01.corp.example.com
+OrchardCore__CrestApps__DataConnectors__Network__AllowPrivateNetworks=true
+```
+
+See [Data Connectors](modules/data-connectors.md#configuration).
+
 ## MCP and A2A
 
 ### MCP server

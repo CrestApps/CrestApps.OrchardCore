@@ -1,0 +1,5 @@
+@model AppointmentRowViewModel
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Appointment type"]"><i class="fa-solid fa-calendar-check text-secondary me-1" aria-hidden="true"></i>@Model.TypeName</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["With"]"><i class="fa-solid fa-user-tie text-secondary me-1" aria-hidden="true"></i>@Model.ResourceNames</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-info text-secondary me-1" aria-hidden="true"></i>@Model.Appointment.Status</span>

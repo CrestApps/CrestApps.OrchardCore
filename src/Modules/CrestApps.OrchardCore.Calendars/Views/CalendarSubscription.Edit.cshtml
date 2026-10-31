@@ -1,0 +1,51 @@
+@model CalendarSubscriptionViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SubscriptionEnabled" class="form-check-input" />
+            <label asp-for="SubscriptionEnabled" class="form-check-label">@T["Keep this calendar in step with an external calendar"]</label>
+            <span class="hint dashed">@T["The external calendar's events are copied here and kept up to date. They can't be changed here."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SubscriptionProvider" class="ocat-label">@T["Provider"]</label>
+    <div class="ocat-end">
+        <select asp-for="SubscriptionProvider" asp-items="Model.ProviderOptions" class="form-select" style="max-width: 24rem"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SubscriptionUrl">
+    <label asp-for="SubscriptionUrl" class="ocat-label">@T["Address"]</label>
+    <div class="ocat-end">
+        <input asp-for="SubscriptionUrl" class="form-control" placeholder="https://calendar.example.com/feed.ics" />
+        <span asp-validation-for="SubscriptionUrl" class="text-danger"></span>
+        <span class="hint">@T["The secret iCalendar address of the external calendar, such as the one Google Calendar or Outlook shows under the calendar's settings."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SubscriptionInterval" class="ocat-label">@T["Every (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="SubscriptionInterval" type="number" min="5" max="10080" class="form-control" style="max-width: 10rem" />
+    </div>
+</div>
+
+@if (Model.LastSyncedUtc.HasValue || !string.IsNullOrEmpty(Model.LastError))
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Last synchronized"]</span>
+        <div class="ocat-end">
+            @if (Model.LastSyncedUtc.HasValue)
+            {
+                <p class="mb-1">@await DisplayAsync(await New.DateTime(Utc: Model.LastSyncedUtc.Value, Format: "g")) <span class="text-muted">@Model.LastResult</span></p>
+            }
+            @if (!string.IsNullOrEmpty(Model.LastError))
+            {
+                <p class="text-danger mb-0">@Model.LastError</p>
+            }
+        </div>
+    </div>
+}

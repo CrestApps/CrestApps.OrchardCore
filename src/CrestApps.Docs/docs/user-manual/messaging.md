@@ -43,6 +43,7 @@ Open **Messaging > Inbox**. The left side lists your customers, most recent firs
 | --- | --- |
 | **Search** | Narrows the conversation list. |
 | **Filter** (funnel button) | **All conversations**, **My conversations**, **Favorites** or **Unassigned**, each with a count; and a channel filter when you have more than one channel. |
+| **Unread only** (envelope button) | Shows only the conversations nobody has read yet, within the filter and channel you picked; the list then says **Unread**. The conversation you open keeps its place in the list while you answer it. Click the button again to see every conversation. |
 | **Available** switch | *Accept routed conversations to your inbox.* Only used by queues set to routed distribution: new conversations are given only to agents who are available and have the inbox open. |
 | **New conversation** (pencil button) | Starts a conversation with a contact or a number. |
 

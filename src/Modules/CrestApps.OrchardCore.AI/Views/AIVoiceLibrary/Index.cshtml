@@ -1,0 +1,77 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIVoiceLibraryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIVoiceLibrary" title="@T["Voice library"]" />
+</zone>
+
+<form method="get" asp-action="Index" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-12 col-md-4">
+                <select asp-for="DeploymentName" asp-items="Model.Deployments" class="form-select" aria-label="@T["Text-to-speech deployment"]" onchange="this.form.submit()"></select>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input asp-for="Query" class="form-control" placeholder="@T["Search voices"]" type="search" />
+                    <input asp-for="Language" class="form-control" placeholder="@T["Language"]" style="max-width: 8rem;" />
+                    <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (!Model.HasLibrary)
+{
+    <div class="alert alert-info">@T["Choose a text-to-speech deployment whose provider has a voice library, such as ElevenLabs or Cartesia. Other providers list their voices in the profile's voice picker."]</div>
+}
+else
+{
+    <admin-list name="AIVoiceLibrary" context="Model.Voices"
+                show-select-all="false"
+                empty-message="@T["<strong>No voices found.</strong> Try another search."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Voice"]" />
+            <admin-list-column name="Language" position="30" title="@T["Language"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+
+    @if (!string.IsNullOrEmpty(Model.NextCursor))
+    {
+        <a class="btn btn-secondary mt-2" asp-action="Index" asp-route-deploymentName="@Model.DeploymentName" asp-route-query="@Model.Query" asp-route-language="@Model.Language" asp-route-cursor="@Model.NextCursor">@T["More voices"]</a>
+    }
+
+    @if (Model.SupportsCloning)
+    {
+        <div class="card mt-3">
+            <div class="card-header fw-semibold">@T["Clone a voice"]</div>
+            <div class="card-body">
+                <form method="post" asp-action="Clone" enctype="multipart/form-data" class="no-multisubmit">
+                    <input type="hidden" name="deploymentName" value="@Model.DeploymentName" />
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-4">
+                            <label for="clone-name" class="form-label ocat-label-required">@T["Name"]</label>
+                            <input id="clone-name" name="name" class="form-control" required />
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label for="clone-language" class="form-label">@T["Language"]</label>
+                            <input id="clone-language" name="language" class="form-control" placeholder="en" />
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label for="clone-sample" class="form-label ocat-label-required">@T["Recording"]</label>
+                            <input id="clone-sample" name="sample" type="file" accept="audio/*" class="form-control" required />
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">@T["Clone"]</button>
+                        </div>
+                    </div>
+                    <span class="hint">@T["A clear recording of one speaker, a minute or more, that you have the right to use. The provider keeps the voice."]</span>
+                </form>
+            </div>
+        </div>
+    }
+}

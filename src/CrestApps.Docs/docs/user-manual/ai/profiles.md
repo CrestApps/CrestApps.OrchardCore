@@ -135,6 +135,25 @@ When the **Orchestrator** is GitHub Copilot or Claude, a configuration block app
 
 The deployment fields are hidden when a GitHub Copilot or Claude orchestrator is chosen, because those engines pick their own model.
 
+### Voice & Speech
+
+How the profile sounds and listens on phone calls and in spoken chats. A setting the voice or recognition provider does not support is ignored.
+
+| Field | What it does |
+| --- | --- |
+| **Speaking rate** | From 0.5 to 2; 1 is normal. Empty uses the voice's own pace. |
+| **Emotion** | The emotion the voice speaks with, such as *calm* or *friendly*, where the provider supports it (Cartesia). |
+| **Pronunciations** | One `word = how to say it` per line, such as `CrestApps = Crest Apps`. Start a line with `!` to match the word's case. |
+| **Fallback voice** | The text-to-speech deployment used when the first one fails during a call. |
+| **Boosted keywords** | Names and terms recognition should listen for, one per line. |
+| **Recognition languages** | The languages recognition listens for, such as `en-US, es-US`. |
+| **Interruption sensitivity** | From 0 (the caller barely interrupts) to 1 (the AI stops at the first sound). |
+| **Backchannel** | The AI says short acknowledgements, such as "mm-hm", while the caller talks; list your own phrases or leave them to the defaults. |
+| **Languages** | The languages the AI may switch to when the caller speaks one. Empty allows any. |
+| **Starting language** | The language it greets in, or a conversation variable's value. |
+
+Spoken replies can use two marks the voice reads rather than says: `<break time="500ms"/>` for a pause and `<spell>A1B2</spell>` to spell something out. Voices that do not support them skip the marks.
+
 ### Instructions
 
 | Field | What it does |
@@ -223,7 +242,7 @@ The video covers the timeout, extraction entries, post-session tasks and the met
 | **Session inactivity timeout (minutes)** | A chat with no messages for this long is closed. At least 1 minute; default 30. Closing a chat starts post-session processing and the **AI Chat Session Closed** workflow event. |
 | **Enable data extraction** | The AI picks out details from the conversation as it goes, such as a name, an email address or a product of interest. |
 | **Extraction check interval** | Check for new details every this many user messages. Default 1 (every message). |
-| **Extraction entries** | Click **Add Entry** for each detail: a **Name** (letters, numbers and underscores, such as `customer_email`), a **Description** that tells the AI what to look for, **Allow Multiple Values**, and **Updatable** (a later answer may replace the value). |
+| **Extraction entries** | Click **Add Entry** for each detail: a **Name** (letters, numbers and underscores, such as `customer_email`), a **Description** that tells the AI what to look for, a **Type** (**Text**, **Number**, **Yes or no**, **Date**, **Choice** from **Allowed values**, or **List** of several values), **Allow Multiple Values**, and **Updatable** (a later answer may replace the value). **Write to contact field** names a field of the conversation's contact, as `PartName.FieldName` such as `Contact.Company`, that the value is written to when the conversation closes, with **How**: replace what it holds, fill it only when empty, or add to a text field. |
 | **Enable post-session processing** | After the chat closes, the AI analyzes the whole conversation. |
 | **Post-session tasks** | On the **Tasks** tab, click **Add Task**: a **Name**, a **Type** (**Semantic** for free text such as a summary, or **Predefined Options** to pick from a list such as *Resolved*, *Escalated*, *Abandoned*) and **Instructions**. For **Predefined Options**, add each choice with **Add Option** (a **Value** and a **Description**) and choose **Allow multiple values** if needed. On the **Capabilities** tab, pick tools the AI may use while it analyzes. |
 | **Enable session metrics** | Chat only. Collects the numbers for the chat analytics report, and adds thumbs up and down buttons to answers. |

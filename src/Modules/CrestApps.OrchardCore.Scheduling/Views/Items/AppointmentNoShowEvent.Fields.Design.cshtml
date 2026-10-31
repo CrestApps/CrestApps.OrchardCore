@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentNoShowEvent>
+
+<header><h4><i class="fa-solid fa-user-slash" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Appointment Marked No-Show"])</h4></header>

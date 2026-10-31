@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -86,7 +87,8 @@ public sealed partial class VoiceAgentConversationLoop
 
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
 
-        return current?.AiEscalated == true || current?.Status.IsTerminal() == true;
+        // A warm or screened transfer is under way once its side call rings; the caller is connected later.
+        return current?.AiEscalated == true || current?.Status.IsTerminal() == true || current?.Has<AIAttendedTransfer>() == true;
     }
 
     /// <summary>
@@ -141,6 +143,11 @@ public sealed partial class VoiceAgentConversationLoop
                 activity.ItemId.SanitizeLogValue());
         }
 
+        // The new profile answers in its own voice, now and on every later turn, rather than the first profile's.
+        switched.Put(new AIProfileSwitch { ProfileId = switched.AIProfileId });
+        await _activityStore.UpdateAsync(switched, cancellationToken);
+        _callSpeech = null;
+
         return (switched, newProfile, newSession);
     }
 
@@ -158,8 +165,30 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        if (await _voiceCallCommands.SendAsync(voiceEvent.ActivityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, digits)))
+        // Keys typed while the keypad is private are secure data, never the caller's turn.
+        var secureEntry = SecureKeypadCaptures.Offer(voiceEvent.ActivityId, digits, _clock.UtcNow);
+
+        if (secureEntry.Captured)
         {
+            await OnSecureEntryAsync(voiceEvent, secureEntry);
+
+            return;
+        }
+
+        var keysPressed = new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, digits);
+
+        if (await _voiceCallCommands.SendAsync(voiceEvent.ActivityId, keysPressed))
+        {
+            return;
+        }
+
+        // The provider's event reached a node other than the one whose live session holds the call: relay it there.
+        var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId);
+
+        if (IsLiveAICall(activity) && activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
+        {
+            await _voiceCallCommands.RelayAsync(voiceEvent.ActivityId, keysPressed);
+
             return;
         }
 
@@ -167,6 +196,50 @@ public sealed partial class VoiceAgentConversationLoop
         // what they said before is overtaken.
         _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
         _callerKeys.Collect(voiceEvent);
+    }
+
+    /// <summary>
+    /// Gives the AI the outcome of a finished secure keypad entry in place of the digits: as a turn on a turn-based
+    /// call, and through the session on a live one.
+    /// </summary>
+    /// <param name="voiceEvent">The event of the last key.</param>
+    /// <param name="entry">The entry.</param>
+    private async Task OnSecureEntryAsync(VoiceAgentEvent voiceEvent, SecureKeypadEntry entry)
+    {
+        if (!entry.Ended)
+        {
+            return;
+        }
+
+        var turn = await SecureKeypadEntries.CompleteAsync(ShellScope.Services, voiceEvent.ActivityId, entry, CancellationToken.None);
+        var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId);
+
+        if (activity is not null && activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
+        {
+            await _voiceCallCommands.RelayAsync(voiceEvent.ActivityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.CallerTurn, turn));
+
+            return;
+        }
+
+        var media = _mediaResolver.Get(voiceEvent.ProviderName) ?? _mediaResolver.GetDefault();
+
+        if (media is not null)
+        {
+            _silenceWatchdog.CallerHeard(voiceEvent.ActivityId);
+            await OnTranscriptionAsync(
+                new VoiceAgentEvent
+                {
+                    Kind = VoiceAgentEventKind.Transcription,
+                    ActivityId = voiceEvent.ActivityId,
+                    ProviderName = voiceEvent.ProviderName,
+                    ProviderCallId = voiceEvent.ProviderCallId,
+                    TranscriptionText = turn,
+                    TranscriptionIsFinal = true,
+                    OccurredUtc = voiceEvent.OccurredUtc,
+                },
+                media,
+                CancellationToken.None);
+        }
     }
 
     /// <summary>
@@ -205,15 +278,25 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="voiceEvent">The call.</param>
     /// <param name="media">The media provider carrying it.</param>
     /// <param name="activity">The call's activity.</param>
-    /// <param name="phoneNumber">The number to ring.</param>
+    /// <param name="request">The transfer: the number to ring, and how.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     private async Task TransferToNumberAsync(
         VoiceAgentEvent voiceEvent,
         IVoiceAgentMediaProvider media,
         OmnichannelActivity activity,
-        string phoneNumber,
+        AITakeOverRequest request,
         CancellationToken cancellationToken)
     {
+        var phoneNumber = request.TargetPhoneNumber;
+
+        // A warm or screened transfer rings the number on a side call first; the caller is connected, or given back
+        // to the AI, from that call's events.
+        if (request.TransferMode != AICallTransferMode.Cold &&
+            await StartAttendedTransferAsync(voiceEvent, media, activity, request, cancellationToken))
+        {
+            return;
+        }
+
         if (!await media.TransferAsync(voiceEvent.ProviderCallId, phoneNumber, cancellationToken))
         {
             _logger.LogWarning(
@@ -229,6 +312,7 @@ public sealed partial class VoiceAgentConversationLoop
         await RecordHandoffAsync(activity, cancellationToken, current => current.Put(new AICallTransfer
         {
             PhoneNumber = phoneNumber,
+            Mode = AICallTransferMode.Cold,
             TransferredUtc = _clock.UtcNow,
         }));
 

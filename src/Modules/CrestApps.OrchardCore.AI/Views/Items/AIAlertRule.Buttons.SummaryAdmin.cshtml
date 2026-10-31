@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIAlertRule>
+
+<a asp-action="Edit" asp-controller="AIAlertRules" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-secondary">@T["Edit"]</a>

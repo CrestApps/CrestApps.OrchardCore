@@ -156,6 +156,15 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Calendars and Scheduling',
+            className: icon('calendar-days'),
+            items: [
+                'user-manual/calendars/calendars',
+                'user-manual/calendars/scheduling',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -217,6 +226,7 @@ const sidebars = {
                 'user-manual/administration/content-access-control',
                 'user-manual/administration/content-fields',
                 'user-manual/administration/import-and-export',
+                'user-manual/data-connectors',
                 'user-manual/administration/do-not-call-lists',
                 'user-manual/administration/phone-number-verification',
                 'user-manual/administration/time-zones',
@@ -285,6 +295,7 @@ const sidebars = {
                         'ai/providers/index',
                         'ai/providers/azure-ai-inference',
                         'ai/providers/azure-openai',
+                        'ai/providers/custom-llm',
                         'ai/providers/ollama',
                         'ai/providers/openai',
                     ],
@@ -389,6 +400,15 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Calendars and Scheduling',
+            className: icon('calendar-days'),
+            items: [
+                'modules/calendars',
+                'modules/scheduling',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'modules/commerce' },
@@ -433,6 +453,7 @@ const sidebars = {
                 'modules/content-access-control',
                 'modules/content-fields',
                 'modules/content-transfer',
+                'modules/data-connectors',
                 'modules/dnc-registry',
                 'modules/phone-number-verifications',
                 'modules/phone-number-verifications-abstractapi',

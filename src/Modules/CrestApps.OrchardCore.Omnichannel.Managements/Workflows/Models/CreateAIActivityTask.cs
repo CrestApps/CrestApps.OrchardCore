@@ -1,12 +1,9 @@
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.ContentManagement;
-using OrchardCore.Modules;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
@@ -22,10 +19,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models;
 /// </summary>
 public sealed class CreateAIActivityTask : TaskActivity<CreateAIActivityTask>
 {
-    private readonly IOmnichannelActivityManager _activityManager;
-    private readonly IContentManager _contentManager;
+    private readonly AIActivityStarter _starter;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
-    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -33,24 +28,18 @@ public sealed class CreateAIActivityTask : TaskActivity<CreateAIActivityTask>
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateAIActivityTask"/> class.
     /// </summary>
-    /// <param name="activityManager">The activity manager.</param>
-    /// <param name="contentManager">The content manager, which loads the contact.</param>
+    /// <param name="starter">Creates the automated activity.</param>
     /// <param name="expressionEvaluator">The workflow expression evaluator, which renders the Liquid fields.</param>
-    /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CreateAIActivityTask(
-        IOmnichannelActivityManager activityManager,
-        IContentManager contentManager,
+        AIActivityStarter starter,
         IWorkflowExpressionEvaluator expressionEvaluator,
-        IClock clock,
         ILogger<CreateAIActivityTask> logger,
         IStringLocalizer<CreateAIActivityTask> stringLocalizer)
     {
-        _activityManager = activityManager;
-        _contentManager = contentManager;
+        _starter = starter;
         _expressionEvaluator = expressionEvaluator;
-        _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -150,55 +139,18 @@ public sealed class CreateAIActivityTask : TaskActivity<CreateAIActivityTask>
             return Outcome("Failed");
         }
 
-        var now = _clock.UtcNow;
-        var channel = string.Equals(Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase)
-            ? OmnichannelConstants.Channels.Sms
-            : OmnichannelConstants.Channels.Phone;
-
-        var activity = await _activityManager.NewAsync();
-        activity.Kind = channel == OmnichannelConstants.Channels.Sms ? ActivityKind.Sms : ActivityKind.Call;
-        activity.Source = ActivitySources.Workflow;
-        activity.Channel = channel;
-        activity.InteractionType = ActivityInteractionType.Automated;
-        activity.AIProfileId = AIProfileId;
-        activity.ChannelEndpointId = ChannelEndpointId;
-        activity.PreferredDestination = destination;
-        activity.CampaignId = string.IsNullOrWhiteSpace(CampaignId) ? null : CampaignId;
-        activity.SubjectContentType = string.IsNullOrWhiteSpace(SubjectContentType) ? null : SubjectContentType;
-        activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-        activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(ActivityInteractionType.Automated, hasAssignedUser: false);
-        activity.ScheduledUtc = now;
-        activity.CreatedUtc = now;
-        activity.ContactResolutionStatus = ContactResolutionStatus.Unresolved;
-
-        var contactId = await EvaluateAsync(ContactContentItemId, workflowContext);
-
-        if (!string.IsNullOrWhiteSpace(contactId))
+        var activity = await _starter.StartAsync(new AIActivityStartRequest
         {
-            var contact = await _contentManager.GetAsync(contactId, VersionOptions.Latest);
-
-            if (contact is not null)
-            {
-                activity.ContactContentItemId = contact.ContentItemId;
-                activity.ContactContentType = contact.ContentType;
-                activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
-                activity.ContactResolvedUtc = now;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(activity.SubjectContentType))
-        {
-            activity.Subject = await _contentManager.NewAsync(activity.SubjectContentType);
-        }
-
-        var variables = ParseVariables(await EvaluateAsync(Variables, workflowContext));
-
-        if (variables.Count > 0)
-        {
-            activity.SetConversationVariables(variables);
-        }
-
-        await _activityManager.CreateAsync(activity);
+            Channel = Channel,
+            AIProfileId = AIProfileId,
+            Destination = destination,
+            ChannelEndpointId = ChannelEndpointId,
+            CampaignId = CampaignId,
+            SubjectContentType = SubjectContentType,
+            ContactContentItemId = await EvaluateAsync(ContactContentItemId, workflowContext),
+            Variables = ParseVariables(await EvaluateAsync(Variables, workflowContext)),
+            Source = ActivitySources.Workflow,
+        });
 
         workflowContext.LastResult = activity.ItemId;
         workflowContext.Output["ActivityId"] = activity.ItemId;
@@ -207,7 +159,7 @@ public sealed class CreateAIActivityTask : TaskActivity<CreateAIActivityTask>
         {
             _logger.LogInformation(
                 "The Create AI Activity task created automated {Channel} activity '{ActivityId}'.",
-                channel,
+                activity.Channel,
                 activity.ItemId.SanitizeLogValue());
         }
 
