@@ -1,0 +1,175 @@
+@model ScheduleBoardViewModel
+@{
+    var period = Model.Period;
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceSchedulesPlan" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(period.Name))">
+        <breadcrumb-item id="WorkforceSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.Workforce">@T["Schedules"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style>
+    .wf-board th, .wf-board td { min-width: 8.5rem; }
+    .wf-board .wf-worker { min-width: 11rem; position: sticky; left: 0; z-index: 1; background-color: var(--bs-body-bg); }
+    .wf-shift { display: block; text-decoration: none; border-left: 4px solid var(--wf-shift-color, #2b8a3e); background-color: var(--bs-tertiary-bg); color: var(--bs-body-color); border-radius: .25rem; padding: .2rem .4rem; margin-bottom: .25rem; font-size: .85rem; line-height: 1.25; }
+    .wf-shift:hover { background-color: var(--bs-secondary-bg); }
+    .wf-add { visibility: hidden; font-size: .8rem; }
+    .wf-board td:hover .wf-add, .wf-add:focus { visibility: visible; }
+</style>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.TeamName</span>
+                <span class="badge ta-badge fw-normal"><i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@period.StartDate.ToString("d")&ndash;@period.EndDate.ToString("d")</span>
+                @if (period.PublishedVersion > 0)
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Published, version {0}", period.PublishedVersion]</span>
+                }
+                else
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-pen-ruler text-warning me-1" aria-hidden="true"></i>@T["Draft"]</span>
+                }
+                <span class="badge ta-badge fw-normal"><i class="fa-solid fa-business-time text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.ShiftCount, "1 shift", "{0} shifts", Model.ShiftCount)</span>
+                @if (Model.OpenCount > 0)
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user-plus text-warning me-1" aria-hidden="true"></i>@T.Plural(Model.OpenCount, "1 open", "{0} open", Model.OpenCount)</span>
+                }
+            </div>
+            <div class="col-auto d-flex flex-wrap gap-2">
+                <form method="post" asp-action="ApplyRotations" asp-route-id="@period.ItemId" class="no-multisubmit">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Apply rotations"]</button>
+                </form>
+                @if (Model.CopySourceOptions.Count > 0)
+                {
+                    <form method="post" asp-action="Copy" asp-route-id="@period.ItemId" class="no-multisubmit d-flex gap-1">
+                        <select name="sourceId" class="form-select form-select-sm" aria-label="@T["Schedule to copy from"]">
+                            @foreach (var option in Model.CopySourceOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm text-nowrap"><i class="fa-regular fa-copy me-1" aria-hidden="true"></i>@T["Copy"]</button>
+                    </form>
+                }
+                @if (period.PublishedVersion > 0)
+                {
+                    <a asp-action="Changes" asp-route-id="@period.ItemId" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>@T["Change log"]</a>
+                }
+                @if (!string.IsNullOrEmpty(Model.CalendarId))
+                {
+                    <a href="@Url.Content("~/Admin/calendar?view=week&calendars=" + Model.CalendarId)" class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Team calendar"]</a>
+                }
+                @if (Model.CanPublish)
+                {
+                    <form method="post" asp-action="Publish" asp-route-id="@period.ItemId" class="no-multisubmit">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(period.PublishedVersion > 0 ? T["Publish changes"] : T["Publish"])</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.WeekCount > 1)
+{
+    <nav class="d-flex align-items-center justify-content-center gap-3 mb-2" aria-label="@T["Weeks"]">
+        @if (Model.Week > 0)
+        {
+            <a asp-action="Plan" asp-route-id="@period.ItemId" asp-route-week="@(Model.Week - 1)" class="btn btn-sm btn-outline-secondary" aria-label="@T["Previous week"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+        }
+        <span class="fw-semibold">@T["Week {0} of {1}", Model.Week + 1, Model.WeekCount]</span>
+        @if (Model.Week < Model.WeekCount - 1)
+        {
+            <a asp-action="Plan" asp-route-id="@period.ItemId" asp-route-week="@(Model.Week + 1)" class="btn btn-sm btn-outline-secondary" aria-label="@T["Next week"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+        }
+    </nav>
+}
+
+<div class="card text-bg-theme">
+    <div class="table-responsive">
+        <table class="table wf-board align-top mb-0">
+            <thead>
+                <tr>
+                    <th scope="col" class="wf-worker">@T["Worker"]</th>
+                    @foreach (var day in Model.Days)
+                    {
+                        <th scope="col">@day.ToString("ddd d MMM")</th>
+                    }
+                    <th scope="col" class="text-end">@T["Hours"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <th scope="row" class="wf-worker fw-normal">
+                            @if (row.WorkerId is null)
+                            {
+                                <span class="fst-italic">@row.Name</span>
+                            }
+                            else
+                            {
+                                @row.Name
+                                @if (!row.OnTeam)
+                                {
+                                    <span class="badge text-bg-warning fw-normal ms-1" data-bs-toggle="tooltip" title="@T["Not on the team this week"]">@T["Off team"]</span>
+                                }
+                            }
+                        </th>
+                        @foreach (var day in Model.Days)
+                        {
+                            <td>
+                                @if (row.Cells.TryGetValue(day, out var shifts))
+                                {
+                                    foreach (var shift in shifts.OrderBy(shift => shift.Start))
+                                    {
+                                        <a asp-action="Shift" asp-route-periodId="@period.ItemId" asp-route-id="@shift.Id" class="wf-shift" style="--wf-shift-color: @(shift.Color ?? "#2b8a3e")">
+                                            <span class="fw-semibold">@shift.Start.ToString("HH:mm")&ndash;@shift.End.ToString("HH:mm")</span>
+                                            @if (!string.IsNullOrEmpty(shift.TemplateName) || !string.IsNullOrEmpty(shift.Segments))
+                                            {
+                                                <br /><span class="text-muted small">@string.Join(" · ", new[] { shift.TemplateName, shift.Segments }.Where(text => !string.IsNullOrEmpty(text)))</span>
+                                            }
+                                        </a>
+                                    }
+                                }
+                                <a asp-action="Shift" asp-route-periodId="@period.ItemId" asp-route-workerId="@row.WorkerId" asp-route-date="@day.ToString("yyyy-MM-dd")" class="wf-add" aria-label="@T["Add a shift for {0} on {1}", row.Name, day.ToString("d")]"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add"]</a>
+                            </td>
+                        }
+                        <td class="text-end text-nowrap">@(row.Hours > 0 ? row.Hours.ToString("0.##") : null)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" class="wf-worker fw-normal">@T["Coverage"]</th>
+                    @foreach (var day in Model.Days)
+                    {
+                        var coverage = Model.Coverage.TryGetValue(day, out var value) ? value : null;
+                        <td>
+                            @if (coverage is null || !coverage.HasRequirement)
+                            {
+                                <span class="text-muted small">@T["No requirement"]</span>
+                            }
+                            else if (coverage.ShortIntervals > 0)
+                            {
+                                <span class="badge text-bg-danger fw-normal" data-bs-toggle="tooltip" title="@T["Below the minimum in {0} half hours", coverage.ShortIntervals]"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["{0} below the minimum at {1}", coverage.WorstShort, coverage.WorstShortAt?.ToString("HH:mm")]</span>
+                            }
+                            else if (coverage.UnderTargetIntervals > 0)
+                            {
+                                <span class="badge text-bg-warning fw-normal" data-bs-toggle="tooltip" title="@T["Below the target in {0} half hours", coverage.UnderTargetIntervals]"><i class="fa-solid fa-circle-exclamation me-1" aria-hidden="true"></i>@T["{0} under target at {1}", coverage.WorstGap, coverage.WorstAt?.ToString("HH:mm")]</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-success fw-normal"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Covered"]</span>
+                            }
+                        </td>
+                    }
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>

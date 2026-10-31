@@ -1,0 +1,65 @@
+@model DraftShiftEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceSchedulesShift" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Shift"] : T["Edit Shift"])">
+        <breadcrumb-item id="WorkforceSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.Workforce">@T["Schedules"]</breadcrumb-item>
+        <breadcrumb-item id="WorkforceSchedulesPlan" action="Plan" controller="Schedules" area="CrestApps.OrchardCore.Workforce" route-id="@Model.PeriodId">@Model.PeriodName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Shift" asp-route-periodId="@Model.PeriodId" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="PeriodId" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="WorkerId" class="ocat-label">@T["Worker"]</label>
+            <div class="ocat-end">
+                <select asp-for="WorkerId" asp-items="Model.WorkerOptions" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Nobody yet (open shift)"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="Date" class="ocat-label ocat-label-required">@T["Day"]</label><div class="ocat-end"><input asp-for="Date" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TemplateId" class="ocat-label">@T["Template"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <select asp-for="TemplateId" asp-items="Model.TemplateOptions" class="form-select" style="max-width: 24rem">
+                        <option value="">@T["None"]</option>
+                    </select>
+                    <button type="submit" name="applyTemplate" value="true" class="btn btn-outline-secondary btn-sm text-nowrap">@T["Use its times"]</button>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Start" class="ocat-label ocat-label-required">@T["Hours"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <input asp-for="Start" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["Starts"]" />
+                    <span>@T["to"]</span>
+                    <input asp-for="End" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["Ends"]" />
+                </div>
+                <span class="hint">@T["An end at or before the start is on the next day."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Segments" class="ocat-label">@T["Breaks and activities"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Segments" class="form-control font-monospace" rows="4" placeholder="10:30-10:45 Break&#10;13:00-13:30 Meal"></textarea>
+                <span class="hint">@T["One per line: a time range, then an activity code. The codes are: {0}.", string.Join(", ", Model.ActivityNames)]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="Notes" class="ocat-label">@T["Notes"]</label><div class="ocat-end"><textarea asp-for="Notes" class="form-control" rows="2"></textarea><span class="hint">@T["Shown to the worker on the calendar."]</span></div></div>
+    </div></div>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" asp-action="Plan" asp-route-id="@Model.PeriodId">@T["Cancel"]</a>
+            @if (!string.IsNullOrEmpty(Model.Id))
+            {
+                <a asp-action="DeleteShift" asp-route-periodId="@Model.PeriodId" asp-route-id="@Model.Id" class="btn btn-outline-danger ms-2" data-title="@T["Delete"]" data-message="@T["Delete this shift?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+            }
+        </div>
+    </div>
+</form>

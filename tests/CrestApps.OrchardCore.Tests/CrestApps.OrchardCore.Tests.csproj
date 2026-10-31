@@ -36,11 +36,15 @@
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Transactions.Abstractions/CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Skills.Abstractions/CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Workforce.Abstractions/CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Customers.Abstractions/CrestApps.OrchardCore.Customers.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Addresses.Core/CrestApps.OrchardCore.Addresses.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Calendars.Core/CrestApps.OrchardCore.Calendars.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Scheduling.Core/CrestApps.OrchardCore.Scheduling.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Skills.Core/CrestApps.OrchardCore.Skills.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Workforce.Core/CrestApps.OrchardCore.Workforce.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
@@ -145,6 +149,8 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Calendars\CrestApps.OrchardCore.Calendars.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Customers\CrestApps.OrchardCore.Customers.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.AzureAI\CrestApps.OrchardCore.Products.AzureAI.csproj" />

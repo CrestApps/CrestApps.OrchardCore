@@ -163,6 +163,16 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Workforce',
+            className: icon('users'),
+            items: [
+                'user-manual/workforce/workers-and-teams',
+                'user-manual/workforce/shift-planning',
+                'user-manual/workforce/skills-and-certifications',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -399,6 +409,15 @@ const sidebars = {
             items: [
                 'modules/calendars',
                 'modules/scheduling',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Workforce',
+            className: icon('users'),
+            items: [
+                'modules/workforce',
+                'modules/skills',
             ],
         },
         {

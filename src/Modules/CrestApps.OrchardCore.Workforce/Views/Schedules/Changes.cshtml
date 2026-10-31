@@ -1,0 +1,25 @@
+@model WorkforceListViewModel
+@{
+    var period = (SchedulePeriod)ViewData["Period"];
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceSchedulesChanges" title="@T["Change Log"]">
+        <breadcrumb-item id="WorkforceSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.Workforce">@T["Schedules"]</breadcrumb-item>
+        <breadcrumb-item id="WorkforceSchedulesPlan" action="Plan" controller="Schedules" area="CrestApps.OrchardCore.Workforce" route-id="@period.ItemId">@period.Name</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <p class="mb-0 text-muted small">@T["Every shift added, moved, reassigned or removed after the schedule was first published, newest first."]</p>
+    </div>
+</div>
+
+<admin-list name="WorkforceSchedulesChanges" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nothing has changed since the schedule was first published."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Change"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+    </admin-list-grid>
+</admin-list>

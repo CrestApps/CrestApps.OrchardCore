@@ -1,0 +1,24 @@
+@model UserSkillsViewModel
+
+<fieldset class="mb-3">
+    <legend class="h5">@T["Skills"]</legend>
+    <span class="hint d-block mb-2">@T["How well the user holds each skill, from 1 (trainee) to 5 (expert). Routing and scheduling use these."]</span>
+    @for (var i = 0; i < Model.Skills.Count; i++)
+    {
+        var row = Model.Skills[i];
+        <div class="row g-2 align-items-center mb-1">
+            <input type="hidden" name="@Html.NameFor(m => m.Skills[i].SkillId)" value="@row.SkillId" />
+            <label class="col-sm-4 col-form-label" for="@Html.IdFor(m => m.Skills[i].Proficiency)">@row.Name@(string.IsNullOrEmpty(row.Category) ? string.Empty : $" ({row.Category})")</label>
+            <div class="col-sm-4">
+                <select class="form-select form-select-sm" id="@Html.IdFor(m => m.Skills[i].Proficiency)" name="@Html.NameFor(m => m.Skills[i].Proficiency)">
+                    <option value="0" selected="@(row.Proficiency == 0)">@T["Doesn't hold it"]</option>
+                    <option value="1" selected="@(row.Proficiency == 1)">@T["1 - Trainee"]</option>
+                    <option value="2" selected="@(row.Proficiency == 2)">@T["2 - Basic"]</option>
+                    <option value="3" selected="@(row.Proficiency == 3)">@T["3 - Competent"]</option>
+                    <option value="4" selected="@(row.Proficiency == 4)">@T["4 - Advanced"]</option>
+                    <option value="5" selected="@(row.Proficiency == 5)">@T["5 - Expert"]</option>
+                </select>
+            </div>
+        </div>
+    }
+</fieldset>

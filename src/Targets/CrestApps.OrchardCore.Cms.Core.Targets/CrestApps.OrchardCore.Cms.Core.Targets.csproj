@@ -103,6 +103,8 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Calendars/CrestApps.OrchardCore.Calendars.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Skills/CrestApps.OrchardCore.Skills.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Workforce/CrestApps.OrchardCore.Workforce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DataConnectors/CrestApps.OrchardCore.DataConnectors.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DataConnectors.SqlServer/CrestApps.OrchardCore.DataConnectors.SqlServer.csproj" PrivateAssets="none" />

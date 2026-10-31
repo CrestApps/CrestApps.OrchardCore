@@ -1,0 +1,27 @@
+@{
+    var filters = (SkillsListViewModel)Model.ViewModel;
+}
+<div class="btn-group filter">
+    <select name="certificationId" form="certificates-filter" class="form-select form-select-sm" aria-label="@T["Certification"]" onchange="this.form.submit()">
+        <option value="">@T["All certifications"]</option>
+        @foreach (var option in filters.CertificationOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="status" form="certificates-filter" class="form-select form-select-sm" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="">@T["All statuses"]</option>
+        @foreach (var option in filters.StatusOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="expiring" form="certificates-filter" class="form-select form-select-sm" aria-label="@T["Expiry"]" onchange="this.form.submit()">
+        <option value="false" selected="@(!filters.Expiring)">@T["Any expiry"]</option>
+        <option value="true" selected="@filters.Expiring">@T["Expiring in 60 days"]</option>
+    </select>
+</div>

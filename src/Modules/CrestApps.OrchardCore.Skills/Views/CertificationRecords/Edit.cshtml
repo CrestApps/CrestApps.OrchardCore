@@ -1,0 +1,33 @@
+@model CertificationRecordEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CertificationRecordsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Certificate"] : T["Edit Certificate"])">
+        <breadcrumb-item id="CertificationRecords" action="Index" controller="CertificationRecords" area="CrestApps.OrchardCore.Skills">@T["Certificates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="UserId" class="ocat-label ocat-label-required">@T["Held by"]</label><div class="ocat-end">
+            @if (Model.HeldByWorker)
+            {
+                <input class="form-control" value="@Model.SubjectName" disabled />
+                <span class="hint">@T["This certificate belongs to a workforce worker."]</span>
+            }
+            else
+            {
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
+            }
+        </div></div>
+        <div class="ocat-wrapper"><label asp-for="CertificationId" class="ocat-label ocat-label-required">@T["Certification"]</label><div class="ocat-end"><select asp-for="CertificationId" asp-items="Model.CertificationOptions" class="form-select" style="max-width: 22rem"><option value="">@T["Choose a certification"]</option></select></div></div>
+        <div class="ocat-wrapper"><label asp-for="Number" class="ocat-label">@T["Certificate number"]</label><div class="ocat-end"><input asp-for="Number" class="form-control" style="max-width: 22rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="IssuedOn" class="ocat-label">@T["Issued on"]</label><div class="ocat-end"><input asp-for="IssuedOn" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="ExpiresOn" class="ocat-label">@T["Valid until"]</label><div class="ocat-end"><input asp-for="ExpiresOn" type="date" class="form-control" style="max-width: 12rem" /><span class="hint">@T["The last day it is valid. Leave empty to work it out from the issue date and the certification's validity."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="DocumentPath" class="ocat-label">@T["Copy of the certificate"]</label><div class="ocat-end"><input asp-for="DocumentPath" class="form-control" placeholder="certificates/name.pdf" /><span class="hint">@T["The path of the file in the media library."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Status" class="ocat-label">@T["Status"]</label><div class="ocat-end"><select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 14rem"></select><span class="hint">@T["Only valid certificates count. A pending one is waiting to be checked."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Notes" class="ocat-label">@T["Notes"]</label><div class="ocat-end"><textarea asp-for="Notes" class="form-control" rows="3"></textarea></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

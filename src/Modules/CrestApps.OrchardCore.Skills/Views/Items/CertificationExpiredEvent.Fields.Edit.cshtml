@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Skills.Workflows
+
+@model SkillsEventActivityViewModel
+
+@if (Model.HasCertificationFilter)
+{
+    <div class="mb-3">
+        <label asp-for="CertificationIds" class="form-label">@T["Certifications"]</label>
+        <select asp-for="CertificationIds" asp-items="Model.CertificationOptions" class="form-select" multiple size="5"></select>
+        <span class="hint">@T["Leave empty for every certification. The workflow input holds CertificationRecordId, CertificationId, CertificationName, SubjectKind, SubjectId, SubjectName, Number, ExpiresOn and, for a reminder, DaysBefore."]</span>
+    </div>
+}
+else
+{
+    <p class="hint">@T["The workflow input holds SubjectKind, SubjectId, SkillIds (every skill they hold), ChangedSkillIds, RemovedSkillIds, EffectiveDatesOnly and Actor."]</p>
+}

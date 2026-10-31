@@ -1,0 +1,17 @@
+@{
+    var filters = (WorkforceListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+    var allowAll = Model.AllowAll is bool all ? all : true;
+}
+<div class="btn-group filter">
+    <select name="teamId" form="@formId" class="form-select form-select-sm" aria-label="@T["Team"]" onchange="this.form.submit()">
+        @if (allowAll)
+        {
+            <option value="">@T["All teams"]</option>
+        }
+        @foreach (var option in filters.TeamOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

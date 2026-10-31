@@ -1,0 +1,34 @@
+@model ScheduleCreateViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceSchedulesCreate" title="@T["Start a Schedule"]">
+        <breadcrumb-item id="WorkforceSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.Workforce">@T["Schedules"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Create" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Choose a team"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="StartDate" class="ocat-label ocat-label-required">@T["First day"]</label><div class="ocat-end"><input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="Weeks" class="ocat-label ocat-label-required">@T["Weeks"]</label>
+            <div class="ocat-end"><input asp-for="Weeks" type="number" min="1" max="12" class="form-control" style="max-width: 7rem" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" />
+                <span class="hint">@T["Leave empty for the team and the first day."]</span>
+            </div>
+        </div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Start"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

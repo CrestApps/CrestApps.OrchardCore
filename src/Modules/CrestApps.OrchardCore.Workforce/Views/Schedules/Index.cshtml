@@ -1,0 +1,29 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceSchedules" title="@T["Schedules"]" /></zone>
+
+<form asp-action="Index" method="get" id="schedules-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <p class="mb-0 text-muted small">@T["Plan a team's shifts as a draft, then publish them to the team's calendar."]</p>
+                </div>
+                <div class="col-auto"><a asp-action="Create" asp-route-teamId="@Model.TeamId" class="btn btn-secondary create">@T["Start a schedule"]</a></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@{
+    Model.List.ToolbarActions = await New.WorkforceTeamFilter(ViewModel: Model, FormId: "schedules-filter");
+}
+
+<admin-list name="WorkforceSchedules" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no schedules."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Schedule"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
