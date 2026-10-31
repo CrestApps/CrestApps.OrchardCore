@@ -9,7 +9,7 @@ description: >
   contributing busy time (ICalendarBusyTimeSource, AddCalendarBusyTimeSource) or read-only occurrences
   (ICalendarEventSource, AddCalendarEventSource), validating and reacting with ICalendarHandler / ICalendarEventHandler,
   acting after commit with ICalendarEventObserver, reminders (ICalendarReminderOffsetProvider,
-  ICalendarReminderObserver), external providers (ICalendarProvider), and the pitfalls: the Calendar name clashing with
+  ICalendarReminderObserver), where external providers live (see crestapps-calendar-provider), and the pitfalls: the Calendar name clashing with
   System.Globalization.Calendar, ICalendarService versus Orchard Core's ICalendarManager, wall-clock DateTime fields
   needing WallClockDateTimeJsonConverter, never setting StartUtc/EndUtc by hand, and overlap checks under locks. Use
   this skill whenever the request is to "add a calendar type", "put <records> on the calendar", "show <records> on the
@@ -241,10 +241,9 @@ every handler: handlers run for every calendar.
 
 ## 9. External providers
 
-`ICalendarProvider` (`CrestApps.OrchardCore.Calendars.Core.External`) has `Name`, `DisplayName` and
-`PullAsync(calendar, subscription)`. The External Calendars feature's sync service imports what it returns by UID,
-read-only, removing events that disappeared. Only the iCalendar address provider (`ics`) exists today; Google Calendar
-and Microsoft 365 providers are not built.
+External calendar providers (`ICalendarProvider`, `IIncrementalCalendarProvider`, `IWritableCalendarProvider` in
+`CrestApps.OrchardCore.Calendars.Core.External`) have their own skill: `crestapps-calendar-provider`. Only the iCalendar
+address provider (`ics`) ships today; Google Calendar and Microsoft 365 are separate work.
 
 ## 10. Check who may see a schedule or an event
 

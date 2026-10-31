@@ -33,7 +33,7 @@ The **Calendars** module is a calendar foundation that other modules build on. I
 Workflow activities need no feature of their own: they are registered when `OrchardCore.Workflows` is enabled. The [AI tools](#ai-tools) need none either: Calendars registers them when `CrestApps.OrchardCore.AI` is enabled. The **Starting Soon** and **Completed** workflow events also need Calendar Reminders. The `Calendars` recipe step needs `OrchardCore.Recipes.Core`, and the deployment step needs `OrchardCore.Deployment`.
 
 :::note[Google Calendar and Microsoft 365]
-Two-way providers for Google Calendar and Microsoft 365 are not available yet. The `ICalendarProvider` seam exists, and External Calendars ships one read-only provider: a subscription to an iCalendar (`.ics`) address, which Google Calendar, Outlook and most calendar apps can publish. In the other direction, Calendar Feeds publishes a calendar as an address those apps can subscribe to.
+External Calendars ships one read-only provider: a subscription to an iCalendar (`.ics`) address, which Google Calendar, Outlook and most calendar apps can publish. Its synchronization also supports providers that read only what changed and write changes back (two-way), so providers for Google Calendar and Microsoft 365 can be added as modules ([#1238](https://github.com/CrestApps/CrestApps.OrchardCore/issues/1238)). In the other direction, Calendar Feeds publishes a calendar as an address those apps can subscribe to.
 :::
 
 ## Permissions
@@ -251,7 +251,9 @@ On every create, change and move, `DefaultCalendarEventManager`:
 | `ICalendarEventSource` | Contribute read-only occurrences to the calendar view from another module's records without copying them. Register with `services.AddCalendarEventSource<T>()`. Return events with `Editable = false`. |
 | `ICalendarReminderOffsetProvider` | Tell Calendar Reminders how long before an occurrence its "starting soon" moment is raised. Each offset is raised once per occurrence. |
 | `ICalendarReminderObserver` | `OnStartingSoonAsync` and `OnCompletedAsync`, raised exactly once per occurrence and offset. |
-| `ICalendarProvider` (Core, `External`) | An external calendar provider: `Name`, `DisplayName`, `PullAsync(calendar, subscription)` returning `ICalendarEventData`. |
+| `ICalendarProvider` (Core, `External`) | An external calendar provider: `Name`, `DisplayName`, `PullAsync(calendar, subscription)` returning `ICalendarEventData`, and `UsesAddress` / `IsConfigured` for providers connected through an account. Register it with `services.AddCalendarProvider<T>()`. |
+| `IIncrementalCalendarProvider` (Core, `External`) | A provider that reads only what changed since a sync token: `PullChangesAsync` and `GetSyncTokenAsync`. |
+| `IWritableCalendarProvider` (Core, `External`) | A provider that writes local changes back for a two-way subscription: `PushAsync` and `DeleteAsync`, with `CalendarProviderConflictException` and `CalendarProviderAuthorizationException`. |
 | `DisplayDriver<Calendar>` / `DisplayDriver<CalendarEvent>` | Add type-specific fields to the editors. |
 
 See the `crestapps-calendar-types` agent skill (`.agents/skills/crestapps-calendar-types/SKILL.md`) for worked examples and pitfalls.
@@ -282,11 +284,24 @@ Calendar Feeds adds:
 
 ## External calendars
 
-External Calendars keeps a calendar in step with an external calendar. The subscription is a `CalendarSubscription` in the calendar's properties: `Provider` (`ics` by default), `Url`, `IntervalMinutes` (60 by default, 5 to 10,080), `Enabled`, `LastSyncedUtc`, `LastAttemptUtc`, `LastError`, `Failures`, `LastResult`.
+External Calendars keeps a calendar in step with an external calendar. The subscription is a `CalendarSubscription` in the calendar's properties: `Provider` (`ics` by default), `Url`, `IntervalMinutes` (60 by default, 5 to 10,080), `Enabled`, `TwoWay`, `ConflictPolicy`, and what synchronization keeps for itself: `SyncToken`, `PendingPush`, `PendingDeletes`, `NeedsReconnect`, `LastSyncedUtc`, `LastAttemptUtc`, `LastError`, `Failures` and `LastResult`.
 
-`CalendarSyncBackgroundTask` runs every five minutes and calls `CalendarSyncService.SyncDueAsync`, which pulls each due calendar through its provider and imports the events with `Source = External`, `Editable = false` and `RemoveMissing = true`, so events gone from the external calendar are removed here. A failure is recorded in `LastError` and the next try waits longer: the interval doubles with each failure in a row, up to 32 times the interval. A provider that is down never blocks the internal calendar.
+`CalendarSyncBackgroundTask` runs every five minutes. It asks `CalendarSyncService.ListDueAsync` which calendars are due and synchronizes each one in its own scope, so a calendar whose provider fails, or whose save conflicts, never stops the others. A calendar is due when its interval has passed since the last attempt, or at the next run when it has local changes to write back.
 
-The built-in `ics` provider (`ICalendarUrlProvider`) accepts `https://`, `http://` and `webcal://` addresses, times out after 30 seconds, and refuses addresses that resolve to private or loopback networks.
+One run:
+
+1. **Reads** the external calendar. A provider that implements `IIncrementalCalendarProvider` reads only what changed since the subscription's `SyncToken`, and the run reads everything again when the token has expired. A full read removes the events that are gone from the external calendar.
+2. **Imports** the events with `Source = External`, matched by the external event's id, and records on each event a `CalendarProviderMapping`: the calendar, the provider, the external id, the external copy's version and a fingerprint of the synchronized fields (title, description, location, times, time zone, status, busy or free, repeat rule, exceptions and attendee emails).
+3. For a **two-way** subscription (only with a provider that implements `IWritableCalendarProvider`), imported events can be changed here, and the run **writes back** the events added or changed here (their fingerprint no longer matches) and deletes the external copies of events deleted here. Each write carries the version it last saw, so a change made externally in the meantime is caught.
+4. **Records** the result on the subscription, shown on the calendar's **Subscription** card.
+
+An event changed both here and in the external calendar since they were last synchronized is a **conflict**. The subscription's **When both copies changed** setting decides: **The external calendar's copy wins** (the default) overwrites the local change, and **This calendar's copy wins** keeps it and writes it over the external copy; an event deleted externally but changed here is then created again externally.
+
+Failures never touch the events the calendar already has. A failure is recorded in `LastError` and the next try waits longer: the interval doubles with each failure in a row, up to 32 times the interval. When the external account refuses access (a revoked consent or an expired refresh token), the subscription is paused (`NeedsReconnect`) instead of retried, the card asks to reconnect, and saving the calendar again starts it. A health check named `calendars-external-sync` (tag `calendars`) reports **Degraded** while a subscription needs reconnecting or has failed three times in a row; it never reports the calendar unhealthy, since the calendar keeps working.
+
+The built-in `ics` provider (`ICalendarUrlProvider`) is read-only. It accepts `https://`, `http://` and `webcal://` addresses, times out after 30 seconds, and refuses addresses that resolve to private or loopback networks.
+
+To build another provider, such as Google Calendar or Microsoft 365, follow the `crestapps-calendar-provider` agent skill (`.agents/skills/crestapps-calendar-provider/SKILL.md`): the contracts, what the synchronization does for the provider, event mapping, connecting accounts, and a checklist.
 
 ## Workflows
 

@@ -86,4 +86,9 @@ public sealed class ICalendarEventData
     /// Gets or sets the attendees.
     /// </summary>
     public IList<CalendarAttendee> Attendees { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the external copy's version marker (an ETag or a change key), for a provider that has one.
+    /// </summary>
+    public string Version { get; set; }
 }
