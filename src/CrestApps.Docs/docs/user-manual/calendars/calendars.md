@@ -18,6 +18,8 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 <YouTube video="calendars-getting-started" title="Video of opening your calendar, adding events and seeing schedules" />
 
+<YouTube video="calendars-events-recurrence-attendees" title="Video of repeating events, attendees and invitations" />
+
 ## Kinds of calendars
 
 <YouTube video="calendars-getting-started" title="Video of the kinds of calendars" start={21} end={72} />
@@ -131,11 +133,17 @@ The event editor has three tabs.
 | **Visibility** | **Same as the calendar**, **Public**, or **Private: others see only that the time is busy**. |
 | **Color** | Tick **Use its own color** to pick a color for this event only. |
 
+<YouTube video="calendars-events-recurrence-attendees" title="Video of the status, busy or free, and visibility of an event" start={212} end={257} />
+
 **Repeat**
+
+<YouTube video="calendars-events-recurrence-attendees" title="Video of making an event repeat" start={23} end={82} />
 
 Choose how the event **Repeats**: **Does not repeat**, **Daily**, **Weekly**, **Monthly** or **Yearly**, and **every** how many days, weeks, months or years. A weekly event repeats **On** the days you tick, so "every day from the 3rd to the 30th except Mondays" is **Weekly**, every 1 week, with every day but Monday ticked, and **Ends** **On** the 30th. A monthly event repeats on **The same day of the month** or **The same weekday of the same week, such as the second Tuesday**. Under **Ends**, choose **Never**, **On** a date, or **After** a number of occurrences. For a pattern the choices don't cover, a **Custom rule** (an iCalendar repeat rule) is used instead.
 
 **Attendees**
+
+<YouTube video="calendars-events-recurrence-attendees" title="Video of inviting people and guests" start={133} end={188} />
 
 | Field | What it does |
 | --- | --- |
@@ -146,11 +154,15 @@ Choose how the event **Repeats**: **Does not repeat**, **Daily**, **Weekly**, **
 
 When you're invited to an event, its page shows **You are invited. Your answer:** with **Accept**, **Maybe** and **Decline**.
 
+<YouTube video="calendars-events-recurrence-attendees" title="Video of answering an invitation" start={187} end={213} />
+
 ### Change a repeating event
+
+<YouTube video="calendars-events-recurrence-attendees" title="Video of changing or cancelling a repeating event" start={81} end={134} />
 
 Opening one occurrence of a repeating event shows **Apply the changes, or the cancellation, to**: **This occurrence**, **This and following**, or **All occurrences**. Changing only this occurrence leaves the others as they are; changing this and following ends the series there and starts a new one with your changes. To change how the event repeats, edit the whole series from its first occurrence.
 
-**Cancel event** (**Cancel** on an occurrence) cancels it, or the occurrences you chose: cancelling **This occurrence** removes just that day from the series, and **All occurrences** cancels the whole event. A cancelled event is kept, with its status set to *Cancelled*, but the calendar no longer shows it, and the people invited are told. **Delete** removes it for good, with every occurrence if it repeats.
+**Cancel event** (**Cancel** on an occurrence) cancels it, or the occurrences you chose: cancelling **This occurrence** removes just that day from the series, and **All occurrences** cancels the whole event. A cancelled event is kept, with its status set to *Cancelled*, but the calendar no longer shows it. With **Calendar Invitations** on, the people invited are told. **Delete** removes it for good, with every occurrence if it repeats.
 
 ### Approve events
 
