@@ -210,6 +210,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 
 ## Data connectors
 

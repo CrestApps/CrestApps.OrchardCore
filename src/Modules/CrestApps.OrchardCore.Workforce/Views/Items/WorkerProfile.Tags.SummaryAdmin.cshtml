@@ -1,0 +1,33 @@
+@model ShapeViewModel<WorkerProfile>
+
+@{
+    var worker = Model.Value;
+    var employment = worker.EmploymentType switch
+    {
+        EmploymentType.PartTime => T["Part time"],
+        EmploymentType.Seasonal => T["Seasonal"],
+        EmploymentType.Temporary => T["Temporary"],
+        EmploymentType.Contractor => T["Contractor"],
+        EmploymentType.Subcontractor => T["Subcontractor"],
+        _ => T["Full time"],
+    };
+}
+@if (!string.IsNullOrEmpty(worker.EmployeeNumber))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Employee number"]"><i class="fa-solid fa-id-badge text-secondary me-1" aria-hidden="true"></i>@worker.EmployeeNumber</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Employment"]"><i class="fa-solid fa-briefcase text-secondary me-1" aria-hidden="true"></i>@employment</span>
+@if (string.IsNullOrEmpty(worker.UserId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Has no user account, so can't sign in"]"><i class="fa-solid fa-user-slash text-secondary me-1" aria-hidden="true"></i>@T["No account"]</span>
+}
+@if (worker.Status != WorkerStatus.Active)
+{
+    var status = worker.Status switch
+    {
+        WorkerStatus.OnLeave => T["On leave"],
+        WorkerStatus.Suspended => T["Suspended"],
+        _ => T["Terminated"],
+    };
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-pause text-warning me-1" aria-hidden="true"></i>@status</span>
+}

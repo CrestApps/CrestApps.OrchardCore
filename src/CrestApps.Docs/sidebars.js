@@ -166,6 +166,7 @@ const sidebars = {
             label: 'Workforce',
             className: icon('users'),
             items: [
+                'user-manual/workforce/workers-and-teams',
                 'user-manual/workforce/skills-and-certifications',
             ],
         },
@@ -414,6 +415,7 @@ const sidebars = {
             label: 'Workforce',
             className: icon('users'),
             items: [
+                'modules/workforce',
                 'modules/skills',
             ],
         },

@@ -998,4 +998,10 @@ Three pull requests (WD21), each a commit (or a few) per slice. Each slice is us
   - `SharedAgentSkillsHandler` resolves its collaborators lazily, which breaks an assignment-service-to-handler construction cycle. It is listed in `DependencyInjectionArchitectureTests`.
   - Skills depends on CrestApps Resources, which the user picker needs.
   - "Create a worker profile for every agent" (§5.2) moves to `Workforce.ContactCenter` in PR B, because Workforce must not reference Contact Center.
+- A2 built (Workforce module, `CrestApps.OrchardCore.Workforce`, with Abstractions and Core): workers, the team tree, manager scoping, activity codes (nine seeded by the migration), availability as text lines, workers' skills and certificates, a Workforce calendar per team, `ICalendarAccessContributor` in Calendars, `ShiftSegmentBusyTimeSource`, and the `Workforce` recipe and deployment step. It differs from §5 in these ways:
+  - `Shift` is a **free** event type, not busy. Scheduling's "hours from shifts" asks free/busy for the resource's user, so a busy shift would block every slot. The non-work segments are reported as busy through the busy-time source instead (acceptance test: a staff member is offered 9:00 to 16:00 but not the 12:00 meal).
+  - Team defaults (rule set, time-off policies, time clock policy, pay period) are not fields yet. Each slice adds the one it needs.
+  - `WorkerAvailability` approval (§5.6) is left to the Portal slice. Availability is edited by managers.
+  - The team list shows each team's parent as a badge instead of indenting, so it pages correctly.
+  - Worker workflow events (§18.1) move to A9, with the API and AI tools.
   - Not verified locally: the docs site build. The `@swc/html` native binding can't load, because of an ACL on `%LOCALAPPDATA%`; `npm run check:manuals` passes. The Contact Center side was covered by tests, not exercised live.

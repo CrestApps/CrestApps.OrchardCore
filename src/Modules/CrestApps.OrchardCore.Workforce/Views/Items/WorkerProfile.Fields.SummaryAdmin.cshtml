@@ -1,0 +1,7 @@
+@model ShapeViewModel<WorkerProfile>
+
+<a asp-controller="Workers" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.DisplayName</a>
+@if (!string.IsNullOrWhiteSpace(Model.Value.JobTitle))
+{
+    <div class="hint">@Model.Value.JobTitle</div>
+}

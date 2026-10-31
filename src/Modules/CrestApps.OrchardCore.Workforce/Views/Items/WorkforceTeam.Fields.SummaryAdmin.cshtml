@@ -1,0 +1,7 @@
+@model TeamRowViewModel
+
+<a asp-controller="Teams" asp-action="Edit" asp-route-id="@Model.Team.ItemId">@Model.Team.Name</a>
+@if (!string.IsNullOrWhiteSpace(Model.Team.Description))
+{
+    <div class="hint">@Model.Team.Description</div>
+}

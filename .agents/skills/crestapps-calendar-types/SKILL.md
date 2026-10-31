@@ -35,8 +35,10 @@ Read first:
   `CalendarTypeBuilder`, `CalendarEventTypeBuilder`, `Services/`, `Models/`).
 - Worked examples in the repo:
   - Built-in types: `src/Modules/CrestApps.OrchardCore.Calendars/Startup.cs`, `TeamsStartup.cs`, `ResourcesStartup.cs`,
-    `OfficeStartup.cs`. There is no built-in workforce type: a workforce management module registers its own
-    (shifts with `RequiresAttendee()`, time off with `NeedsApproval()`).
+    `OfficeStartup.cs`.
+  - The Workforce type, from another module: `src/Core/CrestApps.OrchardCore.Workforce.Core/WorkforceCoreServiceCollectionExtensions.cs`
+    (a `ManagedByCode()` type with one calendar per team, found by `Source`/`SourceId`; `Shift` is a free event type so a
+    shift is time available for work, and `ShiftSegmentBusyTimeSource` makes the breaks inside it busy).
   - A module-managed type from another module: `src/Modules/CrestApps.OrchardCore.Bookings/CalendarStartup.cs` (a
     Bookings startup with `[RequireFeatures(CalendarsConstants.Features.Calendars)]`) and
     `Calendar/BookingCalendarHandler.cs` (one event per booking), `Calendar/BookingCalendarSlotFilter.cs` (reading busy
@@ -246,7 +248,16 @@ every handler: handlers run for every calendar.
 read-only, removing events that disappeared. Only the iCalendar address provider (`ics`) exists today; Google Calendar
 and Microsoft 365 providers are not built.
 
-## 10. Check who may see a schedule or an event
+## 10. Grant access for your own reasons
+
+When people reach a calendar through your module's records rather than through ownership or sharing (the members of
+a team you keep a calendar for), implement `ICalendarAccessContributor` and register it with
+`services.AddCalendarAccessContributor<T>()`. `GetAccessLevelAsync` returns the level for one calendar (return `None`
+for calendars that aren't yours); `GetCalendarIdsAsync` lists the calendars you grant, so they show among the user's
+calendars. A contributor can only raise the level, and runs only for users with Access calendars. See
+`src/Core/CrestApps.OrchardCore.Workforce.Core/Services/WorkforceCalendarAccessContributor.cs`.
+
+## 11. Check who may see a schedule or an event
 
 Check only the broad permission with the resource; `CalendarEventAuthorizationHandler` grants it through the Own permission
 for the user's own schedule or event, and through calendar sharing for events on calendars the user can read. Never check the

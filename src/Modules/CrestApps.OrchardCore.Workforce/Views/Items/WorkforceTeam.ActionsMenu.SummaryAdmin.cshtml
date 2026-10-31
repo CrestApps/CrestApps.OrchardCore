@@ -1,0 +1,10 @@
+@model TeamRowViewModel
+
+<a asp-controller="Teams" asp-action="Edit" asp-route-parentId="@Model.Team.ItemId" class="dropdown-item">@T["Add a team under it"]</a>
+<a asp-controller="Workers" asp-action="Index" asp-route-teamId="@Model.Team.ItemId" class="dropdown-item">@T["Workers"]</a>
+<a asp-controller="Workers" asp-action="Edit" asp-route-teamId="@Model.Team.ItemId" class="dropdown-item">@T["Add a worker"]</a>
+@if (!string.IsNullOrEmpty(Model.Team.CalendarId))
+{
+    <a href="@Url.Content("~/Admin/calendar?view=week&calendars=" + Model.Team.CalendarId)" class="dropdown-item">@T["Calendar"]</a>
+}
+<a asp-controller="Teams" asp-action="Delete" asp-route-id="@Model.Team.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this team? Its calendar is kept. A team with sub-teams or members can't be deleted."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
