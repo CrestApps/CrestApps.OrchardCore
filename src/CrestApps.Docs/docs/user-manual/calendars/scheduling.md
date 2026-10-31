@@ -16,7 +16,9 @@ Scheduling books appointments with your staff, rooms and equipment: a consultati
 
 <AskYourAdmin />
 
-To set it up, add your resources first, then your appointment types.
+To set it up, add your resources first, then your appointment types. A video shows both, step by step:
+
+<YouTube video="scheduling-people-rooms-appointment-types" title="Video of adding resources and appointment types" />
 
 ## Add the people, rooms and equipment that take appointments
 
@@ -84,17 +86,25 @@ Deleting an appointment type keeps its appointments.
 
 ## How open times are worked out
 
-A time is offered when the whole appointment, with its free time before and after, fits:
+A video shows each rule on screen:
 
-- inside the resource's working hours (or shifts), less its days off;
-- outside anything busy on the resource's calendar, and for a staff member, on their own calendars;
-- outside the free time before and after the appointments already booked with the resource;
+<YouTube video="scheduling-open-times" title="Video of how open times are worked out" />
+
+A time is offered when:
+
+- the appointment itself fits inside the resource's working hours (or shifts), less its days off. Its free time before and after only has to be clear of other plans, so it may run past the end of a range, such as into a lunch break;
+- the appointment, with its free time before and after, is clear of anything busy on the resource's calendar, and for a staff member, on their own calendars;
+- it is clear of the free time that the appointments already booked with the resource keep before and after them;
 - after the minimum notice and before the booking limit;
 - without going over the most per day, or for a group session, while places are left.
 
 With **All resources together**, every resource must be free at that time.
 
 ## Book an appointment for a customer
+
+A video shows booking, and managing the appointment afterwards:
+
+<YouTube video="scheduling-book-and-manage" title="Video of booking and managing appointments" />
 
 1. Open **Calendars > Appointments** and choose **Book an appointment**, or choose **Book** next to an appointment type.
 2. Choose the **Appointment type** and the **Day**, then **Show times**.
@@ -107,7 +117,7 @@ If someone else took the time a moment before you, you're told so and can pick a
 **Calendars > Appointments** lists appointments with a search by customer and a **Status** filter. **Open** shows an appointment with its time, resource, customer, place and notes, and these actions:
 
 - **Confirm** a requested appointment.
-- **Took place** or **No-show** after the time.
+- **Took place** or **No-show**, once the visit has happened. Both are offered for confirmed and requested appointments.
 - **Move to another time on** a day: choose the **Day**, pick an open time, and choose **Move**.
 - **Cancel appointment**, with an optional **Reason**.
 
@@ -127,6 +137,10 @@ Appointments show on the calendar of the resource, tentative while held or reque
 
 ## Let customers book online
 
+A video shows the customer's side, and the waitlist:
+
+<YouTube video="scheduling-online-booking-and-waitlist" title="Video of online booking and the waitlist" />
+
 With the **Scheduling Self-Service** feature on, every appointment type with **Customers can book it themselves** and a **Booking page address** gets a public page at */book/* followed by that address. Add it to your site's menu, or link to it from your pages.
 
 On the page, the customer picks a **Day**, chooses **Show times**, picks a time (times are in the site's time zone), enters their **Name**, **Email**, **Phone** and **Notes**, and chooses **Book**. They land on a **Your appointment** page. Its address is their manage link: they can come back to it to move the appointment to another open time, or to cancel it. For an appointment type that waits for confirmation, the page says the request has been received.
@@ -135,11 +149,15 @@ Scheduling doesn't email customers by itself. To send a confirmation with the ma
 
 ## Waitlist
 
-When a customer wants a time that's taken, add them to the waitlist. Open **Calendars > Waitlist**, choose the **Appointment type**, the **From** and **To** dates and times they can come, their **Name** and **Email**, and choose **Add**.
+When a customer wants a time that's taken, add them to the waitlist. Open **Calendars > Waitlist**, choose the **Appointment type**, the **From** and **To** days they can come (whole days in the site's time zone, both included), their **Name** and **Email**, and choose **Add**.
 
-When an appointment of that type is cancelled or moved, the customer who has waited longest and can come at the freed time is marked *Notified*, and the **Waitlist Slot Available** workflow event starts, so a workflow can tell them. **Remove** takes a customer off the list.
+When an appointment of that type is cancelled or moved, the customer who has waited longest and can come on the day of the freed time is marked *Notified*, and the **Waitlist Slot Available** workflow event starts, so a workflow can tell them. **Remove** takes a customer off the list.
 
 ## Copy scheduling to another site
+
+A video shows the Scheduling events and tasks, the AI assistant, and copying scheduling to another site:
+
+<YouTube video="scheduling-workflows-and-ai" title="Video of Scheduling workflows, the AI assistant and deployment" />
 
 Add the **Scheduling** step (under **Calendar**) to a deployment plan to take the appointment types and the staff, rooms and equipment that take appointments. Tick **Include appointments** to take every appointment too (with the customers' names, emails and phone numbers) and **Include the waitlist** for the waitlist. Add the **Calendars** step as well, with **Include events** when you take appointments, so the resources' calendars and the appointments' calendar events come along; put **Calendars** before **Scheduling** in the plan.
 
