@@ -88,6 +88,7 @@ A time is offered when the whole appointment, with its free time before and afte
 
 - inside the resource's working hours (or shifts), less its days off;
 - outside anything busy on the resource's calendar, and for a staff member, on their own calendars;
+- outside the free time before and after the appointments already booked with the resource;
 - after the minimum notice and before the booking limit;
 - without going over the most per day, or for a group session, while places are left.
 
