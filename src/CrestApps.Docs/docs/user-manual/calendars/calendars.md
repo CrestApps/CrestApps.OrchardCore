@@ -20,6 +20,8 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 <YouTube video="calendars-events-recurrence-attendees" title="Video of repeating events, attendees and invitations" />
 
+<YouTube video="calendars-create-and-share" title="Video of creating a calendar and sharing it" />
+
 ## Kinds of calendars
 
 <YouTube video="calendars-getting-started" title="Video of the kinds of calendars" start={21} end={72} />
@@ -60,9 +62,11 @@ Events another feature keeps, such as appointments and bookings, can't be moved 
 
 ## Create a calendar
 
+<YouTube video="calendars-create-and-share" title="Video of creating a calendar and sharing it" start={18} end={122} />
+
 1. Open **Calendars > Manage Calendars**.
 2. Choose **Add calendar** and pick the type.
-3. Fill in the tabs below and choose **Save**.
+3. Fill in the sections below and choose **Save**.
 
 When you create a calendar, you manage it. **Manage Calendars** lists the calendars you can see, with a search box and a **Type** filter. **Open** shows a calendar in the calendar view, and on a calendar you manage, **Edit** opens its settings and the menu next to it has **Delete calendar**, which deletes the calendar and every event on it.
 
@@ -80,9 +84,11 @@ When you create a calendar, you manage it. **Manage Calendars** lists the calend
 
 ### Owner
 
-Personal calendars belong to a user, and team calendars belong to a role. On the **Owner** tab, choose the user or the **Team** (role). Everyone in the role can see a team calendar and add events to it. Only calendar administrators can give a personal calendar to someone else.
+Personal calendars belong to a user, and team calendars belong to a role. In the **Owner** section, choose the user or the **Team** (role). Everyone in the role can see a team calendar and add events to it. Only calendar administrators can give a personal calendar to someone else.
 
 ### Sharing
+
+<YouTube video="calendars-create-and-share" title="Video of what each person sees at each sharing level" start={121} end={158} />
 
 Share a calendar with **Users** or **Roles**, each with one of these levels. Each level includes the ones above it:
 
@@ -115,7 +121,7 @@ You can do everything from the calendar without leaving it. The editor opens in 
 
 Only the events of calendars you can change can be edited this way. The calendar loads the events of the days you're looking at as you move between them, so a busy calendar still opens quickly.
 
-The event editor has three tabs.
+The event editor has three sections: **General**, **Repeat** and **Attendees**.
 
 **General**
 
@@ -189,7 +195,7 @@ Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps
 
 To see what people have scheduled, such as a manager checking a team's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **Choose people** and pick one or more users in the box that appears, or choose **Everyone**, then **Show**. The calendar shows the events on those people's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
 
-**Whose schedule** only appears for people allowed to see others' schedules. Two pairs of permissions decide this, under **Security > Roles**:
+**Whose schedule** only appears for people allowed to see others' schedules. Two pairs of permissions decide this, under **Access Control > Roles**:
 
 | Permission | What it allows |
 | --- | --- |
@@ -216,7 +222,7 @@ The invitation has **Accept**, **Maybe** and **Decline** links. Guests answer fr
 
 ## Reminders
 
-With **Calendar Reminders** on, an event's **Remind** setting (on its **General** tab) shows a reminder before it starts: when it starts, 5, 10, 15 or 30 minutes, 1 or 2 hours, or a day before. Events that take time remind 10 minutes before unless you change it; all-day events don't remind.
+With **Calendar Reminders** on, an event's **Remind** setting (in its **General** section) shows a reminder before it starts: when it starts, 5, 10, 15 or 30 minutes, 1 or 2 hours, or a day before. Events that take time remind 10 minutes before unless you change it; all-day events don't remind.
 
 The reminder shows at the top right of every admin page of the calendar's owner (for a personal calendar) and of each invited user who hasn't declined. It stays until you click **Dismiss** or close it, and dismissing it on one page or tab removes it from the others. **Open calendar** opens the calendar on that day. Pages check for reminders every minute while they're open.
 
