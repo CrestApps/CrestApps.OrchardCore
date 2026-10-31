@@ -189,6 +189,10 @@ The input of every event:
 
 ## Bookings on the calendar
 
+The video shows these screens:
+
+<YouTube video="bookings-on-the-calendar" title="Video of bookings on the calendar" />
+
 Whenever Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) are both on, Bookings puts bookings on the shared [calendar](./calendars.md) and lets a calendar close booking dates. There is no separate feature to enable: `CalendarStartup` belongs to the Bookings feature and carries `[RequireFeatures(CalendarsConstants.Features.Calendars)]`, so it runs only while Calendars is on.
 
 **One calendar for every booking.** Bookings registers the `Bookings` calendar type, managed by code (`ManagedByCode()`, so it isn't in **Add calendar**), with one event type, `Booking`. `BookingCalendarHandler` is an `IBookingHandler`: on every booking save it creates, moves or cancels the booking's calendar event on the **Bookings** calendar, which it creates the first time (`Source = Bookings`, `SourceId = Bookings`, found again with `ICalendarService.FindBySourceAsync`). The event:

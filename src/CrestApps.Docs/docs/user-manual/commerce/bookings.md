@@ -94,6 +94,10 @@ The **Find a date** page (*/bookings* on your site) lets shoppers enter dates an
 
 ## Bookings on the calendar
 
+A video shows the Bookings calendar, **Sync to calendar** and **Block with calendar**:
+
+<YouTube video="bookings-on-the-calendar" title="Video of bookings on the calendar" />
+
 When the **Calendars** feature is on too, every booking also goes on a **Bookings** calendar, next to the rest of your calendars:
 
 - A held or requested booking shows as *Tentative*, and a booked one as *Confirmed*.
