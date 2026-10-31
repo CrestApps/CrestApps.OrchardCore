@@ -1,5 +1,5 @@
 // @ts-check
-// Draws FullCalendar in a time zone without a time zone plugin. FullCalendar is set to UTC and given "calendar dates":
+// Draws FullCalendar in the user's time zone. FullCalendar is set to UTC and given "calendar dates":
 // Dates whose UTC components are the wall-clock time in the zone, so it shows them as they are. These helpers turn
 // instants and wall-clock times into calendar dates and back.
 
