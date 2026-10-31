@@ -24,6 +24,8 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 <YouTube video="calendars-categories-and-colors" title="Video of color-coding events with categories" />
 
+<YouTube video="calendars-schedules-and-team" title="Video of seeing schedules and finding a time with Team Availability" />
+
 ## Kinds of calendars
 
 <YouTube video="calendars-getting-started" title="Video of the kinds of calendars" start={21} end={72} />
@@ -203,6 +205,8 @@ Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps
 
 ## See someone else's schedule
 
+<YouTube video="calendars-schedules-and-team" title="Video of Whose schedule" start={18} end={74} />
+
 <YouTube video="calendars-getting-started" title="Video of seeing someone else's schedule" start={236} end={272} />
 
 To see what people have scheduled, such as a manager checking a team's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **Choose people** and pick one or more users in the box that appears, or choose **Everyone**, then **Show**. The calendar shows the events on those people's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
@@ -220,7 +224,11 @@ Being able to read a calendar, because it's shared with you or visible to everyo
 
 ## See when your team is free
 
-With Team Calendars on, open **Calendars > Team Availability**. Choose the team's **Calendar**, the **Day** and the **Meeting length (minutes)**, then **Show**. Each member of the team's role gets a row showing when they are **Busy**, **Tentative** or **Free**, from all of their calendars. **When everyone is free** lists the gaps long enough for the meeting that everyone shares.
+<YouTube video="calendars-schedules-and-team" title="Video of how busy and free time are counted" start={73} end={105} />
+
+<YouTube video="calendars-schedules-and-team" title="Video of the Team Availability page" start={104} end={170} />
+
+With Team Calendars on, open **Calendars > Team Availability**. Choose the **Team** (its calendar), the **Day** and the **Meeting length (minutes)**, then **Show**. Each member of the team's role gets a row, with a cell for each half hour, showing when they are **Busy**, **Tentative** or **Free**, from all of their calendars. **When everyone is free** lists the gaps long enough for the meeting that everyone shares.
 
 ## Invitations
 
