@@ -16,7 +16,11 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 <AskYourAdmin />
 
+<YouTube video="calendars-getting-started" title="Video of opening your calendar, adding events and seeing schedules" />
+
 ## Kinds of calendars
+
+<YouTube video="calendars-getting-started" title="Video of the kinds of calendars" start={21} end={72} />
 
 Which types you can choose depends on the features your administrator turned on.
 
@@ -38,6 +42,8 @@ Some kinds of events have their own behavior:
 - A kind of event that needs approval, such as time off on a calendar another module adds, is created as *Tentative* and waits until someone who manages the calendar confirms it.
 
 ## Use the calendar
+
+<YouTube video="calendars-getting-started" title="Video of opening the calendar and choosing its views" start={71} end={126} />
 
 Open **Calendars > Calendar**. The list on the side shows every calendar you can see; tick the ones to show. Your choice is remembered on that browser.
 
@@ -95,6 +101,10 @@ Free events, and kinds of events that don't count (such as a team's **Out of off
 
 ## Add and change events
 
+<YouTube video="calendars-getting-started" title="Video of adding an event" start={125} end={189} />
+
+<YouTube video="calendars-getting-started" title="Video of changing, moving, cancelling and deleting an event" start={188} end={237} />
+
 You can do everything from the calendar without leaving it. The editor opens in a window over the calendar, and the calendar refreshes when you save:
 
 - **Add:** choose **New event**, or drag across the times (or click a day) where the event goes, then pick the calendar and the kind of event.
@@ -140,7 +150,7 @@ When you're invited to an event, its page shows **You are invited. Your answer:*
 
 Opening one occurrence of a repeating event shows **Apply the changes, or the cancellation, to**: **This occurrence**, **This and following**, or **All occurrences**. Changing only this occurrence leaves the others as they are; changing this and following ends the series there and starts a new one with your changes. To change how the event repeats, edit the whole series from its first occurrence.
 
-**Cancel event** (**Cancel** on an occurrence) cancels it, or the occurrences you chose: cancelling **This occurrence** removes just that day from the series, and **All occurrences** cancels the whole event, which stays on the calendar as cancelled. **Delete** removes it for good, with every occurrence if it repeats.
+**Cancel event** (**Cancel** on an occurrence) cancels it, or the occurrences you chose: cancelling **This occurrence** removes just that day from the series, and **All occurrences** cancels the whole event. A cancelled event is kept, with its status set to *Cancelled*, but the calendar no longer shows it, and the people invited are told. **Delete** removes it for good, with every occurrence if it repeats.
 
 ### Approve events
 
@@ -162,6 +172,8 @@ Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps
 - Deleting a category keeps its events; they show again in their kind's color.
 
 ## See someone else's schedule
+
+<YouTube video="calendars-getting-started" title="Video of seeing someone else's schedule" start={236} end={272} />
 
 To see what people have scheduled, such as a manager checking a team's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **Choose people** and pick one or more users in the box that appears, or choose **Everyone**, then **Show**. The calendar shows the events on those people's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
 
