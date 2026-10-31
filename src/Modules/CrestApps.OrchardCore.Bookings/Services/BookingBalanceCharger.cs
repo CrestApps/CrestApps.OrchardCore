@@ -19,6 +19,7 @@ public sealed class BookingBalanceCharger
     internal const int MaxAttempts = 3;
 
     private readonly IBookingBalanceStore _balances;
+    private readonly IBookingStore _bookings;
     private readonly ITransactionManager _transactions;
     private readonly ICheckoutEngine _checkoutEngine;
     private readonly ICheckoutSessionStore _sessionStore;
@@ -26,11 +27,13 @@ public sealed class BookingBalanceCharger
     private readonly IEnumerable<ICheckoutSavedPaymentMethodProvider> _savedPaymentMethodProviders;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IEnumerable<IBookingPaymentHandler> _paymentHandlers;
 
     internal readonly IStringLocalizer S;
 
     public BookingBalanceCharger(
         IBookingBalanceStore balances,
+        IBookingStore bookings,
         ITransactionManager transactions,
         ICheckoutEngine checkoutEngine,
         ICheckoutSessionStore sessionStore,
@@ -38,9 +41,11 @@ public sealed class BookingBalanceCharger
         IEnumerable<ICheckoutSavedPaymentMethodProvider> savedPaymentMethodProviders,
         IClock clock,
         ILogger<BookingBalanceCharger> logger,
-        IStringLocalizer<BookingBalanceCharger> stringLocalizer)
+        IStringLocalizer<BookingBalanceCharger> stringLocalizer,
+        IEnumerable<IBookingPaymentHandler> paymentHandlers)
     {
         _balances = balances;
+        _bookings = bookings;
         _transactions = transactions;
         _checkoutEngine = checkoutEngine;
         _sessionStore = sessionStore;
@@ -48,6 +53,7 @@ public sealed class BookingBalanceCharger
         _savedPaymentMethodProviders = savedPaymentMethodProviders;
         _clock = clock;
         _logger = logger;
+        _paymentHandlers = paymentHandlers;
         S = stringLocalizer;
     }
 
@@ -199,6 +205,11 @@ public sealed class BookingBalanceCharger
     private async Task<string> FailAsync(BookingBalance balance, string reason, bool final, CancellationToken cancellationToken)
     {
         balance = await ReloadAsync(balance, cancellationToken);
+
+        // A balance that isn't scheduled any more, such as one that already failed for good, was paid or was let go of,
+        // had its last failure reported already.
+        var report = balance.Status == BookingBalanceStatus.Scheduled;
+
         balance.LastFailure = reason;
 
         if (final || balance.Attempts >= MaxAttempts)
@@ -215,6 +226,38 @@ public sealed class BookingBalanceCharger
 
         _logger.LogWarning("The balance of order '{OrderNumber}' wasn't charged: {Reason}", balance.OrderNumber, reason);
 
+        if (report)
+        {
+            await ReportFailureAsync(balance, reason, cancellationToken);
+        }
+
         return reason;
+    }
+
+    private async Task ReportFailureAsync(BookingBalance balance, string reason, CancellationToken cancellationToken)
+    {
+        var bookings = (await _bookings.ListByOrderAsync(balance.OrderId, cancellationToken))
+            .Where(booking => booking.ConfirmedUtc.HasValue)
+            .ToList();
+
+        if (bookings.Count == 0)
+        {
+            return;
+        }
+
+        var context = new BookingPaymentContext
+        {
+            Bookings = bookings,
+            OrderId = balance.OrderId,
+            OrderNumber = balance.OrderNumber,
+            PaymentKind = BookingPaymentKind.Balance,
+            Amount = balance.Amount,
+            Currency = balance.Currency,
+            Reason = reason,
+            IsFinal = balance.Status == BookingBalanceStatus.Failed,
+            Reference = balance.TransactionId,
+        };
+
+        await _paymentHandlers.InvokeAsync((handler, paymentContext) => handler.PaymentFailedAsync(paymentContext, cancellationToken), context, _logger);
     }
 }
