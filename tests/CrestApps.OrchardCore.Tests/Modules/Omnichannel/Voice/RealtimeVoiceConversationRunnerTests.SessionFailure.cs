@@ -151,6 +151,75 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task ASessionThatRefusesItsSetUp_IsNotCarriedOn()
+    {
+        // Arrange
+        // Live: the profile kept a voice of another provider, OpenAI refused the session's set-up over it, and the
+        // session carried on with neither the profile's instructions nor its tools. The model then told the caller
+        // it had booked an appointment that nothing booked.
+        var harness = new RealtimeHarness();
+        harness.Media.KeepAlive = true;
+        harness.Conversation.KeepAlive = true;
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.Error,
+            ErrorMessage = "Invalid value: 'EXAVITQu4vr4xnSDxMaL'. Supported values are: 'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', and 'cedar'.",
+        });
+
+        var second = new FakeRealtimeConversation { KeepAlive = true };
+        harness.Orchestrator.Later.Enqueue(second);
+
+        // Act
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Orchestrator.Starts > 1 || run.IsCompleted);
+
+        // Assert
+        // The refused session was given up, though its stream stayed open, and a new one was asked for.
+        Assert.Equal(2, harness.Orchestrator.Starts);
+        Assert.True(harness.Conversation.Disposed);
+
+        second.KeepAlive = false;
+        await LetTheCallGoAsync(harness, run);
+    }
+
+    [Fact]
+    public async Task AnUnexpectedErrorOnceTheSessionIsRunning_IsRiddenOut()
+    {
+        // Arrange
+        // Only an error before anything else answers the set-up. Later, the same error is one more the session may
+        // well survive.
+        var harness = new RealtimeHarness();
+        harness.Media.KeepAlive = true;
+        harness.Conversation.KeepAlive = true;
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseStarted, ResponseId = "response-1" },
+            Speech("response-1", "item-1", milliseconds: 40));
+
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Media.WrittenAudio.Count > 0);
+        var writtenBefore = harness.Media.WrittenAudio.Count;
+
+        // Act
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent
+            {
+                Type = RealtimeConversationEventType.Error,
+                ErrorMessage = "Invalid value: 'EXAVITQu4vr4xnSDxMaL'. Supported values are: 'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', and 'cedar'.",
+            },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseStarted, ResponseId = "response-2" },
+            Speech("response-2", "item-2", milliseconds: 40));
+
+        await WaitUntilAsync(() => harness.Media.WrittenAudio.Count > writtenBefore || run.IsCompleted);
+
+        // Assert
+        Assert.False(run.IsCompleted, "An error mid-call ended it.");
+        Assert.Equal(1, harness.Orchestrator.Starts);
+        Assert.False(harness.Conversation.Disposed);
+
+        await LetTheCallGoAsync(harness, run);
+    }
+
+    [Fact]
     public async Task SendingToASessionWhoseSocketHasGone_BringsItBack_RatherThanEndingTheCall()
     {
         // Arrange

@@ -18,17 +18,44 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// <summary>
     /// Decides whether the session carries on after an error, and repairs what the error was about when it can.
     /// </summary>
+    /// <remarks>
+    /// The session's set-up -- the profile's instructions, its tools and its voice -- reaches the provider as one
+    /// message, and the provider refuses that message whole over a single value it does not accept. Its answer comes
+    /// before anything else the session sends, so an unexpected error with nothing from the session before it is
+    /// that refusal, and what would carry on is a model that knows nothing of the call. Live, OpenAI refused a voice
+    /// of another provider ("Invalid value: '...'. Supported values are: 'alloy', ..."), and the model went on to tell
+    /// the caller it had booked an appointment, with no tool to book it.
+    /// </remarks>
+    /// <param name="conversation">The session that reported the error.</param>
+    /// <param name="bargeIn">What is queued on the line.</param>
+    /// <param name="message">The provider's error message.</param>
+    /// <param name="consecutiveErrors">How many errors in a row the session has reported, this one included.</param>
+    /// <param name="heardFromSession">Whether the session has sent anything other than errors before this one.</param>
+    /// <param name="activityId">The call's activity, for the log.</param>
+    /// <param name="cancellationToken">The call's token.</param>
     /// <returns><see langword="true"/> when the session carries on; <see langword="false"/> when it is lost.</returns>
     private async Task<bool> RideOutErrorAsync(
         IRealtimeConversation conversation,
         AssistantBargeIn bargeIn,
         string message,
         int consecutiveErrors,
+        bool heardFromSession,
         string activityId,
         CancellationToken cancellationToken)
     {
         var kind = RealtimeSessionErrors.Classify(message);
         var sanitized = message.SanitizeLogValue();
+
+        if (kind == RealtimeSessionErrorKind.Unexpected && !heardFromSession)
+        {
+            _meter?.Failed();
+            _logger.LogError(
+                "The realtime voice session on activity '{ActivityId}' refused its set-up, so it has neither the profile's instructions nor its tools, and is not carried on: {Error}",
+                activityId,
+                sanitized);
+
+            return false;
+        }
 
         if (kind == RealtimeSessionErrorKind.Fatal ||
             (kind == RealtimeSessionErrorKind.Unexpected && consecutiveErrors >= MaximumConsecutiveErrors))
