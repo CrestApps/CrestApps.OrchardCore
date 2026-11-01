@@ -1,0 +1,37 @@
+@model WorkforceSetupViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceGetStarted" title="@T["Get Started with Workforce"]" /></zone>
+
+<p class="text-muted">@T["Set up Workforce in this order. Each step shows what is there now."]
+    @if (Model.HasRecipes)
+    {
+        <span>@T["To try it with sample teams, workers and settings, run the Workforce sample under"] <a href="@Url.Content("~/Admin/Recipes")">@T["Configuration > Recipes"]</a>.</span>
+    }
+</p>
+
+<ol class="list-group list-group-numbered mb-3">
+    @foreach (var step in Model.Steps)
+    {
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-3">
+            <div class="me-auto" style="flex: 1 1 22rem">
+                <div class="fw-semibold">
+                    @step.Title
+                    @if (step.Done)
+                    {
+                        <span class="badge text-bg-success ms-1"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Done"]</span>
+                    }
+                    else if (step.FeatureOff)
+                    {
+                        <span class="badge text-bg-light border ms-1">@T["Feature off"]</span>
+                    }
+                </div>
+                <div class="small text-muted">@step.Description</div>
+                @if (!string.IsNullOrEmpty(step.Status) && !step.FeatureOff)
+                {
+                    <div class="small mt-1">@step.Status</div>
+                }
+            </div>
+            <a href="@step.Url" class="btn @(step.Done ? "btn-outline-secondary" : "btn-primary") btn-sm">@step.Action</a>
+        </li>
+    }
+</ol>

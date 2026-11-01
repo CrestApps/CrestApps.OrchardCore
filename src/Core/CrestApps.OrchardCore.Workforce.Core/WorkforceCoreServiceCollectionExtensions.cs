@@ -67,6 +67,8 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddScoped<WorkerLocks>();
         services.TryAddScoped<ScheduleChangeRecorder>();
         services.TryAddScoped<IWorkforceNotifier, NullWorkforceNotifier>();
+        services.TryAddScoped<IWorkforceEvents, NullWorkforceEvents>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulePublishHandler, SchedulePublishedEvents>());
         services.TryAddScoped<DefaultWorkerScheduleLimitsProvider>();
         services.TryAddScoped<IWorkerScheduleLimitsProvider, DefaultWorkerScheduleLimitsProvider>();
         services.TryAddScoped<TeamPlanningPolicy>();

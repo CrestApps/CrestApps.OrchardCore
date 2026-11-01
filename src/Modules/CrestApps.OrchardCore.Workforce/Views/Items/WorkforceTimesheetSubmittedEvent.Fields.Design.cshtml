@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceTimesheetSubmittedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Timesheet Submitted"])
+    </h4>
+</header>

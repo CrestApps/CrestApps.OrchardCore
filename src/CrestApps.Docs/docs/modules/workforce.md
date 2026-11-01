@@ -8,6 +8,7 @@ user_manual:
   - user-manual/workforce/time-off
   - user-manual/workforce/labor-rules
   - user-manual/workforce/time-clock
+  - user-manual/workforce/reports-and-automation
   - user-manual/workforce/my-work-portal
 ---
 
@@ -22,6 +23,7 @@ The admin screens are described in the User Manual: [Workers and Teams](../user-
 | `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.LaborRules` | Workforce Labor Rules | `CrestApps.OrchardCore.Workforce.ShiftPlanning` |
 | `CrestApps.OrchardCore.Workforce.TimeClock` | Workforce Time Clock | `CrestApps.OrchardCore.Workforce` |
+| `CrestApps.OrchardCore.Workforce.Api` | Workforce API | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.Portal` | Workforce My Work Portal | `CrestApps.OrchardCore.Workforce` |
 
 Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts), `CrestApps.OrchardCore.Workforce.Core` (stores, indexes, services), `CrestApps.OrchardCore.Workforce` (the module).
@@ -262,6 +264,33 @@ The `Workforce` step imports activity codes (by id or name), teams (by id or nam
 ```
 
 The **Workforce teams and workers** deployment step exports the activity codes and teams, and optionally the workers, without their date of birth.
+
+Each feature has its own settings step, matching records by id or name (pay codes by code) so a second run updates them, and naming the records they refer to: `WorkforceShiftPlanning` (`Templates`, with `teamNames` and each segment's `activityName`), `WorkforceTimeOff` (`Types`; `Policies` with `typeName` and `teamNames`; `Allotments` and `BlackoutPeriods` with `teamName` and `typeNames`), `WorkforceLaborRules` (`RuleSets`) and `WorkforceTimeClock` (`PayPeriods`; `PayCodes`; `Policies` with `payPeriodsName` and `teamNames`, which gives those teams the policy). A name that doesn't exist is reported and its record skipped. The **Workforce settings** deployment step writes the steps of the features that are on.
+
+```json
+{
+  "name": "WorkforceTimeClock",
+  "PayPeriods": [ { "name": "Every two weeks", "frequency": "Biweekly", "anchorDate": "2026-01-04", "weekStart": "Sunday" } ],
+  "PayCodes": [ { "code": "NIGHT", "kind": "ShiftDifferential", "windowStart": "22:00:00", "windowEnd": "06:00:00", "premiumPerHour": 2 } ],
+  "Policies": [ { "name": "Hourly staff", "payPeriodsName": "Every two weeks", "roundingMinutes": 5, "teamNames": [ "Front Desk" ] } ]
+}
+```
+
+The `workforce-sample` recipe uses every step; it is a starting point to copy.
+
+## Events, workflows and AI tools
+
+Services raise events through `IWorkforceEvents` after saving, named in `WorkforceEvents` (`WorkforceTimeOffRequestedEvent`, `WorkforceSchedulePublishedEvent`, `WorkforcePunchedInEvent`, `WorkforceAttendanceExceptionRaisedEvent`, `WorkforceTimesheetApprovedEvent` and the rest), with an input of `WorkerId`, `TeamId` and the record's ids. Without Workflows nothing hears them; with it, `WorkflowWorkforceEvents` starts the workflows that begin with the event's activity (`IWorkflowManager.TriggerEventAsync`, correlated by the record's id). Each event activity can be limited to some teams. Replace `IWorkforceEvents` to send them elsewhere.
+
+The AI tools (`workforceWhoIsWorking`, `workforceMySchedule`, `workforceTimeOffBalance`, `workforceRequestTimeOff`, `workforceFindCover`, `workforceExplainViolations`) are registered with `AddCoreAITool` when the AI feature is on, each with its feature. They read the signed-in user from the request and use the same permission and scope checks as the admin; a person who manages no team gets an answer saying so.
+
+## Reports
+
+The `Workforce` report data source (`WorkforceReportDataSource`) holds the `IWorkforceReportDataSet` data sets each feature adds: `WorkforcePunches`, `WorkforceTimesheetLines`, `WorkforceAttendanceExceptions` (Time Clock), `WorkforceTimeOffRequests` (Time Off) and `WorkforcePredictabilityPay` (Labor Rules). `WorkforceReportDataSet<TRecord, TIndex>` reads them through their index, limits the rows to the teams the reader manages (`IWorkforceScopeService`, by the index's team column) and adds the worker's and team's names.
+
+## HTTP API
+
+The **Workforce API** feature maps `api/workforce/v1` with the API authentication scheme. Under `me`: `GET me`, `GET me/schedule?from=&days=`, `GET me/balances`, `GET me/time-off`, `POST me/time-off`, `GET me/clock`, `POST me/punch` and `GET me/timesheet?date=`. For the teams the caller manages: `GET teams`, `GET workers?teamId=`, `GET shifts?teamId=&from=&to=` (up to 62 days), `GET time-off/requests`, `POST time-off/requests/{id}/approve` and `/decline`, `POST punches` (Edit punches; `source` may be `Api`, `ContactCenter`, `Kiosk` or `Manager`), `GET timesheets` and `POST timesheets/{id}/approve`. A punch is recorded once per `Idempotency-Key` header; a refused one answers 400 with the reasons.
 
 ## Permissions
 

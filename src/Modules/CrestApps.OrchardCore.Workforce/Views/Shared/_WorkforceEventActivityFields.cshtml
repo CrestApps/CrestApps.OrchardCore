@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@model WorkforceEventActivityViewModel
+
+<div class="mb-3">
+    <label asp-for="TeamIds" class="form-label">@T["Teams"]</label>
+    <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="8"></select>
+    <span class="hint">@T["Optional. Start the workflow only for these teams. Choose none for every team; a parent team doesn't include its sub-teams here."]</span>
+</div>
+<p class="hint">@T["The workflow's input has WorkerId and TeamId, and the ids and details of what happened, such as RequestId, TimesheetId, PunchId or ExceptionId."]</p>

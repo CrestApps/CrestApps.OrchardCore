@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforcePunchedInEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+    @T["Punched In"]
+</h4>
+<p>@T["Starts when a worker clocks in."]</p>

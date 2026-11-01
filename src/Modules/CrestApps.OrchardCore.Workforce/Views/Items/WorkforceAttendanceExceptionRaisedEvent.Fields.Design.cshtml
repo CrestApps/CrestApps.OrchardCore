@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceAttendanceExceptionRaisedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Attendance Exception Raised"])
+    </h4>
+</header>

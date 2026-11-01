@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceTimeOffCanceledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ban" aria-hidden="true"></i>
+    @T["Time Off Canceled"]
+</h4>
+<p>@T["Starts when time off is canceled or withdrawn."]</p>

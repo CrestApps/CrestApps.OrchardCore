@@ -29,6 +29,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
     private readonly WorkerTimeZones _timeZones;
     private readonly TimeOffLocks _locks;
     private readonly IWorkforceNotifier _notifier;
+    private readonly IWorkforceEvents _events;
     private readonly IEnumerable<IAttendancePointsHandler> _pointsHandlers;
     private readonly IServiceProvider _serviceProvider;
     private readonly ISession _session;
@@ -49,6 +50,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         WorkerTimeZones timeZones,
         TimeOffLocks locks,
         IWorkforceNotifier notifier,
+        IWorkforceEvents events,
         IEnumerable<IAttendancePointsHandler> pointsHandlers,
         IServiceProvider serviceProvider,
         ISession session,
@@ -67,6 +69,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         _timeZones = timeZones;
         _locks = locks;
         _notifier = notifier;
+        _events = events;
         _pointsHandlers = pointsHandlers;
         _serviceProvider = serviceProvider;
         _session = session;
@@ -200,9 +203,9 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return _store.PageAsync(query, skip, take, cancellationToken);
     }
 
-    public Task<PlanningResult<Timesheet>> SubmitAsync(string id, string attestation, string actor, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<Timesheet>> SubmitAsync(string id, string attestation, string actor, CancellationToken cancellationToken = default)
     {
-        return ChangeAsync(id, recalculate: true, async (timesheet, worker, result) =>
+        var submitted = await ChangeAsync(id, recalculate: true, async (timesheet, worker, result) =>
         {
             if (!timesheet.IsEditable)
             {
@@ -225,11 +228,15 @@ internal sealed class DefaultTimesheetService : ITimesheetService
 
             await Task.CompletedTask;
         }, cancellationToken);
+
+        await RaiseAsync(submitted, WorkforceEvents.TimesheetSubmitted, cancellationToken);
+
+        return submitted;
     }
 
-    public Task<PlanningResult<Timesheet>> ApproveAsync(string id, string actor, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<Timesheet>> ApproveAsync(string id, string actor, CancellationToken cancellationToken = default)
     {
-        return ChangeAsync(id, recalculate: true, async (timesheet, worker, result) =>
+        var approved = await ChangeAsync(id, recalculate: true, async (timesheet, worker, result) =>
         {
             if (timesheet.Status is TimesheetStatus.Approved or TimesheetStatus.Locked)
             {
@@ -245,6 +252,17 @@ internal sealed class DefaultTimesheetService : ITimesheetService
 
             await NotifyAsync(worker, timesheet, S["Your timesheet was approved"], S["Your hours for {0} were approved.", PeriodText(timesheet)], cancellationToken);
         }, cancellationToken);
+
+        await RaiseAsync(approved, WorkforceEvents.TimesheetApproved, cancellationToken);
+
+        return approved;
+    }
+
+    private Task RaiseAsync(PlanningResult<Timesheet> result, string name, CancellationToken cancellationToken)
+    {
+        return result.Succeeded && result.Value is { } timesheet
+            ? _events.RaiseAsync(name, WorkforceEventInputs.Timesheet(timesheet), timesheet.ItemId, cancellationToken)
+            : Task.CompletedTask;
     }
 
     public Task<PlanningResult<Timesheet>> RejectAsync(string id, string reason, string actor, CancellationToken cancellationToken = default)
@@ -616,6 +634,11 @@ internal sealed class DefaultTimesheetService : ITimesheetService
 
     private async Task AfterRaisedAsync(WorkerProfile worker, TimeClockPolicy policy, IReadOnlyList<AttendanceException> raised, CancellationToken cancellationToken)
     {
+        foreach (var exception in raised)
+        {
+            await _events.RaiseAsync(WorkforceEvents.AttendanceExceptionRaised, WorkforceEventInputs.Exception(exception), exception.ItemId, cancellationToken);
+        }
+
         foreach (var exception in raised.Where(exception => exception.Kind == AttendanceExceptionKind.MissedPunch))
         {
             await _notifier.NotifyAsync(new WorkforceNotification
@@ -641,6 +664,12 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         {
             return;
         }
+
+        var input = WorkforceEventInputs.Exception(latest);
+
+        input["Points"] = points;
+        input["Threshold"] = policy.PointsThreshold.Value;
+        await _events.RaiseAsync(WorkforceEvents.AttendancePointsThresholdReached, input, latest.ItemId, cancellationToken);
 
         foreach (var handler in _pointsHandlers)
         {

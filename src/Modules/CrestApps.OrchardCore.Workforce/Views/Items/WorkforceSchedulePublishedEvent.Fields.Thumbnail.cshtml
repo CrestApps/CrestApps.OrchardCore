@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceSchedulePublishedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+    @T["Schedule Published"]
+</h4>
+<p>@T["Starts when a team schedule is published."]</p>

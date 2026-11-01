@@ -1,0 +1,131 @@
+{
+  "name": "WorkforceSample",
+  "displayName": "Workforce sample",
+  "description": "Sets up a sample workforce: a region with a clinic site and two teams, six workers, early and late shift templates, vacation and sick time with an allotment, a rule set that warns past 40 hours a week and blocks less than 10 hours of rest, and a time clock with pay periods every two weeks. Link workers to user accounts under Workforce > Workers to try My Work.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "workforce"
+  ],
+  "tags": [
+    "workforce",
+    "scheduling",
+    "time off",
+    "time clock",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Workforce",
+        "CrestApps.OrchardCore.Workforce.ShiftPlanning",
+        "CrestApps.OrchardCore.Workforce.TimeOff",
+        "CrestApps.OrchardCore.Workforce.LaborRules",
+        "CrestApps.OrchardCore.Workforce.TimeClock",
+        "CrestApps.OrchardCore.Workforce.Portal"
+      ]
+    },
+    {
+      "name": "Workforce",
+      "Teams": [
+        { "name": "North Region", "kind": "Region", "timeZoneId": "America/Chicago" },
+        { "name": "Riverside Clinic", "kind": "Site", "parentName": "North Region", "location": { "address": "100 River Road" } },
+        { "name": "Front Desk", "kind": "Team", "parentName": "Riverside Clinic", "description": "Check-in, phones and scheduling." },
+        { "name": "Nursing", "kind": "Team", "parentName": "Riverside Clinic", "description": "Clinic nurses." }
+      ],
+      "Workers": [
+        { "displayName": "Avery Brooks", "employeeNumber": "1001", "jobTitle": "Clinic manager", "employmentType": "FullTime", "teamMemberships": [ { "teamName": "Riverside Clinic", "role": "Manager" } ] },
+        { "displayName": "Jordan Lee", "employeeNumber": "1002", "jobTitle": "Receptionist", "employmentType": "FullTime", "contractedHoursPerWeek": 40, "teamMemberships": [ { "teamName": "Front Desk" } ] },
+        { "displayName": "Sam Rivera", "employeeNumber": "1003", "jobTitle": "Receptionist", "employmentType": "PartTime", "contractedHoursPerWeek": 24, "teamMemberships": [ { "teamName": "Front Desk" } ] },
+        { "displayName": "Casey Morgan", "employeeNumber": "1004", "jobTitle": "Nurse", "employmentType": "FullTime", "contractedHoursPerWeek": 40, "teamMemberships": [ { "teamName": "Nursing" } ] },
+        { "displayName": "Riley Chen", "employeeNumber": "1005", "jobTitle": "Nurse", "employmentType": "FullTime", "contractedHoursPerWeek": 36, "teamMemberships": [ { "teamName": "Nursing" } ] },
+        { "displayName": "Taylor Kim", "employeeNumber": "1006", "jobTitle": "Nurse", "employmentType": "PartTime", "contractedHoursPerWeek": 20, "teamMemberships": [ { "teamName": "Nursing" } ] }
+      ]
+    },
+    {
+      "name": "WorkforceShiftPlanning",
+      "Templates": [
+        {
+          "name": "Early",
+          "color": "#2b8a3e",
+          "start": "07:00:00",
+          "lengthMinutes": 510,
+          "teamNames": [ "Front Desk", "Nursing" ],
+          "segments": [
+            { "activityName": "Break", "offsetMinutes": 120, "lengthMinutes": 15 },
+            { "activityName": "Meal", "offsetMinutes": 270, "lengthMinutes": 30 }
+          ]
+        },
+        {
+          "name": "Late",
+          "color": "#1971c2",
+          "start": "12:00:00",
+          "lengthMinutes": 510,
+          "teamNames": [ "Front Desk", "Nursing" ],
+          "segments": [
+            { "activityName": "Meal", "offsetMinutes": 240, "lengthMinutes": 30 },
+            { "activityName": "Break", "offsetMinutes": 390, "lengthMinutes": 15 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WorkforceTimeOff",
+      "Types": [
+        { "name": "Vacation", "description": "Planned time away.", "color": "#e8590c", "unit": "Hours", "hoursPerDay": 8, "payCode": "PTO" },
+        { "name": "Sick time", "description": "When you or someone you care for is unwell.", "color": "#c2255c", "unit": "Hours", "hoursPerDay": 8, "payCode": "PTO", "countsAgainstAllotment": false }
+      ],
+      "Policies": [
+        { "name": "Vacation", "typeName": "Vacation", "accrualMethod": "PerPeriod", "frequency": "Monthly", "rate": 8, "maxBalance": 160, "carryoverMax": 40, "teamNames": [ "Riverside Clinic" ] },
+        { "name": "Sick time", "typeName": "Sick time", "accrualMethod": "PerHourWorked", "rate": 0.0333, "maxBalance": 48, "teamNames": [ "Riverside Clinic" ] }
+      ],
+      "Allotments": [
+        { "name": "Nursing vacation", "teamName": "Nursing", "typeNames": [ "Vacation" ], "weekdaySlots": [ 1, 1, 1, 1, 1, 1, 1 ] }
+      ]
+    },
+    {
+      "name": "WorkforceLaborRules",
+      "RuleSets": [
+        {
+          "name": "Clinic hourly staff",
+          "description": "An example. Check the rules and numbers that apply where your teams work.",
+          "teamNames": [ "Riverside Clinic" ],
+          "rules": [
+            { "ruleKey": "MaxHoursPerWeek", "enforcement": "Warn", "parameters": { "Hours": "40" } },
+            { "ruleKey": "MinRest", "enforcement": "Block", "parameters": { "Hours": "10" } },
+            { "ruleKey": "Breaks", "enforcement": "Warn", "parameters": { "ShiftHours": "6", "BreakMinutes": "30" } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WorkforceTimeClock",
+      "PayPeriods": [
+        { "name": "Every two weeks", "frequency": "Biweekly", "anchorDate": "2026-01-04", "weekStart": "Sunday" }
+      ],
+      "PayCodes": [
+        { "code": "NIGHT", "name": "Night premium", "kind": "ShiftDifferential", "windowStart": "22:00:00", "windowEnd": "06:00:00", "premiumPerHour": 2 }
+      ],
+      "Policies": [
+        {
+          "name": "Clinic hourly staff",
+          "payPeriodsName": "Every two weeks",
+          "roundingMinutes": 5,
+          "roundingDirection": "Nearest",
+          "earlyGraceMinutes": 5,
+          "lateGraceMinutes": 5,
+          "autoMealAfterHours": 6,
+          "autoMealMinutes": 30,
+          "weeklyOvertimeHours": 40,
+          "attendancePoints": [ { "kind": "NoShow", "points": 2 }, { "kind": "Late", "points": 0.5 }, { "kind": "MissedPunch", "points": 0.5 } ],
+          "pointsWindowDays": 180,
+          "pointsThreshold": 6,
+          "teamNames": [ "Riverside Clinic" ]
+        }
+      ]
+    }
+  ]
+}

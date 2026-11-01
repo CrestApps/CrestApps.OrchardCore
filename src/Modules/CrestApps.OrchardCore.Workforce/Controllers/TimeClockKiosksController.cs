@@ -258,7 +258,7 @@ public sealed class TimeClockKiosksController : Controller
     private async Task PopulateAsync(TimeClockKioskEditViewModel model)
     {
         model.TeamOptions = (await _teamManager.ListTreeAsync(HttpContext.RequestAborted))
-            .Select(entry => new SelectListItem(new string(' ', entry.Depth * 4) + entry.Team.Name, entry.Team.ItemId, entry.Team.ItemId == model.TeamId))
+            .Select(entry => new SelectListItem(new string('\u00A0', entry.Depth * 3) + entry.Team.Name, entry.Team.ItemId, entry.Team.ItemId == model.TeamId))
             .ToList();
     }
 

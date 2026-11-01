@@ -32,6 +32,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     private readonly WorkerShiftReader _shiftReader;
     private readonly WorkerTimeZones _timeZones;
     private readonly TimeOffLocks _locks;
+    private readonly IWorkforceEvents _events;
     private readonly ISession _session;
     private readonly IClock _clock;
 
@@ -48,6 +49,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         WorkerShiftReader shiftReader,
         WorkerTimeZones timeZones,
         TimeOffLocks locks,
+        IWorkforceEvents events,
         ISession session,
         IClock clock,
         IStringLocalizer<DefaultTimeClockService> stringLocalizer)
@@ -62,6 +64,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         _shiftReader = shiftReader;
         _timeZones = timeZones;
         _locks = locks;
+        _events = events;
         _session = session;
         _clock = clock;
         S = stringLocalizer;
@@ -260,13 +263,18 @@ internal sealed class DefaultTimeClockService : ITimeClockService
             await _session.SaveChangesAsync(cancellationToken);
 
             result.Value = punch;
-
-            return result;
         }
         finally
         {
             await TimeOffLocks.ReleaseAsync(lockers);
         }
+
+        if (result.Value.Kind is TimePunchKind.In or TimePunchKind.Out)
+        {
+            await _events.RaiseAsync(result.Value.Kind == TimePunchKind.In ? WorkforceEvents.PunchedIn : WorkforceEvents.PunchedOut, WorkforceEventInputs.Punch(result.Value), result.Value.ItemId, cancellationToken);
+        }
+
+        return result;
     }
 
     public Task<PlanningResult<TimePunch>> CorrectAsync(string punchId, TimePunchKind kind, DateTime utc, string reason, string actor, CancellationToken cancellationToken = default)

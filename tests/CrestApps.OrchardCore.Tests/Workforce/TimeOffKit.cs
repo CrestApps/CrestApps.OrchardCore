@@ -18,12 +18,13 @@ namespace CrestApps.OrchardCore.Tests.Workforce;
 /// </summary>
 internal static class TimeOffKit
 {
-    public static Task<CalendarTestHarness> CreateAsync()
+    public static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         return WorkforceTests.CreateAsync(services =>
         {
             services.AddWorkforceTimeOffCore();
             services.AddSingleton<IDistributedLock, KeyedLock>();
+            configure?.Invoke(services);
         });
     }
 

@@ -49,6 +49,11 @@ internal sealed class WorkerStore : DocumentCatalog<WorkerProfile, WorkerIndex>
             results = results.Where(index => index.Status == status);
         }
 
+        if (query?.HasUser is { } hasUser)
+        {
+            results = hasUser ? results.Where(index => index.UserId != null && index.UserId != "") : results.Where(index => index.UserId == null || index.UserId == "");
+        }
+
         if (teamIds is not null)
         {
             if (teamIds.Count == 0)

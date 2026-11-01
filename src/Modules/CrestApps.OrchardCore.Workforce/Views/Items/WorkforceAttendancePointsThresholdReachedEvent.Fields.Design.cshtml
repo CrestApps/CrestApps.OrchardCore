@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceAttendancePointsThresholdReachedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Attendance Points Threshold Reached"])
+    </h4>
+</header>

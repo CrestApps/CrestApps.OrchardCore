@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceTimesheetApprovedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+    @T["Timesheet Approved"]
+</h4>
+<p>@T["Starts when a timesheet is approved."]</p>

@@ -25,6 +25,11 @@ public sealed class WorkforceAdminMenu : AdminNavigationProvider
         builder.Add(S["Workforce"], S["Workforce"].PrefixPosition("6"), workforce => workforce
             .AddClass("workforce")
             .Id("workforce")
+            .Add(S["Get Started"], S["Get Started"].PrefixPosition("01"), start => start
+                .Id("workforceGetStarted")
+                .Action("Index", "WorkforceSetup", WorkforceConstants.Features.Workforce)
+                .Permission(WorkforcePermissions.ManageTeams)
+                .LocalNav())
             .Add(S["Workers"], S["Workers"].PrefixPosition("10"), workers => workers
                 .Id("workers")
                 .Action("Index", "Workers", WorkforceConstants.Features.Workforce)

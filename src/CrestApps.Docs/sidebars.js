@@ -171,6 +171,7 @@ const sidebars = {
                 'user-manual/workforce/time-off',
                 'user-manual/workforce/labor-rules',
                 'user-manual/workforce/time-clock',
+                'user-manual/workforce/reports-and-automation',
                 'user-manual/workforce/my-work-portal',
                 'user-manual/workforce/skills-and-certifications',
             ],

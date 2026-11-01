@@ -68,6 +68,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = WorkforceConstants.Features.Api,
+    Name = "Workforce API",
+    Description = "An HTTP API for the caller's own schedule, balances, time off, clock and timesheet, and for the teams, workers, shifts, time off, punches and timesheets of the teams they manage.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceConstants.Features.Workforce,
+    ]
+)]
+
+[assembly: Feature(
     Id = WorkforceConstants.Features.Portal,
     Name = "Workforce My Work Portal",
     Description = "An installable My Work portal for workers: their schedule, time off, open shifts and trades, availability, notifications by push and email, and a calendar feed; and approvals and who is working for managers.",

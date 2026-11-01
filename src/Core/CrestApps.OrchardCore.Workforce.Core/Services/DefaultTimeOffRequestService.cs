@@ -30,6 +30,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
     private readonly TimeOffLocks _locks;
     private readonly WorkerShiftReader _shiftReader;
     private readonly WorkerTimeZones _timeZones;
+    private readonly IWorkforceEvents _events;
     private readonly ISession _session;
     private readonly IClock _clock;
 
@@ -49,6 +50,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         TimeOffLocks locks,
         WorkerShiftReader shiftReader,
         WorkerTimeZones timeZones,
+        IWorkforceEvents events,
         ISession session,
         IClock clock,
         IStringLocalizer<DefaultTimeOffRequestService> stringLocalizer)
@@ -66,6 +68,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         _locks = locks;
         _shiftReader = shiftReader;
         _timeZones = timeZones;
+        _events = events;
         _session = session;
         _clock = clock;
         S = stringLocalizer;
@@ -163,23 +166,37 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
             await TimeOffLocks.ReleaseAsync(lockers);
         }
 
+        if (result.Value is { } submitted)
+        {
+            await _events.RaiseAsync(WorkforceEvents.TimeOffRequested, WorkforceEventInputs.TimeOff(submitted), submitted.ItemId, cancellationToken);
+
+            if (submitted.Status == TimeOffRequestStatus.Approved)
+            {
+                await _events.RaiseAsync(WorkforceEvents.TimeOffApproved, WorkforceEventInputs.TimeOff(submitted), submitted.ItemId, cancellationToken);
+            }
+        }
+
         return result;
     }
 
-    public Task<PlanningResult<TimeOffRequest>> ApproveAsync(string id, string actor, string note = null, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<TimeOffRequest>> ApproveAsync(string id, string actor, string note = null, CancellationToken cancellationToken = default)
     {
-        return DecideAsync(id, actor, async (request, worker, type, result) =>
+        var approved = await DecideAsync(id, actor, async (request, worker, type, result) =>
         {
             foreach (var error in await _approvals.ApproveAsync(request, worker, type, actor, false, note?.Trim(), cancellationToken))
             {
                 result.Fail(error);
             }
         }, cancellationToken);
+
+        await RaiseAsync(approved, WorkforceEvents.TimeOffApproved, cancellationToken);
+
+        return approved;
     }
 
-    public Task<PlanningResult<TimeOffRequest>> DeclineAsync(string id, string actor, string note = null, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<TimeOffRequest>> DeclineAsync(string id, string actor, string note = null, CancellationToken cancellationToken = default)
     {
-        return DecideAsync(id, actor, (request, worker, type, result) =>
+        var declined = await DecideAsync(id, actor, (request, worker, type, result) =>
         {
             var now = _clock.UtcNow;
 
@@ -191,6 +208,17 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
 
             return _approvals.NotifyAsync(request, type, S["Your {0} request was declined", type.Name], note, cancellationToken);
         }, cancellationToken);
+
+        await RaiseAsync(declined, WorkforceEvents.TimeOffDeclined, cancellationToken);
+
+        return declined;
+    }
+
+    private Task RaiseAsync(PlanningResult<TimeOffRequest> result, string name, CancellationToken cancellationToken)
+    {
+        return result.Succeeded && result.Value is { } request
+            ? _events.RaiseAsync(name, WorkforceEventInputs.TimeOff(request), request.ItemId, cancellationToken)
+            : Task.CompletedTask;
     }
 
     public async Task<PlanningResult<TimeOffRequest>> CancelAsync(string id, string actor, string note = null, CancellationToken cancellationToken = default)
@@ -254,6 +282,8 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         {
             await TimeOffLocks.ReleaseAsync(lockers);
         }
+
+        await RaiseAsync(result, WorkforceEvents.TimeOffCanceled, cancellationToken);
 
         if (heldPlace)
         {
