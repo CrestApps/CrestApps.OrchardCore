@@ -93,7 +93,8 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddDataMigration<OmnichannelAddressMigrations>()
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
-            .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
+            .AddDataMigration<OmnichannelActivityBatchIndexMigrations>()
+            .AddDataMigration<OmnichannelActivityBatchScheduleMigrations>();
 
         // The kinds of address the business can own. A type is offered in the address list once a feature registers a
         // capability for it, so email addresses stay hidden until an email channel exists.
