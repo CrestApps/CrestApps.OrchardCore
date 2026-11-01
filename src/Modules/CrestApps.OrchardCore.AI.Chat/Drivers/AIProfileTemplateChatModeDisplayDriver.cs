@@ -3,6 +3,8 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Speech;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -10,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -23,6 +26,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
     private readonly ISiteService _siteService;
+    private readonly IRealtimeVoiceResolver _realtimeVoiceResolver;
 
     internal readonly IStringLocalizer S;
 
@@ -33,18 +37,21 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     /// <param name="capabilityService">The deployment capability service.</param>
     /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="realtimeVoiceResolver">The realtime voice resolver.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IAIDeploymentCapabilityService capabilityService,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
         ISiteService siteService,
+        IRealtimeVoiceResolver realtimeVoiceResolver,
         IStringLocalizer<AIProfileTemplateChatModeDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _capabilityService = capabilityService;
         _speechVoiceMenuService = speechVoiceMenuService;
         _siteService = siteService;
+        _realtimeVoiceResolver = realtimeVoiceResolver;
         S = stringLocalizer;
     }
 
@@ -148,9 +155,13 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         // One voice question, whichever path answers it: a realtime deployment's own voices, or the
         // text-to-speech voices when the conversation runs as the speech-to-text plus text-to-speech cascade. Kept
         // whatever the chat mode, because phone calls answered or placed with the profiles it creates speak with it.
-        settings.VoiceName = string.IsNullOrWhiteSpace(model.VoiceName)
+        var voiceName = string.IsNullOrWhiteSpace(model.VoiceName)
             ? null
             : model.VoiceName.Trim();
+
+        await RefuseAVoiceTheDeploymentDoesNotOfferAsync(context, conversationDeploymentName, voiceName);
+
+        settings.VoiceName = voiceName;
         template.Put(settings);
 
         // The metadata carries the same answer for the templates that are authored as recipes or markdown
@@ -164,6 +175,21 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         template.Put(metadata);
 
         return Edit(template, context);
+    }
+
+    // The voice goes to a speech-to-speech provider with the instructions and tools, and one it does not have makes
+    // it refuse all three (see RealtimeVoiceOffer).
+    private async Task RefuseAVoiceTheDeploymentDoesNotOfferAsync(UpdateEditorContext context, string conversationDeploymentName, string voiceName)
+    {
+        var deployment = await RealtimeVoiceOffer.FindDeploymentWithoutVoiceAsync(_deploymentManager, _realtimeVoiceResolver, conversationDeploymentName, voiceName);
+
+        if (deployment is not null)
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(AIProfileChatModeViewModel.VoiceName),
+                S["The conversation deployment '{0}' has no voice '{1}'. Choose one of its voices, or leave the voice empty.", deployment.Name, voiceName]);
+        }
     }
 
     private async Task<List<SelectListItem>> GetAvailableModesAsync(bool hasSpeech)
