@@ -436,7 +436,7 @@ public sealed class TimesheetCalculatorTests
         return date.ToDateTime(new TimeOnly(hour, minute), DateTimeKind.Utc);
     }
 
-    private static IEnumerable<(DateOnly Date, string Code, decimal Hours)> Lines(TimesheetCalculation result)
+    private static (DateOnly Date, string Code, decimal Hours)[] Lines(TimesheetCalculation result)
     {
         var codes = new[] { _regular, _overtime, _doubleTime, _paidTimeOff, _predictability }.ToDictionary(code => code.ItemId, code => code.Code);
 

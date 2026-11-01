@@ -89,8 +89,10 @@ public sealed class WorkforceApiTests
         };
     }
 
+    private static readonly JsonSerializerOptions _web = new(JsonSerializerDefaults.Web);
+
     private static JsonElement Value(IResult result)
     {
-        return JsonSerializer.SerializeToElement(((IValueHttpResult)result).Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        return JsonSerializer.SerializeToElement(((IValueHttpResult)result).Value, _web);
     }
 }

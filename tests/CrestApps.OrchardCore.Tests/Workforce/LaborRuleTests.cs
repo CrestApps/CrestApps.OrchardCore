@@ -319,7 +319,7 @@ public sealed class LaborRuleTests
         // Assert
         Assert.True(restsNine.Succeeded, string.Join(" ", restsNine.Errors));
         Assert.False(tenHours.Succeeded);
-        Assert.Contains(tenHours.Errors, error => error.Contains("9", StringComparison.Ordinal));
+        Assert.Contains(tenHours.Errors, error => error.Contains('9'));
     }
 
     [Fact]

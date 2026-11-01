@@ -90,8 +90,8 @@ public sealed class PortalTests
         Assert.Equal(3, anaInbox.Count);
         Assert.Equal(2, benInbox.Count);
         Assert.All(anaInbox.Concat(benInbox), item => Assert.False(string.IsNullOrEmpty(item.Url)));
-        Assert.Equal(WorkforceNotificationKind.SchedulePublished, anaInbox.Last().Kind);
-        Assert.Equal(WorkforceNotificationKind.ShiftChanged, benInbox.First().Kind);
+        Assert.Equal(WorkforceNotificationKind.SchedulePublished, anaInbox[^1].Kind);
+        Assert.Equal(WorkforceNotificationKind.ShiftChanged, benInbox[0].Kind);
     }
 
     [Fact]
