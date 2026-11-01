@@ -1,0 +1,35 @@
+@{
+    var filter = (WorkOrdersListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<label for="work-orders-status" class="visually-hidden">@T["Status"]</label>
+<select id="work-orders-status" name="status" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="@WorkOrdersController.OpenFilter" selected="@(filter.Status == WorkOrdersController.OpenFilter)">@T["Still open"]</option>
+    <option value="@WorkOrdersController.AllFilter" selected="@(filter.Status == WorkOrdersController.AllFilter)">@T["Every status"]</option>
+    @foreach (var status in Enum.GetValues<WorkOrderStatus>())
+    {
+        <option value="@status" selected="@(filter.Status == status.ToString())">@T[status.Text()]</option>
+    }
+</select>
+<label for="work-orders-type" class="visually-hidden">@T["Type"]</label>
+<select id="work-orders-type" name="typeId" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["Every type"]</option>
+    @foreach (var option in filter.TypeOptions)
+    {
+        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+    }
+</select>
+<label for="work-orders-priority" class="visually-hidden">@T["Priority"]</label>
+<select id="work-orders-priority" name="priority" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["Every priority"]</option>
+    @foreach (var priority in Enum.GetValues<WorkOrderPriority>().OrderDescending())
+    {
+        <option value="@priority" selected="@(filter.Priority == priority.ToString())">@priority</option>
+    }
+</select>
+@if (!string.IsNullOrEmpty(filter.AssetId))
+{
+    <input type="hidden" name="assetId" value="@filter.AssetId" form="@formId" />
+    <a class="btn btn-sm btn-secondary" href="@Url.Action("Index", new { status = filter.Status, typeId = filter.TypeId, priority = filter.Priority, q = filter.Q })" title="@T["Show every asset"]">@T["Asset: {0}", filter.AssetName] <i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+}

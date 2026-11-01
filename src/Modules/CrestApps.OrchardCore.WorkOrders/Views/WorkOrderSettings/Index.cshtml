@@ -1,0 +1,41 @@
+@model WorkOrderSettingsListViewModel
+
+@{
+    var tabs = new[]
+    {
+        (Kind: WorkOrderSettingsController.Types, Title: T["Work Order Types"], Intro: T["Kinds of job, with what each new work order starts with: its duration, priority, checklists, lines, service level and billing."], Add: T["Add work order type"], Empty: T["<strong>Nothing here!</strong> Add a work order type, such as Repair or Installation, before adding work orders."]),
+        (Kind: WorkOrderSettingsController.Checklists, Title: T["Checklists"], Intro: T["Questions answered on the job, such as safety checks and readings. A required question must be answered before the work order is completed."], Add: T["Add checklist"], Empty: T["<strong>Nothing here!</strong> Add a checklist, then give it to the work order types that need it."]),
+        (Kind: WorkOrderSettingsController.ServiceLevels, Title: T["Service Levels"], Intro: T["How fast work orders are responded to and resolved, by priority. The clock can run only in opening hours, and stops while a work order waits."], Add: T["Add service level"], Empty: T["<strong>Nothing here!</strong> Add a service level, then give it to work order types."]),
+        (Kind: WorkOrderSettingsController.SubStatuses, Title: T["Sub-statuses"], Intro: T["Finer statuses inside a status, such as On hold: waiting for parts. A sub-status can stop the service level clock."], Add: T["Add sub-status"], Empty: T["<strong>Nothing here!</strong> Add a sub-status, such as Waiting for parts under On hold."]),
+    };
+    var current = tabs.First(tab => tab.Kind == Model.Kind);
+}
+
+<zone Name="Title"><breadcrumb name="WorkOrderSettings" title="@current.Title" /></zone>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in tabs)
+    {
+        <li class="nav-item"><a class="nav-link @(tab.Kind == Model.Kind ? "active" : null)" aria-current="@(tab.Kind == Model.Kind ? "page" : null)" asp-action="Index" asp-route-kind="@tab.Kind">@tab.Title</a></li>
+    }
+</ul>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@current.Intro</p>
+            </div>
+            <div class="col-auto"><a asp-action="@Model.EditAction" class="btn btn-secondary create">@current.Add</a></div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="WorkOrderSettings" context="Model.List" show-select-all="false" empty-message="@current.Empty">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

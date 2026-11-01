@@ -1,0 +1,101 @@
+@model WorkOrderTypeEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkOrderTypesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Work Order Type"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditType" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-8">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-12 col-md-4">
+            <label asp-for="Color" class="form-label">@T["Color"]</label>
+            <input asp-for="Color" type="color" class="form-control form-control-color" />
+            <span class="hint">@T["Shown on the dispatch board."]</span>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="DefaultDurationMinutes" class="form-label">@T["Usual duration (minutes)"]</label>
+            <input asp-for="DefaultDurationMinutes" type="number" min="0" step="5" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="CrewSize" class="form-label">@T["People needed"]</label>
+            <input asp-for="CrewSize" type="number" min="1" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="DefaultPriority" class="form-label">@T["Usual priority"]</label>
+            <select asp-for="DefaultPriority" asp-items="Html.GetEnumSelectList<WorkOrderPriority>()" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="ServiceLevelPolicyId" class="form-label">@T["Service level"]</label>
+            <select asp-for="ServiceLevelPolicyId" asp-items="Model.PolicyOptions" class="form-select">
+                <option value="">@T["None"]</option>
+            </select>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Billing"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4">
+            <label asp-for="BillingMode" class="form-label">@T["Billed"]</label>
+            <select asp-for="BillingMode" class="form-select">
+                <option value="@WorkOrderBillingMode.NotBillable">@T["Not billed"]</option>
+                <option value="@WorkOrderBillingMode.FixedPrice">@T["At a fixed price"]</option>
+                <option value="@WorkOrderBillingMode.TimeAndMaterials">@T["For the time and materials used"]</option>
+            </select>
+            <span class="hint">@T["When Transactions is on, completing a billed work order makes its invoice."]</span>
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="FixedPrice" class="form-label">@T["Fixed price"]</label>
+            <input asp-for="FixedPrice" type="number" min="0" step="0.01" class="form-control" />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+            <input asp-for="Currency" class="form-control" maxlength="3" />
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Finishing the job"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <div class="form-check">
+                <input asp-for="RequiresSignature" type="checkbox" class="form-check-input" />
+                <label asp-for="RequiresSignature" class="form-check-label">@T["The customer must sign"]</label>
+                <span class="hint dashed">@T["A work order of this type can't be completed until someone signs for the work."]</span>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="RequiredPhotos" class="form-label">@T["Photos needed"]</label>
+            <input asp-for="RequiredPhotos" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Checklists"]</h2>
+    @if (Model.ChecklistOptions.Count == 0)
+    {
+        <p class="hint">@T["No checklists yet."] <a asp-action="EditChecklist">@T["Add a checklist"]</a></p>
+    }
+    else
+    {
+        <div class="mb-3">
+            @foreach (var option in Model.ChecklistOptions)
+            {
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="ChecklistTemplateIds" value="@option.Value" id="checklist-@option.Value" checked="@option.Selected" />
+                    <label class="form-check-label" for="checklist-@option.Value">@option.Text</label>
+                </div>
+            }
+        </div>
+    }
+
+    <h2 class="h5 mt-4">@T["Lines every work order starts with"]</h2>
+    <p class="hint">@T["Parts, labor and charges planned for the job. Leave a row empty to skip it."]</p>
+    <partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@WorkOrderSettingsController.Types" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

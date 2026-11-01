@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+    @T["Work Order Created"]
+</h4>
+<p>@T["Starts when a work order is created."]</p>

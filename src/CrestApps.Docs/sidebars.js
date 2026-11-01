@@ -192,6 +192,7 @@ const sidebars = {
             className: icon('wrench'),
             items: [
                 'user-manual/field-service/assets',
+                'user-manual/field-service/work-orders',
             ],
         },
         {
@@ -458,6 +459,7 @@ const sidebars = {
             className: icon('wrench'),
             items: [
                 'modules/assets',
+                'modules/work-orders',
             ],
         },
         {

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderSlaWarningEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+    @T["Work Order Service Level Warning"]
+</h4>
+<p>@T["Starts when a work order is close to missing its response or resolution target. The input has Target."]</p>

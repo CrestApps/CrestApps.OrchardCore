@@ -1,0 +1,38 @@
+@model WorkOrderSubStatusEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkOrderSubStatusesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Sub-status"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditSubStatus" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="ParentStatus" class="form-label">@T["Under"]</label>
+            <select asp-for="ParentStatus" class="form-select">
+                @foreach (var status in Enum.GetValues<WorkOrderStatus>())
+                {
+                    <option value="@status">@T[status.Text()]</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Color" class="form-label">@T["Color"]</label>
+            <input asp-for="Color" type="color" class="form-control form-control-color" />
+        </div>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="PausesSla" type="checkbox" class="form-check-input" />
+        <label asp-for="PausesSla" class="form-check-label">@T["Stops the service level clock"]</label>
+        <span class="hint dashed">@T["Such as waiting for the customer, or for parts."]</span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@WorkOrderSettingsController.SubStatuses" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

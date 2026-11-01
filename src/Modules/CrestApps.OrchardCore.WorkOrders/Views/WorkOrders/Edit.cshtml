@@ -1,0 +1,114 @@
+@model WorkOrderEditViewModel
+
+@{
+    var isNew = string.IsNullOrEmpty(Model.Id);
+}
+
+<zone Name="Title"><breadcrumb name="@(isNew ? "WorkOrdersNew" : "WorkOrdersEdit")" title="@(isNew ? T["New Work Order: {0}", Model.TypeName] : T["Edit {0}", Model.Number])" /></zone>
+
+<form asp-action="@(isNew ? "New" : "Edit")" asp-route-id="@Model.Id" asp-route-typeId="@(isNew ? Model.TypeId : null)" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-8">
+            <label asp-for="Summary" class="form-label">@T["Summary"]</label>
+            <input asp-for="Summary" class="form-control" required placeholder="@T["Such as: No heat in the upstairs rooms"]" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label asp-for="Priority" class="form-label">@T["Priority"]</label>
+            <select asp-for="Priority" asp-items="Html.GetEnumSelectList<WorkOrderPriority>()" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label asp-for="EstimatedMinutes" class="form-label">@T["Minutes"]</label>
+            <input asp-for="EstimatedMinutes" type="number" min="0" step="5" class="form-control" />
+        </div>
+        <div class="col-12">
+            <label asp-for="Description" class="form-label">@T["Description"]</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Who and where"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4">
+            <label asp-for="ContactName" class="form-label">@T["Contact"]</label>
+            <input asp-for="ContactName" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="ContactPhone" class="form-label">@T["Phone"]</label>
+            <input asp-for="ContactPhone" type="tel" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="ContactEmail" class="form-label">@T["Email"]</label>
+            <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-12 col-md-8">
+            <label asp-for="AddressLine1" class="form-label">@T["Street address"]</label>
+            <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-12 col-md-4">
+            <label asp-for="AddressLine2" class="form-label">@T["Unit, floor"]</label>
+            <input asp-for="AddressLine2" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="City" class="form-label">@T["City"]</label>
+            <input asp-for="City" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Region" class="form-label">@T["State or region"]</label>
+            <input asp-for="Region" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="PostalCode" class="form-label">@T["Postal code"]</label>
+            <input asp-for="PostalCode" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label asp-for="Country" class="form-label">@T["Country"]</label>
+            <input asp-for="Country" class="form-control" autocomplete="off" maxlength="2" placeholder="US" />
+        </div>
+        <div class="col-12">
+            <label asp-for="AccessNotes" class="form-label">@T["Access notes"]</label>
+            <textarea asp-for="AccessNotes" class="form-control" rows="2" placeholder="@T["Such as: gate code, the dog, where to park"]"></textarea>
+            <span class="hint">@T["When Geo is on, the address is placed on the map in the background and gives the work order its territory."]</span>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["When"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-4">
+            <label asp-for="Earliest" class="form-label">@T["Not before"]</label>
+            <input asp-for="Earliest" type="datetime-local" class="form-control" />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="Latest" class="form-label">@T["Not after"]</label>
+            <input asp-for="Latest" type="datetime-local" class="form-control" />
+        </div>
+    </div>
+
+    @if (Model.AssetOptions.Count > 0)
+    {
+        <h2 class="h5 mt-4">@T["Assets"]</h2>
+        <div class="mb-3">
+            <label asp-for="AssetIds" class="form-label visually-hidden">@T["Assets"]</label>
+            <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="form-select" multiple size="5"></select>
+            <span class="hint">@T["The equipment the job is on. The work order shows in each asset's history."]</span>
+        </div>
+    }
+
+    <h2 class="h5 mt-4">@T["Lines"]</h2>
+    <p class="hint">@T["Parts, labor and charges planned for the job. What is used is recorded on the work order's page."]</p>
+    <partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@(isNew ? T["Create"] : T["Save"])</button>
+        @if (isNew)
+        {
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">@T["Cancel"]</a>
+        }
+    </div>
+</form>

@@ -6,6 +6,8 @@
     var underWarranty = asset.Warranty?.Covers(Model.Today) == true;
 }
 
+@inject OrchardCore.Environment.Shell.Descriptor.Models.ShellDescriptor ShellDescriptor
+
 <zone Name="Title"><breadcrumb name="AssetsView" title="@T["{0} {1}", asset.Name, asset.Number]" /></zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -20,6 +22,12 @@
                     }
                 </span>
             </div>
+            @if (ShellDescriptor.Features.Any(feature => feature.Id == "CrestApps.OrchardCore.WorkOrders"))
+            {
+                <div class="col-auto">
+                    <a href="@Url.Action("Index", "WorkOrders", new { area = "CrestApps.OrchardCore.WorkOrders", assetId = asset.ItemId, status = "all" })" class="btn btn-secondary">@T["Work orders"]</a>
+                </div>
+            }
             @if (Model.CanManage)
             {
                 <div class="col-auto">

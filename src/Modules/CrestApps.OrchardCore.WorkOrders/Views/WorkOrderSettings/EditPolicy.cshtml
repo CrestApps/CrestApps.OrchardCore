@@ -1,0 +1,96 @@
+@model ServiceLevelPolicyEditViewModel
+
+@{
+    var culture = CultureInfo.CurrentCulture;
+    var week = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+    var pausable = new[] { WorkOrderStatus.New, WorkOrderStatus.Ready, WorkOrderStatus.Scheduled, WorkOrderStatus.InProgress, WorkOrderStatus.OnHold };
+}
+
+<zone Name="Title"><breadcrumb name="WorkOrderServiceLevelsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Service Level"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditPolicy" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="TimeZoneId" class="form-label">@T["Time zone"]</label>
+            <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select">
+                <option value="">@T["UTC"]</option>
+            </select>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Targets"]</h2>
+    <p class="hint">@T["Hours to respond, by scheduling or starting the work, and to resolve, by completing it. Leave both empty for no target."]</p>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle w-auto">
+            <thead><tr><th scope="col">@T["Priority"]</th><th scope="col">@T["Respond within (hours)"]</th><th scope="col">@T["Resolve within (hours)"]</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Targets.Count; i++)
+                {
+                    <tr>
+                        <th scope="row"><input type="hidden" asp-for="Targets[i].Priority" />@Model.Targets[i].Priority</th>
+                        <td><input asp-for="Targets[i].ResponseHours" type="number" min="0" step="0.25" class="form-control form-control-sm" aria-label="@T["Respond within (hours)"]" /></td>
+                        <td><input asp-for="Targets[i].ResolveHours" type="number" min="0" step="0.25" class="form-control form-control-sm" aria-label="@T["Resolve within (hours)"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4">
+            <label asp-for="WarningPercent" class="form-label">@T["Warn at (% of a target)"]</label>
+            <input asp-for="WarningPercent" type="number" min="1" max="99" class="form-control" />
+            <span class="hint">@T["The warning starts the Work Order Service Level Warning workflow event."]</span>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["When the clock runs"]</h2>
+    <div class="form-check mb-2">
+        <input asp-for="BusinessHoursOnly" type="checkbox" class="form-check-input" />
+        <label asp-for="BusinessHoursOnly" class="form-check-label">@T["Only in opening hours"]</label>
+        <span class="hint dashed">@T["Otherwise the clock runs around the clock."]</span>
+    </div>
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            @foreach (var day in week)
+            {
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" name="Days" value="@day" id="day-@day" checked="@Model.Days.Contains(day)" />
+                    <label class="form-check-label" for="day-@day">@culture.DateTimeFormat.GetAbbreviatedDayName(day)</label>
+                </div>
+            }
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Opens" class="form-label">@T["Opens"]</label>
+            <input asp-for="Opens" type="time" value="@Model.Opens.ToString("HH:mm", CultureInfo.InvariantCulture)" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Closes" class="form-label">@T["Closes"]</label>
+            <input asp-for="Closes" type="time" value="@Model.Closes.ToString("HH:mm", CultureInfo.InvariantCulture)" class="form-control" />
+        </div>
+    </div>
+
+    <h3 class="h6">@T["The clock stops while a work order is"]</h3>
+    <div class="mb-3">
+        @foreach (var status in pausable)
+        {
+            <div class="form-check form-check-inline">
+                <input type="checkbox" class="form-check-input" name="PauseStatuses" value="@status" id="pause-@status" checked="@Model.PauseStatuses.Contains(status)" />
+                <label class="form-check-label" for="pause-@status">@T[status.Text()]</label>
+            </div>
+        }
+        <span class="hint d-block">@T["A sub-status can stop the clock too."]</span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@WorkOrderSettingsController.ServiceLevels" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>
