@@ -11,9 +11,11 @@ using CrestApps.OrchardCore.Workforce.ContactCenter.Navigation;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Reports;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
+using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Intraday;
 using CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Workflows;
 using CrestApps.OrchardCore.Workforce.Reports;
+using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.Workflows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -116,6 +118,25 @@ public sealed class ForecastingStartup : StartupBase
         services.AddDisplayDriver<ForecastEvent, ForecastEventRowDisplayDriver>();
         services.AddDisplayDriver<ForecastRow, ForecastRowDisplayDriver>();
         services.AddNavigationProvider<ForecastingAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers intraday management: the day as it happens, reforecasts and voluntary overtime and time off.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Intraday)]
+public sealed class IntradayStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddIndexProvider<IntradayOfferIndexProvider>()
+            .AddDataMigration<IntradayMigrations>();
+
+        services.TryAddScoped<IntradayService>();
+        services.AddScoped<IMyWorkLinkProvider, IntradayOffersLinkProvider>();
+        services.AddNavigationProvider<IntradayAdminMenu>();
     }
 }
 

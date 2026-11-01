@@ -29,5 +29,10 @@ public static class WorkforceContactCenterConstants
         /// Forecasting and Erlang staffing.
         /// </summary>
         public const string Forecasting = "CrestApps.OrchardCore.Workforce.Forecasting";
+
+        /// <summary>
+        /// Intraday management: the day as it happens, reforecasts and voluntary overtime and time off.
+        /// </summary>
+        public const string Intraday = "CrestApps.OrchardCore.Workforce.Intraday";
     }
 }

@@ -50,4 +50,19 @@ public interface IShiftService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The two changed events, or why not.</returns>
     Task<PlanningResult<IReadOnlyList<CalendarEvent>>> SwapAsync(string firstEventId, string secondEventId, ScheduleChangeInitiator initiatedBy, string reason, string actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves the start or end of a published shift, such as when a worker takes voluntary overtime or time off. The
+    /// change is checked against the worker's rules and logged; segments outside the new times are dropped.
+    /// </summary>
+    /// <param name="eventId">The shift's calendar event.</param>
+    /// <param name="startUtc">The new start.</param>
+    /// <param name="endUtc">The new end.</param>
+    /// <param name="initiatedBy">Whether the employer or the worker asked for it; a worker's change earns no
+    /// predictability pay.</param>
+    /// <param name="reason">Why, for the change log.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The changed event, or why not.</returns>
+    Task<PlanningResult<CalendarEvent>> ChangeTimesAsync(string eventId, DateTime startUtc, DateTime endUtc, ScheduleChangeInitiator initiatedBy, string reason, string actor, CancellationToken cancellationToken = default);
 }

@@ -210,6 +210,128 @@ internal sealed class DefaultShiftService : IShiftService
         }
     }
 
+    public async Task<PlanningResult<CalendarEvent>> ChangeTimesAsync(string eventId, DateTime startUtc, DateTime endUtc, ScheduleChangeInitiator initiatedBy, string reason, string actor, CancellationToken cancellationToken = default)
+    {
+        var result = new PlanningResult<CalendarEvent>();
+        var calendarEvent = string.IsNullOrEmpty(eventId) ? null : await _eventManager.FindByIdAsync(eventId, cancellationToken);
+
+        if (!ShiftEvents.TryRead(calendarEvent, out var data))
+        {
+            result.Fail(S["The shift doesn't exist."]);
+
+            return result;
+        }
+
+        if (endUtc <= startUtc)
+        {
+            result.Fail(S["The shift must end after it starts."]);
+
+            return result;
+        }
+
+        var worker = await _workerStore.FindByIdAsync(data.WorkerId, cancellationToken);
+
+        if (worker is null)
+        {
+            result.Fail(S["The worker doesn't exist."]);
+
+            return result;
+        }
+
+        var lockers = await _locks.LockAsync([worker.ItemId]);
+
+        if (lockers is null)
+        {
+            result.Fail(S["Someone else is changing these shifts. Try again."]);
+
+            return result;
+        }
+
+        try
+        {
+            var context = await _contexts.ForEventAsync(calendarEvent, data, worker, [data.ShiftKey, calendarEvent.SourceId], cancellationToken);
+            var beforeStart = calendarEvent.StartUtc;
+            var beforeEnd = calendarEvent.EndUtc;
+
+            context.PaidMinutes += (int)Math.Round(((endUtc - startUtc) - (beforeEnd - beforeStart)).TotalMinutes);
+            context.StartUtc = startUtc;
+            context.EndUtc = endUtc;
+
+            foreach (var problem in await CheckAsync(context, cancellationToken))
+            {
+                result.Fail(problem);
+            }
+
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
+            var timeZoneId = string.IsNullOrEmpty(calendarEvent.TimeZoneId) ? await _timeZones.GetAsync(data.TeamId, cancellationToken) : calendarEvent.TimeZoneId;
+            var options = new CalendarChangeOptions { Actor = actor ?? WorkforceConstants.Source, SendInvitations = false, SkipConflictCheck = true };
+            var updated = await _eventManager.UpdateAsync(calendarEvent, target =>
+            {
+                target.Start = CalendarTime.ToLocal(startUtc, timeZoneId);
+                target.End = CalendarTime.ToLocal(endUtc, timeZoneId);
+                target.StartUtc = startUtc;
+                target.EndUtc = endUtc;
+                data.Segments = [.. data.Segments.Where(segment => segment.StartUtc >= startUtc && segment.EndUtc <= endUtc)];
+                target.Put(data);
+            }, options, cancellationToken);
+
+            if (!updated.Succeeded)
+            {
+                result.Fail(S["The shift could not be changed: {0}", string.Join(" ", updated.Errors.Select(error => error.Message))]);
+
+                return result;
+            }
+
+            var period = string.IsNullOrEmpty(data.ScheduleId) ? null : await _periodStore.FindByIdAsync(data.ScheduleId, cancellationToken);
+
+            if (period is not null)
+            {
+                // Keep the schedule's draft in step, so the next publish finds the shift already right.
+                var date = DateOnly.FromDateTime(CalendarTime.ToLocal(beforeStart, timeZoneId));
+                var draft = await _draftStore.FindByShiftKeyAsync(period.ItemId, date, data.ShiftKey ?? calendarEvent.SourceId, cancellationToken);
+
+                if (draft is not null)
+                {
+                    draft.Start = CalendarTime.ToLocal(startUtc, timeZoneId);
+                    draft.End = CalendarTime.ToLocal(endUtc, timeZoneId);
+                    draft.Segments = [.. draft.Segments.Where(segment => segment.Start >= draft.Start && segment.End <= draft.End)];
+                    await _draftStore.UpdateAsync(draft, cancellationToken);
+                }
+            }
+
+            await _changeRecorder.RecordAsync(new ScheduleChange
+            {
+                ItemId = UniqueId.GenerateId(),
+                PeriodId = data.ScheduleId,
+                TeamId = data.TeamId,
+                WorkerId = worker.ItemId,
+                ShiftKey = data.ShiftKey ?? calendarEvent.SourceId,
+                Kind = ScheduleChangeKind.Moved,
+                BeforeStartUtc = beforeStart,
+                BeforeEndUtc = beforeEnd,
+                AfterStartUtc = startUtc,
+                AfterEndUtc = endUtc,
+                InitiatedBy = initiatedBy,
+                Reason = reason,
+                PublishedVersion = period?.PublishedVersion ?? data.PublishedVersion,
+                ChangedBy = actor,
+                ChangedUtc = _clock.UtcNow,
+            }, cancellationToken);
+
+            result.Value = updated.Value ?? calendarEvent;
+
+            return result;
+        }
+        finally
+        {
+            await WorkerLocks.ReleaseAsync(lockers);
+        }
+    }
+
     private async Task<CalendarEvent> MoveAsync(CalendarEvent calendarEvent, ShiftData data, WorkerProfile worker, ScheduleChangeKind kind, ScheduleChangeInitiator initiatedBy, string reason, string actor, List<string> errors, CancellationToken cancellationToken)
     {
         var previousWorkerId = data.WorkerId;

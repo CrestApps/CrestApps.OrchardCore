@@ -216,6 +216,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | [Workforce for Contact Center](./modules/workforce-contact-center) |
 | `CrestApps.OrchardCore.Workforce.ContactCenter.SignInPunches` | Contact Center Sign-in Punches | [Workforce for Contact Center](./modules/workforce-contact-center#sign-in-punches) |
 | `CrestApps.OrchardCore.Workforce.Forecasting` | Workforce Forecasting | [Workforce for Contact Center](./modules/workforce-contact-center#forecasting) |
+| `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | [Workforce for Contact Center](./modules/workforce-contact-center#intraday) |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | [Workforce for Contact Center](./modules/workforce-contact-center#adherence) |
 
 ## Data connectors

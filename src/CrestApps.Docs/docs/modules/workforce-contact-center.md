@@ -16,6 +16,7 @@ The admin screens are described in the User Manual: [Contact Center Adherence](.
 | `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | `CrestApps.OrchardCore.Workforce`, `CrestApps.OrchardCore.ContactCenter.Agents` |
 | `CrestApps.OrchardCore.Workforce.ContactCenter.SignInPunches` | Contact Center Sign-in Punches | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.TimeClock` |
 | `CrestApps.OrchardCore.Workforce.Forecasting` | Workforce Forecasting | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.ShiftPlanning`, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` |
+| `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | `CrestApps.OrchardCore.Workforce.Forecasting` |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.ShiftPlanning`, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` |
 
 ## Agents and workers
@@ -71,12 +72,22 @@ A `PlanningGroup` is a set of queues (optionally one channel) forecast and staff
 
 `AdjustAsync` changes the volume of some days by a percentage and staffs them again. `ActivateAsync` makes a forecast its group's active one (the one before is superseded) and writes the staffing as the team's coverage requirement named *Forecast: group name* (`CoverageSource.Forecast`), one row per run of intervals that need the same people on each date: the minimum is the agents needed and the target the agents to schedule. The planner board and the auto-scheduler use it unchanged. `ActiveIntervalsAsync` gives the active forecast's intervals of a stretch of time.
 
+## Intraday
+
+`IntradayService.DayAsync` gives a planning group's day, every 15 minutes, in the team's time zone: the active forecast's volume, handle time and agents needed; the actual volume, handle time and service level from the interval statistics (today's are computed every 15 minutes); the agents on published shifts working then (`ICoverageService`); and the agents available or working, from the agent intervals of the team's workers.
+
+- **Reforecast:** `IntradayCalculator.ReforecastFactor` compares the work so far with its forecast and follows half the difference (between 0.25 and 4); `ReforecastAsync` scales the rest of the day's active forecast by it (`ForecastService.ScaleAsync`), staffs it again and updates the team's coverage.
+- **Quietest times:** `IntradayCalculator.FindWindows` finds where taking some people off the phones for a while (a meeting, training, coaching) adds the least shortfall, among the times with that many people scheduled.
+- **Offers:** an `IntradayOffer` gives the staffing team voluntary overtime or time off over a stretch of the day, for a number of places, first come, first served. `TakeAsync` lengthens the worker's shift that ends as the overtime starts (or starts as it ends), or cuts time off from the start or end of a shift, through `IShiftService.ChangeTimesAsync` with the worker as the initiator, so the change is logged and checked against their rules and earns no predictability pay. Workers take offers on the **Offers** page of My Work, which the feature adds through the new `IMyWorkLinkProvider` seam of the portal's menu.
+
+`IShiftService.ChangeTimesAsync` (in Workforce) moves the start or end of a published shift: it checks the worker's rules with the new times, updates the calendar event and the schedule's draft, drops segments outside the new times, and records a *Moved* schedule change with who asked for it.
+
 ## Permissions
 
 | Permission | Allows |
 | --- | --- |
 | `ManageWorkforceAdherence` (Manage adherence rules and exceptions) | Adherence rule sets, recording and removing exceptions, and saving a worker's day again. Implied by Manage the whole workforce. |
-| `ManageWorkforceForecasts` (Manage forecasts) | Planning groups, forecast events and forecasts, and making a forecast the team's coverage. Implied by Manage the whole workforce. |
+| `ManageWorkforceForecasts` (Manage forecasts) | Planning groups, forecast events and forecasts, making a forecast the team's coverage, and the intraday page and its offers. Implied by Manage the whole workforce. |
 | `ViewWorkforceAdherence` (View adherence) | The real-time board, workers' days and the exception list, for the teams one manages, and the adherence data sets. |
 
 The Contact Center Agents page needs **Manage workers**.

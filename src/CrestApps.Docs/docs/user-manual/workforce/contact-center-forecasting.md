@@ -10,9 +10,9 @@ Forecasting looks at how much work your queues had in past weeks, forecasts the 
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Forecasting > Forecasts, Planning Groups, Forecast Events |
+| **Menu** | Workforce > Forecasting > Intraday, Forecasts, Planning Groups, Forecast Events |
 | **Permission** | Manage forecasts |
-| **Feature** | Workforce Forecasting (it needs Contact Center Interval Statistics and Workforce Shift Planning) |
+| **Feature** | Workforce Forecasting (it needs Contact Center Interval Statistics and Workforce Shift Planning); Workforce Intraday for the day as it happens |
 
 <AskYourAdmin />
 
@@ -53,3 +53,19 @@ Under **Workforce > Forecasting > Forecast Events**, add the days whose work dif
 ## Use the forecast for scheduling
 
 On a draft forecast, select **Make it the team's coverage**. The forecast becomes active, the group's previous forecast is superseded, and the team gets a coverage requirement named *Forecast: group name* for the forecast's days. The planner board shows where the schedule falls short of it, and **Auto-schedule** fills the gaps. Adjusting an active forecast updates the coverage.
+
+## Watch the day as it happens
+
+Go to **Workforce > Forecasting > Intraday** and choose the planning group and the day. Every 15 minutes shows the contacts (with the forecast in brackets), the handle time, the agents needed, the agents scheduled, with how many short, the agents who were available or working, and the service level reached. Today's actuals arrive as the interval statistics are computed, every 15 minutes.
+
+- **Against the forecast** tells how far the work so far is from the forecast. **Reforecast the rest of the day** scales the rest of the day by half that difference and updates the team's coverage.
+- **Best times for a meeting or training:** enter how many people and for how long, and select **Find**. The times that leave the queue least short come first.
+
+## Offer extra hours or time off
+
+On the intraday page, under **Offer extra hours or time off**, choose the offer, the times, how many people and a note, then select **Offer**. Workers in the team see it under **Offers** in My Work and select **Take it**, first come, first served:
+
+- **Extra hours** lengthen the worker's shift that ends when the offer starts, or starts when it ends.
+- **Time off** comes off the start or the end of the worker's shift.
+
+The worker chose it, so it earns no predictability pay. The intraday page lists the day's offers with who took them; select **Close** to stop an offer early.

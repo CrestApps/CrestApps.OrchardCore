@@ -228,6 +228,73 @@ public sealed class ForecastService
     }
 
     /// <summary>
+    /// Scales the forecast intervals of a stretch of time, such as the rest of today, and staffs them again.
+    /// </summary>
+    /// <param name="forecast">The forecast.</param>
+    /// <param name="fromUtc">The start.</param>
+    /// <param name="toUtc">The end.</param>
+    /// <param name="factor">What the volume is multiplied by.</param>
+    /// <param name="note">Why, for the adjustment list.</param>
+    /// <param name="by">Who.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>How many intervals were scaled.</returns>
+    public async Task<int> ScaleAsync(Forecast forecast, DateTime fromUtc, DateTime toUtc, double factor, string note, string by, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(forecast);
+
+        var group = string.IsNullOrEmpty(forecast.PlanningGroupId) ? null : await _groupManager.FindByIdAsync(forecast.PlanningGroupId, cancellationToken);
+
+        if (group is null)
+        {
+            return 0;
+        }
+
+        var scaled = forecast.Intervals.Where(interval => interval.StartUtc >= fromUtc && interval.StartUtc < toUtc).ToArray();
+
+        foreach (var interval in scaled)
+        {
+            interval.Volume *= factor;
+            Staff(group, interval);
+        }
+
+        if (scaled.Length == 0)
+        {
+            return 0;
+        }
+
+        forecast.Adjustments.Add(new ForecastAdjustment
+        {
+            FromDate = scaled.Min(interval => interval.Date),
+            ToDate = scaled.Max(interval => interval.Date),
+            Percent = Math.Round((factor - 1) * 100, 1),
+            Note = note,
+            By = by,
+        });
+
+        await _session.SaveAsync(forecast, collection: WorkforceConstants.CollectionName, cancellationToken: cancellationToken);
+
+        if (forecast.Status == ForecastStatus.Active)
+        {
+            await WriteCoverageAsync(group, forecast, cancellationToken);
+        }
+
+        return scaled.Length;
+    }
+
+    /// <summary>
+    /// Gets the active forecasts of a planning group that cover a stretch of time.
+    /// </summary>
+    /// <param name="groupId">The planning group.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The forecasts.</returns>
+    public async Task<IReadOnlyList<Forecast>> ActiveAsync(string groupId, CancellationToken cancellationToken = default)
+    {
+        var active = ForecastStatus.Active.ToString();
+
+        return [.. await _session.Query<Forecast, ForecastIndex>(index => index.PlanningGroupId == groupId && index.Status == active, collection: WorkforceConstants.CollectionName).ListAsync(cancellationToken)];
+    }
+
+    /// <summary>
     /// Makes a forecast its group's active forecast: the one before is superseded, and the staffing becomes the
     /// staffing team's coverage requirement for the forecast's days.
     /// </summary>

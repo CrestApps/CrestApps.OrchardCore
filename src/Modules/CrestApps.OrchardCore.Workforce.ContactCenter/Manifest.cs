@@ -49,6 +49,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = WorkforceContactCenterConstants.Features.Intraday,
+    Name = "Workforce Intraday",
+    Description = "The day as it happens for each planning group: forecast against actual work, agents needed against scheduled and available, a reforecast of the rest of the day, the quietest times for meetings, and voluntary overtime and time off that workers take in My Work.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceContactCenterConstants.Features.Forecasting,
+    ]
+)]
+
+[assembly: Feature(
     Id = WorkforceContactCenterConstants.Features.Adherence,
     Name = "Workforce Adherence",
     Description = "Compares agents' published schedules with their contact center states: a live board, alerts when an agent is out of adherence too long, daily adherence and conformance, exceptions and reports.",

@@ -60,6 +60,10 @@
                         {
                             <li class="nav-item"><a class="@Active("shifts")" href="@Url.Content("~/my-work/shifts")">@T["Shifts"]</a></li>
                         }
+                        @foreach (var link in nav.Links)
+                        {
+                            <li class="nav-item"><a class="@Active(link.Key)" href="@Url.Content(link.Path)">@link.Title@if (link.Badge > 0) {<span class="badge rounded-pill text-bg-info ms-1">@link.Badge</span>}</a></li>
+                        }
                         <li class="nav-item"><a class="@Active("availability")" href="@Url.Content("~/my-work/availability")">@T["Availability"]</a></li>
                         <li class="nav-item"><a class="@Active("settings")" href="@Url.Content("~/my-work/settings")">@T["Settings"]</a></li>
                     }

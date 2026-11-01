@@ -17,6 +17,7 @@ public sealed class MyWorkPortal
     private readonly IWorkforceScopeService _scopeService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellFeaturesManager _featuresManager;
+    private readonly IEnumerable<IMyWorkLinkProvider> _linkProviders;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MyWorkPortal"/> class.
@@ -26,13 +27,15 @@ public sealed class MyWorkPortal
     /// <param name="scopeService">The service that says which teams a user manages.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="featuresManager">The features manager.</param>
-    public MyWorkPortal(IWorkerManager workerManager, IWorkforceInbox inbox, IWorkforceScopeService scopeService, IAuthorizationService authorizationService, IShellFeaturesManager featuresManager)
+    /// <param name="linkProviders">The providers of the menu's other links.</param>
+    public MyWorkPortal(IWorkerManager workerManager, IWorkforceInbox inbox, IWorkforceScopeService scopeService, IAuthorizationService authorizationService, IShellFeaturesManager featuresManager, IEnumerable<IMyWorkLinkProvider> linkProviders)
     {
         _workerManager = workerManager;
         _inbox = inbox;
         _scopeService = scopeService;
         _authorizationService = authorizationService;
         _featuresManager = featuresManager;
+        _linkProviders = linkProviders;
     }
 
     /// <summary>
@@ -60,8 +63,16 @@ public sealed class MyWorkPortal
         var features = (await _featuresManager.GetEnabledFeaturesAsync()).Select(feature => feature.Id).ToHashSet(StringComparer.Ordinal);
         var scope = await _scopeService.GetManagedScopeAsync(user, cancellationToken);
 
+        var links = new List<MyWorkLink>();
+
+        foreach (var provider in _linkProviders)
+        {
+            links.AddRange(await provider.GetLinksAsync(user, worker, cancellationToken));
+        }
+
         return new MyWorkNavViewModel
         {
+            Links = links,
             Active = active,
             WorkerName = worker?.DisplayName ?? user?.Identity?.Name,
             IsWorker = worker is not null,
