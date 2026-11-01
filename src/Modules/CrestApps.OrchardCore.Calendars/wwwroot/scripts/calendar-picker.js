@@ -157,11 +157,10 @@
 						center: "title",
 						right: "timeGridDay,timeGridWeek"
 					},
-					buttonText: {
-						today: data.todayText,
-						day: data.dayText,
-						week: data.weekText
-					},
+					headerToolbarClass: "calendar-fc-toolbar",
+					todayText: data.todayText,
+					dayText: data.dayText,
+					weekTextLong: data.weekText,
 					height: Math.max(360, Math.round(window.innerHeight * .65)),
 					nowIndicator: true,
 					selectable: true,

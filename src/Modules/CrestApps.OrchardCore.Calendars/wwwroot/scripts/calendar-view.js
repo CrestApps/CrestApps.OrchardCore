@@ -292,23 +292,14 @@
 				dayGridMonth: { dayHeaderFormat: { weekday: narrow ? "narrow" : "short" } }
 			},
 			loading: (isLoading) => root.classList.toggle("calendar-loading", isLoading),
-			windowResize: () => {
-				const nowNarrow = isNarrow();
-				if (nowNarrow === narrow) return;
-				narrow = nowNarrow;
-				root.classList.toggle("calendar-narrow", narrow);
-				const layout = toolbars(narrow);
-				calendar.setOption("headerToolbar", layout.headerToolbar);
-				calendar.setOption("footerToolbar", layout.footerToolbar);
-				if (narrow && calendar.view.type === "timeGridWeek") calendar.changeView("timeGridDay");
-			},
-			buttonText: {
-				today: labels.today,
-				day: labels.day,
-				week: labels.week,
-				month: labels.month,
-				list: labels.agenda
-			},
+			headerToolbarClass: "calendar-fc-toolbar",
+			footerToolbarClass: "calendar-fc-toolbar",
+			viewClass: "calendar-fc-view",
+			todayText: labels.today,
+			dayText: labels.day,
+			weekTextLong: labels.week,
+			monthText: labels.month,
+			listText: labels.agenda,
 			height: "auto",
 			nowIndicator: true,
 			navLinks: true,
@@ -568,6 +559,16 @@
 			calendar.refetchEvents();
 		}));
 		calendar.render();
+		if (typeof ResizeObserver === "function") new ResizeObserver(() => {
+			const nowNarrow = isNarrow();
+			if (nowNarrow === narrow) return;
+			narrow = nowNarrow;
+			root.classList.toggle("calendar-narrow", narrow);
+			const layout = toolbars(narrow);
+			calendar.setOption("headerToolbar", layout.headerToolbar);
+			calendar.setOption("footerToolbar", layout.footerToolbar);
+			if (narrow && calendar.view.type === "timeGridWeek") calendar.changeView("timeGridDay");
+		}).observe(element);
 	}
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
 	else initialize();
