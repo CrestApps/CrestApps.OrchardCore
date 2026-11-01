@@ -50,6 +50,11 @@ public class EditProfileViewModel
     public AgentAvailability AgentAvailability { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent runs its own tools when another assistant calls it.
+    /// </summary>
+    public bool AgentAllowToolInvocation { get; set; }
+
+    /// <summary>
     /// Gets or sets the title type.
     /// </summary>
     public AISessionTitleType? TitleType { get; set; }

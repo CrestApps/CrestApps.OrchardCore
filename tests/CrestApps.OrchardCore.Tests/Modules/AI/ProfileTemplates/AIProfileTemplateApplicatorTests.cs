@@ -97,4 +97,93 @@ public sealed class AIProfileTemplateApplicatorTests
         // Assert
         Assert.Null(profile.GetOrCreate<AIProfileMetadata>().InitialPrompt);
     }
+
+    [Fact]
+    public void Apply_WhenAgentTemplateAllowsToolInvocation_ShouldLetTheAgentRunItsTools()
+    {
+        // Arrange
+        var template = new AIProfileTemplate
+        {
+            Name = "content-agent",
+            DisplayText = "Content Agent",
+        };
+
+        template.Put(new ProfileTemplateMetadata
+        {
+            ProfileType = AIProfileType.Agent,
+            AgentAvailability = AgentAvailability.OnDemand,
+            AllowToolInvocation = true,
+            ToolNames = ["searchForContentItems"],
+        });
+
+        var profile = new AIProfile();
+
+        // Act
+        AIProfileTemplateApplicator.Apply(profile, template);
+
+        // Assert
+        var agentMetadata = profile.GetOrCreate<AgentMetadata>();
+        Assert.True(agentMetadata.AllowToolInvocation);
+        Assert.Equal(AgentAvailability.OnDemand, agentMetadata.Availability);
+    }
+
+    [Fact]
+    public void Apply_WhenTemplateOnlyAllowsToolInvocation_ShouldKeepTheProfilesAvailability()
+    {
+        // Arrange
+        var template = new AIProfileTemplate
+        {
+            Name = "agent",
+            DisplayText = "Agent",
+        };
+
+        template.Put(new ProfileTemplateMetadata
+        {
+            ProfileType = AIProfileType.Agent,
+            AllowToolInvocation = true,
+        });
+
+        var profile = new AIProfile();
+        profile.Put(new AgentMetadata
+        {
+            Availability = AgentAvailability.AlwaysAvailable,
+        });
+
+        // Act
+        AIProfileTemplateApplicator.Apply(profile, template);
+
+        // Assert
+        var agentMetadata = profile.GetOrCreate<AgentMetadata>();
+        Assert.True(agentMetadata.AllowToolInvocation);
+        Assert.Equal(AgentAvailability.AlwaysAvailable, agentMetadata.Availability);
+    }
+
+    [Fact]
+    public void Apply_WhenTemplateSaysNothingAboutToolInvocation_ShouldKeepTheProfilesSetting()
+    {
+        // Arrange
+        var template = new AIProfileTemplate
+        {
+            Name = "agent",
+            DisplayText = "Agent",
+        };
+
+        template.Put(new ProfileTemplateMetadata
+        {
+            ProfileType = AIProfileType.Agent,
+            AgentAvailability = AgentAvailability.OnDemand,
+        });
+
+        var profile = new AIProfile();
+        profile.Put(new AgentMetadata
+        {
+            AllowToolInvocation = true,
+        });
+
+        // Act
+        AIProfileTemplateApplicator.Apply(profile, template);
+
+        // Assert
+        Assert.True(profile.GetOrCreate<AgentMetadata>().AllowToolInvocation);
+    }
 }

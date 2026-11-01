@@ -106,6 +106,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.TitleType = profile.TitleType;
             model.ProfileType = profile.Type;
             model.AgentAvailability = agentMetadata?.Availability ?? AgentAvailability.OnDemand;
+            model.AgentAllowToolInvocation = agentMetadata?.AllowToolInvocation ?? false;
             model.TitleTypes =
             [
                 new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
@@ -246,6 +247,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
             var agentMetadata = profile.GetOrCreate<AgentMetadata>();
             agentMetadata.Availability = model.AgentAvailability;
+            agentMetadata.AllowToolInvocation = model.AgentAllowToolInvocation;
             profile.Put(agentMetadata);
         }
 

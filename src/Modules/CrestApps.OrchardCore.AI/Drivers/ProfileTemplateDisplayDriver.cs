@@ -133,6 +133,11 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         metadata.Description = profileFieldsModel.Description?.Trim();
         metadata.ProfileType = profileFieldsModel.ProfileType;
         metadata.AgentAvailability = profileFieldsModel.AgentAvailability;
+
+        // Only an agent reads this, so the template keeps no opinion on it for any other profile type.
+        metadata.AllowToolInvocation = profileFieldsModel.ProfileType == AIProfileType.Agent && profileFieldsModel.AllowToolInvocation
+            ? true
+            : null;
         metadata.TitleType = profileFieldsModel.TitleType;
 
         var parametersModel = new AIProfileTemplateParametersViewModel();
@@ -159,6 +164,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         model.Description = metadata.Description;
         model.ProfileType = metadata.ProfileType;
         model.AgentAvailability = metadata.AgentAvailability;
+        model.AllowToolInvocation = metadata.AllowToolInvocation ?? false;
         model.TitleType = metadata.TitleType;
 
         model.ProfileTypes =
