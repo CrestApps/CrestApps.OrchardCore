@@ -1,3 +1,5 @@
+using CoreWebMcpConstants = CrestApps.Core.AI.WebMcp.WebMcpConstants;
+
 namespace CrestApps.OrchardCore.AI.WebMcp;
 
 /// <summary>
@@ -8,17 +10,17 @@ public static class WebMcpConstants
     /// <summary>
     /// The relative route of the endpoint that lists the tools the current user may call.
     /// </summary>
-    public const string ToolsRoute = "api/ai/webmcp/tools";
+    public const string ToolsRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/tools";
 
     /// <summary>
     /// The relative route of the endpoint that calls one tool.
     /// </summary>
-    public const string InvokeRoute = "api/ai/webmcp/tools/{name}/invoke";
+    public const string InvokeRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/tools/{{name}}/invoke";
 
     /// <summary>
     /// The id of the JSON block that carries the page configuration to the browser scripts.
     /// </summary>
-    public const string ConfigurationElementId = "crestapps-webmcp-config";
+    public const string ConfigurationElementId = CoreWebMcpConstants.ConfigurationElementId;
 
     /// <summary>
     /// The shell configuration section that can override the WebMCP settings.
@@ -52,7 +54,13 @@ public static class WebMcpConstants
     public static class ResourceNames
     {
         /// <summary>
-        /// The core WebMCP script.
+        /// The W3C reference polyfill that installs <c>document.modelContext</c> in browsers without native WebMCP.
+        /// </summary>
+        public const string Polyfill = "CrestAppsWebMcpPolyfill";
+
+        /// <summary>
+        /// The script that registers the site's AI tools with <c>document.modelContext</c> and connects the AI chat to
+        /// the page's tools.
         /// </summary>
         public const string Script = "CrestAppsWebMcp";
 
@@ -60,10 +68,5 @@ public static class WebMcpConstants
         /// The page tools script.
         /// </summary>
         public const string PageToolsScript = "CrestAppsWebMcpPageTools";
-
-        /// <summary>
-        /// The chat bridge script.
-        /// </summary>
-        public const string ChatBridgeScript = "CrestAppsWebMcpChatBridge";
     }
 }

@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Models;
 
 /// <summary>
 /// The site settings of the WebMCP Tools feature. <see cref="Services.WebMcpOptionsConfiguration"/> loads them into
-/// <see cref="WebMcpOptions"/>.
+/// <see cref="CrestApps.Core.AI.WebMcp.Models.WebMcpOptions"/> and <see cref="WebMcpPageOptions"/>.
 /// </summary>
 public sealed class WebMcpSettings
 {

@@ -15,12 +15,14 @@ using OrchardCore.ResourceManagement;
 namespace CrestApps.OrchardCore.AI.WebMcp.Filters;
 
 /// <summary>
-/// Adds the WebMCP script and its configuration to the full pages a signed-in user with the
-/// <see cref="WebMcpPermissionsProvider.UseWebMcpTools"/> permission opens, on the page kinds the settings turn on.
+/// Adds the WebMCP scripts and their configuration to the full pages a signed-in user with the
+/// <see cref="WebMcpPermissionsProvider.UseWebMcpTools"/> permission opens, on the page kinds the settings turn on:
+/// the W3C reference polyfill (for browsers without native WebMCP), CrestApps.Core's <c>webmcp.js</c>, and the scripts
+/// the enabled features add.
 /// </summary>
 public sealed class WebMcpScriptFilter : IAsyncResultFilter
 {
-    private readonly WebMcpOptions _options;
+    private readonly WebMcpPageOptions _options;
     private readonly IAuthorizationService _authorizationService;
     private readonly IResourceManager _resourceManager;
     private readonly IAntiforgery _antiforgery;
@@ -29,13 +31,13 @@ public sealed class WebMcpScriptFilter : IAsyncResultFilter
     /// <summary>
     /// Initializes a new instance of the <see cref="WebMcpScriptFilter"/> class.
     /// </summary>
-    /// <param name="options">The effective WebMCP settings.</param>
+    /// <param name="options">The pages that get the WebMCP scripts.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="resourceManager">The resource manager.</param>
     /// <param name="antiforgery">The antiforgery service, which gives the token the page script sends.</param>
     /// <param name="handlers">The handlers that add scripts and settings to the page configuration.</param>
     public WebMcpScriptFilter(
-        IOptionsSnapshot<WebMcpOptions> options,
+        IOptionsSnapshot<WebMcpPageOptions> options,
         IAuthorizationService authorizationService,
         IResourceManager resourceManager,
         IAntiforgery antiforgery,
@@ -96,6 +98,11 @@ public sealed class WebMcpScriptFilter : IAsyncResultFilter
         configuration.Settings["antiforgeryToken"] = tokens.RequestToken;
         configuration.Settings["isAdmin"] = isAdminPage;
 
+        if (_options.PageToolOrigins is { Count: > 0 })
+        {
+            configuration.Settings["pageToolOrigins"] = _options.PageToolOrigins.ToArray();
+        }
+
         foreach (var handler in _handlers)
         {
             await handler.ConfigureAsync(configuration);
@@ -103,6 +110,7 @@ public sealed class WebMcpScriptFilter : IAsyncResultFilter
 
         // The block goes in the head so it is in the document before the foot scripts that read it run.
         _resourceManager.RegisterHeadScript(new HtmlString(BuildConfigurationElement(configuration.Settings)));
+        // The script depends on the polyfill, so the resource manager writes the polyfill first.
         _resourceManager.RegisterResource("script", WebMcpConstants.ResourceNames.Script).AtFoot();
 
         foreach (var script in configuration.Scripts)

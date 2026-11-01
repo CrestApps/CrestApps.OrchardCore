@@ -7,7 +7,14 @@
             <label class="form-check-label" asp-for="AllowPageTools">
                 @T["Allow page tools"]
             </label>
-            <span class="hint dashed">@T["When enabled, this profile's chat can call the WebMCP tools on the page the user has open, such as reading the page and filling its forms. It only works for signed-in users, and needs the WebMCP Chat Bridge feature."]</span>
+            <span class="hint dashed">@T["When enabled, this profile's chat can discover and run every WebMCP tool the page the user has open exposes, whoever registered it: the page tools, the site's own scripts or a third-party script. Only allow it on profiles used on pages whose scripts you trust. It only works for signed-in users, and needs the WebMCP Chat Bridge feature."]</span>
+        </div>
+        <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" asp-for="AllowConsequentialPageTools" />
+            <label class="form-check-label" asp-for="AllowConsequentialPageTools">
+                @T["Allow consequential page tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the chat can also run the page tools marked as consequential, such as placing an order. Needs Allow page tools."]</span>
         </div>
     </div>
 </div>

@@ -6,7 +6,7 @@ technical_manual:
   - ai/mcp/webmcp
 ---
 
-Some web browsers now come with an AI assistant, and some people add one as a browser extension. **WebMCP** lets such an assistant work with this site the way you do: it can use the AI tools your administrator picks, read the page you have open, open another page of the site and fill in a form for you to review. It works as you, with your permissions, and only while you are signed in. The site's own AI chat can use the same page tools, so you can ask it to fill in the form in front of you.
+Some web browsers now come with an AI assistant, and some people add one as a browser extension. **WebMCP** lets such an assistant work with this site the way you do: it can use the AI tools your administrator picks, read the page you have open, open another page of the site and fill in a form for you to review. It works as you, with your permissions, and only while you are signed in. The site's own AI chat can use every tool the page you have open offers, so you can ask it to fill in the form in front of you.
 
 | | |
 | --- | --- |
@@ -17,7 +17,7 @@ Some web browsers now come with an AI assistant, and some people add one as a br
 <AskYourAdmin />
 
 :::note[Which browsers]
-WebMCP is new. Only some browsers support it, and some only as a trial. In a browser without it, nothing changes on the page. The site's own chat can still use the page tools in every browser.
+WebMCP is new, and only some browsers have it built in. The site adds it to the other browsers, so the tools and the site's own chat work in every browser. It needs a secure (HTTPS) address.
 :::
 
 ## Choose what browser assistants can use
@@ -52,16 +52,23 @@ With the **WebMCP Page Tools** feature on, every page that offers tools also off
 
 ## Let the site's chat use the page you have open
 
-With the **WebMCP Chat Bridge** feature on, you can let an AI profile's chat use the page tools of the page you have open, for example to ask the admin chat widget to fill in the form you are editing.
+With the **WebMCP Chat Bridge** feature on, you can let an AI profile's chat use the tools of the page you have open, for example to ask the admin chat widget to fill in the form you are editing. The chat sees every tool the page offers: the page tools above, and tools other scripts on the page add.
 
 1. Open **Artificial Intelligence > Profiles** and edit a chat profile.
 2. On the **Capabilities** tab, tick **Allow page tools**.
-3. Click **Save**.
+3. To also let the chat use tools the page marks as having consequences, such as placing an order, tick **Allow consequential page tools**.
+4. Click **Save**.
 
-The chat uses the tab you looked at last. It only works for signed-in users with the **Use WebMCP tools in the browser** permission.
+| Field | What it does |
+| --- | --- |
+| **Allow page tools** | The chat can use the tools of the page the message is sent from. |
+| **Allow consequential page tools** | The chat can also use the tools the page marks as consequential. Needs **Allow page tools**. |
+
+The chat uses the tools of the page you send the message from. It only works for signed-in users with the **Use WebMCP tools in the browser** permission.
 
 ## Tips
 
 - Offer only the tools you would let the person run themselves, and prefer tools that only read.
 - If an assistant says a tool is not available, check that the tool is ticked on the **WebMCP** card and that the person's role allows that tool.
-- If the chat cannot reach the page, keep the page open in the tab you looked at last. A page tool that does not answer within a minute fails.
+- Only allow page tools on profiles used on pages whose scripts you trust: the chat can use any tool the page offers.
+- If the chat cannot reach the page, keep the page open until the answer arrives. A page tool that does not answer within a minute fails.

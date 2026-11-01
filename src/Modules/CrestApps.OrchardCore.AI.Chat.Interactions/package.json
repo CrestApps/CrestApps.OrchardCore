@@ -5,6 +5,6 @@
   "description": "Provides ad-hoc AI chat interactions",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.226"
+    "@crestapps/ai-chat-ui": "2.0.0-preview.243"
   }
 }

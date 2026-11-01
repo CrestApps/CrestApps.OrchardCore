@@ -22,25 +22,6 @@ public sealed class WebMcpClientConfigurationHandlerTests
     }
 
     [Fact]
-    public async Task ChatHandler_AddsTheBridgeScriptAndTheTenantHubAddress()
-    {
-        // Arrange
-        var httpContext = new DefaultHttpContext();
-
-        httpContext.Request.PathBase = "/tenant";
-
-        var context = new WebMcpClientConfigurationContext(httpContext, isAdminPage: false);
-        var handler = new WebMcpChatClientConfigurationHandler();
-
-        // Act
-        await handler.ConfigureAsync(context);
-
-        // Assert
-        Assert.Equal([WebMcpConstants.ResourceNames.ChatBridgeScript], context.Scripts);
-        Assert.Equal("/tenant/Communication/Hub/WebMcpHub", context.Settings["chatHubUrl"]);
-    }
-
-    [Fact]
     public void AddScript_KeepsTheOrderAndAddsAScriptOnce()
     {
         // Arrange

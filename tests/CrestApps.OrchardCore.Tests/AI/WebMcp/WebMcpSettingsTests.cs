@@ -25,7 +25,7 @@ public sealed class WebMcpSettingsTests
     public void IsEnabledFor_FollowsThePageKind(bool enableAdmin, bool enableFrontEnd, bool isAdminPage, bool expected)
     {
         // Arrange
-        var options = new WebMcpOptions
+        var options = new WebMcpPageOptions
         {
             EnableOnAdminPages = enableAdmin,
             EnableOnFrontEndPages = enableFrontEnd,

@@ -65,7 +65,7 @@ public sealed class WebMcpScriptFilterTests
     public async Task OnResultExecutionAsync_AddsTheScriptToAFrontEndPageWhenTurnedOn()
     {
         // Arrange
-        var harness = new FilterHarness(new WebMcpOptions
+        var harness = new FilterHarness(new WebMcpPageOptions
         {
             EnableOnAdminPages = false,
             EnableOnFrontEndPages = true,
@@ -78,6 +78,39 @@ public sealed class WebMcpScriptFilterTests
         // Assert
         Assert.Equal([WebMcpConstants.ResourceNames.Script], harness.Scripts);
         Assert.False(harness.ReadConfiguration().GetProperty("isAdmin").GetBoolean());
+    }
+
+    [Fact]
+    public async Task OnResultExecutionAsync_OmitsThePageToolOriginsByDefault()
+    {
+        // Arrange
+        var harness = new FilterHarness();
+        var context = harness.CreateContext(isAdmin: true);
+
+        // Act
+        await harness.Filter.OnResultExecutionAsync(context, harness.Next);
+
+        // Assert
+        Assert.False(harness.ReadConfiguration().TryGetProperty("pageToolOrigins", out _));
+    }
+
+    [Fact]
+    public async Task OnResultExecutionAsync_PassesThePageToolOriginsToTheScript()
+    {
+        // Arrange
+        var harness = new FilterHarness(new WebMcpPageOptions
+        {
+            PageToolOrigins = ["https://partner.example"],
+        });
+        var context = harness.CreateContext(isAdmin: true);
+
+        // Act
+        await harness.Filter.OnResultExecutionAsync(context, harness.Next);
+
+        // Assert
+        var origins = harness.ReadConfiguration().GetProperty("pageToolOrigins");
+
+        Assert.Equal(["https://partner.example"], origins.EnumerateArray().Select(origin => origin.GetString()));
     }
 
     [Fact]
@@ -175,13 +208,13 @@ public sealed class WebMcpScriptFilterTests
     {
         private readonly List<string> _headScripts = [];
 
-        public FilterHarness(WebMcpOptions options = null, bool allowed = true, IEnumerable<IWebMcpClientConfigurationHandler> handlers = null)
+        public FilterHarness(WebMcpPageOptions options = null, bool allowed = true, IEnumerable<IWebMcpClientConfigurationHandler> handlers = null)
         {
-            var snapshot = new Mock<IOptionsSnapshot<WebMcpOptions>>();
+            var snapshot = new Mock<IOptionsSnapshot<WebMcpPageOptions>>();
 
             snapshot
                 .Setup(s => s.Value)
-                .Returns(options ?? new WebMcpOptions());
+                .Returns(options ?? new WebMcpPageOptions());
 
             var authorizationService = new Mock<IAuthorizationService>();
 

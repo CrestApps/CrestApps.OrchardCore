@@ -1,20 +1,22 @@
 [
   {
-    "action": "vite",
-    "name": "webmcp.js",
-    "source": "Assets/js/webmcp.js",
-    "dest": "wwwroot/scripts/webmcp.js"
-  },
-  {
-    "action": "vite",
-    "name": "webmcp-page-tools.js",
-    "source": "Assets/js/webmcp-page-tools.js",
-    "dest": "wwwroot/scripts/webmcp-page-tools.js"
-  },
-  {
-    "action": "vite",
-    "name": "webmcp-chat-bridge.js",
-    "source": "Assets/js/webmcp-chat-bridge.js",
-    "dest": "wwwroot/scripts/webmcp-chat-bridge.js"
+    "action": "copy",
+    "name": "webmcp-scripts",
+    "source": [
+      "node_modules/@crestapps/webmcp/dist/webmcp-polyfill.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp-polyfill.LICENSE.txt",
+      "node_modules/@crestapps/webmcp/dist/webmcp.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp.js.map",
+      "node_modules/@crestapps/webmcp/dist/webmcp.min.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp.min.js.map",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.js.map",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.min.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.min.js.map"
+    ],
+    "dest": "wwwroot/scripts/",
+    "tags": [
+      "vendor"
+    ]
   }
 ]

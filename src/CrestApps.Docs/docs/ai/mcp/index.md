@@ -19,7 +19,7 @@ CrestApps provides both **client** and **server** MCP support:
 |---------|-----------|-------------|
 | [MCP Client Integration](client) | `CrestApps.OrchardCore.AI.Mcp` / `CrestApps.OrchardCore.AI.Mcp.Stdio` | Connect to remote (SSE) or local (Stdio) MCP servers |
 | [MCP Server](server) | `CrestApps.OrchardCore.AI.Mcp.Server` | Expose Orchard Core AI capabilities to external MCP clients |
-| [WebMCP](webmcp) | `CrestApps.OrchardCore.AI.WebMcp` / `.PageTools` / `.Chat` | Give AI tools and page tools to AI agents in the browser, and let the AI chat use the page the user has open |
+| [WebMCP](webmcp) | `CrestApps.OrchardCore.AI.WebMcp` / `.PageTools` / `.Chat` | Register AI tools and page tools with the standard WebMCP API, and let the AI chat use every WebMCP tool the page the user has open exposes |
 
 ## Orchard admin surfaces
 

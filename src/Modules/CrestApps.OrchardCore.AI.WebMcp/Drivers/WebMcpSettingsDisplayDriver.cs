@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.WebMcp.Drivers;
@@ -28,6 +29,7 @@ public sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSettin
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer S;
 
@@ -41,6 +43,7 @@ public sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSettin
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="toolAccessEvaluator">The evaluator of the per-tool permission.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="shellReleaseManager">The shell release manager, which rebuilds the tenant after the settings change.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WebMcpSettingsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
@@ -48,6 +51,7 @@ public sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSettin
         IAuthorizationService authorizationService,
         IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<WebMcpSettingsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
@@ -55,6 +59,7 @@ public sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSettin
         _authorizationService = authorizationService;
         _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
+        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
@@ -156,10 +161,22 @@ public sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSettin
             .Select(instance => instance.Name)
             .Intersect(selectedInstanceNames, StringComparer.OrdinalIgnoreCase));
 
+        var changed = settings.ExposeAllTools != model.ExposeAllTools ||
+            settings.EnableOnAdminPages != model.EnableOnAdminPages ||
+            settings.EnableOnFrontEndPages != model.EnableOnFrontEndPages ||
+            !(settings.Tools ?? []).OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .SequenceEqual(tools.OrderBy(name => name, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
+
         settings.ExposeAllTools = model.ExposeAllTools;
         settings.EnableOnAdminPages = model.EnableOnAdminPages;
         settings.EnableOnFrontEndPages = model.EnableOnFrontEndPages;
         settings.Tools = tools;
+
+        if (changed && context.Updater.ModelState.IsValid)
+        {
+            // CrestApps.Core reads the tool selection through IOptionsMonitor, so the tenant is released to rebuild it.
+            _shellReleaseManager.RequestRelease();
+        }
 
         return await EditAsync(site, settings, context);
     }

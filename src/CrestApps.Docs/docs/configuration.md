@@ -676,7 +676,7 @@ Use `None` only for local development. See [MCP Server](ai/mcp/server.md).
 | **Section** | `CrestApps:AI:WebMcp` |
 | **Controls** | Which AI tools browser agents may call, on which pages, and how long the AI chat waits for a page tool |
 
-Keys: `ExposeAllTools`, `Tools`, `EnableOnAdminPages`, `EnableOnFrontEndPages`, and `Chat:ToolCallTimeout` (default `00:01:00`). Values here override the **WebMCP** settings stored in the admin.
+Keys: `ExposeAllTools`, `Tools`, `EnableOnAdminPages`, `EnableOnFrontEndPages`, `PageToolOrigins` (the cross-origin frames whose shared tools the AI chat may use, empty by default), and `Chat:ToolCallTimeout` (default `00:01:00`). Values here override the **WebMCP** settings stored in the admin.
 
 ```json
 {
