@@ -65,6 +65,9 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddScoped<ShiftTradeStore>();
         services.TryAddScoped<WorkerShiftReader>();
         services.TryAddScoped<WorkerLocks>();
+        services.TryAddScoped<ScheduleChangeRecorder>();
+        services.TryAddScoped<DefaultWorkerScheduleLimitsProvider>();
+        services.TryAddScoped<IWorkerScheduleLimitsProvider, DefaultWorkerScheduleLimitsProvider>();
         services.TryAddScoped<TeamPlanningPolicy>();
         services.TryAddScoped<ShiftAssignmentContexts>();
         services.TryAddScoped<OpenShiftPosting>();

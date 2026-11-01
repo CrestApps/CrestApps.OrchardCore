@@ -234,6 +234,8 @@ public sealed class SchedulesController : Controller
             OpenCount = drafts.Count(draft => draft.WorkerId is null),
             CanPublish = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.PublishSchedules),
             LastRun = (await _planningService.FindScenarioAsync(period.PrimaryScenarioId, HttpContext.RequestAborted))?.LastRun,
+            Violations = drafts.Count == 0 ? [] : (await _planningService.CheckPublishAsync(period.ItemId, HttpContext.RequestAborted)).ToList(),
+            CanOverride = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.OverrideLaborRules),
         };
 
         var members = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
@@ -585,13 +587,14 @@ public sealed class SchedulesController : Controller
     }
 
     /// <summary>
-    /// Publishes a schedule to the team's calendar.
+    /// Publishes a schedule to the team's calendar, with a reason to go ahead despite labor rules that need an override.
     /// </summary>
     /// <param name="id">The schedule id.</param>
+    /// <param name="overrideReason">Why to go ahead despite rules that need an override.</param>
     /// <returns>A redirect to the planner board.</returns>
     [HttpPost]
     [Admin("workforce/schedules/publish/{id}", "WorkforceSchedulesPublish")]
-    public async Task<IActionResult> Publish(string id)
+    public async Task<IActionResult> Publish(string id, string overrideReason = null)
     {
         var (period, _, denied) = await AuthorizePeriodAsync(id, WorkforcePermissions.PublishSchedules);
 
@@ -600,11 +603,40 @@ public sealed class SchedulesController : Controller
             return denied;
         }
 
-        var result = await _planningService.PublishAsync(period.ItemId, User.Identity?.Name, HttpContext.RequestAborted);
+        if (!string.IsNullOrWhiteSpace(overrideReason) && !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.OverrideLaborRules))
+        {
+            return Forbid();
+        }
+
+        var result = await _planningService.PublishAsync(period.ItemId, User.Identity?.Name, overrideReason, HttpContext.RequestAborted);
+
+        if (result.NeedsOverride || result.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.Block))
+        {
+            // Nothing was published; the board lists the broken rules.
+            foreach (var error in result.Errors)
+            {
+                await _notifier.ErrorAsync(H["{0}", error]);
+            }
+
+            return RedirectToAction(nameof(Plan), new { id });
+        }
 
         foreach (var error in result.Errors)
         {
             await _notifier.WarningAsync(H["{0}", error]);
+        }
+
+        var overridden = result.Violations.Count(violation => violation.Enforcement == LaborRuleEnforcement.RequireOverride);
+        var warnings = result.Violations.Count(violation => violation.Enforcement == LaborRuleEnforcement.Warn);
+
+        if (overridden > 0)
+        {
+            await _notifier.InformationAsync(H.Plural(overridden, "1 broken labor rule was overridden; it is recorded under Rule Overrides.", "{0} broken labor rules were overridden; they are recorded under Rule Overrides.", overridden));
+        }
+
+        if (warnings > 0)
+        {
+            await _notifier.InformationAsync(H.Plural(warnings, "Published with 1 labor rule warning; the board lists it.", "Published with {0} labor rule warnings; the board lists them.", warnings));
         }
 
         if (result.Succeeded)

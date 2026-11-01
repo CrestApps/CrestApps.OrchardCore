@@ -38,6 +38,16 @@ public sealed class PlanningPublishResult
     public IList<ScheduleChange> Changes { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the broken rules the publish found, including the warnings it went ahead with.
+    /// </summary>
+    public IList<LaborRuleViolation> Violations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the publish stopped because a broken rule needs an override reason.
+    /// </summary>
+    public bool NeedsOverride { get; set; }
+
+    /// <summary>
     /// Gets whether every shift was published.
     /// </summary>
     public bool Succeeded => Errors.Count == 0;

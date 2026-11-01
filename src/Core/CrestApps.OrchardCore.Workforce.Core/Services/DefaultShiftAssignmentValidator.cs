@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
@@ -20,7 +19,7 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
     private readonly ISkillManager _skillManager;
     private readonly ActivityCodeStore _activityCodeStore;
     private readonly TeamTimeZoneResolver _timeZones;
-    private readonly ShiftPlanningOptions _options;
+    private readonly IWorkerScheduleLimitsProvider _limits;
 
     internal readonly IStringLocalizer S;
 
@@ -30,7 +29,7 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
         ISkillManager skillManager,
         ActivityCodeStore activityCodeStore,
         TeamTimeZoneResolver timeZones,
-        IOptions<ShiftPlanningOptions> options,
+        IWorkerScheduleLimitsProvider limits,
         IStringLocalizer<DefaultShiftAssignmentValidator> stringLocalizer)
     {
         _shiftReader = shiftReader;
@@ -38,7 +37,7 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
         _skillManager = skillManager;
         _activityCodeStore = activityCodeStore;
         _timeZones = timeZones;
-        _options = options.Value;
+        _limits = limits;
         S = stringLocalizer;
     }
 
@@ -80,7 +79,11 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
 
         var timeZoneId = await _timeZones.GetAsync(context.TeamId, cancellationToken);
         var codes = (await _activityCodeStore.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
-        var restMinutes = Math.Max(0, _options.MinRestHours) * 60;
+        var limits = await _limits.GetAsync(worker, context.TeamId, cancellationToken);
+
+        // With a labor rule set, its rules check rest and hours, with their own enforcement.
+        var checkLimits = !limits.FromRuleSet;
+        var restMinutes = (double)Math.Max(0, limits.MinRestHours) * 60;
         var others = (await _shiftReader.ListAsync(worker, context.StartUtc.AddDays(-8), context.EndUtc.AddDays(8), cancellationToken))
             .Where(calendarEvent => !context.IgnoredShiftKeys.Contains(calendarEvent.SourceId ?? string.Empty))
             .ToArray();
@@ -99,9 +102,9 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
 
             var gap = other.EndUtc <= context.StartUtc ? (context.StartUtc - other.EndUtc).TotalMinutes : (other.StartUtc - context.EndUtc).TotalMinutes;
 
-            if (gap < restMinutes)
+            if (checkLimits && gap < restMinutes)
             {
-                context.Problems.Add(S["{0} would rest only {1:0.#} hours between shifts; at least {2} are needed.", name, gap / 60, _options.MinRestHours]);
+                context.Problems.Add(S["{0} would rest only {1:0.#} hours between shifts; at least {2} are needed.", name, gap / 60, limits.MinRestHours]);
             }
         }
 
@@ -130,14 +133,14 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
             }
         }
 
-        if (worker.MaxHoursPerWeek.HasValue && weekMinutes > worker.MaxHoursPerWeek.Value * 60)
+        if (checkLimits && limits.MaxHoursPerWeek.HasValue && weekMinutes > limits.MaxHoursPerWeek.Value * 60)
         {
-            context.Problems.Add(S["{0} would work {1:0.#} hours that week, more than their {2:0.#}.", name, weekMinutes / 60.0, worker.MaxHoursPerWeek.Value]);
+            context.Problems.Add(S["{0} would work {1:0.#} hours that week, more than their {2:0.#}.", name, weekMinutes / 60.0, limits.MaxHoursPerWeek.Value]);
         }
 
-        if (worker.MaxHoursPerDay.HasValue && dayMinutes > worker.MaxHoursPerDay.Value * 60)
+        if (checkLimits && limits.MaxHoursPerDay.HasValue && dayMinutes > limits.MaxHoursPerDay.Value * 60)
         {
-            context.Problems.Add(S["{0} would work {1:0.#} hours that day, more than their {2:0.#}.", name, dayMinutes / 60.0, worker.MaxHoursPerDay.Value]);
+            context.Problems.Add(S["{0} would work {1:0.#} hours that day, more than their {2:0.#}.", name, dayMinutes / 60.0, limits.MaxHoursPerDay.Value]);
         }
     }
 }

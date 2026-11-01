@@ -18,7 +18,7 @@ internal sealed class DefaultShiftService : IShiftService
     private readonly WorkerStore _workerStore;
     private readonly SchedulePeriodStore _periodStore;
     private readonly DraftShiftStore _draftStore;
-    private readonly ScheduleChangeStore _changeStore;
+    private readonly ScheduleChangeRecorder _changeRecorder;
     private readonly WorkerShiftReader _shiftReader;
     private readonly ShiftAssignmentContexts _contexts;
     private readonly TeamTimeZoneResolver _timeZones;
@@ -33,7 +33,7 @@ internal sealed class DefaultShiftService : IShiftService
         WorkerStore workerStore,
         SchedulePeriodStore periodStore,
         DraftShiftStore draftStore,
-        ScheduleChangeStore changeStore,
+        ScheduleChangeRecorder changeRecorder,
         WorkerShiftReader shiftReader,
         ShiftAssignmentContexts contexts,
         TeamTimeZoneResolver timeZones,
@@ -46,7 +46,7 @@ internal sealed class DefaultShiftService : IShiftService
         _workerStore = workerStore;
         _periodStore = periodStore;
         _draftStore = draftStore;
-        _changeStore = changeStore;
+        _changeRecorder = changeRecorder;
         _shiftReader = shiftReader;
         _contexts = contexts;
         _timeZones = timeZones;
@@ -244,7 +244,7 @@ internal sealed class DefaultShiftService : IShiftService
             }
         }
 
-        await _changeStore.CreateAsync(new ScheduleChange
+        await _changeRecorder.RecordAsync(new ScheduleChange
         {
             ItemId = UniqueId.GenerateId(),
             PeriodId = data.ScheduleId,

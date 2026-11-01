@@ -21,7 +21,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
     private readonly WorkerStore _workerStore;
     private readonly SchedulePeriodStore _periodStore;
     private readonly DraftShiftStore _draftStore;
-    private readonly ScheduleChangeStore _changeStore;
+    private readonly ScheduleChangeRecorder _changeRecorder;
     private readonly ActivityCodeStore _activityCodeStore;
     private readonly WorkforceCalendarService _calendarService;
     private readonly ICalendarService _calendars;
@@ -42,7 +42,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         WorkerStore workerStore,
         SchedulePeriodStore periodStore,
         DraftShiftStore draftStore,
-        ScheduleChangeStore changeStore,
+        ScheduleChangeRecorder changeRecorder,
         ActivityCodeStore activityCodeStore,
         WorkforceCalendarService calendarService,
         ICalendarService calendars,
@@ -61,7 +61,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         _workerStore = workerStore;
         _periodStore = periodStore;
         _draftStore = draftStore;
-        _changeStore = changeStore;
+        _changeRecorder = changeRecorder;
         _activityCodeStore = activityCodeStore;
         _calendarService = calendarService;
         _calendars = calendars;
@@ -459,7 +459,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
             shift.CalendarEventId = (created.Value ?? calendarEvent).ItemId;
             await _openShiftStore.UpdateAsync(shift, cancellationToken);
 
-            await _changeStore.CreateAsync(new ScheduleChange
+            await _changeRecorder.RecordAsync(new ScheduleChange
             {
                 ItemId = UniqueId.GenerateId(),
                 PeriodId = shift.PeriodId,

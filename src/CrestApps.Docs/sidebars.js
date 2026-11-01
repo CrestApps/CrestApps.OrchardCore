@@ -169,6 +169,7 @@ const sidebars = {
                 'user-manual/workforce/workers-and-teams',
                 'user-manual/workforce/shift-planning',
                 'user-manual/workforce/time-off',
+                'user-manual/workforce/labor-rules',
                 'user-manual/workforce/skills-and-certifications',
             ],
         },

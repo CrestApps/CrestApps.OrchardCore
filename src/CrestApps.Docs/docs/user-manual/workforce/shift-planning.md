@@ -108,7 +108,7 @@ Falling short of the minimum counts far more than falling short of the target, a
 
 Choose **Publish** to put the schedule on the team's Workforce calendar. Open shifts stay off the calendar until you give them to someone. You need **Publish team schedules**; **Plan team schedules** alone lets you prepare the draft.
 
-Shifts with nobody are offered as [open shifts](#open-shifts).
+Shifts with nobody are offered as [open shifts](#open-shifts). When the team has a [labor rule set](./labor-rules.md), the board lists the rules the draft breaks, and a rule that blocks or needs an override stops the publish.
 
 After the first publish, the button reads **Publish changes**. Publishing again adds new shifts, moves or reassigns the ones you changed, and removes the ones you deleted. Shifts you didn't touch stay as they are. If a shift can't be published, a warning says which one and why, and the others are still published.
 

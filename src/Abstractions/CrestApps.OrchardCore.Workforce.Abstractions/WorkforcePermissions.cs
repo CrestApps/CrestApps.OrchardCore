@@ -80,6 +80,21 @@ public static class WorkforcePermissions
     public static readonly Permission AdjustTimeOffBalances = new("AdjustTimeOffBalances", LocalizationSource.Create("Adjust time-off balances", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
+    /// Add, change and remove labor rule sets, and see the overrides of their rules.
+    /// </summary>
+    public static readonly Permission ManageLaborRules = new("ManageLaborRules", LocalizationSource.Create("Manage labor rules", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Go ahead, with a reason, with changes that break a labor rule that needs an override.
+    /// </summary>
+    public static readonly Permission OverrideLaborRules = new("OverrideLaborRules", LocalizationSource.Create("Override labor rules", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Approve or waive the predictability pay of the workers of the teams the user manages.
+    /// </summary>
+    public static readonly Permission ApprovePredictabilityPay = new("ApprovePredictabilityPay", LocalizationSource.Create("Approve predictability pay", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
     /// Request one's own time off.
     /// </summary>
     public static readonly Permission RequestTimeOff = new("RequestTimeOff", LocalizationSource.Create("Request time off", typeof(WorkforcePermissions)));

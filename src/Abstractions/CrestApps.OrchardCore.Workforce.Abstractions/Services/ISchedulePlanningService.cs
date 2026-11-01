@@ -124,6 +124,26 @@ public interface ISchedulePlanningService
     Task<PlanningPublishResult> PublishAsync(string periodId, string actor, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Publishes a period's primary scenario, going ahead with broken rules that need an override when a reason is
+    /// given. The <see cref="ISchedulePublishValidator"/>s check the schedule first: a rule that blocks stops the
+    /// publish, and one that needs an override stops it unless <paramref name="overrideReason"/> is given.
+    /// </summary>
+    /// <param name="periodId">The period.</param>
+    /// <param name="actor">Who published.</param>
+    /// <param name="overrideReason">Why to go ahead despite rules that need an override, or empty.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What was published, or what stopped it.</returns>
+    Task<PlanningPublishResult> PublishAsync(string periodId, string actor, string overrideReason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks a period's primary scenario as publishing it would, without publishing or recording anything.
+    /// </summary>
+    /// <param name="periodId">The period.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The broken rules.</returns>
+    Task<IReadOnlyList<LaborRuleViolation>> CheckPublishAsync(string periodId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the changes made to a period after it was first published, oldest first.
     /// </summary>
     /// <param name="periodId">The period.</param>

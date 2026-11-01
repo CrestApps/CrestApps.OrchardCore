@@ -1,0 +1,24 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforcePredictabilityPay" title="@T["Predictability Pay"]" /></zone>
+
+<form asp-action="Index" method="get" id="predictability-pay-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <p class="mb-0 text-muted small">@T["Premium owed when a published shift was added, moved or removed with less notice than the worker's rule set asks for. Changes a worker asked for, such as trades and claims, owe nothing. Approve each to be paid, or waive it with the reason."]</p>
+        </div>
+    </div>
+</form>
+
+@{
+    Model.List.ToolbarActions = await New.WorkforceTeamStatusFilter(ViewModel: Model, FormId: "predictability-pay-filter");
+}
+
+<admin-list name="WorkforcePredictabilityPay" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> No predictability pay matches."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Change"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

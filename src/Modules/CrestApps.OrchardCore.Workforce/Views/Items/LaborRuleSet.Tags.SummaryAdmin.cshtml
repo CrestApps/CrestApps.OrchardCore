@@ -1,0 +1,25 @@
+@model ShapeViewModel<LaborRuleSet>
+@{
+    var set = Model.Value;
+}
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-scale-balanced text-secondary me-1" aria-hidden="true"></i>@T.Plural(set.Rules.Count, "1 rule", "{0} rules", set.Rules.Count)</span>
+@if (set.TeamIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@T.Plural(set.TeamIds.Count, "1 team", "{0} teams", set.TeamIds.Count)</span>
+}
+@if (set.WorkerIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T.Plural(set.WorkerIds.Count, "1 worker", "{0} workers", set.WorkerIds.Count)</span>
+}
+@if (set.TeamIds.Count + set.WorkerIds.Count == 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T["Assigned to nobody"]</span>
+}
+@if (set.Rules.Any(rule => rule.Enforcement == LaborRuleEnforcement.Block))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-danger me-1" aria-hidden="true"></i>@T["Blocks"]</span>
+}
+@if (!set.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

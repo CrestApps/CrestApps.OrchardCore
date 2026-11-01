@@ -1,0 +1,106 @@
+@model LaborRuleSetEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceLaborRulesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Labor Rule Set"] : T["Edit '{0}' Labor Rule Set", Model.Name])">
+        <breadcrumb-item id="WorkforceLaborRules" action="Index" controller="LaborRuleSets" area="CrestApps.OrchardCore.Workforce">@T["Labor Rules"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Jurisdiction" class="ocat-label">@T["Jurisdiction"]</label><div class="ocat-end"><input asp-for="Jurisdiction" class="form-control" style="max-width: 24rem" /><span class="hint">@T["Optional. The place or law the set follows, such as a city or a state."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="2"></textarea></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="6"></select>
+                <span class="hint">@T["The set applies to these teams and the teams under them. A team's own set comes before its parent's."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="EmploymentTypes" class="ocat-label">@T["Employment types"]</label>
+            <div class="ocat-end">
+                <select asp-for="EmploymentTypes" asp-items="Model.EmploymentOptions" class="form-select" multiple size="6"></select>
+                <span class="hint">@T["Leave empty for everyone. Workers of other types get the next set up the team tree."]</span>
+            </div>
+        </div>
+        @if (Model.WorkerCount > 0)
+        {
+            <div class="ocat-wrapper"><div class="ocat-end-offset"><span class="hint">@T.Plural(Model.WorkerCount, "1 worker also has this set on their own.", "{0} workers also have this set on their own.", Model.WorkerCount)</span></div></div>
+        }
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@T["Rules"]</h5>
+            <p class="text-muted small">@T["A rule that warns shows the problem and lets the change go ahead. One that blocks stops it. One that needs an override lets someone allowed to override go ahead with a reason, which is recorded."]</p>
+            @if (Model.Rules.Count == 0)
+            {
+                <p class="text-muted">@T["No rules yet. Add one below."]</p>
+            }
+            @for (var index = 0; index < Model.Rules.Count; index++)
+            {
+                var row = Model.Rules[index];
+                Model.Catalog.TryGetValue(row.RuleKey ?? string.Empty, out var rule);
+                <div class="border rounded p-3 mb-2">
+                    <input type="hidden" name="Rules[@index].Id" value="@row.Id" />
+                    <input type="hidden" name="Rules[@index].RuleKey" value="@row.RuleKey" />
+                    <div class="d-flex flex-wrap align-items-start gap-2 mb-2">
+                        <div class="me-auto">
+                            <strong>@(rule?.DisplayName ?? row.RuleKey)</strong>
+                            @if (rule is not null)
+                            {
+                                <div class="small text-muted">@rule.Description</div>
+                            }
+                        </div>
+                        @if (rule?.RecordsOnly == true)
+                        {
+                            <input type="hidden" name="Rules[@index].Enforcement" value="Warn" />
+                            <span class="badge ta-badge fw-normal">@T["Records only"]</span>
+                        }
+                        else
+                        {
+                            <select name="Rules[@index].Enforcement" class="form-select form-select-sm" style="width: auto" aria-label="@T["Enforcement"]">
+                                <option value="Warn" selected="@(row.Enforcement == "Warn")">@T["Warn"]</option>
+                                <option value="Block" selected="@(row.Enforcement == "Block")">@T["Block"]</option>
+                                <option value="RequireOverride" selected="@(row.Enforcement == "RequireOverride")">@T["Needs an override"]</option>
+                            </select>
+                        }
+                        <button type="submit" name="removeRule" value="@row.Id" class="btn btn-outline-danger btn-sm" formnovalidate>@T["Remove"]</button>
+                    </div>
+                    @if (rule is not null && rule.Parameters.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var parameter in rule.Parameters)
+                            {
+                                row.Parameters.TryGetValue(parameter.Name, out var value);
+                                var id = $"rule-{index}-{parameter.Name}";
+                                <div>
+                                    <label for="@id" class="form-label small mb-1">@parameter.Label</label>
+                                    @if (parameter.Kind == CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Time)
+                                    {
+                                        <input type="time" id="@id" name="Rules[@index].Parameters[@parameter.Name]" value="@(value ?? parameter.DefaultValue)" class="form-control form-control-sm" style="width: 8rem" />
+                                    }
+                                    else
+                                    {
+                                        <input type="number" id="@id" name="Rules[@index].Parameters[@parameter.Name]" value="@(value ?? parameter.DefaultValue)" min="0" step="@(parameter.Kind is CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Count or CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Days or CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Years ? "1" : "0.25")" class="form-control form-control-sm" style="width: 8rem" />
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            <div class="d-flex align-items-center gap-2 mt-3">
+                <select asp-for="AddRuleKey" asp-items="Model.RuleOptions" class="form-select" style="max-width: 22rem" aria-label="@T["Rule to add"]"></select>
+                <button type="submit" name="addRule" value="true" class="btn btn-outline-secondary text-nowrap" formnovalidate>@T["Add rule"]</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

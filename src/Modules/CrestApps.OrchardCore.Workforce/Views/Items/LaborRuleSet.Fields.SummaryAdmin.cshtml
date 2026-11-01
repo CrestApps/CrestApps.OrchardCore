@@ -1,0 +1,7 @@
+@model ShapeViewModel<LaborRuleSet>
+
+<a asp-controller="LaborRuleSets" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
+@if (!string.IsNullOrEmpty(Model.Value.Jurisdiction))
+{
+    <span class="ms-1 text-muted">@Model.Value.Jurisdiction</span>
+}

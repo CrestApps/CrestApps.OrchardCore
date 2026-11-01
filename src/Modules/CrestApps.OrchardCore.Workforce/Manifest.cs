@@ -44,3 +44,14 @@ using OrchardCore.Modules.Manifest;
         WorkforceConstants.Features.Workforce,
     ]
 )]
+
+[assembly: Feature(
+    Id = WorkforceConstants.Features.LaborRules,
+    Name = "Workforce Labor Rules",
+    Description = "A catalog of labor rules combined into rule sets for teams and workers, each set to warn, block or need an override; schedules are checked before they are published, claims and trades as they are made, and late changes record predictability pay.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceConstants.Features.ShiftPlanning,
+    ]
+)]

@@ -21,6 +21,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     private readonly ScheduleScenarioStore _scenarioStore;
     private readonly DraftShiftStore _draftStore;
     private readonly ScheduleChangeStore _changeStore;
+    private readonly ScheduleChangeRecorder _changeRecorder;
+    private readonly IEnumerable<ISchedulePublishValidator> _publishValidators;
     private readonly TeamStore _teamStore;
     private readonly WorkerStore _workerStore;
     private readonly ActivityCodeStore _activityCodeStore;
@@ -43,6 +45,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         ScheduleScenarioStore scenarioStore,
         DraftShiftStore draftStore,
         ScheduleChangeStore changeStore,
+        ScheduleChangeRecorder changeRecorder,
+        IEnumerable<ISchedulePublishValidator> publishValidators,
         TeamStore teamStore,
         WorkerStore workerStore,
         ActivityCodeStore activityCodeStore,
@@ -63,6 +67,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         _scenarioStore = scenarioStore;
         _draftStore = draftStore;
         _changeStore = changeStore;
+        _changeRecorder = changeRecorder;
+        _publishValidators = publishValidators;
         _teamStore = teamStore;
         _workerStore = workerStore;
         _activityCodeStore = activityCodeStore;
@@ -396,7 +402,31 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     public Task<AutoScheduleResult> AutoScheduleAsync(string scenarioId, AutoScheduleOptions options, string actor, CancellationToken cancellationToken = default)
         => _autoScheduler.RunAsync(scenarioId, options, actor, cancellationToken);
 
-    public async Task<PlanningPublishResult> PublishAsync(string periodId, string actor, CancellationToken cancellationToken = default)
+    public Task<PlanningPublishResult> PublishAsync(string periodId, string actor, CancellationToken cancellationToken = default)
+        => PublishAsync(periodId, actor, null, cancellationToken);
+
+    public async Task<IReadOnlyList<LaborRuleViolation>> CheckPublishAsync(string periodId, CancellationToken cancellationToken = default)
+    {
+        var period = await FindPeriodAsync(periodId, cancellationToken);
+        var team = period is null ? null : await _teamStore.FindByIdAsync(period.TeamId, cancellationToken);
+
+        if (team is null || string.IsNullOrEmpty(team.CalendarId) || !_publishValidators.Any())
+        {
+            return [];
+        }
+
+        var timeZoneId = await GetTimeZoneAsync(team.ItemId, cancellationToken);
+        var drafts = await _draftStore.ListForScenarioAsync(period.PrimaryScenarioId, cancellationToken);
+        var codes = (await _activityCodeStore.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
+        var workers = (await _workerStore.GetAsync(drafts.Select(draft => draft.WorkerId).Where(id => id is not null).Distinct(StringComparer.Ordinal), cancellationToken))
+            .ToDictionary(worker => worker.ItemId, StringComparer.Ordinal);
+        var published = await ListPublishedAsync(team.CalendarId, period, timeZoneId, cancellationToken);
+        var context = await ValidatePublishAsync(period, timeZoneId, drafts, workers, published, codes, null, null, true, cancellationToken);
+
+        return context.Violations.ToArray();
+    }
+
+    public async Task<PlanningPublishResult> PublishAsync(string periodId, string actor, string overrideReason, CancellationToken cancellationToken = default)
     {
         var result = new PlanningPublishResult();
         var period = await FindPeriodAsync(periodId, cancellationToken);
@@ -431,6 +461,37 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         var options = new CalendarChangeOptions { Actor = actor ?? WorkforceConstants.Source, SendInvitations = false, SkipConflictCheck = true };
         var calendar = await _calendars.FindByIdAsync(calendarId, cancellationToken);
         var openDrafts = new List<DraftShift>();
+
+        if (_publishValidators.Any())
+        {
+            var validation = await ValidatePublishAsync(period, timeZoneId, drafts, workers, published, codes, overrideReason, actor, false, cancellationToken);
+
+            result.Violations = validation.Violations;
+
+            if (validation.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.Block))
+            {
+                var blocking = validation.Violations.Count(violation => violation.Enforcement == LaborRuleEnforcement.Block);
+
+                result.Errors.Add(blocking == 1
+                    ? S["The schedule breaks a labor rule that stops it being published: {0}", validation.Violations.First(violation => violation.Enforcement == LaborRuleEnforcement.Block).Message]
+                    : S["The schedule breaks {0} labor rules that stop it being published; the board lists them.", blocking]);
+
+                return result;
+            }
+
+            if (validation.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.RequireOverride) && string.IsNullOrWhiteSpace(overrideReason))
+            {
+                result.NeedsOverride = true;
+                result.Errors.Add(S["The schedule breaks labor rules that need an override. Give the reason to publish it anyway."]);
+
+                return result;
+            }
+
+            foreach (var validator in _publishValidators)
+            {
+                await validator.ProceedingAsync(validation, cancellationToken);
+            }
+        }
 
         foreach (var draft in drafts)
         {
@@ -548,7 +609,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
 
         foreach (var change in result.Changes)
         {
-            await _changeStore.CreateAsync(change, cancellationToken);
+            await _changeRecorder.RecordAsync(change, cancellationToken);
         }
 
         period.PublishedVersion = version;
@@ -572,6 +633,78 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         return string.IsNullOrEmpty(periodId)
             ? Task.FromResult<IReadOnlyList<ScheduleChange>>([])
             : _changeStore.ListForPeriodAsync(periodId, cancellationToken);
+    }
+
+    // Lists the changes the publish would make, then lets the validators check the schedule.
+    private async Task<SchedulePublishValidationContext> ValidatePublishAsync(SchedulePeriod period, string timeZoneId, IReadOnlyList<DraftShift> drafts, Dictionary<string, WorkerProfile> workers, Dictionary<string, CalendarEvent> published, Dictionary<string, ActivityCode> codes, string overrideReason, string actor, bool checkOnly, CancellationToken cancellationToken)
+    {
+        var version = period.PublishedVersion + 1;
+        var changes = new List<SchedulePublishChange>();
+        var assigned = drafts.Where(draft => draft.WorkerId is not null && workers.ContainsKey(draft.WorkerId)).ToArray();
+
+        if (period.PublishedVersion > 0)
+        {
+            var kept = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var draft in assigned)
+            {
+                var startUtc = CalendarTime.ToUtc(draft.Start, timeZoneId);
+
+                if (!published.TryGetValue(draft.ShiftKey, out var existing))
+                {
+                    changes.Add(new SchedulePublishChange { Kind = ScheduleChangeKind.Added, ShiftKey = draft.ShiftKey, WorkerId = draft.WorkerId, AfterStartUtc = startUtc });
+
+                    continue;
+                }
+
+                kept.Add(draft.ShiftKey);
+
+                var before = existing.TryGet<ShiftData>(out var previous) ? previous : null;
+                var kind = before?.WorkerId != draft.WorkerId
+                    ? ScheduleChangeKind.Reassigned
+                    : existing.StartUtc != startUtc || existing.EndUtc != CalendarTime.ToUtc(draft.End, timeZoneId)
+                        ? ScheduleChangeKind.Moved
+                        : SameSegments(before, ToShiftData(draft, period, version, codes, timeZoneId))
+                            ? (ScheduleChangeKind?)null
+                            : ScheduleChangeKind.SegmentsChanged;
+
+                if (kind.HasValue)
+                {
+                    changes.Add(new SchedulePublishChange { Kind = kind.Value, ShiftKey = draft.ShiftKey, WorkerId = draft.WorkerId, PreviousWorkerId = before?.WorkerId, BeforeStartUtc = existing.StartUtc, AfterStartUtc = startUtc });
+                }
+            }
+
+            foreach (var (shiftKey, calendarEvent) in published.Where(pair => !kept.Contains(pair.Key)))
+            {
+                changes.Add(new SchedulePublishChange
+                {
+                    Kind = ScheduleChangeKind.Removed,
+                    ShiftKey = shiftKey,
+                    WorkerId = calendarEvent.TryGet<ShiftData>(out var data) ? data.WorkerId : null,
+                    BeforeStartUtc = calendarEvent.StartUtc,
+                });
+            }
+        }
+
+        var context = new SchedulePublishValidationContext
+        {
+            Period = period,
+            TimeZoneId = timeZoneId,
+            Drafts = assigned,
+            Workers = workers,
+            PublishedShiftKeys = new HashSet<string>(published.Keys, StringComparer.Ordinal),
+            Changes = changes,
+            OverrideReason = overrideReason,
+            Actor = actor,
+            CheckOnly = checkOnly,
+        };
+
+        foreach (var validator in _publishValidators)
+        {
+            await validator.ValidateAsync(context, cancellationToken);
+        }
+
+        return context;
     }
 
     private Task<string> GetTimeZoneAsync(string teamId, CancellationToken cancellationToken)

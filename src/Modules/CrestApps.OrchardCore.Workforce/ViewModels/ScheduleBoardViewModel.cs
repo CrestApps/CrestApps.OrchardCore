@@ -68,6 +68,16 @@ public class ScheduleBoardViewModel
     public CrestApps.OrchardCore.Workforce.Models.ScheduleSolverRun LastRun { get; set; }
 
     /// <summary>
+    /// Gets or sets the labor rules the draft breaks, as publishing would find them.
+    /// </summary>
+    public IList<CrestApps.OrchardCore.Workforce.Services.LaborRuleViolation> Violations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the user can publish despite rules that need an override.
+    /// </summary>
+    public bool CanOverride { get; set; }
+
+    /// <summary>
     /// Gets or sets the team's other schedules to copy from.
     /// </summary>
     public IList<SelectListItem> CopySourceOptions { get; set; } = [];

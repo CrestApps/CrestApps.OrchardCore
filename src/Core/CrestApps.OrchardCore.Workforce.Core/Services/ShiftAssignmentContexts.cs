@@ -35,6 +35,7 @@ internal sealed class ShiftAssignmentContexts
             StartUtc = calendarEvent.StartUtc,
             EndUtc = calendarEvent.EndUtc,
             PaidMinutes = ShiftEvents.PaidMinutes(calendarEvent, data, codes),
+            BreakMinutes = (int)data.Segments.Where(segment => segment.Kind is ActivityKind.Break or ActivityKind.Meal).Sum(segment => (segment.EndUtc - segment.StartUtc).TotalMinutes),
             RequiredSkillIds = template?.RequiredSkillIds.ToArray() ?? [],
             IgnoredShiftKeys = new HashSet<string>(ignoredShiftKeys.Where(key => !string.IsNullOrEmpty(key)), StringComparer.Ordinal),
         };
@@ -52,6 +53,9 @@ internal sealed class ShiftAssignmentContexts
             StartUtc = CalendarTime.ToUtc(shift.Start, shift.TimeZoneId),
             EndUtc = CalendarTime.ToUtc(shift.End, shift.TimeZoneId),
             PaidMinutes = ShiftEvents.PaidMinutes(shift.Start, shift.End, shift.Segments, codes),
+            BreakMinutes = (int)shift.Segments
+                .Where(segment => segment.ActivityCodeId is not null && codes.TryGetValue(segment.ActivityCodeId, out var code) && code.Kind is ActivityKind.Break or ActivityKind.Meal)
+                .Sum(segment => (segment.End - segment.Start).TotalMinutes),
             RequiredSkillIds = shift.RequiredSkillIds.ToArray(),
             IgnoredShiftKeys = new HashSet<string>([shift.ShiftKey ?? string.Empty], StringComparer.Ordinal),
         };

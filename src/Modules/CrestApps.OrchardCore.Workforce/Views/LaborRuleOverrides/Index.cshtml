@@ -1,0 +1,18 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceRuleOverrides" title="@T["Rule Overrides"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <p class="mb-0 text-muted small">@T["Changes that broke a labor rule needing an override and went ahead, with who allowed them and why."]</p>
+    </div>
+</div>
+
+<admin-list name="WorkforceRuleOverrides" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> No rule has been overridden."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Rule"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

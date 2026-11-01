@@ -31,6 +31,7 @@ internal sealed class ScheduleAutoScheduler
     private readonly IEnumerable<IShiftScheduleSolver> _solvers;
     private readonly TeamTimeZoneResolver _timeZones;
     private readonly ShiftPlanningOptions _options;
+    private readonly IWorkerScheduleLimitsProvider _limits;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -47,6 +48,7 @@ internal sealed class ScheduleAutoScheduler
         ISkillAssignmentService skillAssignments,
         ICalendarQueryService queryService,
         IEnumerable<IShiftScheduleSolver> solvers,
+        IWorkerScheduleLimitsProvider limits,
         TeamTimeZoneResolver timeZones,
         IOptions<ShiftPlanningOptions> options,
         IClock clock,
@@ -63,6 +65,7 @@ internal sealed class ScheduleAutoScheduler
         _skillAssignments = skillAssignments;
         _queryService = queryService;
         _solvers = solvers;
+        _limits = limits;
         _timeZones = timeZones;
         _options = options.Value;
         _clock = clock;
@@ -208,7 +211,8 @@ internal sealed class ScheduleAutoScheduler
         var subject = SkillSubject.Worker(worker.ItemId);
         var first = (await _skillAssignments.GetEffectiveAsync(subject, period.StartDate, cancellationToken)).Select(assignment => assignment.SkillId);
         var last = (await _skillAssignments.GetEffectiveAsync(subject, period.EndDate, cancellationToken)).Select(assignment => assignment.SkillId);
-        var maxHours = worker.MaxHoursPerWeek ?? worker.ContractedHoursPerWeek ?? _options.DefaultMaxHoursPerWeek;
+        var limits = await _limits.GetAsync(worker, team.ItemId, cancellationToken);
+        var maxHours = limits.MaxHoursPerWeek ?? worker.ContractedHoursPerWeek ?? _options.DefaultMaxHoursPerWeek;
         var result = new ShiftScheduleWorker
         {
             Id = worker.ItemId,
@@ -217,7 +221,9 @@ internal sealed class ScheduleAutoScheduler
             SkillIds = new HashSet<string>(first.Intersect(last, StringComparer.Ordinal), StringComparer.Ordinal),
             MaxMinutesPerWeek = (int)(maxHours * 60),
             MinMinutesPerWeek = (int)((worker.MinHoursPerWeek ?? 0) * 60),
-            MaxMinutesPerDay = (int)((worker.MaxHoursPerDay ?? 0) * 60),
+            MaxMinutesPerDay = (int)((limits.MaxHoursPerDay ?? 0) * 60),
+            MinRestMinutes = (int)(Math.Max(0, limits.MinRestHours) * 60),
+            MaxConsecutiveDays = limits.MaxConsecutiveDays,
         };
 
         for (var day = 0; day < days; day++)

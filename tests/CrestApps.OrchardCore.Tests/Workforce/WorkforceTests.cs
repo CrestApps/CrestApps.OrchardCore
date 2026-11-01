@@ -422,12 +422,14 @@ public sealed class WorkforceTests
                 await WorkforceIndexSchema.CreateAsync(schemaBuilder);
                 await ShiftPlanningIndexSchema.CreateAsync(schemaBuilder);
                 await TimeOffIndexSchema.CreateAsync(schemaBuilder);
+                await LaborRulesIndexSchema.CreateAsync(schemaBuilder);
             },
             new IIndexProvider[] { new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider() }
                 .Concat(SkillsIndexProviders.All())
                 .Concat(WorkforceIndexProviders.All())
                 .Concat(ShiftPlanningIndexProviders.All())
                 .Concat(TimeOffIndexProviders.All())
+                .Concat(LaborRulesIndexProviders.All())
                 .ToArray(),
             [SkillsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName]);
     }

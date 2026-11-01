@@ -20,7 +20,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
     private readonly ICalendarEventManager _eventManager;
     private readonly SchedulePeriodStore _periodStore;
     private readonly DraftShiftStore _draftStore;
-    private readonly ScheduleChangeStore _changeStore;
+    private readonly ScheduleChangeRecorder _changeRecorder;
     private readonly TeamTimeZoneResolver _timeZones;
     private readonly IClock _clock;
 
@@ -31,7 +31,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
         ICalendarEventManager eventManager,
         SchedulePeriodStore periodStore,
         DraftShiftStore draftStore,
-        ScheduleChangeStore changeStore,
+        ScheduleChangeRecorder changeRecorder,
         TeamTimeZoneResolver timeZones,
         IClock clock,
         IStringLocalizer<TimeOffShiftRemover> stringLocalizer)
@@ -40,7 +40,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
         _eventManager = eventManager;
         _periodStore = periodStore;
         _draftStore = draftStore;
-        _changeStore = changeStore;
+        _changeRecorder = changeRecorder;
         _timeZones = timeZones;
         _clock = clock;
         S = stringLocalizer;
@@ -78,7 +78,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
                 }
             }
 
-            await _changeStore.CreateAsync(new ScheduleChange
+            await _changeRecorder.RecordAsync(new ScheduleChange
             {
                 ItemId = UniqueId.GenerateId(),
                 PeriodId = data.ScheduleId,

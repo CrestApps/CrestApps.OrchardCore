@@ -38,6 +38,11 @@ public sealed class ShiftAssignmentContext
     public int PaidMinutes { get; set; }
 
     /// <summary>
+    /// Gets or sets the minutes of breaks and meals inside the shift.
+    /// </summary>
+    public int BreakMinutes { get; set; }
+
+    /// <summary>
     /// Gets or sets the skills it needs.
     /// </summary>
     public IReadOnlyCollection<string> RequiredSkillIds { get; set; } = [];

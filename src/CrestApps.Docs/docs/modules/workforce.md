@@ -1,22 +1,24 @@
 ---
 sidebar_label: Workforce
 title: Workforce
-description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, recipes and the contracts other modules build on."
+description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, labor rules with overrides and predictability pay, recipes and the contracts other modules build on."
 user_manual:
   - user-manual/workforce/workers-and-teams
   - user-manual/workforce/shift-planning
   - user-manual/workforce/time-off
+  - user-manual/workforce/labor-rules
 ---
 
 The **Workforce** module is the base of workforce management. It keeps the people who work and how they are organized, and gives every team a Workforce calendar on the shared [Calendars](./calendars.md) module, where shifts and approved time off are published. It uses the shared [Skills](./skills.md) catalog for workers' skills and certificates.
 
-The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md) and [Time Off](../user-manual/workforce/time-off.md).
+The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md), [Time Off](../user-manual/workforce/time-off.md) and [Labor Rules](../user-manual/workforce/labor-rules.md).
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Workforce` | Workforce | `CrestApps.OrchardCore.Calendars`, `CrestApps.OrchardCore.Skills` |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
+| `CrestApps.OrchardCore.Workforce.LaborRules` | Workforce Labor Rules | `CrestApps.OrchardCore.Workforce.ShiftPlanning` |
 
 Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts), `CrestApps.OrchardCore.Workforce.Core` (stores, indexes, services), `CrestApps.OrchardCore.Workforce` (the module).
 
@@ -130,6 +132,75 @@ A team's `TimeOffShiftHandling` (`Flag`, `Remove`, or `null` for its parent's) s
 
 **Background task.** *Time off accrual* runs every hour at a quarter past and calls `RunAsync` for the site's today.
 
+## Labor rules
+
+The **Workforce Labor Rules** feature (`CrestApps.OrchardCore.Workforce.LaborRules`) registers its services with `AddWorkforceLaborRulesCore()`, and adds the index tables, the admin screens, the permissions and the `WorkforceLaborRules` recipe step.
+
+**The catalog.** A rule is an `ILaborRule` registered with `services.AddLaborRule<TRule>()`: a `Key`, a `DisplayName` and `Description`, typed `Parameters` (`LaborRuleParameter`: name, label, `LaborRuleParameterKind` and a default written invariantly), `RecordsOnly` for a rule with no enforcement, and `EvaluateAsync(LaborRuleEvaluationContext, LaborRuleInstance)`, which calls `context.Report(...)` for each violation. The context holds the worker, the team, its time zone, the rule set, now, the worker's shifts in start order (`IsCandidate` for the ones being checked; each with its day, UTC times, paid and break minutes and required skills), the changes being made (`LaborRuleChange`) and the worker's approved time off. The built-in rules are listed in `LaborRuleKeys`: `MaxHoursPerDay`, `MaxHoursPerWeek`, `MinHoursPerWeek`, `MinRest`, `MaxConsecutiveDays`, `DaysOffPerWeek`, `MaxShiftLength`, `MinShiftLength`, `Breaks`, `MinorLimits`, `SkillsRequired`, `NoWorkDuringTimeOff`, `ScheduleNotice`, `Overtime` and `PredictabilityPay` (records only).
+
+| Record | What it holds |
+| --- | --- |
+| `LaborRuleSet` | Name, description, jurisdiction, `Rules` (`LaborRuleInstance`: id, rule key, `Enforcement` (`Warn`, `Block`, `RequireOverride`) and `Parameters` by name), `TeamIds`, `WorkerIds`, `EmploymentTypes` (empty for all) and whether it is in use. |
+| `LaborRuleOverride` | A violation gone ahead with: worker, team, rule set, rule, message, reason, source (`Publish`), schedule, shifts, actor and time. |
+| `PredictabilityPayEntry` | Worker, team, schedule, the `ScheduleChange`, shift, `ChangeKind` (`Added`, `Moved`, `Removed`), the shift's start, the notice in hours, the premium `Hours`, the rule set, `Status` (`Pending`, `Approved`, `Waived`, `Exported`), a note, who decided and when. |
+
+| Contract | What it does |
+| --- | --- |
+| `ILaborRuleSetManager` | Catalog manager plus `ListRules()` and `NewRule(key)` with the rule's default parameters. Validation refuses a rule not in the catalog and fills missing parameters with their defaults. |
+| `ILaborRuleEvaluator` | `ResolveRuleSetAsync(worker, teamId)`: the enabled set for the worker's employment type assigned to the worker, or else the nearest team's from the team up. `EvaluateAsync(LaborRuleRequest)` adds the worker's published shifts eight days either side (less `IgnoredShiftKeys`) and approved time off to the candidates, runs each rule of the set and returns a `LaborRuleResult` (`Violations`, `IsBlocked`, `NeedsOverride`). |
+| `ILaborRuleOverrideService` | Records and pages overrides. |
+| `IPredictabilityPayService` | Pages entries, approves and waives (with a reason) pending ones. |
+
+**Where rules are enforced.**
+
+- **Publishing.** Shift Planning calls every `ISchedulePublishValidator` before writing anything, with the drafts, their workers, the period's published shift keys and the `SchedulePublishChange`s a republish would make. The labor rules validator checks each worker's drafts. A `Block` violation stops the publish; a `RequireOverride` one stops it unless `PublishAsync(periodId, actor, overrideReason)` is given a reason, and then `ProceedingAsync` records the overrides. `PlanningPublishResult` carries `Violations` and `NeedsOverride`. `CheckPublishAsync(periodId)` runs the same check without publishing; the planner board shows it.
+- **Claims, trades and reassignments.** `LaborRuleShiftAssignmentValidator` is an `IShiftAssignmentValidator`; `Block` and `RequireOverride` violations are problems, warnings aren't.
+- **Limits.** `IWorkerScheduleLimitsProvider` gives a worker's rest, days in a row and weekly and daily hours. The built-in one reads `ShiftPlanningOptions` and the worker; with Labor Rules on, a worker's rule set's `MinRest`, `MaxConsecutiveDays`, `MaxHoursPerWeek` and `MaxHoursPerDay` replace them (`FromRuleSet`), the auto-scheduler uses them per worker (`ShiftScheduleWorker.MinRestMinutes` and `MaxConsecutiveDays`), and the built-in validator leaves rest and hours to the rules.
+
+**Predictability pay.** Every `ScheduleChange` is written through a recorder that calls the `IScheduleChangeHandler`s. The labor rules handler skips changes initiated by the worker; for the employer's, it resolves the worker's rule set and, when it has the `PredictabilityPay` rule and the change came less than `NoticeDays` before the shift (the earlier of its times before and after), records `AddedHours` for an added shift, `MovedHours` for a moved one and `RemovedPercent` of a removed one's hours. A reassignment is an added shift for the worker who gets it and a removed one for the worker who loses it. One entry is written per change and worker.
+
+### Example rule sets
+
+:::warning[Examples only]
+These show the shape of a rule set. They are not legal advice: check every rule and number with someone who knows the law where your teams work.
+:::
+
+```json
+{
+  "steps": [
+    {
+      "name": "WorkforceLaborRules",
+      "RuleSets": [
+        {
+          "name": "Example: hourly retail staff",
+          "jurisdiction": "Example city with a fair workweek law",
+          "teamNames": [ "Boston" ],
+          "employmentTypes": [ "FullTime", "PartTime" ],
+          "rules": [
+            { "ruleKey": "MaxHoursPerDay", "enforcement": "Warn", "parameters": { "Hours": "10" } },
+            { "ruleKey": "MaxHoursPerWeek", "enforcement": "RequireOverride", "parameters": { "Hours": "40" } },
+            { "ruleKey": "MinRest", "enforcement": "RequireOverride", "parameters": { "Hours": "11" } },
+            { "ruleKey": "Breaks", "enforcement": "Block", "parameters": { "ShiftHours": "6", "BreakMinutes": "30" } },
+            { "ruleKey": "ScheduleNotice", "enforcement": "Warn", "parameters": { "Days": "14" } },
+            { "ruleKey": "PredictabilityPay", "parameters": { "NoticeDays": "14", "AddedHours": "1", "MovedHours": "1", "RemovedPercent": "50" } }
+          ]
+        },
+        {
+          "name": "Example: young workers",
+          "teamNames": [ "Boston" ],
+          "rules": [
+            { "ruleKey": "MinorLimits", "enforcement": "Block", "parameters": { "UnderAge": "18", "MaxHoursPerDay": "8", "MaxHoursPerWeek": "40", "LatestEnd": "22:00" } },
+            { "ruleKey": "DaysOffPerWeek", "enforcement": "Block", "parameters": { "Days": "1" } }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The `WorkforceLaborRules` step matches sets by id or name, and teams by `teamNames`.
+
 ## Recipes and deployment
 
 The `Workforce` step imports activity codes (by id or name), teams (by id or name, with the parent by `parentName` in any order) and workers (by id, employee number or user, with each membership's team by `teamName`). Every record goes through its manager, so it is validated and each new team gets its calendar.
@@ -175,4 +246,7 @@ The **Workforce teams and workers** deployment step exports the activity codes a
 | `ManageTimeOffPolicies` (Manage time-off policies) | Time-off types, policies, allotments and blackout dates, and assigning a policy to one worker. |
 | `ApproveTimeOff` (Approve time off) | The time-off queue, requesting time off for a worker, approving, declining and canceling, and workers' balances, for the teams in one's scope. |
 | `AdjustTimeOffBalances` (Adjust time-off balances) | Changing the balances of the workers in one's scope. |
+| `ManageLaborRules` (Manage labor rules) | Labor rule sets and the override list. |
+| `OverrideLaborRules` (Override labor rules) | Publishing with a reason despite rules that need an override. |
+| `ApprovePredictabilityPay` (Approve predictability pay) | Approving and waiving the predictability pay of the teams in one's scope. |
 | `RequestTimeOff` (Request time off) | Requesting one's own time off, in the self-service portal. Not implied by Manage the whole workforce. |

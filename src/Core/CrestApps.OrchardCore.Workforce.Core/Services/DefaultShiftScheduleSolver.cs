@@ -401,7 +401,7 @@ internal sealed class DefaultShiftScheduleSolver : IShiftScheduleSolver
                     return false;
                 }
 
-                if ((otherEnd <= start && start - otherEnd < _problem.MinRestMinutes) || (otherStart >= end && otherStart - end < _problem.MinRestMinutes))
+                if ((otherEnd <= start && start - otherEnd < worker.MinRest) || (otherStart >= end && otherStart - end < worker.MinRest))
                 {
                     return false;
                 }
@@ -424,7 +424,7 @@ internal sealed class DefaultShiftScheduleSolver : IShiftScheduleSolver
                 run++;
             }
 
-            return run <= Math.Max(1, _problem.MaxConsecutiveDays);
+            return run <= worker.MaxConsecutive;
         }
 
         /// <summary>
@@ -660,6 +660,8 @@ internal sealed class DefaultShiftScheduleSolver : IShiftScheduleSolver
             MaxPerWeek = worker.MaxMinutesPerWeek > 0 ? worker.MaxMinutesPerWeek : int.MaxValue / 4;
             MinPerWeek = Math.Max(0, worker.MinMinutesPerWeek);
             MaxPerDay = Math.Max(0, worker.MaxMinutesPerDay);
+            MinRest = Math.Max(0, worker.MinRestMinutes ?? problem.MinRestMinutes);
+            MaxConsecutive = Math.Max(1, worker.MaxConsecutiveDays ?? problem.MaxConsecutiveDays);
             _weekPaid = new int[weeks + 1];
 
             var windows = worker.Windows ?? [];
@@ -693,6 +695,10 @@ internal sealed class DefaultShiftScheduleSolver : IShiftScheduleSolver
         public int MinPerWeek { get; }
 
         public int MaxPerDay { get; }
+
+        public int MinRest { get; }
+
+        public int MaxConsecutive { get; }
 
         public int TotalPaid { get; private set; }
 

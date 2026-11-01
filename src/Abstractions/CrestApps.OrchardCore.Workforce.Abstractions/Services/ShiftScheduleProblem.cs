@@ -120,6 +120,17 @@ public sealed class ShiftScheduleWorker
     /// Gets or sets the most paid minutes in a day; 0 for no limit.
     /// </summary>
     public int MaxMinutesPerDay { get; set; }
+
+    /// <summary>
+    /// Gets or sets the fewest minutes between the worker's shifts, in place of the problem's; empty for the
+    /// problem's.
+    /// </summary>
+    public int? MinRestMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most days in a row the worker may work, in place of the problem's; empty for the problem's.
+    /// </summary>
+    public int? MaxConsecutiveDays { get; set; }
 }
 
 /// <summary>

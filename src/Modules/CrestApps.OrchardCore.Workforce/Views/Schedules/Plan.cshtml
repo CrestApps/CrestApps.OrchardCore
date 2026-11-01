@@ -69,7 +69,7 @@
                 {
                     <a href="@Url.Content("~/Admin/calendar?view=week&calendars=" + Model.CalendarId)" class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Team calendar"]</a>
                 }
-                @if (Model.CanPublish)
+                @if (Model.CanPublish && !Model.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.Block))
                 {
                     <form method="post" asp-action="Publish" asp-route-id="@period.ItemId" class="no-multisubmit">
                         <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(period.PublishedVersion > 0 ? T["Publish changes"] : T["Publish"])</button>
@@ -79,6 +79,37 @@
         </div>
     </div>
 </div>
+
+@if (Model.Violations.Count > 0)
+{
+    var blocks = Model.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.Block);
+    var needsOverride = Model.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.RequireOverride);
+    <div class="card text-bg-theme mb-3 @(blocks ? "border-danger" : needsOverride ? "border-warning" : null)">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fa-solid fa-scale-balanced me-1" aria-hidden="true"></i>@T.Plural(Model.Violations.Count, "1 labor rule broken", "{0} labor rules broken", Model.Violations.Count)</h5>
+            <partial name="_LaborRuleViolations" model="Model.Violations" />
+            @if (blocks)
+            {
+                <p class="mt-2 mb-0 text-danger small">@T["Change the shifts that break a rule that blocks; the schedule can't be published until then."]</p>
+            }
+            else if (needsOverride && Model.CanPublish)
+            {
+                @if (Model.CanOverride)
+                {
+                    <form method="post" asp-action="Publish" asp-route-id="@Model.Period.ItemId" class="no-multisubmit d-flex flex-wrap gap-2 align-items-center mt-2">
+                        <input type="text" name="overrideReason" class="form-control" style="max-width: 28rem" placeholder="@T["Why it should go ahead"]" aria-label="@T["Why it should go ahead"]" required />
+                        <button type="submit" class="btn btn-warning">@T["Publish with an override"]</button>
+                    </form>
+                    <span class="hint">@T["The reason is recorded with each rule gone ahead with, under Rule Overrides."]</span>
+                }
+                else
+                {
+                    <p class="mt-2 mb-0 small">@T["Someone allowed to override labor rules must publish this schedule, or the shifts must change."]</p>
+                }
+            }
+        </div>
+    </div>
+}
 
 @if (Model.WeekCount > 1)
 {
