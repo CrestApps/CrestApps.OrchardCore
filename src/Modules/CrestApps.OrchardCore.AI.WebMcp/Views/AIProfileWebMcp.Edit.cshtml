@@ -1,0 +1,13 @@
+@model EditProfileWebMcpViewModel
+
+<div class="ocat-wrapper profile-type profile-type-chat">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowPageTools" />
+            <label class="form-check-label" asp-for="AllowPageTools">
+                @T["Allow page tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, this profile's chat can call the WebMCP tools on the page the user has open, such as reading the page and filling its forms. It only works for signed-in users, and needs the WebMCP Chat Bridge feature."]</span>
+        </div>
+    </div>
+</div>

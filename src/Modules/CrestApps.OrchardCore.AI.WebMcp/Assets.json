@@ -1,0 +1,20 @@
+[
+  {
+    "action": "vite",
+    "name": "webmcp.js",
+    "source": "Assets/js/webmcp.js",
+    "dest": "wwwroot/scripts/webmcp.js"
+  },
+  {
+    "action": "vite",
+    "name": "webmcp-page-tools.js",
+    "source": "Assets/js/webmcp-page-tools.js",
+    "dest": "wwwroot/scripts/webmcp-page-tools.js"
+  },
+  {
+    "action": "vite",
+    "name": "webmcp-chat-bridge.js",
+    "source": "Assets/js/webmcp-chat-bridge.js",
+    "dest": "wwwroot/scripts/webmcp-chat-bridge.js"
+  }
+]

@@ -377,6 +377,9 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
 - **Example**: `.agents/skills/crestapps-calendar-provider` — how to add an external calendar provider (Google Calendar,
   Microsoft 365, CalDAV, …) to External Calendars: full and incremental reads, two-way writes with versions, conflict
   policies, refused access, account connections, event mapping, registration, tests and docs.
+- **Example**: `.agents/skills/crestapps-webmcp-tools` — how to extend the WebMCP module: page tools registered with
+  `window.crestAppsWebMcp.registerTool`, scripts and settings added through `IWebMcpClientConfigurationHandler`, the
+  server-side checks every WebMCP list and call must keep, the chat bridge's limits, and the tests to add.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

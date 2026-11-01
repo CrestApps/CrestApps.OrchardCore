@@ -180,6 +180,7 @@ Many modules can be set up both in the browser and in configuration. Which one w
 | Claude | **Settings > Artificial Intelligence > Claude** | `CrestApps:AI:Claude` | The settings page wins for every value it holds. The stored API key is used only while API-key authentication is selected. |
 | Copilot | **Settings > Artificial Intelligence > Copilot** | `CrestApps:AI:Copilot` | The settings page wins for every value it holds. |
 | MCP server | **Settings > Artificial Intelligence**, **MCP Server** card | `CrestApps:AI:McpServer` | **Configuration wins.** Values in configuration override the stored settings. |
+| WebMCP | **Settings > Artificial Intelligence**, **WebMCP** card | `CrestApps:AI:WebMcp` | **Configuration wins.** Values in configuration override the stored settings. |
 | AI data sources | The data source editor | `CrestApps:PostgreSQL`, `CrestApps:Elasticsearch` and the `CrestApps:AI:DataSources` overrides | A connection stored on a data source wins over configuration. |
 | Telnyx SMS | **Settings > Communication > SMS**, **Telnyx** | `OrchardCore_Sms_Telnyx` | The settings page wins while its provider is enabled. A field left blank there falls back to configuration. |
 | Telnyx voice | **Settings > Communication > Telephony**, **Telnyx** | None | Admin screen only. |
@@ -667,6 +668,41 @@ OrchardCore__CrestApps__AI__McpServer__ApiKey=<api-key>
 ```
 
 Use `None` only for local development. See [MCP Server](ai/mcp/server.md).
+
+### WebMCP
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:AI:WebMcp` |
+| **Controls** | Which AI tools browser agents may call, on which pages, and how long the AI chat waits for a page tool |
+
+Keys: `ExposeAllTools`, `Tools`, `EnableOnAdminPages`, `EnableOnFrontEndPages`, and `Chat:ToolCallTimeout` (default `00:01:00`). Values here override the **WebMCP** settings stored in the admin.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "WebMcp": {
+          "EnableOnFrontEndPages": false,
+          "Tools": [ "listTimeZones" ],
+          "Chat": {
+            "ToolCallTimeout": "00:00:30"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__AI__WebMcp__EnableOnFrontEndPages=false
+OrchardCore__CrestApps__AI__WebMcp__Tools__0=listTimeZones
+OrchardCore__CrestApps__AI__WebMcp__Chat__ToolCallTimeout=00:00:30
+```
+
+See [WebMCP](ai/mcp/webmcp.md).
 
 ### A2A host
 

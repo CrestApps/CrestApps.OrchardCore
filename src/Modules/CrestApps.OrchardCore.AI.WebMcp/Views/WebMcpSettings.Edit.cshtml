@@ -1,0 +1,39 @@
+@model WebMcpSettingsViewModel
+
+<p class="text-muted">@T["WebMCP lets AI agents in the browser, such as the browser's own assistant, call tools on the pages a signed-in user opens. The tools run as that user, and each one also needs the user's permission for that tool. Browsers that do not support WebMCP ignore it."]</p>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableOnAdminPages" />
+            <label class="form-check-label" asp-for="EnableOnAdminPages">
+                @T["Offer tools on admin pages"]
+            </label>
+            <span class="hint dashed">@T["When enabled, admin pages offer WebMCP tools to users who have the Use WebMCP tools in the browser permission."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableOnFrontEndPages" />
+            <label class="form-check-label" asp-for="EnableOnFrontEndPages">
+                @T["Offer tools on front-end pages"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the site's public pages also offer WebMCP tools to signed-in users who have the permission. Anonymous visitors never get tools."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" />
+            <label class="form-check-label" asp-for="ExposeAllTools">
+                @T["Expose all tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, every selectable tool and tool instance is offered, and the selection below is ignored. Leave disabled to offer only the tools you select."]</span>
+        </div>
+    </div>
+</div>
