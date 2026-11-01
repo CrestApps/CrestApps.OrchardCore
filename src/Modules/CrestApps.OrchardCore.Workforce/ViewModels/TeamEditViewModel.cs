@@ -50,6 +50,18 @@ public class TeamEditViewModel
     public string ShiftTradesNeedApproval { get; set; }
 
     /// <summary>
+    /// Gets or sets what happens to a worker's published shifts when their time off is approved; empty to use the
+    /// parent team's.
+    /// </summary>
+    public string TimeOffShiftHandling { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether time off is on too, so its shift setting is shown.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool ShowTimeOff { get; set; }
+
+    /// <summary>
     /// Gets or sets whether shift planning is on, so its settings are shown.
     /// </summary>
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]

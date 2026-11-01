@@ -1,0 +1,19 @@
+@model ShapeViewModel<TimeOffLedgerRowViewModel>
+@{
+    var entry = Model.Value.Entry;
+}
+<span class="badge ta-badge fw-normal">@(entry.Kind switch
+{
+    TimeOffLedgerKind.Opening => T["Opening balance"],
+    TimeOffLedgerKind.Accrual => T["Accrued"],
+    TimeOffLedgerKind.Taken => T["Taken"],
+    TimeOffLedgerKind.Reversal => T["Given back"],
+    TimeOffLedgerKind.Carryover => T["Carried over"],
+    TimeOffLedgerKind.Expiry => T["Expired"],
+    TimeOffLedgerKind.Payout => T["Paid out"],
+    _ => T["Adjusted"],
+})</span>
+@if (!string.IsNullOrEmpty(entry.Actor))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user-pen text-secondary me-1" aria-hidden="true"></i>@(entry.Actor == "Accrual" ? T["Accrual"].Value : entry.Actor)</span>
+}

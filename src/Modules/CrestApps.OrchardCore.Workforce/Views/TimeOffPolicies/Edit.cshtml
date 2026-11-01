@@ -1,0 +1,118 @@
+@model TimeOffPolicyEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimeOffPoliciesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Time-Off Policy"] : T["Edit '{0}' Time-Off Policy", Model.Name])">
+        <breadcrumb-item id="WorkforceTimeOffPolicies" action="Index" controller="TimeOffPolicies" area="CrestApps.OrchardCore.Workforce">@T["Time-Off Policies"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="TypeId" class="ocat-label ocat-label-required">@T["Time-off type"]</label><div class="ocat-end"><select asp-for="TypeId" asp-items="Model.TypeOptions" class="form-select" style="max-width: 22rem"><option value="">@T["Choose a type"]</option></select></div></div>
+        <h5 class="mt-3">@T["Accrual"]</h5>
+        <div class="ocat-wrapper">
+            <label asp-for="AccrualMethod" class="ocat-label">@T["Workers earn"]</label>
+            <div class="ocat-end">
+                <select asp-for="AccrualMethod" class="form-select" style="max-width: 22rem">
+                    <option value="None">@T["Nothing; balances change only by hand"]</option>
+                    <option value="PerPeriod">@T["A set amount each period"]</option>
+                    <option value="PerHourWorked">@T["An amount for each hour worked"]</option>
+                    <option value="AnnualLumpSum">@T["The year's amount at the reset date"]</option>
+                </select>
+                <span class="hint">@T["Hours worked are the paid time of published shifts. A worker who starts during the year gets a share of the yearly amount."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Rate" class="ocat-label">@T["Amount"]</label>
+            <div class="ocat-end">
+                <input asp-for="Rate" type="number" step="0.0001" min="0" class="form-control" style="max-width: 10rem" />
+                <span class="hint">@T["In the type's unit: per period, per hour worked or per year."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Frequency" class="ocat-label">@T["Period"]</label>
+            <div class="ocat-end">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <select asp-for="Frequency" class="form-select" style="max-width: 14rem">
+                        <option value="Weekly">@T["Weekly"]</option>
+                        <option value="Biweekly">@T["Every two weeks"]</option>
+                        <option value="SemiMonthly">@T["Twice a month"]</option>
+                        <option value="Monthly">@T["Monthly"]</option>
+                    </select>
+                    <label asp-for="AnchorDate" class="mb-0">@T["starting"]</label>
+                    <input asp-for="AnchorDate" type="date" class="form-control" style="max-width: 12rem" />
+                </div>
+                <span class="hint">@T["Each period is paid when it ends. The start date sets the weeks of a weekly or two-week period; leave it empty to start on a Monday."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="TenureTiers" class="ocat-label">@T["Rates by service"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="TenureTiers" class="form-control font-monospace" rows="3" placeholder="12 = 10&#10;60 = 13.33"></textarea>
+                <span class="hint">@T["Optional. One per line: the months of service, an equals sign and the amount from then on. Service counts from the seniority date, or else the hire date."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="WaitingPeriodDays" class="ocat-label">@T["Waiting period"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2"><input asp-for="WaitingPeriodDays" type="number" min="0" class="form-control" style="max-width: 8rem" /><span>@T["days after the hire date"]</span></div>
+            </div>
+        </div>
+        <h5 class="mt-3">@T["Limits"]</h5>
+        <div class="ocat-wrapper">
+            <label asp-for="MaxBalance" class="ocat-label">@T["Most the balance can reach"]</label>
+            <div class="ocat-end"><input asp-for="MaxBalance" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Optional. Accrual stops while the balance is at this amount."]</span></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ResetMonth" class="ocat-label">@T["Reset date"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <select asp-for="ResetMonth" class="form-select" style="max-width: 12rem">
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            <option value="@month">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+                        }
+                    </select>
+                    <input asp-for="ResetDay" type="number" min="1" max="31" class="form-control" style="max-width: 6rem" aria-label="@T["Day"]" />
+                </div>
+                <span class="hint">@T["The start of the policy's year: the yearly amount is given and what is above the carryover limit expires."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="CarryoverMax" class="ocat-label">@T["Most that carries over"]</label>
+            <div class="ocat-end"><input asp-for="CarryoverMax" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Optional. Leave empty to carry everything over to the next year."]</span></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="NegativeBalanceLimit" class="ocat-label">@T["Can go below zero by"]</label>
+            <div class="ocat-end"><input asp-for="NegativeBalanceLimit" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["How much a worker may borrow against future accrual."]</span></div>
+        </div>
+        <h5 class="mt-3">@T["Who it applies to"]</h5>
+        <div class="ocat-wrapper">
+            <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="6"></select>
+                <span class="hint">@T["The policy applies to these teams and the teams under them. A worker on several teams gets the nearest team's policy of each type."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="EffectiveFrom" class="ocat-label">@T["For the teams from"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" />
+                    <span>@T["to"]</span>
+                    <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
+                </div>
+                <span class="hint">@T["Optional. Leave empty for no start or end."]</span>
+            </div>
+        </div>
+        @if (Model.WorkerAssignments > 0)
+        {
+            <div class="ocat-wrapper"><div class="ocat-end-offset"><span class="hint">@T.Plural(Model.WorkerAssignments, "1 worker also has this policy on its own; change it on the worker's Time off page.", "{0} workers also have this policy on their own; change it on each worker's Time off page.", Model.WorkerAssignments)</span></div></div>
+        }
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

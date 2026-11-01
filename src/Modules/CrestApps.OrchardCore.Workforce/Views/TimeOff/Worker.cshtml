@@ -1,0 +1,137 @@
+@model WorkerTimeOffViewModel
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimeOffWorker" title="@T["{0}'s Time Off", Model.Worker.DisplayName]">
+        <breadcrumb-item id="Workers" action="Index" controller="Workers" area="CrestApps.OrchardCore.Workforce">@T["Workers"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col"><p class="mb-0 text-muted small">@T["Balances on {0}. Available is what can still be requested: the balance less approved time off still to come and requests waiting for a decision.", Model.Today.ToString("d MMM yyyy")]</p></div>
+            <div class="col-auto d-flex gap-2">
+                <a asp-action="Index" asp-route-workerId="@Model.Worker.ItemId" asp-route-status="Approved" class="btn btn-outline-secondary">@T["Requests"]</a>
+                <a asp-action="Create" asp-route-workerId="@Model.Worker.ItemId" class="btn btn-secondary">@T["Request time off"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <h5 class="card-title">@T["Balances"]</h5>
+        @if (Model.Balances.Count == 0)
+        {
+            <p class="mb-0 text-muted">@T["No time-off policy applies to {0}. Assign one to one of their teams, or to them below.", Model.Worker.DisplayName]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>@T["Policy"]</th><th class="text-end">@T["Balance"]</th><th class="text-end">@T["Approved, to come"]</th><th class="text-end">@T["Waiting"]</th><th class="text-end">@T["Available"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var balance in Model.Balances)
+                        {
+                            var unit = balance.Type?.Unit ?? TimeOffUnit.Hours;
+                            <tr>
+                                <td>@balance.Policy.Name <span class="text-muted small">@balance.Type?.Name</span></td>
+                                <td class="text-end"><partial name="_TimeOffAmount" model="(balance.Current + balance.ProjectedAccrual, unit)" /></td>
+                                <td class="text-end"><partial name="_TimeOffAmount" model="(balance.Upcoming, unit)" /></td>
+                                <td class="text-end"><partial name="_TimeOffAmount" model="(balance.Pending, unit)" /></td>
+                                <td class="text-end"><strong><partial name="_TimeOffAmount" model="(balance.Available, unit)" /></strong></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    @if (Model.CanAdjust && Model.PolicyOptions.Count > 0)
+    {
+        <div class="col-lg-6">
+            <div class="card text-bg-theme h-100">
+                <div class="card-body">
+                    <h5 class="card-title">@T["Change a balance"]</h5>
+                    <form method="post" asp-action="Adjust" asp-route-workerId="@Model.Worker.ItemId" class="no-multisubmit">
+                        <div class="row g-2">
+                            <div class="col-sm-6"><label for="adjust-policy" class="form-label">@T["Policy"]</label><select id="adjust-policy" name="PolicyId" class="form-select" asp-items="Model.PolicyOptions"></select></div>
+                            <div class="col-sm-6">
+                                <label for="adjust-kind" class="form-label">@T["Kind"]</label>
+                                <select id="adjust-kind" name="Kind" class="form-select">
+                                    <option value="Adjustment">@T["Correction"]</option>
+                                    <option value="Opening">@T["Opening balance"]</option>
+                                    <option value="Carryover">@T["Carried over"]</option>
+                                    <option value="Payout">@T["Paid out"]</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-4"><label for="adjust-amount" class="form-label">@T["Amount"]</label><input id="adjust-amount" name="Amount" type="number" step="0.25" class="form-control" required /></div>
+                            <div class="col-sm-8"><label for="adjust-date" class="form-label">@T["Counts from"]</label><input id="adjust-date" name="EffectiveDate" type="date" value="@Model.Today.ToString("yyyy-MM-dd")" class="form-control" /></div>
+                            <div class="col-12"><label for="adjust-note" class="form-label">@T["Note"]</label><input id="adjust-note" name="Note" class="form-control" /></div>
+                        </div>
+                        <span class="hint">@T["A negative correction takes away. A payout always takes away."]</span>
+                        <div class="mt-2"><button type="submit" class="btn btn-primary">@T["Change the balance"]</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+    <div class="col-lg-6">
+        <div class="card text-bg-theme h-100">
+            <div class="card-body">
+                <h5 class="card-title">@T["Policies of their own"]</h5>
+                @if (Model.Assignments.Count == 0)
+                {
+                    <p class="text-muted">@T["{0} takes their policies from their teams.", Model.Worker.DisplayName]</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled">
+                        @foreach (var (policy, assignment) in Model.Assignments)
+                        {
+                            <li class="d-flex align-items-center gap-2 mb-1">
+                                <span>@policy.Name</span>
+                                <span class="text-muted small">
+                                    @if (assignment.EffectiveFrom.HasValue || assignment.EffectiveTo.HasValue)
+                                    {
+                                        @(assignment.EffectiveFrom?.ToString("d MMM yyyy") ?? "…")<text> &ndash; </text>@(assignment.EffectiveTo?.ToString("d MMM yyyy") ?? "…")
+                                    }
+                                </span>
+                                @if (Model.CanAssign)
+                                {
+                                    <form method="post" asp-action="Unassign" asp-route-workerId="@Model.Worker.ItemId" asp-route-policyId="@policy.ItemId" class="no-multisubmit ms-auto">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Remove"]</button>
+                                    </form>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (Model.CanAssign && Model.AllPolicyOptions.Count > 0)
+                {
+                    <form method="post" asp-action="Assign" asp-route-workerId="@Model.Worker.ItemId" class="no-multisubmit">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-sm-12"><label for="assign-policy" class="form-label">@T["Give them a policy"]</label><select id="assign-policy" name="PolicyId" class="form-select" asp-items="Model.AllPolicyOptions"></select></div>
+                            <div class="col-sm-6"><label for="assign-from" class="form-label">@T["From"]</label><input id="assign-from" name="EffectiveFrom" type="date" class="form-control" /></div>
+                            <div class="col-sm-6"><label for="assign-to" class="form-label">@T["To"]</label><input id="assign-to" name="EffectiveTo" type="date" class="form-control" /></div>
+                        </div>
+                        <span class="hint">@T["Their own policy of a type replaces their teams' policy of that type."]</span>
+                        <div class="mt-2"><button type="submit" class="btn btn-secondary">@T["Assign"]</button></div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<h5>@T["Ledger"]</h5>
+<admin-list name="WorkforceTimeOffLedger" context="Model.Ledger" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> No balance changes yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Change"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

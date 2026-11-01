@@ -32,6 +32,13 @@ internal sealed class CertificationCatalogHandler : CatalogEntryHandlerBase<Cert
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
+        // Set here rather than as the property's default: documents are read by filling the existing list, so a
+        // default entry would come back in front of the saved ones.
+        if (context.Model.ReminderDays.Count == 0)
+        {
+            context.Model.ReminderDays.Add(30);
+        }
+
         return Task.CompletedTask;
     }
 

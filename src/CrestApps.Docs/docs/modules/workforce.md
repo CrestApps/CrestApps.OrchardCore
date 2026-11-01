@@ -1,20 +1,22 @@
 ---
 sidebar_label: Workforce
 title: Workforce
-description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, recipes and the contracts other modules build on."
+description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, recipes and the contracts other modules build on."
 user_manual:
   - user-manual/workforce/workers-and-teams
   - user-manual/workforce/shift-planning
+  - user-manual/workforce/time-off
 ---
 
 The **Workforce** module is the base of workforce management. It keeps the people who work and how they are organized, and gives every team a Workforce calendar on the shared [Calendars](./calendars.md) module, where shifts and approved time off are published. It uses the shared [Skills](./skills.md) catalog for workers' skills and certificates.
 
-The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md).
+The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md) and [Time Off](../user-manual/workforce/time-off.md).
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Workforce` | Workforce | `CrestApps.OrchardCore.Calendars`, `CrestApps.OrchardCore.Skills` |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | `CrestApps.OrchardCore.Workforce` |
+| `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
 
 Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts), `CrestApps.OrchardCore.Workforce.Core` (stores, indexes, services), `CrestApps.OrchardCore.Workforce` (the module).
 
@@ -36,7 +38,7 @@ The module registers the `Workforce` calendar type with `ManagedByCode()` and cr
 | Event type | Busy or free | Notes |
 | --- | --- | --- |
 | `Shift` | Free | Ignores capacity. The worker is named in its `ShiftData`, and is also its attendee when they have a user account or an email; a worker without either can still be scheduled. A shift is time the worker is available for work, so it doesn't block their free time; Scheduling reads Shift events for resources whose hours come from shifts. |
-| `TimeOff` | Busy | All day by default, requires an attendee. |
+| `TimeOff` | Busy | All day by default, ignores capacity. Approved time off; the worker is its attendee when they have a user account or an email. |
 | `Training`, `Meeting` | Busy | |
 | `OnCall` | Free | Requires an attendee. |
 
@@ -95,6 +97,39 @@ The **Workforce Shift Planning** feature (`CrestApps.OrchardCore.Workforce.Shift
 
 **Background task.** *Open shifts awarded by seniority* runs every five minutes and calls `AwardDueAsync`.
 
+## Time off
+
+The **Workforce Time Off** feature (`CrestApps.OrchardCore.Workforce.TimeOff`) registers its services with `AddWorkforceTimeOffCore()`, and adds the index tables, the admin screens, the permissions and the accrual task.
+
+| Record | What it holds |
+| --- | --- |
+| `TimeOffType` | A kind of time off: name, description, color, `Unit` (`Hours`, `Days`), `HoursPerDay`, whether it is paid, needs a balance, allows part of a day, needs a reason, counts against allotments and is visible to workers, and a pay code. |
+| `TimeOffPolicy` | How workers earn one type: `AccrualMethod` (`None`, `PerPeriod`, `PerHourWorked`, `AnnualLumpSum`), `Frequency` (`Weekly`, `Biweekly`, `SemiMonthly`, `Monthly`) and `AnchorDate`, `Rate`, `TenureTiers` (from months of service, rate), `WaitingPeriodDays`, `MaxBalance`, `CarryoverMax`, the reset month and day, `NegativeBalanceLimit` and `Assignments` (a team or a worker, with effective dates). |
+| `TimeOffLedgerEntry` | One change to a worker's balance under a policy, only ever added: `Kind` (`Opening`, `Accrual`, `Taken`, `Reversal`, `Adjustment`, `Carryover`, `Expiry`, `Payout`), a signed `Amount`, `EffectiveDate`, `SourceRef`, `IdempotencyKey`, the actor and a note. |
+| `TimeOffRequest` | A request: worker, team, type, policy, first and last day, optional start and end time for part of one day, time zone, `Days` (date, amount, minutes), `Amount`, `Status` (`Pending`, `Waitlisted`, `Approved`, `Declined`, `Canceled`, `Withdrawn`), reason, decision note, who decided and when, `AutoApproved`, who submitted and when (which orders the waitlist), the calendar event and `FlaggedShiftEventIds`. |
+| `TimeOffAllotment` | How many people of a team and its sub-teams may be off: `WeekdaySlots` (Sunday first), `Dates` that override them, `TypeIds`, `AutoApprove` and `WhenFull` (`Waitlist`, `Pending`). |
+| `BlackoutPeriod` | Dates no time off can be requested for: a team with its sub-teams (or every team), first and last day, `TypeIds` and a message. |
+
+A team's `TimeOffShiftHandling` (`Flag`, `Remove`, or `null` for its parent's) says what happens to a worker's published shifts under approved time off.
+
+| Contract | What it does |
+| --- | --- |
+| `ITimeOffTypeManager`, `ITimeOffAllotmentManager`, `IBlackoutPeriodManager` | Catalog managers. |
+| `ITimeOffPolicyManager` | Catalog manager plus `ListForWorkerAsync(worker, date)` and `FindForWorkerAsync(worker, typeId, date)`, which pick for each type the worker's own assignment first, then the nearest team up the tree from the teams they are on that day, and `ListAssignedAsync`. |
+| `ITimeOffBalanceService` | `GetBalancesAsync` and `GetBalanceAsync(worker, policy, date)` return a `TimeOffBalance`: `Current` (the ledger up to the date), `ProjectedAccrual` (what the policy owes up to the date and isn't in the ledger yet), `Upcoming` (approved time off after the date), `Pending` (open requests) and `Available`. `PageLedgerAsync` lists the ledger; `AdjustAsync(TimeOffAdjustment)` writes an opening balance, adjustment, carryover or payout, once per idempotency key. |
+| `ITimeOffAccrualService` | `RunAsync(date)` and `RunForWorkerAsync(workerId, date)` write what each policy owes for the periods that ended on or before the date. |
+| `IWorkedTimeSource` | The minutes a worker worked on a range of days, for accrual per hour worked. The built-in one counts the paid time of published shifts; a time clock replaces it. |
+| `ITimeOffRequestService` | `PreviewAsync` (days, amount, balance, overlapping shifts, full dates, the outcome and the problems), `SubmitAsync`, `ApproveAsync`, `DeclineAsync`, `CancelAsync`, `FindAsync` and `PageAsync(TimeOffRequestQuery)`. |
+| `ITimeOffApprovalHandler` | Called when time off is approved with the worker's overlapping published shifts. The built-in one cancels the shifts of teams set to `Remove`, deletes their draft shifts and records a `Removed` change initiated by the worker; the shifts left in the list are flagged on the request. |
+
+**Accrual.** `TimeOffAccrualEngine` is pure. For a worker and a policy it owes an accrual at the end of each period (or, for a yearly amount, on the first eligible day as a share of the year and at each reset date) from the later of the assignment's start and the hire date plus the waiting period, up to the date, the assignment's end and the termination date, on the days the policy is the one that applies. The rate comes from the tenure tiers by whole months of service. An amount that would take the balance above `MaxBalance` is cut to fit and the entry notes it. At each reset date, before that day's accrual, what is above `CarryoverMax` expires. Each entry's key is `accrual:` or `expiry:` with the worker, the policy and the day, and entries whose key is in the ledger are not owed again. A run takes the worker's lock and saves before letting it go.
+
+**Requests.** A day with published shifts counts their paid time; a weekday without counts the type's `HoursPerDay`; a weekend day without counts nothing. Part of a day counts the paid time of the shifts inside it, or its length. Submitting checks blackout dates (of the team and the teams above it), the balance on the first day against the amount less the negative limit, overlap with the worker's open and approved requests, and the reason. It runs under the worker's lock (`WORKFORCE_TIMEOFF_{id}`) and one lock per allotment the request falls under (`WORKFORCE_ALLOTMENT_{id}`), taken in key order, recounts the places under them, and saves before letting them go, so two requests for the last place can't both get it. Approved and pending requests hold a place on each day they count something. Approving creates a confirmed, busy, non-editable `TimeOff` event (`Source` `Workforce`, `SourceId` the request) on the team's calendar and a `Taken` entry dated the first day. Canceling approved time off writes a `Reversal`, cancels the event, and then, under the locks of every allotment involved, approves (or sends to a manager) the waitlisted requests of those days that now fit, in the order they were submitted, saving after each.
+
+**Pending requests on the calendar.** `PendingTimeOffEventSource` is an `ICalendarEventSource` named `WorkforceTimeOffRequests`. For the team calendars asked for by id, it returns the open requests as tentative, free, non-editable `TimeOff` occurrences.
+
+**Background task.** *Time off accrual* runs every hour at a quarter past and calls `RunAsync` for the site's today.
+
 ## Recipes and deployment
 
 The `Workforce` step imports activity codes (by id or name), teams (by id or name, with the parent by `parentName` in any order) and workers (by id, employee number or user, with each membership's team by `teamName`). Every record goes through its manager, so it is validated and each new team gets its calendar.
@@ -137,3 +172,7 @@ The **Workforce teams and workers** deployment step exports the activity codes a
 | `PublishWorkforceSchedules` (Publish team schedules) | Publishing the schedules of the teams in one's scope. |
 | `ManageWorkforceOpenShifts` (Manage open shifts) | Posting, assigning and canceling the open shifts of the teams in one's scope, and deciding on claims. |
 | `ApproveWorkforceShiftTrades` (Approve shift trades) | Approving and declining the shift trades of the teams in one's scope, and offering or accepting trades on a worker's behalf. |
+| `ManageTimeOffPolicies` (Manage time-off policies) | Time-off types, policies, allotments and blackout dates, and assigning a policy to one worker. |
+| `ApproveTimeOff` (Approve time off) | The time-off queue, requesting time off for a worker, approving, declining and canceling, and workers' balances, for the teams in one's scope. |
+| `AdjustTimeOffBalances` (Adjust time-off balances) | Changing the balances of the workers in one's scope. |
+| `RequestTimeOff` (Request time off) | Requesting one's own time off, in the self-service portal. Not implied by Manage the whole workforce. |

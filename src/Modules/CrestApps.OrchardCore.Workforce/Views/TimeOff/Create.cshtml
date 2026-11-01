@@ -1,0 +1,116 @@
+@model TimeOffRequestEditViewModel
+@{
+    var preview = Model.Preview;
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimeOffCreate" title="@T["Request Time Off"]">
+        <breadcrumb-item id="WorkforceTimeOff" action="Index" controller="TimeOff" area="CrestApps.OrchardCore.Workforce">@T["Time Off"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Create" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="WorkerId" class="ocat-label ocat-label-required">@T["Worker"]</label><div class="ocat-end"><select asp-for="WorkerId" asp-items="Model.WorkerOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Choose a worker"]</option></select><span class="hint">@T["The workers of the teams you manage."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="TypeId" class="ocat-label ocat-label-required">@T["Type"]</label><div class="ocat-end"><select asp-for="TypeId" asp-items="Model.TypeOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Choose a type"]</option></select></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["Days"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
+                    <span>@T["to"]</span>
+                    <input asp-for="EndDate" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="PartialDay" class="form-check-input" />
+                    <label asp-for="PartialDay" class="form-check-label">@T["Only part of the first day"]</label>
+                    <span class="hint dashed">@T["Ask for some hours of one day, such as a doctor's appointment."]</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-2@(Model.PartialDay ? null : " d-none")" id="partial-day-times">
+                    <input asp-for="StartTime" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["From"]" />
+                    <span>@T["to"]</span>
+                    <input asp-for="EndTime" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["To"]" />
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="Reason" class="ocat-label">@T["Reason"]</label><div class="ocat-end"><textarea asp-for="Reason" class="form-control" rows="2"></textarea><span class="hint">@T["Seen by the managers who decide. Some types need one."]</span></div></div>
+    </div></div>
+
+    @if (preview is not null)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-body">
+                <h5 class="card-title">@T["What this request would do"]</h5>
+                @foreach (var problem in preview.Problems)
+                {
+                    <div class="text-danger mb-1"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@problem</div>
+                }
+                @if (preview.Problems.Count == 0)
+                {
+                    <p class="mb-2">
+                        @switch (preview.Outcome)
+                        {
+                            case TimeOffRequestStatus.Approved:
+                                <span class="badge text-bg-success fw-normal">@T["Approved at once"]</span> @T["It fits the allotment, which approves on its own."]
+                                break;
+                            case TimeOffRequestStatus.Waitlisted:
+                                <span class="badge text-bg-warning fw-normal">@T["Waitlisted"]</span> @T["As many people as may be off already are on some of these days."]
+                                break;
+                            default:
+                                <span class="badge text-bg-secondary fw-normal">@T["Waits for a manager"]</span>
+                                break;
+                        }
+                    </p>
+                }
+                <table class="table table-sm mb-2" style="max-width: 32rem">
+                    <thead><tr><th>@T["Day"]</th><th class="text-end">@T["Counts"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var day in preview.Days)
+                        {
+                            <tr class="@(day.Amount == 0 ? "text-muted" : null)">
+                                <td>@day.Date.ToString("ddd d MMM")@if (preview.FullDates.Contains(day.Date)) {<span class="badge ta-badge fw-normal ms-2">@T["Full"]</span>}</td>
+                                <td class="text-end"><partial name="_TimeOffAmount" model="(day.Amount, preview.Type?.Unit ?? TimeOffUnit.Hours)" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th>@T["In all"]</th><th class="text-end"><partial name="_TimeOffAmount" model="(preview.Amount, preview.Type?.Unit ?? TimeOffUnit.Hours)" /></th></tr></tfoot>
+                </table>
+                @if (preview.Balance is not null)
+                {
+                    <p class="mb-1">@T["Balance under '{0}' on the first day:", preview.Balance.Policy.Name] <strong><partial name="_TimeOffAmount" model="(preview.Balance.Available, preview.Balance.Type?.Unit ?? TimeOffUnit.Hours)" /></strong> @T["available"], <partial name="_TimeOffAmount" model="(preview.Balance.Available - preview.Amount, preview.Balance.Type?.Unit ?? TimeOffUnit.Hours)" /> @T["after this request."]</p>
+                }
+                @if (preview.OverlappingShifts > 0)
+                {
+                    <p class="mb-0 text-warning"><i class="fa-solid fa-calendar-xmark me-1" aria-hidden="true"></i>@T.Plural(preview.OverlappingShifts, "It overlaps 1 published shift.", "It overlaps {0} published shifts.", preview.OverlappingShifts)</p>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper"><div class="ocat-end-offset">
+        <button class="btn btn-primary" type="submit">@T["Submit"]</button>
+        <button class="btn btn-outline-secondary" type="submit" name="check" value="true">@T["Check first"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div></div>
+</form>
+
+<script at="Foot">
+    (() => {
+        const partial = document.getElementById('PartialDay');
+        const times = document.getElementById('partial-day-times');
+        const endDate = document.getElementById('EndDate');
+
+        const sync = () => {
+            times.classList.toggle('d-none', !partial.checked);
+            endDate.disabled = partial.checked;
+        };
+
+        partial.addEventListener('change', sync);
+        sync();
+    })();
+</script>

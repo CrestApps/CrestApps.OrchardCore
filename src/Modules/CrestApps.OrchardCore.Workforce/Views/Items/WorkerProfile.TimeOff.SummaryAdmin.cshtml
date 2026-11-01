@@ -1,0 +1,3 @@
+@model ShapeViewModel<WorkerProfile>
+
+<a asp-controller="TimeOff" asp-action="Worker" asp-route-workerId="@Model.Value.ItemId" class="dropdown-item">@T["Time off"]</a>

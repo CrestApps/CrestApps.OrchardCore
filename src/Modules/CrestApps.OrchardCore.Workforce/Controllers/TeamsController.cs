@@ -129,6 +129,7 @@ public sealed class TeamsController : Controller
             LinkedRoleName = team.LinkedRoleName,
             OpenShiftClaimPolicy = team.OpenShiftClaimPolicy?.ToString(),
             ShiftTradesNeedApproval = team.ShiftTradesNeedApproval.HasValue ? (team.ShiftTradesNeedApproval.Value ? "true" : "false") : null,
+            TimeOffShiftHandling = team.TimeOffShiftHandling?.ToString(),
             TimeZoneId = team.TimeZoneId,
             Address = team.Location?.Address,
             Enabled = team.Enabled,
@@ -175,7 +176,13 @@ public sealed class TeamsController : Controller
         {
             team.OpenShiftClaimPolicy = Enum.TryParse<OpenShiftClaimPolicy>(model.OpenShiftClaimPolicy, out var policy) ? policy : null;
             team.ShiftTradesNeedApproval = bool.TryParse(model.ShiftTradesNeedApproval, out var needsApproval) ? needsApproval : null;
+
+            if (await IsFeatureOnAsync(WorkforceConstants.Features.TimeOff))
+            {
+                team.TimeOffShiftHandling = Enum.TryParse<TimeOffShiftHandling>(model.TimeOffShiftHandling, out var handling) ? handling : null;
+            }
         }
+
         team.Location = string.IsNullOrWhiteSpace(model.Address) ? null : new WorkforceLocation { Address = model.Address.Trim(), Latitude = team.Location?.Latitude, Longitude = team.Location?.Longitude };
         team.Enabled = model.Enabled;
 
@@ -258,11 +265,17 @@ public sealed class TeamsController : Controller
         model.KindOptions = TeamKindOptions(S, model.Kind);
         model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
         model.ShowShiftPlanning = await IsShiftPlanningOnAsync();
+        model.ShowTimeOff = model.ShowShiftPlanning && await IsFeatureOnAsync(WorkforceConstants.Features.TimeOff);
     }
 
-    private async Task<bool> IsShiftPlanningOnAsync()
+    private Task<bool> IsShiftPlanningOnAsync()
     {
-        return (await _shellFeaturesManager.GetEnabledFeaturesAsync()).Any(feature => feature.Id == WorkforceConstants.Features.ShiftPlanning);
+        return IsFeatureOnAsync(WorkforceConstants.Features.ShiftPlanning);
+    }
+
+    private async Task<bool> IsFeatureOnAsync(string featureId)
+    {
+        return (await _shellFeaturesManager.GetEnabledFeaturesAsync()).Any(feature => feature.Id == featureId);
     }
 
     internal static IList<SelectListItem> TeamKindOptions(IStringLocalizer S, string selected)

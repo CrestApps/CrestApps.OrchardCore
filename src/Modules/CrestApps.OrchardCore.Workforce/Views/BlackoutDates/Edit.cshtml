@@ -1,0 +1,36 @@
+@model BlackoutPeriodEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceBlackoutDatesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Blackout Dates"] : T["Edit '{0}' Blackout Dates", Model.Name])">
+        <breadcrumb-item id="WorkforceBlackoutDates" action="Index" controller="BlackoutDates" area="CrestApps.OrchardCore.Workforce">@T["Blackout Dates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["Days"]</label>
+            <div class="ocat-end">
+                <div class="d-flex align-items-center gap-2">
+                    <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
+                    <span>@T["to"]</span>
+                    <input asp-for="EndDate" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="TeamId" class="ocat-label">@T["Team"]</label><div class="ocat-end"><select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Every team"]</option></select><span class="hint">@T["The dates apply to this team and the teams under it."]</span></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TypeIds" class="ocat-label">@T["Time-off types"]</label>
+            <div class="ocat-end">
+                <select asp-for="TypeIds" asp-items="Model.TypeOptions" class="form-select" multiple size="4"></select>
+                <span class="hint">@T["Leave empty to block every type."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="Message" class="ocat-label">@T["Message"]</label><div class="ocat-end"><input asp-for="Message" class="form-control" /><span class="hint">@T["What a worker is told when a request falls on these dates."]</span></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

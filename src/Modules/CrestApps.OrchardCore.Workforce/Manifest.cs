@@ -33,3 +33,14 @@ using OrchardCore.Modules.Manifest;
         WorkforceConstants.Features.Workforce,
     ]
 )]
+
+[assembly: Feature(
+    Id = WorkforceConstants.Features.TimeOff,
+    Name = "Workforce Time Off",
+    Description = "Time-off types and policies with accrual, a balance ledger, requests and approvals, allotments that approve on their own with a waitlist, and blackout dates. Approved time off goes on the team calendar.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceConstants.Features.Workforce,
+    ]
+)]

@@ -42,6 +42,20 @@
                     </select>
                 </div>
             </div>
+            @if (Model.ShowTimeOff)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="TimeOffShiftHandling" class="ocat-label">@T["Shifts under approved time off"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="TimeOffShiftHandling" class="form-select" style="max-width: 22rem">
+                            <option value="">@T["As the parent team (flag them)"]</option>
+                            <option value="Flag">@T["Keep them, flagged for cover"]</option>
+                            <option value="Remove">@T["Take them off the schedule"]</option>
+                        </select>
+                        <span class="hint">@T["What happens to a worker's published shifts when time off over them is approved. Removed shifts are logged as the worker's change."]</span>
+                    </div>
+                </div>
+            }
         }
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
     </div></div>

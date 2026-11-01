@@ -98,6 +98,19 @@ internal static class ShiftEvents
     }
 
     /// <summary>
+    /// Returns the paid minutes of a published shift that fall inside a range: its time in the range less the unpaid
+    /// segments in the range.
+    /// </summary>
+    public static int PaidMinutesWithin(CalendarEvent calendarEvent, ShiftData data, IReadOnlyDictionary<string, ActivityCode> codes, DateTime fromUtc, DateTime toUtc)
+    {
+        var unpaid = data.Segments
+            .Where(segment => IsUnpaid(segment.ActivityCodeId, segment.Kind, codes))
+            .Sum(segment => Overlap(segment.StartUtc, segment.EndUtc, fromUtc, toUtc));
+
+        return (int)Math.Max(0, Overlap(calendarEvent.StartUtc, calendarEvent.EndUtc, fromUtc, toUtc) - unpaid);
+    }
+
+    /// <summary>
     /// Returns a planned shift's paid minutes: its length less its unpaid segments.
     /// </summary>
     public static int PaidMinutes(DateTime start, DateTime end, IEnumerable<DraftShiftSegment> segments, IReadOnlyDictionary<string, ActivityCode> codes)
@@ -107,6 +120,14 @@ internal static class ShiftEvents
             .Sum(segment => (segment.End - segment.Start).TotalMinutes);
 
         return (int)Math.Max(0, (end - start).TotalMinutes - unpaid);
+    }
+
+    private static double Overlap(DateTime start, DateTime end, DateTime fromUtc, DateTime toUtc)
+    {
+        var from = start > fromUtc ? start : fromUtc;
+        var to = end < toUtc ? end : toUtc;
+
+        return to > from ? (to - from).TotalMinutes : 0;
     }
 
     private static bool IsUnpaid(string activityCodeId, ActivityKind? kind, IReadOnlyDictionary<string, ActivityCode> codes)

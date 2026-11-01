@@ -168,6 +168,7 @@ const sidebars = {
             items: [
                 'user-manual/workforce/workers-and-teams',
                 'user-manual/workforce/shift-planning',
+                'user-manual/workforce/time-off',
                 'user-manual/workforce/skills-and-certifications',
             ],
         },

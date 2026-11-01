@@ -1,0 +1,13 @@
+@model TimeOffRequest
+@if (Model.IsPartialDay)
+{
+    @Model.StartDate.ToString("ddd d MMM")<text> </text>@Model.StartTime.Value.ToString("HH:mm")<text>&ndash;</text>@Model.EndTime.Value.ToString("HH:mm")
+}
+else if (Model.StartDate == Model.EndDate)
+{
+    @Model.StartDate.ToString("ddd d MMM yyyy")
+}
+else
+{
+    @Model.StartDate.ToString("ddd d MMM")<text> &ndash; </text>@Model.EndDate.ToString("ddd d MMM yyyy")
+}

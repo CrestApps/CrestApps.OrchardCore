@@ -1,0 +1,3 @@
+@model ShapeViewModel<TimeOffType>
+
+<a asp-controller="TimeOffTypes" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this time-off type? Requests and policies of the type keep their history but the type can no longer be requested."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

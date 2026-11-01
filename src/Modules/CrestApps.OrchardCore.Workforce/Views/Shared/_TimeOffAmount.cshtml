@@ -1,0 +1,12 @@
+@model (decimal Amount, TimeOffUnit Unit)
+@{
+    var text = Model.Amount.ToString("0.##");
+}
+@if (Model.Unit == TimeOffUnit.Days)
+{
+    @(Model.Amount == 1 ? T["1 day"] : T["{0} days", text])
+}
+else
+{
+    @(Model.Amount == 1 ? T["1 hour"] : T["{0} hours", text])
+}

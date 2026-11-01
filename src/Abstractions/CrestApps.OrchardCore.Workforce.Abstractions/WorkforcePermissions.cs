@@ -63,4 +63,24 @@ public static class WorkforcePermissions
     /// behalf.
     /// </summary>
     public static readonly Permission ApproveShiftTrades = new("ApproveWorkforceShiftTrades", LocalizationSource.Create("Approve shift trades", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Add, change and remove time-off types, policies, allotments and blackout dates.
+    /// </summary>
+    public static readonly Permission ManageTimeOffPolicies = new("ManageTimeOffPolicies", LocalizationSource.Create("Manage time-off policies", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Approve, decline and cancel the time off of the teams the user manages, and request time off for their workers.
+    /// </summary>
+    public static readonly Permission ApproveTimeOff = new("ApproveTimeOff", LocalizationSource.Create("Approve time off", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Change the time-off balances of the workers of the teams the user manages.
+    /// </summary>
+    public static readonly Permission AdjustTimeOffBalances = new("AdjustTimeOffBalances", LocalizationSource.Create("Adjust time-off balances", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Request one's own time off.
+    /// </summary>
+    public static readonly Permission RequestTimeOff = new("RequestTimeOff", LocalizationSource.Create("Request time off", typeof(WorkforcePermissions)));
 }

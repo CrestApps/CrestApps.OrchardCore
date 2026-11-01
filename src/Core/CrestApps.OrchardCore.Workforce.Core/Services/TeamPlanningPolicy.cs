@@ -49,6 +49,23 @@ internal sealed class TeamPlanningPolicy
         return true;
     }
 
+    /// <summary>
+    /// Returns what happens to a worker's published shifts when their time off is approved; they are flagged by
+    /// default.
+    /// </summary>
+    public async Task<TimeOffShiftHandling> TimeOffShiftHandlingAsync(string teamId, CancellationToken cancellationToken = default)
+    {
+        foreach (var team in await LineageAsync(teamId, cancellationToken))
+        {
+            if (team.TimeOffShiftHandling.HasValue)
+            {
+                return team.TimeOffShiftHandling.Value;
+            }
+        }
+
+        return TimeOffShiftHandling.Flag;
+    }
+
     private async Task<IReadOnlyList<WorkforceTeam>> LineageAsync(string teamId, CancellationToken cancellationToken)
     {
         var team = string.IsNullOrEmpty(teamId) ? null : await _teamStore.FindByIdAsync(teamId, cancellationToken);

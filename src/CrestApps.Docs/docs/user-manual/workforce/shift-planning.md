@@ -149,9 +149,10 @@ When the team's **Shift trades** setting needs a manager, an accepted trade wait
 
 ## Team settings
 
-When Shift Planning is on, a team's editor under **Workforce > Teams** has two more settings. A team left at **As the parent team** takes its parent's setting; at the top, a manager approves both.
+When Shift Planning is on, a team's editor under **Workforce > Teams** has two more settings, and a third when [Time Off](./time-off.md) is on too. A team left at **As the parent team** takes its parent's setting; at the top, a manager approves both.
 
 | Field | What it does |
 | --- | --- |
 | **Open shifts go to** | Whoever a manager approves, the first eligible worker to claim, or the most senior claimant after a day. |
 | **Shift trades** | Whether a manager approves trades, or they apply when the colleague accepts. |
+| **Shifts under approved time off** | Keep a worker's published shifts flagged for cover when their time off is approved (the default), or take them off the schedule. |

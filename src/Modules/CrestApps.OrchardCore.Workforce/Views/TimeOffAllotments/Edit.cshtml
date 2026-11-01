@@ -1,0 +1,61 @@
+@model TimeOffAllotmentEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimeOffAllotmentsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Allotment"] : T["Edit '{0}' Allotment", Model.Name])">
+        <breadcrumb-item id="WorkforceTimeOffAllotments" action="Index" controller="TimeOffAllotments" area="CrestApps.OrchardCore.Workforce">@T["Time-Off Allotments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label><div class="ocat-end"><select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Choose a team"]</option></select><span class="hint">@T["The allotment counts the time off of this team and the teams under it."]</span></div></div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["People who may be off"]</label>
+            <div class="ocat-end">
+                <div class="d-flex flex-wrap gap-2">
+                    @{
+                        var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+                    }
+                    @for (var index = 0; index < 7; index++)
+                    {
+                        <div style="width: 5.5rem">
+                            <label for="Slots_@index" class="form-label small mb-1">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(days[index])</label>
+                            <input type="number" min="0" name="Slots[@index]" id="Slots_@index" value="@Model.Slots.ElementAtOrDefault(index)" class="form-control" />
+                        </div>
+                    }
+                </div>
+                <span class="hint">@T["How many people may be off each day of the week."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Dates" class="ocat-label">@T["Other numbers on dates"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Dates" class="form-control font-monospace" rows="3" placeholder="2026-12-24 = 1&#10;2026-12-31 = 0"></textarea>
+                <span class="hint">@T["Optional. One per line: a date, an equals sign and the number of people on that date."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="TypeIds" class="ocat-label">@T["Time-off types"]</label>
+            <div class="ocat-end">
+                <select asp-for="TypeIds" asp-items="Model.TypeOptions" class="form-select" multiple size="4"></select>
+                <span class="hint">@T["Leave empty for every type that takes a place in allotments."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="AutoApprove" class="form-check-input" /><label asp-for="AutoApprove" class="form-check-label">@T["Approve requests that fit with no manager"]</label><span class="hint dashed">@T["A request on days with a place left is approved as soon as it is made."]</span></div></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="WhenFull" class="ocat-label">@T["When it's full"]</label>
+            <div class="ocat-end">
+                <select asp-for="WhenFull" class="form-select" style="max-width: 24rem">
+                    <option value="Waitlist">@T["Put the request on the waitlist"]</option>
+                    <option value="Pending">@T["Send the request to a manager"]</option>
+                </select>
+                <span class="hint">@T["A waitlisted request is approved, in the order requests came in, when a place frees up."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

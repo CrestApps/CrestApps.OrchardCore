@@ -1,0 +1,25 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceTimeOffAllotments" title="@T["Time-Off Allotments"]" /></zone>
+
+<form asp-action="Index" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <p class="mb-0 text-muted small">@T["How many people of a team may be off each day. Requests that fit are approved on their own; the rest wait for a place or a manager."]</p>
+                </div>
+                <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add allotment"]</a></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="WorkforceTimeOffAllotments" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no allotments."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Allotment"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

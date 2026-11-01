@@ -35,9 +35,10 @@ public sealed class Certification : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool RequiresDocument { get; set; }
 
     /// <summary>
-    /// Gets or sets how many days before expiry a reminder is raised, one reminder per entry (for example 60, 30 and 7).
+    /// Gets or sets how many days before expiry a reminder is raised, one reminder per entry (for example 60, 30 and 7). A new
+    /// certification starts with 30.
     /// </summary>
-    public IList<int> ReminderDays { get; set; } = [30];
+    public IList<int> ReminderDays { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether the certification can be recorded and required.
