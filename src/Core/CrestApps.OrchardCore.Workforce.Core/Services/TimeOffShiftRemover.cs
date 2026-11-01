@@ -90,6 +90,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
                 BeforeEndUtc = shift.EndUtc,
                 InitiatedBy = ScheduleChangeInitiator.Worker,
                 Reason = S["Approved time off"],
+                Source = ScheduleChangeSources.TimeOff,
                 PublishedVersion = period?.PublishedVersion ?? data.PublishedVersion,
                 ChangedBy = context.Actor,
                 ChangedUtc = _clock.UtcNow,

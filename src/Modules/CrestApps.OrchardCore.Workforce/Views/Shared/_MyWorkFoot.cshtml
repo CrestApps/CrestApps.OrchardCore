@@ -1,0 +1,9 @@
+    </main>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('@Url.Content("~/my-work/sw.js")', { scope: '@Url.Content("~/my-work")' }).catch(() => { });
+        }
+    </script>
+    <resources type="FootScript" />
+@Html.Raw("</body>")
+</html>

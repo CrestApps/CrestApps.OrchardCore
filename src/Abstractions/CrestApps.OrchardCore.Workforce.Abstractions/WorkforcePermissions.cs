@@ -95,6 +95,11 @@ public static class WorkforcePermissions
     public static readonly Permission ApprovePredictabilityPay = new("ApprovePredictabilityPay", LocalizationSource.Create("Approve predictability pay", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
+    /// Use the My Work portal: one's own schedule, time off, shifts to claim and trade, and notifications.
+    /// </summary>
+    public static readonly Permission UseWorkforcePortal = new("UseWorkforcePortal", LocalizationSource.Create("Use the My Work portal", typeof(WorkforcePermissions)));
+
+    /// <summary>
     /// Request one's own time off.
     /// </summary>
     public static readonly Permission RequestTimeOff = new("RequestTimeOff", LocalizationSource.Create("Request time off", typeof(WorkforcePermissions)));

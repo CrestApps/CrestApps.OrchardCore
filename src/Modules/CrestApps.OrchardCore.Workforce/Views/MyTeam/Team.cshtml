@@ -1,0 +1,39 @@
+@model MyTeamNowViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Who's working"].Value;
+}
+<partial name="_MyWorkHead" />
+
+<h1 class="h4 mb-1">@T["Who's working now"]</h1>
+<p class="text-muted small">@Model.Now.ToString("dddd d MMMM HH:mm")</p>
+
+@if (Model.Working.Count == 0)
+{
+    <div class="alert alert-light">@T["Nobody on your teams is on shift right now."]</div>
+}
+<ul class="list-group mb-3">
+    @foreach (var (name, teamName, start, end, doing) in Model.Working)
+    {
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+            <strong class="me-auto">@name</strong>
+            <span class="text-muted small">@teamName</span>
+            <span class="badge text-bg-light fw-normal">@start.ToString("HH:mm")&ndash;@end.ToString("HH:mm")</span>
+            <span class="badge @(doing is null ? "text-bg-success" : "text-bg-warning") fw-normal">@(doing ?? T["Working"].Value)</span>
+        </li>
+    }
+</ul>
+
+@if (Model.Off.Count > 0)
+{
+    <h2 class="h6">@T["Off now"]</h2>
+    <ul class="list-group">
+        @foreach (var (name, teamName, hours) in Model.Off)
+        {
+            <li class="list-group-item d-flex flex-wrap gap-2"><span class="me-auto">@name</span><span class="text-muted small">@teamName</span>@if (hours is not null) {<span class="badge text-bg-light fw-normal">@hours</span>}</li>
+        }
+    </ul>
+}
+
+<partial name="_MyWorkFoot" />

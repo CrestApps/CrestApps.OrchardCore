@@ -19,6 +19,7 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
     private readonly IShiftService _shiftService;
     private readonly ShiftAssignmentContexts _contexts;
     private readonly TeamPlanningPolicy _policy;
+    private readonly IWorkforceNotifier _notifier;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -30,6 +31,7 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
         IShiftService shiftService,
         ShiftAssignmentContexts contexts,
         TeamPlanningPolicy policy,
+        IWorkforceNotifier notifier,
         IClock clock,
         IStringLocalizer<DefaultShiftTradeService> stringLocalizer)
     {
@@ -39,6 +41,7 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
         _shiftService = shiftService;
         _contexts = contexts;
         _policy = policy;
+        _notifier = notifier;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -129,6 +132,13 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
         await _tradeStore.CreateAsync(trade, cancellationToken);
         result.Value = trade;
 
+        if (!string.IsNullOrEmpty(trade.TargetWorkerId))
+        {
+            var from = await _workerStore.FindByIdAsync(trade.OfferedByWorkerId, cancellationToken);
+
+            await NotifyAsync(trade.TargetWorkerId, trade.Kind == ShiftTradeKind.Swap ? S["{0} wants to swap shifts with you", from?.DisplayName] : S["{0} offers you a shift", from?.DisplayName], trade.Note, cancellationToken);
+        }
+
         return result;
     }
 
@@ -185,6 +195,8 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
             await _tradeStore.UpdateAsync(trade, cancellationToken);
             result.Value = trade;
 
+            await NotifyAsync(trade.OfferedByWorkerId, S["Your trade was accepted"], S["It waits for a manager to approve it."], cancellationToken);
+
             return result;
         }
 
@@ -207,6 +219,8 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
 
         await EndAsync(trade, ShiftTradeStatus.Rejected, null, actor, cancellationToken);
         result.Value = trade;
+
+        await NotifyAsync(trade.OfferedByWorkerId, S["Your trade was turned down"], null, cancellationToken);
 
         return result;
     }
@@ -252,6 +266,8 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
 
         await EndAsync(trade, ShiftTradeStatus.Declined, note, actor, cancellationToken);
         result.Value = trade;
+
+        await NotifyAsync(trade.OfferedByWorkerId, S["Your trade was declined"], note, cancellationToken);
 
         return result;
     }
@@ -371,6 +387,20 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
         }
 
         result.Value = trade;
+    }
+
+    private Task NotifyAsync(string workerId, string title, string body, CancellationToken cancellationToken)
+    {
+        return string.IsNullOrEmpty(workerId)
+            ? Task.CompletedTask
+            : _notifier.NotifyAsync(new WorkforceNotification
+            {
+                WorkerId = workerId,
+                Kind = WorkforceNotificationKind.ShiftTrade,
+                Title = title,
+                Body = body ?? string.Empty,
+                Url = "my-work/shifts",
+            }, cancellationToken);
     }
 
     private async Task EndAsync(ShiftTrade trade, ShiftTradeStatus status, string note, string actor, CancellationToken cancellationToken)

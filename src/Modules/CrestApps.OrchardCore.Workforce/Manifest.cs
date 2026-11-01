@@ -55,3 +55,14 @@ using OrchardCore.Modules.Manifest;
         WorkforceConstants.Features.ShiftPlanning,
     ]
 )]
+
+[assembly: Feature(
+    Id = WorkforceConstants.Features.Portal,
+    Name = "Workforce My Work Portal",
+    Description = "An installable My Work portal for workers: their schedule, time off, open shifts and trades, availability, notifications by push and email, and a calendar feed; and approvals and who is working for managers.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceConstants.Features.Workforce,
+    ]
+)]

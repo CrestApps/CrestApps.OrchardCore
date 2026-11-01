@@ -26,6 +26,11 @@ public static class WorkforceConstants
     public const string RecipeStepName = "Workforce";
 
     /// <summary>
+    /// The name of the HTTP client web push notifications are sent with.
+    /// </summary>
+    public const string WebPushHttpClient = "WorkforceWebPush";
+
+    /// <summary>
     /// The name of the built-in shift schedule solver.
     /// </summary>
     public const string DefaultSolver = "Default";

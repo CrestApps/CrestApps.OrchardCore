@@ -189,7 +189,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
             request.DecisionNote = note?.Trim();
             request.ModifiedUtc = now;
 
-            return Task.CompletedTask;
+            return _approvals.NotifyAsync(request, type, S["Your {0} request was declined", type.Name], note, cancellationToken);
         }, cancellationToken);
     }
 
@@ -231,6 +231,11 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
             {
                 await _approvals.UndoAsync(request, actor, cancellationToken);
                 request.Status = TimeOffRequestStatus.Canceled;
+
+                if (await _typeStore.FindByIdAsync(request.TypeId, cancellationToken) is { } type)
+                {
+                    await _approvals.NotifyAsync(request, type, S["Your {0} was canceled", type.Name], note, cancellationToken);
+                }
             }
             else
             {

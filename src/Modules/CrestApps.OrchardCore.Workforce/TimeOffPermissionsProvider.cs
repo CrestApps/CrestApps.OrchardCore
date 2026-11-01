@@ -25,6 +25,11 @@ internal sealed class TimeOffPermissionsProvider : IPermissionProvider
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
             },
+            new PermissionStereotype
+            {
+                Name = OrchardCoreConstants.Roles.Authenticated,
+                Permissions = [WorkforcePermissions.RequestTimeOff],
+            },
         ];
     }
 }

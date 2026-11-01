@@ -1,17 +1,18 @@
 ---
 sidebar_label: Workforce
 title: Workforce
-description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, labor rules with overrides and predictability pay, recipes and the contracts other modules build on."
+description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, labor rules with overrides and predictability pay, the My Work portal with web push, recipes and the contracts other modules build on."
 user_manual:
   - user-manual/workforce/workers-and-teams
   - user-manual/workforce/shift-planning
   - user-manual/workforce/time-off
   - user-manual/workforce/labor-rules
+  - user-manual/workforce/my-work-portal
 ---
 
 The **Workforce** module is the base of workforce management. It keeps the people who work and how they are organized, and gives every team a Workforce calendar on the shared [Calendars](./calendars.md) module, where shifts and approved time off are published. It uses the shared [Skills](./skills.md) catalog for workers' skills and certificates.
 
-The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md), [Time Off](../user-manual/workforce/time-off.md) and [Labor Rules](../user-manual/workforce/labor-rules.md).
+The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md), [Time Off](../user-manual/workforce/time-off.md), [Labor Rules](../user-manual/workforce/labor-rules.md) and [My Work Portal](../user-manual/workforce/my-work-portal.md).
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
@@ -19,6 +20,7 @@ The admin screens are described in the User Manual: [Workers and Teams](../user-
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.LaborRules` | Workforce Labor Rules | `CrestApps.OrchardCore.Workforce.ShiftPlanning` |
+| `CrestApps.OrchardCore.Workforce.Portal` | Workforce My Work Portal | `CrestApps.OrchardCore.Workforce` |
 
 Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts), `CrestApps.OrchardCore.Workforce.Core` (stores, indexes, services), `CrestApps.OrchardCore.Workforce` (the module).
 
@@ -201,6 +203,23 @@ These show the shape of a rule set. They are not legal advice: check every rule 
 
 The `WorkforceLaborRules` step matches sets by id or name, and teams by `teamNames`.
 
+## My Work portal
+
+The **Workforce My Work Portal** feature (`CrestApps.OrchardCore.Workforce.Portal`) registers its services with `AddWorkforcePortalCore()`. Its pages are front-end routes under `my-work` (`MyWorkController` and `MyTeamController`) with their own layout, so they look the same in any theme, and are allowed by the `UseWorkforcePortal` permission, which the Authenticated role has by default. A user is a worker when `IWorkerManager.FindByUserIdAsync` finds their user id. The time off page needs `RequestTimeOff` (Authenticated by default) and the Time Off feature.
+
+**Notifications.** Services tell workers about changes through `IWorkforceNotifier` with a `WorkforceNotification` (worker, `WorkforceNotificationKind`, title, body and the portal page it opens). Without the portal the notifier does nothing. With it, the notifier delivers to every `IWorkforceNotificationChannel`: the inbox (`Inbox`, which can't be turned off; `IWorkforceInbox` pages it and marks it read), web push (`Push`) and, with the Email feature, email (`Email`), skipping the channels and kinds the worker turned off in their `WorkerPortalSettings` (kept in the worker's properties). A failing channel is logged and the others still run. Other modules add channels, such as SMS. What sends notifications:
+
+- `ISchedulePublishHandler`: one notice per worker with shifts on a first publish, and one per worker whose shifts changed on a republish;
+- `IScheduleChangeHandler`: each change outside a publish or approved time off (`ScheduleChange.Source` is `Publish` or `TimeOff` for those), such as a reassignment, a swap or a filled open shift;
+- time off approved (also by an allotment or the waitlist), declined and canceled;
+- a trade offered to a colleague, and accepted (waiting for a manager), turned down or declined.
+
+**Web push.** `IWebPushService` makes the site's VAPID key pair (P-256) the first time `GetPublicKeyAsync` is called and keeps it in the Workforce collection, the private key protected with ASP.NET Core data protection. `SubscribeAsync` adds a device (`WebPushSubscription`, found again by the SHA-256 of its endpoint), `UnsubscribeAsync` removes it. The push channel encrypts each message for the device (`aes128gcm`) and signs it with VAPID through `Lib.Net.Http.WebPush` (MIT), using the `WorkforceWebPush` named `HttpClient`; a device the push service answers 404 or 410 for is deleted. The payload is `{ title, body, url }`.
+
+**The PWA.** `my-work/manifest.webmanifest` (standalone, scope `my-work`, 192 and 512 pixel icons and a maskable one) and `my-work/sw.js` are served anonymously. The service worker is served with `Service-Worker-Allowed` so its scope covers `my-work`; it shows push notifications, opens their page when clicked, and shows an offline page when a portal page can't load. It caches nothing.
+
+**Calendar feed.** `IWorkerFeedService.GetTokenAsync(worker, renew)` keeps a 256-bit secret in the worker's portal settings; `my-work/feed/{token}.ics` (anonymous) finds the worker by the secret's SHA-256 (`WorkerFeedIndex`), checks the secret itself, and writes the worker's shifts and approved time off from 28 days back to 84 days ahead with `ICalendarWriter`. Renewing the secret stops the old address working.
+
 ## Recipes and deployment
 
 The `Workforce` step imports activity codes (by id or name), teams (by id or name, with the parent by `parentName` in any order) and workers (by id, employee number or user, with each membership's team by `teamName`). Every record goes through its manager, so it is validated and each new team gets its calendar.
@@ -249,4 +268,5 @@ The **Workforce teams and workers** deployment step exports the activity codes a
 | `ManageLaborRules` (Manage labor rules) | Labor rule sets and the override list. |
 | `OverrideLaborRules` (Override labor rules) | Publishing with a reason despite rules that need an override. |
 | `ApprovePredictabilityPay` (Approve predictability pay) | Approving and waiving the predictability pay of the teams in one's scope. |
+| `UseWorkforcePortal` (Use the My Work portal) | The My Work portal. Authenticated users have it by default. |
 | `RequestTimeOff` (Request time off) | Requesting one's own time off, in the self-service portal. Not implied by Manage the whole workforce. |

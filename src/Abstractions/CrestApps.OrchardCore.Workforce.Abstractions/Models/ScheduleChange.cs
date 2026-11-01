@@ -68,6 +68,12 @@ public sealed class ScheduleChange : CatalogItem
     public string Reason { get; set; }
 
     /// <summary>
+    /// Gets or sets what made the change: <c>Publish</c> for a republished schedule, or empty for a change made to
+    /// one shift, such as a trade or a claim.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the publish that made the change.
     /// </summary>
     public int PublishedVersion { get; set; }

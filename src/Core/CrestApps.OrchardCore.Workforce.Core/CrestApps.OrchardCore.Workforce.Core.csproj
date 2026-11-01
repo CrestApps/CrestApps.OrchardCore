@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="Lib.Net.Http.WebPush" />
   </ItemGroup>
 
   <ItemGroup>

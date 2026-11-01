@@ -130,6 +130,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- CrestApps Core Packages -->
+    <PackageVersion Include="Lib.Net.Http.WebPush" Version="3.3.1" />
     <PackageVersion Include="CrestApps.Core.Abstractions" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Data.YesSql" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core" Version="$(CrestAppsCoreVersion)" />

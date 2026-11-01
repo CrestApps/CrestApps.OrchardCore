@@ -1,0 +1,67 @@
+@inject OrchardCore.DisplayManagement.Layout.ILayoutAccessor LayoutAccessor
+@{
+    var nav = ViewData["MyWorkNav"] as MyWorkNavViewModel ?? new MyWorkNavViewModel();
+    var title = ViewData["Title"] as string;
+    var layout = await LayoutAccessor.GetLayoutAsync();
+    string Active(string page) => nav.Active == page ? "nav-link active" : "nav-link";
+}
+<!DOCTYPE html>
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2b8a3e" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@(string.IsNullOrEmpty(title) ? T["My Work"] : T["{0} - My Work", title])</title>
+    <link rel="manifest" href="@Url.Content("~/my-work/manifest.webmanifest")" />
+    <link rel="icon" href="@Url.Content("~/CrestApps.OrchardCore.Workforce/portal/icon-192.png")" />
+    <link rel="apple-touch-icon" href="@Url.Content("~/CrestApps.OrchardCore.Workforce/portal/icon-192.png")" />
+    <style asp-name="bootstrap"></style>
+    <style asp-name="font-awesome"></style>
+    <script asp-name="bootstrap" at="Foot"></script>
+    <resources type="Meta" />
+    <resources type="HeadLink" />
+    <resources type="Stylesheet" />
+    <resources type="HeadScript" />
+    <style>
+        .my-work-main { max-width: 64rem; }
+        .my-work-nav .nav-link { white-space: nowrap; }
+        .my-work-shift { border-left: .3rem solid #2b8a3e; }
+        .my-work-time-off { border-left: .3rem solid #e8590c; }
+    </style>
+</head>
+@* The page body opens here and closes in _MyWorkFoot. *@
+@Html.Raw("<body class=\"bg-body-tertiary\">")
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top my-work-nav" style="background-color: #2b8a3e" aria-label="@T["My Work"]">
+        <div class="container my-work-main">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="@Url.Content("~/my-work")"><i class="fa-solid fa-user-clock" aria-hidden="true"></i>@T["My Work"]</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#my-work-menu" aria-controls="my-work-menu" aria-expanded="false" aria-label="@T["Menu"]"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="my-work-menu">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="@Active("home")" href="@Url.Content("~/my-work")">@T["Home"]@if (nav.Unread > 0) {<span class="badge rounded-pill text-bg-warning ms-1">@nav.Unread</span>}</a></li>
+                    @if (nav.IsWorker)
+                    {
+                        <li class="nav-item"><a class="@Active("schedule")" href="@Url.Content("~/my-work/schedule")">@T["Schedule"]</a></li>
+                        @if (nav.HasTimeOff)
+                        {
+                            <li class="nav-item"><a class="@Active("time-off")" href="@Url.Content("~/my-work/time-off")">@T["Time off"]</a></li>
+                        }
+                        @if (nav.HasShiftPlanning)
+                        {
+                            <li class="nav-item"><a class="@Active("shifts")" href="@Url.Content("~/my-work/shifts")">@T["Shifts"]</a></li>
+                        }
+                        <li class="nav-item"><a class="@Active("availability")" href="@Url.Content("~/my-work/availability")">@T["Availability"]</a></li>
+                        <li class="nav-item"><a class="@Active("settings")" href="@Url.Content("~/my-work/settings")">@T["Settings"]</a></li>
+                    }
+                    @if (nav.IsManager)
+                    {
+                        <li class="nav-item"><a class="@Active("approvals")" href="@Url.Content("~/my-work/approvals")">@T["Approvals"]</a></li>
+                        <li class="nav-item"><a class="@Active("team")" href="@Url.Content("~/my-work/team")">@T["Who's working"]</a></li>
+                    }
+                </ul>
+                <span class="navbar-text small">@nav.WorkerName</span>
+            </div>
+        </div>
+    </nav>
+    <main class="container my-work-main py-3">
+        @await DisplayAsync(layout.Zones["Messages"])

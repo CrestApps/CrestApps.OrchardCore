@@ -1,0 +1,22 @@
+@model MyAvailabilityViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Availability"].Value;
+}
+<partial name="_MyWorkHead" />
+
+<h1 class="h4 mb-3">@T["When I can work"]</h1>
+<div class="card">
+    <div class="card-body">
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/availability")">
+            @Html.ValidationSummary()
+            <label for="Availability" class="form-label">@T["One line per day"]</label>
+            <textarea asp-for="Availability" class="form-control font-monospace" rows="7" placeholder="Monday 09:00-17:00&#10;Tuesday 08:00-12:00 preferred&#10;Saturday unavailable"></textarea>
+            <div class="form-text">@T["Write a day and the hours you can work, add preferred for the hours you'd like, or unavailable for a day you can't. Leave it empty if you can work any time. New schedules follow it; shifts already published don't change."]</div>
+            <button type="submit" class="btn btn-success mt-3">@T["Save"]</button>
+        </form>
+    </div>
+</div>
+
+<partial name="_MyWorkFoot" />

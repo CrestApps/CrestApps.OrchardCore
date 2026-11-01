@@ -1,0 +1,84 @@
+@model MyApprovalsViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Approvals"].Value;
+    var nothing = Model.TimeOff.Count + Model.Trades.Count + Model.Claims.Count == 0;
+}
+<partial name="_MyWorkHead" />
+
+<h1 class="h4 mb-3">@T["Waiting for you"]</h1>
+@if (nothing)
+{
+    <div class="alert alert-light">@T["Nothing is waiting for a decision."]</div>
+}
+
+@if (Model.TimeOff.Count > 0)
+{
+    <h2 class="h5">@T["Time off"]</h2>
+    @foreach (var row in Model.TimeOff)
+    {
+        <div class="card mb-2 my-work-time-off">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@row.WorkerName</strong> @row.Type?.Name <span class="text-muted"><partial name="_TimeOffDates" model="row.Request" /></span>
+                    <div class="small"><partial name="_TimeOffStatus" model="row.Request.Status" /> <partial name="_TimeOffAmount" model="(row.Request.Amount, row.Type?.Unit ?? TimeOffUnit.Hours)" /> · @row.TeamName</div>
+                    @if (!string.IsNullOrEmpty(row.Request.Reason))
+                    {
+                        <div class="small text-muted">@row.Request.Reason</div>
+                    }
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                <a href="@Url.Content("~/Admin/workforce/time-off/requests/" + row.Request.ItemId)" class="btn btn-link btn-sm">@T["Details"]</a>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Trades.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Shift trades"]</h2>
+    @foreach (var row in Model.Trades)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    @if (row.Trade.Kind == ShiftTradeKind.Swap)
+                    {
+                        @T["{0} and {1} swap {2} and {3}.", row.FromName, row.ToName, row.ShiftText, row.TargetShiftText]
+                    }
+                    else
+                    {
+                        @T["{0} gives {1} to {2}.", row.FromName, row.ShiftText, row.ToName]
+                    }
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Claims.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Open shift claims"]</h2>
+    @foreach (var (shift, teamName, claims) in Model.Claims)
+    {
+        <div class="card mb-2 my-work-shift">
+            <div class="card-body py-2">
+                <strong>@shift.Start.ToString("ddd d MMM HH:mm")&ndash;@shift.End.ToString("HH:mm")</strong> <span class="text-muted">@teamName</span>
+                @foreach (var (claim, name) in claims)
+                {
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                        <span class="me-auto">@name</span>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Give the shift"]</button></form>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+<partial name="_MyWorkFoot" />

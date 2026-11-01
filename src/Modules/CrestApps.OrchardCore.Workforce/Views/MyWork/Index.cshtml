@@ -1,0 +1,105 @@
+@model MyWorkHomeViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+}
+<partial name="_MyWorkHead" />
+
+<h1 class="h4 mb-3">@T["Hello, {0}", Model.Nav.WorkerName]</h1>
+
+@if (!Model.Nav.IsWorker)
+{
+    <div class="alert alert-info">@T["Your account isn't set up as a worker yet, so there is no schedule to show. Ask your manager to link your account to your worker profile."]</div>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-muted text-uppercase">@T["Next shift"]</h2>
+                    @if (Model.NextShift is null)
+                    {
+                        <p class="mb-0">@T["No shifts in the next four weeks."]</p>
+                    }
+                    else
+                    {
+                        <p class="fs-5 mb-1"><strong>@Model.NextShift.Start.ToString("dddd d MMMM")</strong></p>
+                        <p class="mb-1">@Model.NextShift.Start.ToString("HH:mm")&ndash;@Model.NextShift.End.ToString("HH:mm") @if (!string.IsNullOrEmpty(Model.NextShift.TeamName)) {<span class="text-muted">· @Model.NextShift.TeamName</span>}</p>
+                        @if (!string.IsNullOrEmpty(Model.NextShift.Segments))
+                        {
+                            <p class="small text-muted mb-1">@Model.NextShift.Segments</p>
+                        }
+                        <p class="small mb-0" id="next-shift-countdown" data-start="@Model.NextShift.StartUtc.ToString("o")"></p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-muted text-uppercase">@T["Today"]</h2>
+                    @if (Model.Today.Count == 0)
+                    {
+                        <p class="mb-0">@T["Nothing scheduled today."]</p>
+                    }
+                    @foreach (var item in Model.Today)
+                    {
+                        <partial name="_MyShift" model="item" />
+                    }
+                    <a href="@Url.Content("~/my-work/schedule")" class="small">@T["See my schedule"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+                <h2 class="h6 text-muted text-uppercase mb-0 me-auto">@T["Notifications"]</h2>
+                @if (Model.Nav.Unread > 0)
+                {
+                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/inbox/read")"><button type="submit" class="btn btn-link btn-sm p-0">@T["Mark all read"]</button></form>
+                }
+            </div>
+            @if (Model.Inbox.Count == 0)
+            {
+                <p class="mb-0 text-muted">@T["Nothing yet. You'll see changes to your schedule, your time off and your trades here."]</p>
+            }
+            <ul class="list-group list-group-flush">
+                @foreach (var item in Model.Inbox)
+                {
+                    <li class="list-group-item px-0 @(item.ReadUtc.HasValue ? null : "fw-semibold")">
+                        <a href="@Url.Content("~/" + (item.Url ?? "my-work"))" class="text-reset text-decoration-none">@item.Title</a>
+                        @if (!string.IsNullOrEmpty(item.Body))
+                        {
+                            <div class="small text-muted fw-normal">@item.Body</div>
+                        }
+                        <div class="small text-muted fw-normal">@item.CreatedUtc.ToLocalTime().ToString("g")</div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const target = document.getElementById('next-shift-countdown');
+            if (!target) {
+                return;
+            }
+            const start = new Date(target.dataset.start);
+            const update = () => {
+                const minutes = Math.max(0, Math.round((start - new Date()) / 60000));
+                const days = Math.floor(minutes / 1440);
+                const hours = Math.floor((minutes % 1440) / 60);
+                const rest = minutes % 60;
+                target.textContent = minutes === 0 ? @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Starting now"].Value)) : @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Starts in"].Value)) + ' ' + (days ? days + 'd ' : '') + (hours || days ? hours + 'h ' : '') + rest + 'm';
+            };
+            update();
+            setInterval(update, 30000);
+        })();
+    </script>
+}
+
+<partial name="_MyWorkFoot" />

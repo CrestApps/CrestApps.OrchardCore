@@ -423,6 +423,7 @@ public sealed class WorkforceTests
                 await ShiftPlanningIndexSchema.CreateAsync(schemaBuilder);
                 await TimeOffIndexSchema.CreateAsync(schemaBuilder);
                 await LaborRulesIndexSchema.CreateAsync(schemaBuilder);
+                await PortalIndexSchema.CreateAsync(schemaBuilder);
             },
             new IIndexProvider[] { new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider() }
                 .Concat(SkillsIndexProviders.All())
@@ -430,6 +431,7 @@ public sealed class WorkforceTests
                 .Concat(ShiftPlanningIndexProviders.All())
                 .Concat(TimeOffIndexProviders.All())
                 .Concat(LaborRulesIndexProviders.All())
+                .Concat(PortalIndexProviders.All())
                 .ToArray(),
             [SkillsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName]);
     }

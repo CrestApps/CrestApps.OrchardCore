@@ -21,6 +21,7 @@ internal sealed class TimeOffApprovals
     private readonly ICalendarEventManager _eventManager;
     private readonly WorkerShiftReader _shiftReader;
     private readonly IEnumerable<ITimeOffApprovalHandler> _handlers;
+    private readonly IWorkforceNotifier _notifier;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -33,6 +34,7 @@ internal sealed class TimeOffApprovals
         ICalendarEventManager eventManager,
         WorkerShiftReader shiftReader,
         IEnumerable<ITimeOffApprovalHandler> handlers,
+        IWorkforceNotifier notifier,
         IClock clock,
         IStringLocalizer<TimeOffApprovals> stringLocalizer)
     {
@@ -43,6 +45,7 @@ internal sealed class TimeOffApprovals
         _eventManager = eventManager;
         _shiftReader = shiftReader;
         _handlers = handlers;
+        _notifier = notifier;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -132,6 +135,8 @@ internal sealed class TimeOffApprovals
 
         request.FlaggedShiftEventIds = context.OverlappingShifts.Select(shift => shift.ItemId).ToList();
 
+        await NotifyAsync(request, type, S["Your {0} is approved", type.Name], note, cancellationToken);
+
         return [];
     }
 
@@ -167,6 +172,25 @@ internal sealed class TimeOffApprovals
         {
             await _eventManager.CancelAsync(calendarEvent, Options(actor), cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Tells the worker about a decision on their time off.
+    /// </summary>
+    public Task NotifyAsync(TimeOffRequest request, TimeOffType type, string title, string note, CancellationToken cancellationToken = default)
+    {
+        var days = request.StartDate == request.EndDate
+            ? request.StartDate.ToString("ddd d MMM", null)
+            : $"{request.StartDate.ToString("ddd d MMM", null)} - {request.EndDate.ToString("ddd d MMM", null)}";
+
+        return _notifier.NotifyAsync(new WorkforceNotification
+        {
+            WorkerId = request.WorkerId,
+            Kind = WorkforceNotificationKind.TimeOff,
+            Title = title,
+            Body = string.IsNullOrWhiteSpace(note) ? days : $"{days}: {note.Trim()}",
+            Url = "my-work/time-off",
+        }, cancellationToken);
     }
 
     private static string TakenKey(TimeOffRequest request)

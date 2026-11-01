@@ -1,0 +1,136 @@
+@model MySettingsViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Settings"].Value;
+}
+<partial name="_MyWorkHead" />
+
+<h1 class="h4 mb-3">@T["Settings"]</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5">@T["Push notifications on this device"]</h2>
+        <p class="small text-muted">@T["Get a notification on this phone or computer when your schedule changes, even when My Work is closed. On a phone, add My Work to your home screen first."]</p>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-success btn-sm" id="push-on" data-key="@Model.PushPublicKey">@T["Turn on"]</button>
+            <span class="small" id="push-status" role="status"></span>
+        </div>
+        @if (Model.Devices.Count > 0)
+        {
+            <ul class="list-group list-group-flush mt-3">
+                @foreach (var device in Model.Devices)
+                {
+                    <li class="list-group-item px-0 d-flex flex-wrap align-items-center gap-2">
+                        <span class="me-auto small">@(string.IsNullOrEmpty(device.UserAgent) ? T["A device"].Value : device.UserAgent)<br /><span class="text-muted">@T["Added {0}", device.CreatedUtc.ToLocalTime().ToString("d")]@if (device.LastSentUtc.HasValue) {<text> · </text>@T["last reached {0}", device.LastSentUtc.Value.ToLocalTime().ToString("g")]}</span></span>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/push/unsubscribe")"><input type="hidden" name="endpoint" value="@device.Endpoint" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Turn off"]</button></form>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5">@T["What I hear about"]</h2>
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/settings")">
+            <fieldset class="mb-3">
+                <legend class="form-label h6">@T["How"]</legend>
+                <div class="form-check"><input class="form-check-input" type="checkbox" checked disabled id="channel-inbox" /><label class="form-check-label" for="channel-inbox">@T["My Work notifications"] <span class="text-muted small">@T["(always on)"]</span></label></div>
+                @foreach (var channel in Model.Channels)
+                {
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="channels" value="@channel.Value" id="channel-@channel.Value" checked="@channel.Enabled" /><label class="form-check-label" for="channel-@channel.Value">@channel.Label</label></div>
+                }
+            </fieldset>
+            <fieldset class="mb-3">
+                <legend class="form-label h6">@T["About"]</legend>
+                @foreach (var kind in Model.Kinds)
+                {
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="kinds" value="@kind.Value" id="kind-@kind.Value" checked="@kind.Enabled" /><label class="form-check-label" for="kind-@kind.Value">@kind.Label</label></div>
+                }
+                <div class="form-text">@T["Turned-off topics still show here in My Work."]</div>
+            </fieldset>
+            <button type="submit" class="btn btn-success">@T["Save"]</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3" id="calendar">
+    <div class="card-body">
+        <h2 class="h5">@T["My calendar app"]</h2>
+        <p class="small text-muted">@T["Subscribe to this address in Google Calendar, Outlook or your phone's calendar to see your shifts and time off there. Keep it private: anyone with it can see your schedule."]</p>
+        <div class="input-group">
+            <input type="text" class="form-control" value="@Model.FeedUrl" id="feed-url" readonly aria-label="@T["Calendar address"]" />
+            <button class="btn btn-outline-secondary" type="button" id="feed-copy">@T["Copy"]</button>
+        </div>
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/feed/renew")" class="mt-2"><button type="submit" class="btn btn-link btn-sm p-0">@T["Replace this address (the old one stops working)"]</button></form>
+    </div>
+</div>
+
+<form id="push-form">@Html.AntiForgeryToken()</form>
+<script>
+    (() => {
+        const button = document.getElementById('push-on');
+        const status = document.getElementById('push-status');
+        const messages = {
+            unsupported: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["This browser can't receive push notifications. On an iPhone, add My Work to your home screen and open it from there."].Value)),
+            denied: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Notifications are blocked for this site in the browser's settings."].Value)),
+            on: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Push notifications are on for this device."].Value)),
+            failed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Push notifications could not be turned on. Try again."].Value)),
+            copied: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Copied"].Value)),
+        };
+        const toKey = text => {
+            const padded = (text + '='.repeat((4 - text.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+            return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+        };
+
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            button.disabled = true;
+            status.textContent = messages.unsupported;
+        } else {
+            navigator.serviceWorker.ready.then(registration => registration.pushManager.getSubscription()).then(subscription => {
+                if (subscription) {
+                    status.textContent = messages.on;
+                }
+            });
+        }
+
+        button.addEventListener('click', async () => {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    status.textContent = messages.denied;
+                    return;
+                }
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(button.dataset.key) });
+                const token = document.querySelector('#push-form input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('@Url.Content("~/my-work/push/subscribe")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify(subscription.toJSON()),
+                });
+                status.textContent = response.ok ? messages.on : messages.failed;
+                if (response.ok) {
+                    setTimeout(() => location.reload(), 800);
+                }
+            } catch {
+                status.textContent = messages.failed;
+            }
+        });
+
+        document.getElementById('feed-copy').addEventListener('click', async event => {
+            const input = document.getElementById('feed-url');
+            input.select();
+            try {
+                await navigator.clipboard.writeText(input.value);
+                event.target.textContent = messages.copied;
+            } catch {
+                document.execCommand('copy');
+            }
+        });
+    })();
+</script>
+
+<partial name="_MyWorkFoot" />

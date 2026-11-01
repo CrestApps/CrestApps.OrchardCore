@@ -163,4 +163,4 @@ Open **Workforce > Blackout Dates** and choose **Add blackout dates** to block t
 | **Approve time off** | The time-off queue, requesting time off for a worker, deciding and canceling, and a worker's balances, for the teams you manage. |
 | **Adjust time-off balances** | Changing the balances of the workers of the teams you manage. |
 | **Manage time-off policies** | Types, policies, allotments and blackout dates, and giving a worker a policy of their own. |
-| **Request time off** | Requesting one's own time off. Workers use it in the self-service portal. |
+| **Request time off** | Requesting one's own time off, in the [My Work portal](./my-work-portal.md). |

@@ -1,0 +1,123 @@
+@model MyShiftsViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Shifts"].Value;
+}
+<partial name="_MyWorkHead" />
+
+<h1 class="h4 mb-3">@T["Shifts"]</h1>
+
+<h2 class="h5">@T["Open shifts"]</h2>
+@if (Model.OpenShifts.Count == 0)
+{
+    <p class="text-muted">@T["No open shifts on your teams right now."]</p>
+}
+@foreach (var row in Model.OpenShifts)
+{
+    <div class="card mb-2 my-work-shift">
+        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+            <div class="me-auto">
+                <strong>@row.Shift.Start.ToString("ddd d MMM HH:mm")&ndash;@row.Shift.End.ToString("HH:mm")</strong> <span class="text-muted">@row.TeamName</span>
+                @if (row.MyClaim is not null)
+                {
+                    <div class="small text-success">@T["You claimed it; you'll hear when it is decided."]</div>
+                }
+                @foreach (var problem in row.Problems)
+                {
+                    <div class="small text-danger">@problem</div>
+                }
+            </div>
+            @if (row.MyClaim is not null)
+            {
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/shifts/withdraw/" + row.Shift.ItemId)"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Withdraw"]</button></form>
+            }
+            else if (row.Problems.Count == 0)
+            {
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/shifts/claim/" + row.Shift.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Claim"]</button></form>
+            }
+        </div>
+    </div>
+}
+
+<h2 class="h5 mt-4">@T["Offered to me"]</h2>
+@if (Model.OfferedToMe.Count == 0)
+{
+    <p class="text-muted">@T["No shifts offered to you."]</p>
+}
+@foreach (var row in Model.OfferedToMe)
+{
+    <div class="card mb-2">
+        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+            <div class="me-auto">
+                @if (row.Trade.Kind == ShiftTradeKind.Swap)
+                {
+                    @T["{0} wants to swap their {1} for your {2}.", row.FromName, row.ShiftText, row.TargetShiftText]
+                }
+                else if (row.Trade.TargetWorkerId is null)
+                {
+                    @T["{0} gives away their shift of {1}; anyone can pick it up.", row.FromName, row.ShiftText]
+                }
+                else
+                {
+                    @T["{0} offers you their shift of {1}.", row.FromName, row.ShiftText]
+                }
+                @if (!string.IsNullOrEmpty(row.Trade.Note))
+                {
+                    <div class="small text-muted">@row.Trade.Note</div>
+                }
+            </div>
+            <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/" + row.Trade.ItemId + "/accept")"><button type="submit" class="btn btn-success btn-sm">@T["Accept"]</button></form>
+            @if (row.Trade.TargetWorkerId is not null)
+            {
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/" + row.Trade.ItemId + "/reject")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn down"]</button></form>
+            }
+        </div>
+    </div>
+}
+
+<h2 class="h5 mt-4">@T["My shifts"]</h2>
+@if (Model.MyShifts.Count == 0)
+{
+    <p class="text-muted">@T["No upcoming shifts."]</p>
+}
+@foreach (var shift in Model.MyShifts)
+{
+    var offered = Model.MyOffers.FirstOrDefault(offer => offer.Trade.ShiftEventId == shift.EventId);
+    <div class="card mb-2 my-work-shift">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <strong class="me-auto">@shift.Start.ToString("ddd d MMM HH:mm")&ndash;@shift.End.ToString("HH:mm") <span class="text-muted fw-normal">@shift.TeamName</span></strong>
+                @if (offered is not null)
+                {
+                    <span class="badge text-bg-warning fw-normal">@(offered.Trade.Status == ShiftTradeStatus.Accepted ? T["Accepted; waits for a manager"] : offered.ToName is null ? T["Offered to anyone"] : T["Offered to {0}", offered.ToName])</span>
+                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/" + offered.Trade.ItemId + "/cancel")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take back"]</button></form>
+                }
+                else
+                {
+                    <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#trade-@shift.EventId" aria-expanded="false">@T["Trade"]</button>
+                }
+            </div>
+            @if (offered is null)
+            {
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/offer")" class="collapse mt-2" id="trade-@shift.EventId">
+                    <input type="hidden" name="shiftEventId" value="@shift.EventId" />
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small" for="give-@shift.EventId">@T["Give it to"]</label>
+                            <select name="targetWorkerId" id="give-@shift.EventId" class="form-select form-select-sm" asp-items="Model.Colleagues"><option value="">@T["Anyone who can take it"]</option></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small" for="swap-@shift.EventId">@T["Or swap it for"]</label>
+                            <select name="swapFor" id="swap-@shift.EventId" class="form-select form-select-sm" asp-items="Model.ColleagueShifts"><option value="">@T["No swap"]</option></select>
+                        </div>
+                        <div class="col-12"><input type="text" name="note" class="form-control form-control-sm" placeholder="@T["Note to your colleague (optional)"]" aria-label="@T["Note"]" /></div>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm mt-2">@T["Offer"]</button>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+<partial name="_MyWorkFoot" />
