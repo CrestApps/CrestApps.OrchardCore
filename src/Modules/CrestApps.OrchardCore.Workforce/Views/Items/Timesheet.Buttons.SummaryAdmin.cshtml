@@ -1,0 +1,3 @@
+@model ShapeViewModel<TimesheetRowViewModel>
+
+<a asp-controller="Timesheets" asp-action="Details" asp-route-id="@Model.Value.Timesheet.ItemId" class="btn btn-primary btn-sm">@(Model.Value.Timesheet.Status == TimesheetStatus.Submitted ? T["Review"] : T["Open"])</a>

@@ -1,0 +1,44 @@
+@model TimeClockKioskEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimeClockKiosksEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Kiosk"] : T["Edit '{0}'", Model.Name])">
+        <breadcrumb-item id="WorkforceTimeClockKiosks" action="Index" controller="TimeClockKiosks" area="CrestApps.OrchardCore.Workforce">@T["Time Clock Kiosks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    @if (!string.IsNullOrEmpty(Model.NewAddress))
+    {
+        <div class="alert alert-success">
+            <p class="mb-2"><strong>@T["The kiosk's address"]</strong></p>
+            <div class="input-group mb-2">
+                <input type="text" class="form-control font-monospace" value="@Model.NewAddress" id="kiosk-address" readonly aria-label="@T["The kiosk's address"]" />
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('kiosk-address').value).then(() => { this.textContent = '@T["Copied"]'; })">@T["Copy"]</button>
+            </div>
+            <p class="mb-0 small">@T["Open it on the device and keep it open. It is shown only now; if it is lost, give the kiosk a new address."]</p>
+        </div>
+    }
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /><span class="hint">@T["Where it stands, such as Warehouse back door."]</span></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="TeamId" class="ocat-label">@T["For"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 22rem"><option value="">@T["Any worker"]</option></select>
+                <span class="hint">@T["Optional. Only workers of this team and its sub-teams can clock in on it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.Id))
+{
+    <form method="post" asp-action="Renew" asp-route-id="@Model.Id" class="mt-4">
+        <h2 class="h5">@T["Address"]</h2>
+        <p class="text-muted small">@T["Give the kiosk a new address when the old one is lost or seen by someone it shouldn't be. The old one stops working."]</p>
+        <button type="submit" class="btn btn-secondary" data-title="@T["New address"]" data-message="@T["The kiosk's current address stops working at once. Continue?"]">@T["Give it a new address"]</button>
+    </form>
+}

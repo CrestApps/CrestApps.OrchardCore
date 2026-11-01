@@ -1,0 +1,69 @@
+@model PayrollColumnsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforcePayrollExportColumns" title="@T["CSV Columns"]">
+        <breadcrumb-item id="WorkforcePayrollExport" action="Index" controller="PayrollExport" area="CrestApps.OrchardCore.Workforce">@T["Payroll Export"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Columns" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <p class="text-muted small">@T["The columns of the payroll CSV file, in order. There is a row for each worker and pay code, and for each day, activity or job when a column asks for it. Clear a heading to drop the column."]</p>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th scope="col">@T["Heading"]</th><th scope="col">@T["Holds"]</th></tr></thead>
+                    <tbody>
+                        @for (var index = 0; index < Model.Columns.Count; index++)
+                        {
+                            var column = Model.Columns[index];
+                            <tr>
+                                <td><input type="text" name="Columns[@index].Header" value="@column.Header" class="form-control" aria-label="@T["Heading"]" /></td>
+                                <td>
+                                    <select name="Columns[@index].Field" class="form-select" aria-label="@T["Holds"]">
+                                <option value="WorkerExternalId" selected="@(column.Field == PayrollCsvField.WorkerExternalId)">@T["Payroll id (or the employee number)"]</option>
+                                <option value="EmployeeNumber" selected="@(column.Field == PayrollCsvField.EmployeeNumber)">@T["Employee number"]</option>
+                                <option value="WorkerName" selected="@(column.Field == PayrollCsvField.WorkerName)">@T["Name"]</option>
+                                <option value="PayCode" selected="@(column.Field == PayrollCsvField.PayCode)">@T["Pay code"]</option>
+                                <option value="Date" selected="@(column.Field == PayrollCsvField.Date)">@T["Day (a row per day)"]</option>
+                                <option value="Hours" selected="@(column.Field == PayrollCsvField.Hours)">@T["Hours"]</option>
+                                <option value="Rate" selected="@(column.Field == PayrollCsvField.Rate)">@T["Rate an hour"]</option>
+                                <option value="Amount" selected="@(column.Field == PayrollCsvField.Amount)">@T["Amount"]</option>
+                                <option value="PeriodStart" selected="@(column.Field == PayrollCsvField.PeriodStart)">@T["Period start"]</option>
+                                <option value="PeriodEnd" selected="@(column.Field == PayrollCsvField.PeriodEnd)">@T["Period end"]</option>
+                                <option value="ActivityCode" selected="@(column.Field == PayrollCsvField.ActivityCode)">@T["Activity (a row per activity)"]</option>
+                                <option value="Job" selected="@(column.Field == PayrollCsvField.Job)">@T["Job (a row per job)"]</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        }
+                        <tr>
+                            <td><input type="text" name="Columns[@Model.Columns.Count].Header" class="form-control" placeholder="@T["New column"]" aria-label="@T["New column heading"]" /></td>
+                            <td>
+                                <select name="Columns[@Model.Columns.Count].Field" class="form-select" aria-label="@T["Holds"]">
+                                <option value="WorkerExternalId">@T["Payroll id (or the employee number)"]</option>
+                                <option value="EmployeeNumber">@T["Employee number"]</option>
+                                <option value="WorkerName">@T["Name"]</option>
+                                <option value="PayCode">@T["Pay code"]</option>
+                                <option value="Date">@T["Day (a row per day)"]</option>
+                                <option value="Hours">@T["Hours"]</option>
+                                <option value="Rate">@T["Rate an hour"]</option>
+                                <option value="Amount">@T["Amount"]</option>
+                                <option value="PeriodStart">@T["Period start"]</option>
+                                <option value="PeriodEnd">@T["Period end"]</option>
+                                <option value="ActivityCode">@T["Activity (a row per activity)"]</option>
+                                <option value="Job">@T["Job (a row per job)"]</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <button class="btn btn-outline-secondary" type="submit" name="reset" value="true">@T["Use the built-in columns"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

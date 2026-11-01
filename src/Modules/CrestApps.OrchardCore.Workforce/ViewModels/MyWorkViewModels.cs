@@ -44,6 +44,11 @@ public class MyWorkNavViewModel
     /// Gets or sets whether the user manages teams.
     /// </summary>
     public bool IsManager { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the worker clocks in and out, so the timesheet is shown.
+    /// </summary>
+    public bool HasTimeClock { get; set; }
 }
 
 /// <summary>
@@ -126,6 +131,11 @@ public class MyWorkHomeViewModel
     /// Gets or sets the latest notifications.
     /// </summary>
     public IList<WorkforceInboxItem> Inbox { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets where the worker stands on the clock; <see langword="null"/> when they don't clock in.
+    /// </summary>
+    public TimeClockStatus Clock { get; set; }
 }
 
 /// <summary>
@@ -390,6 +400,32 @@ public class MySettingsViewModel
 /// <summary>
 /// A manager's approvals.
 /// </summary>
+public class MyTimesheetViewModel
+{
+    /// <summary>
+    /// Gets or sets the portal menu.
+    /// </summary>
+    public MyWorkNavViewModel Nav { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timesheet.
+    /// </summary>
+    public TimesheetDetailsViewModel Details { get; set; }
+
+    /// <summary>
+    /// Gets or sets why there is no timesheet.
+    /// </summary>
+    public string Problem { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the worker attests to.
+    /// </summary>
+    public string Attestation { get; set; }
+}
+
+/// <summary>
+/// The approvals waiting for a manager in the My Work portal.
+/// </summary>
 public class MyApprovalsViewModel
 {
     /// <summary>
@@ -426,6 +462,26 @@ public class MyApprovalsViewModel
     /// Gets or sets whether the user can decide claims.
     /// </summary>
     public bool CanClaims { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user approves timesheets.
+    /// </summary>
+    public bool CanTimesheets { get; set; }
+
+    /// <summary>
+    /// Gets or sets the submitted timesheets, with their worker's name.
+    /// </summary>
+    public IList<(Timesheet Timesheet, string WorkerName)> Timesheets { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the punches workers asked for, with the worker's name and the punch's local time.
+    /// </summary>
+    public IList<(PunchCorrection Correction, string WorkerName, string When)> Corrections { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the open attendance exceptions, with their worker's name.
+    /// </summary>
+    public IList<(AttendanceException Exception, string WorkerName)> Exceptions { get; set; } = [];
 }
 
 /// <summary>

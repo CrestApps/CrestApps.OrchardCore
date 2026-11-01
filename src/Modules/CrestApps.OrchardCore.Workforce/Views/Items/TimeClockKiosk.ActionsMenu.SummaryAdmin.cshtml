@@ -1,0 +1,3 @@
+@model ShapeViewModel<TimeClockKiosk>
+
+<a asp-controller="TimeClockKiosks" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this kiosk? Its address stops working at once."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

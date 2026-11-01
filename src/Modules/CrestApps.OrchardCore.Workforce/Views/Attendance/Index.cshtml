@@ -1,0 +1,38 @@
+@model AttendanceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceAttendance" title="@T["Attendance"]" /></zone>
+
+<form asp-action="Index" method="get" id="attendance-filter">
+    <input type="hidden" name="workerId" value="@Model.WorkerId" />
+</form>
+
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="hidden" name="Options.BulkAction" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+    <input type="hidden" asp-for="TeamId" />
+    <input type="hidden" asp-for="Status" />
+    <input type="hidden" asp-for="Kind" />
+    <input type="hidden" asp-for="WorkerId" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <p class="mb-0 text-muted small">@T["Late starts, early finishes, missed punches, no-shows, long meals and punches away from the site, found against the published schedule when timesheets are worked out. Confirm them, or excuse them so they earn no points."]</p>
+        </div>
+    </div>
+
+    @{
+        Model.List.ToolbarActions = await New.AttendanceFilter(ViewModel: Model, FormId: "attendance-filter");
+    }
+
+    <admin-list name="WorkforceAttendance" context="Model.List" bulk-actions="Model.BulkActions" empty-message="@T["<strong>Nothing here!</strong> No exceptions match."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["Exception"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

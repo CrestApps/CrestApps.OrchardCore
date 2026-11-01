@@ -22,8 +22,9 @@ Every signed-in user can open My Work. A user sees their own schedule once a man
 
 | Page | What it shows |
 | --- | --- |
-| **Home** | The next shift with its breaks and a countdown, what is on today, and the latest notifications. **Mark all read** clears the count in the menu. |
+| **Home** | The time clock (when the worker clocks in), the next shift with its breaks and a countdown, what is on today, and the latest notifications. **Mark all read** clears the count in the menu. |
 | **Schedule** | The worker's published shifts and approved time off for the next four weeks, by day. |
+| **Timesheet** | The worker's hours for each pay period, with their punches, anything that looks off, a way to ask for a missed punch, and **Submit**. It appears when the [Time Clock](./time-clock.md) is on and their team has a time clock policy. |
 | **Time off** | What is available under each policy, a form to ask for time off (with **Check first** to see what it counts and what would happen to it), and the worker's requests, which they can withdraw, or cancel once approved. It appears when [Time Off](./time-off.md) is on. |
 | **Shifts** | Open shifts of the worker's teams they can **Claim** (or why they can't), shifts offered to them to **Accept** or **Turn down**, and their own shifts to **Trade**: give one to a colleague or anyone who can take it, or swap it for a colleague's shift. It appears when [Shift Planning](./shift-planning.md) is on. |
 | **Availability** | When the worker can work, one line per day, such as *Monday 09:00-17:00*, *Tuesday 08:00-12:00 preferred* or *Saturday unavailable*. New schedules follow it. |
@@ -57,7 +58,7 @@ A user who manages teams also sees:
 
 | Page | What it shows |
 | --- | --- |
-| **Approvals** | Time off waiting for a decision, trades accepted and waiting for approval, and open shifts with claims, each with buttons to approve, decline or give the shift. **Details** opens the request in the admin. |
+| **Approvals** | Time off waiting for a decision, trades accepted and waiting for approval, open shifts with claims, submitted timesheets, punches workers asked for, and open attendance exceptions, each with buttons to decide them. **Details** and **Review** open them in the admin. |
 | **Who's working** | Who is on shift now in the teams they manage, with their hours and whether they are on a break, and who is off. |
 
 ## Installing My Work

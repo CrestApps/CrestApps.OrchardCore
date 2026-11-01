@@ -16,6 +16,26 @@
         <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="2"></textarea></div></div>
         <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select" style="max-width: 22rem"><option value="">@T["The site's time zone"]</option></select><span class="hint">@T["Where the team works. Its days start and end at midnight in this time zone."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="Address" class="ocat-label">@T["Address"]</label><div class="ocat-end"><input asp-for="Address" class="form-control" /></div></div>
+        @if (Model.ShowTimeClock)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="Latitude" class="ocat-label">@T["Site coordinates"]</label>
+                <div class="ocat-end">
+                    <div class="d-flex flex-wrap gap-2">
+                        <input asp-for="Latitude" type="number" step="0.000001" min="-90" max="90" class="form-control" style="max-width: 12rem" placeholder="@T["Latitude"]" aria-label="@T["Latitude"]" />
+                        <input asp-for="Longitude" type="number" step="0.000001" min="-180" max="180" class="form-control" style="max-width: 12rem" placeholder="@T["Longitude"]" aria-label="@T["Longitude"]" />
+                    </div>
+                    <span class="hint">@T["Optional. Where workers must be to clock in when their time clock policy asks for the work site. Sub-teams use their parent's."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="TimeClockPolicyId" class="ocat-label">@T["Time clock policy"]</label>
+                <div class="ocat-end">
+                    <select asp-for="TimeClockPolicyId" asp-items="Model.TimeClockPolicyOptions" class="form-select" style="max-width: 22rem"><option value="">@T["As the parent team"]</option></select>
+                    <span class="hint">@T["How the team's time is clocked and paid. A team with none, and no parent with one, doesn't clock time."]</span>
+                </div>
+            </div>
+        }
         <div class="ocat-wrapper"><label asp-for="LinkedRoleName" class="ocat-label">@T["Role that can read the calendar"]</label><div class="ocat-end"><input asp-for="LinkedRoleName" class="form-control" style="max-width: 22rem" /><span class="hint">@T["Optional. Users in this role can read the team's Workforce calendar, as its members can."]</span></div></div>
         @if (Model.ShowShiftPlanning)
         {

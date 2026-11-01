@@ -103,4 +103,35 @@ public static class WorkforcePermissions
     /// Request one's own time off.
     /// </summary>
     public static readonly Permission RequestTimeOff = new("RequestTimeOff", LocalizationSource.Create("Request time off", typeof(WorkforcePermissions)));
+
+    /// <summary>
+    /// Manage time clock policies, pay periods, pay codes and kiosks.
+    /// </summary>
+    public static readonly Permission ManageTimeClockPolicies = new("ManageTimeClockPolicies", LocalizationSource.Create("Manage time clock policies", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Approve, reject, reopen and lock the timesheets of the workers of the teams the user manages, and decide their
+    /// attendance exceptions and punch corrections.
+    /// </summary>
+    public static readonly Permission ApproveTimesheets = new("ApproveTimesheets", LocalizationSource.Create("Approve timesheets", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Add, change and remove the punches of the workers of the teams the user manages.
+    /// </summary>
+    public static readonly Permission EditPunches = new("EditPunches", LocalizationSource.Create("Edit punches", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Export locked timesheets for payroll.
+    /// </summary>
+    public static readonly Permission ExportPayroll = new("ExportPayroll", LocalizationSource.Create("Export payroll", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// See and change workers' pay rates.
+    /// </summary>
+    public static readonly Permission ViewPayRates = new("ViewPayRates", LocalizationSource.Create("View pay rates", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
+    /// Clock in and out, and see one's own timesheet, in the My Work portal.
+    /// </summary>
+    public static readonly Permission PunchTime = new("PunchTime", LocalizationSource.Create("Clock in and out", typeof(WorkforcePermissions)));
 }

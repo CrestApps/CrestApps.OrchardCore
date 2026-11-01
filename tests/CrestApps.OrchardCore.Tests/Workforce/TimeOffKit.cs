@@ -176,7 +176,7 @@ internal static class TimeOffKit
     /// <summary>
     /// A lock that really excludes, one semaphore per key, for the race tests.
     /// </summary>
-    private sealed class KeyedLock : IDistributedLock
+    internal sealed class KeyedLock : IDistributedLock
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores = new(StringComparer.Ordinal);
 

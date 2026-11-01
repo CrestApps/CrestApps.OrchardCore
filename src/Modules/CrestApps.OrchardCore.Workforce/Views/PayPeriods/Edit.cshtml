@@ -1,0 +1,61 @@
+@model PayPeriodEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforcePayPeriodsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Pay Periods"] : T["Edit '{0}'", Model.Name])">
+        <breadcrumb-item id="WorkforcePayPeriods" action="Index" controller="PayPeriods" area="CrestApps.OrchardCore.Workforce">@T["Pay Periods"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="Frequency" class="ocat-label">@T["Paid"]</label>
+            <div class="ocat-end">
+                <select asp-for="Frequency" class="form-select" style="max-width: 22rem">
+                    <option value="Weekly">@T["Every week"]</option>
+                    <option value="Biweekly">@T["Every two weeks"]</option>
+                    <option value="SemiMonthly">@T["Twice a month (1st-15th, 16th-end)"]</option>
+                    <option value="Monthly">@T["Every month"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="AnchorDate" class="ocat-label">@T["A period starts on"]</label>
+            <div class="ocat-end">
+                <input asp-for="AnchorDate" type="date" class="form-control" style="max-width: 12rem" />
+                <span class="hint">@T["Any first day of a period, for weekly and two-weekly periods. The others follow from it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="WeekStart" class="ocat-label">@T["Overtime weeks start on"]</label>
+            <div class="ocat-end">
+                <select asp-for="WeekStart" class="form-select" style="max-width: 12rem">
+                    @foreach (var day in new[] { DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday })
+                    {
+                        <option value="@day">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(day)</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+        @if (Model.Upcoming.Count > 0)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Next periods"]</span>
+                <div class="ocat-end">
+                    <ul class="list-unstyled mb-0 small">
+                        @foreach (var (start, end) in Model.Upcoming)
+                        {
+                            <li>@start.ToString("ddd d MMM") – @end.ToString("ddd d MMM yyyy")</li>
+                        }
+                    </ul>
+                    <span class="hint">@T["As saved. They change when you save a new frequency or start."]</span>
+                </div>
+            </div>
+        }
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>

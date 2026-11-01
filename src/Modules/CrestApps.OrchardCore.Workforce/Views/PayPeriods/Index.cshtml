@@ -1,0 +1,23 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforcePayPeriods" title="@T["Pay Periods"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["The periods timesheets cover, and the week overtime counts in."]</p>
+            </div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add pay periods"]</a></div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="WorkforcePayPeriods" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are none yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Pay periods"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

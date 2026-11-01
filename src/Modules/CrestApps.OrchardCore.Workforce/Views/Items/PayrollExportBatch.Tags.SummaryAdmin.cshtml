@@ -1,0 +1,9 @@
+@model ShapeViewModel<PayrollExportBatch>
+
+<span class="badge ta-badge fw-normal">@Model.Value.PeriodStart.ToString("d MMM") – @Model.Value.PeriodEnd.ToString("d MMM yyyy")</span>
+<span class="badge ta-badge fw-normal">@T.Plural(Model.Value.TimesheetIds.Count, "1 timesheet", "{0} timesheets")</span>
+<span class="badge ta-badge fw-normal">@T.Plural(Model.Value.RowCount, "1 row", "{0} rows")</span>
+@if (!string.IsNullOrEmpty(Model.Value.CreatedBy))
+{
+    <span class="badge ta-badge fw-normal">@T["By {0}", Model.Value.CreatedBy]</span>
+}

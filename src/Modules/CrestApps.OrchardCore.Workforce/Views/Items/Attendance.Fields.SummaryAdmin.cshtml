@@ -1,0 +1,7 @@
+@model ShapeViewModel<AttendanceRowViewModel>
+@{
+    var exception = Model.Value.Exception;
+}
+<span class="fw-semibold">@(Model.Value.Worker?.DisplayName ?? T["A removed worker"].Value)</span>
+<span class="ms-1">@CrestApps.OrchardCore.Workforce.Controllers.AttendanceKinds.Name(T, exception.Kind)</span>
+<span class="text-muted small ms-1">@exception.Date.ToString("ddd d MMM yyyy")</span>

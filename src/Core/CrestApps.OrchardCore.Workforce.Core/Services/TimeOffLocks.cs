@@ -30,6 +30,22 @@ internal sealed class TimeOffLocks
     }
 
     /// <summary>
+    /// The lock a worker's punches and timesheets change under.
+    /// </summary>
+    public static string TimeClock(string workerId)
+    {
+        return "WORKFORCE_TIMECLOCK_" + workerId;
+    }
+
+    /// <summary>
+    /// The lock a pay period's payroll export runs under.
+    /// </summary>
+    public static string PayrollExport(string calendarId, DateOnly periodStart)
+    {
+        return $"WORKFORCE_PAYROLL_{calendarId}_{periodStart:yyyyMMdd}";
+    }
+
+    /// <summary>
     /// Takes the locks, or returns <see langword="null"/> when one is held too long by someone else.
     /// </summary>
     public async Task<List<ILocker>> LockAsync(IEnumerable<string> keys)

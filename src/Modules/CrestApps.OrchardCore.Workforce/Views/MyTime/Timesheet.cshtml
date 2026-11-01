@@ -1,0 +1,164 @@
+@model MyTimesheetViewModel
+@using CrestApps.OrchardCore.Calendars.Core
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Timesheet"].Value;
+    var details = Model.Details;
+}
+<partial name="_MyWorkHead" />
+
+@if (details is null)
+{
+    <h1 class="h4 mb-3">@T["Timesheet"]</h1>
+    <div class="alert alert-info">@Model.Problem</div>
+}
+else
+{
+    var timesheet = details.Timesheet;
+    string Local(DateTime utc) => CalendarTime.ToLocal(utc, details.TimeZoneId).ToString("t");
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a href="@Url.Content("~/my-work/timesheet?date=" + details.PreviousPeriod?.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Previous period"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+        <h1 class="h4 mb-0">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM yyyy")</h1>
+        @if (details.NextPeriod.HasValue)
+        {
+            <a href="@Url.Content("~/my-work/timesheet?date=" + details.NextPeriod.Value.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Next period"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+        }
+        <span class="badge text-bg-light border fw-normal">@(timesheet.Status switch
+        {
+            TimesheetStatus.Submitted => T["Sent to your manager"],
+            TimesheetStatus.Approved => T["Approved"],
+            TimesheetStatus.Rejected => T["Sent back to you"],
+            TimesheetStatus.Locked => T["Paid"],
+            TimesheetStatus.Reopened => T["Reopened"],
+            _ => T["Open"],
+        })</span>
+    </div>
+
+    @if (timesheet.Status == TimesheetStatus.Rejected && !string.IsNullOrEmpty(timesheet.RejectionReason))
+    {
+        <div class="alert alert-warning">@T["Your manager asks: {0}", timesheet.RejectionReason]</div>
+    }
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="border rounded px-3 py-2 text-center bg-body">
+            <div class="fs-5 fw-semibold">@timesheet.TotalHours.ToString("0.##")</div>
+            <div class="small text-muted">@T["Hours"]</div>
+        </div>
+        @foreach (var (code, hours) in details.Totals.Where(total => total.Code.Kind != PayCodeKind.Regular || details.Totals.Count > 1))
+        {
+            <div class="border rounded px-3 py-2 text-center bg-body">
+                <div class="fs-5 fw-semibold">@hours.ToString("0.##")</div>
+                <div class="small text-muted">@code.Name</div>
+            </div>
+        }
+        @if (details.OnTheClockSinceUtc.HasValue)
+        {
+            <div class="border border-success rounded px-3 py-2 text-center bg-body">
+                <div class="fs-5 fw-semibold">@Local(details.OnTheClockSinceUtc.Value)</div>
+                <div class="small text-muted">@T["On the clock since"]</div>
+            </div>
+        }
+    </div>
+
+    <div class="list-group mb-3">
+        @foreach (var day in details.Days.Where(day => day.Punches.Count > 0 || day.Lines.Count > 0 || day.Exceptions.Count > 0))
+        {
+            <div class="list-group-item">
+                <div class="d-flex flex-wrap align-items-baseline gap-2">
+                    <strong class="me-auto">@day.Date.ToString("dddd d MMM")</strong>
+                    <span class="fw-semibold">@T["{0} h", day.Lines.Sum(line => line.Hours).ToString("0.##")]</span>
+                </div>
+                @if (day.Punches.Count > 0)
+                {
+                    <div class="small text-muted">@string.Join(" · ", day.Punches.Select(punch => Local(punch.Utc) + " " + PunchName(punch.Kind)))</div>
+                }
+                @foreach (var line in day.Lines.Where(line => line.Source != TimesheetLineSource.Punches || (line.PayCodeId is not null && details.PayCodes.TryGetValue(line.PayCodeId, out var code) && code.Kind != PayCodeKind.Regular)))
+                {
+                    <div class="small">@line.Hours.ToString("0.##") @(line.PayCodeId is not null && details.PayCodes.TryGetValue(line.PayCodeId, out var lineCode) ? lineCode.Name : null)</div>
+                }
+                @foreach (var exception in day.Exceptions.Where(exception => exception.Status != AttendanceExceptionStatus.Excused))
+                {
+                    <div class="small text-warning-emphasis"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@CrestApps.OrchardCore.Workforce.Controllers.AttendanceKinds.Name(T, exception.Kind)@(exception.Minutes > 0 ? " · " + T.GetString("{0} min", exception.Minutes).Value : null)</div>
+                }
+            </div>
+        }
+        @if (!details.Days.Any(day => day.Punches.Count > 0 || day.Lines.Count > 0))
+        {
+            <div class="list-group-item text-muted">@T["No time in this period yet."]</div>
+        }
+    </div>
+
+    @if (details.Corrections.Count > 0)
+    {
+        <h2 class="h6">@T["Punches you asked for"]</h2>
+        <ul class="small mb-3">
+            @foreach (var correction in details.Corrections)
+            {
+                <li>@PunchName(correction.Kind) @(CalendarTime.ToLocal(correction.Utc, details.TimeZoneId).ToString("ddd d MMM") + ", " + CalendarTime.ToLocal(correction.Utc, details.TimeZoneId).ToString("t")) <span class="text-muted">· @T["waiting for your manager"]</span></li>
+            }
+        </ul>
+    }
+
+    @if (timesheet.IsEditable)
+    {
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="h6">@T["Forgot to punch?"]</h2>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/timesheet/correction")" class="row g-2">
+                            <div class="col-12">
+                                <select name="kind" class="form-select" aria-label="@T["Punch"]">
+                                    <option value="In">@T["Clocked in"]</option>
+                                    <option value="Out" selected>@T["Clocked out"]</option>
+                                    <option value="MealStart">@T["Meal"]</option>
+                                    <option value="MealEnd">@T["Back from meal"]</option>
+                                </select>
+                            </div>
+                            <div class="col-6"><input type="date" name="date" class="form-control" min="@timesheet.PeriodStart.ToString("yyyy-MM-dd")" max="@timesheet.PeriodEnd.ToString("yyyy-MM-dd")" value="@(details.Days.LastOrDefault(day => day.Punches.Count > 0)?.Date.ToString("yyyy-MM-dd") ?? timesheet.PeriodStart.ToString("yyyy-MM-dd"))" aria-label="@T["Day"]" required /></div>
+                            <div class="col-6"><input type="time" name="time" class="form-control" aria-label="@T["Time"]" required /></div>
+                            <div class="col-12"><input type="text" name="reason" class="form-control" placeholder="@T["What happened"]" aria-label="@T["What happened"]" required /></div>
+                            <div class="col-12"><button type="submit" class="btn btn-outline-secondary">@T["Ask for the punch"]</button></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="h6">@T["Submit your timesheet"]</h2>
+                        @if (timesheet.OpenExceptions > 0)
+                        {
+                            <p class="small text-warning-emphasis">@T.Plural(timesheet.OpenExceptions, "Something looks off on 1 day. Ask for any punch you missed first.", "Something looks off on {0} days. Ask for any punch you missed first.")</p>
+                        }
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/timesheet/" + timesheet.ItemId + "/submit")">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="attest" value="true" id="attest" required />
+                                <label class="form-check-label" for="attest">@T[Model.Attestation]</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">@T["Submit"]</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<partial name="_MyWorkFoot" />
+@functions {
+    private string PunchName(TimePunchKind kind) => kind switch
+    {
+        TimePunchKind.In => T["Clocked in"].Value,
+        TimePunchKind.Out => T["Clocked out"].Value,
+        TimePunchKind.MealStart => T["Meal"].Value,
+        TimePunchKind.MealEnd => T["Back from meal"].Value,
+        TimePunchKind.BreakStart => T["Break"].Value,
+        TimePunchKind.BreakEnd => T["Back from break"].Value,
+        TimePunchKind.ActivityChange => T["Changed activity"].Value,
+        TimePunchKind.JobStart => T["Started a job"].Value,
+        _ => T["Finished a job"].Value,
+    };
+}

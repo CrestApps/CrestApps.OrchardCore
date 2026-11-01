@@ -28,6 +28,12 @@
         .my-work-nav .nav-link { white-space: nowrap; }
         .my-work-shift { border-left: .3rem solid #2b8a3e; }
         .my-work-time-off { border-left: .3rem solid #e8590c; }
+        @* Notifier messages, styled as Bootstrap alerts. *@
+        .message { padding: .75rem 1rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: var(--bs-border-radius); }
+        .message-success { color: var(--bs-success-text-emphasis); background: var(--bs-success-bg-subtle); border-color: var(--bs-success-border-subtle); }
+        .message-information { color: var(--bs-info-text-emphasis); background: var(--bs-info-bg-subtle); border-color: var(--bs-info-border-subtle); }
+        .message-warning { color: var(--bs-warning-text-emphasis); background: var(--bs-warning-bg-subtle); border-color: var(--bs-warning-border-subtle); }
+        .message-error { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); border-color: var(--bs-danger-border-subtle); }
     </style>
 </head>
 @* The page body opens here and closes in _MyWorkFoot. *@
@@ -42,6 +48,10 @@
                     @if (nav.IsWorker)
                     {
                         <li class="nav-item"><a class="@Active("schedule")" href="@Url.Content("~/my-work/schedule")">@T["Schedule"]</a></li>
+                        @if (nav.HasTimeClock)
+                        {
+                            <li class="nav-item"><a class="@Active("timesheet")" href="@Url.Content("~/my-work/timesheet")">@T["Timesheet"]</a></li>
+                        }
                         @if (nav.HasTimeOff)
                         {
                             <li class="nav-item"><a class="@Active("time-off")" href="@Url.Content("~/my-work/time-off")">@T["Time off"]</a></li>

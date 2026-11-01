@@ -72,6 +72,11 @@ public sealed class WorkforceTeam : CatalogItem, INameAwareModel, IModifiedUtcAw
     public TimeOffShiftHandling? TimeOffShiftHandling { get; set; }
 
     /// <summary>
+    /// Gets or sets the time clock policy; <see langword="null"/> to use the parent team's.
+    /// </summary>
+    public string TimeClockPolicyId { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the team is in use.
     /// </summary>
     public bool Enabled { get; set; } = true;

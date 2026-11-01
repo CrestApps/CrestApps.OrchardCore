@@ -1,0 +1,21 @@
+@model ShapeViewModel<AttendanceRowViewModel>
+@{
+    var exception = Model.Value.Exception;
+}
+@if (exception.Minutes > 0)
+{
+    <span class="badge ta-badge fw-normal">@T["{0} min", exception.Minutes]</span>
+}
+@if (exception.Points > 0)
+{
+    <span class="badge ta-badge fw-normal">@T.Plural((int)Math.Ceiling(exception.Points), "1 point", "{0} points")</span>
+}
+<span class="badge @(exception.Status switch { AttendanceExceptionStatus.Excused => "text-bg-success", AttendanceExceptionStatus.Confirmed => "text-bg-secondary", _ => "text-bg-warning" }) fw-normal">@(exception.Status switch { AttendanceExceptionStatus.Excused => T["Excused"], AttendanceExceptionStatus.Confirmed => T["Confirmed"], _ => T["Open"] })</span>
+@if (!string.IsNullOrEmpty(Model.Value.TeamName))
+{
+    <span class="badge ta-badge fw-normal">@Model.Value.TeamName</span>
+}
+@if (!string.IsNullOrEmpty(exception.Note))
+{
+    <span class="text-muted small">@exception.Note</span>
+}

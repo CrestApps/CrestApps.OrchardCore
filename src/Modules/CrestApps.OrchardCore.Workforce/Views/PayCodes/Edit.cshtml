@@ -1,0 +1,96 @@
+@model PayCodeEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="WorkforcePayCodesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Pay Code"] : T["Edit '{0}'", Model.Name])">
+        <breadcrumb-item id="WorkforcePayCodes" action="Index" controller="PayCodes" area="CrestApps.OrchardCore.Workforce">@T["Pay Codes"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Code" class="ocat-label ocat-label-required">@T["Code"]</label><div class="ocat-end"><input asp-for="Code" class="form-control text-uppercase" style="max-width: 12rem" /><span class="hint">@T["Short and unique, such as REG or NIGHT."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="Kind" class="ocat-label">@T["Pays for"]</label>
+            <div class="ocat-end">
+                <select asp-for="Kind" class="form-select" style="max-width: 22rem" id="pay-code-kind">
+                    <option value="Regular">@T["Regular hours"]</option>
+                    <option value="Overtime">@T["Overtime"]</option>
+                    <option value="DoubleTime">@T["Double time"]</option>
+                    <option value="Holiday">@T["Holiday hours"]</option>
+                    <option value="PaidTimeOff">@T["Paid time off"]</option>
+                    <option value="PredictabilityPay">@T["Predictability pay"]</option>
+                    <option value="CallBack">@T["Call back"]</option>
+                    <option value="ShiftDifferential">@T["A shift differential (a premium for hours in a window)"]</option>
+                    <option value="Unpaid">@T["Unpaid time"]</option>
+                </select>
+                <span class="hint">@T["Worked hours use the first code in use of regular, overtime and double time. Holiday and call-back codes are for lines managers add."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="Multiplier" class="ocat-label">@T["Multiplier"]</label><div class="ocat-end"><input asp-for="Multiplier" type="number" step="0.05" min="0" max="10" class="form-control" style="max-width: 8rem" /><span class="hint">@T["What the hourly rate is multiplied by, such as 1.5 for overtime."]</span></div></div>
+        <div id="differential-fields">
+        <div class="ocat-wrapper"><label asp-for="PremiumPerHour" class="ocat-label">@T["Premium an hour"]</label><div class="ocat-end"><input asp-for="PremiumPerHour" type="number" step="0.01" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Paid on top of the hours in the window. Leave empty to pay the rate times the multiplier instead."]</span></div></div>
+            <div class="ocat-wrapper">
+                <label asp-for="WindowStart" class="ocat-label">@T["Hours"]</label>
+                <div class="ocat-end">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <input asp-for="WindowStart" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["From"]" />
+                        <span>@T["to"]</span>
+                        <input asp-for="WindowEnd" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["To"]" />
+                    </div>
+                    <span class="hint">@T["In the worker's time. An end before the start runs past midnight, such as 22:00 to 06:00."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["On"]</span>
+                <div class="ocat-end">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Monday" id="day-Monday" checked="@Model.Weekdays.Contains("Monday")" />
+                        <label class="form-check-label" for="day-Monday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Monday)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Tuesday" id="day-Tuesday" checked="@Model.Weekdays.Contains("Tuesday")" />
+                        <label class="form-check-label" for="day-Tuesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Tuesday)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Wednesday" id="day-Wednesday" checked="@Model.Weekdays.Contains("Wednesday")" />
+                        <label class="form-check-label" for="day-Wednesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Wednesday)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Thursday" id="day-Thursday" checked="@Model.Weekdays.Contains("Thursday")" />
+                        <label class="form-check-label" for="day-Thursday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Thursday)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Friday" id="day-Friday" checked="@Model.Weekdays.Contains("Friday")" />
+                        <label class="form-check-label" for="day-Friday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Friday)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Saturday" id="day-Saturday" checked="@Model.Weekdays.Contains("Saturday")" />
+                        <label class="form-check-label" for="day-Saturday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Saturday)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="Weekdays" value="Sunday" id="day-Sunday" checked="@Model.Weekdays.Contains("Sunday")" />
+                        <label class="form-check-label" for="day-Sunday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Sunday)</label>
+                    </div>
+                    <span class="hint d-block">@T["The day the window starts. Tick none for every day."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="ExportCode" class="ocat-label">@T["Payroll code"]</label><div class="ocat-end"><input asp-for="ExportCode" class="form-control" style="max-width: 12rem" /><span class="hint">@T["Optional. What payroll calls it, when that differs from the code."]</span></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
+    </div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+</form>
+
+<script at="Foot">
+    (() => {
+        const kind = document.getElementById('pay-code-kind');
+        const fields = document.getElementById('differential-fields');
+        const toggle = () => fields.classList.toggle('d-none', kind.value !== 'ShiftDifferential');
+
+        kind.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>

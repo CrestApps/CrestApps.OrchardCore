@@ -1,0 +1,34 @@
+@{
+    var filters = (TimesheetListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+<div class="btn-group filter gap-2 flex-wrap">
+    @if (filters.CalendarOptions.Count > 1)
+    {
+        <select name="calendarId" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Pay periods"]" onchange="this.form.submit()">
+            @foreach (var option in filters.CalendarOptions)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    }
+    <select name="periodStart" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Pay period"]" onchange="this.form.submit()">
+        @foreach (var option in filters.PeriodOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+    <select name="teamId" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Team"]" onchange="this.form.submit()">
+        <option value="">@T["All teams"]</option>
+        @foreach (var option in filters.TeamOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+    <select name="status" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+        @foreach (var option in filters.StatusOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

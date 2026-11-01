@@ -1,0 +1,37 @@
+@model ShapeViewModel<PayCode>
+
+@{
+    var code = Model.Value;
+}
+<span class="badge ta-badge fw-normal">@(code.Kind switch
+{
+    PayCodeKind.Regular => T["Regular"],
+    PayCodeKind.Overtime => T["Overtime"],
+    PayCodeKind.DoubleTime => T["Double time"],
+    PayCodeKind.Holiday => T["Holiday"],
+    PayCodeKind.PaidTimeOff => T["Paid time off"],
+    PayCodeKind.PredictabilityPay => T["Predictability pay"],
+    PayCodeKind.CallBack => T["Call back"],
+    PayCodeKind.ShiftDifferential => T["Shift differential"],
+    _ => T["Unpaid"],
+})</span>
+@if (code.PremiumPerHour is > 0)
+{
+    <span class="badge ta-badge fw-normal">@T["+{0} an hour", code.PremiumPerHour.Value.ToString("0.00")]</span>
+}
+else if (code.Kind != PayCodeKind.Unpaid)
+{
+    <span class="badge ta-badge fw-normal">@T["× {0}", code.Multiplier.ToString("0.##")]</span>
+}
+@if (code.WindowStart.HasValue && code.WindowEnd.HasValue)
+{
+    <span class="badge ta-badge fw-normal">@code.WindowStart.Value.ToString("t") – @code.WindowEnd.Value.ToString("t")</span>
+}
+@if (!string.IsNullOrEmpty(code.ExportCode))
+{
+    <span class="badge ta-badge fw-normal">@T["Payroll: {0}", code.ExportCode]</span>
+}
+@if (!code.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

@@ -1,0 +1,18 @@
+@model ShapeViewModel<PayPeriodCalendar>
+
+@{
+    var calendar = Model.Value;
+    var (start, end) = calendar.PeriodOn(DateOnly.FromDateTime(DateTime.Today));
+}
+<span class="badge ta-badge fw-normal">@(calendar.Frequency switch
+{
+    PayPeriodFrequency.Weekly => T["Weekly"],
+    PayPeriodFrequency.Biweekly => T["Every two weeks"],
+    PayPeriodFrequency.SemiMonthly => T["Twice a month"],
+    _ => T["Monthly"],
+})</span>
+<span class="badge ta-badge fw-normal">@T["Now: {0} to {1}", start.ToString("d MMM"), end.ToString("d MMM yyyy")]</span>
+@if (!calendar.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

@@ -1,0 +1,7 @@
+@model ShapeViewModel<TimesheetRowViewModel>
+
+<a asp-controller="Timesheets" asp-action="Details" asp-route-id="@Model.Value.Timesheet.ItemId" class="fw-semibold">@(Model.Value.Worker?.DisplayName ?? T["A removed worker"].Value)</a>
+@if (!string.IsNullOrEmpty(Model.Value.TeamName))
+{
+    <span class="text-muted small ms-1">@Model.Value.TeamName</span>
+}

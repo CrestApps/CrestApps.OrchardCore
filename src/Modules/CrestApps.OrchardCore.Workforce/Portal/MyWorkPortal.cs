@@ -69,6 +69,7 @@ public sealed class MyWorkPortal
             HasShiftPlanning = features.Contains(WorkforceConstants.Features.ShiftPlanning),
             HasTimeOff = features.Contains(WorkforceConstants.Features.TimeOff) && await _authorizationService.AuthorizeAsync(user, WorkforcePermissions.RequestTimeOff),
             IsManager = scope.All || scope.TeamIds.Count > 0,
+            HasTimeClock = worker is not null && features.Contains(WorkforceConstants.Features.TimeClock) && await _authorizationService.AuthorizeAsync(user, WorkforcePermissions.PunchTime),
         };
     }
 }

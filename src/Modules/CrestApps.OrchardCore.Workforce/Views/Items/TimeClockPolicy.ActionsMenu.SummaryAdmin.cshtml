@@ -1,0 +1,3 @@
+@model ShapeViewModel<TimeClockPolicy>
+
+<a asp-controller="TimeClockPolicies" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this policy? Teams that use it stop clocking time until they get another one. Punches and timesheets stay."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

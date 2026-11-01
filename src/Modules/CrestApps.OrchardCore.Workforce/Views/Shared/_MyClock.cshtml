@@ -1,0 +1,92 @@
+@model CrestApps.OrchardCore.Workforce.Services.TimeClockStatus
+@{
+    var shown = new[] { TimePunchKind.In, TimePunchKind.MealStart, TimePunchKind.MealEnd, TimePunchKind.BreakStart, TimePunchKind.BreakEnd, TimePunchKind.Out };
+    var punches = shown.Where(kind => Model.NextPunches.Contains(kind)).ToArray();
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+<div class="card mb-3 my-work-clock border-@(Model.State == TimeClockState.Out ? "secondary" : "success")">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        <div class="me-auto">
+            <div class="h6 text-muted text-uppercase mb-1">@T["Time clock"]</div>
+            <div class="fs-5 fw-semibold">
+                @(Model.State switch
+                {
+                    TimeClockState.Working => T["You're clocked in"],
+                    TimeClockState.OnMeal => T["You're on a meal"],
+                    TimeClockState.OnBreak => T["You're on a break"],
+                    _ => T["You're clocked out"],
+                })
+            </div>
+            @if (Model.SinceUtc.HasValue)
+            {
+                <div class="small text-muted">
+                    @(Model.State == TimeClockState.Out ? T["Last clocked out"] : T["Since"]) <time datetime="@Model.SinceUtc.Value.ToString("o")">@CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(Model.SinceUtc.Value, Model.TimeZoneId ?? "UTC").ToString("t")</time>
+                </div>
+            }
+            @if (Model.NeedsLocation)
+            {
+                <div class="small text-muted"><i class="fa-solid fa-location-dot me-1" aria-hidden="true"></i>@T["Your location is shared when you punch."]</div>
+            }
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var kind in punches)
+            {
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/punch")" class="my-work-punch" data-needs-location="@(Model.NeedsLocation ? "true" : "false")">
+                    <input type="hidden" name="kind" value="@kind" />
+                    <input type="hidden" name="latitude" />
+                    <input type="hidden" name="longitude" />
+                    <input type="hidden" name="key" />
+                    <input type="hidden" name="source" value="Web" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button type="submit" class="btn btn-lg @(kind is TimePunchKind.In or TimePunchKind.MealEnd or TimePunchKind.BreakEnd ? "btn-success" : kind == TimePunchKind.Out ? "btn-danger" : "btn-outline-secondary")">
+                        @(kind switch
+                        {
+                            TimePunchKind.In => T["Clock in"],
+                            TimePunchKind.MealStart => T["Start meal"],
+                            TimePunchKind.MealEnd => T["End meal"],
+                            TimePunchKind.BreakStart => T["Start break"],
+                            TimePunchKind.BreakEnd => T["End break"],
+                            _ => T["Clock out"],
+                        })
+                    </button>
+                </form>
+            }
+        </div>
+        <p class="small text-danger w-100 mb-0 d-none" data-location-error>@T["Your location couldn't be read. Allow location for this site and try again."]</p>
+    </div>
+</div>
+<script at="Foot">
+    (() => {
+        const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        document.querySelectorAll('form.my-work-punch').forEach(form => {
+            form.querySelector('[name="source"]').value = standalone ? 'Mobile' : 'Web';
+            form.querySelector('[name="key"]').value = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
+
+            form.addEventListener('submit', event => {
+                if (form.dataset.needsLocation !== 'true' || form.dataset.located === 'true') {
+                    form.querySelectorAll('button').forEach(button => button.disabled = true);
+
+                    return;
+                }
+
+                event.preventDefault();
+
+                const error = form.closest('.card').querySelector('[data-location-error]');
+
+                if (!navigator.geolocation) {
+                    error.classList.remove('d-none');
+
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(position => {
+                    form.querySelector('[name="latitude"]').value = position.coords.latitude;
+                    form.querySelector('[name="longitude"]').value = position.coords.longitude;
+                    form.dataset.located = 'true';
+                    form.requestSubmit();
+                }, () => error.classList.remove('d-none'), { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+            });
+        });
+    })();
+</script>

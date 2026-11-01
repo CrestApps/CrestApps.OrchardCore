@@ -57,6 +57,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = WorkforceConstants.Features.TimeClock,
+    Name = "Workforce Time Clock",
+    Description = "Punches from the My Work portal, kiosks, the contact center and the API; time clock policies with rounding, grace, meals, geofences and overtime; timesheets workers attest to and managers approve; attendance exceptions and points; and payroll export.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceConstants.Features.Workforce,
+    ]
+)]
+
+[assembly: Feature(
     Id = WorkforceConstants.Features.Portal,
     Name = "Workforce My Work Portal",
     Description = "An installable My Work portal for workers: their schedule, time off, open shifts and trades, availability, notifications by push and email, and a calendar feed; and approvals and who is working for managers.",

@@ -1,0 +1,5 @@
+@model ShapeViewModel<PayrollExportBatch>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+<a asp-controller="PayrollExport" asp-action="Download" asp-route-id="@Model.Value.ItemId" class="fw-semibold">@Model.Value.FileName</a>
+<span class="text-muted small ms-1">@((await LocalClock.ConvertToLocalAsync(Model.Value.CreatedUtc)).ToString("g"))</span>

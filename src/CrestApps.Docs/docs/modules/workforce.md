@@ -1,18 +1,19 @@
 ---
 sidebar_label: Workforce
 title: Workforce
-description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, labor rules with overrides and predictability pay, the My Work portal with web push, recipes and the contracts other modules build on."
+description: "Workforce management on the shared calendar: workers with or without a user account, the team hierarchy and manager scoping, activity codes, team Workforce calendars, calendar access by team, the busy time of breaks inside shifts, shift planning with templates, rotations, coverage, auto-scheduling, publishing, open shifts and shift trades, time off with accrual, balances, allotments and a waitlist, labor rules with overrides and predictability pay, the My Work portal with web push, a time clock with timesheets and payroll export, recipes and the contracts other modules build on."
 user_manual:
   - user-manual/workforce/workers-and-teams
   - user-manual/workforce/shift-planning
   - user-manual/workforce/time-off
   - user-manual/workforce/labor-rules
+  - user-manual/workforce/time-clock
   - user-manual/workforce/my-work-portal
 ---
 
 The **Workforce** module is the base of workforce management. It keeps the people who work and how they are organized, and gives every team a Workforce calendar on the shared [Calendars](./calendars.md) module, where shifts and approved time off are published. It uses the shared [Skills](./skills.md) catalog for workers' skills and certificates.
 
-The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md), [Time Off](../user-manual/workforce/time-off.md), [Labor Rules](../user-manual/workforce/labor-rules.md) and [My Work Portal](../user-manual/workforce/my-work-portal.md).
+The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md), [Time Off](../user-manual/workforce/time-off.md), [Labor Rules](../user-manual/workforce/labor-rules.md), [Time Clock](../user-manual/workforce/time-clock.md) and [My Work Portal](../user-manual/workforce/my-work-portal.md).
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
@@ -20,6 +21,7 @@ The admin screens are described in the User Manual: [Workers and Teams](../user-
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.LaborRules` | Workforce Labor Rules | `CrestApps.OrchardCore.Workforce.ShiftPlanning` |
+| `CrestApps.OrchardCore.Workforce.TimeClock` | Workforce Time Clock | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.Portal` | Workforce My Work Portal | `CrestApps.OrchardCore.Workforce` |
 
 Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts), `CrestApps.OrchardCore.Workforce.Core` (stores, indexes, services), `CrestApps.OrchardCore.Workforce` (the module).
@@ -203,6 +205,20 @@ These show the shape of a rule set. They are not legal advice: check every rule 
 
 The `WorkforceLaborRules` step matches sets by id or name, and teams by `teamNames`.
 
+## Time clock
+
+The **Workforce Time Clock** feature (`CrestApps.OrchardCore.Workforce.TimeClock`) registers its services with `AddWorkforceTimeClockCore()`. A team's `TimeClockPolicyId` names its policy; sub-teams use the nearest parent's (`ITimeClockService.GetPolicyAsync`).
+
+**Punches.** `TimePunch` records are never changed. `ITimeClockService.PunchAsync` records one under the worker's lock, once per `IdempotencyKey` (an offline punch's id, or an event id from another system), when it follows the worker's last punch (an open punch older than 16 hours no longer counts), its source is allowed, it isn't earlier than `BlockEarlyPunchInMinutes` before a shift, and the worker's timesheet for the day is still open. With `RequireGeofence`, browser and app punches must carry a location; one farther than the radius from the team's `Location` is recorded with `WithinGeofence` false. `CorrectAsync` and `RemoveAsync` record a manager's punch with `ReplacesPunchId` (and `Removes` for a removal) and a reason; `ListAsync` returns the punches that count. A contact center or dispatch integration calls `PunchAsync` with its source and the event's id as the key, so a replayed event is recorded once.
+
+**Timesheets.** `ITimesheetCalculator` is pure: it pairs punches into work, break and meal spans, applies grace against the published shift and rounding, closes or flags a forgotten clock-out, splits at midnight in the worker's zone (with NodaTime, so daylight saving days are paid the hours worked), takes the automatic meal off, classifies regular, overtime and double time by day and by the pay periods' week (counting days of the week before the period), adds shift differential premiums, approved time off (`TimeOffType.PayCode`, or the paid time off code) and approved predictability pay, keeps manual lines, and raises attendance exceptions with stable keys. `ITimesheetService` keeps one `Timesheet` per worker and pay period, works it out while it is open, keeps exceptions in step (new ones raised, open ones no longer found removed, decided ones kept), and takes it through `SubmitAsync` (with an attestation), `ApproveAsync`, `RejectAsync`, `ReopenAsync` and `LockPeriodAsync`, which locks only approved timesheets of a period that has ended in the worker's zone. `TimesheetRefresher` runs hourly (`TimesheetRefreshBackgroundTask`) for workers who punched or had a shift in the last 36 hours. With the time clock on, `IWorkedTimeSource` counts punches, so per-hour accrual follows worked time.
+
+**Attendance.** `IAttendanceService` pages exceptions, excuses and confirms them, sums a worker's points in the policy's window, and handles `PunchCorrection` requests: approving one records the punch. When new exceptions take a worker's points to the policy's threshold, every `IAttendancePointsHandler` runs; the built-in one tells the worker's line manager.
+
+**Payroll.** `IPayrollExportService.RunAsync` exports a period's locked timesheets through an `IPayrollExportProvider`, once per provider unless asked again, under the period's lock, keeps the file in a `PayrollExportBatch`, and marks the predictability pay it paid as exported. The built-in `Csv` provider writes the columns in `PayrollCsvSettings` (rates from the worker's `WorkerPayRates`; values that start like a formula are quoted). Add a provider to write another payroll format.
+
+**Kiosks.** A kiosk's address is `workforce/kiosk/{token}`; only the token's hash is stored. Workers identify with their employee number and a PIN (`SetPinAsync`; PBKDF2 with a salt, five wrong PINs lock it for 15 minutes), and the punch carries a two-minute protected ticket.
+
 ## My Work portal
 
 The **Workforce My Work Portal** feature (`CrestApps.OrchardCore.Workforce.Portal`) registers its services with `AddWorkforcePortalCore()`. Its pages are front-end routes under `my-work` (`MyWorkController` and `MyTeamController`) with their own layout, so they look the same in any theme, and are allowed by the `UseWorkforcePortal` permission, which the Authenticated role has by default. A user is a worker when `IWorkerManager.FindByUserIdAsync` finds their user id. The time off page needs `RequestTimeOff` (Authenticated by default) and the Time Off feature.
@@ -268,5 +284,11 @@ The **Workforce teams and workers** deployment step exports the activity codes a
 | `ManageLaborRules` (Manage labor rules) | Labor rule sets and the override list. |
 | `OverrideLaborRules` (Override labor rules) | Publishing with a reason despite rules that need an override. |
 | `ApprovePredictabilityPay` (Approve predictability pay) | Approving and waiving the predictability pay of the teams in one's scope. |
+| `ManageTimeClockPolicies` (Manage time clock policies) | Time clock policies, pay periods, pay codes and kiosks. |
+| `ApproveTimesheets` (Approve timesheets) | Approving timesheets, attendance exceptions and punch corrections of the teams the user manages. |
+| `EditPunches` (Edit punches) | Adding, changing and removing punches. |
+| `ExportPayroll` (Export payroll) | Locking periods and exporting payroll. |
+| `ViewPayRates` (View pay rates) | Workers' pay rates. |
+| `PunchTime` (Clock in and out) | The time clock and timesheet in My Work. Authenticated users have it by default. |
 | `UseWorkforcePortal` (Use the My Work portal) | The My Work portal. Authenticated users have it by default. |
 | `RequestTimeOff` (Request time off) | Requesting one's own time off, in the self-service portal. Not implied by Manage the whole workforce. |

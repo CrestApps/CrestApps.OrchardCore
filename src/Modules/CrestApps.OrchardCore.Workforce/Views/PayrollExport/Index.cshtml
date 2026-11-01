@@ -1,0 +1,93 @@
+@model PayrollExportViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforcePayrollExport" title="@T["Payroll Export"]" /></zone>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <p class="text-muted small">@T["Exports the locked timesheets of a pay period. Approve the timesheets, lock the period under Timesheets, then export. Each timesheet is exported once unless you export again."]</p>
+        @if (Model.CalendarOptions.Count == 0)
+        {
+            <div class="alert alert-info mb-0">@T["Add pay periods first."] <a asp-controller="PayPeriods" asp-action="Index">@T["Pay periods"]</a></div>
+        }
+        else
+        {
+            <form asp-action="Index" method="get" id="export-period" class="row g-2 align-items-end mb-3">
+                @if (Model.CalendarOptions.Count > 1)
+                {
+                    <div class="col-sm-auto">
+                        <label class="form-label" for="CalendarId">@T["Pay periods"]</label>
+                        <select asp-for="CalendarId" asp-items="Model.CalendarOptions" class="form-select" onchange="this.form.submit()"></select>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="CalendarId" />
+                }
+                <div class="col-sm-auto">
+                    <label class="form-label" for="PeriodStart">@T["Pay period"]</label>
+                    <select name="PeriodStart" id="PeriodStart" class="form-select" onchange="this.form.submit()">
+                        @foreach (var option in Model.PeriodOptions)
+                        {
+                            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                        }
+                    </select>
+                </div>
+            </form>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @foreach (var status in new[] { TimesheetStatus.Open, TimesheetStatus.Submitted, TimesheetStatus.Rejected, TimesheetStatus.Reopened, TimesheetStatus.Approved, TimesheetStatus.Locked })
+                {
+                    if (Model.Counts.TryGetValue(status, out var count))
+                    {
+                        <a asp-controller="Timesheets" asp-action="Index" asp-route-calendarId="@Model.CalendarId" asp-route-periodStart="@Model.PeriodStart?.ToString("yyyy-MM-dd")" asp-route-status="@status" class="border rounded px-3 py-2 text-center text-decoration-none">
+                            <div class="fs-5 fw-semibold">@count</div>
+                            <div class="small text-muted">@(status switch { TimesheetStatus.Open => T["Open"], TimesheetStatus.Submitted => T["Submitted"], TimesheetStatus.Rejected => T["Sent back"], TimesheetStatus.Reopened => T["Reopened"], TimesheetStatus.Approved => T["Approved"], _ => T["Locked"] })</div>
+                        </a>
+                    }
+                }
+                @if (Model.Counts.Count == 0)
+                {
+                    <span class="text-muted small">@T["No timesheets in this period yet."]</span>
+                }
+            </div>
+
+            <form asp-action="Index" method="post" class="row g-2 align-items-end">
+                <input type="hidden" asp-for="CalendarId" />
+                <input type="hidden" name="PeriodStart" value="@Model.PeriodStart?.ToString("yyyy-MM-dd")" />
+                @if (Model.ProviderOptions.Count > 1)
+                {
+                    <div class="col-sm-auto">
+                        <label class="form-label" for="Provider">@T["Export as"]</label>
+                        <select asp-for="Provider" asp-items="Model.ProviderOptions" class="form-select"></select>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" name="Provider" value="@Model.ProviderOptions.FirstOrDefault()?.Value" />
+                }
+                <div class="col-sm-auto">
+                    <div class="form-check mb-2">
+                        <input asp-for="IncludeExported" class="form-check-input" />
+                        <label asp-for="IncludeExported" class="form-check-label">@T["Export again the ones already exported"]</label>
+                    </div>
+                </div>
+                <div class="col-sm-auto">
+                    <button type="submit" class="btn btn-primary mb-1" disabled="@(!Model.Counts.ContainsKey(TimesheetStatus.Locked))"><i class="fa-solid fa-file-export me-1" aria-hidden="true"></i>@T["Export locked timesheets"]</button>
+                </div>
+                <div class="col-sm-auto ms-sm-auto">
+                    <a asp-action="Columns" class="btn btn-link mb-1">@T["Choose the CSV columns"]</a>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+<h2 class="h5">@T["Exports"]</h2>
+<admin-list name="WorkforcePayrollExports" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nothing has been exported yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["File"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

@@ -56,6 +56,33 @@ public class TeamEditViewModel
     public string TimeOffShiftHandling { get; set; }
 
     /// <summary>
+    /// Gets or sets the time clock policy; empty to use the parent team's.
+    /// </summary>
+    public string TimeClockPolicyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the site's latitude, for the time clock's geofence.
+    /// </summary>
+    public double? Latitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets the site's longitude, for the time clock's geofence.
+    /// </summary>
+    public double? Longitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the time clock is on, so its settings are shown.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool ShowTimeClock { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time clock policies to choose from.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<SelectListItem> TimeClockPolicyOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether time off is on too, so its shift setting is shown.
     /// </summary>
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]

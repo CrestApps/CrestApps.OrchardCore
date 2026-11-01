@@ -1,0 +1,5 @@
+@model ShapeViewModel<AttendanceRowViewModel>
+@{
+    var exception = Model.Value.Exception;
+}
+<a asp-controller="Timesheets" asp-action="Worker" asp-route-workerId="@exception.WorkerId" asp-route-date="@exception.Date.ToString("yyyy-MM-dd")" class="btn btn-secondary btn-sm">@T["Timesheet"]</a>

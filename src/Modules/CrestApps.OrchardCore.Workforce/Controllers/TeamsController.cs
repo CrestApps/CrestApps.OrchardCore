@@ -132,6 +132,9 @@ public sealed class TeamsController : Controller
             TimeOffShiftHandling = team.TimeOffShiftHandling?.ToString(),
             TimeZoneId = team.TimeZoneId,
             Address = team.Location?.Address,
+            Latitude = team.Location?.Latitude,
+            Longitude = team.Location?.Longitude,
+            TimeClockPolicyId = team.TimeClockPolicyId,
             Enabled = team.Enabled,
         };
 
@@ -183,7 +186,23 @@ public sealed class TeamsController : Controller
             }
         }
 
-        team.Location = string.IsNullOrWhiteSpace(model.Address) ? null : new WorkforceLocation { Address = model.Address.Trim(), Latitude = team.Location?.Latitude, Longitude = team.Location?.Longitude };
+        var timeClockOn = await IsFeatureOnAsync(WorkforceConstants.Features.TimeClock);
+        var latitude = timeClockOn ? model.Latitude : team.Location?.Latitude;
+        var longitude = timeClockOn ? model.Longitude : team.Location?.Longitude;
+
+        if (timeClockOn)
+        {
+            team.TimeClockPolicyId = string.IsNullOrEmpty(model.TimeClockPolicyId) ? null : model.TimeClockPolicyId;
+
+            if (latitude is < -90 or > 90 || longitude is < -180 or > 180 || latitude.HasValue != longitude.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.Latitude), S["Give both the latitude (-90 to 90) and the longitude (-180 to 180), or neither."]);
+            }
+        }
+
+        team.Location = string.IsNullOrWhiteSpace(model.Address) && !latitude.HasValue
+            ? null
+            : new WorkforceLocation { Address = model.Address?.Trim(), Latitude = latitude, Longitude = longitude };
         team.Enabled = model.Enabled;
 
         var validation = await _teamManager.ValidateAsync(team);
@@ -266,6 +285,14 @@ public sealed class TeamsController : Controller
         model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
         model.ShowShiftPlanning = await IsShiftPlanningOnAsync();
         model.ShowTimeOff = model.ShowShiftPlanning && await IsFeatureOnAsync(WorkforceConstants.Features.TimeOff);
+        model.ShowTimeClock = await IsFeatureOnAsync(WorkforceConstants.Features.TimeClock);
+
+        if (model.ShowTimeClock && HttpContext.RequestServices.GetService(typeof(ITimeClockPolicyManager)) is ITimeClockPolicyManager policies)
+        {
+            model.TimeClockPolicyOptions = (await policies.ListEnabledAsync(HttpContext.RequestAborted))
+                .Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == model.TimeClockPolicyId))
+                .ToList();
+        }
     }
 
     private Task<bool> IsShiftPlanningOnAsync()

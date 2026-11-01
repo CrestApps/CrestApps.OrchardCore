@@ -3,7 +3,7 @@
     Layout = null;
     ViewData["MyWorkNav"] = Model.Nav;
     ViewData["Title"] = T["Approvals"].Value;
-    var nothing = Model.TimeOff.Count + Model.Trades.Count + Model.Claims.Count == 0;
+    var nothing = Model.TimeOff.Count + Model.Trades.Count + Model.Claims.Count + Model.Timesheets.Count + Model.Corrections.Count + Model.Exceptions.Count == 0;
 }
 <partial name="_MyWorkHead" />
 
@@ -81,4 +81,72 @@
     }
 }
 
+@if (Model.Timesheets.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Timesheets"]</h2>
+    @foreach (var (timesheet, workerName) in Model.Timesheets)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@workerName</strong> <span class="text-muted">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM")</span>
+                    <div class="small">@T["{0} h", timesheet.TotalHours.ToString("0.##")]@if (timesheet.OpenExceptions > 0) { <span class="text-warning-emphasis"> · @T.Plural(timesheet.OpenExceptions, "1 exception", "{0} exceptions")</span> }</div>
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/timesheets/" + timesheet.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <a href="@Url.Content("~/Admin/workforce/timesheets/" + timesheet.ItemId)" class="btn btn-link btn-sm">@T["Review"]</a>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Corrections.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Missed punches"]</h2>
+    @foreach (var (correction, workerName, when) in Model.Corrections)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@workerName</strong> @PunchName(correction.Kind) <span class="text-muted">@when</span>
+                    <div class="small text-muted">@correction.Reason</div>
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Add it"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Exceptions.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Attendance"]</h2>
+    @foreach (var (exception, workerName) in Model.Exceptions)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@workerName</strong> @CrestApps.OrchardCore.Workforce.Controllers.AttendanceKinds.Name(T, exception.Kind) <span class="text-muted">@exception.Date.ToString("ddd d MMM")@(exception.Minutes > 0 ? " · " + T.GetString("{0} min", exception.Minutes).Value : null)</span>
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="false" /><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Confirm"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="true" /><button type="submit" class="btn btn-outline-success btn-sm">@T["Excuse"]</button></form>
+            </div>
+        </div>
+    }
+}
+
 <partial name="_MyWorkFoot" />
+@functions {
+    private string PunchName(TimePunchKind kind) => kind switch
+    {
+        TimePunchKind.In => T["Clocked in"].Value,
+        TimePunchKind.Out => T["Clocked out"].Value,
+        TimePunchKind.MealStart => T["Meal"].Value,
+        TimePunchKind.MealEnd => T["Back from meal"].Value,
+        TimePunchKind.BreakStart => T["Break"].Value,
+        TimePunchKind.BreakEnd => T["Back from break"].Value,
+        TimePunchKind.ActivityChange => T["Changed activity"].Value,
+        TimePunchKind.JobStart => T["Started a job"].Value,
+        _ => T["Finished a job"].Value,
+    };
+}
+

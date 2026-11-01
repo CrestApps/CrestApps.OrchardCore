@@ -1,0 +1,362 @@
+@model TimesheetDetailsViewModel
+@using CrestApps.OrchardCore.Calendars.Core
+@{
+    var timesheet = Model.Timesheet;
+    var editable = timesheet.IsEditable;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    string Local(DateTime utc) => CalendarTime.ToLocal(utc, Model.TimeZoneId).ToString("t");
+    var today = DateOnly.FromDateTime(CalendarTime.ToLocal(DateTime.UtcNow, Model.TimeZoneId));
+    var defaultDay = (today < timesheet.PeriodStart ? timesheet.PeriodStart : today > timesheet.PeriodEnd ? timesheet.PeriodEnd : today).ToString("yyyy-MM-dd");
+    var manualCodes = Model.PayCodes.Values.Where(code => code.Enabled).OrderBy(code => code.Kind).ThenBy(code => code.Code).ToList();
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimesheetsDetails" title="@T["{0}, {1} to {2}", Model.Worker.DisplayName, timesheet.PeriodStart.ToString("d MMM"), timesheet.PeriodEnd.ToString("d MMM yyyy")]">
+        <breadcrumb-item id="WorkforceTimesheets" action="Index" controller="Timesheets" area="CrestApps.OrchardCore.Workforce">@T["Timesheets"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-start">
+            <div class="col-md">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="h5 mb-0">@Model.Worker.DisplayName</span>
+                    @Status(timesheet.Status)
+                </div>
+                <div class="text-muted small">
+                    @if (!string.IsNullOrEmpty(Model.TeamName))
+                    {
+                        <span>@Model.TeamName · </span>
+                    }
+                    <span>@T["{0} worked", Hours(timesheet.WorkedMinutes / 60m)]</span>
+                    @if (Model.OnTheClockSinceUtc.HasValue)
+                    {
+                        <span> · <i class="fa-solid fa-circle text-success small" aria-hidden="true"></i> @T["On the clock since {0}", Local(Model.OnTheClockSinceUtc.Value)]</span>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(timesheet.Attestation) && timesheet.Status is TimesheetStatus.Submitted or TimesheetStatus.Approved or TimesheetStatus.Locked)
+                {
+                    <p class="small mb-0 mt-2"><i class="fa-solid fa-signature text-secondary me-1" aria-hidden="true"></i>@T["{0} attested: “{1}”", Model.Worker.DisplayName, timesheet.Attestation]</p>
+                }
+                @if (timesheet.Status == TimesheetStatus.Rejected && !string.IsNullOrEmpty(timesheet.RejectionReason))
+                {
+                    <p class="small mb-0 mt-2 text-warning-emphasis"><i class="fa-solid fa-rotate-left me-1" aria-hidden="true"></i>@T["Sent back: {0}", timesheet.RejectionReason]</p>
+                }
+            </div>
+            <div class="col-md-auto">
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var (code, hours) in Model.Totals)
+                    {
+                        <div class="border rounded px-3 py-2 text-center">
+                            <div class="fs-5 fw-semibold">@hours.ToString("0.##")</div>
+                            <div class="small text-muted">@code.Name</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        @if (Model.CanApprove)
+        {
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                @if (timesheet.Status is not (TimesheetStatus.Approved or TimesheetStatus.Locked))
+                {
+                    <form asp-action="Decide" asp-route-id="@timesheet.ItemId" method="post">
+                        <input type="hidden" name="decision" value="Approve" />
+                        <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Approve"]</button>
+                    </form>
+                }
+                @if (timesheet.Status == TimesheetStatus.Submitted)
+                {
+                    <details class="d-inline-block">
+                        <summary class="btn btn-outline-warning">@T["Send back"]</summary>
+                        <form asp-action="Decide" asp-route-id="@timesheet.ItemId" method="post" class="card card-body mt-2" style="min-width: 20rem">
+                            <input type="hidden" name="decision" value="Reject" />
+                            <label class="form-label" for="reject-reason">@T["What to fix"]</label>
+                            <textarea class="form-control mb-2" name="reason" id="reject-reason" rows="2" required></textarea>
+                            <button type="submit" class="btn btn-warning">@T["Send back"]</button>
+                        </form>
+                    </details>
+                }
+                @if (timesheet.Status is TimesheetStatus.Approved or TimesheetStatus.Submitted)
+                {
+                    <form asp-action="Decide" asp-route-id="@timesheet.ItemId" method="post">
+                        <input type="hidden" name="decision" value="Reopen" />
+                        <button type="submit" class="btn btn-outline-secondary">@T["Reopen"]</button>
+                    </form>
+                }
+                @if (timesheet.Status == TimesheetStatus.Locked)
+                {
+                    <span class="text-muted small align-self-center">@T["Locked for payroll. Add any change to the next period."]</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.Corrections.Count > 0)
+{
+    <div class="card mb-3 border-info">
+        <div class="card-body">
+            <h2 class="h6">@T["Punches the worker asked for"]</h2>
+            <ul class="list-unstyled mb-0">
+                @foreach (var correction in Model.Corrections)
+                {
+                    var when = CalendarTime.ToLocal(correction.Utc, Model.TimeZoneId);
+                    <li class="d-flex flex-wrap align-items-center gap-2 py-1">
+                        <span><strong>@PunchName(correction.Kind)</strong> @(when.ToString("ddd d MMM") + ", " + when.ToString("t"))</span>
+                        <span class="text-muted small">“@correction.Reason”</span>
+                        <form asp-action="DecideCorrection" asp-route-id="@timesheet.ItemId" method="post" class="d-inline ms-auto">
+                            <input type="hidden" name="correctionId" value="@correction.ItemId" />
+                            <button type="submit" name="approve" value="true" class="btn btn-sm btn-success">@T["Add it"]</button>
+                            <button type="submit" name="approve" value="false" class="btn btn-sm btn-outline-secondary">@T["Decline"]</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 9rem">@T["Day"]</th>
+                    <th scope="col">@T["Punches"]</th>
+                    <th scope="col">@T["Hours"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var day in Model.Days)
+                {
+                    var weekend = day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                    <tr class="@(weekend && day.Punches.Count == 0 && day.Lines.Count == 0 ? "text-muted" : null)">
+                        <th scope="row" class="fw-normal">
+                            <div class="fw-semibold">@day.Date.ToString("ddd")</div>
+                            <div class="small text-muted">@day.Date.ToString("d MMM")</div>
+                        </th>
+                        <td>
+                            @if (day.Punches.Count == 0 && day.Exceptions.Count == 0)
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var punch in day.Punches)
+                                {
+                                    <span class="badge text-bg-light border fw-normal d-inline-flex align-items-center gap-1" title="@T["{0}, from the {1}", PunchName(punch.Kind), SourceName(punch.Source)]@(string.IsNullOrEmpty(punch.Reason) ? null : " · " + punch.Reason)">
+                                        <span class="fw-semibold">@Local(punch.Utc)</span> @PunchName(punch.Kind)
+                                        @if (punch.WithinGeofence == false)
+                                        {
+                                            <i class="fa-solid fa-location-dot text-warning" aria-label="@T["Away from the site"]"></i>
+                                        }
+                                        @if (!string.IsNullOrEmpty(punch.ReplacesPunchId))
+                                        {
+                                            <i class="fa-solid fa-pen text-secondary" aria-label="@T["Changed by a manager"]"></i>
+                                        }
+                                    </span>
+                                }
+                            </div>
+                            @foreach (var exception in day.Exceptions)
+                            {
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1 small">
+                                    <span class="badge @(exception.Status == AttendanceExceptionStatus.Open ? "text-bg-warning" : exception.Status == AttendanceExceptionStatus.Excused ? "text-bg-success" : "text-bg-secondary") fw-normal">
+                                        @CrestApps.OrchardCore.Workforce.Controllers.AttendanceKinds.Name(T, exception.Kind)@(exception.Minutes > 0 ? " · " + T.GetString("{0} min", exception.Minutes).Value : null)
+                                    </span>
+                                    @if (exception.Status == AttendanceExceptionStatus.Excused)
+                                    {
+                                        <span class="text-muted">@T["Excused"]@(string.IsNullOrEmpty(exception.Note) ? null : ": " + exception.Note)</span>
+                                    }
+                                    else if (Model.CanApprove)
+                                    {
+                                        <form asp-controller="Attendance" asp-action="Decide" asp-route-id="@exception.ItemId" method="post" class="d-inline-flex gap-1">
+                                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                            @if (exception.Status == AttendanceExceptionStatus.Open)
+                                            {
+                                                <button type="submit" name="decision" value="Confirm" class="btn btn-link btn-sm p-0">@T["Confirm"]</button>
+                                                <span class="text-muted">·</span>
+                                            }
+                                            <button type="submit" name="decision" value="Excuse" class="btn btn-link btn-sm p-0">@T["Excuse"]</button>
+                                        </form>
+                                    }
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            @foreach (var line in day.Lines)
+                            {
+                                var code = line.PayCodeId is null ? null : Model.PayCodes.GetValueOrDefault(line.PayCodeId);
+                                <div class="d-flex align-items-center gap-2 small">
+                                    <span class="fw-semibold" style="min-width: 3rem">@line.Hours.ToString("0.00")</span>
+                                    <span>@(code?.Name ?? T["No pay code"].Value)</span>
+                                    @if (!string.IsNullOrEmpty(line.ActivityCodeId) && Model.ActivityNames.TryGetValue(line.ActivityCodeId, out var activity))
+                                    {
+                                        <span class="text-muted">@activity</span>
+                                    }
+                                    @if (line.Source == TimesheetLineSource.TimeOff)
+                                    {
+                                        <span class="badge ta-badge fw-normal">@T["Time off"]</span>
+                                    }
+                                    @if (line.Source == TimesheetLineSource.Manual)
+                                    {
+                                        <span class="badge ta-badge fw-normal" title="@line.Note">@T["Added"]</span>
+                                        @if (editable && Model.CanApprove)
+                                        {
+                                            <form asp-action="RemoveLine" asp-route-id="@timesheet.ItemId" method="post" class="d-inline">
+                                                <input type="hidden" name="lineId" value="@line.Id" />
+                                                <button type="submit" class="btn btn-link btn-sm p-0 text-danger" aria-label="@T["Remove"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                                            </form>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" colspan="2" class="text-end">@T["Total"]</th>
+                    <td class="fw-semibold">@timesheet.TotalHours.ToString("0.00")</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@if (editable && Model.CanApprove)
+{
+    <div class="row g-3">
+        @if (Model.CanEditPunches)
+        {
+            <div class="col-lg-6">
+                <div class="card text-bg-theme h-100">
+                    <div class="card-body">
+                        <h2 class="h6">@T["Add a punch"]</h2>
+                        <form asp-action="AddPunch" asp-route-id="@timesheet.ItemId" method="post">
+                            <div class="row g-2">
+                                <div class="col-sm-4">
+                                    <select name="kind" class="form-select" aria-label="@T["Punch"]">
+                                <option value="In">@T["Clocked in"]</option>
+                                <option value="Out">@T["Clocked out"]</option>
+                                <option value="MealStart">@T["Meal"]</option>
+                                <option value="MealEnd">@T["Back from meal"]</option>
+                                <option value="BreakStart">@T["Break"]</option>
+                                <option value="BreakEnd">@T["Back from break"]</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-4"><input type="date" name="date" class="form-control" min="@timesheet.PeriodStart.ToString("yyyy-MM-dd")" max="@timesheet.PeriodEnd.ToString("yyyy-MM-dd")" value="@defaultDay" aria-label="@T["Day"]" required /></div>
+                                <div class="col-sm-4"><input type="time" name="time" class="form-control" aria-label="@T["Time"]" required /></div>
+                                <div class="col-12"><input type="text" name="reason" class="form-control" placeholder="@T["Why"]" aria-label="@T["Why"]" required /></div>
+                                <div class="col-12"><button type="submit" class="btn btn-secondary">@T["Add punch"]</button></div>
+                            </div>
+                        </form>
+                        @if (Model.Days.Any(day => day.Punches.Count > 0))
+                        {
+                            <h2 class="h6 mt-4">@T["Change or remove a punch"]</h2>
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var punch in Model.Days.SelectMany(day => day.Punches))
+                                {
+                                    var local = CalendarTime.ToLocal(punch.Utc, Model.TimeZoneId);
+                                    <li class="py-1">
+                                        <details>
+                                            <summary class="small">@(local.ToString("ddd d MMM") + ", " + local.ToString("t")) · @PunchName(punch.Kind)</summary>
+                                            <form asp-action="CorrectPunch" asp-route-id="@timesheet.ItemId" method="post" class="row g-2 mt-1">
+                                                <input type="hidden" name="punchId" value="@punch.ItemId" />
+                                                <div class="col-sm-4">
+                                                    <select name="kind" class="form-select form-select-sm" aria-label="@T["Punch"]">
+                                <option selected="@(punch.Kind.ToString() == "In")" value="In">@T["Clocked in"]</option>
+                                <option selected="@(punch.Kind.ToString() == "Out")" value="Out">@T["Clocked out"]</option>
+                                <option selected="@(punch.Kind.ToString() == "MealStart")" value="MealStart">@T["Meal"]</option>
+                                <option selected="@(punch.Kind.ToString() == "MealEnd")" value="MealEnd">@T["Back from meal"]</option>
+                                <option selected="@(punch.Kind.ToString() == "BreakStart")" value="BreakStart">@T["Break"]</option>
+                                <option selected="@(punch.Kind.ToString() == "BreakEnd")" value="BreakEnd">@T["Back from break"]</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-sm-4"><input type="date" name="date" class="form-control form-control-sm" value="@local.ToString("yyyy-MM-dd")" aria-label="@T["Day"]" required /></div>
+                                                <div class="col-sm-4"><input type="time" name="time" class="form-control form-control-sm" value="@local.ToString("HH:mm")" aria-label="@T["Time"]" required /></div>
+                                                <div class="col-12"><input type="text" name="reason" class="form-control form-control-sm" placeholder="@T["Why"]" aria-label="@T["Why"]" required /></div>
+                                                <div class="col-12 d-flex gap-2">
+                                                    <button type="submit" class="btn btn-sm btn-secondary">@T["Change"]</button>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" formaction="@Url.Action("RemovePunch", new { id = timesheet.ItemId })">@T["Remove"]</button>
+                                                </div>
+                                            </form>
+                                        </details>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="col-lg-6">
+            <div class="card text-bg-theme h-100">
+                <div class="card-body">
+                    <h2 class="h6">@T["Add hours by hand"]</h2>
+                    <p class="text-muted small">@T["For hours with no punches, such as a holiday or being called back."]</p>
+                    <form asp-action="AddLine" asp-route-id="@timesheet.ItemId" method="post">
+                        <div class="row g-2">
+                            <div class="col-sm-4"><input type="date" name="date" class="form-control" min="@timesheet.PeriodStart.ToString("yyyy-MM-dd")" max="@timesheet.PeriodEnd.ToString("yyyy-MM-dd")" value="@defaultDay" aria-label="@T["Day"]" required /></div>
+                            <div class="col-sm-5">
+                                <select name="payCodeId" class="form-select" aria-label="@T["Pay code"]" required>
+                                    @foreach (var code in manualCodes)
+                                    {
+                                        <option value="@code.ItemId" selected="@(code.Kind == PayCodeKind.Holiday)">@code.Code — @code.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-sm-3"><input type="number" name="hours" step="0.25" min="0.25" max="24" class="form-control" placeholder="@T["Hours"]" aria-label="@T["Hours"]" required /></div>
+                            <div class="col-12"><input type="text" name="note" class="form-control" placeholder="@T["Note (optional)"]" aria-label="@T["Note"]" /></div>
+                            <div class="col-12"><button type="submit" class="btn btn-secondary">@T["Add hours"]</button></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent Status(TimesheetStatus status)
+    {
+        var (text, css) = status switch
+        {
+            TimesheetStatus.Submitted => (T["Submitted"], "text-bg-info"),
+            TimesheetStatus.Approved => (T["Approved"], "text-bg-success"),
+            TimesheetStatus.Rejected => (T["Sent back"], "text-bg-warning"),
+            TimesheetStatus.Locked => (T["Locked"], "text-bg-secondary"),
+            TimesheetStatus.Reopened => (T["Reopened"], "text-bg-light border"),
+            _ => (T["Open"], "text-bg-light border"),
+        };
+
+        return new Microsoft.AspNetCore.Html.HtmlString($"<span class=\"badge {css}\">{System.Net.WebUtility.HtmlEncode(text.Value)}</span>");
+    }
+
+    private string Hours(decimal hours) => T.GetString("{0} h", hours.ToString("0.##")).Value;
+}
+@functions {
+    private string PunchName(TimePunchKind kind) => kind switch
+    {
+        TimePunchKind.In => T["Clocked in"].Value,
+        TimePunchKind.Out => T["Clocked out"].Value,
+        TimePunchKind.MealStart => T["Meal"].Value,
+        TimePunchKind.MealEnd => T["Back from meal"].Value,
+        TimePunchKind.BreakStart => T["Break"].Value,
+        TimePunchKind.BreakEnd => T["Back from break"].Value,
+        TimePunchKind.ActivityChange => T["Changed activity"].Value,
+        TimePunchKind.JobStart => T["Started a job"].Value,
+        _ => T["Finished a job"].Value,
+    };
+
+    private string SourceName(TimePunchSource source) => source switch
+    {
+        TimePunchSource.Web => T["browser"].Value,
+        TimePunchSource.Mobile => T["app"].Value,
+        TimePunchSource.Kiosk => T["kiosk"].Value,
+        TimePunchSource.ContactCenter => T["contact center"].Value,
+        TimePunchSource.Api => T["API"].Value,
+        _ => T["manager"].Value,
+    };
+}

@@ -161,7 +161,144 @@ public sealed class MyTeamController : Controller
             }
         }
 
+        if (HttpContext.RequestServices.GetService<ITimesheetService>() is { } timesheets && await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveTimesheets))
+        {
+            var attendance = HttpContext.RequestServices.GetRequiredService<IAttendanceService>();
+
+            model.CanTimesheets = true;
+
+            foreach (var timesheet in (await timesheets.PageAsync(new TimesheetQuery { TeamIds = teamIds, Statuses = [TimesheetStatus.Submitted] }, 0, 50, HttpContext.RequestAborted)).Items)
+            {
+                model.Timesheets.Add((timesheet, (await _workerManager.FindByIdAsync(timesheet.WorkerId))?.DisplayName));
+            }
+
+            foreach (var correction in await attendance.ListPendingCorrectionsAsync(teamIds, null, HttpContext.RequestAborted))
+            {
+                var team = await _teamManager.FindByIdAsync(correction.TeamId);
+                var zone = await PlanningOptions.TimeZoneOfAsync(team, _siteService);
+
+                model.Corrections.Add((correction, (await _workerManager.FindByIdAsync(correction.WorkerId))?.DisplayName, CalendarTime.ToLocal(correction.Utc, zone).ToString("ddd d MMM HH:mm", null)));
+            }
+
+            foreach (var exception in (await attendance.PageAsync(new AttendanceQuery { TeamIds = teamIds, Status = AttendanceExceptionStatus.Open }, 0, 30, HttpContext.RequestAborted)).Items)
+            {
+                model.Exceptions.Add((exception, (await _workerManager.FindByIdAsync(exception.WorkerId))?.DisplayName));
+            }
+        }
+
         return View(model);
+    }
+
+    /// <summary>
+    /// Approves a submitted timesheet.
+    /// </summary>
+    /// <param name="id">The timesheet.</param>
+    /// <returns>A redirect to the approvals.</returns>
+    [HttpPost("my-work/approvals/timesheets/{id}")]
+    public async Task<IActionResult> ApproveTimesheet(string id)
+    {
+        var (scope, denied) = await AuthorizeAsync();
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var timesheets = HttpContext.RequestServices.GetService<ITimesheetService>();
+
+        if (timesheets is null || !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveTimesheets))
+        {
+            return Forbid();
+        }
+
+        var timesheet = await timesheets.FindAsync(id, HttpContext.RequestAborted);
+
+        if (timesheet is null || !scope.Covers(timesheet.TeamId))
+        {
+            return NotFound();
+        }
+
+        var result = await timesheets.ApproveAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
+
+        await NotifyAsync(result.Errors, H["The timesheet has been approved."]);
+
+        return RedirectToAction(nameof(Approvals));
+    }
+
+    /// <summary>
+    /// Adds or declines the punch a worker asked for.
+    /// </summary>
+    /// <param name="id">The correction.</param>
+    /// <param name="approve">Whether to add it.</param>
+    /// <returns>A redirect to the approvals.</returns>
+    [HttpPost("my-work/approvals/corrections/{id}")]
+    public async Task<IActionResult> DecideCorrection(string id, bool approve)
+    {
+        var (scope, denied) = await AuthorizeAsync();
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var attendance = HttpContext.RequestServices.GetService<IAttendanceService>();
+
+        if (attendance is null || !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveTimesheets))
+        {
+            return Forbid();
+        }
+
+        var pending = await attendance.ListPendingCorrectionsAsync(scope.All ? null : scope.TeamIds.ToArray(), null, HttpContext.RequestAborted);
+
+        if (pending.All(correction => correction.ItemId != id))
+        {
+            return NotFound();
+        }
+
+        var result = await attendance.DecideCorrectionAsync(id, approve, User.Identity?.Name, HttpContext.RequestAborted);
+
+        await NotifyAsync(result.Errors, approve ? H["The punch has been added."] : H["The correction has been declined."]);
+
+        return RedirectToAction(nameof(Approvals));
+    }
+
+    /// <summary>
+    /// Confirms or excuses an attendance exception.
+    /// </summary>
+    /// <param name="id">The exception.</param>
+    /// <param name="excuse">Whether to excuse it.</param>
+    /// <returns>A redirect to the approvals.</returns>
+    [HttpPost("my-work/approvals/exceptions/{id}")]
+    public async Task<IActionResult> DecideException(string id, bool excuse)
+    {
+        var (scope, denied) = await AuthorizeAsync();
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var attendance = HttpContext.RequestServices.GetService<IAttendanceService>();
+
+        if (attendance is null || !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveTimesheets))
+        {
+            return Forbid();
+        }
+
+        var open = await attendance.PageAsync(new AttendanceQuery { TeamIds = scope.All ? null : scope.TeamIds.ToArray(), Status = AttendanceExceptionStatus.Open }, 0, 1000, HttpContext.RequestAborted);
+
+        if (open.Items.All(exception => exception.ItemId != id))
+        {
+            return NotFound();
+        }
+
+        var result = excuse
+            ? await attendance.ExcuseAsync(id, null, User.Identity?.Name, HttpContext.RequestAborted)
+            : await attendance.ConfirmAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
+
+        await NotifyAsync(result.Errors, excuse ? H["The exception has been excused."] : H["The exception has been confirmed."]);
+
+        return RedirectToAction(nameof(Approvals));
     }
 
     /// <summary>

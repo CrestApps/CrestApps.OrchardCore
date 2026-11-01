@@ -29,4 +29,14 @@ public enum WorkforceNotificationKind
     /// A shift trade offered to the worker, or a decision on one they offered.
     /// </summary>
     ShiftTrade,
+
+    /// <summary>
+    /// A timesheet approved, sent back or ready to submit.
+    /// </summary>
+    Timesheet,
+
+    /// <summary>
+    /// An attendance exception, or a decision on a punch correction.
+    /// </summary>
+    Attendance,
 }

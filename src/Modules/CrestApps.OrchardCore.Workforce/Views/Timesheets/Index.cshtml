@@ -1,0 +1,70 @@
+@model TimesheetListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceTimesheets" title="@T["Timesheets"]" /></zone>
+
+<form asp-action="Index" method="get" id="timesheet-filter"></form>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["The timesheets of the teams you manage. A timesheet is made when its worker punches, has a shift or opens it; make the rest for the period here."]</p>
+            </div>
+            @if (Model.PeriodStart.HasValue && !string.IsNullOrEmpty(Model.CalendarId))
+            {
+                <div class="col-auto">
+                    <form asp-action="Prepare" method="post" class="d-inline">
+                        <input type="hidden" name="calendarId" value="@Model.CalendarId" />
+                        <input type="hidden" name="periodStart" value="@Model.PeriodStart.Value.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="teamId" value="@Model.TeamId" />
+                        <button type="submit" class="btn btn-secondary">@T["Make this period's timesheets"]</button>
+                    </form>
+                </div>
+                @if (Model.ApprovedInPeriod > 0 && !Model.PeriodEnded)
+                {
+                    <div class="col-auto"><span class="text-muted small">@T.Plural(Model.ApprovedInPeriod, "1 approved. Lock it after the period ends.", "{0} approved. Lock them after the period ends.")</span></div>
+                }
+                else if (Model.ApprovedInPeriod > 0)
+                {
+                    <div class="col-auto">
+                        <form asp-action="Lock" method="post" class="d-inline">
+                            <input type="hidden" name="calendarId" value="@Model.CalendarId" />
+                            <input type="hidden" name="periodStart" value="@Model.PeriodStart.Value.ToString("yyyy-MM-dd")" />
+                            <button type="submit" class="btn btn-primary" data-title="@T["Lock"]" data-message="@T["Lock the approved timesheets of this period? They go to payroll and can no longer change."]">@T.Plural(Model.ApprovedInPeriod, "Lock 1 approved timesheet", "Lock {0} approved timesheets")</button>
+                        </form>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.CalendarOptions.Count == 0)
+{
+    <div class="alert alert-info">@T["Add pay periods and a time clock policy, and give teams the policy, to start keeping timesheets."] <a asp-controller="PayPeriods" asp-action="Index">@T["Pay periods"]</a></div>
+}
+
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="hidden" name="Options.BulkAction" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+    <input type="hidden" asp-for="TeamId" />
+    <input type="hidden" asp-for="Status" />
+    <input type="hidden" asp-for="CalendarId" />
+    <input type="hidden" name="PeriodStart" value="@Model.PeriodStart?.ToString("yyyy-MM-dd")" />
+
+    @{
+        Model.List.ToolbarActions = await New.TimesheetFilter(ViewModel: Model, FormId: "timesheet-filter");
+    }
+
+    <admin-list name="WorkforceTimesheets" context="Model.List" bulk-actions="Model.BulkActions" empty-message="@T["<strong>Nothing here!</strong> No timesheets match."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["Worker"]" />
+            <admin-list-column name="Details" position="30" title="@T["Hours"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

@@ -134,6 +134,13 @@ public sealed class MyWorkController : Controller
             model.NextShift = shifts.Where(shift => !shift.IsTimeOff && shift.StartUtc > now).OrderBy(shift => shift.StartUtc).FirstOrDefault();
             model.Today = shifts.Where(shift => shift.Date == today).ToList();
             model.Inbox = (await _inbox.PageAsync(worker.ItemId, 0, 10, HttpContext.RequestAborted)).Items.ToList();
+
+            if (model.Nav.HasTimeClock && HttpContext.RequestServices.GetService<ITimeClockService>() is { } timeClock)
+            {
+                var status = await timeClock.GetStatusAsync(worker, HttpContext.RequestAborted);
+
+                model.Clock = status.Policy is null ? null : status;
+            }
         }
 
         return View(model);
