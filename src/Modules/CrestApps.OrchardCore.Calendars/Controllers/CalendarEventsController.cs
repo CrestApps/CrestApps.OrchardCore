@@ -435,7 +435,7 @@ public sealed class CalendarEventsController : Controller
             IsOccurrence = isOccurrence,
             Title = calendarEvent.Title,
             CanConfirm = calendarEvent.Status == CalendarEventStatus.Tentative && await _accessService.GetAccessLevelAsync(User, calendar) >= CalendarAccessLevel.Manage,
-            MyResponse = mine?.Response.ToString(),
+            MyResponse = mine is null ? null : DescribeResponse(mine.Response),
             Source = calendarEvent.Source,
             Editor = editor,
         };
@@ -517,4 +517,13 @@ public sealed class CalendarEventsController : Controller
 
         return System.Text.Json.JsonSerializer.Deserialize<CalendarEvent>(json);
     }
+
+    private string DescribeResponse(CalendarAttendeeResponse response)
+        => response switch
+        {
+            CalendarAttendeeResponse.Accepted => S["Accepted"],
+            CalendarAttendeeResponse.Tentative => S["Maybe"],
+            CalendarAttendeeResponse.Declined => S["Declined"],
+            _ => S["no answer yet"],
+        };
 }
