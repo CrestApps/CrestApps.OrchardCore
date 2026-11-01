@@ -46,6 +46,8 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.AddCalendarBusyTimeSource<ShiftSegmentBusyTimeSource>();
 
         services.TryAddScoped<TeamTimeZoneResolver>();
+        services.TryAddScoped<WorkerTimeZones>();
+        services.TryAddScoped<IWorkerTimeZoneService>(sp => sp.GetRequiredService<WorkerTimeZones>());
         services.TryAddScoped<ShiftTemplateStore>();
         services.TryAddScoped<ShiftPatternStore>();
         services.TryAddScoped<CoverageRequirementStore>();

@@ -1,0 +1,9 @@
+@model ShapeViewModel<AdherenceExceptionRow>
+
+@{
+    var item = Model.Value;
+    var start = CalendarTime.ToLocal(item.Exception.StartUtc, item.TimeZoneId);
+    var end = CalendarTime.ToLocal(item.Exception.EndUtc, item.TimeZoneId);
+}
+<span class="fw-semibold">@item.WorkerName</span>
+<span class="text-muted small ms-1">@start.ToString("d", CultureInfo.CurrentCulture) @start.ToString("t", CultureInfo.CurrentCulture)–@end.ToString("t", CultureInfo.CurrentCulture)</span>

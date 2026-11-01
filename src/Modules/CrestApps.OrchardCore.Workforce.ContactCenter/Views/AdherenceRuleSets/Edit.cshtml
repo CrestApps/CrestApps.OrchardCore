@@ -1,0 +1,73 @@
+@model AdherenceRuleSetEditViewModel
+@using CrestApps.OrchardCore.ContactCenter.Models
+@inject IStringLocalizer<AdherenceRuleSetEditViewModel> S
+
+<zone Name="Title"><breadcrumb name="WorkforceAdherenceRuleSetsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add an Adherence Rule Set"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="TeamIds" class="form-label">@T["Teams"]</label>
+        <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="6"></select>
+        <span class="hint">@T["Their sub-teams use it too, unless they have their own."]</span>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Rules"]</h2>
+    <p class="text-muted small">@T["For each scheduled activity, the agent states that are in adherence. Grace lets an agent finish one activity late or start the next early; a slip shorter than the minimum is forgiven."]</p>
+
+    @for (var i = 0; i < Model.Rules.Count; i++)
+    {
+        var rule = Model.Rules[i];
+        <fieldset class="card mb-3">
+            <div class="card-body">
+                <legend class="h6">@AdherenceNames.Kind(S, rule.Kind)</legend>
+                <input type="hidden" name="Rules[@i].Kind" value="@rule.Kind" />
+                <div class="d-flex flex-wrap gap-3 mb-2">
+                    @foreach (var status in Enum.GetValues<AgentPresenceStatus>())
+                    {
+                        var id = "rule-" + i + "-" + status;
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="@id" name="Rules[@i].AllowedStatuses" value="@status" checked="@rule.AllowedStatuses.Contains(status.ToString())" />
+                            <label class="form-check-label" for="@id">@AdherenceNames.Status(S, status)</label>
+                        </div>
+                    }
+                </div>
+                <div class="row g-2">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small" for="rule-@i-reasons">@T["Reasons"]</label>
+                        <input class="form-control form-control-sm" id="rule-@i-reasons" name="Rules[@i].AllowedReasons" value="@rule.AllowedReasons" />
+                        <span class="hint">@T["Optional, comma-separated, such as Meal."]</span>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small" for="rule-@i-start">@T["Start grace (min)"]</label>
+                        <input class="form-control form-control-sm" type="number" min="0" id="rule-@i-start" name="Rules[@i].StartGraceMinutes" value="@rule.StartGraceMinutes" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small" for="rule-@i-end">@T["End grace (min)"]</label>
+                        <input class="form-control form-control-sm" type="number" min="0" id="rule-@i-end" name="Rules[@i].EndGraceMinutes" value="@rule.EndGraceMinutes" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small" for="rule-@i-min">@T["Shortest slip (min)"]</label>
+                        <input class="form-control form-control-sm" type="number" min="0" id="rule-@i-min" name="Rules[@i].MinimumOutMinutes" value="@rule.MinimumOutMinutes" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small" for="rule-@i-alert">@T["Alert after (min)"]</label>
+                        <input class="form-control form-control-sm" type="number" min="0" id="rule-@i-alert" name="Rules[@i].AlertAfterMinutes" value="@rule.AlertAfterMinutes" />
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    }
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

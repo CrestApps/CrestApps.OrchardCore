@@ -1,0 +1,15 @@
+@model ShapeViewModel<AdherenceExceptionRow>
+@inject IStringLocalizer<AdherenceExceptionRow> S
+
+@{
+    var item = Model.Value;
+}
+<span class="badge ta-badge fw-normal">@AdherenceNames.Reason(S, item.Exception.Reason)</span>
+@if (!string.IsNullOrEmpty(item.TeamName))
+{
+    <span class="badge ta-badge fw-normal">@item.TeamName</span>
+}
+@if (!string.IsNullOrEmpty(item.Exception.Note))
+{
+    <span class="small text-muted">@item.Exception.Note</span>
+}

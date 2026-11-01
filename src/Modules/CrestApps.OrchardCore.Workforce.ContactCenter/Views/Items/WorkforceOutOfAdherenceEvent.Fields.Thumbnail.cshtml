@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.ContactCenter.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceOutOfAdherenceEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-user-clock" aria-hidden="true"></i>
+    @T["Agent Out Of Adherence"]
+</h4>
+<p>@T["Starts when an agent has been out of adherence with their schedule for longer than their rule allows."]</p>

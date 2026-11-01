@@ -213,6 +213,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
 | `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
+| `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | [Workforce for Contact Center](./modules/workforce-contact-center) |
+| `CrestApps.OrchardCore.Workforce.ContactCenter.SignInPunches` | Contact Center Sign-in Punches | [Workforce for Contact Center](./modules/workforce-contact-center#sign-in-punches) |
+| `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | [Workforce for Contact Center](./modules/workforce-contact-center#adherence) |
 
 ## Data connectors
 

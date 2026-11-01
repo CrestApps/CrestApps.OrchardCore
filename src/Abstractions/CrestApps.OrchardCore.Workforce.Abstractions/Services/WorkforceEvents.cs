@@ -60,4 +60,9 @@ public static class WorkforceEvents
     /// A timesheet was approved. Input: TimesheetId, PeriodStart, PeriodEnd, Hours.
     /// </summary>
     public const string TimesheetApproved = "WorkforceTimesheetApprovedEvent";
+
+    /// <summary>
+    /// An agent has been out of adherence with their schedule for longer than their rule allows.
+    /// </summary>
+    public const string OutOfAdherence = "WorkforceOutOfAdherenceEvent";
 }

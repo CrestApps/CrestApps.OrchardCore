@@ -1,0 +1,54 @@
+@model AdherenceBoardViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceAdherence" title="@T["Real-time Adherence"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row gx-2 gy-2 align-items-center">
+            <div class="col-12 col-md">
+                <p class="mb-0 text-muted small">@T["Each agent's contact center state against what their published schedule has them doing now. Out of adherence comes first. The board refreshes every five seconds."]</p>
+            </div>
+            <div class="col-auto">
+                <label for="TeamId" class="visually-hidden">@T["Team"]</label>
+                <select id="TeamId" name="teamId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                    <option value="">@T["All my teams"]</option>
+                    @foreach (var option in Model.TeamOptions)
+                    {
+                        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto small text-muted" aria-live="polite" id="adherence-updated"></div>
+        </form>
+    </div>
+</div>
+
+<div id="adherence-rows" data-url="@Url.Action("Rows", new { teamId = Model.TeamId })">
+    <partial name="_AdherenceRows" model="Model" />
+</div>
+
+<script at="Foot">
+    (() => {
+        const container = document.getElementById('adherence-rows');
+        const updated = document.getElementById('adherence-updated');
+
+        if (!container) {
+            return;
+        }
+
+        const refresh = async () => {
+            try {
+                const response = await fetch(container.dataset.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+                if (response.ok) {
+                    container.innerHTML = await response.text();
+                    updated.textContent = '@T["Updated"] ' + new Date().toLocaleTimeString();
+                }
+            } catch {
+                updated.textContent = '@T["Couldn&#39;t refresh; trying again."]';
+            }
+        };
+
+        setInterval(refresh, 5000);
+    })();
+</script>

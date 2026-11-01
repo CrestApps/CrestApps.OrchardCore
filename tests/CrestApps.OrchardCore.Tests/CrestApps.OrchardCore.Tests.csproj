@@ -151,6 +151,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Workforce.ContactCenter\CrestApps.OrchardCore.Workforce.ContactCenter.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Customers\CrestApps.OrchardCore.Customers.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.AzureAI\CrestApps.OrchardCore.Products.AzureAI.csproj" />

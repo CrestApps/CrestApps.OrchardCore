@@ -52,6 +52,7 @@ public sealed class IntervalStatisticsStartup : StartupBase
             .AddDataMigration<IntervalStatisticsIndexMigrations>();
 
         services.AddScoped<IIntervalStatisticsReader, IntervalStatisticsReader>();
+        services.AddScoped<IAgentStateHistory, AgentStateHistory>();
         services.AddScoped<IntervalStatisticsRoller>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, IntervalStatisticsBackgroundTask>());
         services.AddNavigationProvider<IntervalStatisticsAdminMenu>();

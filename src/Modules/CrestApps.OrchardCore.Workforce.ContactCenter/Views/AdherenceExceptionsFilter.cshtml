@@ -1,0 +1,13 @@
+@{
+    var model = (AdherenceExceptionListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<label for="adherence-team" class="visually-hidden">@T["Team"]</label>
+<select id="adherence-team" name="teamId" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["All my teams"]</option>
+    @foreach (var option in model.TeamOptions)
+    {
+        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+    }
+</select>

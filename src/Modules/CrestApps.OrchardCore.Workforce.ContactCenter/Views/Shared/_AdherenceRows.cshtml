@@ -1,0 +1,79 @@
+@model AdherenceBoardViewModel
+@inject IStringLocalizer<AdherenceBoardViewModel> S
+
+@{
+    string Clock(DateTime utc, string zone) => CalendarTime.ToLocal(utc, zone).ToString("t", CultureInfo.CurrentCulture);
+}
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-info">@T["No agents to show. Agents appear here when their user is a worker in a team you manage."]</div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+        @foreach (var item in Model.Rows)
+        {
+            var row = item.Row;
+            var border = row.InAdherence ? "border-success" : row.Alert ? "border-danger" : "border-warning";
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 border-start border-4 @border">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <a asp-action="Day" asp-route-workerId="@row.WorkerId" class="fw-semibold">@row.WorkerName</a>
+                                @if (!string.IsNullOrEmpty(row.TeamName))
+                                {
+                                    <div class="small text-muted">@row.TeamName</div>
+                                }
+                            </div>
+                            @if (row.InAdherence)
+                            {
+                                <span class="badge text-bg-success">@T["In adherence"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge @(row.Alert ? "text-bg-danger" : "text-bg-warning")">@T["Out {0} min", item.OutMinutes]</span>
+                            }
+                        </div>
+                        <dl class="row small mb-0 mt-2">
+                            <dt class="col-5 fw-normal text-muted">@T["Scheduled"]</dt>
+                            <dd class="col-7 mb-1">
+                                @if (row.Scheduled is null)
+                                {
+                                    @T["Nothing"]
+                                }
+                                else
+                                {
+                                    @AdherenceNames.Kind(S, row.Scheduled.Kind)
+                                    <span class="text-muted">@Clock(row.Scheduled.StartUtc, item.TimeZoneId)–@Clock(row.Scheduled.EndUtc, item.TimeZoneId)</span>
+                                }
+                            </dd>
+                            <dt class="col-5 fw-normal text-muted">@T["State"]</dt>
+                            <dd class="col-7 mb-1">
+                                @AdherenceNames.Status(S, row.Status)
+                                @if (!string.IsNullOrEmpty(row.Reason))
+                                {
+                                    <span class="text-muted">(@row.Reason)</span>
+                                }
+                                @if (row.StatusSinceUtc.HasValue)
+                                {
+                                    <span class="text-muted">· @T["{0} min", item.StateMinutes]</span>
+                                }
+                            </dd>
+                            @if (row.Next is not null)
+                            {
+                                <dt class="col-5 fw-normal text-muted">@T["Next"]</dt>
+                                <dd class="col-7 mb-1">@AdherenceNames.Kind(S, row.Next.Kind) <span class="text-muted">@Clock(row.Next.StartUtc, item.TimeZoneId)</span></dd>
+                            }
+                        </dl>
+                        @if (Model.CanManage && !row.InAdherence)
+                        {
+                            <a asp-controller="AdherenceExceptions" asp-action="Create" asp-route-workerId="@row.WorkerId" asp-route-returnUrl="@Url.Action("Index", "Adherence", new { teamId = Model.TeamId })" class="btn btn-sm btn-outline-secondary mt-2">@T["Add exception"]</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

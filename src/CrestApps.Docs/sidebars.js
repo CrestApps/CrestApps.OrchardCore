@@ -173,6 +173,7 @@ const sidebars = {
                 'user-manual/workforce/time-clock',
                 'user-manual/workforce/reports-and-automation',
                 'user-manual/workforce/my-work-portal',
+                'user-manual/workforce/contact-center-adherence',
                 'user-manual/workforce/skills-and-certifications',
             ],
         },
@@ -422,6 +423,7 @@ const sidebars = {
             className: icon('users'),
             items: [
                 'modules/workforce',
+                'modules/workforce-contact-center',
                 'modules/skills',
             ],
         },

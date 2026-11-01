@@ -165,6 +165,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Skills/CrestApps.OrchardCore.Skills.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Workforce/CrestApps.OrchardCore.Workforce.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Workforce.ContactCenter/CrestApps.OrchardCore.Workforce.ContactCenter.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DataConnectors/CrestApps.OrchardCore.DataConnectors.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DataConnectors.SqlServer/CrestApps.OrchardCore.DataConnectors.SqlServer.csproj" />

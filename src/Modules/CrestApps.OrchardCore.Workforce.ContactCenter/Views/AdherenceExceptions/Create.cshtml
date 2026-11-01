@@ -1,0 +1,52 @@
+@model AdherenceExceptionEditViewModel
+@inject IStringLocalizer<AdherenceExceptionEditViewModel> S
+
+<zone Name="Title"><breadcrumb name="WorkforceAdherenceExceptionsAdd" title="@T["Add an Adherence Exception"]" /></zone>
+
+<form asp-action="Create" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    <div class="mb-3">
+        <label asp-for="WorkerId" class="form-label">@T["Worker"]</label>
+        <select asp-for="WorkerId" asp-items="Model.WorkerOptions" class="form-select">
+            <option value="">@T["Choose a worker"]</option>
+        </select>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-auto">
+            <label asp-for="Date" class="form-label">@T["Day"]</label>
+            <input asp-for="Date" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-sm-auto">
+            <label asp-for="Start" class="form-label">@T["From"]</label>
+            <input asp-for="Start" type="time" class="form-control" />
+        </div>
+        <div class="col-6 col-sm-auto">
+            <label asp-for="End" class="form-label">@T["To"]</label>
+            <input asp-for="End" type="time" class="form-control" />
+        </div>
+    </div>
+    <span class="hint d-block mb-3">@T["In the worker's time zone. An end before the start is the next day."]</span>
+
+    <div class="mb-3">
+        <label asp-for="Reason" class="form-label">@T["Reason"]</label>
+        <select asp-for="Reason" class="form-select">
+            @foreach (var reason in Enum.GetValues<AdherenceExceptionReason>())
+            {
+                <option value="@reason" selected="@(reason == Model.Reason)">@AdherenceNames.Reason(S, reason)</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Note" class="form-label">@T["Note"]</label>
+        <input asp-for="Note" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Add"]</button>
+        <a href="@(string.IsNullOrEmpty(Model.ReturnUrl) ? Url.Action("Index") : Model.ReturnUrl)" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

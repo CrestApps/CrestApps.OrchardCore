@@ -544,6 +544,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics
         public long DocumentId { get; set; }
         public string UserId { get; set; }
     }
+    public sealed class AgentStateSpan
+    {
+        public AgentStateSpan() { }
+        public string AgentId { get; set; }
+        public System.DateTime EndUtc { get; set; }
+        public string Reason { get; set; }
+        public System.DateTime StartUtc { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus Status { get; set; }
+    }
+    public interface IAgentStateHistory
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentStateSpan>> GetSpansAsync(System.Collections.Generic.IEnumerable<string> agentIds, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IIntervalStatisticsReader
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentIntervalStatistic>> GetAgentIntervalsAsync(System.Collections.Generic.IEnumerable<string> userIds, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);

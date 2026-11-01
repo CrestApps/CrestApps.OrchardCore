@@ -1,0 +1,10 @@
+@model ShapeViewModel<AgentWorkerRow>
+
+@{
+    var agent = Model.Value.Agent;
+}
+<span class="fw-semibold">@(string.IsNullOrWhiteSpace(agent.DisplayName) ? agent.UserName : agent.DisplayName)</span>
+@if (!string.IsNullOrWhiteSpace(agent.UserName))
+{
+    <span class="text-muted small ms-1">@agent.UserName</span>
+}
