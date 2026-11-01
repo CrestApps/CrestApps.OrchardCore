@@ -15,7 +15,19 @@ internal sealed class ForecastingMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await ForecastingIndexSchema.CreateAsync(SchemaBuilder);
+        await CapacityPlanIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the capacity plan table.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CapacityPlanIndexSchema.CreateAsync(SchemaBuilder);
+
+        return 2;
     }
 }

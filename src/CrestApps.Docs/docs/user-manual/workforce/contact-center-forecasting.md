@@ -10,7 +10,7 @@ Forecasting looks at how much work your queues had in past weeks, forecasts the 
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Forecasting > Intraday, Forecasts, Planning Groups, Forecast Events |
+| **Menu** | Workforce > Forecasting > Intraday, Forecasts, Planning Groups, Capacity Plans, Forecast Events |
 | **Permission** | Manage forecasts |
 | **Feature** | Workforce Forecasting (it needs Contact Center Interval Statistics and Workforce Shift Planning); Workforce Intraday for the day as it happens |
 
@@ -69,3 +69,28 @@ On the intraday page, under **Offer extra hours or time off**, choose the offer,
 - **Time off** comes off the start or the end of the worker's shift.
 
 The worker chose it, so it earns no predictability pay. The intraday page lists the day's offers with who took them; select **Close** to stop an offer early.
+
+## Plan headcount for the months ahead
+
+A capacity plan shows, week by week, the agents a planning group needs against the agents you expect to have, so you know when to hire.
+
+1. Go to **Workforce > Forecasting > Capacity Plans** and select **Add capacity plan**.
+2. Enter a name and choose the planning group, the first week and how many weeks to plan, up to 78.
+3. Under **Work**, enter the handle hours of a week, or leave it empty to use the average week of the last four weeks, and the growth you expect in a year.
+4. Under **Agents**, enter the agents you have today in full-time equivalents (leave it empty to count the team), a full-time agent's hours a week, and the share who leave each month.
+5. Under **Hiring classes**, add each class you plan: its first day, how many agents, the weeks of training and the weeks to reach full productivity. Leave a row empty to skip it.
+6. Select **Save**.
+
+The plan's page shows the work and agents in the first and last weeks, how many weeks are short, and when you're first and most short, with the size of a class that would cover it and when it should start. The table shows every week: the work, the agents needed, the agents expected and in training, and how many over or short. The planning group's shrinkage and highest occupancy turn the work into agents.
+
+## Report on forecasts
+
+In **Reports > Report Builder**, the **Workforce** data source has **Forecast intervals**: one row per forecast and 15 minutes, with the contacts, the handle time and the agents needed. Filter on **Status** = Active to compare the active forecast with the **Queue intervals** of the Contact Center data source.
+
+## Ask the AI assistant
+
+When an AI profile has the **Forecast summary** tool, planners can ask for the day's forecast: "What's the forecast for Sales voice tomorrow?" With **Who's out of adherence**, supervisors can ask who's out of adherence now in their teams.
+
+## Set it up with a recipe
+
+The **Workforce for Contact Center sample** recipe, under **Configuration > Recipes**, sets up a team, a queue, a planning group, a holiday and a promotion, a capacity plan and adherence rules to try everything with. The `WorkforceForecasting` and `WorkforceAdherence` recipe steps set up your own.

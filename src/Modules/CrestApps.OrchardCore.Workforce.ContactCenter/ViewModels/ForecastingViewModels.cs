@@ -253,3 +253,112 @@ public class ForecastDetailsViewModel
     /// </summary>
     public string AdjustNote { get; set; }
 }
+
+/// <summary>
+/// A row of the capacity plan list.
+/// </summary>
+public sealed class CapacityPlanRow
+{
+    /// <summary>
+    /// Gets or sets the plan.
+    /// </summary>
+    public CapacityPlan Plan { get; set; }
+
+    /// <summary>
+    /// Gets or sets the planning group's name.
+    /// </summary>
+    public string PlanningGroupName { get; set; }
+}
+
+/// <summary>
+/// The capacity plan editor.
+/// </summary>
+public class CapacityPlanEditViewModel
+{
+    /// <summary>
+    /// Gets or sets the identifier, or <see langword="null"/> for a new plan.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the planning group.
+    /// </summary>
+    public string PlanningGroupId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first week; the plan starts on its Monday.
+    /// </summary>
+    public DateOnly StartDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many weeks.
+    /// </summary>
+    public int Weeks { get; set; } = 26;
+
+    /// <summary>
+    /// Gets or sets the handle hours of a week of work at the start, or empty for the last four weeks.
+    /// </summary>
+    public double? WeeklyWorkloadHours { get; set; }
+
+    /// <summary>
+    /// Gets or sets the growth a year, in percent.
+    /// </summary>
+    public double GrowthPercentPerYear { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paid hours of a full-time agent in a week.
+    /// </summary>
+    public double HoursPerFte { get; set; } = 37.5;
+
+    /// <summary>
+    /// Gets or sets the agents at the start, or empty for the team's headcount.
+    /// </summary>
+    public double? CurrentFte { get; set; }
+
+    /// <summary>
+    /// Gets or sets the attrition a month, in percent.
+    /// </summary>
+    public double AttritionPercentPerMonth { get; set; } = 2;
+
+    /// <summary>
+    /// Gets or sets the hiring classes; rows without a first day or a size are left out.
+    /// </summary>
+    public List<HiringClassEditModel> HiringClasses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the planning groups.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> PlanningGroupOptions { get; set; } = [];
+}
+
+/// <summary>
+/// A hiring class row of the capacity plan editor.
+/// </summary>
+public class HiringClassEditModel
+{
+    /// <summary>
+    /// Gets or sets the first day.
+    /// </summary>
+    public DateOnly? StartDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many agents.
+    /// </summary>
+    public double? Size { get; set; }
+
+    /// <summary>
+    /// Gets or sets the weeks of training.
+    /// </summary>
+    public int TrainingWeeks { get; set; } = 4;
+
+    /// <summary>
+    /// Gets or sets the weeks to reach full productivity.
+    /// </summary>
+    public int RampWeeks { get; set; } = 4;
+}

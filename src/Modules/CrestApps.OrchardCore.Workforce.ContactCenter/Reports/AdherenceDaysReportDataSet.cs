@@ -39,7 +39,7 @@ public sealed class AdherenceDaysReportDataSet : WorkforceReportDataSet<Adherenc
         AddField("WorkerId", S["Worker ID"], DataFieldType.Text, row => row.Record.WorkerId, group);
         AddField("WorkerName", S["Worker"], DataFieldType.Text, row => row.WorkerName, group);
         AddField("TeamName", S["Team"], DataFieldType.Text, row => row.TeamName, group);
-        AddField("Date", S["Day"], DataFieldType.DateTime, row => row.Record.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), group);
+        AddField("Date", S["Day"], DataFieldType.Date, row => row.Record.Date.ToDateTime(TimeOnly.MinValue), group);
         AddField("Adherence", S["Adherence %"], DataFieldType.Decimal, row => Percent(row.Record.Adherence), group);
         AddField("Conformance", S["Conformance %"], DataFieldType.Decimal, row => Percent(row.Record.Conformance), group);
         AddField("ScheduledHours", S["Scheduled hours"], DataFieldType.Decimal, row => Hours(row.Record.ScheduledSeconds), group);

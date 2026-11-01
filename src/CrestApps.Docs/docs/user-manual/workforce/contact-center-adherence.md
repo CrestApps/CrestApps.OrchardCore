@@ -74,4 +74,4 @@ A team without a rule set uses the defaults: work is available, offered work, bu
 
 ## Reports
 
-In **Reports > Report Builder**, the **Workforce** data source has **Adherence days** and **Adherence segments**.
+In **Reports > Report Builder**, the **Workforce** data source has **Adherence days** and **Adherence segments**. An AI profile with the **Who's out of adherence** tool can tell supervisors who's out of adherence now in their teams.

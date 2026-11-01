@@ -38,7 +38,7 @@ public sealed class AdherenceSegmentsReportDataSet : WorkforceReportDataSet<Adhe
         AddField("WorkerId", S["Worker ID"], DataFieldType.Text, row => row.Record.WorkerId, group);
         AddField("WorkerName", S["Worker"], DataFieldType.Text, row => row.WorkerName, group);
         AddField("TeamName", S["Team"], DataFieldType.Text, row => row.TeamName, group);
-        AddField("Date", S["Day"], DataFieldType.DateTime, row => row.Record.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), group);
+        AddField("Date", S["Day"], DataFieldType.Date, row => row.Record.Date.ToDateTime(TimeOnly.MinValue), group);
         AddField("StartUtc", S["Start"], DataFieldType.DateTime, row => Segment(row)?.StartUtc, group);
         AddField("EndUtc", S["End"], DataFieldType.DateTime, row => Segment(row)?.EndUtc, group);
         AddField("Activity", S["Scheduled activity"], DataFieldType.Text, row => Segment(row)?.Kind.ToString(), group);

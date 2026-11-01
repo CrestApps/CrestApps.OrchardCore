@@ -59,6 +59,8 @@ The **Workforce** report data source gains two data sets, limited to the reader'
 - **Adherence days** (`WorkforceAdherenceDays`): one row per agent and day with adherence and conformance percentages and the hours they come from.
 - **Adherence segments** (`WorkforceAdherenceSegments`): one row per stretch of a scheduled day, with the scheduled activity, the agent's state and reason, and whether it was in adherence or covered by an exception.
 
+Their **Day** is a date-only field, so it reads the same in every time zone.
+
 ## Forecasting
 
 A `PlanningGroup` is a set of queues (optionally one channel) forecast and staffed together, with its service goal (a service level such as 80% within 20 seconds, an average speed of answer, or both), the highest occupancy, the contacts an agent handles at once, the customers' patience, the shrinkage, the weeks of history and the team that staffs it. A `ForecastEvent` scales the volume of its days (a closure multiplies by zero), for some groups or all, once or every year.
@@ -72,6 +74,22 @@ A `PlanningGroup` is a set of queues (optionally one channel) forecast and staff
 
 `AdjustAsync` changes the volume of some days by a percentage and staffs them again. `ActivateAsync` makes a forecast its group's active one (the one before is superseded) and writes the staffing as the team's coverage requirement named *Forecast: group name* (`CoverageSource.Forecast`), one row per run of intervals that need the same people on each date: the minimum is the agents needed and the target the agents to schedule. The planner board and the auto-scheduler use it unchanged. `ActiveIntervalsAsync` gives the active forecast's intervals of a stretch of time.
 
+### Capacity plans
+
+A `CapacityPlan` looks up to 78 weeks ahead for a planning group: the handle hours of a week of work at the start (or, left empty, the average week of the group's last four weeks of history, `CapacityPlanService.HistoryWorkloadAsync`), the growth a year, a full-time agent's paid hours, the agents at the start (in the editor, left empty, the team's headcount today), the attrition a month, and its `HiringClass`es (first day, size, training weeks and ramp-up weeks).
+
+`CapacityPlanner.Project` (pure) works each week out:
+
+- **Work:** the starting hours, grown evenly over the year.
+- **Agents needed:** the hours over the group's highest occupancy, over a full-time agent's hours less the group's shrinkage.
+- **Agents expected:** the agents at the start, losing the month's attrition spread over its weeks, plus each hiring class: it answers nothing while it trains, then reaches full productivity evenly over its ramp-up, and loses attrition from its first week.
+
+The plan's page shows the first and worst short weeks and the class that would cover the worst one, starting early enough to finish training and ramp-up.
+
+### Forecast report data set
+
+The **Workforce** report data source gains **Forecast intervals** (`WorkforceForecastIntervals`) for readers with **Manage forecasts**: one row per forecast and 15-minute interval, with the planning group, the forecast's status and model, the day, the contacts, the handle time, the agents needed and to schedule, and the service level, average speed of answer and occupancy expected. Filter on **Status** to read only active forecasts.
+
 ## Intraday
 
 `IntradayService.DayAsync` gives a planning group's day, every 15 minutes, in the team's time zone: the active forecast's volume, handle time and agents needed; the actual volume, handle time and service level from the interval statistics (today's are computed every 15 minutes); the agents on published shifts working then (`ICoverageService`); and the agents available or working, from the agent intervals of the team's workers.
@@ -82,12 +100,41 @@ A `PlanningGroup` is a set of queues (optionally one channel) forecast and staff
 
 `IShiftService.ChangeTimesAsync` (in Workforce) moves the start or end of a published shift: it checks the worker's rules with the new times, updates the calendar event and the schedule's draft, drops segments outside the new times, and records a *Moved* schedule change with who asked for it.
 
+## AI tools
+
+When the AI feature is on, two tools join the Workforce tools:
+
+- `workforceForecastSummary` (**Workforce Forecasting**, needs **Manage forecasts**): the active forecast of each planning group, or a named one, for a day in its team's time zone: the contacts, the average handle time, when the work starts and ends, the agent hours, and the most agents to schedule and when.
+- `workforceOutOfAdherence` (**Workforce Adherence**, needs **View adherence**): the agents scheduled now in the teams the user manages, or a named team, and those out of adherence, with the scheduled activity, their state and reason, the minutes out and whether an alert was raised.
+
+## Recipes
+
+Each feature has a recipe step that matches records by id or name, so a second run updates them, and names the records it refers to. A name that doesn't exist is reported and its record skipped.
+
+- `WorkforceForecasting` (**Workforce Forecasting**): `PlanningGroups` with `queueNames` and `teamName`, `ForecastEvents` with `planningGroupNames` (none for every planning group), and `CapacityPlans` with `planningGroupName`. A plan's `startDate` moves to its Monday.
+- `WorkforceAdherence` (**Workforce Adherence**): `RuleSets` with `teamNames`, and a rule's activity code by `activityName`.
+
+```json
+{
+  "name": "WorkforceForecasting",
+  "PlanningGroups": [
+    { "name": "Support voice", "queueNames": [ "Support" ], "teamName": "Customer Care", "serviceLevelPercent": 80, "serviceLevelSeconds": 20, "shrinkagePercent": 32 }
+  ],
+  "CapacityPlans": [
+    { "name": "Support voice 2027", "planningGroupName": "Support voice", "startDate": "2027-01-04", "weeks": 52, "weeklyWorkloadHours": 600, "currentFte": 30,
+      "hiringClasses": [ { "startDate": "2027-02-01", "size": 4, "trainingWeeks": 4, "rampWeeks": 4 } ] }
+  ]
+}
+```
+
+The **Workforce for Contact Center sample** recipe sets up a Customer Care team, a Support queue, a planning group, a holiday and a promotion, a capacity plan with two hiring classes and adherence rules.
+
 ## Permissions
 
 | Permission | Allows |
 | --- | --- |
 | `ManageWorkforceAdherence` (Manage adherence rules and exceptions) | Adherence rule sets, recording and removing exceptions, and saving a worker's day again. Implied by Manage the whole workforce. |
-| `ManageWorkforceForecasts` (Manage forecasts) | Planning groups, forecast events and forecasts, making a forecast the team's coverage, and the intraday page and its offers. Implied by Manage the whole workforce. |
+| `ManageWorkforceForecasts` (Manage forecasts) | Planning groups, forecast events, forecasts and capacity plans, making a forecast the team's coverage, the intraday page and its offers, and the forecast intervals data set. Implied by Manage the whole workforce. |
 | `ViewWorkforceAdherence` (View adherence) | The real-time board, workers' days and the exception list, for the teams one manages, and the adherence data sets. |
 
 The Contact Center Agents page needs **Manage workers**.

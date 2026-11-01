@@ -1,4 +1,8 @@
+using CrestApps.Core.AI;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Workforce.ContactCenter.AI;
+using CrestApps.OrchardCore.Workforce.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.BackgroundTasks;
@@ -19,12 +23,14 @@ using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.Workflows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -104,6 +110,7 @@ public sealed class ForecastingStartup : StartupBase
             .AddIndexProvider<PlanningGroupIndexProvider>()
             .AddIndexProvider<ForecastEventIndexProvider>()
             .AddIndexProvider<ForecastIndexProvider>()
+            .AddIndexProvider<CapacityPlanIndexProvider>()
             .AddDataMigration<ForecastingMigrations>();
 
         services.TryAddScoped<PlanningGroupStore>();
@@ -113,10 +120,15 @@ public sealed class ForecastingStartup : StartupBase
         services.TryAddScoped<ForecastEventManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ForecastEvent>, ForecastEventHandler>());
         services.TryAddScoped<ForecastService>();
+        services.TryAddScoped<CapacityPlanStore>();
+        services.TryAddScoped<CapacityPlanManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<CapacityPlan>, CapacityPlanHandler>());
+        services.TryAddScoped<CapacityPlanService>();
 
         services.AddDisplayDriver<PlanningGroup, PlanningGroupRowDisplayDriver>();
         services.AddDisplayDriver<ForecastEvent, ForecastEventRowDisplayDriver>();
         services.AddDisplayDriver<ForecastRow, ForecastRowDisplayDriver>();
+        services.AddDisplayDriver<CapacityPlanRow, CapacityPlanRowDisplayDriver>();
         services.AddNavigationProvider<ForecastingAdminMenu>();
     }
 }
@@ -166,5 +178,133 @@ public sealed class AdherenceReportsStartup : StartupBase
     {
         services.AddScoped<IWorkforceReportDataSet, AdherenceDaysReportDataSet>();
         services.AddScoped<IWorkforceReportDataSet, AdherenceSegmentsReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Registers the forecast intervals data set of the Workforce report data source.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Forecasting)]
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class ForecastingReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IWorkforceReportDataSet, ForecastIntervalsReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Adds the forecast summary AI tool.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Forecasting)]
+[RequireFeatures("CrestApps.OrchardCore.AI")]
+public sealed class ForecastingAIToolsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ForecastingAIToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ForecastingAIToolsStartup(IStringLocalizer<ForecastingAIToolsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAITool<ForecastSummaryTool>(ForecastSummaryTool.ToolName)
+            .WithTitle(S["Forecast summary"])
+            .WithDescription(S["Summarizes the active contact center forecast of planning groups for a day."])
+            .WithCategory(S["Workforce"])
+            .Selectable();
+    }
+}
+
+/// <summary>
+/// Adds the out of adherence AI tool.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures("CrestApps.OrchardCore.AI")]
+public sealed class AdherenceAIToolsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdherenceAIToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AdherenceAIToolsStartup(IStringLocalizer<AdherenceAIToolsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAITool<OutOfAdherenceTool>(OutOfAdherenceTool.ToolName)
+            .WithTitle(S["Who's out of adherence"])
+            .WithDescription(S["Lists the agents out of adherence now in the teams the user manages."])
+            .WithCategory(S["Workforce"])
+            .Selectable();
+    }
+}
+
+/// <summary>
+/// Imports the WorkforceForecasting recipe step.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Forecasting)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class ForecastingRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<ForecastingRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Describes the WorkforceForecasting recipe step to CrestApps Recipes.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Forecasting)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class ForecastingRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, ForecastingRecipeStepSchema>();
+    }
+}
+
+/// <summary>
+/// Imports the WorkforceAdherence recipe step.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class AdherenceRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AdherenceRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Describes the WorkforceAdherence recipe step to CrestApps Recipes.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class AdherenceRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AdherenceRecipeStepSchema>();
     }
 }

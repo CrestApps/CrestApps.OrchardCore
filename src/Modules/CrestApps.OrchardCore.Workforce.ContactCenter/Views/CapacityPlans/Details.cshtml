@@ -1,0 +1,131 @@
+@model CapacityProjection
+@using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting
+
+@{
+    var plan = Model.Plan;
+    var culture = CultureInfo.CurrentCulture;
+    var first = Model.Weeks.Count > 0 ? Model.Weeks[0] : null;
+    var last = Model.Weeks.Count > 0 ? Model.Weeks[^1] : null;
+    var worst = Model.WorstWeek;
+    var firstShort = Model.FirstShortWeek;
+    var shortWeeks = Model.Weeks.Count(week => week.Gap < -0.05);
+    var lead = plan.HiringClasses.Count > 0 ? plan.HiringClasses[^1].TrainingWeeks + plan.HiringClasses[^1].RampWeeks : 8;
+    var scale = Model.Weeks.Count > 0 ? Model.Weeks.Max(week => Math.Max(week.RequiredFte, week.AvailableFte)) : 1;
+}
+
+<zone Name="Title"><breadcrumb name="WorkforceCapacityPlansView" title="@T["Capacity plan {0}", plan.Name]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                <span class="text-muted small">@(Model.Group?.Name ?? T["Planning group removed"].Value) · @T["{0} weeks from {1}", plan.Weeks, plan.StartDate.ToString("d", culture)]</span>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Edit" asp-route-id="@plan.ItemId" class="btn btn-primary">@T["Edit"]</a>
+                <a asp-action="Index" class="btn btn-secondary">@T["All plans"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Group is null)
+{
+    <div class="alert alert-warning">@T["This plan's planning group was removed. Edit the plan and choose another."]</div>
+}
+else if (Model.Weeks.Count == 0)
+{
+    <div class="alert alert-info">@T["There's no handled work in the planning group's last four weeks. Edit the plan and enter the handle hours of a week."]</div>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">@T["Work in the first week"]</div>
+                <div class="fs-4">@T["{0} h", first.WorkloadHours.ToString("N0", culture)]</div>
+                <div class="text-muted small">@(Model.WorkloadFromHistory ? T["From the last four weeks"] : T["Entered on the plan"])</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">@T["Agents needed"]</div>
+                <div class="fs-4">@first.RequiredFte.ToString("N1", culture) → @last.RequiredFte.ToString("N1", culture)</div>
+                <div class="text-muted small">@T["Full-time, first to last week"]</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">@T["Agents expected"]</div>
+                <div class="fs-4">@first.AvailableFte.ToString("N1", culture) → @last.AvailableFte.ToString("N1", culture)</div>
+                <div class="text-muted small">@T["After attrition and hiring"]</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">@T["Weeks short"]</div>
+                <div class="fs-4 @(shortWeeks > 0 ? "text-danger" : "text-success")">@shortWeeks</div>
+                <div class="text-muted small">@T["of {0}", Model.Weeks.Count]</div>
+            </div></div>
+        </div>
+    </div>
+
+    @if (worst is null)
+    {
+        <div class="alert alert-success">@T["You have enough agents every week of the plan."]</div>
+    }
+    else
+    {
+        var hireBy = worst.WeekStart.AddDays(-7 * lead);
+        <div class="alert alert-warning">
+            @T["You're first short in the week of {0}, and most short in the week of {1}, by {2} agents.", firstShort.WeekStart.ToString("d", culture), worst.WeekStart.ToString("d", culture), (-worst.Gap).ToString("N1", culture)]
+            @if (hireBy > Model.Today)
+            {
+                @T["A class of {0} starting by {1} would be ready by then ({2} weeks of training and ramp-up).", Math.Ceiling(-worst.Gap).ToString("N0", culture), hireBy.ToString("d", culture), lead]
+            }
+            else
+            {
+                @T["A class of {0} starting now would be fully productive by {1} ({2} weeks of training and ramp-up).", Math.Ceiling(-worst.Gap).ToString("N0", culture), Model.Today.AddDays(7 * lead).ToString("d", culture), lead]
+            }
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Week of"]</th>
+                    <th scope="col" class="text-end">@T["Work (h)"]</th>
+                    <th scope="col" class="text-end">@T["Needed"]</th>
+                    <th scope="col" class="text-end">@T["Expected"]</th>
+                    <th scope="col" class="text-end">@T["In training"]</th>
+                    <th scope="col" class="text-end">@T["Over or short"]</th>
+                    <th scope="col" class="d-none d-md-table-cell w-25"><span class="visually-hidden">@T["Needed against expected"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var week in Model.Weeks)
+                {
+                    var isShort = week.Gap < -0.05;
+                    <tr>
+                        <td>@week.WeekStart.ToString("d", culture)</td>
+                        <td class="text-end">@week.WorkloadHours.ToString("N0", culture)</td>
+                        <td class="text-end">@week.RequiredFte.ToString("N1", culture)</td>
+                        <td class="text-end">@week.AvailableFte.ToString("N1", culture)</td>
+                        <td class="text-end">@(week.InTrainingFte > 0 ? week.InTrainingFte.ToString("N1", culture) : "–")</td>
+                        <td class="text-end @(isShort ? "text-danger fw-semibold" : "text-success")">@((week.Gap >= 0 ? "+" : string.Empty) + week.Gap.ToString("N1", culture))</td>
+                        <td class="d-none d-md-table-cell">
+                            <div class="progress" role="img" aria-label="@T["{0} needed, {1} expected", week.RequiredFte.ToString("N1", culture), week.AvailableFte.ToString("N1", culture)]" style="height: .5rem;">
+                                <div class="progress-bar @(isShort ? "bg-danger" : "bg-success")" style="width: @((week.AvailableFte / scale * 100).ToString("0.#", CultureInfo.InvariantCulture))%"></div>
+                            </div>
+                            <div class="progress mt-1" style="height: .25rem;">
+                                <div class="progress-bar bg-secondary" style="width: @((week.RequiredFte / scale * 100).ToString("0.#", CultureInfo.InvariantCulture))%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="hint">@T["Agents are full-time equivalents. Needed is the week's handle hours at the highest occupancy, over a full-time agent's hours less shrinkage. The upper bar is the agents expected, the lower the agents needed."]</p>
+}

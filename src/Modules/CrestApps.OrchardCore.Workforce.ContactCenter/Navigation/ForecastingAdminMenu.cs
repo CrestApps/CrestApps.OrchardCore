@@ -35,6 +35,11 @@ public sealed class ForecastingAdminMenu : AdminNavigationProvider
                     .Action("Index", "PlanningGroups", WorkforceContactCenterConstants.Features.Forecasting)
                     .Permission(WorkforcePermissions.ManageForecasts)
                     .LocalNav())
+                .Add(S["Capacity Plans"], S["Capacity Plans"].PrefixPosition("25"), plans => plans
+                    .Id("workforceCapacityPlans")
+                    .Action("Index", "CapacityPlans", WorkforceContactCenterConstants.Features.Forecasting)
+                    .Permission(WorkforcePermissions.ManageForecasts)
+                    .LocalNav())
                 .Add(S["Forecast Events"], S["Forecast Events"].PrefixPosition("30"), events => events
                     .Id("workforceForecastEvents")
                     .Action("Index", "ForecastEvents", WorkforceContactCenterConstants.Features.Forecasting)

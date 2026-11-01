@@ -69,6 +69,43 @@ public sealed class ForecastIndex : CatalogItemIndex
 }
 
 /// <summary>
+/// Indexes capacity plans by name and planning group.
+/// </summary>
+public sealed class CapacityPlanIndex : CatalogItemIndex
+{
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the planning group.
+    /// </summary>
+    public string PlanningGroupId { get; set; }
+}
+
+/// <summary>
+/// Maps capacity plans.
+/// </summary>
+public sealed class CapacityPlanIndexProvider : IndexProvider<CapacityPlan>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CapacityPlanIndexProvider"/> class.
+    /// </summary>
+    public CapacityPlanIndexProvider()
+    {
+        CollectionName = WorkforceConstants.CollectionName;
+    }
+
+    /// <inheritdoc/>
+    public override void Describe(DescribeContext<CapacityPlan> context)
+    {
+        context.For<CapacityPlanIndex>()
+            .Map(item => new CapacityPlanIndex { ItemId = item.ItemId, Name = item.Name, PlanningGroupId = item.PlanningGroupId });
+    }
+}
+
+/// <summary>
 /// Maps planning groups.
 /// </summary>
 public sealed class PlanningGroupIndexProvider : IndexProvider<PlanningGroup>
@@ -192,6 +229,36 @@ public static class ForecastingIndexSchema
         {
             table.CreateIndex("IDX_ForecastIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_ForecastIndex_Group", "PlanningGroupId", "Status", "FromDate");
+        }, collection: collection);
+    }
+}
+
+/// <summary>
+/// Creates the capacity plan index table.
+/// </summary>
+public static class CapacityPlanIndexSchema
+{
+    /// <summary>
+    /// Creates the table and its indexes.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task that completes when the table exists.</returns>
+    public static async Task CreateAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        const string collection = WorkforceConstants.CollectionName;
+
+        await schemaBuilder.CreateMapIndexTableAsync<CapacityPlanIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.Nullable().WithLength(255))
+            .Column<string>("PlanningGroupId", column => column.Nullable().WithLength(26)),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<CapacityPlanIndex>(table =>
+        {
+            table.CreateIndex("IDX_CapacityPlanIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_CapacityPlanIndex_Group", "PlanningGroupId");
         }, collection: collection);
     }
 }

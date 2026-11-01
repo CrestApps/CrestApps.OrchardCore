@@ -4,6 +4,7 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
+using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -75,6 +76,124 @@ public sealed class ForecastEventManager : CatalogManager<ForecastEvent>
     public ForecastEventManager(ForecastEventStore store, IEnumerable<ICatalogEntryHandler<ForecastEvent>> handlers, ILogger<CatalogManager<ForecastEvent>> logger)
         : base(store, handlers, logger)
     {
+    }
+}
+
+/// <summary>
+/// Stores capacity plans.
+/// </summary>
+public sealed class CapacityPlanStore : DocumentCatalog<CapacityPlan, CapacityPlanIndex>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CapacityPlanStore"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    public CapacityPlanStore(ISession session)
+        : base(session)
+    {
+        CollectionName = WorkforceConstants.CollectionName;
+    }
+}
+
+/// <summary>
+/// Manages capacity plans.
+/// </summary>
+public sealed class CapacityPlanManager : CatalogManager<CapacityPlan>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CapacityPlanManager"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="handlers">The handlers.</param>
+    /// <param name="logger">The logger.</param>
+    public CapacityPlanManager(CapacityPlanStore store, IEnumerable<ICatalogEntryHandler<CapacityPlan>> handlers, ILogger<CatalogManager<CapacityPlan>> logger)
+        : base(store, handlers, logger)
+    {
+    }
+}
+
+/// <summary>
+/// Validates and stamps capacity plans.
+/// </summary>
+internal sealed class CapacityPlanHandler : CatalogEntryHandlerBase<CapacityPlan>
+{
+    private readonly IClock _clock;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CapacityPlanHandler"/> class.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CapacityPlanHandler(IClock clock, IStringLocalizer<CapacityPlanHandler> stringLocalizer)
+    {
+        _clock = clock;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override Task InitializedAsync(InitializedContext<CapacityPlan> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.CreatedUtc = _clock.UtcNow;
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task UpdatingAsync(UpdatingContext<CapacityPlan> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task ValidatingAsync(ValidatingContext<CapacityPlan> context, CancellationToken cancellationToken = default)
+    {
+        var plan = context.Model;
+
+        if (string.IsNullOrWhiteSpace(plan.Name))
+        {
+            context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(CapacityPlan.Name)]));
+        }
+
+        if (string.IsNullOrEmpty(plan.PlanningGroupId))
+        {
+            context.Result.Fail(new ValidationResult(S["Choose a planning group."], [nameof(CapacityPlan.PlanningGroupId)]));
+        }
+
+        if (plan.Weeks is < 1 or > CapacityPlanner.MaxWeeks)
+        {
+            context.Result.Fail(new ValidationResult(S["A plan covers 1 to {0} weeks.", CapacityPlanner.MaxWeeks], [nameof(CapacityPlan.Weeks)]));
+        }
+
+        if (plan.HoursPerFte is <= 0 or > 80)
+        {
+            context.Result.Fail(new ValidationResult(S["A full-time agent's hours must be more than 0 and at most 80 a week."], [nameof(CapacityPlan.HoursPerFte)]));
+        }
+
+        if (plan.CurrentFte < 0 || plan.WeeklyWorkloadHours < 0)
+        {
+            context.Result.Fail(new ValidationResult(S["The agents and the work can't be negative."], [nameof(CapacityPlan.CurrentFte)]));
+        }
+
+        if (plan.AttritionPercentPerMonth is < 0 or >= 100)
+        {
+            context.Result.Fail(new ValidationResult(S["Attrition must be at least 0 and under 100 percent a month."], [nameof(CapacityPlan.AttritionPercentPerMonth)]));
+        }
+
+        if (plan.GrowthPercentPerYear <= -100)
+        {
+            context.Result.Fail(new ValidationResult(S["The work can't shrink by 100 percent or more."], [nameof(CapacityPlan.GrowthPercentPerYear)]));
+        }
+
+        if (plan.HiringClasses.Any(item => item.Size <= 0 || item.TrainingWeeks < 0 || item.RampWeeks < 0))
+        {
+            context.Result.Fail(new ValidationResult(S["Each hiring class needs a size above 0, and its training and ramp-up can't be negative."], [nameof(CapacityPlan.HiringClasses)]));
+        }
+
+        return Task.CompletedTask;
     }
 }
 
