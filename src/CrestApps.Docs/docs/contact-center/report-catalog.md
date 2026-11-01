@@ -237,6 +237,27 @@ The time-based kinds, **Agent time summary**, **Presence status duration**, **Re
 
 Known limits of the summaries: a sign-off recorded more than an hour after the time it is dated by, across midnight, can supersede changes the next day's summary counted; and an agent whose profile was deleted before a day was summarized, and who has a state change elsewhere in the period, is missing from that day's summary. Both differ from a report over the log only in those cases, and both are corrected for a day by deleting its summary.
 
+### Interval statistics
+
+The **Contact Center Interval Statistics** feature (`CrestApps.OrchardCore.ContactCenter.IntervalStatistics`, depends on Work Distribution) keeps 15-minute statistics of every queue and agent. Workforce forecasting, intraday management and adherence read them, and the report builder lists them as two data sets.
+
+- **Queue intervals.** One row per queue, channel and 15-minute interval: offered (inbound), outbound, answered, handled, abandoned, short abandons, voicemail, callbacks, transferred, the service level counts (answered or abandoned inbound work, and the part answered within the queue's threshold, with the threshold used), answer wait and the longest answer wait, talk, wrap-up and handle seconds. Work counts in the interval it was offered in, by the same calculator and outcome rules as the reports above, so the intervals of a day add up to the queue's report for that UTC day. A short abandon is an abandon after a wait below `ShortAbandonSeconds`.
+- **Agent intervals.** One row per agent and 15-minute interval: signed-in seconds, seconds in each state and reason (split at interval boundaries, from the agent state log, as the workforce reports build it), and the work handled per queue with its handle seconds. Offline time is left out.
+- **Longer intervals.** Both data sets carry **Half hour** and **Hour** fields to group by, and `IntervalStatisticsRollup.Combine` rolls queue intervals up to 30 or 60 minutes in code.
+- **Reading them in code.** `IIntervalStatisticsReader` returns the queue or agent intervals of a range and the days computed, reading whole days through their indexes, never the interactions.
+- **Roller.** The **Contact Center Interval Statistics** background task runs every five minutes under the background task lock and computes up to `MaxDaysPerRun` days per run: a rebuild first, then today (again every `CurrentDayRefresh`), the days not yet final, recent final days whose interaction count changed (checked hourly for three days), and the days not computed yet, newest first, back to `BackfillDays` or the first interaction or agent state change, whichever is later. A day is final once it has been over for `SettleDelay`. Days older than `RetentionDays` are deleted, a hundred documents of each kind per run.
+- **Rebuild.** **Interaction Center > Management > Interval statistics** shows the last run, how many of the last 30 days are computed, today's totals so far and a rebuild of a range of days, which administrators with **Manage the Contact Center** can start. A rebuild is written with its cursor, one day at a time, so a restart resumes from the next day. The page warns when a rebuild has made no progress for 30 minutes.
+- **Storage.** One `QueueIntervalStatistics` document per queue and UTC day and one `AgentIntervalStatistics` document per agent and UTC day, with an `IntervalStatisticsDay` marker per computed day, in the Contact Center collection. Their indexes are by day and queue, and by day and user.
+
+| Setting (`CrestApps:ContactCenter:IntervalStatistics`) | Default | Meaning |
+| --- | --- | --- |
+| `RetentionDays` | `760` | Days kept: two years and a month, so a forecast can compare a day with the same day a year before. |
+| `BackfillDays` | `400` | Earlier days filled in when the feature is turned on. |
+| `ShortAbandonSeconds` | `5` | Waits below this make an abandon a short abandon. |
+| `SettleDelay` | `02:00:00` | How long after midnight a day is computed for the last time. |
+| `CurrentDayRefresh` | `00:15:00` | How often today, and a day not yet final, is computed again. |
+| `MaxDaysPerRun` | `5` | Days computed per run. |
+
 ### Billing and usage reports
 
 | # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |

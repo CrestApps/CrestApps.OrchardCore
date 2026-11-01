@@ -1,0 +1,52 @@
+@model MyOffersViewModel
+@{
+    Layout = null;
+    ViewData["MyWorkNav"] = Model.Nav;
+    ViewData["Title"] = T["Offers"].Value;
+    string Clock(DateTime utc) => CalendarTime.ToLocal(utc, Model.TimeZoneId).ToString("t", CultureInfo.CurrentCulture);
+}
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkHead.cshtml" />
+
+<h1 class="h4 mb-3">@T["Offers"]</h1>
+<p class="text-muted">@T["Extra hours and time off your team offers today and in the coming days, first come, first served. Overtime is added to a shift that ends when it starts, or starts when it ends; time off comes off the start or the end of a shift."]</p>
+
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="@(Model.IsError ? "message-error" : "message-success") mb-3" role="status">@Model.Message</div>
+}
+
+@if (Model.Offers.Count == 0)
+{
+    <div class="alert alert-info">@T["There are no offers for you right now."]</div>
+}
+else
+{
+    <div class="list-group mb-3">
+        @foreach (var offer in Model.Offers)
+        {
+            var local = CalendarTime.ToLocal(offer.StartUtc, Model.TimeZoneId);
+            var left = offer.Places - offer.Claims.Count;
+            <div class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <div class="fw-semibold">
+                        @(offer.Kind == IntradayOfferKind.VoluntaryOvertime ? T["Extra hours"] : T["Time off"])
+                        <span class="text-muted fw-normal">@local.ToString("ddd d MMM", CultureInfo.CurrentCulture), @Clock(offer.StartUtc)–@Clock(offer.EndUtc)</span>
+                    </div>
+                    <div class="small text-muted">
+                        @(left == 1 ? T["1 place left"] : T["{0} places left", left])
+                        @if (!string.IsNullOrEmpty(offer.Note))
+                        {
+                            <span>· @offer.Note</span>
+                        }
+                    </div>
+                </div>
+                <form method="post" action="@Url.Content("~/my-work/offers/" + offer.ItemId + "/take")">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary btn-sm">@T["Take it"]</button>
+                </form>
+            </div>
+        }
+    </div>
+}
+
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkFoot.cshtml" />

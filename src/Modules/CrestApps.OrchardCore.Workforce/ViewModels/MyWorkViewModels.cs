@@ -49,6 +49,11 @@ public class MyWorkNavViewModel
     /// Gets or sets whether the worker clocks in and out, so the timesheet is shown.
     /// </summary>
     public bool HasTimeClock { get; set; }
+
+    /// <summary>
+    /// Gets or sets the links other features add to the menu.
+    /// </summary>
+    public IList<MyWorkLink> Links { get; set; } = [];
 }
 
 /// <summary>

@@ -55,6 +55,8 @@ public sealed class CallTopologyAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
         // SMS Omnichannel Automation shares the Twilio inbound webhook from the SMS core, which reaches Contact Center Core.
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Sms"),
+        // Workforce for Contact Center reads agent profiles, the event log and interval statistics from Contact Center Core.
+        Path.Combine("Modules", "CrestApps.OrchardCore.Workforce.ContactCenter"),
         Path.Combine("Targets", "CrestApps.OrchardCore.Cms.Core.Targets"),
         Path.Combine("Startup", "CrestApps.Aspire.AppHost"),
         Path.Combine("Startup", "CrestApps.OrchardCore.Cms.Web"),

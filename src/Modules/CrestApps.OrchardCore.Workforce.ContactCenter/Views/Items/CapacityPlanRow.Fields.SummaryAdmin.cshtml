@@ -1,0 +1,3 @@
+@model ShapeViewModel<CapacityPlanRow>
+
+<a asp-controller="CapacityPlans" asp-action="Details" asp-route-id="@Model.Value.Plan.ItemId">@Model.Value.Plan.Name</a>

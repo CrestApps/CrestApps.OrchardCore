@@ -21,6 +21,7 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using YesSql.Indexes;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Workforce;
 
@@ -405,7 +406,7 @@ public sealed class WorkforceTests
         Assert.Equal(["9:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"], slots.Select(slot => CalendarTime.ToLocal(slot.StartUtc, "America/New_York").ToString("H:mm", null)));
     }
 
-    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
+    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> schema = null, IEnumerable<IIndexProvider> indexProviders = null)
     {
         return CalendarTestHarness.CreateAsync(
             services =>
@@ -425,6 +426,11 @@ public sealed class WorkforceTests
                 await LaborRulesIndexSchema.CreateAsync(schemaBuilder);
                 await PortalIndexSchema.CreateAsync(schemaBuilder);
                 await TimeClockIndexSchema.CreateAsync(schemaBuilder);
+
+                if (schema is not null)
+                {
+                    await schema(schemaBuilder);
+                }
             },
             new IIndexProvider[] { new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider() }
                 .Concat(SkillsIndexProviders.All())
@@ -434,6 +440,7 @@ public sealed class WorkforceTests
                 .Concat(LaborRulesIndexProviders.All())
                 .Concat(PortalIndexProviders.All())
                 .Concat(TimeClockIndexProviders.All())
+                .Concat(indexProviders ?? [])
                 .ToArray(),
             [SkillsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName]);
     }

@@ -80,6 +80,18 @@ Reports of agents' time over many days are quick because the site keeps a summar
 
 The button always shows the range you picked in words, for example *From Jan 1, 2026 to Jan 31, 2026*. Weeks start on the first day of the week for your language settings.
 
+## Statistics in 15-minute intervals
+
+With **Contact Center Interval Statistics** turned on, the site keeps the numbers of every queue and agent in 15-minute intervals: how much work was offered and answered, the service level, waits and handle time, and how long each agent was signed in and in each state. Workforce planning uses them, and you can build your own reports on them.
+
+1. Go to **Interaction Center > Management > Interval statistics** to see how far they are computed and today's totals so far. Days are UTC days.
+2. In **Reports > Report Builder**, add the **Queue intervals** or **Agent intervals** data set. Group by **Half hour** or **Hour** to see longer intervals.
+3. After changing a queue's service level threshold, enter a range of days under **Rebuild** and select **Rebuild**. A few days are computed again every five minutes.
+
+:::note[New sites]
+When the feature is first turned on, earlier days are filled in a few at a time, starting from today. Nothing before the first call or agent sign-in is computed.
+:::
+
 ## Which report answers which question
 
 | Question | Report |

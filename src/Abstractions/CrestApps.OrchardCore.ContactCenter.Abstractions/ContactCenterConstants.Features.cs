@@ -41,6 +41,12 @@ public static partial class ContactCenterConstants
         public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
 
         /// <summary>
+        /// The identifier of the interval statistics feature that keeps 15-minute statistics of every queue and agent,
+        /// for workforce planning.
+        /// </summary>
+        public const string IntervalStatistics = "CrestApps.OrchardCore.ContactCenter.IntervalStatistics";
+
+        /// <summary>
         /// The identifier of the outbound dialer feature.
         /// </summary>
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";

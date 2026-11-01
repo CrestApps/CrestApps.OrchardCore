@@ -1,0 +1,4 @@
+@model ShapeViewModel<ForecastEvent>
+
+<a asp-controller="ForecastEvents" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
+<span class="text-muted small ms-1">@Model.Value.StartDate.ToString("d", CultureInfo.CurrentCulture)@(Model.Value.EndDate != Model.Value.StartDate ? "–" + Model.Value.EndDate.ToString("d", CultureInfo.CurrentCulture) : string.Empty)</span>

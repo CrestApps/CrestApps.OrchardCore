@@ -1,0 +1,19 @@
+@model ShapeViewModel<PlanningGroup>
+
+@{
+    var group = Model.Value;
+}
+<span class="badge ta-badge fw-normal">@(group.QueueIds.Count == 1 ? T["1 queue"] : T["{0} queues", group.QueueIds.Count])</span>
+@if (group.ServiceLevelPercent.HasValue)
+{
+    <span class="badge ta-badge fw-normal">@T["{0}% in {1} s", group.ServiceLevelPercent.Value.ToString("0.#", CultureInfo.CurrentCulture), group.ServiceLevelSeconds]</span>
+}
+@if (group.AverageSpeedOfAnswerSeconds.HasValue)
+{
+    <span class="badge ta-badge fw-normal">@T["Answer in {0} s on average", group.AverageSpeedOfAnswerSeconds.Value]</span>
+}
+<span class="badge ta-badge fw-normal">@T["{0}% shrinkage", group.ShrinkagePercent.ToString("0.#", CultureInfo.CurrentCulture)]</span>
+@if (string.IsNullOrEmpty(group.TeamId))
+{
+    <span class="badge text-bg-warning fw-normal">@T["No team"]</span>
+}

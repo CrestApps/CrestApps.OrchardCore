@@ -1,0 +1,111 @@
+@model IntervalStatisticsViewModel
+@using System.Globalization
+
+@{
+    string Utc(DateTime? value) => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc).ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture) + " UTC" : T["Never"].Value;
+    string Day(DateTime? value) => value.HasValue ? value.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty;
+    var total = Model.TodayTotal;
+}
+
+<zone Name="Title"><breadcrumb name="ContactCenterIntervalStatistics" title="@T["Interval statistics"]" /></zone>
+
+<p class="text-muted">@T["15-minute statistics of every queue and agent, computed in the background from interactions and agent states. Workforce forecasting, intraday and adherence read them, and the report builder lists them as Queue intervals and Agent intervals. Days are UTC days."]
+    @T["When the feature is turned on, up to {0} earlier days are filled in, a few every five minutes.", Model.BackfillDays]</p>
+
+@if (!string.IsNullOrEmpty(Model.State.LastError))
+{
+    <div class="alert alert-danger">@T["The last run failed: {0}", Model.State.LastError]</div>
+}
+
+@if (Model.Stalled)
+{
+    <div class="alert alert-warning">@T["The rebuild has made no progress for more than 30 minutes. Check that background tasks are running."]</div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 card-title">@T["Progress"]</h2>
+                <dl class="row mb-0 small">
+                    <dt class="col-6">@T["Last run"]</dt>
+                    <dd class="col-6">@Utc(Model.State.LastRunUtc)</dd>
+                    <dt class="col-6">@T["Last 30 days computed"]</dt>
+                    <dd class="col-6">@T["{0} of 30 ({1} final)", Model.DaysComputed, Model.DaysFinal]</dd>
+                    <dt class="col-6">@T["Today computed"]</dt>
+                    <dd class="col-6">@(Model.Today is null ? T["Not yet"].Value : Utc(Model.Today.ComputedUtc))</dd>
+                    <dt class="col-6">@T["Kept for"]</dt>
+                    <dd class="col-6">@T["{0} days", Model.RetentionDays]</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 card-title">@T["Today so far"]</h2>
+                @if (total.Offered + total.Outbound == 0)
+                {
+                    <p class="small text-muted mb-0">@T["No queue work today yet."]</p>
+                }
+                else
+                {
+                    <dl class="row mb-0 small">
+                        <dt class="col-6">@T["Offered"]</dt>
+                        <dd class="col-6">@(Model.QueuesToday == 1 ? T["{0} in 1 queue", total.Offered] : T["{0} in {1} queues", total.Offered, Model.QueuesToday])</dd>
+                        <dt class="col-6">@T["Answered"]</dt>
+                        <dd class="col-6">@total.Answered</dd>
+                        <dt class="col-6">@T["Abandoned"]</dt>
+                        <dd class="col-6">@T["{0} ({1} short)", total.Abandoned, total.ShortAbandoned]</dd>
+                        <dt class="col-6">@T["Service level"]</dt>
+                        <dd class="col-6">@(total.ServiceLevel.HasValue ? total.ServiceLevel.Value.ToString("P0", CultureInfo.CurrentCulture) : "–")</dd>
+                        <dt class="col-6">@T["Average speed of answer"]</dt>
+                        <dd class="col-6">@T["{0} s", Math.Round(total.AverageSpeedOfAnswerSeconds)]</dd>
+                        <dt class="col-6">@T["Average handle time"]</dt>
+                        <dd class="col-6">@T["{0} s", Math.Round(total.AverageHandleSeconds)]</dd>
+                    </dl>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 card-title">@T["Rebuild"]</h2>
+                @if (Model.State.IsRebuilding)
+                {
+                    <p class="small mb-2">
+                        @T["Computing {0} to {1} again; next is {2}.", Day(Model.State.RebuildFromUtc), Day(Model.State.RebuildToUtc), Day(Model.State.RebuildNextUtc)]
+                        @if (!string.IsNullOrEmpty(Model.State.RebuildRequestedBy))
+                        {
+                            @T["Asked for by {0}.", Model.State.RebuildRequestedBy]
+                        }
+                    </p>
+                }
+                @if (Model.CanRebuild)
+                {
+                    <form asp-action="Rebuild" method="post">
+                        <p class="small text-muted">@T["Compute a range of days again, for example after changing a queue's service level threshold. A few days are computed every five minutes."]</p>
+                        <div class="d-flex flex-wrap gap-2 align-items-end">
+                            <div>
+                                <label asp-for="RebuildFrom" class="form-label small">@T["First day"]</label>
+                                <input asp-for="RebuildFrom" type="date" value="@Day(Model.RebuildFrom)" class="form-control form-control-sm w-auto" required />
+                            </div>
+                            <div>
+                                <label asp-for="RebuildTo" class="form-label small">@T["Last day"]</label>
+                                <input asp-for="RebuildTo" type="date" value="@Day(Model.RebuildTo)" class="form-control form-control-sm w-auto" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">@T["Rebuild"]</button>
+                        </div>
+                    </form>
+                }
+                else if (!Model.State.IsRebuilding)
+                {
+                    <p class="small text-muted mb-0">@T["No rebuild is under way."]</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,7 @@
+@model ShapeViewModel<ForecastRow>
+
+@{
+    var forecast = Model.Value.Forecast;
+}
+<a asp-controller="Forecasts" asp-action="Details" asp-route-id="@forecast.ItemId">@Model.Value.PlanningGroupName</a>
+<span class="text-muted small ms-1">@forecast.FromDate.ToString("d", CultureInfo.CurrentCulture)–@forecast.ToDate.ToString("d", CultureInfo.CurrentCulture)</span>

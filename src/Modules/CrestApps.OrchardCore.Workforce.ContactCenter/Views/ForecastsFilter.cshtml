@@ -1,0 +1,13 @@
+@{
+    var model = (ForecastingListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<label for="forecasts-group" class="visually-hidden">@T["Planning group"]</label>
+<select id="forecasts-group" name="planningGroupId" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["Every planning group"]</option>
+    @foreach (var option in model.PlanningGroupOptions)
+    {
+        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+    }
+</select>
