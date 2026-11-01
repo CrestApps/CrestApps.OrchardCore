@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.Scheduling.Core.Indexes;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -130,21 +131,40 @@ public sealed class AppointmentStore : DocumentCatalog<Appointment, AppointmentI
     public async Task<IReadOnlyList<Appointment>> ListForCustomerAsync(string email, string phone, string userId, DateTime fromUtc)
     {
         var lower = email?.Trim().ToLowerInvariant();
+        var trimmedPhone = phone?.Trim();
         var statuses = ActiveStatuses;
+        var appointments = new List<Appointment>();
 
-        if (string.IsNullOrEmpty(lower) && string.IsNullOrEmpty(phone) && string.IsNullOrEmpty(userId))
+        // One query per identifier: a null check on a captured value doesn't translate to SQL, so an "a or b or c" filter
+        // with missing values would match nothing.
+        if (!string.IsNullOrEmpty(lower))
+        {
+            appointments.AddRange(await ListMatchingAsync(index => index.StartUtc >= fromUtc && index.Status.IsIn(statuses) && index.CustomerEmail == lower));
+        }
+
+        if (!string.IsNullOrEmpty(trimmedPhone))
+        {
+            appointments.AddRange(await ListMatchingAsync(index => index.StartUtc >= fromUtc && index.Status.IsIn(statuses) && index.CustomerPhone == trimmedPhone));
+        }
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            appointments.AddRange(await ListMatchingAsync(index => index.StartUtc >= fromUtc && index.Status.IsIn(statuses) && index.UserId == userId));
+        }
+
+        if (appointments.Count == 0)
         {
             return [];
         }
 
-        var appointments = await Session.Query<Appointment, AppointmentIndex>(
-                index => index.StartUtc >= fromUtc && index.Status.IsIn(statuses) &&
-                    ((lower != null && index.CustomerEmail == lower) || (phone != null && index.CustomerPhone == phone) || (userId != null && index.UserId == userId)),
-                collection: CollectionName)
+        return await LoadedAsync(appointments.DistinctBy(appointment => appointment.ItemId).OrderBy(appointment => appointment.StartUtc).Take(50));
+    }
+
+    private async Task<IEnumerable<Appointment>> ListMatchingAsync(Expression<Func<AppointmentIndex, bool>> predicate)
+    {
+        return await Session.Query<Appointment, AppointmentIndex>(predicate, collection: CollectionName)
             .OrderBy(index => index.StartUtc)
             .Take(50)
             .ListAsync();
-
-        return await LoadedAsync(appointments);
     }
 }

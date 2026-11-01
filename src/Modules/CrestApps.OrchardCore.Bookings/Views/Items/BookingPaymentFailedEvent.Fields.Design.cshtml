@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingPaymentFailedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Booking Payment Failed"])
+    </h4>
+</header>

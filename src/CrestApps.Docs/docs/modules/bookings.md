@@ -157,11 +157,22 @@ internal sealed class BookingAuditHandler : IBookingHandler
 services.AddScoped<IBookingHandler, BookingAuditHandler>();
 ```
 
+`IBookingPaymentHandler` hears about money moving for bookings. Each method gets a `BookingPaymentContext` with the order's `Bookings` the money is for, `OrderId`, `OrderNumber`, `PaymentKind` (`FullPayment`, `Deposit` or `Balance`; `null` for a refund), `Amount` and `Currency` (for the whole order, not for each booking), `Reason`, `IsFinal` and `Reference`.
+
+| Method | Called by | When |
+| --- | --- | --- |
+| `PaymentReceivedAsync` | `BookingService.ConfirmPaidAsync` | An order with bookings is paid: `FullPayment`, or `Deposit` when a balance is owed later. `Amount` is what was paid now; `Reference` is the order's checkout session. |
+| `PaymentReceivedAsync` | `BookingBalancePaymentHandler` (an `ITransactionPaymentHandler`) | A payment is applied to a balance's ledger invoice, however it was paid: the kept card charged when it's due, the buyer's pay link, or staff recording a payment. `PaymentKind` is `Balance`; `Reference` is the ledger transaction. |
+| `PaymentFailedAsync` | `BookingBalanceCharger` | Charging the balance to the kept card fails. `IsFinal` is `true` when it isn't tried again (after the last attempt, or when no card or invoice can be found). |
+| `RefundedAsync` | `BookingOrderEventHandler.RefundedAsync` | A refund is recorded on an order with confirmed bookings, whether a booking was canceled with a refund or staff refunded the order. `Reference` is the refund's id. |
+
+Each is reported once. An order reported paid again confirms no booking twice, so it reports nothing new; the ledger applies a payment and an order records a refund only once; and a balance that already failed for good, was paid or was let go of reports no further failure. Each try of a declined charge reports its own failure. Only bookings that were confirmed are included in a balance payment, a failed charge or a refund. The handlers run inside the unit of work that records the money; a handler that throws is logged and doesn't undo it.
+
 `IBookingSlotFilter` closes some of a product's dates or times for a reason Bookings doesn't track itself. `GetClosedSlotKeysAsync(contentItemId, part, slotKeys, timeZone)` returns which of the slot keys (`yyyy-MM-dd` or `yyyy-MM-ddTHH:mm`, in the given time zone) are closed. `BookingCapacityService` asks every filter in `GetRemainingAsync`, so a closed date shows as full, and again in `HoldAsync`, so it can't be held.
 
 ## Workflow events
 
-With `OrchardCore.Workflows` enabled, Bookings adds these events in the **Commerce** category. `BookingWorkflowHandler` (an `IBookingHandler`) picks them when a booking is saved and triggers them in a deferred task once the session commits, correlated by the booking id. A save can raise more than one, such as **Booking Created** and **Booking Confirmed** for a booking paid at once.
+With `OrchardCore.Workflows` enabled, Bookings adds these events in the **Commerce** category. `BookingWorkflowHandler` (an `IBookingHandler`) picks them when a booking is saved and triggers them in a deferred task once the session commits, correlated by the booking id. A save can raise more than one, such as **Booking Created** and **Booking Confirmed** for a booking paid at once. The payment events come from `BookingPaymentWorkflowHandler` (an `IBookingPaymentHandler`), one for each booking the money is for, also in a deferred task once the session commits.
 
 | Event | Raised when |
 | --- | --- |
@@ -172,6 +183,9 @@ With `OrchardCore.Workflows` enabled, Bookings adds these events in the **Commer
 | Booking Completed (`BookingCompletedEvent`) | A booking is marked complete. |
 | Booking No-Show (`BookingNoShowEvent`) | A booking is marked as a no-show. |
 | Booking Expired (`BookingExpiredEvent`) | A hold or request runs out. |
+| Booking Payment Received (`BookingPaymentReceivedEvent`) | An order with bookings is paid in full or by deposit, or a payment is applied to a booking balance. |
+| Booking Payment Failed (`BookingPaymentFailedEvent`) | Charging a booking balance to the card kept from the deposit fails. |
+| Booking Refunded (`BookingRefundedEvent`) | A refund is recorded on an order with confirmed bookings. |
 
 The input of every event:
 
@@ -184,6 +198,16 @@ The input of every event:
 | `StartsUtc`, `EndsUtc` | When it starts and ends. |
 | `Status`, `PreviousStatus` | Its status now and at its last save. |
 | `CustomerName`, `CustomerEmail` | The buyer. |
+
+The payment events add:
+
+| Key | Value |
+| --- | --- |
+| `Amount`, `Currency` | What was paid, charged or refunded, for the whole order. An order with two bookings raises the event twice, each with the same amount. |
+| `PaymentKind` | `FullPayment`, `Deposit` or `Balance`; empty for **Booking Refunded**. |
+| `Reason` | Why the charge failed, or the refund's reason. |
+| `IsFinal` | For **Booking Payment Failed**, `true` when the charge isn't tried again and the buyer pays from the invoice's pay link. |
+| `PaymentReference` | The order's checkout session, the balance's ledger transaction, or the refund's id. |
 
 ## Bookings on the calendar
 

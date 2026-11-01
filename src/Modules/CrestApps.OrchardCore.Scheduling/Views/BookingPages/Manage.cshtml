@@ -26,8 +26,22 @@
     <form method="post" class="no-multisubmit">
         @if (Model.Appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed)
         {
-            <button type="submit" name="operation" value="Cancel" class="btn btn-danger mb-3" onclick="return confirm('@T["Cancel your appointment?"]')">@T["Cancel my appointment"]</button>
+            if (Model.CustomerCanCancel)
+            {
+                <button type="submit" name="operation" value="Cancel" class="btn btn-danger mb-3" onclick="return confirm('@T["Cancel your appointment?"]')">@T["Cancel my appointment"]</button>
+            }
+            else
+            {
+                <p class="text-muted">@T["It's too close to the start to cancel online. Contact us to cancel it."]</p>
+            }
+            if (!Model.CustomerCanReschedule)
+            {
+                <p class="text-muted">@T["It's too close to the start to move online. Contact us to move it."]</p>
+            }
         }
-        <partial name="_RescheduleChoices" model="Model" />
+        @if (Model.CustomerCanReschedule)
+        {
+            <partial name="_RescheduleChoices" model="Model" />
+        }
     </form>
 </div>

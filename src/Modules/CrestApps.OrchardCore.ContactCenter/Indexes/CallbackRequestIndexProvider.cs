@@ -29,6 +29,9 @@ public sealed class CallbackRequestIndexProvider : IndexProvider<CallbackRequest
                 ScheduledUtc = callback.ScheduledUtc,
                 LeaseExpiresUtc = callback.LeaseExpiresUtc,
                 ModifiedUtc = callback.ModifiedUtc,
+
+                // The column holds an agent profile identifier; anything longer could not be stored on every database.
+                AgentId = callback.AgentId?.Length <= ContactCenterStorage.AgentIdLength ? callback.AgentId : null,
             });
     }
 }

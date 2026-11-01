@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -32,6 +33,47 @@ public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, Call
                 index.ScheduledUtc <= utcNow &&
                 (index.LeaseExpiresUtc == null || index.LeaseExpiresUtc <= utcNow),
             collection: ContactCenterStorage.CollectionName)
+            .OrderBy(index => index.ScheduledUtc)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return callbacks.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<CallbackRequest>> ListOpenForAgentsAsync(
+        IEnumerable<string> agentIds,
+        DateTime fromUtc,
+        DateTime toUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
+        var query = Session.Query<CallbackRequest, CallbackRequestIndex>(
+            index => (index.Status == CallbackRequestStatus.Pending ||
+                    index.Status == CallbackRequestStatus.Scheduled ||
+                    index.Status == CallbackRequestStatus.InProgress) &&
+                index.ScheduledUtc >= fromUtc &&
+                index.ScheduledUtc < toUtc,
+            collection: ContactCenterStorage.CollectionName);
+
+        if (agentIds is null)
+        {
+            query = query.Where(index => index.AgentId != null);
+        }
+        else
+        {
+            var ids = agentIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+            if (ids.Length == 0)
+            {
+                return [];
+            }
+
+            query = query.Where(index => index.AgentId.IsIn(ids));
+        }
+
+        var callbacks = await query
             .OrderBy(index => index.ScheduledUtc)
             .Take(take)
             .ListAsync(cancellationToken);

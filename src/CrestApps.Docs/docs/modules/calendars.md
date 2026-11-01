@@ -33,7 +33,7 @@ The **Calendars** module is a calendar foundation that other modules build on. I
 Workflow activities need no feature of their own: they are registered when `OrchardCore.Workflows` is enabled. The [AI tools](#ai-tools) need none either: Calendars registers them when `CrestApps.OrchardCore.AI` is enabled. The **Starting Soon** and **Completed** workflow events also need Calendar Reminders. The `Calendars` recipe step needs `OrchardCore.Recipes.Core`, and the deployment step needs `OrchardCore.Deployment`.
 
 :::note[Google Calendar and Microsoft 365]
-Two-way providers for Google Calendar and Microsoft 365 are not available yet. The `ICalendarProvider` seam exists, and External Calendars ships one read-only provider: a subscription to an iCalendar (`.ics`) address, which Google Calendar, Outlook and most calendar apps can publish. In the other direction, Calendar Feeds publishes a calendar as an address those apps can subscribe to.
+External Calendars ships one read-only provider: a subscription to an iCalendar (`.ics`) address, which Google Calendar, Outlook and most calendar apps can publish. Its synchronization also supports providers that read only what changed and write changes back (two-way), so providers for Google Calendar and Microsoft 365 can be added as modules ([#1238](https://github.com/CrestApps/CrestApps.OrchardCore/issues/1238)). In the other direction, Calendar Feeds publishes a calendar as an address those apps can subscribe to.
 :::
 
 ## Permissions
@@ -251,7 +251,9 @@ On every create, change and move, `DefaultCalendarEventManager`:
 | `ICalendarEventSource` | Contribute read-only occurrences to the calendar view from another module's records without copying them. Register with `services.AddCalendarEventSource<T>()`. Return events with `Editable = false`. |
 | `ICalendarReminderOffsetProvider` | Tell Calendar Reminders how long before an occurrence its "starting soon" moment is raised. Each offset is raised once per occurrence. |
 | `ICalendarReminderObserver` | `OnStartingSoonAsync` and `OnCompletedAsync`, raised exactly once per occurrence and offset. |
-| `ICalendarProvider` (Core, `External`) | An external calendar provider: `Name`, `DisplayName`, `PullAsync(calendar, subscription)` returning `ICalendarEventData`. |
+| `ICalendarProvider` (Core, `External`) | An external calendar provider: `Name`, `DisplayName`, `PullAsync(calendar, subscription)` returning `ICalendarEventData`, and `UsesAddress` / `IsConfigured` for providers connected through an account. Register it with `services.AddCalendarProvider<T>()`. |
+| `IIncrementalCalendarProvider` (Core, `External`) | A provider that reads only what changed since a sync token: `PullChangesAsync` and `GetSyncTokenAsync`. |
+| `IWritableCalendarProvider` (Core, `External`) | A provider that writes local changes back for a two-way subscription: `PushAsync` and `DeleteAsync`, with `CalendarProviderConflictException` and `CalendarProviderAuthorizationException`. |
 | `DisplayDriver<Calendar>` / `DisplayDriver<CalendarEvent>` | Add type-specific fields to the editors. |
 
 See the `crestapps-calendar-types` agent skill (`.agents/skills/crestapps-calendar-types/SKILL.md`) for worked examples and pitfalls.
@@ -282,11 +284,24 @@ Calendar Feeds adds:
 
 ## External calendars
 
-External Calendars keeps a calendar in step with an external calendar. The subscription is a `CalendarSubscription` in the calendar's properties: `Provider` (`ics` by default), `Url`, `IntervalMinutes` (60 by default, 5 to 10,080), `Enabled`, `LastSyncedUtc`, `LastAttemptUtc`, `LastError`, `Failures`, `LastResult`.
+External Calendars keeps a calendar in step with an external calendar. The subscription is a `CalendarSubscription` in the calendar's properties: `Provider` (`ics` by default), `Url`, `IntervalMinutes` (60 by default, 5 to 10,080), `Enabled`, `TwoWay`, `ConflictPolicy`, and what synchronization keeps for itself: `SyncToken`, `PendingPush`, `PendingDeletes`, `NeedsReconnect`, `LastSyncedUtc`, `LastAttemptUtc`, `LastError`, `Failures` and `LastResult`.
 
-`CalendarSyncBackgroundTask` runs every five minutes and calls `CalendarSyncService.SyncDueAsync`, which pulls each due calendar through its provider and imports the events with `Source = External`, `Editable = false` and `RemoveMissing = true`, so events gone from the external calendar are removed here. A failure is recorded in `LastError` and the next try waits longer: the interval doubles with each failure in a row, up to 32 times the interval. A provider that is down never blocks the internal calendar.
+`CalendarSyncBackgroundTask` runs every five minutes. It asks `CalendarSyncService.ListDueAsync` which calendars are due and synchronizes each one in its own scope, so a calendar whose provider fails, or whose save conflicts, never stops the others. A calendar is due when its interval has passed since the last attempt, or at the next run when it has local changes to write back.
 
-The built-in `ics` provider (`ICalendarUrlProvider`) accepts `https://`, `http://` and `webcal://` addresses, times out after 30 seconds, and refuses addresses that resolve to private or loopback networks.
+One run:
+
+1. **Reads** the external calendar. A provider that implements `IIncrementalCalendarProvider` reads only what changed since the subscription's `SyncToken`, and the run reads everything again when the token has expired. A full read removes the events that are gone from the external calendar.
+2. **Imports** the events with `Source = External`, matched by the external event's id, and records on each event a `CalendarProviderMapping`: the calendar, the provider, the external id, the external copy's version and a fingerprint of the synchronized fields (title, description, location, times, time zone, status, busy or free, repeat rule, exceptions and attendee emails).
+3. For a **two-way** subscription (only with a provider that implements `IWritableCalendarProvider`), imported events can be changed here, and the run **writes back** the events added or changed here (their fingerprint no longer matches) and deletes the external copies of events deleted here. Each write carries the version it last saw, so a change made externally in the meantime is caught.
+4. **Records** the result on the subscription, shown on the calendar's **Subscription** card.
+
+An event changed both here and in the external calendar since they were last synchronized is a **conflict**. The subscription's **When both copies changed** setting decides: **The external calendar's copy wins** (the default) overwrites the local change, and **This calendar's copy wins** keeps it and writes it over the external copy; an event deleted externally but changed here is then created again externally.
+
+Failures never touch the events the calendar already has. A failure is recorded in `LastError` and the next try waits longer: the interval doubles with each failure in a row, up to 32 times the interval. When the external account refuses access (a revoked consent or an expired refresh token), the subscription is paused (`NeedsReconnect`) instead of retried, the card asks to reconnect, and saving the calendar again starts it. A health check named `calendars-external-sync` (tag `calendars`) reports **Degraded** while a subscription needs reconnecting or has failed three times in a row; it never reports the calendar unhealthy, since the calendar keeps working.
+
+The built-in `ics` provider (`ICalendarUrlProvider`) is read-only. It accepts `https://`, `http://` and `webcal://` addresses, times out after 30 seconds, and refuses addresses that resolve to private or loopback networks.
+
+To build another provider, such as Google Calendar or Microsoft 365, follow the `crestapps-calendar-provider` agent skill (`.agents/skills/crestapps-calendar-provider/SKILL.md`): the contracts, what the synchronization does for the provider, event mapping, connecting accounts, and a checklist.
 
 ## Workflows
 
@@ -334,7 +349,7 @@ Task changes are made with the actor `workflow`.
 
 ## HTTP API
 
-The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard Core's `Api` scheme and without antiforgery. Every endpoint checks the caller's access to each calendar it touches.
+The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard Core's `Api` scheme and without antiforgery. Every endpoint checks the caller's access to each calendar it touches, with the same rules as the calendar screens. `GET calendars`, `GET events`, `free-busy` and `free-time` answer `403` to a caller without **Use calendars** (`AccessCalendars`).
 
 | Method and route | Does | Access |
 | --- | --- | --- |
@@ -349,13 +364,13 @@ The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard C
 | `POST free-busy` | Busy intervals for `calendarIds` and `userIds` (up to 50) between `from` and `to` (at most 62 days). | FreeBusy, and **Use calendars** |
 | `POST free-time` | Windows of `durationMinutes` (5 to 1,440, default 30) when everyone is free, up to 50. | FreeBusy, and **Use calendars** |
 
-An overlap refusal returns `409 Conflict` as Problem Details; other validation errors return `400` with the field errors.
+An overlap refusal returns `409 Conflict` as Problem Details; other validation errors, including a missing body or a range whose end is not after its start, return `400` with the field errors. Cancelling an event that is already cancelled, or sending the same answer to an invitation again, succeeds without a change, so a retried request raises no second **Event Cancelled**, **Event Updated** or **Response Received** workflow event.
 
 The admin calendar view uses its own endpoints under `Admin/api/calendars` (`occurrences`, `occurrences/move` and `users/search`), which are not a public API.
 
 ## AI tools
 
-With `CrestApps.OrchardCore.AI` enabled, Calendars registers these tools in the **Calendar** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers.
+With `CrestApps.OrchardCore.AI` enabled, Calendars registers these tools in the **Calendar** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers and callers without **Use calendars** (`AccessCalendars`). Without that permission, `createCalendarEvent` doesn't create the person's personal calendar either.
 
 | Function | Title | Description |
 | --- | --- | --- |
@@ -412,7 +427,65 @@ Property names are camelCase and enums are written by name (a number is read too
 
 With the **CrestApps Recipes** feature on, the module describes the `Calendars` recipe step (`CalendarsRecipeStepSchema`, an `IRecipeStep`) and the deployment step's settings (`CalendarsDeploymentStepSchema`) to it, from `RecipesSchemaStartup` (`[RequireFeatures("CrestApps.OrchardCore.Recipes")]`), so recipes can be checked and written with help.
 
+## Report Builder data source
+
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Calendars adds the **Calendars** data source (`Calendars`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Use calendars** (`AccessCalendars`) and follow the same rules as the calendar view, for the report's owner (the user whose principal runs the report):
+
+- Only calendars the owner can **read** are reported: calendars they own, are in the team role of, are shared with at **Read** or above, or that are public, and every calendar with **View all calendars**. A calendar the owner can only see as free/busy time, and the events on it, are left out completely rather than reported as busy blocks.
+- A private event on a calendar the owner can read but not change is reported with its time, type and status, but its **Title** and **Attendees** are empty and **Details hidden** is `true`, as it shows as busy time on the calendar. **View all calendars** reads every calendar but changes none, so private events stay hidden; **Manage all calendars** shows them.
+- An event the owner is only invited to, on a calendar they can't read, is not reported.
+- Descriptions, locations, attendees' names and email addresses, answer links, feed tokens and links to external calendars are never exposed.
+
+Grouping and totals are left to the report engine, since a grouping statement in the database would read every calendar.
+
+The **Calendars** data set (`Calendars`) has one row per calendar.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Calendar ID | Identifies the calendar. |
+| `Name` | Name | |
+| `Type` | Type | Such as `General`, `Personal`, `Team`, `Room` or `Office`. |
+| `OwnerKind` | Owner kind | `None`, `User`, `Role` or `Resource`. |
+| `OwnerId` | Owner | The user ID, role name or resource it belongs to. |
+| `OwnerUserId` | Owner user ID | The owner when a user owns it; references `Users`. |
+| `Visibility` | Visibility | `Private`, `Shared` or `Public`. |
+| `ShareCount` | Shared with | How many users and roles it is shared with. |
+| `Enabled` | Enabled | |
+| `TimeZoneId` | Time zone | |
+| `ConflictPolicy` | Conflicts | What happens when events overlap. |
+| `Capacity` | Capacity | How many events may overlap when the calendar limits them. |
+| `Source` | Source | The module that owns it, such as `Scheduling`. |
+| `CreatedUtc`, `ModifiedUtc` | Created, Last changed | |
+| `CreatedBy` | Created by | References `Users`. |
+
+The **Calendar events** data set (`CalendarEvents`) has one row per stored event: a one-time event, a repeating event (one row for the whole series, at its first occurrence), or a changed occurrence of one (with its `SeriesId`). Occurrences of a repeating event are not expanded into rows. Rows come newest first by **Starts**, the default date. Date ranges on it, joins on the event and calendar IDs, and filters on **Status** and **Busy or free** are applied in the database.
+
+| Field | Display name | Notes |
+| --- | --- | --- |
+| `ItemId` | Event ID | Identifies the event. |
+| `EventType` | Event type | Such as `Event`, `Meeting`, `Shift` or `Appointment`. |
+| `Title` | Title | Empty when the details are hidden. |
+| `Status` | Status | `Confirmed`, `Tentative` or `Cancelled`. |
+| `Visibility` | Visibility | `Default`, `Public` or `Private`. |
+| `DetailsHidden` | Details hidden | Whether the title and attendees are hidden from the report's owner. |
+| `Transparency` | Busy or free | `Busy`, or `Free` when the event leaves the time free. |
+| `AttendeeCount` | Attendees | How many people, rooms and equipment are invited; empty when the details are hidden. |
+| `IsRecurring` | Repeats | |
+| `SeriesId` | Series ID | The repeating event a changed occurrence belongs to; references `CalendarEvents`. |
+| `Source`, `SourceId` | Source, Source ID | The module that owns the event, such as `Scheduling`, and its record. |
+| `CalendarId` | Calendar ID | References `Calendars`. |
+| `CalendarType` | Calendar type | |
+| `StartUtc`, `EndUtc` | Starts, Ends | For a repeating event, its first occurrence. |
+| `AllDay` | All day | |
+| `DurationMinutes` | Duration (minutes) | |
+| `TimeZoneId` | Time zone | |
+| `CreatedUtc`, `ModifiedUtc` | Created, Last changed | |
+| `CreatedBy` | Created by | References `Users`. |
+
+The `UpdateFrom2Async` migration step adds the database index events are read through (`StartUtc`, `Id`).
+
 ## Building on the calendar
 
 - [Scheduling](./scheduling.md) puts appointments on `Appointments` calendars and reads free/busy time from the calendar.
 - [Bookings](./bookings.md#bookings-on-the-calendar), with Calendars on, keeps every booking on a `Bookings` calendar and closes booking dates that are busy on a chosen calendar.
+- [Contact Center](../contact-center/agents-queues-dialer.md#callbacks-on-the-calendar), with the Outbound Dialer on, shows the open callbacks reserved for an agent on the agent's personal calendar, read-only, through the `ContactCenter.Callbacks` event source.

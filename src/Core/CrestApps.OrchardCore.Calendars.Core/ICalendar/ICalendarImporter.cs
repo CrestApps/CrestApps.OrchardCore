@@ -78,6 +78,10 @@ public sealed class ICalendarImporter
 
                     Count(result, created, data, isNew: true);
                 }
+                else if (options.CanUpdate is not null && !options.CanUpdate(current, data))
+                {
+                    result.Unchanged++;
+                }
                 else
                 {
                     var updated = await _eventManager.UpdateAsync(current, target => Apply(data, target, options, isOverride: true), change);
@@ -93,6 +97,13 @@ public sealed class ICalendarImporter
                 seen.Add(match.ItemId);
 
                 if (match.Sequence == data.Sequence && data.LastModifiedUtc.HasValue && match.ModifiedUtc >= data.LastModifiedUtc.Value)
+                {
+                    result.Unchanged++;
+
+                    continue;
+                }
+
+                if (options.CanUpdate is not null && !options.CanUpdate(match, data))
                 {
                     result.Unchanged++;
 
@@ -124,7 +135,7 @@ public sealed class ICalendarImporter
 
         if (options.RemoveMissing)
         {
-            foreach (var calendarEvent in existing.Where(item => item.SeriesId is null && !seen.Contains(item.ItemId)))
+            foreach (var calendarEvent in existing.Where(item => item.SeriesId is null && !seen.Contains(item.ItemId) && (options.CanRemove is null || options.CanRemove(item))))
             {
                 await _eventManager.DeleteAsync(calendarEvent, change);
                 result.Removed++;
@@ -179,6 +190,8 @@ public sealed class ICalendarImporter
                     ExceptionDates = data.ExceptionDates.ToList(),
                 };
         }
+
+        options.Applied?.Invoke(target, data);
     }
 
     private static void Count(ICalendarImportResult result, CalendarResult<CalendarEvent> outcome, ICalendarEventData data, bool isNew)

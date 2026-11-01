@@ -64,4 +64,10 @@ public sealed class AppointmentRequest
     /// Gets or sets whether to only hold the time for the type's hold minutes.
     /// </summary>
     public bool Hold { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the customer books it themselves, such as on the public booking page or through an AI assistant,
+    /// so the type's customer booking rules apply. Staff who manage appointments leave it off.
+    /// </summary>
+    public bool SelfService { get; set; }
 }

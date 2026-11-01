@@ -64,8 +64,11 @@ Open **Calendars > Appointment Types** and choose **Add appointment type**.
 
 | Field | What it does |
 | --- | --- |
-| **Resources** | The staff, rooms and equipment that take this appointment. |
-| **Pick** | **Any free resource** (the first one free in the list), **Share out (round robin)** (the free one with the fewest recent appointments, so work is shared out), or **All resources together** (every resource at once, such as a doctor and a room). |
+| **Group 1**, **Group 2**, ... | The staff, rooms and equipment that take this appointment, in groups. Most appointment types need one group. When an appointment needs one of each kind, such as a person and a room, put the staff in one group and the rooms in another: a time is only offered when every group has someone or something free. Choose **Add a group** for another. |
+| **Name** | What the group is, such as *Staff* or *Room*. |
+| **Resources** | The staff, rooms or equipment in the group. |
+| **Pick** | **Any free resource** (the first one free in the list), **Share out (round robin)** (the free one with the fewest recent appointments, so work is shared out), or **All resources together** (every resource of the group at once, such as a doctor and a nurse). |
+| **Share of appointments** | With round robin: how much work each resource takes. A resource with 2 gets about twice as many appointments as one with 1. |
 | **Places per appointment** | More than 1 makes it a class or group session that several customers book. The time stays open until it is full. |
 
 **Booking rules**
@@ -75,10 +78,16 @@ Open **Calendars > Appointment Types** and choose **Add appointment type**.
 | **Minimum notice (minutes)** | How soon before the start an appointment can still be booked (60 by default). |
 | **Book up to (days ahead)** | How far ahead appointments can be booked (60 by default). |
 | **Most per resource per day** | The most appointments of this type one resource takes in a day. 0 for no limit. |
+| **Most per resource per week** | The most appointments of this type one resource takes in a week, Monday to Sunday. 0 for no limit. |
 | **Hold a time for (minutes)** | How long a time stays held for someone who is still booking (10 by default). |
 | **Bookings wait for someone to confirm them** | New bookings are *Requested* until someone confirms them. |
 | **Customers can book it themselves** | Offer it on the public booking page and through the scheduling AI tools. |
+| **Most upcoming per customer** | How many upcoming appointments of this type one customer can book themselves, such as 1 so each customer has only one at a time. Customers are recognized by their account, email or phone number. 0 for no limit. |
+| **Customers can cancel up to (minutes before)** | Closer to the start than this, customers can't cancel online and are asked to contact you, such as 1440 for a day's notice. 0 lets them cancel any time before it starts. |
+| **Customers can move up to (minutes before)** | The same for moving the appointment to another time. |
 | **Booking page address** | The end of the public booking page's address, after */book/*. |
+
+The last three rules hold customers who book on the booking page or through the AI assistant. You and other staff who manage appointments can still book more, cancel or move appointments at any time.
 
 Deleting an appointment type keeps its appointments.
 
@@ -90,9 +99,9 @@ A time is offered when the whole appointment, with its free time before and afte
 - outside anything busy on the resource's calendar, and for a staff member, on their own calendars;
 - outside the free time before and after the appointments already booked with the resource;
 - after the minimum notice and before the booking limit;
-- without going over the most per day, or for a group session, while places are left.
+- without going over the most per day or per week, or for a group session, while places are left.
 
-With **All resources together**, every resource must be free at that time.
+With several groups, each group needs a free resource at that time, and with **All resources together** every resource of that group must be free. An appointment keeps every resource it took busy, so a room booked with one staff member can't be booked with another at the same time.
 
 ## Book an appointment for a customer
 
@@ -129,7 +138,7 @@ Appointments show on the calendar of the resource, tentative while held or reque
 
 With the **Scheduling Self-Service** feature on, every appointment type with **Customers can book it themselves** and a **Booking page address** gets a public page at */book/* followed by that address. Add it to your site's menu, or link to it from your pages.
 
-On the page, the customer picks a **Day**, chooses **Show times**, picks a time (times are in the site's time zone), enters their **Name**, **Email**, **Phone** and **Notes**, and chooses **Book**. They land on a **Your appointment** page. Its address is their manage link: they can come back to it to move the appointment to another open time, or to cancel it. For an appointment type that waits for confirmation, the page says the request has been received.
+On the page, the customer picks a **Day**, chooses **Show times**, picks a time (times are in the site's time zone), enters their **Name**, **Email**, **Phone** and **Notes**, and chooses **Book**. They land on a **Your appointment** page. Its address is their manage link: they can come back to it to move the appointment to another open time, or to cancel it, until the appointment type's notice for cancelling or moving has passed; after that the page asks them to contact you. For an appointment type that waits for confirmation, the page says the request has been received.
 
 Scheduling doesn't email customers by itself. To send a confirmation with the manage link, set up a workflow on **Appointment Confirmed** that sends an email; your administrator can do this, and the [Technical Manual](../../modules/scheduling.md#self-service) shows what to put in it.
 

@@ -26,18 +26,103 @@
         <div class="ocat-wrapper"><label asp-for="BufferAfterMinutes" class="ocat-label">@T["Free time after (minutes)"]</label><div class="ocat-end"><input asp-for="BufferAfterMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>
     </div></div>
     <div class="card text-bg-theme mb-3"><div class="card-header">@T["Who"]</div><div class="card-body">
-        <div class="ocat-wrapper"><label asp-for="ResourceIds" class="ocat-label">@T["Resources"]</label><div class="ocat-end"><select asp-for="ResourceIds" asp-items="Model.ResourceOptions" class="selectpicker show-tick" multiple data-live-search="true" title="@T["Choose resources"]"></select><span class="hint">@T["The staff, rooms and equipment that take this appointment."]</span></div></div>
-        <div class="ocat-wrapper"><label asp-for="Assignment" class="ocat-label">@T["Pick"]</label><div class="ocat-end"><select asp-for="Assignment" asp-items="Model.AssignmentOptions" class="form-select" style="max-width: 22rem"></select></div></div>
+        <p class="hint">@T["The staff, rooms and equipment that take this appointment. To need one of each kind, such as one person and one room, put each kind in its own group: a time is offered only when every group has someone or something free."]</p>
+        @for (var i = 0; i < Model.Requirements.Count; i++)
+        {
+            var group = Model.Requirements[i];
+            var selected = group.ResourceIds ?? [];
+            <fieldset class="border rounded p-3 mb-3@(i < Model.VisibleRequirements ? string.Empty : " d-none")" data-requirement>
+                <legend class="fs-6 float-none w-auto px-2 mb-0">@T["Group {0}", i + 1]</legend>
+                <div class="ocat-wrapper"><label for="Requirements_@(i)_Name" class="ocat-label">@T["Name"]</label><div class="ocat-end"><input id="Requirements_@(i)_Name" name="Requirements[@i].Name" value="@group.Name" class="form-control" style="max-width: 22rem" placeholder="@T["Such as Staff or Room"]" /></div></div>
+                <div class="ocat-wrapper"><label for="Requirements_@(i)_ResourceIds" class="ocat-label">@T["Resources"]</label><div class="ocat-end">
+                    <select id="Requirements_@(i)_ResourceIds" name="Requirements[@i].ResourceIds" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Choose resources"]" data-requirement-resources>
+                        @foreach (var option in Model.ResourceOptions)
+                        {
+                            <option value="@option.Value" selected="@selected.Contains(option.Value)">@option.Text</option>
+                        }
+                    </select>
+                </div></div>
+                <div class="ocat-wrapper"><label for="Requirements_@(i)_Assignment" class="ocat-label">@T["Pick"]</label><div class="ocat-end">
+                    <select id="Requirements_@(i)_Assignment" name="Requirements[@i].Assignment" class="form-select" style="max-width: 22rem" data-requirement-assignment>
+                        @foreach (var option in Model.AssignmentOptions)
+                        {
+                            <option value="@option.Value" selected="@(option.Value == group.Assignment)">@option.Text</option>
+                        }
+                    </select>
+                </div></div>
+                <div class="ocat-wrapper" data-weights><span class="ocat-label">@T["Share of appointments"]</span><div class="ocat-end">
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var option in Model.ResourceOptions)
+                        {
+                            var weight = group.Weights is not null && group.Weights.TryGetValue(option.Value, out var value) && value > 0 ? value : 1;
+                            <div class="input-group input-group-sm" style="max-width: 16rem" data-weight-for="@option.Value">
+                                <label class="input-group-text" for="Requirements_@(i)_Weights_@option.Value">@option.Text</label>
+                                <input id="Requirements_@(i)_Weights_@option.Value" name="Requirements[@i].Weights[@option.Value]" type="number" min="1" max="100" value="@weight" class="form-control" />
+                            </div>
+                        }
+                    </div>
+                    <span class="hint">@T["With round robin, a resource with 2 takes about twice as many appointments as one with 1."]</span>
+                </div></div>
+            </fieldset>
+        }
+        @if (Model.VisibleRequirements < Model.Requirements.Count)
+        {
+            <div class="mb-3"><button type="button" class="btn btn-sm btn-secondary" data-add-requirement><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a group"]</button></div>
+        }
         <div class="ocat-wrapper"><label asp-for="Capacity" class="ocat-label">@T["Places per appointment"]</label><div class="ocat-end"><input asp-for="Capacity" type="number" min="1" class="form-control" style="max-width: 10rem" /><span class="hint">@T["More than 1 makes it a class or group session that several customers book."]</span></div></div>
     </div></div>
     <div class="card text-bg-theme mb-3"><div class="card-header">@T["Booking rules"]</div><div class="card-body">
         <div class="ocat-wrapper"><label asp-for="MinimumNoticeMinutes" class="ocat-label">@T["Minimum notice (minutes)"]</label><div class="ocat-end"><input asp-for="MinimumNoticeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>
         <div class="ocat-wrapper"><label asp-for="HorizonDays" class="ocat-label">@T["Book up to (days ahead)"]</label><div class="ocat-end"><input asp-for="HorizonDays" type="number" min="1" class="form-control" style="max-width: 10rem" /></div></div>
         <div class="ocat-wrapper"><label asp-for="MaxPerDay" class="ocat-label">@T["Most per resource per day"]</label><div class="ocat-end"><input asp-for="MaxPerDay" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["0 for no limit."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxPerWeek" class="ocat-label">@T["Most per resource per week"]</label><div class="ocat-end"><input asp-for="MaxPerWeek" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Weeks run Monday to Sunday in the resource's time zone. 0 for no limit."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="HoldMinutes" class="ocat-label">@T["Hold a time for (minutes)"]</label><div class="ocat-end"><input asp-for="HoldMinutes" type="number" min="1" class="form-control" style="max-width: 10rem" /></div></div>
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="RequiresConfirmation" class="form-check-input" /><label asp-for="RequiresConfirmation" class="form-check-label">@T["Bookings wait for someone to confirm them"]</label></div></div></div>
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="AllowSelfService" class="form-check-input" /><label asp-for="AllowSelfService" class="form-check-label">@T["Customers can book it themselves"]</label><span class="hint dashed">@T["On the public booking page (with the Scheduling Self-Service feature) and through the scheduling AI tools."]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxUpcomingPerCustomer" class="ocat-label">@T["Most upcoming per customer"]</label><div class="ocat-end"><input asp-for="MaxUpcomingPerCustomer" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["How many upcoming appointments of this type one customer can book themselves, matched by their account, email or phone. Staff can always book more. 0 for no limit."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="CancelNoticeMinutes" class="ocat-label">@T["Customers can cancel up to (minutes before)"]</label><div class="ocat-end"><input asp-for="CancelNoticeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Closer to the start, customers can't cancel it themselves; staff still can. 0 for any time before it starts."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="RescheduleNoticeMinutes" class="ocat-label">@T["Customers can move up to (minutes before)"]</label><div class="ocat-end"><input asp-for="RescheduleNoticeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Closer to the start, customers can't move it themselves; staff still can. 0 for any time before it starts."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="Slug" class="ocat-label">@T["Booking page address"]</label><div class="ocat-end"><div class="input-group" style="max-width: 28rem"><span class="input-group-text">/book/</span><input asp-for="Slug" class="form-control" /></div></div></div>
     </div></div>
     <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
 </form>
+
+<script at="Foot">
+    (function () {
+        // Each group shows a share for its chosen resources only while it picks by round robin.
+        document.querySelectorAll('[data-requirement]').forEach(function (group) {
+            var resources = group.querySelector('[data-requirement-resources]');
+            var assignment = group.querySelector('[data-requirement-assignment]');
+            var weights = group.querySelector('[data-weights]');
+            var update = function () {
+                var chosen = Array.from(resources.selectedOptions).map(function (option) { return option.value; });
+                var roundRobin = assignment.value === 'RoundRobin';
+
+                group.querySelectorAll('[data-weight-for]').forEach(function (item) {
+                    item.classList.toggle('d-none', !chosen.includes(item.getAttribute('data-weight-for')));
+                });
+                weights.classList.toggle('d-none', !roundRobin || chosen.length === 0);
+            };
+
+            resources.addEventListener('change', update);
+            assignment.addEventListener('change', update);
+            update();
+        });
+
+        var add = document.querySelector('[data-add-requirement]');
+
+        if (add) {
+            add.addEventListener('click', function () {
+                var next = document.querySelector('[data-requirement].d-none');
+
+                if (next) {
+                    next.classList.remove('d-none');
+                }
+
+                if (!document.querySelector('[data-requirement].d-none')) {
+                    add.classList.add('d-none');
+                }
+            });
+        }
+    })();
+</script>

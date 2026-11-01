@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingPaymentFailedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+    @T["Booking Payment Failed"]
+</h4>
+<p>@T["Starts when charging a booking's balance to the kept card fails."]</p>

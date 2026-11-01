@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingRefundedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    @T["Booking Refunded"]
+</h4>
+<p>@T["Starts when money paid for a booking is refunded."]</p>

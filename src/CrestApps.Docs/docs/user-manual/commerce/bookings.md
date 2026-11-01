@@ -111,5 +111,8 @@ With the **Workflows** feature on, the **Commerce** category of the workflow edi
 | **Booking Completed** | A booking is marked **Complete**. |
 | **Booking No-Show** | A booking is marked **No-show**. |
 | **Booking Expired** | A hold or a request runs out. |
+| **Booking Payment Received** | An order with bookings is paid in full or by deposit, or a payment is made on a booking's balance. |
+| **Booking Payment Failed** | Charging a booking's balance to the kept card fails. The event says whether the charge is tried again. |
+| **Booking Refunded** | Money is refunded on an order with confirmed bookings, including a refund made from the order. |
 
-For example: text the buyer the meeting point the day a booking is confirmed, or alert the guide when a booking is canceled. The values each event hands to the next steps are listed in the [Technical Manual](../../modules/bookings.md#workflow-events).
+For example: text the buyer the meeting point the day a booking is confirmed, alert the guide when a booking is canceled, or email the buyer when their balance can't be charged. The values each event hands to the next steps are listed in the [Technical Manual](../../modules/bookings.md#workflow-events).

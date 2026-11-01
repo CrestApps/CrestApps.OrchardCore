@@ -267,6 +267,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
     public sealed class CallbackRequestIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
         public CallbackRequestIndex() { }
+        public string AgentId { get; set; }
         public long DocumentId { get; set; }
         public System.DateTime? LeaseExpiresUtc { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
@@ -4028,6 +4029,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public CallbackRequestStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> ListOpenForAgentsAsync(System.Collections.Generic.IEnumerable<string> agentIds, System.DateTime fromUtc, System.DateTime toUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallbackService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackService
     {
@@ -5079,6 +5081,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface ICallbackRequestStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> ListOpenForAgentsAsync(System.Collections.Generic.IEnumerable<string> agentIds, System.DateTime fromUtc, System.DateTime toUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ICallbackService
     {

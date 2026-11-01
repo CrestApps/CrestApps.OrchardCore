@@ -33,6 +33,7 @@ public sealed class BookingService
     private readonly IOrderRefunder _orderRefunder;
     private readonly ITransactionManager _transactionManager;
     private readonly ITransactionCommandService _transactionCommands;
+    private readonly IEnumerable<IBookingPaymentHandler> _paymentHandlers;
 
     internal readonly IStringLocalizer S;
 
@@ -49,7 +50,8 @@ public sealed class BookingService
         IStringLocalizer<BookingService> stringLocalizer,
         IOrderRefunder orderRefunder,
         ITransactionManager transactionManager,
-        ITransactionCommandService transactionCommands)
+        ITransactionCommandService transactionCommands,
+        IEnumerable<IBookingPaymentHandler> paymentHandlers)
     {
         _bookings = bookings;
         _balances = balances;
@@ -63,6 +65,7 @@ public sealed class BookingService
         _orderRefunder = orderRefunder;
         _transactionManager = transactionManager;
         _transactionCommands = transactionCommands;
+        _paymentHandlers = paymentHandlers;
         S = stringLocalizer;
     }
 
@@ -119,7 +122,9 @@ public sealed class BookingService
     }
 
     /// <summary>
-    /// Confirms an order's bookings once it's paid: their dates are taken, and the buyer is told.
+    /// Confirms an order's bookings once it's paid: their dates are taken, the buyer is told, and the payment handlers hear
+    /// about the payment. Only bookings not confirmed yet are confirmed, so an order reported paid again changes nothing and
+    /// reports no payment twice.
     /// </summary>
     public async Task ConfirmPaidAsync(Order order, CancellationToken cancellationToken = default)
     {
@@ -133,6 +138,7 @@ public sealed class BookingService
         }
 
         var now = _clock.UtcNow;
+        var confirmed = new List<Booking>();
 
         foreach (var booking in bookings)
         {
@@ -151,6 +157,7 @@ public sealed class BookingService
                     booking.ConfirmedUtc = now;
                     booking.ModifiedUtc = now;
                     await _bookings.UpdateAsync(booking, cancellationToken);
+                    confirmed.Add(booking);
 
                     continue;
                 }
@@ -167,11 +174,69 @@ public sealed class BookingService
             booking.UserId = order.UserId ?? booking.UserId;
 
             await _bookings.UpdateAsync(booking, cancellationToken);
+            confirmed.Add(booking);
         }
 
         var balance = await _balances.FindByOrderAsync(order.ItemId, cancellationToken);
 
         await _emails.SendConfirmedAsync(order, bookings, balance, await _capacity.GetTimeZoneAsync(), cancellationToken);
+
+        // What the balance put on the ledger is owed later, so it wasn't paid now.
+        var deferred = (order.Tenders ?? []).Where(tender => tender.ProviderKey == BookingsConstants.BalanceTenderKey).Sum(tender => tender.Amount);
+        var context = new BookingPaymentContext
+        {
+            Bookings = confirmed,
+            OrderId = order.ItemId,
+            OrderNumber = order.OrderNumber,
+            PaymentKind = deferred > 0m || balance is not null ? BookingPaymentKind.Deposit : BookingPaymentKind.FullPayment,
+            Amount = Money.Round(Math.Max(0m, (order.Total ?? order.Subtotal) - deferred), order.Currency),
+            Currency = order.Currency,
+            Reference = order.CheckoutSessionId,
+        };
+
+        await _paymentHandlers.InvokeAsync((handler, paymentContext) => handler.PaymentReceivedAsync(paymentContext, cancellationToken), context, _logger);
+    }
+
+    /// <summary>
+    /// Tells the payment handlers about a refund just recorded on an order, for its bookings that were confirmed. A refund
+    /// is recorded on its order once, so it's reported once.
+    /// </summary>
+    /// <param name="order">The order the refund was recorded on.</param>
+    /// <param name="refund">The refund.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    public async Task ReportRefundAsync(Order order, OrderRefund refund, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(refund);
+
+        if (refund.Amount <= 0m)
+        {
+            return;
+        }
+
+        // Only bookings that were paid for: an order refunded before its bookings were confirmed paid nothing for them.
+        var bookings = (await _bookings.ListByOrderAsync(order.ItemId, cancellationToken))
+            .Where(booking => booking.ConfirmedUtc.HasValue)
+            .ToList();
+
+        if (bookings.Count == 0)
+        {
+            return;
+        }
+
+        var context = new BookingPaymentContext
+        {
+            Bookings = bookings,
+            OrderId = order.ItemId,
+            OrderNumber = order.OrderNumber,
+            Amount = refund.Amount,
+            Currency = refund.Currency ?? order.Currency,
+            Reason = refund.Reason,
+            Reference = refund.RefundId,
+        };
+
+        await _paymentHandlers.InvokeAsync((handler, paymentContext) => handler.RefundedAsync(paymentContext, cancellationToken), context, _logger);
     }
 
     /// <summary>

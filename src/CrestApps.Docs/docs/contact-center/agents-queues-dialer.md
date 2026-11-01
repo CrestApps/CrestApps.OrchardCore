@@ -476,6 +476,20 @@ A queued callback is dialed with a built-in Preview-style profile (the agent acc
 
 Use callbacks when an agent schedules a later follow-up, an inbound entry point offers a callback instead of waiting in queue, or workflow automation decides the next best action is a phone callback. Managers should configure a dedicated callback queue when callbacks need different SLA, skills, or priority from live inbound calls. Agents handle the promoted callback like any other outbound call: answer the offer, complete the conversation, select a disposition, and finish wrap-up through the Subject Flow.
 
+#### Callbacks on the calendar
+
+When the [Calendars](../modules/calendars.md) feature (`CrestApps.OrchardCore.Calendars`) is on with the Outbound Dialer, `DialerCalendarStartup` registers `CallbackCalendarEventSource`, an `ICalendarEventSource` named `ContactCenter.Callbacks`. It shows the open callbacks (`Pending`, `Scheduled` or `InProgress`) that are reserved for an agent (`CallbackRequest.AgentId`, an agent profile ID) as read-only occurrences, without copying them into calendar events:
+
+- The calendar view shows an agent's callbacks on their **Personal** calendar when that calendar is shown. A calendar query that asks for a user's invitations (`AttendeeUserIds`) gets that user's callbacks too, without a calendar. The agent profile is found from the user ID.
+- Each callback is drawn at its scheduled time for 15 minutes, in orange (`#f08c00`), with the event type `Callback`. It cannot be moved or edited on the calendar; it changes only through the Contact Center.
+- A viewer sees only their own callbacks, unless they have **Monitor the Contact Center in real time** (`MonitorContactCenter`, which **Manage the Contact Center** implies), who see every agent's.
+- The title shows the number to call back (`Call back +1...`) only to the agent the callback is for and to those with `MonitorContactCenter`. A query without a viewer, such as background work, gets the title `Callback` without the number.
+- Callbacks that are not reserved for an agent, such as those waiting in a callback queue, are not shown.
+
+No Contact Center screen, entry point or workflow task reserves a callback for an agent yet: `AgentId` is set by code that schedules a callback through `ICallbackService`, and the dialer does not route a reserved callback to that agent. Until something sets it, the calendar shows no callbacks.
+
+The open callbacks of the agents asked for are read through the `AgentId` column of `CallbackRequestIndex`, which the `UpdateFrom5Async` step of `CallbackRequestIndexMigrations` adds with an index on `AgentId`, `ScheduledUtc` and `Status`. A callback saved before that step is found once it is saved again.
+
 ## Outbound lines
 
 A tenant with more than one phone number often wants different agents to call from different numbers: the sales team from the sales number and support from the support number, so a customer who calls back reaches the right people. Outbound lines do this with the phone numbers you already manage. There is no feature to enable: they are part of Contact Center Voice, which Inbound Voice, the Dialer, Recording and Supervision turn on for you.
