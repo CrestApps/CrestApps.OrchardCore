@@ -8,6 +8,7 @@ technical_manual:
   - ai/agent
   - ai/mcp/client
   - ai/mcp/server
+  - ai/mcp/webmcp
   - ai/a2a/client
 ---
 

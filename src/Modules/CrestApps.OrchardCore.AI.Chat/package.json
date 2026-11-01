@@ -4,7 +4,7 @@
   "description": "Provides Chat UI to interact with AI models",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.226"
+    "@crestapps/ai-chat-ui": "2.0.0-preview.243"
   },
   "private": true
 }

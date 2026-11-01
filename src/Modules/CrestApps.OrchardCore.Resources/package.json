@@ -9,7 +9,7 @@
     "marked": "^18.1.1"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.226",
+    "@crestapps/ai-chat-ui": "2.0.0-preview.243",
     "@crestapps/bootstrap-select": "^1.2.6",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
     "@telnyx/webrtc": "2.27.10",

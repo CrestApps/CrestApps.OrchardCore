@@ -82,6 +82,9 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.AI.Mcp.Server` | Model Context Protocol (MCP) Server | [MCP Server](./ai/mcp/server) |
 | `CrestApps.OrchardCore.AI.Mcp.Resources.Ftp` | Model Context Protocol (MCP) FTP Resource | [MCP FTP Resource](./ai/mcp/ftp) |
 | `CrestApps.OrchardCore.AI.Mcp.Resources.Sftp` | Model Context Protocol (MCP) SFTP Resource | [MCP SFTP Resource](./ai/mcp/sftp) |
+| `CrestApps.OrchardCore.AI.WebMcp` | WebMCP Tools | [WebMCP](./ai/mcp/webmcp) |
+| `CrestApps.OrchardCore.AI.WebMcp.PageTools` | WebMCP Page Tools | [WebMCP](./ai/mcp/webmcp#webmcp-page-tools) |
+| `CrestApps.OrchardCore.AI.WebMcp.Chat` | WebMCP Chat Bridge | [WebMCP](./ai/mcp/webmcp#webmcp-chat-bridge) |
 
 ## Artificial Intelligence - A2A
 
