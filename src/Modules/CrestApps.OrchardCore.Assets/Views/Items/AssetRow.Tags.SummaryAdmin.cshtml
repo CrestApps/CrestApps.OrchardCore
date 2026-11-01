@@ -1,0 +1,34 @@
+@model ShapeViewModel<AssetRow>
+
+@{
+    var asset = Model.Value.Asset;
+}
+<span class="badge ta-badge fw-normal">@Model.Value.TypeName</span>
+@if (asset.Status != AssetStatus.Active)
+{
+    <span class="badge @(asset.Status == AssetStatus.OutOfService ? "text-bg-warning" : "ta-badge") fw-normal">@asset.Status</span>
+}
+@if (asset.OwnerKind != AssetOwnerKind.Internal)
+{
+    <span class="badge ta-badge fw-normal">@T["{0}: {1}", asset.OwnerKind, asset.OwnerId]</span>
+}
+@if (!string.IsNullOrEmpty(Model.Value.ParentName))
+{
+    <span class="badge ta-badge fw-normal">@T["In {0}", Model.Value.ParentName]</span>
+}
+@if (!string.IsNullOrEmpty(asset.SerialNumber))
+{
+    <span class="badge ta-badge fw-normal">@T["Serial {0}", asset.SerialNumber]</span>
+}
+@if (asset.Warranty?.Covers(Model.Value.Today) == true)
+{
+    <span class="badge text-bg-success fw-normal">@T["Under warranty"]</span>
+}
+@if (asset.Fleet?.Schedulable == true)
+{
+    <span class="badge ta-badge fw-normal">@T["Bookable"]</span>
+}
+@if (asset.Fleet?.CarriesStock == true)
+{
+    <span class="badge ta-badge fw-normal">@T["Carries stock"]</span>
+}

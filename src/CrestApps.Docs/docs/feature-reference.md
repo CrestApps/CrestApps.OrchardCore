@@ -228,6 +228,13 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Geo.GoogleMaps` | Google Maps | [Geo](./modules/geo#providers) |
 | `CrestApps.OrchardCore.Geo.Osrm` | OSRM | [Geo](./modules/geo#providers) |
 
+## Field service
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Assets` | Assets | [Assets](./modules/assets) |
+| `CrestApps.OrchardCore.Assets.Fleet` | Fleet | [Assets](./modules/assets#fleet) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |

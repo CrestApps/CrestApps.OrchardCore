@@ -24,6 +24,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Skills.Abstractions/CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Assets.Abstractions/CrestApps.OrchardCore.Assets.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Geo.Abstractions/CrestApps.OrchardCore.Geo.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Workforce.Abstractions/CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Customers.Abstractions/CrestApps.OrchardCore.Customers.Abstractions.csproj" />
@@ -57,6 +58,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Calendars.Core/CrestApps.OrchardCore.Calendars.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Scheduling.Core/CrestApps.OrchardCore.Scheduling.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Skills.Core/CrestApps.OrchardCore.Skills.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Assets.Core/CrestApps.OrchardCore.Assets.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Geo.Core/CrestApps.OrchardCore.Geo.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Workforce.Core/CrestApps.OrchardCore.Workforce.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
@@ -88,6 +90,7 @@
   </Folder>
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CrestApps.OrchardCore.Addresses/CrestApps.OrchardCore.Addresses.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer.Azure/CrestApps.OrchardCore.ContentTransfer.Azure.csproj" />

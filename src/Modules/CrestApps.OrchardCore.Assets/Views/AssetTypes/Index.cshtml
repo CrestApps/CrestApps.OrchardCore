@@ -1,0 +1,23 @@
+@model AssetsListViewModel
+
+<zone Name="Title"><breadcrumb name="AssetTypes" title="@T["Asset Types"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["Kinds of asset: their category, the values each asset records and the meters read on it."]</p>
+            </div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add asset type"]</a></div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="AssetTypes" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add an asset type, such as Boiler or Service van, before adding assets."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Asset type"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

@@ -1,0 +1,4 @@
+@model ShapeViewModel<AssetRow>
+
+<a asp-controller="Assets" asp-action="Details" asp-route-id="@Model.Value.Asset.ItemId">@Model.Value.Asset.Name</a>
+<span class="text-muted small ms-1">@Model.Value.Asset.Number</span>

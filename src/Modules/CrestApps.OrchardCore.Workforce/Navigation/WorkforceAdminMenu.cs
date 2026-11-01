@@ -24,6 +24,8 @@ public sealed class WorkforceAdminMenu : AdminNavigationProvider
     {
         builder.Add(S["Workforce"], S["Workforce"].PrefixPosition("6"), workforce => workforce
             .AddClass("workforce")
+            .AddClass("icon-class-fa-solid")
+            .AddClass("icon-class-fa-users")
             .Id("workforce")
             .Add(S["Get Started"], S["Get Started"].PrefixPosition("01"), start => start
                 .Id("workforceGetStarted")

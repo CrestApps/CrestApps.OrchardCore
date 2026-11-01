@@ -1,0 +1,65 @@
+@model AssetTypeEditViewModel
+
+<zone Name="Title"><breadcrumb name="AssetTypesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add an Asset Type"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="Category" class="form-label">@T["Category"]</label>
+            <select asp-for="Category" asp-items="Html.GetEnumSelectList<AssetCategory>()" class="form-select"></select>
+            <span class="hint">@T["Vehicles, equipment and tools the business owns can be booked and carry stock with Fleet."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label">@T["Description"]</label>
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Attributes"]</h2>
+    <p class="hint">@T["Values every asset of this type records, such as a refrigerant or a capacity. Leave a row empty to skip it."]</p>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle">
+            <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Kind"]</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Attributes.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Attributes[i].Name" class="form-control form-control-sm" aria-label="@T["Attribute name"]" /></td>
+                        <td><select asp-for="Attributes[i].Kind" asp-items="Html.GetEnumSelectList<AssetAttributeKind>()" class="form-select form-select-sm" aria-label="@T["Kind"]"></select></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Meters"]</h2>
+    <p class="hint">@T["Readings taken on assets of this type, such as hours run or miles. A meter that only goes up refuses a lower reading."]</p>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle">
+            <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Unit"]</th><th scope="col">@T["Only goes up"]</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Meters.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Meters[i].Name" class="form-control form-control-sm" aria-label="@T["Meter name"]" /></td>
+                        <td><input asp-for="Meters[i].Unit" class="form-control form-control-sm" aria-label="@T["Unit"]" /></td>
+                        <td><input asp-for="Meters[i].Cumulative" type="checkbox" class="form-check-input" aria-label="@T["Only goes up"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

@@ -188,6 +188,14 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Field Service',
+            className: icon('wrench'),
+            items: [
+                'user-manual/field-service/assets',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -442,6 +450,14 @@ const sidebars = {
             className: icon('compass'),
             items: [
                 'modules/geo',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Field Service',
+            className: icon('wrench'),
+            items: [
+                'modules/assets',
             ],
         },
         {

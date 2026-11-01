@@ -28,6 +28,8 @@ public sealed class GeoAdminMenu : AdminNavigationProvider
             .Add(S["Territories"], S["Territories"].PrefixPosition("7"), territories => territories
                 .Id("geoTerritories")
                 .AddClass("geo-territories")
+                .AddClass("icon-class-fa-solid")
+                .AddClass("icon-class-fa-map-location-dot")
                 .Action("Index", "Territories", GeoConstants.Features.Geo)
                 .Permission(GeoPermissions.ManageTerritories)
                 .LocalNav())

@@ -14,4 +14,15 @@ public sealed class InventoryLocation
     /// Gets or sets where the location is, on one line, for staff.
     /// </summary>
     public string Address { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of record that owns the location, such as <c>Asset</c> for a van, or
+    /// <see langword="null"/> for the site's own.
+    /// </summary>
+    public string OwnerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record that owns the location.
+    /// </summary>
+    public string OwnerId { get; set; }
 }

@@ -1,0 +1,193 @@
+@model AssetEditViewModel
+
+<zone Name="Title"><breadcrumb name="AssetsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add an Asset"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="AssetTypeId" class="form-label">@T["Type"]</label>
+            <select asp-for="AssetTypeId" asp-items="Model.TypeOptions" class="form-select" required>
+                <option value="">@T["Choose a type"]</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Number" class="form-label">@T["Asset number"]</label>
+            <input asp-for="Number" class="form-control" placeholder="@T["Next number"]" />
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="SerialNumber" class="form-label">@T["Serial number"]</label>
+            <input asp-for="SerialNumber" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Manufacturer" class="form-label">@T["Manufacturer"]</label>
+            <input asp-for="Manufacturer" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Model" class="form-label">@T["Model"]</label>
+            <input asp-for="Model" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Status" class="form-label">@T["State"]</label>
+            <select asp-for="Status" asp-items="Html.GetEnumSelectList<AssetStatus>()" class="form-select"></select>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Owner and place"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="OwnerKind" class="form-label">@T["Owned by"]</label>
+            <select asp-for="OwnerKind" asp-items="Html.GetEnumSelectList<AssetOwnerKind>()" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="OwnerId" class="form-label">@T["Customer or company"]</label>
+            <input asp-for="OwnerId" class="form-control" />
+            <span class="hint">@T["Its number, when a customer or company owns it."]</span>
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="ParentAssetId" class="form-label">@T["Part of"]</label>
+            <select asp-for="ParentAssetId" asp-items="Model.ParentOptions" class="form-select">
+                <option value="">@T["Not part of another asset"]</option>
+            </select>
+        </div>
+    </div>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="AddressLine1" class="form-label">@T["Street address"]</label>
+            <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label asp-for="City" class="form-label">@T["City"]</label>
+            <input asp-for="City" class="form-control" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label asp-for="Region" class="form-label">@T["State or region"]</label>
+            <input asp-for="Region" class="form-control" />
+        </div>
+        <div class="col-6 col-md-1">
+            <label asp-for="PostalCode" class="form-label">@T["Postal code"]</label>
+            <input asp-for="PostalCode" class="form-control" />
+        </div>
+        <div class="col-6 col-md-1">
+            <label asp-for="Country" class="form-label">@T["Country"]</label>
+            <input asp-for="Country" class="form-control" maxlength="2" placeholder="US" />
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Installation and warranty"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="InstallDate" class="form-label">@T["Installed"]</label>
+            <input asp-for="InstallDate" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="WarrantyStart" class="form-label">@T["Warranty from"]</label>
+            <input asp-for="WarrantyStart" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="WarrantyEnd" class="form-label">@T["Warranty until"]</label>
+            <input asp-for="WarrantyEnd" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="WarrantyProvider" class="form-label">@T["Warranty from whom"]</label>
+            <input asp-for="WarrantyProvider" class="form-control" />
+        </div>
+    </div>
+
+    @if (Model.Type?.Attributes.Count > 0)
+    {
+        <h2 class="h5 mt-4">@T["{0} details", Model.Type.Name]</h2>
+        <div class="row g-3 mb-3">
+            @foreach (var field in Model.Type.Attributes)
+            {
+                var id = "attribute-" + field.Name.Replace(' ', '-');
+                var value = Model.Attributes.GetValueOrDefault(field.Name);
+                <div class="col-6 col-md-3">
+                    <label for="@id" class="form-label">@field.Name</label>
+                    @switch (field.Kind)
+                    {
+                        case AssetAttributeKind.Number:
+                            <input id="@id" name="Attributes[@field.Name]" type="number" step="any" value="@value" class="form-control" />
+                            break;
+                        case AssetAttributeKind.Date:
+                            <input id="@id" name="Attributes[@field.Name]" type="date" value="@value" class="form-control" />
+                            break;
+                        case AssetAttributeKind.YesNo:
+                            <select id="@id" name="Attributes[@field.Name]" class="form-select">
+                                <option value=""></option>
+                                <option value="Yes" selected="@(value == "Yes")">@T["Yes"]</option>
+                                <option value="No" selected="@(value == "No")">@T["No"]</option>
+                            </select>
+                            break;
+                        default:
+                            <input id="@id" name="Attributes[@field.Name]" value="@value" class="form-control" />
+                            break;
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (Model.Type is null)
+    {
+        <p class="hint">@T["Choose the type and save to fill in the values its type records."]</p>
+    }
+
+    @if (Model.ShowFleet)
+    {
+        <h2 class="h5 mt-4">@T["Fleet"]</h2>
+        <div class="row g-3 mb-2">
+            <div class="col-12 col-md-6">
+                <div class="form-check">
+                    <input asp-for="Schedulable" type="checkbox" class="form-check-input" />
+                    <label asp-for="Schedulable" class="form-check-label">@T["Book it for visits"]</label>
+                    <span class="hint dashed">@T["It gets its own Equipment calendar, which refuses two bookings at once."]</span>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="form-check">
+                    <input asp-for="CarriesStock" type="checkbox" class="form-check-input" />
+                    <label asp-for="CarriesStock" class="form-check-label">@T["It carries stock"]</label>
+                    <span class="hint dashed">@T["Its parts are kept at its own Inventory location, so parts used on a job come off it."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <label asp-for="Plate" class="form-label">@T["Plate"]</label>
+                <input asp-for="Plate" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Vin" class="form-label">@T["VIN"]</label>
+                <input asp-for="Vin" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Capacity" class="form-label">@T["Capacity"]</label>
+                <input asp-for="Capacity" class="form-control" placeholder="@T["2 seats, 800 kg"]" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="FuelType" class="form-label">@T["Fuel"]</label>
+                <input asp-for="FuelType" class="form-control" />
+            </div>
+        </div>
+    }
+
+    <h2 class="h5 mt-4">@T["Documents"]</h2>
+    <div class="mb-3">
+        <textarea asp-for="Documents" class="form-control font-monospace" rows="2" placeholder="manuals/boiler-x200.pdf"></textarea>
+        <span class="hint">@T["Paths of manuals and certificates in the media library, one a line."]</span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

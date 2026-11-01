@@ -61,6 +61,29 @@ public sealed class DefaultInventoryService : IInventoryService
         return ChangeAsync(stockItemId, locationId, level => quantity, kind, reason, actor, purchaseOrderId: null, cancellationToken);
     }
 
+    public async Task<StockChangeResult> ConsumeAsync(string stockItemId, string locationId, int quantity, string referenceType, string referenceId, string reason, StockActor actor, CancellationToken cancellationToken = default)
+    {
+        if (quantity <= 0)
+        {
+            return StockChangeResult.Fail(StockChangeError.InvalidQuantity);
+        }
+
+        var item = string.IsNullOrEmpty(stockItemId) ? null : await _items.FindByIdAsync(stockItemId, cancellationToken);
+
+        if (item is null)
+        {
+            return StockChangeResult.Fail(StockChangeError.NotFound);
+        }
+
+        // Units held for orders can't be used up.
+        if (item.GetLevel(locationId).Available < quantity)
+        {
+            return StockChangeResult.Fail(StockChangeError.NotEnoughAtLocation);
+        }
+
+        return await ChangeAsync(stockItemId, locationId, level => -quantity, StockMovementKind.Consumed, reason, actor, purchaseOrderId: null, (referenceType, referenceId), cancellationToken);
+    }
+
     public Task<StockChangeResult> SetCountAsync(string stockItemId, int count, string reason, StockActor actor, CancellationToken cancellationToken = default)
         => SetCountAsync(stockItemId, null, count, reason, actor, cancellationToken);
 
@@ -548,7 +571,10 @@ public sealed class DefaultInventoryService : IInventoryService
         return released;
     }
 
-    private async Task<StockChangeResult> ChangeAsync(string stockItemId, string locationId, Func<StockLocationLevel, int> delta, StockMovementKind kind, string reason, StockActor actor, string purchaseOrderId, CancellationToken cancellationToken)
+    private Task<StockChangeResult> ChangeAsync(string stockItemId, string locationId, Func<StockLocationLevel, int> delta, StockMovementKind kind, string reason, StockActor actor, string purchaseOrderId, CancellationToken cancellationToken)
+        => ChangeAsync(stockItemId, locationId, delta, kind, reason, actor, purchaseOrderId, (null, null), cancellationToken);
+
+    private async Task<StockChangeResult> ChangeAsync(string stockItemId, string locationId, Func<StockLocationLevel, int> delta, StockMovementKind kind, string reason, StockActor actor, string purchaseOrderId, (string Type, string Id) reference, CancellationToken cancellationToken)
     {
         var item = string.IsNullOrEmpty(stockItemId) ? null : await _items.FindByIdAsync(stockItemId, cancellationToken);
 
@@ -568,6 +594,8 @@ public sealed class DefaultInventoryService : IInventoryService
 
         var movement = Movement(item, level.LocationId, kind, quantity, reason, actor, now);
         movement.PurchaseOrderId = purchaseOrderId;
+        movement.ReferenceType = reference.Type;
+        movement.ReferenceId = reference.Id;
 
         await _movements.CreateAsync(movement, cancellationToken);
         await UpdateAsync(item, previous, cancellationToken);

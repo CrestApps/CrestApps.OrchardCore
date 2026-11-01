@@ -12,6 +12,16 @@ public sealed class StockMovementIndex : CatalogItemIndex
 
     public string OrderId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the kind of record the movement is for.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record the movement is for.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
     public DateTime Utc { get; set; }
 }
 
@@ -31,6 +41,8 @@ public sealed class StockMovementIndexProvider : IndexProvider<StockMovement>
                 StockItemId = movement.StockItemId,
                 Kind = movement.Kind,
                 OrderId = movement.OrderId,
+                ReferenceType = movement.ReferenceType,
+                ReferenceId = movement.ReferenceId,
                 Utc = movement.Utc,
             });
     }
