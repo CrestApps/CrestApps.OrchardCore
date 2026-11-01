@@ -1,0 +1,75 @@
+@model TerritoryEditViewModel
+@using System.Text.Json
+
+<zone Name="Title"><breadcrumb name="GeoTerritoriesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Territory"] : T["Edit {0}", Model.Name])" /></zone>
+
+<style asp-name="leaflet-geoman"></style>
+<script asp-name="leaflet-geoman" at="Foot"></script>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="ParentId" class="form-label">@T["Part of"]</label>
+            <select asp-for="ParentId" asp-items="Model.ParentOptions" class="form-select">
+                <option value="">@T["No larger territory"]</option>
+            </select>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Area"]</h2>
+    <p class="hint">@T["Draw the area with the tools on the left of the map: a polygon or a rectangle, more than one if needed. Drag a corner to change it, or cut a hole. Other territories show in grey."]</p>
+
+    @{
+        ViewData["MapId"] = "territory-map";
+        ViewData["MapHeight"] = "26rem";
+        ViewData["MapLabel"] = T["Map to draw the territory on"].Value;
+    }
+    <partial name="_GeoMap" model="Model.Map" />
+
+    <details class="mb-3" @(ViewData.ModelState.ContainsKey(nameof(Model.Shape)) && ViewData.ModelState[nameof(Model.Shape)].Errors.Count > 0 ? "open" : null)>
+        <summary class="small">@T["The shape as GeoJSON"]</summary>
+        <textarea asp-for="Shape" class="form-control font-monospace mt-2" rows="5" spellcheck="false"></textarea>
+        <span class="hint">@T["Paste a Polygon, MultiPolygon, Feature or FeatureCollection to load it on the map. Positions are longitude, then latitude."]</span>
+    </details>
+
+    <div class="mb-3">
+        <label asp-for="PostalCodes" class="form-label">@T["Postal codes"]</label>
+        <textarea asp-for="PostalCodes" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Separated by commas. End a code with * to take every code that starts with it, such as 021*. Places without coordinates are matched by these."]</span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="TimeZoneId" class="form-label">@T["Time zone"]</label>
+            <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select">
+                <option value="">@T["The site's time zone"]</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="TravelSpeedKmh" class="form-label">@T["Average travel speed (km/h)"]</label>
+            <input asp-for="TravelSpeedKmh" type="number" min="1" max="200" step="any" class="form-control" />
+            <span class="hint">@T["Leave empty for the site's. Travel inside a dense city is slower than in the countryside."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script at="Foot">
+    (function () {
+        const map = window.crestappsMap.create('territory-map');
+
+        window.crestappsMap.showShapes(map, @Html.Raw(JsonSerializer.Serialize(Model.OtherShapes.Select(shape => new { label = shape.Label, geoJson = shape.GeoJson }))), { color: '#6c757d', fillOpacity: 0.08, weight: 1 });
+        window.crestappsMap.editShapes(map, document.getElementById('@Html.IdFor(m => m.Shape)'));
+    })();
+</script>

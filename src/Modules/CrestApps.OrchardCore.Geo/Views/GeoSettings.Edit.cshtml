@@ -1,0 +1,103 @@
+@model GeoSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["Maps, finding the coordinates of addresses, and travel times between places, for every module that works with places."]</p>
+    </div>
+</div>
+
+<h2 class="h5 mt-3">@T["Providers"]</h2>
+
+<div class="ocat-wrapper">
+    <label asp-for="GeocodingProvider" class="ocat-label">@T["Geocoding"]</label>
+    <div class="ocat-end">
+        <select asp-for="GeocodingProvider" asp-items="Model.GeocodingProviders" class="form-select" style="max-width: 22rem"></select>
+        <span class="hint">@T["Finds the coordinates of addresses in the background, retrying when the provider fails. Turn on a provider's feature to list it here."]</span>
+    </div>
+</div>
+
+@if (Model.Waiting + Model.Done + Model.Failed > 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="badge ta-badge fw-normal">@T["{0} waiting", Model.Waiting]</span>
+            <span class="badge ta-badge fw-normal">@T["{0} geocoded", Model.Done]</span>
+            @if (Model.Failed > 0)
+            {
+                <span class="badge text-bg-warning fw-normal">@T["{0} not found", Model.Failed]</span>
+            }
+            <span class="hint d-block">@(string.IsNullOrEmpty(Model.GeocodingProvider) && Model.Waiting > 0 ? T["Addresses wait until a geocoding provider is chosen."] : T["Addresses are geocoded every minute; failures are retried for about three hours."])</span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="TravelTimeProvider" class="ocat-label">@T["Travel times"]</label>
+    <div class="ocat-end">
+        <select asp-for="TravelTimeProvider" asp-items="Model.TravelTimeProviders" class="form-select" style="max-width: 22rem"></select>
+        <span class="hint">@T["When the provider is missing or fails, the built-in estimate is used."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RouteProvider" class="ocat-label">@T["Routes on maps"]</label>
+    <div class="ocat-end">
+        <select asp-for="RouteProvider" asp-items="Model.RouteProviders" class="form-select" style="max-width: 22rem"></select>
+    </div>
+</div>
+
+<h2 class="h5 mt-4">@T["Built-in travel estimate"]</h2>
+
+<div class="ocat-wrapper">
+    <label asp-for="AverageSpeedKmh" class="ocat-label">@T["Average speed (km/h)"]</label>
+    <div class="ocat-end">
+        <input asp-for="AverageSpeedKmh" type="number" min="1" max="200" step="any" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["A territory can set its own."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RoadFactor" class="ocat-label">@T["Road factor"]</label>
+    <div class="ocat-end">
+        <input asp-for="RoadFactor" type="number" min="1" max="3" step="0.05" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["How much longer the roads are than a straight line. 1.3 suits most towns."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MatrixCacheMinutes" class="ocat-label">@T["Keep travel times (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="MatrixCacheMinutes" type="number" min="1" max="10080" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["A provider's answers are reused this long, so the same trips aren't asked for again."]</span>
+    </div>
+</div>
+
+<h2 class="h5 mt-4">@T["Maps"]</h2>
+
+<div class="ocat-wrapper">
+    <label asp-for="TileUrl" class="ocat-label">@T["Tile address"]</label>
+    <div class="ocat-end">
+        <input asp-for="TileUrl" class="form-control" />
+        <span class="hint">@T["With {0}, {1} and {2}. The OpenStreetMap tile server is only for trying things out: a live site must use its own tiles or a commercial tile service, under the OpenStreetMap tile usage policy.", "{z}", "{x}", "{y}"]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TileAttribution" class="ocat-label">@T["Attribution"]</label>
+    <div class="ocat-end">
+        <input asp-for="TileAttribution" class="form-control" />
+        <span class="hint">@T["Shown in the corner of every map, as the tile source requires."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultLatitude" class="ocat-label">@T["Maps start at"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="DefaultLatitude" type="number" min="-90" max="90" step="any" class="form-control" style="max-width: 10rem" aria-label="@T["Latitude"]" placeholder="@T["Latitude"]" />
+            <input asp-for="DefaultLongitude" type="number" min="-180" max="180" step="any" class="form-control" style="max-width: 10rem" aria-label="@T["Longitude"]" placeholder="@T["Longitude"]" />
+            <input asp-for="DefaultZoom" type="number" min="1" max="19" class="form-control" style="max-width: 7rem" aria-label="@T["Zoom"]" placeholder="@T["Zoom"]" />
+        </div>
+        <span class="hint">@T["The latitude, longitude and zoom of a map with nothing on it yet."]</span>
+    </div>
+</div>

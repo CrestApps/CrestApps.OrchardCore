@@ -180,6 +180,14 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Geo',
+            className: icon('compass'),
+            items: [
+                'user-manual/geo/territories',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -426,6 +434,14 @@ const sidebars = {
                 'modules/workforce',
                 'modules/workforce-contact-center',
                 'modules/skills',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Geo',
+            className: icon('compass'),
+            items: [
+                'modules/geo',
             ],
         },
         {
