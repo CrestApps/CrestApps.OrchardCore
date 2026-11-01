@@ -4,16 +4,18 @@ title: Workforce for Contact Center
 description: "Contact center workforce management on the Workforce module: a worker for every agent, punches from agent sign-in, and real-time and daily adherence with rule sets, exceptions, alerts and report data sets."
 user_manual:
   - user-manual/workforce/contact-center-adherence
+  - user-manual/workforce/contact-center-forecasting
 ---
 
 The **Workforce for Contact Center** module (`CrestApps.OrchardCore.Workforce.ContactCenter`) joins the [Workforce](./workforce.md) module to the Contact Center. Workforce never references the Contact Center; this module references both. It reads the Contact Center's [interval statistics](../contact-center/report-catalog.md#interval-statistics) and agent state log.
 
-The admin screens are described in the User Manual: [Contact Center Adherence](../user-manual/workforce/contact-center-adherence.md).
+The admin screens are described in the User Manual: [Contact Center Adherence](../user-manual/workforce/contact-center-adherence.md) and [Contact Center Forecasting](../user-manual/workforce/contact-center-forecasting.md).
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | `CrestApps.OrchardCore.Workforce`, `CrestApps.OrchardCore.ContactCenter.Agents` |
 | `CrestApps.OrchardCore.Workforce.ContactCenter.SignInPunches` | Contact Center Sign-in Punches | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.TimeClock` |
+| `CrestApps.OrchardCore.Workforce.Forecasting` | Workforce Forecasting | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.ShiftPlanning`, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.ShiftPlanning`, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` |
 
 ## Agents and workers
@@ -56,11 +58,25 @@ The **Workforce** report data source gains two data sets, limited to the reader'
 - **Adherence days** (`WorkforceAdherenceDays`): one row per agent and day with adherence and conformance percentages and the hours they come from.
 - **Adherence segments** (`WorkforceAdherenceSegments`): one row per stretch of a scheduled day, with the scheduled activity, the agent's state and reason, and whether it was in adherence or covered by an exception.
 
+## Forecasting
+
+A `PlanningGroup` is a set of queues (optionally one channel) forecast and staffed together, with its service goal (a service level such as 80% within 20 seconds, an average speed of answer, or both), the highest occupancy, the contacts an agent handles at once, the customers' patience, the shrinkage, the weeks of history and the team that staffs it. A `ForecastEvent` scales the volume of its days (a closure multiplies by zero), for some groups or all, once or every year.
+
+`ForecastService.CreateAsync` reads the group's [queue intervals](../contact-center/report-catalog.md#interval-statistics) in the team's time zone and builds a draft `Forecast`:
+
+- **Daily volume** from the weighted history (the same weekday of the last weeks, the latest weighing most) or Holt-Winters (additive triple exponential smoothing with a weekly season, from two weeks of history). **Auto** back-tests both on the last two weeks and keeps the lower weighted error; each forecast records both errors (MAPE and WAPE).
+- **Events** scale their days.
+- **Intervals:** each day is split into 15-minute intervals by its weekday's share of volume over the history, so closed hours stay empty. The **handle time** of an interval is the trimmed mean of the same weekday and time, or the overall average.
+- **Staffing** (`ErlangCalculator`, pure): Erlang C from the stable Erlang B recursion, solving for the fewest agents that meet the service level, the average speed of answer and the occupancy cap; chats and messages divide the handle time by the contacts at once; with a patience, Erlang A from the birth-death chain with abandonment, its answer times approximated by Erlang C on the answered load. The agents to schedule are the agents needed over one minus the shrinkage.
+
+`AdjustAsync` changes the volume of some days by a percentage and staffs them again. `ActivateAsync` makes a forecast its group's active one (the one before is superseded) and writes the staffing as the team's coverage requirement named *Forecast: group name* (`CoverageSource.Forecast`), one row per run of intervals that need the same people on each date: the minimum is the agents needed and the target the agents to schedule. The planner board and the auto-scheduler use it unchanged. `ActiveIntervalsAsync` gives the active forecast's intervals of a stretch of time.
+
 ## Permissions
 
 | Permission | Allows |
 | --- | --- |
 | `ManageWorkforceAdherence` (Manage adherence rules and exceptions) | Adherence rule sets, recording and removing exceptions, and saving a worker's day again. Implied by Manage the whole workforce. |
+| `ManageWorkforceForecasts` (Manage forecasts) | Planning groups, forecast events and forecasts, and making a forecast the team's coverage. Implied by Manage the whole workforce. |
 | `ViewWorkforceAdherence` (View adherence) | The real-time board, workers' days and the exception list, for the teams one manages, and the adherence data sets. |
 
 The Contact Center Agents page needs **Manage workers**.

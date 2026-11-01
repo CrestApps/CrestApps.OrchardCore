@@ -36,6 +36,19 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = WorkforceContactCenterConstants.Features.Forecasting,
+    Name = "Workforce Forecasting",
+    Description = "Forecasts the work of planning groups of queues from their interval statistics, staffs every 15 minutes with Erlang C or Erlang A to a service goal, and turns the active forecast into the team's coverage for the auto-scheduler.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceContactCenterConstants.Features.ContactCenter,
+        WorkforceConstants.Features.ShiftPlanning,
+        ContactCenterConstants.Feature.IntervalStatistics,
+    ]
+)]
+
+[assembly: Feature(
     Id = WorkforceContactCenterConstants.Features.Adherence,
     Name = "Workforce Adherence",
     Description = "Compares agents' published schedules with their contact center states: a live board, alerts when an agent is out of adherence too long, daily adherence and conformance, exceptions and reports.",

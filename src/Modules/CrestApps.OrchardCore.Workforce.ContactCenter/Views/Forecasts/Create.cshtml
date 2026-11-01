@@ -1,0 +1,39 @@
+@model ForecastCreateViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceForecastsCreate" title="@T["Make a Forecast"]" /></zone>
+
+<form asp-action="Create" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="PlanningGroupId" class="form-label">@T["Planning group"]</label>
+        <select asp-for="PlanningGroupId" asp-items="Model.PlanningGroupOptions" class="form-select" required>
+            <option value="">@T["Choose a planning group"]</option>
+        </select>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-auto">
+            <label asp-for="FromDate" class="form-label">@T["First day"]</label>
+            <input asp-for="FromDate" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-md-auto">
+            <label asp-for="Weeks" class="form-label">@T["Weeks"]</label>
+            <input asp-for="Weeks" type="number" min="1" max="13" class="form-control" />
+        </div>
+        <div class="col-12 col-md-auto">
+            <label asp-for="Model" class="form-label">@T["Model"]</label>
+            <select asp-for="Model" class="form-select">
+                <option value="@ForecastModelKind.Auto">@T["The best on the last two weeks"]</option>
+                <option value="@ForecastModelKind.WeightedHistory">@T["Weighted history"]</option>
+                <option value="@ForecastModelKind.HoltWinters">@T["Holt-Winters"]</option>
+            </select>
+        </div>
+    </div>
+    <span class="hint d-block mb-3">@T["The forecast reads the planning group's interval statistics before the first day. Weighted history repeats the same weekday of the last weeks, the latest weighing most; Holt-Winters follows a trend and the weekly pattern."]</span>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Make forecast"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

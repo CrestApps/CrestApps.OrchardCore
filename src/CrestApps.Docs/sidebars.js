@@ -174,6 +174,7 @@ const sidebars = {
                 'user-manual/workforce/reports-and-automation',
                 'user-manual/workforce/my-work-portal',
                 'user-manual/workforce/contact-center-adherence',
+                'user-manual/workforce/contact-center-forecasting',
                 'user-manual/workforce/skills-and-certifications',
             ],
         },

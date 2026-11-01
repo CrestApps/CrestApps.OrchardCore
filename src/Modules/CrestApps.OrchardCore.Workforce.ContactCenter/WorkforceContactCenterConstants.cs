@@ -24,5 +24,10 @@ public static class WorkforceContactCenterConstants
         /// Real-time and historical adherence.
         /// </summary>
         public const string Adherence = "CrestApps.OrchardCore.Workforce.Adherence";
+
+        /// <summary>
+        /// Forecasting and Erlang staffing.
+        /// </summary>
+        public const string Forecasting = "CrestApps.OrchardCore.Workforce.Forecasting";
     }
 }

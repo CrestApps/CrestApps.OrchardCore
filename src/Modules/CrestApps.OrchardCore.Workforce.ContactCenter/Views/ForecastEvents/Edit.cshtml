@@ -1,0 +1,57 @@
+@model ForecastEventEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceForecastEventsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Forecast Event"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-8">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required />
+        </div>
+        <div class="col-12 col-md-4">
+            <label asp-for="Kind" class="form-label">@T["Kind"]</label>
+            <select asp-for="Kind" class="form-select">
+                <option value="@ForecastEventKind.Holiday">@T["Holiday"]</option>
+                <option value="@ForecastEventKind.Closure">@T["Closure"]</option>
+                <option value="@ForecastEventKind.Promotion">@T["Promotion"]</option>
+                <option value="@ForecastEventKind.Outage">@T["Outage"]</option>
+                <option value="@ForecastEventKind.Custom">@T["Other"]</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-auto">
+            <label asp-for="StartDate" class="form-label">@T["First day"]</label>
+            <input asp-for="StartDate" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-md-auto">
+            <label asp-for="EndDate" class="form-label">@T["Last day"]</label>
+            <input asp-for="EndDate" type="date" class="form-control" />
+        </div>
+        <div class="col-12 col-md-auto">
+            <label asp-for="ChangePercent" class="form-label">@T["Change in work %"]</label>
+            <input asp-for="ChangePercent" type="number" min="-100" step="any" class="form-control" />
+        </div>
+    </div>
+    <span class="hint d-block mb-3">@T["-100 for no work at all, such as a closure; 50 for half as much again."]</span>
+
+    <div class="mb-3 form-check">
+        <input asp-for="RecursYearly" class="form-check-input" />
+        <label asp-for="RecursYearly" class="form-check-label">@T["Every year on the same dates"]</label>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="PlanningGroupIds" class="form-label">@T["Planning groups"]</label>
+        <select asp-for="PlanningGroupIds" asp-items="Model.PlanningGroupOptions" class="form-select" multiple size="5"></select>
+        <span class="hint">@T["Choose none for every planning group."]</span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

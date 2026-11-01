@@ -131,6 +131,11 @@ public static class WorkforcePermissions
     public static readonly Permission ViewPayRates = new("ViewPayRates", LocalizationSource.Create("View pay rates", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
+    /// Manage planning groups, forecast events and forecasts, and make a forecast the team's coverage.
+    /// </summary>
+    public static readonly Permission ManageForecasts = new("ManageWorkforceForecasts", LocalizationSource.Create("Manage forecasts", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
     /// Manage adherence rule sets and exceptions.
     /// </summary>
     public static readonly Permission ManageAdherence = new("ManageWorkforceAdherence", LocalizationSource.Create("Manage adherence rules and exceptions", typeof(WorkforcePermissions)), [ManageAllWorkforce]);

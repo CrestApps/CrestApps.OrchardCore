@@ -1,0 +1,87 @@
+@model PlanningGroupEditViewModel
+@using CrestApps.OrchardCore.ContactCenter.Models
+
+<zone Name="Title"><breadcrumb name="WorkforcePlanningGroupsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Planning Group"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="QueueIds" class="form-label">@T["Queues"]</label>
+        <select asp-for="QueueIds" asp-items="Model.QueueOptions" class="form-select" multiple size="6"></select>
+        <span class="hint">@T["Their work is forecast together, from their interval statistics."]</span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Channel" class="form-label">@T["Channel"]</label>
+            <select asp-for="Channel" class="form-select">
+                <option value="">@T["Every channel"]</option>
+                @foreach (var channel in Enum.GetValues<InteractionChannel>())
+                {
+                    <option value="@channel" selected="@(Model.Channel == channel.ToString())">@channel</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="TeamId" class="form-label">@T["Team that staffs it"]</label>
+            <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select">
+                <option value="">@T["Choose a team"]</option>
+            </select>
+            <span class="hint">@T["The active forecast becomes this team's coverage, in its time zone."]</span>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Service goal"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="ServiceLevelPercent" class="form-label">@T["Answer % "]</label>
+            <input asp-for="ServiceLevelPercent" type="number" min="1" max="99" step="any" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="ServiceLevelSeconds" class="form-label">@T["within (seconds)"]</label>
+            <input asp-for="ServiceLevelSeconds" type="number" min="1" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="AverageSpeedOfAnswerSeconds" class="form-label">@T["Average answer (seconds)"]</label>
+            <input asp-for="AverageSpeedOfAnswerSeconds" type="number" min="1" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="MaxOccupancyPercent" class="form-label">@T["Highest occupancy %"]</label>
+            <input asp-for="MaxOccupancyPercent" type="number" min="1" max="100" step="any" class="form-control" />
+        </div>
+    </div>
+    <span class="hint d-block mb-3">@T["Set a service level such as 80% within 20 seconds, an average speed of answer, or both. Agents are never planned busier than the highest occupancy."]</span>
+
+    <h2 class="h5 mt-4">@T["Staffing"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="ShrinkagePercent" class="form-label">@T["Shrinkage %"]</label>
+            <input asp-for="ShrinkagePercent" type="number" min="0" max="99" step="any" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Concurrency" class="form-label">@T["Contacts at once"]</label>
+            <input asp-for="Concurrency" type="number" min="1" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="PatienceSeconds" class="form-label">@T["Customer patience (seconds)"]</label>
+            <input asp-for="PatienceSeconds" type="number" min="1" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="HistoryWeeks" class="form-label">@T["Weeks of history"]</label>
+            <input asp-for="HistoryWeeks" type="number" min="1" max="104" class="form-control" />
+        </div>
+    </div>
+    <span class="hint d-block mb-3">@T["Shrinkage is the share of paid time agents can't answer: breaks, meetings, absence. Contacts at once is for chats and messages. With a customer patience, staffing allows for customers who give up (Erlang A); without, nobody does (Erlang C)."]</span>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

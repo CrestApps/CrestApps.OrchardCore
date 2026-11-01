@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Navigation;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Reports;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
+using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
 using CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Workflows;
 using CrestApps.OrchardCore.Workforce.Reports;
@@ -84,6 +85,37 @@ public sealed class AdherenceStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AdherenceAlertsBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AdherenceHistoryBackgroundTask>());
         services.AddNavigationProvider<AdherenceAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers forecasting: planning groups, forecast events, forecasts and their pages.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Forecasting)]
+public sealed class ForecastingStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddPermissionProvider<ForecastingPermissionsProvider>();
+        services
+            .AddIndexProvider<PlanningGroupIndexProvider>()
+            .AddIndexProvider<ForecastEventIndexProvider>()
+            .AddIndexProvider<ForecastIndexProvider>()
+            .AddDataMigration<ForecastingMigrations>();
+
+        services.TryAddScoped<PlanningGroupStore>();
+        services.TryAddScoped<PlanningGroupManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PlanningGroup>, PlanningGroupHandler>());
+        services.TryAddScoped<ForecastEventStore>();
+        services.TryAddScoped<ForecastEventManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ForecastEvent>, ForecastEventHandler>());
+        services.TryAddScoped<ForecastService>();
+
+        services.AddDisplayDriver<PlanningGroup, PlanningGroupRowDisplayDriver>();
+        services.AddDisplayDriver<ForecastEvent, ForecastEventRowDisplayDriver>();
+        services.AddDisplayDriver<ForecastRow, ForecastRowDisplayDriver>();
+        services.AddNavigationProvider<ForecastingAdminMenu>();
     }
 }
 
