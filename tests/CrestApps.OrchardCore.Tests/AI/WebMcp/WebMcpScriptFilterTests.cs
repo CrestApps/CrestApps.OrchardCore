@@ -27,7 +27,7 @@ public sealed class WebMcpScriptFilterTests
     {
         // Arrange
         var harness = new FilterHarness();
-        var context = harness.CreateContext(isAdmin: true);
+        var context = FilterHarness.CreateContext(isAdmin: true);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -50,7 +50,7 @@ public sealed class WebMcpScriptFilterTests
     {
         // Arrange
         var harness = new FilterHarness();
-        var context = harness.CreateContext(isAdmin: false);
+        var context = FilterHarness.CreateContext(isAdmin: false);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -70,7 +70,7 @@ public sealed class WebMcpScriptFilterTests
             EnableOnAdminPages = false,
             EnableOnFrontEndPages = true,
         });
-        var context = harness.CreateContext(isAdmin: false);
+        var context = FilterHarness.CreateContext(isAdmin: false);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -85,7 +85,7 @@ public sealed class WebMcpScriptFilterTests
     {
         // Arrange
         var harness = new FilterHarness();
-        var context = harness.CreateContext(isAdmin: true);
+        var context = FilterHarness.CreateContext(isAdmin: true);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -102,7 +102,7 @@ public sealed class WebMcpScriptFilterTests
         {
             PageToolOrigins = ["https://partner.example"],
         });
-        var context = harness.CreateContext(isAdmin: true);
+        var context = FilterHarness.CreateContext(isAdmin: true);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -118,7 +118,7 @@ public sealed class WebMcpScriptFilterTests
     {
         // Arrange
         var harness = new FilterHarness();
-        var context = harness.CreateContext(isAdmin: true, authenticated: false);
+        var context = FilterHarness.CreateContext(isAdmin: true, authenticated: false);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -133,7 +133,7 @@ public sealed class WebMcpScriptFilterTests
     {
         // Arrange
         var harness = new FilterHarness(allowed: false);
-        var context = harness.CreateContext(isAdmin: true);
+        var context = FilterHarness.CreateContext(isAdmin: true);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -148,7 +148,7 @@ public sealed class WebMcpScriptFilterTests
     {
         // Arrange
         var harness = new FilterHarness();
-        var context = harness.CreateContext(isAdmin: true, result: new JsonResult(new { }));
+        var context = FilterHarness.CreateContext(isAdmin: true, result: new JsonResult(new { }));
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -175,7 +175,7 @@ public sealed class WebMcpScriptFilterTests
             .Returns(Task.CompletedTask);
 
         var harness = new FilterHarness(handlers: [handler.Object]);
-        var context = harness.CreateContext(isAdmin: true);
+        var context = FilterHarness.CreateContext(isAdmin: true);
 
         // Act
         await harness.Filter.OnResultExecutionAsync(context, harness.Next);
@@ -261,7 +261,7 @@ public sealed class WebMcpScriptFilterTests
 
         public bool NextCalled { get; private set; }
 
-        public ResultExecutingContext CreateContext(bool isAdmin, bool authenticated = true, IActionResult result = null)
+        public static ResultExecutingContext CreateContext(bool isAdmin, bool authenticated = true, IActionResult result = null)
         {
             var identity = authenticated
                 ? new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test")
