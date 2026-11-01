@@ -76,7 +76,10 @@ What users see and do in a spoken conversation is described in the User Manual u
 - The dictation microphone is hidden while a realtime session carries the conversation: the session already
   owns the microphone.
 - A **Voice** picker appears beside the conversation deployment, populated from the resolved realtime model's
-  own voices — or from the text-to-speech deployment's when the conversation runs as the cascade.
+  own voices — or from the text-to-speech deployment's when the conversation runs as the cascade. A profile or
+  template is not saved with a voice its speech-to-speech deployment does not offer: the provider would refuse the
+  session's set-up over it, and the profile's instructions and tools with it. A saved voice the list no longer has
+  shows as the default voice.
 - A short settings popover (from the shared realtime audio controller) exposes only per-device preferences — microphone, speaker, assistant volume, language, **Allow interruptions** (barge-in), and **Push-to-talk** — saved per browser. Everything acoustic (echo margins, the microphone gate, turn-detection timing) is measured automatically; there are no acoustic knobs to tune.
 
 The realtime experience is delivered by the `@crestapps/ai-chat-ui` package (the vendored `realtime-audio.js` controller plus the `ai-chat.js` / `chat-interaction.js` apps); no additional page script is required.

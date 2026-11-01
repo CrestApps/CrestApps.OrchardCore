@@ -80,7 +80,13 @@
             }
 
             var voicesUrl = '@realtimeVoicesUrl';
+
+            // The voice to keep selected as the lists change: the saved one, then whichever the user picks.
             var selectedVoice = voiceSelect ? (voiceSelect.getAttribute('data-voice-name') || '') : '';
+
+            // Only the newest voice list is shown. Switching deployments quickly sends a request for each, and an
+            // older answer arriving last would offer one deployment's voices under another.
+            var voicesRequest = 0;
 
             // The text-to-speech voices rendered on the server, restored when the conversation falls back to
             // the speech-to-text plus text-to-speech cascade.
@@ -130,6 +136,13 @@
                 if (voiceSelect) {
                     voiceSelect.innerHTML = html;
                     voiceSelect.value = selectedVoice;
+
+                    // A voice this list does not have would leave nothing selected; say plainly that the default
+                    // voice is used instead.
+                    if (voiceSelect.selectedIndex < 0) {
+                        voiceSelect.value = '';
+                    }
+
                     refreshDefaultVoiceLabel();
                 }
             }
@@ -140,6 +153,7 @@
                 }
 
                 var html = '<option value="">@T["Default voice"]</option>';
+                var request = ++voicesRequest;
 
                 try {
                     var response = await fetch(voicesUrl + '?deploymentName=' + encodeURIComponent(deploymentName), { credentials: 'same-origin' });
@@ -164,7 +178,9 @@
                     /* ignore voice load failures */
                 }
 
-                setVoiceOptions(html);
+                if (request === voicesRequest) {
+                    setVoiceOptions(html);
+                }
             }
 
             function apply() {
@@ -189,12 +205,20 @@
                 if (resolved) {
                     loadRealtimeVoices(resolved);
                 } else {
+                    // Any voice list still on its way is for a deployment no longer chosen.
+                    voicesRequest++;
                     setVoiceOptions(ttsOptionsHtml);
                 }
             }
 
             if (conversationDeploymentSelect) {
                 conversationDeploymentSelect.addEventListener('change', apply);
+            }
+
+            if (voiceSelect) {
+                voiceSelect.addEventListener('change', function () {
+                    selectedVoice = voiceSelect.value;
+                });
             }
 
             apply();
