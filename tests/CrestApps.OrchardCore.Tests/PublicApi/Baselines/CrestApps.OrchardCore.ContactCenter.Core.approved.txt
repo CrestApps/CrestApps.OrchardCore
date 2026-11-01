@@ -498,6 +498,163 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public string Name { get; set; }
     }
 }
+namespace CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics
+{
+    public sealed class AgentIntervalQueue
+    {
+        public AgentIntervalQueue() { }
+        public double HandleSeconds { get; set; }
+        public long Handled { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class AgentIntervalState
+    {
+        public AgentIntervalState() { }
+        public string Reason { get; set; }
+        public double Seconds { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus Status { get; set; }
+    }
+    public sealed class AgentIntervalStatistic
+    {
+        public AgentIntervalStatistic() { }
+        public string AgentId { get; set; }
+        public double HandleSeconds { get; }
+        public long Handled { get; }
+        public int IntervalMinutes { get; set; }
+        public System.DateTime IntervalStartUtc { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentIntervalQueue> Queues { get; set; }
+        public double SignedInSeconds { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentIntervalState> States { get; set; }
+        public string UserId { get; set; }
+        public double SecondsIn(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus status) { }
+    }
+    public sealed class AgentIntervalStatistics : CrestApps.Core.Models.CatalogItem
+    {
+        public AgentIntervalStatistics() { }
+        public string AgentId { get; set; }
+        public System.DateTime Date { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentIntervalStatistic> Intervals { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AgentIntervalStatisticsIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AgentIntervalStatisticsIndex() { }
+        public string AgentId { get; set; }
+        public System.DateTime Date { get; set; }
+        public long DocumentId { get; set; }
+        public string UserId { get; set; }
+    }
+    public interface IIntervalStatisticsReader
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentIntervalStatistic>> GetAgentIntervalsAsync(System.Collections.Generic.IEnumerable<string> userIds, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.IntervalStatisticsDay>> GetDaysAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.QueueIntervalStatistic>> GetQueueIntervalsAsync(System.Collections.Generic.IEnumerable<string> queueIds, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public static class IntervalStatisticsConstants
+    {
+        public const int IntervalMinutes = 15;
+        public const int Version = 1;
+        public static readonly System.TimeSpan Interval;
+        public static System.DateTime DayStart(System.DateTime utc) { }
+        public static System.DateTime IntervalStart(System.DateTime utc, int minutes = 15) { }
+    }
+    public sealed class IntervalStatisticsDay : CrestApps.Core.Models.CatalogItem
+    {
+        public IntervalStatisticsDay() { }
+        public System.DateTime ComputedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public bool Final { get; set; }
+        public int InteractionCount { get; set; }
+        public int Version { get; set; }
+    }
+    public sealed class IntervalStatisticsDayIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public IntervalStatisticsDayIndex() { }
+        public System.DateTime ComputedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public long DocumentId { get; set; }
+        public bool Final { get; set; }
+        public int InteractionCount { get; set; }
+        public int Version { get; set; }
+    }
+    public sealed class IntervalStatisticsOptions
+    {
+        public IntervalStatisticsOptions() { }
+        public int BackfillDays { get; set; }
+        public System.TimeSpan CurrentDayRefresh { get; set; }
+        public int MaxDaysPerRun { get; set; }
+        public int RetentionDays { get; set; }
+        public System.TimeSpan SettleDelay { get; set; }
+        public int ShortAbandonSeconds { get; set; }
+    }
+    public sealed class IntervalStatisticsReader : CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.IIntervalStatisticsReader
+    {
+        public IntervalStatisticsReader(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.AgentIntervalStatistic>> GetAgentIntervalsAsync(System.Collections.Generic.IEnumerable<string> userIds, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.IntervalStatisticsDay>> GetDaysAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.QueueIntervalStatistic>> GetQueueIntervalsAsync(System.Collections.Generic.IEnumerable<string> queueIds, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class IntervalStatisticsRollup
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.QueueIntervalStatistic> Combine(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.QueueIntervalStatistic> intervals, int minutes = 15, string queueId = null) { }
+    }
+    public sealed class IntervalStatisticsState : CrestApps.Core.Models.CatalogItem
+    {
+        public IntervalStatisticsState() { }
+        public bool IsRebuilding { get; }
+        public string LastError { get; set; }
+        public System.DateTime? LastProgressUtc { get; set; }
+        public System.DateTime? LastRunUtc { get; set; }
+        public System.DateTime? RebuildFromUtc { get; set; }
+        public System.DateTime? RebuildNextUtc { get; set; }
+        public string RebuildRequestedBy { get; set; }
+        public System.DateTime? RebuildRequestedUtc { get; set; }
+        public System.DateTime? RebuildToUtc { get; set; }
+    }
+    public sealed class QueueIntervalStatistic
+    {
+        public QueueIntervalStatistic() { }
+        public long Abandoned { get; set; }
+        public double AnswerWaitSeconds { get; set; }
+        public long Answered { get; set; }
+        public long AnsweredWithinServiceLevel { get; set; }
+        public double AverageHandleSeconds { get; }
+        public double AverageSpeedOfAnswerSeconds { get; }
+        public long CallbackRequested { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.InteractionChannel Channel { get; set; }
+        public double HandleSeconds { get; }
+        public long Handled { get; set; }
+        public int IntervalMinutes { get; set; }
+        public System.DateTime IntervalStartUtc { get; set; }
+        public double MaxAnswerWaitSeconds { get; set; }
+        public long Offered { get; set; }
+        public long Outbound { get; set; }
+        public string QueueId { get; set; }
+        public double? ServiceLevel { get; }
+        public long ServiceLevelOffered { get; set; }
+        public int ServiceLevelThresholdSeconds { get; set; }
+        public long ShortAbandoned { get; set; }
+        public double TalkSeconds { get; set; }
+        public long Transferred { get; set; }
+        public long Voicemail { get; set; }
+        public double WrapUpSeconds { get; set; }
+        public void Add(CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.QueueIntervalStatistic other) { }
+    }
+    public sealed class QueueIntervalStatistics : CrestApps.Core.Models.CatalogItem
+    {
+        public QueueIntervalStatistics() { }
+        public System.DateTime Date { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics.QueueIntervalStatistic> Intervals { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class QueueIntervalStatisticsIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public QueueIntervalStatisticsIndex() { }
+        public System.DateTime Date { get; set; }
+        public long DocumentId { get; set; }
+        public string QueueId { get; set; }
+    }
+}
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models
 {
     public sealed class ActivityDispositionEventData

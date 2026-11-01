@@ -110,6 +110,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContactCenter.Agents` | Contact Center Agents | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | Contact Center Agent Entitlements | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Contact Center Work Distribution | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` | Contact Center Interval Statistics | [Report catalog](./contact-center/report-catalog#interval-statistics) |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Contact Center Outbound Dialer | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Contact Center Paced Dialing | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Voice` | Contact Center Voice (dependency only) | [Voice routing](./contact-center/voice-routing) |

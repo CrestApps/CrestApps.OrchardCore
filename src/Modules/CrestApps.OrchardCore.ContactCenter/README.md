@@ -42,6 +42,7 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 | --- | --- | --- |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence/offer/queue broadcasts (enabled by dependency only). |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Real-time supervisor dashboard and provider-gated monitoring actions. |
+| Contact Center Interval Statistics | `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` | 15-minute statistics of every queue and agent for workforce planning, with a rebuild page and two report data sets. |
 
 > **Reports & analytics** are not a separate feature. The executive, interaction, queue/SLA, agent, transfer, recording, campaign, subject, and dialer decision log reports activate automatically whenever both Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) and the Reports framework (`CrestApps.OrchardCore.Reports`) are enabled. The **Dialer activity and health** report, the live dashboard's dialer banner and the `contactcenter-dialer-pacing` health check come with Contact Center Paced Dialing, which records how every pacing cycle ends.
 

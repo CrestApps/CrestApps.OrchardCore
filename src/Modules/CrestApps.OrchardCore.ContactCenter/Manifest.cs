@@ -77,6 +77,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.IntervalStatistics,
+    Name = "Contact Center Interval Statistics",
+    Description = "Keeps 15-minute statistics of every queue and agent: volume, service level, handle time and time in each state. Workforce forecasting, intraday and adherence read them, and the report builder lists them.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Dialer,
     Name = "Contact Center Outbound Dialer",
     Description = "Adds outbound calling over CRM activities: dialing profiles and their administration, mandatory compliance screening, callbacks, and Manual or Preview activity batches placed through the contact center's voice provider.",
