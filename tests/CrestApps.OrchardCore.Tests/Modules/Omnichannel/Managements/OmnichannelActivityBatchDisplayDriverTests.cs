@@ -137,6 +137,26 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
             .SelectMany(entry => entry.Value.Errors)
             .Select(error => error.ErrorMessage);
 
+    // The bug: the load form stored the time as it was typed, the loader read it in the site's time zone, and a report
+    // read it as UTC, so the load's schedule showed off by the site's offset. It is stored in UTC now, as the single
+    // activity form stores its time.
+    [Fact]
+    public async Task UpdateAsync_StoresTheScheduleInUtc()
+    {
+        // Arrange
+        var driver = CreateDriver(subjectDefaultCampaignId: null, localClock: new TwoHoursAheadLocalClock());
+        var context = PostedFormUpdateModel.CreateContext(NewDialerModel(campaignId: CampaignId), isNew: true);
+        var batch = new OmnichannelActivityBatch();
+
+        // Act
+        await driver.UpdateAsync(batch, context);
+
+        // Assert
+        // 09:00 typed two hours ahead of UTC is 07:00 UTC.
+        Assert.Equal(new DateTime(2026, 9, 28, 7, 0, 0, DateTimeKind.Utc), batch.ScheduleAt);
+        Assert.Equal(DateTimeKind.Utc, batch.ScheduleAt.Kind);
+    }
+
     private static IEnumerable<string> CampaignErrors(UpdateEditorContext context)
         => context.Updater.ModelState
             .Where(entry => entry.Key.EndsWith(nameof(OmnichannelActivityBatchViewModel.CampaignId), StringComparison.Ordinal))
@@ -152,10 +172,13 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
             ContactContentType = ContactContentType,
             DialerProfileId = DialerProfileId,
             CampaignId = campaignId,
-            ScheduleAt = new DateTime(2026, 9, 28, 9, 0, 0, DateTimeKind.Utc),
+            ScheduleAt = new DateTime(2026, 9, 28, 9, 0, 0, DateTimeKind.Unspecified),
         };
 
     private static OmnichannelActivityBatchDisplayDriver CreateDriver(string subjectDefaultCampaignId, params ActivityDialerWaitingRecord[] waitingRecords)
+        => CreateDriver(subjectDefaultCampaignId, Mock.Of<ILocalClock>(), waitingRecords);
+
+    private static OmnichannelActivityBatchDisplayDriver CreateDriver(string subjectDefaultCampaignId, ILocalClock localClock, params ActivityDialerWaitingRecord[] waitingRecords)
     {
         var sourceOptions = new ActivityBatchSourceOptions();
         sourceOptions.AddSource(ActivitySources.Dialer, entry => entry.RequiresUserAssignment = false);
@@ -187,7 +210,7 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
             Mock.Of<IContentDefinitionManager>(),
             new OmnichannelContentTypeProvider(Mock.Of<IServiceScopeFactory>()),
             Mock.Of<ITimeZoneSelectListProvider>(),
-            Mock.Of<ILocalClock>(),
+            localClock,
             Mock.Of<ISession>(),
             Mock.Of<INamedCatalog<OmnichannelDisposition>>(),
             campaignCatalog.Object,
@@ -199,6 +222,26 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
             Array.Empty<IAIProfileManager>(),
             Mock.Of<IBusinessHoursGate>(),
             new PassThroughStringLocalizer<OmnichannelActivityBatchDisplayDriver>());
+    }
+
+    /// <summary>
+    /// A local clock two hours ahead of UTC, as Athens is in winter, so a time that is not converted shows.
+    /// </summary>
+    private sealed class TwoHoursAheadLocalClock : ILocalClock
+    {
+        private static readonly TimeSpan _offset = TimeSpan.FromHours(2);
+
+        public Task<DateTimeOffset> GetLocalNowAsync()
+            => throw new NotSupportedException();
+
+        public Task<ITimeZone> GetLocalTimeZoneAsync()
+            => throw new NotSupportedException();
+
+        public Task<DateTimeOffset> ConvertToLocalAsync(DateTimeOffset utcDateTime)
+            => Task.FromResult(utcDateTime.ToOffset(_offset));
+
+        public Task<DateTime> ConvertToUtcAsync(DateTime dateTimeLocal)
+            => Task.FromResult(DateTime.SpecifyKind(dateTimeLocal - _offset, DateTimeKind.Utc));
     }
 
     /// <summary>

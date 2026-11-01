@@ -80,7 +80,7 @@ The form has three cards: **Activity load settings** (what to create), **Record 
 | **Address** | Automatic loads: the number to send from or call from. Only the [Omnichannel Addresses](channel-endpoints.md) used for the **Channel** picked are listed: numbers used for text messages for SMS, numbers used for voice calls for Phone. |
 | **Dialer profile** | Dialer loads: required. It decides the dialing mode (preview, power or progressive) and its pacing. |
 | **Dial from** | Dialer loads: the number the customers called from this load see, picked from the addresses used for voice calls. It is shown instead of the agent's own number and the dialer profile's **Caller ID**, unless the profile is set to **Always show this caller ID**. Leave it on **Default caller ID** to keep those. |
-| **Schedule at** | When the activities become due. Required. |
+| **Schedule at** | When the activities become due, in your local time. Required. |
 | **User(s) to assign activities to** | Manual loads: who gets the work. The activities are shared out in turn between them. |
 | **Urgency level** / **Instructions** | Copied onto every activity. Instructions are notes the agent reads first. |
 | **Prevent duplicate activity with the same subject** | Skips records that already have an open activity for this subject, on any campaign or channel. An open activity for a different subject does not stop a record from loading. |

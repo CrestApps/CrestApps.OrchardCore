@@ -602,7 +602,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             var now = _clock.UtcNow;
 
-            var scheduledUtc = await _localClock.ConvertToUtcAsync(batch.ScheduleAt);
+            // The load's schedule is stored in UTC: see OmnichannelActivityBatch.ScheduleAt.
+            var scheduledUtc = DateTime.SpecifyKind(batch.ScheduleAt, DateTimeKind.Utc);
 
             foreach (var row in rows)
             {
