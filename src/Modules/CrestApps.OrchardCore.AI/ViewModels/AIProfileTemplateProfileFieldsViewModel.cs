@@ -40,6 +40,12 @@ public class AIProfileTemplateProfileFieldsViewModel
     public AgentAvailability? AgentAvailability { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an agent built from the template runs its own tools when another
+    /// assistant calls it.
+    /// </summary>
+    public bool AllowToolInvocation { get; set; }
+
+    /// <summary>
     /// Gets or sets the title type.
     /// </summary>
     public AISessionTitleType? TitleType { get; set; }

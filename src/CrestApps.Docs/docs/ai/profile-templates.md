@@ -87,6 +87,29 @@ The prompts leave two things to the platform. Whether the assistant may hand the
 
 The phone starting points do not change the profile's chat mode or name a deployment. An automated call speaks through the telephony provider's speech-to-text and text-to-speech, or as a live speech-to-speech session when the profile's chat deployment can hold one.
 
+### Agent starting points for running the site
+
+The Orchard Core AI Agent and Calendars modules ship **Agent** templates that each own one part of the site. Their cards are greyed out until the features they need are enabled.
+
+| Template file | Title | Category | `RequiresFeatures` | Tools ticked |
+| --- | --- | --- | --- | --- |
+| `CrestApps.OrchardCore.AI.Agent/Templates/Profiles/content-agent.md` | Content Agent | Site management | `CrestApps.OrchardCore.AI.Agent`, `OrchardCore.Contents`, `OrchardCore.ContentTypes` | The **Content Management** and **Content Definitions** tools (17) |
+| `CrestApps.OrchardCore.AI.Agent/Templates/Profiles/workflow-agent.md` | Workflow Agent | Site management | `CrestApps.OrchardCore.AI.Agent`, `OrchardCore.Workflows` | The **Workflow Management** tools (4) |
+| `CrestApps.OrchardCore.AI.Agent/Templates/Profiles/ai-operations-agent.md` | AI Operations Agent | Site management | `CrestApps.OrchardCore.AI.Agent` | The **AI Profiles**, **AI Conversations**, **AI Quality** and **AI Analytics** tools (10) |
+| `CrestApps.OrchardCore.Calendars/Templates/Profiles/calendar-agent.md` | Calendar Agent | Calendar | `CrestApps.OrchardCore.Calendars` | The **Calendar** and **Scheduling** tools (10) |
+
+Each sets `ProfileType: Agent`, `AgentAvailability: OnDemand` and `AllowToolInvocation: true`, and lists its tools in `ToolNames`. A tool whose feature is off is skipped when the agent runs, so the Calendar Agent works without Scheduling and simply has no appointment tools. No template ticks the tenant, feature, recipe or settings tools: the tools do not check the caller's permissions (see [AI Agents](agent.md#agent-tools-and-permissions)).
+
+Agent templates also accept these keys:
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `ProfileDescription` | `string` | The agent's description, which the calling model reads to decide when to hand it a job. |
+| `AgentAvailability` | `OnDemand` or `AlwaysAvailable` | Copied to the profile's **Availability**. |
+| `AllowToolInvocation` | `bool` | `true` turns on **Let this agent use its tools**. Without it, an agent runs with no tools when another assistant calls it. |
+| `ToolNames` | `string` | Comma-separated tool names ticked on the profile's **Capabilities** tab. |
+| `AgentNames` | `string` | Comma-separated agent profile names ticked under **Agents**. |
+
 ### Featuring your own template
 
 A profile template stored as a file becomes a featured scenario through four front-matter keys. The AI module reads template files from:

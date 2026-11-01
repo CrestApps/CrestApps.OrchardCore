@@ -50,9 +50,12 @@ The full list of tools and what each does is in the [Technical Manual](../../ai/
 
 ## Who can use tools
 
-Using a profile and using its tools are two separate permissions. A person can only use a tool when their role has **Access any AI tool**, or the permission for that one tool, **Access AI tool - *tool name***. A tool the person may not use is quietly left out, and the assistant answers without it. That often looks like a vague answer or "I can't do that".
+Who can use a tool depends on where it is ticked.
 
-When an assistant works for an administrator but not for someone else, check that person's role under **Access Control > Roles**. **Access any AI tool** is a powerful permission and is given only to administrators by default; prefer granting the individual tools.
+- **On an AI profile** (and on the agents it calls), the profile decides. Everyone who can chat with the profile gets every tool ticked on it, including visitors who are not signed in. The tools do not check the person's own permissions, so a tool that changes the site, such as deleting content, can be used by anyone who can reach the assistant. Only tick tools that are safe for everyone the profile serves.
+- **In a chat interaction**, the person chooses the tools, so each one needs a permission. A person can only use a tool when their role has **Access any AI tool**, or the permission for that one tool, **Access AI tool - *tool name***. A tool the person may not use is quietly left out, and the assistant answers without it. That often looks like a vague answer or "I can't do that".
+
+When a chat interaction works for an administrator but not for someone else, check that person's role under **Access Control > Roles**. **Access any AI tool** is a powerful permission and is given only to administrators by default; prefer granting the individual tools.
 
 ## Tool instances
 
@@ -99,10 +102,33 @@ An agent is a profile of type **Agent**: a specialist with its own instructions 
 1. Create a profile, choose **Profile type** **Agent**, and fill in its **Description**. Other assistants read the description to decide when to call the agent, so say exactly what it does.
 2. Choose its **Availability**:
    - **On demand**: the agent is only included when it fits the user's request, and only for assistants that pick it.
-   - **Always available**: the agent is included in every AI request. This uses more tokens and costs more; use it only for agents every assistant must be able to reach.
-3. In the assistant that should call the agent, open the **Capabilities** tab, tick the agent under **Agents**, and save.
+   - **Always available**: the agent is included in every AI request, for every assistant on the site. This uses more tokens and costs more, and it gives every assistant the agent's tools; use it only for agents every assistant must be able to reach.
+3. If the agent should act and not only answer, tick **Let this agent use its tools**, then tick its tools on its **Capabilities** tab. Without this box the agent runs without any tools when another assistant calls it, even if tools are ticked.
+4. In the assistant that should call the agent, open the **Capabilities** tab, tick the agent under **Agents**, and save.
 
 To try an agent on its own, use **Invoke Profile** from its **Actions** menu (see [Chat with an AI assistant](chat.md#try-out-a-utility-or-agent-profile)).
+
+### Ready-made agents for running the site
+
+The **New AI Profile** picker has agents that each look after one part of the site. Each already has its tools ticked, **Let this agent use its tools** on, and **Availability** set to **On demand**.
+
+| Agent | What it does | Needs |
+| --- | --- | --- |
+| **Content Agent** | Finds, creates, edits, clones, publishes, unpublishes and deletes content items, and adds, changes and removes content types and parts. Saves changes as drafts unless asked to publish. | Orchard Core AI Agent, Contents, Content Types |
+| **Workflow Agent** | Lists and explains workflows, and creates or changes them. New workflows start turned off unless asked otherwise. | Orchard Core AI Agent, Workflows |
+| **AI Operations Agent** | Answers questions about AI profiles, conversations, what the AI remembers about a contact, quality scores, tests, alerts and chat usage. It can run AI tests when asked, but cannot change profiles. | Orchard Core AI Agent |
+| **Calendar Agent** | Finds events and free time, adds, moves and cancels events, and finds, books and changes appointments. | Calendars (appointments also need Scheduling) |
+
+There is no ready-made agent for tenants, features, recipes or settings, because those tools can change the whole site and do not check who is asking. Tick them only on profiles that just administrators can reach.
+
+### Choose between tools and agents
+
+For each part of the site, give an assistant either the tools or the agent, not both.
+
+- **Tick the tools** when the assistant needs only a few of them, or does that kind of work in most conversations. It is faster and cheaper, because nothing is handed off.
+- **Tick the agent** when the assistant does many kinds of work and the area needs many tools, such as content. The agent brings its own instructions for that area, and its tools only come into play when the job needs them.
+
+If an assistant has both the Content Agent and the content tools, it has two ways to do the same thing. It picks between them unpredictably, and you pay for both on every request.
 
 ## MCP connections
 
