@@ -79,7 +79,7 @@ public sealed class GeocodeQueueTests
     }
 
     [Fact]
-    public async Task WithoutAProvider_RequestsWait_AndAskingAgainStartsOver()
+    public async Task WithoutAProvider_RequestsWait_UntilWoken_AndAskingAgainStartsOver()
     {
         await using var setup = await SetupAsync(provider: null);
 
@@ -92,6 +92,9 @@ public sealed class GeocodeQueueTests
         Assert.Equal(0, waiting.Attempts);
         Assert.Equal(setup.Now + DefaultGeocodeQueue.NoProviderWait, waiting.NextAttemptUtc);
         Assert.Equal("No geocoding provider is set up.", waiting.LastError);
+
+        Assert.Equal(1, await setup.Harness.RunAsync(services => services.GetRequiredService<IGeocodeQueue>().WakeAsync()));
+        Assert.Equal(setup.Now, (await RequestAsync(setup)).NextAttemptUtc);
 
         await EnqueueAsync(setup, "2 City Hall Square, Boston");
 

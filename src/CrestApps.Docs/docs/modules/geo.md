@@ -15,6 +15,9 @@ The admin screens are described in the User Manual: [Territories and Maps](../us
 | Feature | Id | Depends on |
 | --- | --- | --- |
 | Geo, Maps and Territories | `CrestApps.OrchardCore.Geo` | CrestApps Resources |
+| Azure Maps | `CrestApps.OrchardCore.Geo.AzureMaps` | Geo |
+| Google Maps | `CrestApps.OrchardCore.Geo.GoogleMaps` | Geo |
+| OSRM | `CrestApps.OrchardCore.Geo.Osrm` | Geo |
 
 ## Points and providers
 
@@ -34,6 +37,20 @@ The admin screens are described in the User Manual: [Territories and Maps](../us
 
 The built-in **Haversine** provider (`HaversineTravelTimeProvider`) is always registered: the great-circle distance (`GeoMath.DistanceMeters`) times the **road factor** (1.3), at the **average speed** (40 km/h) or `TravelOptions.SpeedKmh`, such as a territory's.
 
+## Providers
+
+Each provider is its own module and feature, adds its section to **Settings > Maps and Geocoding**, and is then chosen there. Keys are kept encrypted with data protection and never shown again. A provider throws `GeoProviderException` when it has no key or address, when its key is refused, or when it finds no route between two points; `IGeoService` then falls back to the built-in estimate for travel times and routes, and the geocoding queue retries.
+
+| Provider | Geocoding | Travel times | Routes | Notes |
+| --- | --- | --- | --- | --- |
+| **Azure Maps** (`AzureMaps`) | Search geocoding and reverse geocoding (2023-06-01) | The synchronous route matrix, with traffic, 100 cells a request | Route directions with text instructions | The key goes in the `subscription-key` header. |
+| **Google Maps** (`GoogleMaps`) | The Geocoding API, with the location type as confidence | The Distance Matrix, with traffic, split into 25 by 25 and 100 elements a request | The Directions API, its encoded polyline decoded by `PolylineEncoding` | `MaxCacheDuration` is zero: its travel times are never cached, as its terms require. `ZERO_RESULTS` is an empty answer; every other status is a refusal. |
+| **OSRM** (`Osrm`) | — | The table service | The route service with steps written as sentences | A self-hosted server's address and profile; no key. |
+
+`ITravelTimeProvider.MaxCacheDuration` (default `null`) caps how long `IGeoService` keeps a provider's answers; `DisplayName` names a provider in the settings. Each provider's HTTP client uses the standard resilience handler (retries, timeouts and a circuit breaker). The tests check every provider against the same contract with responses written from each service's documented format.
+
+Choosing a geocoding provider wakes the addresses that waited for one (`IGeocodeQueue.WakeAsync`).
+
 ## Service territories
 
 A `ServiceTerritory` has a name, an optional parent, a shape (GeoJSON Polygon or MultiPolygon, as a geometry, Feature or FeatureCollection), postal codes (a code ending with `*` matches every code that starts with the rest), a time zone, a travel speed and `Members` (teams or people by the identifiers of the modules that own them, Primary or Secondary). The handler tidies postal codes, checks the shape can be read (`GeoShape.TryParse`) and refuses a territory inside itself.
@@ -49,7 +66,7 @@ A `ServiceTerritory` has a name, an optional parent, a shape (GeoJSON Polygon or
 - No match, or a record that is gone, is given up at once.
 - With no provider set up, requests wait an hour at a time without counting an attempt.
 
-The settings page shows how many addresses are waiting, geocoded and not found.
+The settings page shows how many addresses are waiting, geocoded and not found, and the latest problem.
 
 **Workforce** registers targets when Geo is on: a team's location and a worker's home base are geocoded when they have an address and no coordinates. Changing a home base address clears its old coordinates.
 

@@ -1,0 +1,10 @@
+{
+  "formatVersion": "0.0.12",
+  "routes": [
+    {
+      "summary": { "lengthInMeters": 6012, "travelTimeInSeconds": 840 },
+      "legs": [ { "summary": { "lengthInMeters": 6012, "travelTimeInSeconds": 840 }, "points": [ { "latitude": 42.3603, "longitude": -71.0580 }, { "latitude": 42.3650, "longitude": -71.0800 }, { "latitude": 42.3736, "longitude": -71.1097 } ] } ],
+      "guidance": { "instructions": [ { "message": "Leave from City Hall Sq" }, { "message": "Turn left onto Cambridge St" }, { "message": "You have arrived" } ] }
+    }
+  ]
+}

@@ -84,6 +84,12 @@ public class GeoSettingsViewModel
     public int Failed { get; set; }
 
     /// <summary>
+    /// Gets or sets the latest reason an address wasn't geocoded.
+    /// </summary>
+    [BindNever]
+    public string LastError { get; set; }
+
+    /// <summary>
     /// Gets or sets the geocoding providers.
     /// </summary>
     [BindNever]

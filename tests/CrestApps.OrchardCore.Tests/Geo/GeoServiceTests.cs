@@ -59,6 +59,25 @@ public sealed class GeoServiceTests
     }
 
     [Fact]
+    public async Task AProviderThatMayNotBeCached_IsAskedEachTime()
+    {
+        var provider = new Mock<ITravelTimeProvider>();
+
+        provider.SetupGet(p => p.Name).Returns("Roads");
+        provider.SetupGet(p => p.MaxCacheDuration).Returns(TimeSpan.Zero);
+        provider.Setup(p => p.GetMatrixAsync(It.IsAny<IReadOnlyList<GeoPoint>>(), It.IsAny<IReadOnlyList<GeoPoint>>(), It.IsAny<DateTime>(), It.IsAny<TravelOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TravelMatrix { Provider = "Roads", Legs = [[new TravelLeg(TimeSpan.FromMinutes(12), 6000)]] });
+
+        var service = Service(new GeoSettings { TravelTimeProvider = "Roads" }, provider.Object);
+        var departure = new DateTime(2026, 11, 2, 14, 3, 0, DateTimeKind.Utc);
+
+        await service.GetMatrixAsync([_boston], [_cambridge], departure, cancellationToken: TestContext.Current.CancellationToken);
+        await service.GetMatrixAsync([_boston], [_cambridge], departure, cancellationToken: TestContext.Current.CancellationToken);
+
+        provider.Verify(p => p.GetMatrixAsync(It.IsAny<IReadOnlyList<GeoPoint>>(), It.IsAny<IReadOnlyList<GeoPoint>>(), It.IsAny<DateTime>(), It.IsAny<TravelOptions>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task AFailingProvider_FallsBackToTheBuiltInEstimate()
     {
         var provider = new Mock<ITravelTimeProvider>();

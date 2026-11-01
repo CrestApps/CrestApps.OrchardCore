@@ -37,6 +37,16 @@ On the **Territories** page, the map shows every territory. Under **Find the ter
 
 Go to **Settings > Maps and Geocoding**.
 
-- **Geocoding** finds the coordinates of addresses, such as a team's location or a worker's home base, in the background every minute, and retries for about three hours when the provider fails. Until you choose a provider, addresses wait; the page shows how many are waiting, geocoded and not found.
+- **Geocoding** finds the coordinates of addresses, such as a team's location or a worker's home base, in the background every minute, and retries for about three hours when the provider fails. Until you choose a provider, addresses wait; the page shows how many are waiting, geocoded and not found, and the latest problem, such as a refused key.
 - **Travel times** come from the provider you choose, or from the built-in estimate: the straight-line distance times the **road factor**, at the **average speed**.
 - **Maps** use the **tile address** and **attribution** you set. The OpenStreetMap tile server is there for trying things out: a live site must use its own tiles or a commercial tile service.
+
+## Use a map provider
+
+Turn on the **Azure Maps**, **Google Maps** or **OSRM** feature under **Configuration > Features**. Its section appears on **Settings > Maps and Geocoding**:
+
+- **Azure Maps:** paste the primary key of your Azure Maps account. It geocodes, gives travel times with traffic, and draws routes.
+- **Google Maps:** paste an API key enabled for the Geocoding, Distance Matrix and Directions APIs, restricted to them. Google bills each request, and its travel times are never kept, as its terms require.
+- **OSRM:** enter the address of your own OSRM server and its profile, usually driving. It gives travel times and routes, but doesn't geocode.
+
+Then choose the provider under **Geocoding**, **Travel times** or **Routes on maps**, and select **Save**. Addresses that waited for a geocoding provider are tried at the next run. A saved key is never shown again; enter a new one to replace it, or tick **Remove the key**.

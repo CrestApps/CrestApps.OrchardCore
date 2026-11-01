@@ -95,6 +95,9 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Downloads/CrestApps.OrchardCore.Downloads.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Geo/CrestApps.OrchardCore.Geo.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Geo.AzureMaps/CrestApps.OrchardCore.Geo.AzureMaps.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Geo.GoogleMaps/CrestApps.OrchardCore.Geo.GoogleMaps.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Geo.Osrm/CrestApps.OrchardCore.Geo.Osrm.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Inventory/CrestApps.OrchardCore.Inventory.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />

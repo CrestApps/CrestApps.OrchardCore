@@ -13,6 +13,11 @@ public interface IGeocodingProvider
     string Name { get; }
 
     /// <summary>
+    /// Gets the name shown to people choosing a provider.
+    /// </summary>
+    string DisplayName => Name;
+
+    /// <summary>
     /// Finds the places that match a query.
     /// </summary>
     /// <param name="query">The query.</param>
@@ -40,6 +45,11 @@ public interface ITravelTimeProvider
     string Name { get; }
 
     /// <summary>
+    /// Gets the name shown to people choosing a provider.
+    /// </summary>
+    string DisplayName => Name;
+
+    /// <summary>
     /// Gives the leg from each origin to each destination.
     /// </summary>
     /// <param name="origins">The origins.</param>
@@ -49,6 +59,12 @@ public interface ITravelTimeProvider
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matrix.</returns>
     Task<TravelMatrix> GetMatrixAsync(IReadOnlyList<GeoPoint> origins, IReadOnlyList<GeoPoint> destinations, DateTime departureUtc, TravelOptions options, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the longest the provider's terms let its answers be kept, or <see langword="null"/> for the site's setting.
+    /// <see cref="TimeSpan.Zero"/> keeps nothing.
+    /// </summary>
+    TimeSpan? MaxCacheDuration => null;
 }
 
 /// <summary>
@@ -60,6 +76,11 @@ public interface IRouteProvider
     /// Gets the provider's name, as settings refer to it.
     /// </summary>
     string Name { get; }
+
+    /// <summary>
+    /// Gets the name shown to people choosing a provider.
+    /// </summary>
+    string DisplayName => Name;
 
     /// <summary>
     /// Gives the route through the points, in order.
@@ -161,6 +182,13 @@ public interface IGeocodeQueue
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>How many were worked on.</returns>
     Task<int> ProcessDueAsync(int max = 50, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Makes every waiting request due now, such as when a geocoding provider is chosen.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>How many requests were waiting.</returns>
+    Task<int> WakeAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

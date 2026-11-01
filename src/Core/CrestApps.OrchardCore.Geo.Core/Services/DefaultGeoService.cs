@@ -103,10 +103,17 @@ public sealed class DefaultGeoService : IGeoService
             return await _haversine.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken);
         }
 
-        var key = CacheKey(provider.Name, origins, destinations, departureUtc, options);
-        var cached = await _cache.GetStringAsync(key, cancellationToken);
+        // A provider's terms can cap how long its answers are kept, down to not at all.
+        var keep = TimeSpan.FromMinutes(Math.Max(1, settings.MatrixCacheMinutes));
 
-        if (cached is not null)
+        if (provider.MaxCacheDuration is { } cap && cap < keep)
+        {
+            keep = cap;
+        }
+
+        var key = CacheKey(provider.Name, origins, destinations, departureUtc, options);
+
+        if (keep > TimeSpan.Zero && await _cache.GetStringAsync(key, cancellationToken) is { } cached)
         {
             return JsonSerializer.Deserialize<CachedMatrix>(cached, _jsonOptions).ToMatrix(provider.Name);
         }
@@ -115,10 +122,13 @@ public sealed class DefaultGeoService : IGeoService
         {
             var matrix = await provider.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken);
 
-            await _cache.SetStringAsync(key, JsonSerializer.Serialize(CachedMatrix.From(matrix), _jsonOptions), new DistributedCacheEntryOptions
+            if (keep > TimeSpan.Zero)
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(Math.Max(1, settings.MatrixCacheMinutes)),
-            }, cancellationToken);
+                await _cache.SetStringAsync(key, JsonSerializer.Serialize(CachedMatrix.From(matrix), _jsonOptions), new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = keep,
+                }, cancellationToken);
+            }
 
             return matrix;
         }

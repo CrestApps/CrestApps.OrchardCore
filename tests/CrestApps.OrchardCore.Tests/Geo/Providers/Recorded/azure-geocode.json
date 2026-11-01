@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-71.05798, 42.36030] },
+      "bbox": [-71.06, 42.35, -71.05, 42.37],
+      "properties": {
+        "type": "Address",
+        "confidence": "High",
+        "matchCodes": ["Good"],
+        "address": { "addressLine": "1 City Hall Sq", "postalCode": "02201", "locality": "Boston", "formattedAddress": "1 City Hall Sq, Boston, MA 02201", "countryRegion": { "name": "United States", "ISO": "US" } }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-71.0589, 42.3601] },
+      "properties": { "type": "PopulatedPlace", "confidence": "Medium", "address": { "formattedAddress": "Boston, MA", "countryRegion": { "ISO": "US" } } }
+    }
+  ]
+}

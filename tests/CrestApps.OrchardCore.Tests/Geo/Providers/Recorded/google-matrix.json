@@ -1,0 +1,11 @@
+{
+  "destination_addresses": ["Boston, MA, USA", "Cambridge, MA, USA"],
+  "origin_addresses": ["Boston, MA, USA"],
+  "rows": [
+    { "elements": [
+      { "distance": { "text": "1 m", "value": 0 }, "duration": { "text": "1 min", "value": 0 }, "status": "OK" },
+      { "distance": { "text": "6.0 km", "value": 6012 }, "duration": { "text": "12 mins", "value": 720 }, "duration_in_traffic": { "text": "14 mins", "value": 840 }, "status": "OK" }
+    ] }
+  ],
+  "status": "OK"
+}

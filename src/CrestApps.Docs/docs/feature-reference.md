@@ -224,6 +224,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Geo` | Geo, Maps and Territories | [Geo](./modules/geo) |
+| `CrestApps.OrchardCore.Geo.AzureMaps` | Azure Maps | [Geo](./modules/geo#providers) |
+| `CrestApps.OrchardCore.Geo.GoogleMaps` | Google Maps | [Geo](./modules/geo#providers) |
+| `CrestApps.OrchardCore.Geo.Osrm` | OSRM | [Geo](./modules/geo#providers) |
 
 ## Data connectors
 

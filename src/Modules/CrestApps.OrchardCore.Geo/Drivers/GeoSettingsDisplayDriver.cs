@@ -23,7 +23,7 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
     /// <summary>
     /// The settings group.
     /// </summary>
-    public const string GroupId = "geo";
+    public const string GroupId = GeoConstants.SettingsGroupId;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -31,6 +31,7 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
     private readonly IEnumerable<ITravelTimeProvider> _travelProviders;
     private readonly IEnumerable<IRouteProvider> _routeProviders;
     private readonly ISession _session;
+    private readonly IGeocodeQueue _geocodeQueue;
 
     internal readonly IStringLocalizer S;
 
@@ -43,6 +44,7 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
     /// <param name="travelProviders">The travel-time providers.</param>
     /// <param name="routeProviders">The route providers.</param>
     /// <param name="session">The session.</param>
+    /// <param name="geocodeQueue">The geocoding queue.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public GeoSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
@@ -51,6 +53,7 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
         IEnumerable<ITravelTimeProvider> travelProviders,
         IEnumerable<IRouteProvider> routeProviders,
         ISession session,
+        IGeocodeQueue geocodeQueue,
         IStringLocalizer<GeoSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -59,6 +62,7 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
         _travelProviders = travelProviders;
         _routeProviders = routeProviders;
         _session = session;
+        _geocodeQueue = geocodeQueue;
         S = stringLocalizer;
     }
 
@@ -75,6 +79,17 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
             model.Done = requests.Count(index => index.Status == nameof(GeocodeRequestStatus.Done));
             model.Failed = requests.Count(index => index.Status == nameof(GeocodeRequestStatus.Failed));
 
+            if (model.Waiting + model.Failed > 0)
+            {
+                var done = nameof(GeocodeRequestStatus.Done);
+                var troubled = await _session.Query<GeocodeRequest, GeocodeRequestIndex>(index => index.Status != done, collection: GeoConstants.CollectionName)
+                    .OrderByDescending(index => index.NextAttemptUtc)
+                    .Take(20)
+                    .ListAsync();
+
+                model.LastError = troubled.Select(request => request.LastError).FirstOrDefault(error => !string.IsNullOrEmpty(error));
+            }
+
             model.GeocodingProvider = settings.GeocodingProvider;
             model.TravelTimeProvider = settings.TravelTimeProvider;
             model.RouteProvider = settings.RouteProvider;
@@ -86,9 +101,9 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
             model.DefaultLatitude = settings.DefaultLatitude;
             model.DefaultLongitude = settings.DefaultLongitude;
             model.DefaultZoom = settings.DefaultZoom;
-            model.GeocodingProviders = Options(_geocoders.Select(provider => provider.Name), settings.GeocodingProvider, S["None: addresses aren't geocoded"]);
-            model.TravelTimeProviders = Options(_travelProviders.Select(provider => provider.Name).Where(name => name != GeoConstants.HaversineProviderName), settings.TravelTimeProvider, S["Built-in estimate"]);
-            model.RouteProviders = Options(_routeProviders.Select(provider => provider.Name).Where(name => name != GeoConstants.HaversineProviderName), settings.RouteProvider, S["Straight lines"]);
+            model.GeocodingProviders = Options(_geocoders.Select(provider => (provider.Name, provider.DisplayName)), settings.GeocodingProvider, S["None: addresses aren't geocoded"]);
+            model.TravelTimeProviders = Options(_travelProviders.Where(provider => provider.Name != GeoConstants.HaversineProviderName).Select(provider => (provider.Name, provider.DisplayName)), settings.TravelTimeProvider, S["Built-in estimate"]);
+            model.RouteProviders = Options(_routeProviders.Where(provider => provider.Name != GeoConstants.HaversineProviderName).Select(provider => (provider.Name, provider.DisplayName)), settings.RouteProvider, S["Straight lines"]);
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
         .OnGroup(SettingsGroupId);
@@ -127,7 +142,16 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
 
         if (context.Updater.ModelState.IsValid)
         {
+            var geocoderChanged = !string.Equals(settings.GeocodingProvider, Blank(model.GeocodingProvider), StringComparison.OrdinalIgnoreCase);
+
             settings.GeocodingProvider = Blank(model.GeocodingProvider);
+
+            // Addresses that waited for a provider are tried with the new one at the next run.
+            if (geocoderChanged && settings.GeocodingProvider is not null)
+            {
+                await _geocodeQueue.WakeAsync();
+            }
+
             settings.TravelTimeProvider = Blank(model.TravelTimeProvider);
             settings.RouteProvider = Blank(model.RouteProvider);
             settings.AverageSpeedKmh = model.AverageSpeedKmh;
@@ -145,6 +169,9 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
 
     private static string Blank(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
-    private static List<SelectListItem> Options(IEnumerable<string> names, string selected, string none)
-        => [new SelectListItem(none, string.Empty, string.IsNullOrEmpty(selected)), .. names.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).Select(name => new SelectListItem(name, name, string.Equals(name, selected, StringComparison.OrdinalIgnoreCase)))];
+    private static List<SelectListItem> Options(IEnumerable<(string Name, string DisplayName)> providers, string selected, string none)
+        => [new SelectListItem(none, string.Empty, string.IsNullOrEmpty(selected)), .. providers
+            .DistinctBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(provider => provider.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(provider => new SelectListItem(provider.DisplayName, provider.Name, string.Equals(provider.Name, selected, StringComparison.OrdinalIgnoreCase)))];
 }

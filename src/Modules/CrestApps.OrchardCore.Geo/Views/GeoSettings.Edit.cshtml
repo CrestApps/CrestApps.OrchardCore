@@ -26,6 +26,10 @@
             {
                 <span class="badge text-bg-warning fw-normal">@T["{0} not found", Model.Failed]</span>
             }
+            @if (!string.IsNullOrEmpty(Model.LastError))
+            {
+                <span class="hint d-block text-warning-emphasis">@T["Latest problem: {0}", Model.LastError]</span>
+            }
             <span class="hint d-block">@(string.IsNullOrEmpty(Model.GeocodingProvider) && Model.Waiting > 0 ? T["Addresses wait until a geocoding provider is chosen."] : T["Addresses are geocoded every minute; failures are retried for about three hours."])</span>
         </div>
     </div>

@@ -116,6 +116,24 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
         return count;
     }
 
+    /// <inheritdoc/>
+    public async Task<int> WakeAsync(CancellationToken cancellationToken = default)
+    {
+        var now = _clock.UtcNow;
+        var pending = GeocodeRequestStatus.Pending.ToString();
+        var waiting = await _session.Query<GeocodeRequest, GeocodeRequestIndex>(index => index.Status == pending && index.NextAttemptUtc > now, collection: GeoConstants.CollectionName).ListAsync(cancellationToken);
+        var count = 0;
+
+        foreach (var request in waiting)
+        {
+            request.NextAttemptUtc = now;
+            await _store.UpdateAsync(request, cancellationToken);
+            count++;
+        }
+
+        return count;
+    }
+
     private async Task ProcessAsync(GeocodeRequest request, DateTime now, CancellationToken cancellationToken)
     {
         var target = _targets.FirstOrDefault(item => string.Equals(item.TargetType, request.TargetType, StringComparison.Ordinal));
