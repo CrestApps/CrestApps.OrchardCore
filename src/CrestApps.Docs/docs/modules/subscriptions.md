@@ -16,7 +16,13 @@ The **Subscriptions** module lets you sell recurring plans built on ordinary Orc
 
 Subscriptions owns no checkout of its own. Buying a plan runs through the [Checkout](checkout) framework exactly like any other purchase, so there is one path that takes money and one ledger that records it. That is what makes a subscription's revenue reconcilable against the payments the site actually collected.
 
+<YouTube video="selling-sites" title="Narrated video overview of selling sites" />
+
 ## Features
+
+This video shows the subscription screens in the admin:
+
+<YouTube video="subscriptions" title="Video overview of subscriptions and memberships" />
 
 The module ships several composable features:
 
@@ -142,7 +148,7 @@ Subscription state is edited from four directions at once: a gateway webhook, a 
 | Expire | Ends the agreement when the grace window elapses or the agreed cycles are all billed. |
 | Sync from provider | Adopts the gateway's period, pending cancellation, and status. It will not revive an agreement cancelled locally, because that would start billing a customer who already left. |
 
-The dunning grace period is a site setting (**Dunning grace days**, 7 by default). A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
+The dunning grace period is 7 days by default. It is not a field of **Settings > Subscriptions**, which has only **Allow guest sign-up**, **Currency** and the roles a plan may give. A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
 
 A background sweep runs every thirty minutes. It expires agreements whose grace window has elapsed and closes those that have billed every cycle they were sold for. It never charges anyone: a gateway-backed agreement is billed by the gateway, and an offline one is invoiced by its own provider's renewal path.
 

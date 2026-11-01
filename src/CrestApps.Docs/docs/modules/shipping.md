@@ -18,6 +18,10 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 
 ## Model
 
+This video shows the shipping screens in the admin:
+
+<YouTube video="shipping" title="Video overview of shipping" />
+
 - **`ShippingZone`** (`INamedCatalog<ShippingZone>`, one document): `Name`, `Position`, `Countries` (ISO 3166-1 alpha-2), `Regions` (ISO 3166-2, such as `US-AK`), `RestOfWorld` and `Methods`. A country with no region in `Regions` is covered whole.
 - **`ShippingMethod`** (an `Entity`, inside its zone): `MethodId`, `Name`, `Description`, `ProviderName`, `Enabled`, `Position`, `Currency` (empty for any), `TaxCategoryCode` and `ClassSurcharges` (per unit, by class, matched ignoring case). The provider's settings are in the method's properties: `FlatRateSettings` (`Amount`, `PerItemAmount`), `TableRateSettings` (`Basis`: `Weight`, `Subtotal` or `Quantity`; `Rows` of `From` and `Amount`; `Maximum`) and `FreeShippingSettings` (`MinimumSubtotal`).
 - **`ShippingPart`**: `Weight` (one unit, in the site unit), `ShippingClass`, and `VariantWeights` by variant id. `GetWeight(variantId)` falls back to the product's weight, then to zero.

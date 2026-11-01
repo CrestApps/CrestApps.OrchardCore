@@ -20,8 +20,10 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 
 ## Before you start (administrator)
 
+<YouTube video="messaging-setup" title="Video of setting up text messages from the features to a test text" />
+
 1. Enable **SMS Messaging Channel** under **Tools > Features**. It turns on the Omnichannel Messaging Workspace and everything it needs. Without a channel such as SMS, the inbox has nothing to send or receive on.
-2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)).
+2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)). Each enabled provider adds a tab; **Default SMS provider** on the **Providers** tab chooses the one used by numbers that name none. Send a test text from **Tools > Testing > SMS Test** before your team relies on it.
 3. Add each SMS number under **Interaction Center > Management > Omnichannel Addresses** with **Text messages (SMS)** ticked (see [Omnichannel addresses](channel-endpoints.md)), then add a **Text messages** entry point under **Interaction Center > Management > Inbound entry points** that sends its texts to an agent or a queue. See [Text entry points](entry-points-and-ivr.md#text-entry-points).
 4. Give the roles that staff the inbox the permissions in the table above. The permissions cover every channel; there is no separate permission per channel.
 
@@ -29,14 +31,18 @@ Your administrator also connects the SMS provider to the site, so that customers
 
 ## Work the inbox
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of the messaging inbox: filtering conversations, opening a thread, claiming it and using a canned response" start={558} end={586} />
+<YouTube video="messaging-inbox" title="Video overview of the messaging inbox" />
+
+The video covers why a shared inbox helps, how the page is laid out, and how to open, claim, answer, close, favorite and start conversations.
+
+<YouTube video="messaging-inbox" title="Video of searching, filtering and answering a conversation" start={82} end={180} />
 
 Open **Messaging > Inbox**. The left side lists your customers, most recent first; the right side shows the conversation you open. A customer who wrote on several channels appears only once, with the unread messages of all their channels added together and an icon for each channel they used.
 
 | Control | What it does |
 | --- | --- |
 | **Search** | Narrows the conversation list. |
-| **Filter** (funnel button) | **All conversations**, **My conversations**, or **Unassigned**, each with a count; and a channel filter when you have more than one channel. |
+| **Filter** (funnel button) | **All conversations**, **My conversations**, **Favorites** or **Unassigned**, each with a count; and a channel filter when you have more than one channel. |
 | **Unread only** (envelope button) | Shows only the conversations nobody has read yet, within the filter and channel you picked; the list then says **Unread**. The conversation you open keeps its place in the list while you answer it. Click the button again to see every conversation. |
 | **Available** switch | *Accept routed conversations to your inbox.* Only used by queues set to routed distribution: new conversations are given only to agents who are available and have the inbox open. |
 | **New conversation** (pencil button) | Starts a conversation with a contact or a number. |
@@ -50,9 +56,9 @@ Open a conversation to read the thread. At the top:
 
 This screencast opens the **Unassigned** view, claims a conversation, closes it (a closed conversation shows *This conversation is closed and cannot be replied to*), and reopens it:
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of claiming an unassigned conversation, closing it and reopening it" start={589} end={613} />
+<YouTube video="messaging-inbox" title="Video of closing, marking spam and reopening a conversation" start={180} end={211} />
 
-In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. The side panel has an **AI summary** of the thread and the **Customer** card, which lists every contact record that matches the customer's address, with **View account** for the linked contact.
+In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. On a wide screen, the side panel on the right (hidden below about 1200 pixels of width) has the **Customer** card, which lists every contact record that matches the customer's address, with **View account** for the linked contact, or says that no contact record matches. An **AI summary** of the thread appears there only after an AI conversation was handed to a person.
 
 When the AI was handling a customer's texts and hands the conversation to a person, the whole AI conversation is copied into the thread, so you see every message the customer and the AI exchanged, in order.
 
@@ -62,6 +68,8 @@ A banner above the composer warns you during the customer's **quiet hours**: out
 
 ### Know when new work arrives
 
+<YouTube video="messaging-inbox" title="Video of the badges and notices for new messages" start={243} end={271} />
+
 You do not have to keep the inbox open to hear about new work.
 
 - The **Messaging > Inbox** menu item shows how many conversations are waiting for you: the unread open conversations assigned to you, plus the unread open conversations nobody has taken yet in the queues you serve. The **Messaging** menu icon turns red while that number is above zero, so a collapsed menu still shows that something is waiting. The number drops as soon as you open the conversation.
@@ -70,6 +78,12 @@ You do not have to keep the inbox open to hear about new work.
 - New messages appear in the open conversation as they arrive, and the customer moves to the top of the list. If your connection drops, the conversation catches up within seconds and the list within half a minute.
 
 Browsing other admin pages does not count as being at the inbox: queues set to routed distribution only hand new conversations to agents whose **Inbox** is open.
+
+### Shared pool and routed distribution
+
+<YouTube video="messaging-routing-and-transfers" title="Video of how a queue hands out conversations" start={90} end={131} />
+
+The **Queue distribution** of a text entry point decides who is given a new conversation. With **Shared pool (claim to own)**, every agent of the queue sees it and the first to claim it owns it. With **Routed**, the conversation is pushed to one available agent whose inbox is open and who has the fewest conversations. If that agent does not pick it up within five minutes, it is routed to another agent; after two such re-routes it returns to the shared pool, so it is never lost.
 
 ### Send and receive attachments
 
@@ -83,6 +97,8 @@ Each channel accepts its own kinds of files. SMS takes pictures (JPEG, PNG, GIF 
 
 ### Favorites
 
+<YouTube video="messaging-inbox" title="Video of favorites and attachments" start={211} end={243} />
+
 Keep the customers you message most one click away.
 
 - **Add a favorite:** open their conversation and click **Add to favorites** at the top, beside **Transfer**, or on the **Customer** card. The button then reads **Favorite**; click it again to remove them.
@@ -95,6 +111,8 @@ Your favorites are your own, up to 100 customers; other agents do not see them.
 If the provider does not accept a message, it is tried again after 1, 5, 15 and 60 minutes before it is marked failed. A message refused because the customer opted out is marked failed at once, and the contact is marked **Do not SMS**.
 
 ## Transfer a conversation
+
+<YouTube video="messaging-routing-and-transfers" title="Video of transferring a conversation to a person and back to a queue" start={131} end={203} />
 
 Transferring keeps the same conversation, so its whole history goes with it. The customer is not told.
 
@@ -111,7 +129,7 @@ Who can transfer and to whom:
 
 ## Start a new conversation
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of starting a new SMS conversation and sending it" start={616} end={639} />
+<YouTube video="messaging-inbox" title="Video of starting a new conversation" start={271} end={302} />
 
 1. Click the **New conversation** (pencil) button.
 2. Pick **From**, the number you send from (it decides the channel).
@@ -124,26 +142,34 @@ You can also click the **Send SMS** button beside any phone field on admin pages
 
 ## Templates
 
-<YouTube video="contact-center-agent-walkthroughs" title="Video of creating a message template and sending a broadcast" start={642} end={692} />
+<YouTube video="messaging-templates-broadcasts" title="Video of creating a message template and inserting it into a reply" start={53} end={108} />
 
 Templates are canned responses agents insert into a reply. Use them for answers you give often, such as your opening hours.
 
 1. Open **Messaging > Templates** and click **Add template**.
-2. Enter a **Name** agents will recognize and the **Body** text, then save.
+2. Enter a **Name** agents will recognize and the **Body** text, then click **Save**.
+
+In the inbox, the list **Insert a canned response...** above the message box shows the templates. Pick one and its text fills the message box as a draft, which you can change before you send it. Anyone who can use the messaging workspace can insert a template; adding and changing them needs the **Manage the messaging workspace** permission.
 
 Your administrator can copy templates to another site through a deployment plan.
 
 ## Broadcasts
 
+<YouTube video="messaging-templates-broadcasts" title="Video of sending a broadcast" start={108} end={230} />
+
 A broadcast sends the same message to many people; each recipient gets their own one-to-one thread and cannot see the others, and replies come back to the inbox.
 
 1. Open **Messaging > Broadcasts** and click **New broadcast**.
-2. Enter a **Name**, pick **Send from** (the address decides the channel), choose **Recipients (contacts)** and add **Additional addresses** (one per line or comma-separated).
+2. Enter a **Name**, pick **Send from** (the address decides the channel), choose **Recipients** (search your contacts and leads by name or number; only people with an address on that channel are offered) and add **Additional addresses** for numbers that are not in your contacts (one per line or comma-separated, in international format such as `+12015550123`).
 3. Type the **Message** and click **Queue broadcast**.
 
-The list shows each broadcast's channel, sending address, status, recipients, and how many messages were sent and failed. A queued broadcast cannot be cancelled.
+The list shows each broadcast's channel, sending address, status, recipients, and how many messages were sent and failed. A broadcast starts as **Queued**, because the messages are sent in the background, and becomes **Completed** when every recipient has been handled. **Failed** counts the messages the provider refused and the people who opted out. A queued broadcast cannot be cancelled, so read it twice before you queue it.
+
+A message the provider does not accept is tried again after 1, 5, 15 and 60 minutes before it counts as failed. A broadcast does not wait for the channel's quiet hours and does not check the do-not-call registry, so send it only to people who agreed to hear from you. A person who opted out of SMS never receives it.
 
 ## Keywords customers can send
+
+<YouTube video="messaging-templates-broadcasts" title="Video of the STOP, START and HELP keywords" start={230} end={293} />
 
 The SMS channel always answers these carrier keywords, and a keyword never triggers the entry point's auto-reply.
 

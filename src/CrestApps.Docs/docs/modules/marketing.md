@@ -12,6 +12,8 @@ user_manual: user-manual/commerce/marketing
 | **Depends on** | Commerce, Customers, Orders |
 | **Seams it fills** | `IOrderEventHandler` (Orders) |
 
+<YouTube video="marketing" title="Narrated video overview of Marketing" />
+
 The **Marketing** feature emails the store's customers who accept marketing (`Customer.AcceptsMarketing`). It keeps what each customer has bought, groups customers into segments by it, and sends campaigns to a segment. Admin screens are described in the [User Manual](../user-manual/commerce/marketing.md).
 
 ## Customers' purchases

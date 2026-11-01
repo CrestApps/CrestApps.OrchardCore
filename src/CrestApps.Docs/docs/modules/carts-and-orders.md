@@ -14,6 +14,8 @@ user_manual:
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
+<YouTube video="buyer-account-guest-orders" title="Narrated video overview of the buyer account and guest orders" />
+
 **Carts** lets visitors put products sold online in a cart from a listing card or a product page. **Orders** checks the cart out through the [Checkout](checkout) framework and records what was bought. Together they sell goods the way [Subscriptions](subscriptions) sells plans: through the same checkout, payment providers, coupons and taxes.
 
 ## Carts
@@ -100,6 +102,10 @@ The carts and wishlists indexes hold no dates, so these data sets have no main d
 | Wishlist items | `AddedUtc` | Saved | |
 
 ## Orders
+
+This video shows the order screens in the admin:
+
+<YouTube video="orders" title="Video overview of orders" />
 
 ### Checking out
 
@@ -384,6 +390,8 @@ The **Reports: store reports to adapt** recipe (`CommerceReportBuilderReports`) 
 The customers, cohorts, checkouts, sales by category and VAT one-stop-shop reports work out figures across orders and periods, such as a buyer's first order, that a report built in the builder does not, so they stay built-in only.
 
 ### Workflow events
+
+<YouTube video="commerce-automation" title="Narrated video overview of commerce automation" />
 
 With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
 

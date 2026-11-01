@@ -13,6 +13,8 @@ user_manual: user-manual/commerce/bookings
 | **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders), `ICheckoutTenderProvider` and two `CheckoutFlowDisplayDriver`s (Checkout), `ICartActionProvider` (Carts); with Calendars on, a calendar type and `ICalendarAvailabilityService` (Calendars) |
 | **Seams it offers** | `IBookingHandler`, `IBookingSlotFilter` |
 
+<YouTube video="bookings" title="Narrated video overview of Bookings" />
+
 The **Bookings** feature sells products by date. The attachable **Booking** part (`BookingPart`) makes a product a booking of one of three kinds (`BookingKind`):
 
 - **Departure:** a fixed date with seats, such as a tour, an event or a class. The store adds its dates.
@@ -186,6 +188,10 @@ The input of every event:
 | `CustomerName`, `CustomerEmail` | The buyer. |
 
 ## Bookings on the calendar
+
+The video shows these screens:
+
+<YouTube video="bookings-on-the-calendar" title="Video of bookings on the calendar" />
 
 Whenever Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) are both on, Bookings puts bookings on the shared [calendar](./calendars.md) and lets a calendar close booking dates. There is no separate feature to enable: `CalendarStartup` belongs to the Bookings feature and carries `[RequireFeatures(CalendarsConstants.Features.Calendars)]`, so it runs only while Calendars is on.
 

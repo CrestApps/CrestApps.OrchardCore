@@ -12,6 +12,8 @@ description: Store Contact Center call recordings and voice media master copies 
 
 Provides an optional storage backend for the Telephony media store, which holds Contact Center call recordings and the master copy of every voice media clip (hold music, IVR prompts and agent voicemail greetings). When enabled and configured, the feature replaces the default local encrypted store with an Azure Blob Storage backend — while keeping the exact same encryption at rest.
 
+<YouTube video="telephony-recording-storage" title="Video overview of where call recordings are stored and the Azure Blob Storage option" />
+
 ## Overview
 
 By default, call recordings and voice media master copies are stored on the local file system under a tenant-scoped application-data folder:

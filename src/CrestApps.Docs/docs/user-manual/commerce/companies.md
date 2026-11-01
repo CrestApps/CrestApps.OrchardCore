@@ -16,7 +16,13 @@ A **company** is a business you sell to. Several people buy for it, it may pay o
 
 <AskYourAdmin />
 
+This video shows a company's terms, a buyer's order that needs approval, the admin's approval, paying a deposit with the rest on account, what the company owes, quotes and punchout:
+
+<YouTube video="company-approvals" title="Narrated video overview of company approvals and pay on account" />
+
 ## Add a company
+
+<YouTube video="customers-companies" title="Video of adding a company" start={540} end={625} />
 
 1. On **Commerce > Companies**, click **Add company**.
 2. Enter its **Name**, and if you like its **Tax or VAT number** (printed on its invoices) and a **Billing email** that gets its invoices too.
@@ -27,6 +33,8 @@ A user buys for one company. Turn **On** off to let a company's buyers buy for t
 
 ## Payment terms
 
+<YouTube video="company-approvals" title="Video of setting a company's terms" start={72} end={129} />
+
 | Field | What it does |
 | --- | --- |
 | **Net days** | Such as 30: what the company doesn't pay at checkout is invoiced, due in this many days. Leave it blank and the company pays at checkout like anyone else. |
@@ -34,13 +42,23 @@ A user buys for one company. Turn **On** off to let a company's buyers buy for t
 | **Credit limit** | The most the company may owe at once. An order goes on account only as far as the limit allows; the rest is paid at checkout. |
 | **Buyers give a purchase order number** | A buyer can't place an order without one. It's printed on the invoice. |
 
-At checkout, a company buyer gets a **Company** step after shipping, where they enter the purchase order number. The payment step then offers to put the rest on the company's account. What the company owes shows on its **Company** page in the buyer's account, and in [Transactions](transactions.md).
+At checkout, a company buyer gets a **Company** step after shipping, where they enter the purchase order number. The payment step then has a **Pay on account** box: *Pay a 20% deposit now, and $316 on Northwind Traders's account, due in 30 days.* Click **Pay on account**, and the order shows what is on account and what is **Due now**; pay that as usual.
+
+<YouTube video="company-approvals" title="Video of paying a deposit and putting the rest on account" start={236} end={304} />
+
+When the company pays its invoice, open it under **Commerce > Transactions** and enter the amount under **Record an offline payment**.
+
+<YouTube video="company-approvals" title="Video of what the company owes" start={304} end={349} />
+
+The invoice is the transaction *on account*, with its purchase order number, due in net days; the deposit is its own transaction. What the company owes shows on its **Company** page in the buyer's account, and in [Transactions](transactions.md).
 
 ## Locations
 
 Under **Locations**, add the places the company has orders shipped to, with a name such as *Head office* and the address, in the same address form as the rest of the store: choose the country first and the form asks for what that country's addresses need. Its buyers pick one at checkout. To remove a location, clear its fields.
 
 ## Price lists
+
+<YouTube video="customers-companies" title="Video of creating a price list" start={497} end={540} />
 
 A **price list** gives the companies on it their own prices.
 
@@ -54,6 +72,8 @@ A product on the list by SKU costs its price there; any other product costs your
 
 ## Order limits, budgets and approvals
 
+<YouTube video="company-approvals" title="Video of a buyer's order that needs approval" start={129} end={200} />
+
 Two settings send a buyer's order to the company's admins before it can be paid:
 
 - a buyer's **Order limit**: an order over it;
@@ -61,20 +81,26 @@ Two settings send a buyer's order to the company's admins before it can be paid:
 
 An admin's own orders never need approval.
 
-When an order needs approval, the buyer's **Company** step says why and offers **Ask for approval**. Once they ask, the company's admins are emailed, and the order waits under the buyer's orders as *Waiting for approval*; it can't be paid yet.
+When an order needs approval, the buyer's **Company** step says why and has an **Ask for approval** box to tick. Once they ask, the company's admins are emailed, and the order waits under the buyer's orders as *Waiting for approval*; it can't be paid yet.
+
+<YouTube video="company-approvals" title="Video of the company admin approving an order" start={200} end={236} />
 
 An admin approves or rejects it from the **Company** page of their account, where waiting orders are listed with who asked, why, and the items. They can add a note for the buyer. The buyer is emailed either way:
 
-- **Approved**: the order shows *... approved this order. Pay it to place it.* with **Pay now**.
+- **Approved**: the order shows *... approved this order. Pay it to place it.*, with the admin's note, and **Pay now**. **Pay now** opens the checkout at the **Company** step again, where the buyer enters the purchase order number once more.
 - **Rejected**: the order is canceled.
 
 An order that grows past the total that was approved, such as with more items, needs approval again. The admin's **Company** page also shows the monthly budget and what's been spent.
 
 ## Quotes
 
+<YouTube video="company-approvals" title="Video of a company buyer asking for a quote" start={349} end={382} />
+
 Company buyers can ask for a quote from their cart, with their purchase order number, when your store takes quote requests. See [Quotes](carts-and-orders.md#quotes).
 
 ## Punchout
+
+<YouTube video="company-approvals" title="Video of how punchout transfers a cart" start={382} end={410} />
 
 **Punchout** lets a company's procurement system, such as SAP, open your store: the buyer fills a cart, and it goes back to their system, where it's approved and ordered. Your store speaks OCI.
 

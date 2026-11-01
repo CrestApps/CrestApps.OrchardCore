@@ -17,6 +17,8 @@ user_manual:
 
 The **Customers** feature keeps a record of everyone who buys from the store: a person or a business, with an account or as a guest. Orders, transactions and subscriptions can point at one customer, whatever later happens to the account.
 
+<YouTube video="customers-companies" title="Narrated video overview of the Customers and Companies modules" />
+
 ## Customers and users
 
 A customer is not a user. Accounts stay with Orchard Core Users, which handles registration, sign-in, password resets, email confirmation and external logins. A customer with an account is linked to its user by `Customer.UserId`. The customer record keeps only what the store needs: how to address the customer, their company and tax id, and how they want to be contacted.
@@ -71,6 +73,8 @@ With Orders enabled, Customers adds a **Contact** step to every order's checkout
 - **The billing address** uses the Addresses module's `AddressEditor` under the step's prefix, without a recipient name (the buyer named above is the recipient) and with the buyer's phone. A signed-in customer can pick one of their saved addresses and ask for a new one to be saved.
 - **What it keeps:** the entries as `CustomerContactStep` in the session's saved steps, and a `CheckoutContactInfo` (name, email, phone, billing address) on the session. The order copies that contact and billing address when it is paid, and Pay Later puts the guest's name and email on its transaction, so receipts and reminders reach them.
 - **When the order is paid** (`CompletingAsync`, inside the completion's transaction): the order is linked to the signed-in buyer's customer, or to a new guest customer made with `ICustomerService.CreateGuestAsync`; each guest checkout makes its own, since an email typed at checkout proves nothing. A guest's billing address goes into their address book as the default billing address; a signed-in customer's new address goes in when they asked, never twice.
+
+<YouTube video="customers-guests-privacy" title="Narrated video overview of customers, guests and privacy" />
 
 ## Checkout details
 

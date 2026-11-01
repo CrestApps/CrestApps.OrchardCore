@@ -16,13 +16,19 @@ A **product listing** is a page of your site that lists products: a shop, a page
 
 <AskYourAdmin />
 
+This video walks through the product screens, including the listing page that shoppers see:
+
+<YouTube video="products" title="Video overview of products, prices and listings" />
+
 Setting up a listing takes three steps: decide which of your products' fields visitors can filter and sort by, create the listing page, and lay out each product's own page.
 
 ## Decide what visitors can filter on
 
+<YouTube video="product-listings-and-attributes" title="Choosing what a field is for" start={93} end={142} />
+
 Filters come from the fields of your product types: a car's year and mileage, a home's bedrooms, a shirt's color and size. You choose which fields take part in the field's own settings.
 
-1. Open **Content > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
+1. Open **Design > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
 2. Click **Edit** next to a field.
 3. In the **Product listing** section, tick what the field is for, and save.
 
@@ -43,6 +49,9 @@ The **Product listing** section appears only on fields of product types. Text, n
 The price, the product's type, whether it can be bought online and whether it is featured are always available to filter and sort by, without any field. A product type sold in variants can also filter on its options; see [Products and currencies](products-and-currencies.md#sell-a-product-in-variants).
 
 ## Create a listing page
+
+<YouTube video="product-listings-and-attributes" title="Setting up the listing page" start={160} end={211} />
+<YouTube video="products" title="Video of a product listing page's settings and the shop" start={331} end={387} />
 
 1. Open **Commerce > Product Listings** and click **New**.
 2. Enter a **Title**, and a **Permalink** such as *shop* or *homes* for the page's address.
@@ -106,7 +115,7 @@ Leave **Offer the standard sorts and every sortable field** ticked to offer **Re
 
 Each product can have its own page with its images, price, highlights and actions, and its specification table.
 
-1. Open **Content > Content Definition > Content Types** and edit the product type.
+1. Open **Design > Content Definition > Content Types** and edit the product type.
 2. Click **Edit** next to the **Product** part.
 3. Tick **Show product details on the product page**.
 4. For products that cannot be bought online, fill in **Inquiry button**, such as *Schedule a viewing*, and **Inquiry link**, where the button leads. In the link, `{id}` and `{title}` are replaced with the product's identifier and title.
@@ -118,6 +127,8 @@ Whether a product can be bought online, and how its price is shown (shown, *Call
 
 ## What visitors see
 
+<YouTube video="product-listings-and-attributes" title="What visitors see" start={211} end={230} />
+
 - The filters, in a side panel on wide screens and behind a **Filters** button on phones. Each filter shows how many products match each option, and folds open and closed.
 - The picked filters as chips above the results, each with a button to remove it, and **Clear all**.
 - The number of results, the sort, the page size and the grid or list switch.
@@ -128,6 +139,9 @@ Every combination of filters has its own address, so visitors can bookmark it, s
 
 ## Recommend products
 
+<YouTube video="product-bundles-and-recommendations" title="Recommend products" start={194} end={257} />
+<YouTube video="products" title="Video of comparison, upsells, cross-sells, grouped products and bundles" start={387} end={435} />
+
 With the **Product Recommendations** feature, each product's editor has **Upsells** and **Cross-sells** pickers:
 
 - **Upsells**, better or bigger choices, show on the product's page as *You may also like*.
@@ -137,6 +151,8 @@ The product's page also shows **Related products** from its categories and the p
 
 ## Let visitors compare products
 
+<YouTube video="product-bundles-and-recommendations" title="Compare products" start={257} end={283} />
+
 With the **Product Comparison** feature, cards and product pages have a **Compare** tick box. Visitors tick up to four products, and a bar at the bottom of the page opens a page that sets them side by side: prices, stock and a row per specification. On a phone the comparison scrolls sideways.
 
 ## Sites in several languages
@@ -144,6 +160,11 @@ With the **Product Comparison** feature, cards and product pages have a **Compar
 On a site with several languages, translate your products and listing pages with Orchard Core's localization as usual. A listing shows the products of the visitor's language, plus products that are not translated at all, and a product's page links back to the listing in its own language.
 
 ## Search with Elasticsearch, Lucene or Azure AI Search
+
+Watch the video for the three steps: the feature, the index and the listing.
+
+<YouTube video="product-search-indexes" title="Product search indexes in CrestApps for Orchard Core" />
+<YouTube video="products" title="Video of product feeds and the product search features" start={435} end={476} />
 
 Listings search your database by default, which suits most catalogs. A large catalog, or one where keyword search should rank the best matches first, can search a search server instead.
 
@@ -158,6 +179,8 @@ Visitors see the same filters, counts, sorts and pages as before. Keyword search
 With the SEO feature on, add the **SEO** part to the **Product Listing** type and to your product types, then fill it in on each listing and product. Filtered and searched pages of a listing point search engines at the listing's own address and ask not to be indexed, so search results show your listing once rather than every combination of filters.
 
 ## Shopping feeds
+
+<YouTube video="product-import-and-feeds" title="Product feeds" start={169} end={211} />
 
 With **Product Feeds** on, your products are published as a feed for Google Merchant Center, Meta (Facebook and Instagram shops) and TikTok, so they show in shopping ads and shops.
 

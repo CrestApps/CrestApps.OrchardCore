@@ -12,6 +12,8 @@ user_manual: user-manual/commerce/fundraising
 | **Depends on** | Commerce, Orders |
 | **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders) |
 
+<YouTube video="fundraising" title="Narrated video overview of Fundraising" />
+
 The **Fundraising** feature raises money. The attachable **Fundraising campaign** part makes a product a campaign that donors give their own amount to. Admin screens are described in the [User Manual](../user-manual/commerce/fundraising.md). The **Fundraising sample** recipe adds a Fundraising Campaign type and a campaign raising $10,000.
 
 ## The campaign part

@@ -13,6 +13,8 @@ user_manual: user-manual/commerce/marketplace
 | **Seams it fills** | `IOrderEventHandler` (Orders) |
 | **Seams it adds** | `IVendorPayoutProvider` |
 
+<YouTube video="marketplace-classifieds" title="Narrated video overview of the Marketplace and Classifieds modules" />
+
 The **Marketplace** feature sells other sellers' products. A vendor is a seller with the people who run it. The attachable **Vendor** part (`VendorPart.VendorId`) says which vendor a product is sold for. Each paid sale of a vendor's product earns the vendor its price after discounts, less the store's commission. What it earns is held until it's released, and then paid out. Admin screens are described in the [User Manual](../user-manual/commerce/marketplace.md). The **Marketplace sample** recipe adds a Vendor Product type, a vendor, and a mug sold for it.
 
 ## Records

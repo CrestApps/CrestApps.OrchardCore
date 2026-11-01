@@ -16,6 +16,10 @@ A new store takes a few steps before its first sale: its name and contact detail
 
 <AskYourAdmin />
 
+Watch the video for a tour of the setup guide, from a new site to a first sale.
+
+<YouTube video="set-up-your-store" title="Set up your store in CrestApps for Orchard Core" />
+
 ## Start a new store
 
 When you set up a new site, choose the **Online store** recipe. Your site starts with:
@@ -29,10 +33,12 @@ On a site you already have, the guide shows the steps for the features you've tu
 
 ## Follow the guide
 
+<YouTube video="set-up-your-store" title="Opening the guide" start={84} end={105} />
+
 Open **Commerce > Set up your store**. The step to do next is open. Each step says what it's for, and either has a short form to fill in or a link to the page where it's done in full. A tick shows a step that's done. The bar at the top shows how many steps are left.
 
 1. **Your store's details.** Your store's name, the email customers write to, and optionally your phone and address. They're printed on receipts, invoices and order emails.
-2. **Your currency.** The currency your prices are in and customers pay in.
+2. **Your currency.** The currency your prices are in and customers pay in. Choose it in the guide and click **Use this currency**: it is the one place the store's currency is set, because **Settings > Commerce > Checkout** only picks the checkout's layout.
 3. **Take card payments.** Make an account at stripe.com and copy your keys into the Stripe settings. Start with the test keys, so you can try a sale without real money.
 4. **Take bank transfers** (optional). Enter how customers pay you from their bank. Their order waits until you mark it paid.
 5. **Ship your products.** Enter one rate for every order, wherever it goes. You can add zones by country, rates by weight or free shipping later, under **Shipping zones**.
@@ -44,6 +50,8 @@ Open **Commerce > Set up your store**. The step to do next is open. Each step sa
 Choose **Skip this step** for a step you don't need, such as shipping when you sell only services. **Do this step after all** brings it back. When every step is done or skipped, the guide says your store is set up.
 
 ## Roles for your staff
+
+<YouTube video="set-up-your-store" title="Roles for your staff" start={220} end={244} />
 
 **Add the staff roles** adds four roles, each allowed what that job needs:
 
@@ -57,6 +65,8 @@ Choose **Skip this step** for a step you don't need, such as shipping when you s
 Each role gets what the features turned on now allow it. When a commerce feature is turned on later, the staff roles get what that feature allows them too. Give a staff member a role under **Security > Users**. Change what a role can do under **Security > Roles**. A role that was there already is left as it is.
 
 ## The Storefront theme
+
+<YouTube video="set-up-your-store" title="The Storefront theme" start={244} end={266} />
 
 The Storefront theme gives your store:
 

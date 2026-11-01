@@ -16,7 +16,13 @@ The **Commerce Webhooks** feature posts commerce events (an order paid, a shipme
 
 The modules that raise events don't depend on this one: they resolve the publisher when an event happens, and skip when the feature is off.
 
+<YouTube video="webhooks" title="Narrated video overview of webhooks" />
+
 ## Model
+
+This video shows adding a webhook in the admin:
+
+<YouTube video="payments" title="Video overview of payments" />
 
 Both documents live in the `Webhooks` YesSql collection.
 

@@ -19,6 +19,8 @@ user_manual:
   - user-manual/reports
 ---
 
+<YouTube video="omnichannel-contacts" title="Video overview of omnichannel contacts" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel Management |
@@ -186,11 +188,15 @@ The `OmnichannelSubject` stereotype is not recognized as a subject marker. A sub
 Because subject content items are authored and completed through the omnichannel subject flow rather than the standard content workflow, the default content editor action buttons Orchard Core injects (**Publish**, **Save Draft**, and **Preview**) are automatically hidden on the editor of any content type that has `OmnichannelSubjectPart` attached. This applies as soon as the part is attached and is reverted automatically when the part is detached, without any placement configuration. On the `OmnichannelSubjectPart` settings screen, the Azure AI Search and Elasticsearch index settings that Orchard Core injects into every part editor are hidden too, because indexing for omnichannel subjects is managed automatically.
 
 ### Disposition
+
+<YouTube video="contact-center-dispositions" title="Video of dispositions" />
 A **Disposition** is the outcome of an activity (e.g. `Completed`, `FollowUp`, `DoNotCall`, `Scheduled`, `Sold`).
 
 Dispositions are a key building block for controlling what happens next via subject actions. Disposition names are unique and become fixed after creation so subject-flow mappings stay stable. A disposition's **Outcome** (`DispositionOutcome`: `None`, `NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine`) marks it for automatic use when a call ends in a way nobody chose; see [Dispositions](../user-manual/dispositions.md#outcomes).
 
 ### Campaign
+
+<YouTube video="contact-center-campaigns" title="Video of campaigns and campaign groups" />
 A **Campaign** is used for **reporting, grouping, and business outcome tracking**.
 
 Campaigns do not define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings live on the subject flow and the activity load, so different subjects inside the same campaign can behave differently. Campaigns cannot be deleted once created.
@@ -281,6 +287,8 @@ When an automated AI conversation completes, the activity stores the AI session 
 An automated voice call whose live (speech-to-speech) session is lost partway through is not concluded as the model reads the cut-off transcript. The platform first opens a new session that is given the conversation so far, up to two times. When that does not work, the caller is handed to a live agent if the subject allows handoff. Otherwise the caller hears a short apology and the call ends. The activity then takes the disposition the subject's **Try again** action is wired to, so the contact is called again, and its notes say the conversation was cut short. A subject with no **Try again** action keeps the reviewed disposition. The activity's terminal reason is `ai_session_lost`.
 
 ### Load Activities
+
+<YouTube video="contact-center-numbers-not-in-service" title="Video of numbers not in service" />
 A **Load Activities** definition (an activity batch) stores filters to find contacts and then **loads activities in the background**.
 
 The loader runs as a background process to avoid overloading the system and to allow large loads to run safely. A load does not start on save; **Actions > Load activities** or the form's **Save & Load activities** button starts it, and **Actions > Clone** copies a load's settings into a new one. The **Load Activities** list is ordered by creation date with the newest activity loads first, is paged, and supports the standard admin bulk-selection controls. The form, the three sources (**Manual**, **Automatic**, **Dialer**) and the load report are described in [Load activities](../user-manual/load-inventory.md); automatic AI loads in [Automated AI SMS and voice](../user-manual/automated-ai.md).
@@ -411,14 +419,18 @@ The bulk actions apply either to the activities selected on the current page or 
 
 ## Reports
 
-When the **Reports** feature (`CrestApps.OrchardCore.Reports`) is enabled, Omnichannel Management contributes 26 CRM reports to the admin **Reports** area, grouped by category: **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT**. They include activity summary, campaign performance, disposition breakdown, dialer call detail, handoff containment, backlog and aging, source, channel and channel-endpoint performance, per-user productivity and completion time, and campaign source, channel, disposition, and attempt mixes.
 
-Every Omnichannel report can be narrowed by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status**, and **Disposition**, which takes several dispositions at once. The filters are read into an `OmnichannelReportCriteria` (`DispositionIds` is the set picked, or `null` for every disposition) and applied by the shared activity filter, so every report that goes through it honors them. Reports export to CSV, and to Excel (`.xlsx`) when the **Reports (OpenXml)** feature is enabled. Viewing them requires the **View Omnichannel reports** permission, which **Manage activities** implies. See [Reports](../user-manual/reports.md) in the user manual.
+<YouTube video="omnichannel-reports" title="Video overview of the omnichannel reports: which report answers which question" />
+When the **Reports** feature (`CrestApps.OrchardCore.Reports`) is enabled, Omnichannel Management contributes 26 reports to the admin **Reports** area, and the Omnichannel CRM feature adds three more (**Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline**), 29 in all. They are grouped by category: **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT**. They include activity summary, campaign performance, disposition breakdown, dialer call detail, AI handoff and containment, backlog and aging, source, channel, kind, assignment, urgency, attempt and address performance, customer and contact type workload, scheduled completion, per-user productivity, completion time, overdue workload and creation, and campaign source, channel, disposition, and attempt mixes. The user manual lists each one under [Omnichannel reports](../user-manual/reports.md#omnichannel-reports).
+
+Every Omnichannel activity report can be narrowed by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status**, and **Disposition**, which takes several dispositions at once; the three CRM reports (lead funnel, lead conversion and opportunity pipeline) take the date range only. The filters are read into an `OmnichannelReportCriteria` (`DispositionIds` is the set picked, or `null` for every disposition) and applied by the shared activity filter, so every report that goes through it honors them. The **Source** filter offers *Automatic*, *Callback*, *Dialer*, *Inbound* and *Manual*; *Dialer* matches every dialer mode (`PreviewDial`, `PowerDial`, `ProgressiveDial` and `PredictiveDial`), which the report rows show as stored. Reports export to CSV, to Excel (`.xlsx`) when the **Reports (OpenXml)** feature is enabled, and to PDF when **Reports (PDF)** is enabled. Viewing them requires the **View Omnichannel reports** permission, which **Manage activities** implies and which administrators and supervisors have by default. See [Reports](../user-manual/reports.md) in the user manual.
 
 **Dialer call detail** (`omnichannel-dialer-call-detail`, `DialerCallDetailReportProvider`) is the one row-per-record report: one row per activity with the number dialed (`PreferredDestination`), contact, campaign, last disposition, attempts, completion time, assigned user and status. It queries `OmnichannelActivityIndex` directly and pages in SQL: on screen it counts the matching rows and reads one page of 100 (`DialerCallDetailReportProvider.PageSize`) ordered newest first, and for an export (`ReportContext.Mode` is `ReportRunMode.Export`) it reads every matching row in batches of 500 keyed on the document id, so no query loads the whole result set. A completed attempt is matched on `CompletedUtc`; an attempt without a completion is matched on `ScheduledUtc`. The report declares its filters through `IReportFilterMetadata`: `OmnichannelReportFilterDisplayDriver.FilterName` (`OmnichannelActivity`) for the shared filters and `OmnichannelReportFilterDisplayDriver.PageFilterName` (`OmnichannelActivityPage`) for the page picker, which only reports naming it get. It also implements `IOmnichannelReportFilterDefaults`, through which an Omnichannel report presets its filter the first time it is opened (the driver applies the defaults only while the filter form has not been submitted); the dialer report presets **Source** to **Dialer**.
 
 ### Report Builder data sets
 
+
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
 The **Omnichannel Activities** feature also exposes the Omnichannel records to the Report Builder and to Orchard Core data pipelines as the `Omnichannel` data source, registered when Data Pipelines Core (`OrchardCore.DataPipelines.Core`) is enabled. Every data set needs **View Omnichannel reports** (`ViewOmnichannelReports`); a principal without it, or no principal, sees no data set and reads no row.
 
 | Data set (technical name) | One row per | Main date | Fields |
@@ -459,7 +471,7 @@ The headless **Omnichannel Activities** feature registers these permissions (`Pe
 | `ManageActivityBatches` | Manage activity batches | **Load Activities**. |
 | `DeleteLoadedActivityBatches` | Delete loaded activity batches | Deletes a load whose status is *Loaded*; the activities it created are kept. |
 | `ManageSubjectFlows` | Manage subject flows | |
-| `ViewOmnichannelReports` | View Omnichannel reports | Implied by `ManageActivities`. |
+| `ViewOmnichannelReports` | View Omnichannel reports | Implied by `ManageActivities`. Administrators and the built-in **Supervisor** role have it by default. |
 
 ## Exporting and importing configuration
 

@@ -100,7 +100,7 @@ The words this manual uses, in plain language. Each term links to the page that 
 
 ## M
 
-- **MCP (Model Context Protocol)**: an open standard for connecting AI to outside tools and data. Your site can use tools from MCP servers, and can offer its own as one. See [Tools and agents](ai/tools-and-agents.md).
+- **MCP (Model Context Protocol)**: an open standard for connecting AI to outside tools and data. Your site can use tools from MCP servers, and can offer its own as one. See [Model Context Protocol (MCP)](ai/mcp.md).
 - **Memory**: what the AI remembers about a signed-in user across conversations, such as their preferences. See [Memory](ai/memory.md).
 - **Message template**: a canned response agents insert into a text reply. See [Messaging workspace](messaging.md).
 - **Messaging workspace**: the shared inbox for text conversations with customers. See [Messaging workspace](messaging.md).

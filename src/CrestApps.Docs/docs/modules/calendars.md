@@ -372,7 +372,7 @@ See [AI Tools](../ai/tools.md#calendar-tools).
 
 The **Calendars** deployment step exports every calendar (without its feed token and booking version), with **Include events** their events, and with **Include categories** (on by default) everyone's categories. The `Calendars` recipe step reads the same shape back: it creates or updates categories first, then calendars, matched by `itemId`, each with its events. A calendar needs a `type` whose feature is on. Recipe changes skip the overlap check and send no invitations.
 
-Property names are camelCase and enums are written by name (a number is read too). Event `start` and `end` are wall-clock times in the event's `timeZoneId`, without an offset. The easiest way to get the exact shape is to export first.
+Property names are camelCase and enums are written by name (a number is read too), except the three lists of the step, `Categories`, `Calendars` and each calendar's `Events`, which start with a capital letter. Event `start` and `end` are wall-clock times in the event's `timeZoneId`, without an offset. The easiest way to get the exact shape is to export first.
 
 ```json
 {
@@ -390,7 +390,7 @@ Property names are camelCase and enums are written by name (a number is read too
           "color": "#1971c2",
           "timeZoneId": "America/New_York",
           "visibility": "Public",
-          "events": [
+          "Events": [
             {
               "itemId": "allhands0000001",
               "eventType": "Meeting",

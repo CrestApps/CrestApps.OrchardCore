@@ -16,6 +16,10 @@ Each item is written with its owner's user name, and share links are never expor
 
 ## Import with the `ReportDesigns` recipe step
 
+<YouTube video="report-builder-administration" title="Video of importing reports with Package Import" start={102} end={145} />
+
+To import a file that holds the step, open **Tools > Deployments > JSON Import** and paste the JSON, or **Package Import** and choose the file (a `.json` or `.zip` file). Importing the same file again replaces the same reports.
+
 The `ReportDesigns` recipe step imports them: report groups first (`Groups`), then views, then reports. Items are matched by `itemId` and replaced, or created with that id, and the owner is matched by `OwnerUserName` when a user with that name exists. An item that names no owner the site knows, and has no `ownerId`, belongs to the person who runs the recipe, so a recipe can ship ready-made reports for any site; run at setup, with nobody signed in, it has no owner. An item without a valid `itemId` or a title is reported as a recipe error. Designs are not checked against the target site's data sources on import.
 
 ```json

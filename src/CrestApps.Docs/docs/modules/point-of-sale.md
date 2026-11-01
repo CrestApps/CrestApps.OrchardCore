@@ -12,7 +12,11 @@ user_manual: user-manual/commerce/point-of-sale
 | **Depends on** | Commerce, Orders, Inventory, Checkout API |
 | **Works with** | Receipts (printed and emailed receipts), Customers (a named buyer), Gift Cards, Stripe (Terminal readers) |
 
+<YouTube video="point-of-sale" title="Narrated video overview of Point of sale" />
+
 The **Point of Sale** feature sells at a store's counter from a till app over the [commerce API](commerce-api.md). A sale is an order on the ordinary checkout framework, so prices, coupons, gift cards, tax, stock holds, order events and reports work as they do online. The module adds what a counter needs: registers, shifts with their cash, a cash tender, a payment method for the store's own card terminal, receipts, and returns at the till.
+
+<YouTube video="point-of-sale-till" title="Narrated video of a day at the till and what the manager sees" />
 
 ## Model
 

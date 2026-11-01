@@ -20,7 +20,13 @@ A dashboard puts everything about a question on one page: a scorecard per queue,
 
 <AskYourAdmin />
 
+<YouTube video="report-builder-dashboards" title="Video overview of Report Builder dashboards" />
+
+<YouTube video="report-builder-dashboards" title="Video of using a dashboard: clicking an agent, a queue or a day" start={54} end={98} />
+
 ## Show data grouped several ways
+
+<YouTube video="report-builder-dashboards" title="Video of several queries in one report" start={98} end={136} />
 
 A report starts with one query: the data sets, columns, filters and sorting you set on the **Design** and **Data model** tabs. Every visual of that query shows the same result, grouped by the same dimensions. To show the same data grouped another way, add a query.
 
@@ -37,6 +43,8 @@ To remove a query, pick it and click **Remove query**. Its visuals are removed w
 
 ## Frame visuals in containers
 
+<YouTube video="report-builder-dashboards" title="Video of containers" start={136} end={167} />
+
 1. In the **Containers** card, under **Visuals**, click **Add container**.
 2. Give it a **Title**, shown in the band across its top, a **Width**, and a **Height**. Pick **Grow with its visuals** for a container that is as tall as what it holds.
 3. Click a visual and pick the container in its **Container** setting. A container is placed where its first visual is, and holds its visuals in their order.
@@ -45,6 +53,9 @@ The widths of the visuals in a container divide the container's width: two visua
 
 Exports keep the containers' layout where the format can:
 
+<YouTube video="report-builder-dashboards" title="Video of exporting a dashboard to Excel and PDF" start={202} end={239} />
+
+
 | Format | How containers are exported |
 | --- | --- |
 | Excel | Each container is a worksheet named after it, with its visuals one under the other, each under its title. A visual outside a container is a worksheet of its own, named after the visual. Chart values are numbers, so you can chart or add them up in Excel. |
@@ -52,6 +63,8 @@ Exports keep the containers' layout where the format can:
 | CSV | A CSV file has no sheets, so it lists the data of every visual in order. A chart is exported as its data. |
 
 ## Filter by clicking
+
+<YouTube video="report-builder-dashboards" title="Video of the When clicked settings" start={167} end={202} />
 
 1. Click a table or a chart in the **Visuals** list.
 2. Under **When clicked**, pick the column whose value a click picks in **Pick the value of**. A table offers the dimensions it shows; a chart offers its categories and its series.

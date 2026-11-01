@@ -18,9 +18,11 @@ A buyer can use several codes on one order. Each coupon says which other kinds o
 
 <AskYourAdmin />
 
-<YouTube video="commerce" title="Narrated video of creating a coupon" start={130} end={161} />
+<YouTube video="coupons-and-discounts" title="Coupons and discounts in CrestApps for Orchard Core" />
 
 ## Find a coupon
+
+<YouTube video="coupons-and-discounts" title="Finding coupons and their recent uses" start={314} end={355} />
 
 **Commerce > Coupons** lists your coupons, newest first.
 
@@ -48,6 +50,8 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 :::
 
 ## Create a coupon
+
+<YouTube video="coupons-and-discounts" title="Creating a code" start={99} end={151} />
 
 1. Open **Commerce > Coupons** and click **Add coupon**.
 2. Under **How it's applied**, choose **The customer enters a code** or **Automatically, on every order that qualifies**.
@@ -83,6 +87,8 @@ A coupon never takes anything off shipping. Its discount is shared among the ite
 
 ### Automatic discounts
 
+<YouTube video="coupons-and-discounts" title="Automatic discounts and buy X get Y" start={203} end={240} />
+
 An automatic discount needs no code. It applies by itself to every checkout that meets its conditions: its dates, minimums, products and categories, and who it's for. The order summary shows it by its description, for example *Summer sale −USD 12.00*, and the order, its page and its confirmation email show it the same way.
 
 Its usage limit and uses per customer work as for a code. A buyer who has had it as often as it allows one customer, or a discount whose last use has gone, doesn't see it at checkout. If its last use goes while the buyer is paying, the payment doesn't go through: the page shows the order again without it, with the new total, and says *The Summer sale discount ran out before you paid, so it was taken off.* It stays off that checkout.
@@ -110,6 +116,8 @@ When the discounts on an order can't all be used together, the buyer gets the co
 For example, an automatic *buy 2, get the cheapest free* that combines with shipping discounts, and *FREESHIP* that combines with product discounts, are used together. A *WELCOME10* that combines with nothing then gives way to whichever takes off more.
 
 ### Share a discount link
+
+<YouTube video="coupons-and-discounts" title="Discount links and unique codes" start={240} end={281} />
 
 A coupon's page shows its **Discount link**, for example *https://example.com/discount/SPRING10*. Whoever opens it gets the code taken off at checkout, without typing it, for the next seven days on that browser. The page says *The code SPRING10 will be taken off at checkout.* A code that isn't available says *The code SPRING10 isn't available.*
 
@@ -172,6 +180,8 @@ Buyers can no longer use the code, nor any code generated for it. If you may wan
 Coupons can travel in a deployment plan: add the **Coupons** step to export every coupon, with its discount, dates, limits, combining rules, products and categories, but not how often it was used, nor the codes generated for it. Importing it on the other site updates the coupons with the same codes, and adds the rest.
 
 ## How a buyer applies a coupon
+
+<YouTube video="coupons-and-discounts" title="What the buyer sees at checkout" start={281} end={314} />
 
 On the **Payment** step of the checkout, the buyer types the code in **Promotion code** and clicks **Apply**. The order summary updates before they pay, and the box lists each code with what it took off, for example *$10 off*. A buyer can add up to five codes, and remove each one. An automatic discount needs nothing from the buyer. See [Apply a promotion code](checkout.md#apply-a-promotion-code) for the messages a buyer can see.
 
