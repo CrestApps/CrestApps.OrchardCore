@@ -425,8 +425,9 @@ public static class ReportDesignerTexts
             ["Down the rows"] = S["Down the rows"].Value,
             ["Draw a line across the chart at the average or median of a value, or at a target."] = S["Draw a line across the chart at the average or median of a value, or at a target."].Value,
             ["Format like"] = S["Format like"].Value,
-            ["In a cross-tab: down each column, across each row, or over every cell. In a chart split into series: along the categories, or across the series of each category."] = S["In a cross-tab: down each column, across each row, or over every cell. In a chart split into series: along the categories, or across the series of each category."].Value,
-            ["Label, such as Target"] = S["Label, such as Target"].Value,
+            ["The values it runs over: down each column, across each row, or every cell. In a chart, the series are its columns."] = S["The values it runs over: down each column, across each row, or every cell. In a chart, the series are its columns."].Value,
+            ["Such as Target"] = S["Such as Target"].Value,
+            ["Such as a target"] = S["Such as a target"].Value,
             ["Line at"] = S["Line at"].Value,
             ["Median"] = S["Median"].Value,
             ["Of"] = S["Of"].Value,
@@ -437,6 +438,7 @@ public static class ReportDesignerTexts
             ["Reference lines"] = S["Reference lines"].Value,
             ["Running total"] = S["Running total"].Value,
             ["Show as"] = S["Show as"].Value,
+            ["Pick a column…"] = S["Pick a column…"].Value,
             ["The value is shown in the format of this column."] = S["The value is shown in the format of this column."].Value,
         };
     }

@@ -708,7 +708,7 @@ describe('reference lines', () => {
 
     it('draws each line across the plot in the color of its dataset', () => {
         const calls = [];
-        const ctx = new Proxy({}, {
+        const ctx = new Proxy({ measureText: () => ({ width: 60 }) }, {
             get: (target, name) => (name in target ? target[name] : (...args) => calls.push([name, ...args])),
             set: (target, name, value) => {
                 target[name] = value;
@@ -726,12 +726,44 @@ describe('reference lines', () => {
             lines: [{ label: 'Average: 40', value: 40, datasetIndex: 1 }],
             horizontal: false,
             textColor: '#111',
+            background: '#fff',
         });
 
         expect(calls).toContainEqual(['moveTo', 10, 60]);
         expect(calls).toContainEqual(['lineTo', 210, 60]);
         expect(calls).toContainEqual(['set strokeStyle', '#14b8a6']);
         expect(calls).toContainEqual(['fillText', 'Average: 40', 206, 57]);
+        expect(calls).toContainEqual(['fillRect', 143, 43, 66, 15]);
         expect(charts.referenceLineColor({ datasetIndex: null }, '#111')).toBe('#111');
+    });
+});
+
+describe('filters on measures', () => {
+    it('filters the result by the column that shows an aggregate field, not by the field', () => {
+        const value = design();
+        value.query.columns = [{ id: 'c3', field: '$count' }];
+
+        const filter = designer.addFilter(value.query, field('$count', 'Integer', { isAggregate: true, label: 'Number of rows' }));
+
+        expect(filter).toMatchObject({ stage: 'Result', field: 'c3', operator: 'GreaterThanOrEqual' });
+    });
+
+    it('leaves the column of an aggregate filter to pick when no column shows the field', () => {
+        const filter = designer.addFilter(design().query, field('$count', 'Integer', { isAggregate: true }));
+
+        expect(filter).toMatchObject({ stage: 'Result', field: null });
+    });
+
+    it('filters a measure column by its result and a dimension column by its field', () => {
+        const value = design();
+        const total = { id: 'c2', field: 'Order.Total', aggregate: 'Sum', label: 'Revenue' };
+        const channel = { id: 'c1', field: 'Order.Channel', aggregate: 'None' };
+
+        const measure = designer.addColumnFilter(value.query, total, field('Order.Total', 'Decimal'));
+        const dimension = designer.addColumnFilter(value.query, channel, field('Order.Channel', 'Text'));
+
+        expect(measure).toMatchObject({ stage: 'Result', field: 'c2', label: 'Revenue', operator: 'GreaterThanOrEqual' });
+        expect(dimension).toMatchObject({ stage: 'Rows', field: 'Order.Channel', operator: 'Contains' });
+        expect(value.query.filters).toHaveLength(2);
     });
 });

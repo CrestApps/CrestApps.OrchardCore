@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -695,6 +696,7 @@ public sealed partial class ReportDesignDocumentBuilder
             Id = column.Id,
             Field = column.Field,
             Label = column.Label,
+            ValueLabel = column.ValueLabel,
             DataType = column.ShowAs switch
             {
                 ReportShowAs.Rank => DataFieldType.Integer,
@@ -727,12 +729,18 @@ public sealed partial class ReportDesignDocumentBuilder
             return _formatter.Format(value, DataFieldType.Integer, "N0");
         }
 
-        if (ReportTableCalculations.IsPercent(column.ShowAs))
+        var text = ReportTableCalculations.IsPercent(column.ShowAs)
+            ? _formatter.Format(value, DataFieldType.Decimal, PercentFormat(column))
+            : _formatter.Format(value, column.DataType, column.Format);
+
+        // A rise is marked with a plus sign, as a fall is with a minus sign.
+        if (column.ShowAs is ReportShowAs.DifferenceFromPrevious or ReportShowAs.PercentDifference &&
+            DataValues.Coerce(value, DataFieldType.Decimal) is decimal change && change > 0 && !text.StartsWith(CultureInfo.CurrentCulture.NumberFormat.PositiveSign, StringComparison.Ordinal))
         {
-            return _formatter.Format(value, DataFieldType.Decimal, PercentFormat(column));
+            return CultureInfo.CurrentCulture.NumberFormat.PositiveSign + text;
         }
 
-        return _formatter.Format(value, column.DataType, column.Format);
+        return text;
     }
 
     // The format of a percentage a column shows: its own format when it is a percent format, such as P0, or one decimal.

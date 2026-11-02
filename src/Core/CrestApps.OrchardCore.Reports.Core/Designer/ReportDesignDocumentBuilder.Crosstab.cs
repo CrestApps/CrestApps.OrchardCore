@@ -119,7 +119,7 @@ public sealed partial class ReportDesignDocumentBuilder
             for (var position = 0; position < perCombination; position++)
             {
                 columns.Add(new ReportColumn(
-                    perCombination > 1 ? measures[position].Label : S["Total"],
+                    perCombination > 1 ? measures[position].ValueLabel ?? measures[position].Label : S["Total"],
                     ReportColumnAlign.End,
                     layout.MeasuresOnRows ? null : ReportColumnColorizer.HeaderStyleOf(measures[position])));
             }
@@ -214,9 +214,10 @@ public sealed partial class ReportDesignDocumentBuilder
                     headers[0] = S["Total"];
                 }
 
+                // Totals show the plain values, under the plain name of a measure shown as a calculation.
                 if (layout.MeasuresOnRows)
                 {
-                    headers.Add(measures[measure].Label);
+                    headers.Add(measures[measure].ValueLabel ?? measures[measure].Label);
                 }
 
                 AddRow(headers, grand, TotalValues, measure, ReportRowKind.GrandTotal);

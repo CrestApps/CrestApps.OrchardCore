@@ -528,14 +528,33 @@
 		};
 		designer.addFilter = function(query, field) {
 			query.filters = query.filters || [];
+			var column = field.isAggregate ? (query.columns || []).filter(function(candidate) {
+				return candidate.field === field.key;
+			})[0] : null;
 			var filter = {
 				id: designer.newId("f", ids(query.filters)),
-				field: field.key,
+				field: field.isAggregate ? column ? column.id : null : field.key,
 				stage: field.isAggregate ? "Result" : "Rows",
-				operator: field.dataType === "Text" ? "Contains" : "Equals",
+				operator: field.dataType === "Text" ? "Contains" : field.isAggregate ? "GreaterThanOrEqual" : "Equals",
 				values: [],
 				exposed: false,
 				label: field.label || null,
+				control: "Auto"
+			};
+			query.filters.push(filter);
+			return filter;
+		};
+		designer.addColumnFilter = function(query, column, field) {
+			if (!designer.isMeasure(column, field)) return field ? designer.addFilter(query, field) : null;
+			query.filters = query.filters || [];
+			var filter = {
+				id: designer.newId("f", ids(query.filters)),
+				field: column.id,
+				stage: "Result",
+				operator: "GreaterThanOrEqual",
+				values: [],
+				exposed: false,
+				label: column.label || field && field.label || null,
 				control: "Auto"
 			};
 			query.filters.push(filter);
@@ -1337,13 +1356,20 @@
 				return app.refreshPlan();
 			});
 		};
+		function pillLabels() {
+			return app.columns().map(function(column) {
+				return column.label + (column.isMeasure ? "#" : "");
+			}).join("");
+		}
 		app.refreshPlan = function() {
 			return ui.request(app.url("plan"), { body: app.design.query }).then(function(plan) {
+				var pills = pillLabels();
 				app.plan = plan || {
 					fields: [],
 					columns: [],
 					errors: []
 				};
+				if (pillLabels() !== pills && app.renderShelves) app.renderShelves();
 				app.renderIssues();
 				app.renderDataPane();
 				app.renderProperties();
@@ -2666,14 +2692,7 @@
 						var column = query.columns.filter(function(candidate) {
 							return candidate.id === moved.id;
 						})[0];
-						var field = column && fields[column.field];
-						if (field) {
-							app.selection = {
-								kind: "filter",
-								id: designer.addFilter(query, field).id
-							};
-							app.changed();
-						}
+						if (column) app.filterOnColumn(column);
 						return;
 					}
 					if (moved.shelf === "filters") return;
@@ -2728,6 +2747,19 @@
 				onclick: onRemove
 			}, ui.icon("fa-xmark")));
 		}
+		app.filterOnColumn = function(column) {
+			var described = app.columns().filter(function(candidate) {
+				return candidate.id === column.id;
+			})[0];
+			var filter = designer.addColumnFilter(app.design.query, described ? Object.assign({}, column, { label: column.label || described.label }) : column, app.fields()[column.field]);
+			if (filter) {
+				app.selection = {
+					kind: "filter",
+					id: filter.id
+				};
+				app.changed();
+			}
+		};
 		function showAsLabel(value) {
 			switch (value) {
 				case "PercentOfTotal": return app.t("Percent of total");
@@ -2847,11 +2879,7 @@
 				label: app.t("Filter on this field"),
 				icon: "fa-filter",
 				action: function() {
-					app.selection = {
-						kind: "filter",
-						id: designer.addFilter(query, fields[column.field]).id
-					};
-					app.changed();
+					app.filterOnColumn(column);
 				}
 			} : null, { divider: true }, {
 				label: other === "Rows" ? app.t("Move to Rows") : app.t("Move to Columns"),
@@ -2904,7 +2932,7 @@
 			var columnPill = function(column) {
 				var index = query.columns.indexOf(column);
 				var aggregate = column.aggregate && column.aggregate !== "None" ? app.config.aggregateLabels[column.aggregate] || column.aggregate : null;
-				var calculation = designer.showAsBadge(column);
+				var calculation = column.label ? designer.showAsBadge(column) : null;
 				if (calculation) aggregate = aggregate ? aggregate + " " + calculation : calculation;
 				return pill(columns[index].label, aggregate, selection.kind === "column" && selection.id === column.id, columns[index].isMeasure, function() {
 					app.select("column", column.id);
@@ -3410,7 +3438,7 @@
 				}), column.showAsDirection || "Down", { onchange: function(event) {
 					designer.setShowAs(column, column.showAs, event.target.value);
 					app.changed();
-				} }), app.t("In a cross-tab: down each column, across each row, or over every cell. In a chart split into series: along the categories, or across the series of each category.")) : null,
+				} }), app.t("The values it runs over: down each column, across each row, or every cell. In a chart, the series are its columns.")) : null,
 				check(app.t("Hide from tables"), column.hidden, function(value) {
 					column.hidden = value;
 					app.changed({ render: false });
@@ -3503,13 +3531,18 @@
 					designer.setFilterStage(filter, event.target.value, columns);
 					app.changed();
 				} })),
-				labelled(filter.stage === "Result" ? app.t("Column") : app.t("Field"), filter.stage === "Result" ? ui.select(columns.map(function(column) {
+				labelled(filter.stage === "Result" ? app.t("Column") : app.t("Field"), filter.stage === "Result" ? ui.select((columns.some(function(column) {
+					return column.id === filter.field;
+				}) ? [] : [{
+					value: "",
+					text: app.t("Pick a column…")
+				}]).concat(columns.map(function(column) {
 					return {
 						value: column.id,
 						text: column.label
 					};
-				}), filter.field, { onchange: function(event) {
-					filter.field = event.target.value;
+				})), filter.field || "", { onchange: function(event) {
+					filter.field = event.target.value || null;
 					app.changed();
 				} }) : h("code", { className: "d-block small" }, filter.field)),
 				labelled(app.t("Condition"), ui.select(designer.operatorsFor(dataType).map(function(value) {
@@ -3750,7 +3783,10 @@
 			var list = h("div", { className: "rd-reference-lines" });
 			lines.forEach(function(line, index) {
 				var constant = line.kind === "Constant";
-				list.appendChild(h("div", { className: "rd-reference-line border rounded p-1 mb-1" }, h("div", { className: "d-flex gap-1 mb-1" }, ui.select(designer.REFERENCE_LINE_KINDS.map(function(value) {
+				var named = function(text, control) {
+					return h("div", { className: "input-group input-group-sm mb-1" }, h("span", { className: "input-group-text rd-reference-name" }, text), control);
+				};
+				list.appendChild(h("div", { className: "rd-reference-line border rounded p-1 mb-1" }, h("div", { className: "d-flex gap-1 mb-1" }, named(app.t("Line at"), ui.select(designer.REFERENCE_LINE_KINDS.map(function(value) {
 					return {
 						value,
 						text: value === "Average" ? app.t("Average") : value === "Median" ? app.t("Median") : app.t("Constant")
@@ -3762,45 +3798,45 @@
 						if (line.kind !== "Constant" && !line.columnId) line.columnId = (visual.valueColumnIds || [])[0] || null;
 						app.changed();
 					}
-				}), h("button", {
+				})), h("button", {
 					type: "button",
-					className: "btn btn-sm btn-link text-reset p-0 px-1",
+					className: "btn btn-sm btn-link text-reset p-0 px-1 mb-1",
 					"aria-label": app.t("Remove"),
+					title: app.t("Remove"),
 					onclick: function() {
 						lines.splice(index, 1);
 						app.changed();
 					}
-				}, ui.icon("fa-xmark"))), ui.select((constant ? [{
-					value: "",
-					text: app.t("None")
-				}] : []).concat(plotted), line.columnId || "", {
-					className: "form-select form-select-sm mb-1",
-					"aria-label": constant ? app.t("Format like") : app.t("Of"),
-					title: constant ? app.t("The value is shown in the format of this column.") : null,
-					onchange: function(event) {
-						line.columnId = event.target.value || null;
-						app.changed();
-					}
-				}), constant ? h("input", {
+				}, ui.icon("fa-xmark"))), constant ? named(app.t("Value"), h("input", {
 					type: "number",
 					step: "any",
-					className: "form-control form-control-sm mb-1",
+					className: "form-control form-control-sm",
 					value: line.value == null ? "" : String(line.value),
-					placeholder: app.t("Value"),
+					placeholder: app.t("Such as a target"),
 					"aria-label": app.t("Value"),
 					onchange: function(event) {
 						var value = parseFloat(event.target.value);
 						line.value = isFinite(value) ? value : null;
 						app.changed();
 					}
-				}) : null, textInput(line.label, function(value) {
+				})) : null, named(constant ? app.t("Format like") : app.t("Of"), ui.select((constant ? [{
+					value: "",
+					text: app.t("None")
+				}] : []).concat(plotted), line.columnId || "", {
+					"aria-label": constant ? app.t("Format like") : app.t("Of"),
+					title: constant ? app.t("The value is shown in the format of this column.") : null,
+					onchange: function(event) {
+						line.columnId = event.target.value || null;
+						app.changed();
+					}
+				})), named(app.t("Label"), textInput(line.label, function(value) {
 					line.label = value;
 					app.changed();
 				}, {
-					placeholder: constant ? app.t("Label, such as Target") : line.kind === "Median" ? app.t("Median") : app.t("Average"),
+					placeholder: constant ? app.t("Such as Target") : line.kind === "Median" ? app.t("Median") : app.t("Average"),
 					maxlength: "200",
 					"aria-label": app.t("Label")
-				})));
+				}))));
 			});
 			return labelled(app.t("Reference lines"), h("div", null, lines.length ? list : h("div", { className: "form-text mt-0 mb-1" }, app.t("Draw a line across the chart at the average or median of a value, or at a target.")), h("button", {
 				type: "button",

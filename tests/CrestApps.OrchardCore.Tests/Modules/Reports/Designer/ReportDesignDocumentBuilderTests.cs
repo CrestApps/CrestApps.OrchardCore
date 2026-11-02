@@ -542,6 +542,63 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         Assert.Equal(["Total", string.Empty, "470"], section.Rows[^1].Cells);
     }
 
+    [Theory]
+    [InlineData(ReportShowAs.Value, "Sum of Total")]
+    [InlineData(ReportShowAs.PercentOfTotal, "% of total Sum of Total")]
+    [InlineData(ReportShowAs.RunningTotal, "Running total of Sum of Total")]
+    [InlineData(ReportShowAs.DifferenceFromPrevious, "Change in Sum of Total")]
+    [InlineData(ReportShowAs.PercentDifference, "% change in Sum of Total")]
+    [InlineData(ReportShowAs.Rank, "Rank of Sum of Total")]
+    public async Task Build_CalculatedColumnWithoutAHeader_NamesTheCalculation(ReportShowAs showAs, string header)
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].Label = null;
+        query.Columns[2].ShowAs = showAs;
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        Assert.Equal(header, document.Sections[0].Columns[2].Label);
+    }
+
+    [Fact]
+    public async Task Build_CalculatedMeasureOnTheRowsShelf_NamesItsTotalsRowAfterThePlainValues()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[1].Shelf = ReportColumnShelf.Rows;
+        query.Columns[2].Shelf = ReportColumnShelf.Rows;
+        query.Columns[2].Label = null;
+        query.Columns[2].ShowAs = ReportShowAs.PercentOfTotal;
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert: the cells are percentages, while the totals row holds the plain sums.
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["Acme", "% of total Sum of Total", string.Empty, "88.2 %", "150"], section.Rows.Single(row => row.Cells[0] == "Acme").Cells);
+        Assert.Equal(["Total", "Sum of Total", "300", "170", "470"], section.Rows[^1].Cells);
+    }
+
+    [Theory]
+    [InlineData(ReportShowAs.DifferenceFromPrevious, "", "+130", "+150")]
+    [InlineData(ReportShowAs.PercentDifference, "", "+650.0 %", "+100.0 %")]
+    public async Task Build_ChangeFromPrevious_MarksARiseWithAPlusSign(ReportShowAs showAs, string first, string second, string third)
+    {
+        // Arrange: Initech 20, Acme 150, then Globex 300.
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = showAs;
+        query.Sorts = [new ReportSortDefinition { ColumnId = "revenue" }];
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        Assert.Equal([first, second, third], document.Sections[0].Rows.Take(3).Select(row => row.Cells[2]));
+    }
+
     [Fact]
     public async Task Build_PercentOfTotalWithAPercentFormat_KeepsTheColumnsFormat()
     {

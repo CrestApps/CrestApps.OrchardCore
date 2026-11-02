@@ -619,14 +619,46 @@
     designer.addFilter = function (query, field) {
         query.filters = query.filters || [];
 
+        // An aggregate, such as the number of rows, can only filter the result, by a column that shows it: the first
+        // one, or none for the user to pick when no column shows it yet.
+        var column = field.isAggregate
+            ? (query.columns || []).filter(function (candidate) {
+                return candidate.field === field.key;
+            })[0]
+            : null;
         var filter = {
             id: designer.newId('f', ids(query.filters)),
-            field: field.key,
+            field: field.isAggregate ? (column ? column.id : null) : field.key,
             stage: field.isAggregate ? 'Result' : 'Rows',
-            operator: field.dataType === 'Text' ? 'Contains' : 'Equals',
+            operator: field.dataType === 'Text' ? 'Contains' : (field.isAggregate ? 'GreaterThanOrEqual' : 'Equals'),
             values: [],
             exposed: false,
             label: field.label || null,
+            control: 'Auto'
+        };
+
+        query.filters.push(filter);
+
+        return filter;
+    };
+
+    // Adds a filter on a column of the query: a dimension filters the rows by its field, and a measure filters the
+    // result by the column, such as agents with at least 10 calls.
+    designer.addColumnFilter = function (query, column, field) {
+        if (!designer.isMeasure(column, field)) {
+            return field ? designer.addFilter(query, field) : null;
+        }
+
+        query.filters = query.filters || [];
+
+        var filter = {
+            id: designer.newId('f', ids(query.filters)),
+            field: column.id,
+            stage: 'Result',
+            operator: 'GreaterThanOrEqual',
+            values: [],
+            exposed: false,
+            label: column.label || (field && field.label) || null,
             control: 'Auto'
         };
 
