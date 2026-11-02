@@ -4,7 +4,7 @@
   "description": "WebMCP scripts and the W3C reference polyfill from CrestApps.Core",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/webmcp": "2.0.0-preview.243"
+    "@crestapps/webmcp": "2.0.0-preview.245"
   },
   "private": true
 }

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Services;
 /// </summary>
 internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
-    private const string CdnBaseUrl = "https://cdn.jsdelivr.net/npm/@crestapps/webmcp@2.0.0-preview.243/dist/";
+    private const string CdnBaseUrl = "https://cdn.jsdelivr.net/npm/@crestapps/webmcp@2.0.0-preview.245/dist/";
 
     private static readonly ResourceManifest _manifest;
 
