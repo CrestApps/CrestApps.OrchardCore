@@ -9,6 +9,9 @@ user_manual:
   - user-manual/load-inventory
 ---
 
+<YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
+<YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel CRM |
@@ -217,5 +220,7 @@ Both catalogs have a recipe step and a deployment step, matched by name on impor
 Listing and editing leads, accounts and opportunities uses the ordinary content permissions of each type; the **Leads**, **Accounts**, **Opportunities** and **Lead Sources** menu items need `ListContent`.
 
 ## Reports
+
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the three CRM reports" start={185} end={223} />
 
 The feature adds **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** to the Reports area, in the **CRM & Campaigns** category. They read the lead and opportunity indexes, are filtered by date range only, and require **View Omnichannel reports** (`ViewOmnichannelReports`). See the [report catalog](../contact-center/report-catalog.md) for the other CRM reports.

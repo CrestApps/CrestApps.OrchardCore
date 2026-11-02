@@ -23,6 +23,8 @@ Manual: [Bulk Import and Export](../user-manual/administration/import-and-export
 features, permissions, configuration, hosting limits and extension points.
 :::
 
+<YouTube video="content-transfer" title="Video overview of bulk import and export" />
+
 ## Getting started
 
 1. Enable `CrestApps.OrchardCore.ContentTransfer` (**Content Transfer**). It provides CSV support.

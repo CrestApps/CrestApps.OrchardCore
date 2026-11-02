@@ -19,9 +19,13 @@ A **contact** is the person you call or text. Contacts are ordinary content item
 
 <AskYourAdmin />
 
+<YouTube video="omnichannel-contacts" title="Video overview of omnichannel contacts" />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of creating a contact, finding it by phone number, and opening its activities" start={325} end={370} />
 
 ## Set up the contact type (once)
+
+<YouTube video="omnichannel-contacts" title="Video of the contact type and its part settings" start={56} end={103} />
 
 
 An administrator with the **Edit content types** permission usually does this once, when the site is set up. One contact type is usually all you need. Create more than one only when you want to keep different kinds of people apart, for example *Customer* and *Employee*.
@@ -46,6 +50,8 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 
 ## Create a contact
 
+<YouTube video="omnichannel-contacts" title="Video of creating a contact" start={103} end={152} />
+
 
 1. Open **Interaction Center > Contacts** and click **New** followed by the contact type's name (for example **New Contact**).
 2. Fill in the name and other fields. Under **Contact Methods**, click **Add Item > Phone Number**, type the number and pick its **Type** (for example *Cell*). Pick the **Contact time zone**, or leave *Timezone (Automatic)* to detect it from the number.
@@ -53,6 +59,8 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 4. Click **Publish**.
 
 ## Find a contact
+
+<YouTube video="omnichannel-contacts" title="Video of finding a contact by name or phone number" start={152} end={192} />
 
 
 On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts whose main cell or home number **begins with** those digits, for example `702555`. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
@@ -74,6 +82,8 @@ Tips:
 
 ## Work with a contact
 
+<YouTube video="omnichannel-contacts" title="Video of the buttons of a contact" start={192} end={218} />
+
 
 On a saved contact, the buttons at the top lead to its work:
 
@@ -90,6 +100,8 @@ See [Activities](activities.md).
 Use **Content > Export** to download contacts as CSV or Excel, and **Content > Import** to load a file of leads. See [Import and export](administration/import-and-export.md) for the general steps.
 
 ### Import options for contacts
+
+<YouTube video="omnichannel-contacts" title="Video of the import and export options for contacts" start={218} end={252} />
 
 
 When the file is for a contact type, the import page adds these options:

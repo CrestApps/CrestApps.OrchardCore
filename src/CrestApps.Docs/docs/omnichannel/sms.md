@@ -26,6 +26,8 @@ It allows Orchard Core (through the Omnichannel Management Customer Relationship
 
 You describe what you want the AI to do (tone, rules, goals), and the AI carries the conversation through SMS until the activity is completed.
 
+<YouTube video="omnichannel-automated-sms" title="Video overview of automated SMS with an AI profile" />
+
 ## What this module provides
 
 - An SMS channel processor and inbound event handler for Omnichannel automated activities. Messages are sent through the Orchard Core SMS provider (for example [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) or Twilio).

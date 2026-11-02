@@ -16,6 +16,8 @@ Content Access Control lets an editor say, on each content item, which roles may
 
 <AskYourAdmin />
 
+<YouTube video="content-access-control" title="Video overview of restricting content by role" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of the Restrict content setting and the improved role selector picking roles on a page" start={75} end={102} />
 
 ## How it works
@@ -31,6 +33,8 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 ## Set up a content type (once)
 
 1. Open **Design > Content Definition > Content Types** and edit the content type.
+<YouTube video="content-access-control" title="Video of adding the Role Picker to a content type and restricting its content" start={89} end={144} />
+
 1. Open **Content > Content Definition > Content Types** and edit the content type.
 2. If it does not have the **Role Picker** part yet, click **Add Parts**, tick **Role Picker**, and save.
 3. Click **Add & Configure** next to **Role Picker**, or edit the **Role Picker** part on the content type.
@@ -45,11 +49,15 @@ Give the part a clear name on the content type, such as *Limit access to selecte
 
 ## Restrict an item
 
+<YouTube video="content-access-control" title="Video of picking the roles that may view an item" start={144} end={195} />
+
 1. Create or edit an item of that content type.
 2. In the role picker, search for and tick the roles that may view the item. When more than one role is allowed, **Select All** and **Deselect All** change every role at once.
 3. Save or publish the item.
 
 To lift the restriction from one item, untick all its roles and save. To lift it from the whole content type, untick **Restrict content?** on the part.
+
+<YouTube video="content-access-control" title="Video of checking the result by signing in as people with and without the role" start={195} end={224} />
 
 :::note[Check the result]
 After you set up a restricted type, sign in as a person who does not hold the picked roles and confirm they cannot open the item. Ask your administrator for a test account if you need one.

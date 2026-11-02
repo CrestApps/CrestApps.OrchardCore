@@ -18,9 +18,13 @@ Sell products for other sellers, called vendors. Your store takes the payment, k
 
 This video shows the Marketplace and Classifieds modules: the settings, adding a vendor, a vendor's sales and payouts, and posted listings:
 
+<YouTube video="marketplace-classifieds" title="Narrated video overview of the Marketplace and Classifieds modules" />
+
 To try it, run the **Marketplace sample** recipe under **Configuration > Recipes**. It adds a vendor and a Handmade Ceramic Mug sold for it.
 
 ## Set your commission and hold
+
+<YouTube video="marketplace-classifieds" title="Video of the Marketplace settings" start={99} end={145} />
 
 Under **Settings > Commerce > Marketplace**:
 
@@ -32,15 +36,21 @@ Under **Settings > Commerce > Marketplace**:
 
 ## Add a vendor
 
+<YouTube video="marketplace-classifieds" title="Video of adding a vendor" start={145} end={193} />
+
 1. Under **Commerce > Vendors**, choose **Add vendor**.
 2. Enter its **Name** and **Email** (where Stripe's setup and the vendor's notices go), and under **People who run it**, the usernames of the people who sell through it.
 3. Leave **Commission (%)** empty to use the store's, or enter the vendor's own. **Country** and **Status** are below it: set the **Status** to suspend a vendor.
 
 On each of its products, choose it under **Vendor**. Add the **Vendor** part to the product's content type first, if it isn't there.
 
+<YouTube video="marketplace-classifieds" title="Video of what the people who run a vendor see" start={252} end={282} />
+
 The people who run a vendor see its sales, what it has earned and its payouts under **Vendor** in their account.
 
 ## Pay vendors
+
+<YouTube video="marketplace-classifieds" title="Video of a vendor's sales and payouts" start={193} end={252} />
 
 Vendors are paid to their own Stripe accounts. Each vendor sets theirs up once, from **Set up payouts** under **Vendor** in their account, through Stripe's own pages.
 

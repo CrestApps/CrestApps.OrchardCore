@@ -22,6 +22,10 @@ Watch the short video, then follow the steps below.
 
 ## Put a report in the menu
 
+<YouTube video="report-builder-groups-and-pdf" title="Video overview of report groups and PDF export" />
+
+<YouTube video="report-builder-groups-and-pdf" title="Video of putting a report in a group and in the admin menu" start={99} end={143} />
+
 On the **Settings** tab:
 
 | Setting | What it does |
@@ -35,6 +39,8 @@ On the **Settings** tab:
 Publish the report to apply the settings.
 
 ## Organize reports into groups
+
+<YouTube video="report-builder-groups-and-pdf" title="Video of adding, nesting and ordering report groups" start={57} end={99} />
 
 Report groups arrange the reports in the admin menu, like folders. A group can be nested in another one, so **Sales** can hold **Regional**, which holds the regional reports. In the admin menu, each group is an item under **Reports**, with the groups nested in it first and then its reports. A group shows only when it holds a report in the menu that you may open, so people never see empty groups.
 
@@ -108,6 +114,8 @@ The links of every feature of the site, such as report links and the files of da
 
 ## Run and export a report
 
+<YouTube video="report-builder-groups-and-pdf" title="Video of exporting a report to PDF" start={143} end={183} />
+
 **Reports > Report Builder** (or **Shared Reports**) lists every report you can open. Click **Run**, or the report's title, to open it. A report pinned to the menu also opens from **Reports** > *its group* (or directly from **Reports** when it is in no group).
 
 1. Change the filters shown above the report, if any, and click **Show**.
@@ -118,6 +126,8 @@ The export uses the filters on screen. People the report is shared with can expo
 When you may change the report, **Edit design** opens it in the builder.
 
 ## Show a report on the dashboard
+
+<YouTube video="reports-dashboard-widgets" title="Video of the Custom Report widget" start={175} end={213} />
 
 When your site uses the admin dashboard, you can put a report you built on it as a widget. The widget shows the report's headline numbers, tables and charts for a period such as the last 30 days, and keeps itself up to date. You do not need a developer.
 

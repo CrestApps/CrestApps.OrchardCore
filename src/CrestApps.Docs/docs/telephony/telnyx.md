@@ -21,6 +21,8 @@ SIP-over-WebSocket registrar and a server-side Call Control API, so — unlike a
 the browser soft phone **carries the call audio itself** (WebRTC) and the Contact Center can **bridge live
 calls to agents server-side** (`ServerSideAcd`), which is what makes true power dialing possible.
 
+<YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings" />
+
 ## Features
 
 | Feature | Feature ID | Purpose |

@@ -19,6 +19,8 @@ Provides a provider-agnostic, extensible, international taxation framework that 
 
 This video shows the taxation screens in the admin:
 
+<YouTube video="taxation" title="Video overview of taxation" />
+
 The framework is built on a single principle:
 
 > **Tax is a determination, not a property.**

@@ -12,6 +12,8 @@ user_manual: user-manual/administration/recipes
 | **Feature ID** | `CrestApps.OrchardCore.Resources` |
 
 
+<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
+
 Provides shared resources and libraries used by various CrestApps modules.
 
 ## Overview
