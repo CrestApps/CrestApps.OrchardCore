@@ -193,6 +193,16 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | Save User Memory | Creates or updates a named memory entry for the current user. |
 | Remove User Memory | Removes a saved memory entry when it should be forgotten. |
 
+### NLWeb tools
+
+**Available when:** `CrestApps.OrchardCore.NLWeb` with `CrestApps.OrchardCore.AI` on
+
+The tool answers as the caller, with the **Ask the site questions with NLWeb** (`QueryNLWeb`) permission, and only returns published content items the caller may view. See [NLWeb](../modules/nlweb.md#the-ask-tool).
+
+| Function | Description |
+| --- | --- |
+| `ask` | Asks the site a question in natural language (NLWeb) and returns the matching content items as schema.org objects, with a summary or an answer written from them when asked. Selectable on the MCP Server, WebMCP and AI profiles. |
+
 ### Calendar tools
 
 **Available when:** `CrestApps.OrchardCore.Calendars` with `CrestApps.OrchardCore.AI` on
