@@ -47,5 +47,6 @@ public sealed class ShiftPlanningStartup : StartupBase
         services.AddSingleton<IBackgroundTask, OpenShiftAwardBackgroundTask>();
         services.AddPermissionProvider<ShiftPlanningPermissionsProvider>();
         services.AddNavigationProvider<ShiftPlanningAdminMenu>();
+        services.AddDisplayDriver<CrestApps.OrchardCore.Calendars.Models.Calendar, WorkforceCalendarRowDisplayDriver>();
     }
 }

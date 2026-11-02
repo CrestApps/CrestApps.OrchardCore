@@ -81,11 +81,30 @@ But the suggestion is right that people shouldn't be managed in two places.
 
 Teams are used in many projects, so they move to a shared **Teams** module. A team is a content item of a Team content type with a `TeamPart` (parent, kind, time zone, place), so sites add fields in the admin. Memberships with their dates and roles are records of their own, indexed, rather than part of the content item, so changing a member doesn't version the team. Workforce adds its parts (the team calendar, linked role). It is a separate PR after the Workforce stack, because Workforce, Contact Center Workforce and Dispatch all read teams.
 
-## 4. Consistency rules from review
+## 4. Schedules and the Calendars module
+
+Review asked that Workforce's schedules be an extension of the Calendars module.
+
+### What exists
+
+Shift planning already sits on Calendars where it matters: each team has a **Workforce** calendar (a calendar type of its own, kept by Workforce, with `SourceId` the team), and publishing a schedule writes its shifts there as events, beside time off and dispatch jobs, so they show on **Calendars > Calendar**, in "Whose schedule", in Team Availability, in subscription feeds and as busy time for appointments. What Workforce adds is the **planner**: a draft per team and period, the board of workers by day, coverage, auto-schedule, rotations, copying, labor rules, and publishing versions with a change log.
+
+### Comparison
+
+- Planning in the calendar view itself would put drafts on the live calendar, where workers and feeds see them, and the calendar grid has no room for coverage rows, weekly hours or auto-schedule. The planner stays a page of its own.
+- The pages were under **Workforce** while what they make lives under **Calendars**, and Scheduling, the other module that extends Calendars, puts its pages under **Calendars**.
+
+### Decision
+
+- The shift planning pages move under the **Calendars** menu, after Scheduling's: **Shift Schedules** (renamed from Schedules, beside "Whose schedule"), Open Shifts, Shift Trades, Rotations, Coverage and Shift Templates.
+- A team's Workforce calendar on **Manage Calendars** gets **Shift schedules** in its actions, opening that team's schedules; the planner already links back to the team calendar.
+- Nothing changes in how shifts are stored or published.
+
+## 5. Consistency rules from review
 
 Every module in the plan follows these: admin lists through `<admin-list>`; forms with the `ocat-*` classes, one label and field per line, grouped in cards; a deployment step, a recipe step and the CrestApps `IRecipeStep` definition for every kind of stored record; `ConfigurationSchema.json` for every options class read from configuration; an icon on every top-level menu item; and no one-time setup pages in the menu.
 
-## 5. Order of work
+## 6. Order of work
 
 In PR C (#1252), after C7, one commit each (fewer PRs, one per plan):
 

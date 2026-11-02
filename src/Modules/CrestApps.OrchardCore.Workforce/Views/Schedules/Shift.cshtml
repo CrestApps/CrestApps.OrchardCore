@@ -2,7 +2,7 @@
 
 <zone Name="Title">
     <breadcrumb name="WorkforceSchedulesShift" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Shift"] : T["Edit Shift"])">
-        <breadcrumb-item id="WorkforceSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.Workforce">@T["Schedules"]</breadcrumb-item>
+        <breadcrumb-item id="WorkforceSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.Workforce">@T["Shift Schedules"]</breadcrumb-item>
         <breadcrumb-item id="WorkforceSchedulesPlan" action="Plan" controller="Schedules" area="CrestApps.OrchardCore.Workforce" route-id="@Model.PeriodId">@Model.PeriodName</breadcrumb-item>
     </breadcrumb>
 </zone>

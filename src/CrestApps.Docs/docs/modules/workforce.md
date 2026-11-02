@@ -72,6 +72,8 @@ The calendars it grants appear in each user's calendar list.
 
 ## Shift planning
 
+The shift planning pages are under the **Calendars** menu, after Scheduling's, since what they publish lives on each team's Workforce calendar; `WorkforceCalendarRowDisplayDriver` adds **Shift schedules** to that calendar's actions on Manage Calendars, opening the team's schedules.
+
 The **Workforce Shift Planning** feature (`CrestApps.OrchardCore.Workforce.ShiftPlanning`) plans schedules as drafts and publishes them to the team's Workforce calendar. Its services are registered by `AddWorkforceCore()`; the feature adds the index tables, the admin screens and the permissions.
 
 | Record | What it holds |

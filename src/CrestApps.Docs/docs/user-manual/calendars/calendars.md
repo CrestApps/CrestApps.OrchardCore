@@ -29,7 +29,7 @@ Which types you can choose depends on the features your administrator turned on.
 | **Equipment** | Resource Calendars | Something that can be reserved, such as a projector or a vehicle. | Reservation, Maintenance |
 | **Office** | Office Calendars | Who is in an office and which desks are booked, up to the number of desks. | In office, Desk booking, Visitor, Office closed |
 
-Two more types are kept by other features and can't be added by hand: **Appointments**, one per staff member, room or piece of equipment that takes appointments (see [Scheduling](./scheduling.md)), and **Bookings**, which holds the store's bookings (see [Bookings](../commerce/bookings.md#bookings-on-the-calendar)). Other modules you add can bring types of their own, such as a calendar of employees' shifts and time off.
+Two more types are kept by other features and can't be added by hand: **Appointments**, one per staff member, room or piece of equipment that takes appointments (see [Scheduling](./scheduling.md)), and **Bookings**, which holds the store's bookings (see [Bookings](../commerce/bookings.md#bookings-on-the-calendar)). Other modules you add can bring types of their own, such as a calendar of employees' shifts and time off: with Workforce Shift Planning on, each team's **Workforce** calendar holds its published shifts, and **Calendars > Shift Schedules** plans them (see [Shift Planning](../workforce/shift-planning.md)).
 
 Some kinds of events have their own behavior:
 
