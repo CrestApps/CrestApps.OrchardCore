@@ -488,7 +488,7 @@ public sealed class WorkOrderService
         await MoveAsync(workOrder, WorkOrderStatus.Completed, null, cancellationToken);
         workOrder.CompletedUtc = _clock.UtcNow;
 
-        if (type is not null && type.BillingMode != WorkOrderBillingMode.NotBillable && string.IsNullOrEmpty(workOrder.InvoiceTransactionId))
+        if (type is not null && (type.BillingMode != WorkOrderBillingMode.NotBillable || workOrder.AgreedPrice is not null) && string.IsNullOrEmpty(workOrder.InvoiceTransactionId))
         {
             var amount = BillableAmount(workOrder, type);
 
@@ -569,6 +569,11 @@ public sealed class WorkOrderService
     {
         ArgumentNullException.ThrowIfNull(workOrder);
         ArgumentNullException.ThrowIfNull(type);
+
+        if (workOrder.AgreedPrice is { } agreed)
+        {
+            return agreed;
+        }
 
         return type.BillingMode switch
         {

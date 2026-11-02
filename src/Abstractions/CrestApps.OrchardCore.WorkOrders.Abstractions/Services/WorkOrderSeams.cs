@@ -53,6 +53,20 @@ public interface IWorkOrderBilling
 }
 
 /// <summary>
+/// Hears what happens to service agreements.
+/// </summary>
+public interface IServiceAgreementObserver
+{
+    /// <summary>
+    /// Runs once when an active agreement comes within its notice of its end date.
+    /// </summary>
+    /// <param name="agreement">The agreement.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task.</returns>
+    Task OnExpiringAsync(ServiceAgreement agreement, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Hears what happens to work orders, after the work is saved.
 /// </summary>
 public interface IWorkOrderObserver

@@ -12,7 +12,7 @@ A work order is a job done for a customer, such as a repair or an installation. 
 | --- | --- |
 | **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-statuses |
 | **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists, service levels and sub-statuses |
-| **Feature** | Work Orders; Inventory for parts, Transactions for invoices, Geo for territories, Assets for equipment |
+| **Feature** | Work Orders; Service Agreements for recurring visits; Inventory for parts, Transactions for invoices, Geo for territories, Assets for equipment |
 
 <AskYourAdmin />
 
@@ -69,6 +69,18 @@ On a work order's page:
 When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**.
 
 To come back for more work, enter what it is for under **Follow-up** and select **Create follow-up**. The new work order is for the same customer, place and assets, and links back to this one.
+
+## Recurring visits with a service agreement
+
+A service agreement makes the work orders of a customer's recurring visits, such as a furnace service every six months.
+
+1. Go to **Field Service > Service Agreements** and select **Add service agreement**.
+2. Enter a name, the days it starts and ends, and the notice you want before the end.
+3. Under **Visits**, add a row for each recurring visit: its name, the work order type, how often it repeats, and how many days ahead its work order is made. For anything else, choose **Custom rule** and enter an iCalendar rule, such as `FREQ=MONTHLY;BYDAY=2SU` for the second Sunday of each month.
+4. Under **Pricing**, choose whether the visits are included, so their work orders aren't invoiced, or invoiced at a price per visit.
+5. Enter the customer, contact, address and the assets covered, set the status to **Active** and select **Save**.
+
+The agreement's page shows the next visits of each schedule and the work orders made so far. Work orders are made each hour; select **Make due work orders now** to make them at once. Each visit gets one work order, for its whole day. An agreement past its end date becomes expired; a workflow can start when one comes within its notice, such as to offer a renewal.
 
 ## Service levels on the page
 

@@ -67,11 +67,15 @@
                 {
                     <dt class="col-4">@T["Access"]</dt><dd class="col-8">@workOrder.AccessNotes</dd>
                 }
-                @if (workOrder.EarliestUtc is { } earliest)
+                @if (Model.VisitDay is { } visitDay)
+                {
+                    <dt class="col-4">@T["Visit day"]</dt><dd class="col-8">@visitDay.ToString("D", culture)</dd>
+                }
+                else if (workOrder.EarliestUtc is { } earliest)
                 {
                     <dt class="col-4">@T["Not before"]</dt><dd class="col-8">@await DisplayAsync(await New.DateTime(Utc: earliest, Format: "g"))</dd>
                 }
-                @if (workOrder.LatestUtc is { } latest)
+                @if (Model.VisitDay is null && workOrder.LatestUtc is { } latest)
                 {
                     <dt class="col-4">@T["Not after"]</dt><dd class="col-8">@await DisplayAsync(await New.DateTime(Utc: latest, Format: "g"))</dd>
                 }
@@ -87,6 +91,14 @@
                         {
                             <a href="@Url.Action("Details", "Assets", new { area = "CrestApps.OrchardCore.Assets", id = asset.Value })" class="d-block">@asset.Text</a>
                         }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder.AgreementId))
+                {
+                    <dt class="col-4">@T["Agreement"]</dt>
+                    <dd class="col-8">
+                        <a href="@Url.Action("Details", "ServiceAgreements", new { area = WorkOrdersConstants.Features.WorkOrders, id = workOrder.AgreementId })">@T["View the agreement"]</a>
+                        <span class="badge ta-badge fw-normal">@(workOrder.AgreedPrice is > 0 ? T["{0} a visit", workOrder.AgreedPrice.Value.ToString("N2", culture)] : T["Included"])</span>
                     </dd>
                 }
                 @if (!string.IsNullOrEmpty(workOrder.InvoiceTransactionId))

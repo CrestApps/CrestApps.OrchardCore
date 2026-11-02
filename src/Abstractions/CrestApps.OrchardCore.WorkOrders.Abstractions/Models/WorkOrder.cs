@@ -396,6 +396,17 @@ public sealed class WorkOrder : CatalogItem
     public string InvoiceTransactionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the service agreement it was made for, if any.
+    /// </summary>
+    public string AgreementId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the price agreed for it, which replaces its type's billing: zero when an agreement covers it, or
+    /// <see langword="null"/> to bill as its type says.
+    /// </summary>
+    public decimal? AgreedPrice { get; set; }
+
+    /// <summary>
     /// Gets or sets why it was canceled.
     /// </summary>
     public string CancelReason { get; set; }

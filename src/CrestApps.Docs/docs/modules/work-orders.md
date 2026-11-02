@@ -15,6 +15,7 @@ The admin screens are described in the User Manual: [Work Orders](../user-manual
 | Feature | Id | Depends on |
 | --- | --- | --- |
 | Work Orders | `CrestApps.OrchardCore.WorkOrders` | — |
+| Service Agreements | `CrestApps.OrchardCore.WorkOrders.Agreements` | Work Orders |
 
 The module works with other features when they are on:
 
@@ -51,6 +52,15 @@ Each settings record has its own index table (`WorkOrderTypeIndex`, `ChecklistTe
 - **Completing.** `CompleteAsync` refuses a work order with a required question unanswered (one shown by its condition), without a signature its type requires, or with fewer photos than it needs. It then invoices the billable amount through `IWorkOrderBilling`: the fixed price, or the billable lines at their used quantities (or planned ones for services not yet recorded), and starts the **Completed** event.
 - **Follow-ups.** `FollowUpAsync` makes a new work order of the same type for the same customer, contact, place and assets.
 
+## Service agreements
+
+The **Service Agreements** feature keeps recurring visits, such as preventive maintenance, for a customer over a period.
+
+- **`ServiceAgreement`** (in the `WorkOrders` collection, indexed by `ServiceAgreementIndex`): `Number` (`SA-00001` and on), `Name`, `Status` (`Draft`, `Active`, `Expired`, `Canceled`), the customer and `Contact`, `ServiceAddress`, `AccessNotes`, `AssetIds`, `StartDate`, `EndDate`, `TimeZoneId`, `Schedules`, `Pricing` (`Included` or `PerVisit`) with `PricePerVisit`, `ExpiringNoticeDays` (30) and `ExpiringNotifiedUtc`.
+- **`AgreementSchedule`**: `Name`, `TypeId`, `Rule` (an RFC 5545 rule, expanded from the start date with the Calendars recurrence engine), `LeadDays` (14) and `AssetIds`.
+
+`ServiceAgreementScheduler` runs every active agreement each hour (and from the agreement's page). For each schedule, it makes the work order of every visit day within the lead time that has none yet: the source is `Agreement` and the source id is the agreement, schedule and day, so each visit gets one work order however often it runs. The work order's window is the visit day in the agreement's time zone, across daylight saving changes; it copies the customer, place and assets, and its `AgreedPrice` (zero when included, the price per visit otherwise) replaces its type's billing. An agreement past its end date expires, and an active one within its notice of the end starts the **Service Agreement Expiring** event once (`IServiceAgreementObserver`). The `ManageServiceAgreements` permission covers the agreement pages.
+
 ## Workflow events
 
 | Event | Starts when | Input |
@@ -60,6 +70,7 @@ Each settings record has its own index table (`WorkOrderTypeIndex`, `ChecklistTe
 | Work Order Service Level Warning | It is close to missing a target. | `Target` |
 | Work Order Service Level Breached | It misses a target. | `Target` |
 | Work Order Completed | It is completed. | |
+| Service Agreement Expiring | An agreement comes within its notice of its end date. | `AgreementId`, `Number`, `Name`, `EndDate` |
 
 Each can be limited to some work order types. Every event's input has `WorkOrderId`, `Number`, `TypeId`, `Status`, `Priority`, `Summary`, `CustomerId` and `TerritoryId`.
 

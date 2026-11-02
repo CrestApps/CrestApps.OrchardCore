@@ -325,9 +325,22 @@ public sealed class WorkOrdersController : Controller
         var type = string.IsNullOrEmpty(workOrder.TypeId) ? null : await _types.FindByIdAsync(workOrder.TypeId);
         var subStatuses = (await _subStatuses.GetAllAsync()).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         var assets = workOrder.AssetIds.Count == 0 ? [] : await _lookups.AssetsAsync(HttpContext.RequestAborted);
+        DateOnly? visitDay = null;
+
+        if (workOrder.EarliestUtc is { } earliest && workOrder.LatestUtc is { } latest)
+        {
+            var from = (await _localClock.ConvertToLocalAsync(earliest)).DateTime;
+            var to = (await _localClock.ConvertToLocalAsync(latest)).DateTime;
+
+            if (from.TimeOfDay == TimeSpan.Zero && to == from.AddDays(1))
+            {
+                visitDay = DateOnly.FromDateTime(from);
+            }
+        }
 
         return View(new WorkOrderDetailsViewModel
         {
+            VisitDay = visitDay,
             WorkOrder = workOrder,
             Type = type,
             Policy = string.IsNullOrEmpty(workOrder.Sla?.PolicyId) ? null : await _policies.FindByIdAsync(workOrder.Sla.PolicyId),

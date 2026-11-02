@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model ShapeViewModel<ServiceAgreementRow>
+
+<a asp-controller="ServiceAgreements" asp-action="Details" asp-route-id="@Model.Value.Agreement.ItemId" class="btn btn-secondary btn-sm">@T["View"]</a>
+<a asp-controller="ServiceAgreements" asp-action="Edit" asp-route-id="@Model.Value.Agreement.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+@if (Model.Value.Agreement.Status == ServiceAgreementStatus.Draft)
+{
+    <a asp-controller="ServiceAgreements" asp-action="Delete" asp-route-id="@Model.Value.Agreement.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete this draft agreement?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

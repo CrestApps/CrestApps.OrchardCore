@@ -9,6 +9,11 @@ namespace CrestApps.OrchardCore.WorkOrders;
 public static class WorkOrdersPermissions
 {
     /// <summary>
+    /// Manage service agreements and their schedules.
+    /// </summary>
+    public static readonly Permission ManageServiceAgreements = new("ManageServiceAgreements", LocalizationSource.Create("Manage service agreements", typeof(WorkOrdersPermissions)));
+
+    /// <summary>
     /// Allows managing work order types, checklist templates, service level policies and sub-statuses.
     /// </summary>
     public static readonly Permission ManageWorkOrderSettings = new("ManageWorkOrderSettings", LocalizationSource.Create("Manage work order types, checklists and service levels", typeof(WorkOrdersPermissions)));

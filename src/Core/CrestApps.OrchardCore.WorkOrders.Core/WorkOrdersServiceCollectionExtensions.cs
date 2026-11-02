@@ -34,4 +34,19 @@ public static class WorkOrdersServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers service agreements: their store, manager and scheduler.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddServiceAgreementsCore(this IServiceCollection services)
+    {
+        services.TryAddScoped<ServiceAgreementStore>();
+        services.TryAddScoped<ServiceAgreementManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceAgreement>, ServiceAgreementHandler>());
+        services.TryAddScoped<ServiceAgreementScheduler>();
+
+        return services;
+    }
 }

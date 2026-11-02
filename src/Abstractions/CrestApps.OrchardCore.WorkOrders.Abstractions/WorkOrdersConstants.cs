@@ -21,6 +21,11 @@ public static class WorkOrdersConstants
     public const string NumberPrefix = "WO-";
 
     /// <summary>
+    /// The prefix of service agreement numbers.
+    /// </summary>
+    public const string AgreementNumberPrefix = "SA-";
+
+    /// <summary>
     /// The feature identifiers.
     /// </summary>
     public static class Features
@@ -29,6 +34,11 @@ public static class WorkOrdersConstants
         /// Work orders.
         /// </summary>
         public const string WorkOrders = "CrestApps.OrchardCore.WorkOrders";
+
+        /// <summary>
+        /// The Service Agreements feature.
+        /// </summary>
+        public const string Agreements = "CrestApps.OrchardCore.WorkOrders.Agreements";
     }
 
     /// <summary>
@@ -60,5 +70,10 @@ public static class WorkOrdersConstants
         /// A work order was completed.
         /// </summary>
         public const string Completed = "WorkOrderCompleted";
+
+        /// <summary>
+        /// A service agreement is close to its end date.
+        /// </summary>
+        public const string AgreementExpiring = "ServiceAgreementExpiring";
     }
 }

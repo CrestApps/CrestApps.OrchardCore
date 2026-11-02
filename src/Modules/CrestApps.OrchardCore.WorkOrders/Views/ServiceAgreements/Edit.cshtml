@@ -1,0 +1,162 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model ServiceAgreementEditViewModel
+
+<zone Name="Title"><breadcrumb name="ServiceAgreementsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Service Agreement"] : T["Edit {0}", Model.Number])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Name" class="form-label">@T["Name"]</label>
+            <input asp-for="Name" class="form-control" required placeholder="@T["Such as: Furnace care plan"]" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Status" class="form-label">@T["Status"]</label>
+            <select asp-for="Status" asp-items="Html.GetEnumSelectList<ServiceAgreementStatus>()" class="form-select"></select>
+            <span class="hint">@T["Only an active agreement makes work orders."]</span>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="TimeZoneId" class="form-label">@T["Time zone"]</label>
+            <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select">
+                <option value="">@T["UTC"]</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="StartDate" class="form-label">@T["Starts"]</label>
+            <input asp-for="StartDate" type="date" value="@Model.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" required />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="EndDate" class="form-label">@T["Ends"]</label>
+            <input asp-for="EndDate" type="date" value="@Model.EndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="ExpiringNoticeDays" class="form-label">@T["Notice before the end (days)"]</label>
+            <input asp-for="ExpiringNoticeDays" type="number" min="0" max="365" class="form-control" />
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Visits"]</h2>
+    <p class="hint">@T["Each schedule repeats from the start date. Its work order is made the number of days ahead you choose, once for each visit. Leave a row empty to skip it."]</p>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle">
+            <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Work order type"]</th><th scope="col">@T["Repeats"]</th><th scope="col">@T["Made ahead (days)"]</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Schedules.Count; i++)
+                {
+                    var schedule = Model.Schedules[i];
+                    <tr>
+                        <td><input type="hidden" asp-for="Schedules[i].Id" /><input asp-for="Schedules[i].Name" class="form-control form-control-sm" placeholder="@T["Such as: Annual inspection"]" aria-label="@T["Name"]" /></td>
+                        <td>
+                            <select asp-for="Schedules[i].TypeId" class="form-select form-select-sm" aria-label="@T["Work order type"]">
+                                <option value="">@T["Choose…"]</option>
+                                @foreach (var type in Model.TypeOptions)
+                                {
+                                    <option value="@type.Value" selected="@(type.Value == schedule.TypeId)">@type.Text</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select asp-for="Schedules[i].Rule" class="form-select form-select-sm" aria-label="@T["Repeats"]">
+                                @foreach (var option in Model.RuleOptions)
+                                {
+                                    <option value="@option.Value" selected="@(option.Value == (schedule.Rule ?? string.Empty))">@option.Text</option>
+                                }
+                            </select>
+                            <input asp-for="Schedules[i].CustomRule" class="form-control form-control-sm mt-1" placeholder="FREQ=MONTHLY;BYDAY=2SU" aria-label="@T["Custom rule"]" />
+                        </td>
+                        <td><input asp-for="Schedules[i].LeadDays" type="number" min="0" max="365" class="form-control form-control-sm" aria-label="@T["Made ahead (days)"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span class="hint">@T["A custom rule is an iCalendar RRULE, such as FREQ=MONTHLY;BYDAY=2SU for the second Sunday of every month. It is used when Repeats is Custom rule."]</span>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Pricing"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <label asp-for="Pricing" class="form-label">@T["Visits are"]</label>
+            <select asp-for="Pricing" class="form-select">
+                <option value="@AgreementPricing.Included">@T["Included: their work orders aren't invoiced"]</option>
+                <option value="@AgreementPricing.PerVisit">@T["Invoiced at a price per visit"]</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="PricePerVisit" class="form-label">@T["Price per visit"]</label>
+            <input asp-for="PricePerVisit" type="number" min="0" step="0.01" class="form-control" />
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">@T["Who and where"]</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <label asp-for="CustomerId" class="form-label">@T["Customer number"]</label>
+            <input asp-for="CustomerId" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="CompanyId" class="form-label">@T["Company number"]</label>
+            <input asp-for="CompanyId" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="ContactName" class="form-label">@T["Contact"]</label>
+            <input asp-for="ContactName" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="ContactPhone" class="form-label">@T["Phone"]</label>
+            <input asp-for="ContactPhone" type="tel" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="ContactEmail" class="form-label">@T["Email"]</label>
+            <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-12 col-md-6">
+            <label asp-for="AddressLine1" class="form-label">@T["Street address"]</label>
+            <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-4">
+            <label asp-for="City" class="form-label">@T["City"]</label>
+            <input asp-for="City" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="Region" class="form-label">@T["State or region"]</label>
+            <input asp-for="Region" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="PostalCode" class="form-label">@T["Postal code"]</label>
+            <input asp-for="PostalCode" class="form-control" autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-2">
+            <label asp-for="Country" class="form-label">@T["Country"]</label>
+            <input asp-for="Country" class="form-control" autocomplete="off" maxlength="2" placeholder="US" />
+        </div>
+        <div class="col-12">
+            <label asp-for="AccessNotes" class="form-label">@T["Access notes"]</label>
+            <textarea asp-for="AccessNotes" class="form-control" rows="2"></textarea>
+        </div>
+        @if (Model.AssetOptions.Count > 0)
+        {
+            <div class="col-12">
+                <label asp-for="AssetIds" class="form-label">@T["Assets covered"]</label>
+                <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="form-select" multiple size="5"></select>
+            </div>
+        }
+        <div class="col-12">
+            <label asp-for="Notes" class="form-label">@T["Notes"]</label>
+            <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        @if (string.IsNullOrEmpty(Model.Id))
+        {
+            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">@T["Cancel"]</a>
+        }
+    </div>
+</form>

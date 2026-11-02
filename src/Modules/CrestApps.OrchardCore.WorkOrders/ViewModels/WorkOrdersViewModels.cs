@@ -662,4 +662,9 @@ public class WorkOrderDetailsViewModel
     /// Gets or sets the time now.
     /// </summary>
     public DateTime NowUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the day of the visit, when its window is one whole day in the site's time zone.
+    /// </summary>
+    public DateOnly? VisitDay { get; set; }
 }

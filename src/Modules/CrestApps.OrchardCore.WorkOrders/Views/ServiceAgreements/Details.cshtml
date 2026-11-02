@@ -1,0 +1,105 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model ServiceAgreementDetailsViewModel
+
+@{
+    var agreement = Model.Agreement;
+    var culture = CultureInfo.CurrentCulture;
+    var address = agreement.ServiceAddress;
+}
+
+<zone Name="Title"><breadcrumb name="ServiceAgreementsView" title="@T["{0} {1}", agreement.Number, agreement.Name]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <span class="badge @(agreement.Status == ServiceAgreementStatus.Active ? "text-bg-success" : "text-bg-secondary") fw-normal">@agreement.Status</span>
+                <span class="text-muted small">@(agreement.EndDate is { } end ? T["{0} to {1}", agreement.StartDate.ToString("d", culture), end.ToString("d", culture)] : T["From {0}", agreement.StartDate.ToString("d", culture)]) · @(agreement.Pricing == AgreementPricing.Included ? T["Visits included"] : T["{0} a visit", agreement.PricePerVisit.ToString("N2", culture)])</span>
+            </div>
+            <div class="col-auto">
+                @if (agreement.Status == ServiceAgreementStatus.Active)
+                {
+                    <form asp-action="Run" asp-route-id="@agreement.ItemId" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-secondary">@T["Make due work orders now"]</button>
+                    </form>
+                }
+                <a asp-action="Edit" asp-route-id="@agreement.ItemId" class="btn btn-primary">@T["Edit"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["About"]</h2>
+            <dl class="row mb-0 small">
+                @if (!string.IsNullOrEmpty(agreement.CustomerId) || !string.IsNullOrEmpty(agreement.CompanyId))
+                {
+                    <dt class="col-4">@T["Customer"]</dt><dd class="col-8">@agreement.CustomerId @agreement.CompanyId</dd>
+                }
+                @if (!string.IsNullOrEmpty(agreement.Contact?.Name))
+                {
+                    <dt class="col-4">@T["Contact"]</dt><dd class="col-8">@agreement.Contact.Name @agreement.Contact.Phone</dd>
+                }
+                @if (address is not null)
+                {
+                    <dt class="col-4">@T["Where"]</dt><dd class="col-8">@string.Join(", ", new[] { address.AddressLine1, address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrEmpty(part)))</dd>
+                }
+                @if (Model.Assets.Count > 0)
+                {
+                    <dt class="col-4">@T["Assets"]</dt>
+                    <dd class="col-8">@string.Join(", ", Model.Assets.Select(asset => asset.Text))</dd>
+                }
+                @if (agreement.EndDate is not null)
+                {
+                    <dt class="col-4">@T["Notice"]</dt>
+                    <dd class="col-8">@(agreement.ExpiringNotifiedUtc is null ? T["{0} days before the end", agreement.ExpiringNoticeDays] : T["Given"])</dd>
+                }
+                @if (!string.IsNullOrEmpty(agreement.Notes))
+                {
+                    <dt class="col-4">@T["Notes"]</dt><dd class="col-8">@agreement.Notes</dd>
+                }
+            </dl>
+        </div></div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["Visits"]</h2>
+            @if (Model.Schedules.Count == 0)
+            {
+                <p class="small text-muted mb-0">@T["No schedules yet."]</p>
+            }
+            @foreach (var visits in Model.Schedules)
+            {
+                <p class="small mb-1"><strong>@(visits.Schedule.Name ?? visits.TypeName)</strong> · @visits.TypeName · @visits.Repeats · @T["made {0} days ahead", visits.Schedule.LeadDays]</p>
+                <p class="small text-muted">@(visits.Next.Count == 0 ? T["No more visits."] : T["Next: {0}", string.Join(", ", visits.Next.Select(date => date.ToString("d", culture)))])</p>
+            }
+        </div></div>
+    </div>
+</div>
+
+<div class="card mb-3"><div class="card-body">
+    <h2 class="h6">@T["Work orders"]</h2>
+    @if (Model.WorkOrders.Count == 0)
+    {
+        <p class="small text-muted mb-0">@(agreement.Status == ServiceAgreementStatus.Active ? T["None made yet. They are made each hour, within each schedule's days ahead."] : T["None. Only an active agreement makes work orders."])</p>
+    }
+    else
+    {
+        <ul class="list-unstyled small mb-0">
+            @foreach (var workOrder in Model.WorkOrders)
+            {
+                <li class="mb-1">
+                    <a href="@Url.Action("Details", "WorkOrders", new { area = WorkOrdersConstants.Features.WorkOrders, id = workOrder.ItemId })">@workOrder.Number</a>
+                    @workOrder.Summary
+                    <span class="badge ta-badge fw-normal">@T[workOrder.Status.Text()]</span>
+                    @if (workOrder.EarliestUtc is { } day)
+                    {
+                        <span class="text-muted">@await DisplayAsync(await New.DateTime(Utc: day, Format: "d"))</span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div></div>

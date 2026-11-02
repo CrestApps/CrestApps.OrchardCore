@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model ShapeViewModel<ServiceAgreementRow>
+
+@{
+    var agreement = Model.Value.Agreement;
+    var culture = CultureInfo.CurrentCulture;
+}
+<span class="badge @(agreement.Status == ServiceAgreementStatus.Active ? "text-bg-success" : "ta-badge") fw-normal">@agreement.Status</span>
+<span class="badge ta-badge fw-normal">@(agreement.Schedules.Count == 1 ? T["1 schedule"] : T["{0} schedules", agreement.Schedules.Count])</span>
+<span class="badge ta-badge fw-normal">@(agreement.Pricing == AgreementPricing.Included ? T["Visits included"] : T["{0} a visit", agreement.PricePerVisit.ToString("N2", culture)])</span>
+<span class="badge ta-badge fw-normal">@(agreement.EndDate is { } end ? T["{0} to {1}", agreement.StartDate.ToString("d", culture), end.ToString("d", culture)] : T["From {0}", agreement.StartDate.ToString("d", culture)])</span>
