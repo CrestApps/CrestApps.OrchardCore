@@ -26,6 +26,7 @@ public sealed class TerritoriesController : Controller
     private readonly IGeoSettingsService _settingsService;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IEnumerable<ITerritoryMemberSource> _memberSources;
 
     internal readonly IHtmlLocalizer H;
 
@@ -46,7 +47,8 @@ public sealed class TerritoriesController : Controller
         IGeoSettingsService settingsService,
         IClock clock,
         INotifier notifier,
-        IHtmlLocalizer<TerritoriesController> htmlLocalizer)
+        IHtmlLocalizer<TerritoriesController> htmlLocalizer,
+        IEnumerable<ITerritoryMemberSource> memberSources)
     {
         _authorizationService = authorizationService;
         _manager = manager;
@@ -54,6 +56,7 @@ public sealed class TerritoriesController : Controller
         _settingsService = settingsService;
         _clock = clock;
         _notifier = notifier;
+        _memberSources = memberSources;
         H = htmlLocalizer;
     }
 
@@ -134,6 +137,7 @@ public sealed class TerritoriesController : Controller
             PostalCodes = string.Join(", ", item.PostalCodes),
             TimeZoneId = item.TimeZoneId,
             TravelSpeedKmh = item.TravelSpeedKmh,
+            Members = item.Members.GroupBy(member => member.Kind ?? string.Empty, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Select(member => member.Id).ToList(), StringComparer.Ordinal),
         };
 
         await PopulateAsync(model);
@@ -170,6 +174,15 @@ public sealed class TerritoriesController : Controller
         item.PostalCodes = [.. (form.PostalCodes ?? string.Empty).Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
         item.TimeZoneId = string.IsNullOrEmpty(form.TimeZoneId) ? null : form.TimeZoneId;
         item.TravelSpeedKmh = form.TravelSpeedKmh;
+
+        // Members of kinds no module lists any more stay as they were.
+        var kinds = _memberSources.Select(source => source.Kind).ToHashSet(StringComparer.Ordinal);
+
+        item.Members =
+        [
+            .. item.Members.Where(member => !kinds.Contains(member.Kind ?? string.Empty)),
+            .. kinds.SelectMany(kind => (form.Members?.GetValueOrDefault(kind) ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Select(id => new TerritoryMember { Kind = kind, Id = id, Role = TerritoryRole.Primary })),
+        ];
 
         var validation = await _manager.ValidateAsync(item);
 
@@ -242,5 +255,18 @@ public sealed class TerritoriesController : Controller
         model.ParentOptions = [.. all.Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == model.ParentId))];
         model.OtherShapes = [.. all.Where(item => !string.IsNullOrEmpty(item.Shape)).Select(item => new TerritoryShape { Label = item.Name, GeoJson = item.Shape })];
         model.TimeZoneOptions = [.. _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId))];
+        model.MemberGroups = [];
+
+        foreach (var source in _memberSources)
+        {
+            var selected = model.Members.GetValueOrDefault(source.Kind) ?? [];
+
+            model.MemberGroups.Add(new TerritoryMemberGroup
+            {
+                Kind = source.Kind,
+                DisplayName = source.DisplayName,
+                Options = [.. (await source.ListAsync(HttpContext.RequestAborted)).Select(member => new SelectListItem(member.Name, member.Id, selected.Contains(member.Id)))],
+            });
+        }
     }
 }

@@ -1,0 +1,26 @@
+using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Dispatch;
+using CrestApps.OrchardCore.Geo;
+using CrestApps.OrchardCore.WorkOrders;
+using CrestApps.OrchardCore.Workforce;
+using OrchardCore.Modules.Manifest;
+
+[assembly: Module(
+    Name = "Dispatch",
+    Author = CrestAppsManifestConstants.Author,
+    Website = CrestAppsManifestConstants.Website,
+    Version = CrestAppsManifestConstants.Version
+)]
+
+[assembly: Feature(
+    Id = DispatchConstants.Features.Dispatch,
+    Name = "Dispatch",
+    Description = "Visits for work orders, technicians found by skills, certifications, territory, shifts, time off and travel, assignment that never double-books, a job on each technician's calendar, and a live dispatch board with a map.",
+    Category = "Field Service",
+    Dependencies =
+    [
+        WorkOrdersConstants.Features.WorkOrders,
+        WorkforceConstants.Features.Workforce,
+        GeoConstants.Features.Geo,
+    ]
+)]

@@ -406,7 +406,7 @@ public sealed class WorkforceTests
         Assert.Equal(["9:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"], slots.Select(slot => CalendarTime.ToLocal(slot.StartUtc, "America/New_York").ToString("H:mm", null)));
     }
 
-    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> schema = null, IEnumerable<IIndexProvider> indexProviders = null)
+    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> schema = null, IEnumerable<IIndexProvider> indexProviders = null, IEnumerable<string> collections = null)
     {
         return CalendarTestHarness.CreateAsync(
             services =>
@@ -442,7 +442,7 @@ public sealed class WorkforceTests
                 .Concat(TimeClockIndexProviders.All())
                 .Concat(indexProviders ?? [])
                 .ToArray(),
-            [SkillsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName]);
+            new[] { SkillsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName }.Concat(collections ?? []).ToArray());
     }
 
     internal static Task<WorkforceTeam> AddTeamAsync(CalendarTestHarness harness, string name, TeamKind kind, string parentId = null)

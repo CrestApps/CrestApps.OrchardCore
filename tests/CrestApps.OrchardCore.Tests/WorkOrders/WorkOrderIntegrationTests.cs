@@ -123,6 +123,25 @@ public sealed class WorkOrderIntegrationTests
     }
 
     [Fact]
+    public async Task AMovedPin_FindsTheTerritoryAgain_WithoutGeocoding()
+    {
+        var territories = new Mock<ITerritoryResolver>();
+        var queue = new Mock<IGeocodeQueue>();
+        var south = new ServiceTerritory { ItemId = "south", Name = "South" };
+
+        territories.Setup(resolver => resolver.ResolveAsync(It.Is<GeoPoint?>(point => point.HasValue && point.Value.Latitude == 40.1), "10001", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TerritoryMatch(south, TerritoryMatchKind.Shape));
+
+        var handler = new GeoWorkOrderHandler(territories.Object, new Lazy<IGeocodeQueue>(() => queue.Object));
+        var workOrder = new WorkOrder { ItemId = "wo-1", TerritoryId = null, ServiceAddress = new Address { AddressLine1 = "1 Main St", PostalCode = "10001", Latitude = 40.1, Longitude = -74, GeocodeSource = "Pin" } };
+
+        await handler.UpdatingAsync(workOrder, TestContext.Current.CancellationToken);
+
+        Assert.Equal("south", workOrder.TerritoryId);
+        queue.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task TheWorkflowEvents_GetTheWorkOrdersDetails()
     {
         var workflows = new Mock<IWorkflowManager>();

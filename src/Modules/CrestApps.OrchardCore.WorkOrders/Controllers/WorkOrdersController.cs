@@ -308,7 +308,7 @@ public sealed class WorkOrdersController : Controller
     /// <param name="id">The work order.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/view/{id}", "WorkOrdersView")]
-    public async Task<IActionResult> Details(string id)
+    public async Task<IActionResult> Details(string id, [FromServices] IDisplayManager<WorkOrderPanels> panels, [FromServices] global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ViewWorkOrders))
         {
@@ -338,8 +338,11 @@ public sealed class WorkOrdersController : Controller
             }
         }
 
+        var canManage = await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrders);
+
         return View(new WorkOrderDetailsViewModel
         {
+            Panels = await panels.BuildDisplayAsync(new WorkOrderPanels { WorkOrder = workOrder, CanManage = canManage }, updateModelAccessor.ModelUpdater, "Detail"),
             VisitDay = visitDay,
             WorkOrder = workOrder,
             Type = type,
@@ -348,7 +351,7 @@ public sealed class WorkOrdersController : Controller
             SubStatuses = subStatuses,
             NextStatuses = [.. WorkOrderStatusRules.Next(workOrder.Status).Where(status => status != WorkOrderStatus.Completed)],
             CanComplete = WorkOrderStatusRules.CanMove(workOrder.Status, WorkOrderStatus.Completed),
-            CanManage = await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrders),
+            CanManage = canManage,
             TracksParts = _service.TracksParts,
             BillableAmount = type is null ? 0 : WorkOrderService.BillableAmount(workOrder, type),
             Assets = [.. assets.Where(asset => workOrder.AssetIds.Contains(asset.Value))],
@@ -565,6 +568,8 @@ public sealed class WorkOrdersController : Controller
             Region = address?.Region,
             PostalCode = address?.PostalCode,
             Country = address?.Country,
+            Latitude = address?.Latitude,
+            Longitude = address?.Longitude,
             AccessNotes = workOrder.AccessNotes,
             Earliest = workOrder.EarliestUtc is { } earliest ? (await _localClock.ConvertToLocalAsync(earliest)).DateTime : null,
             Latest = workOrder.LatestUtc is { } latest ? (await _localClock.ConvertToLocalAsync(latest)).DateTime : null,
@@ -605,10 +610,31 @@ public sealed class WorkOrdersController : Controller
             Country = Clean(form.Country),
         };
         var current = workOrder.ServiceAddress;
+        var pinned = GeoPointOf(form.Latitude, form.Longitude);
 
         if (address.AddressLine1 is null && address.City is null && address.PostalCode is null)
         {
             workOrder.ServiceAddress = null;
+        }
+        else if (pinned is { } pin && (pin.Latitude != current?.Latitude || pin.Longitude != current?.Longitude))
+        {
+            // Placed by hand on the map: the pin is where the job is, whatever geocoding would say.
+            workOrder.ServiceAddress = new Address
+            {
+                AddressLine1 = address.AddressLine1,
+                AddressLine2 = address.AddressLine2,
+                City = address.City,
+                Region = address.Region,
+                PostalCode = address.PostalCode,
+                Country = address.Country,
+                Latitude = pin.Latitude,
+                Longitude = pin.Longitude,
+                GeocodedUtc = _clock.UtcNow,
+                GeocodeSource = "Pin",
+            };
+
+            // The territory is found again from the pin.
+            workOrder.TerritoryId = null;
         }
         else if (current is null
             || current.AddressLine1 != address.AddressLine1
@@ -627,12 +653,16 @@ public sealed class WorkOrdersController : Controller
     {
         model.AssetOptions = [.. (await _lookups.AssetsAsync(HttpContext.RequestAborted)).Select(option => new SelectListItem(option.Text, option.Value, model.AssetIds.Contains(option.Value)))];
         model.StockItemOptions = await _lookups.StockItemsAsync(HttpContext.RequestAborted);
+        model.Map = HttpContext.RequestServices.GetService(typeof(CrestApps.OrchardCore.Geo.Services.IGeoSettingsService)) is CrestApps.OrchardCore.Geo.Services.IGeoSettingsService geo ? await geo.GetAsync() : null;
 
         while (model.Lines.Count(line => string.IsNullOrWhiteSpace(line.Description)) < BlankLines)
         {
             model.Lines.Add(new LineEditModel());
         }
     }
+
+    private static (double Latitude, double Longitude)? GeoPointOf(double? latitude, double? longitude)
+        => latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180 ? (Math.Round(latitude.Value, 6), Math.Round(longitude.Value, 6)) : null;
 
     private static string Clean(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

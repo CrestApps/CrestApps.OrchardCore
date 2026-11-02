@@ -57,6 +57,54 @@
         </div>
     </div>
 
+    @if (Model.SkillOptions.Count + Model.CertificationOptions.Count > 0)
+    {
+        <h2 class="h5 mt-4">@T["Who can do it"]</h2>
+        <p class="hint">@T["Dispatch offers only technicians with these skills, at the level or above, and these certifications, valid on the day."]</p>
+        @if (Model.SkillOptions.Count > 0)
+        {
+            <div class="mb-3">
+                <div class="form-label">@T["Skills needed"]</div>
+                @for (var i = 0; i < Model.RequiredSkills.Count; i++)
+                {
+                    <div class="row g-2 mb-2">
+                        <div class="col-8 col-md-5">
+                            <label for="RequiredSkills_@(i)__SkillId" class="visually-hidden">@T["Skill"]</label>
+                            <select id="RequiredSkills_@(i)__SkillId" name="RequiredSkills[@i].SkillId" class="form-select">
+                                <option value="">@T["No skill"]</option>
+                                @foreach (var option in Model.SkillOptions)
+                                {
+                                    <option value="@option.Value" selected="@(option.Value == Model.RequiredSkills[i].SkillId)">@option.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-4 col-md-3">
+                            <label for="RequiredSkills_@(i)__MinProficiency" class="visually-hidden">@T["Lowest level"]</label>
+                            <div class="input-group">
+                                <span class="input-group-text">@T["Level"]</span>
+                                <input id="RequiredSkills_@(i)__MinProficiency" name="RequiredSkills[@i].MinProficiency" type="number" min="1" max="5" value="@Model.RequiredSkills[i].MinProficiency" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+                }
+                <span class="hint">@T["Save to get another empty row."]</span>
+            </div>
+        }
+        @if (Model.CertificationOptions.Count > 0)
+        {
+            <div class="mb-3">
+                <div class="form-label">@T["Certifications needed"]</div>
+                @foreach (var option in Model.CertificationOptions)
+                {
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="RequiredCertificationIds" value="@option.Value" id="certification-@option.Value" checked="@option.Selected" />
+                        <label class="form-check-label" for="certification-@option.Value">@option.Text</label>
+                    </div>
+                }
+            </div>
+        }
+    }
+
     <h2 class="h5 mt-4">@T["Finishing the job"]</h2>
     <div class="row g-3 mb-3">
         <div class="col-12 col-md-6">

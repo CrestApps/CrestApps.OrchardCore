@@ -254,4 +254,36 @@ public class TerritoryEditViewModel
     /// </summary>
     [BindNever]
     public GeoSettings Map { get; set; }
+
+    /// <summary>
+    /// Gets or sets who serves the territory, by kind of member.
+    /// </summary>
+    public Dictionary<string, List<string>> Members { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lists to choose members from.
+    /// </summary>
+    [BindNever]
+    public IList<TerritoryMemberGroup> MemberGroups { get; set; } = [];
+}
+
+/// <summary>
+/// A list of who can serve a territory, such as its technicians.
+/// </summary>
+public sealed class TerritoryMemberGroup
+{
+    /// <summary>
+    /// Gets or sets the kind of member.
+    /// </summary>
+    public string Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list's label.
+    /// </summary>
+    public string DisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the choices, the members selected.
+    /// </summary>
+    public IList<SelectListItem> Options { get; set; } = [];
 }

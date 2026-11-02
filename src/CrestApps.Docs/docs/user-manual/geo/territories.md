@@ -50,3 +50,7 @@ Turn on the **Azure Maps**, **Google Maps** or **OSRM** feature under **Configur
 - **OSRM:** enter the address of your own OSRM server and its profile, usually driving. It gives travel times and routes, but doesn't geocode.
 
 Then choose the provider under **Geocoding**, **Travel times** or **Routes on maps**, and select **Save**. Addresses that waited for a geocoding provider are tried at the next run. A saved key is never shown again; enter a new one to replace it, or tick **Remove the key**.
+
+## Who serves a territory
+
+With Dispatch on, choose under **Who serves it** the technicians and the teams that work in the territory. Dispatch offers them first for its work, and only them when the dispatch settings say so.

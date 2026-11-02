@@ -1,0 +1,125 @@
+@model DispatchBoardViewModel
+
+@{
+    var day = DateOnly.ParseExact(Model.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+    var texts = new Dictionary<string, string>
+    {
+        ["unscheduledEmpty"] = T["Nothing waiting. New work orders show up here."].Value,
+        ["noTechnicians"] = T["No technicians in this team. Add workers to a team, then publish their shifts."].Value,
+        ["noShift"] = T["No shift"].Value,
+        ["findTechnician"] = T["Find technician"].Value,
+        ["assign"] = T["Assign"].Value,
+        ["minutes"] = T["{0} min"].Value,
+        ["due"] = T["Resolve by {0}"].Value,
+        ["travel"] = T["{0} min travel"].Value,
+        ["score"] = T["Score {0}"].Value,
+        ["nobody"] = T["Nobody can take it this day."].Value,
+        ["ruledOut"] = T["{0} ruled out"].Value,
+        ["candidatesFor"] = T["Technicians for {0}"].Value,
+        ["close"] = T["Close"].Value,
+        ["moved"] = T["{0} is scheduled."].Value,
+        ["failed"] = T["Couldn't move it."].Value,
+        ["live"] = T["Live"].Value,
+        ["refreshing"] = T["Updates every minute"].Value,
+        ["pinned"] = T["Pinned"].Value,
+        ["late"] = T["Past its resolution target"].Value,
+        ["dragHint"] = T["Drag a visit onto a technician's row at the time it should start."].Value,
+        ["unscheduled"] = T["Unscheduled"].Value,
+        ["technician"] = T["Technician"].Value,
+    };
+}
+
+<zone Name="Title"><breadcrumb name="DispatchBoard" title="@T["Dispatch Board"]" /></zone>
+
+<style asp-name="leaflet"></style>
+<style asp-name="CrestApps.OrchardCore.Dispatch.Board"></style>
+@if (!string.IsNullOrEmpty(Model.HubUrl))
+{
+    <script asp-name="signalr" at="Foot"></script>
+}
+<script asp-name="CrestApps.OrchardCore.Dispatch.Board" at="Foot"></script>
+
+<form asp-action="Index" method="get" id="dispatch-board-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <a class="btn btn-secondary" asp-action="Index" asp-route-day="@day.AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" asp-route-teamId="@Model.TeamId" title="@T["The day before"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i><span class="visually-hidden">@T["The day before"]</span></a>
+                        <label for="dispatch-day" class="visually-hidden">@T["Day"]</label>
+                        <input id="dispatch-day" type="date" name="day" value="@Model.Day" class="form-control" onchange="this.form.submit()" />
+                        <a class="btn btn-secondary" asp-action="Index" asp-route-day="@day.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" asp-route-teamId="@Model.TeamId" title="@T["The day after"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><span class="visually-hidden">@T["The day after"]</span></a>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-secondary" asp-action="Index" asp-route-teamId="@Model.TeamId">@T["Today"]</a>
+                </div>
+                <div class="col-auto">
+                    <label for="dispatch-team" class="visually-hidden">@T["Team"]</label>
+                    <select id="dispatch-team" name="teamId" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">@T["Every team"]</option>
+                        @foreach (var option in Model.TeamOptions)
+                        {
+                            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col">
+                    <span class="small text-muted" data-board-title></span>
+                    <span class="badge ta-badge fw-normal ms-1" data-board-live></span>
+                </div>
+                <div class="col-auto">
+                    <a asp-controller="Visits" asp-action="Index" class="btn btn-sm btn-secondary">@T["Visits"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="dispatch-board"
+     data-data-url="@Url.Action("Data", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch })"
+     data-move-url="@Url.Action("Move", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch })"
+     data-candidates-url="@Url.Action("Candidates", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch, visitId = "__id__" })"
+     data-day="@Model.Day"
+     data-team-id="@Model.TeamId"
+     data-can-manage="@(Model.CanManage ? "true" : "false")"
+     data-hub-url="@Model.HubUrl"
+     data-texts="@System.Text.Json.JsonSerializer.Serialize(texts)">
+    @Html.AntiForgeryToken()
+    <div class="alert alert-danger d-none" role="alert" data-board-error></div>
+    <div class="row g-3">
+        <div class="col-12 col-xl-9">
+            <div class="card mb-3">
+                <div class="card-body p-2">
+                    @if (Model.CanManage)
+                    {
+                        <p class="small text-muted mb-2">@texts["dragHint"]</p>
+                    }
+                    <div class="db-timeline" data-board-timeline aria-live="polite">
+                        <div class="text-muted small p-3">@T["Loading…"]</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6">@T["Map"]</h2>
+                    @{
+                        ViewData["MapId"] = "dispatch-map";
+                        ViewData["MapHeight"] = "22rem";
+                        ViewData["MapLabel"] = T["The day's visits on the map"].Value;
+                    }
+                    <partial name="_DispatchMap" model="Model.Map" />
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-3">
+            <div class="card mb-3 d-none" data-board-candidates></div>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6">@T["Unscheduled"] <span class="badge ta-badge fw-normal" data-board-queue-count></span></h2>
+                    <div class="db-queue" data-board-queue></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

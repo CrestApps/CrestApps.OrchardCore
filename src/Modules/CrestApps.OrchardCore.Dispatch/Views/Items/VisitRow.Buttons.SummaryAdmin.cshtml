@@ -1,0 +1,3 @@
+@model ShapeViewModel<VisitRow>
+
+<a asp-controller="Visits" asp-action="Details" asp-route-id="@Model.Value.Visit.ItemId" class="btn btn-primary btn-sm">@T["View"]</a>

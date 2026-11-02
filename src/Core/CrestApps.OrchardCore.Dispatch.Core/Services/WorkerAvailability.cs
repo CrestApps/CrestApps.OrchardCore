@@ -1,0 +1,394 @@
+using CrestApps.Core;
+using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Dispatch.Core.Indexes;
+using CrestApps.OrchardCore.Dispatch.Models;
+using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Geo.Models;
+using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.WorkOrders.Core.Services;
+using CrestApps.OrchardCore.Workforce;
+using CrestApps.OrchardCore.Workforce.Models;
+using CrestApps.OrchardCore.Workforce.Services;
+using YesSql;
+
+namespace CrestApps.OrchardCore.Dispatch.Core.Services;
+
+/// <summary>
+/// A span of time, in UTC.
+/// </summary>
+/// <param name="Start">The start.</param>
+/// <param name="End">The end.</param>
+public readonly record struct TimeSpanUtc(DateTime Start, DateTime End)
+{
+    /// <summary>
+    /// Tells whether the span overlaps another.
+    /// </summary>
+    /// <param name="start">The other's start.</param>
+    /// <param name="end">The other's end.</param>
+    /// <returns>Whether they overlap.</returns>
+    public bool Overlaps(DateTime start, DateTime end) => Start < end && start < End;
+}
+
+/// <summary>
+/// When a worker can work over a period: their shifts without breaks and time off, and the visits they already have.
+/// </summary>
+public sealed class WorkerAvailability
+{
+    /// <summary>
+    /// Gets or sets the worker.
+    /// </summary>
+    public WorkerProfile Worker { get; set; }
+
+    /// <summary>
+    /// Gets or sets the worker's time zone.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the worker starts from.
+    /// </summary>
+    public GeoPoint? Home { get; set; }
+
+    /// <summary>
+    /// Gets or sets the team calendars the worker's job events go on.
+    /// </summary>
+    public string CalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the spans they are on shift and free of breaks and time off, earliest first.
+    /// </summary>
+    public List<TimeSpanUtc> Open { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether any shift falls in the period.
+    /// </summary>
+    public bool HasShift { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time off in the period.
+    /// </summary>
+    public List<TimeSpanUtc> TimeOff { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the worker's other visits that keep them busy, earliest first.
+    /// </summary>
+    public List<ServiceVisit> Visits { get; set; } = [];
+}
+
+/// <summary>
+/// Reads what dispatch needs to know about workers, places and travel.
+/// </summary>
+public sealed class DispatchResources
+{
+    private readonly IWorkerManager _workerManager;
+    private readonly ITeamManager _teamManager;
+    private readonly IShiftService _shiftService;
+    private readonly ICalendarQueryService _queryService;
+    private readonly ISession _session;
+    private readonly WorkOrderStore _workOrderStore;
+    private readonly IEnumerable<IGeoService> _geoServices;
+    private readonly IDispatchSettingsProvider _settingsProvider;
+    private readonly Dictionary<string, GeoPoint?> _places = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, WorkforceTeam> _teams = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DispatchResources"/> class.
+    /// </summary>
+    public DispatchResources(
+        IWorkerManager workerManager,
+        ITeamManager teamManager,
+        IShiftService shiftService,
+        ICalendarQueryService queryService,
+        ISession session,
+        WorkOrderStore workOrderStore,
+        IEnumerable<IGeoService> geoServices,
+        IDispatchSettingsProvider settingsProvider)
+    {
+        _settingsProvider = settingsProvider;
+        _workerManager = workerManager;
+        _teamManager = teamManager;
+        _shiftService = shiftService;
+        _queryService = queryService;
+        _session = session;
+        _workOrderStore = workOrderStore;
+        _geoServices = geoServices;
+    }
+
+    /// <summary>
+    /// Gets whether travel can be measured.
+    /// </summary>
+    public bool MeasuresTravel => _geoServices.Any();
+
+    /// <summary>
+    /// Lists the active workers.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The workers.</returns>
+    public async Task<IReadOnlyList<WorkerProfile>> ListWorkersAsync(CancellationToken cancellationToken = default)
+    {
+        var (_, workers) = await _workerManager.SearchAsync(new WorkerQuery { Status = WorkerStatus.Active }, 0, 1000, cancellationToken);
+
+        return workers;
+    }
+
+    /// <summary>
+    /// Finds a worker.
+    /// </summary>
+    /// <param name="workerId">The worker.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The worker, or <see langword="null"/>.</returns>
+    public async Task<WorkerProfile> FindWorkerAsync(string workerId, CancellationToken cancellationToken = default)
+        => string.IsNullOrEmpty(workerId) ? null : await _workerManager.FindByIdAsync(workerId, cancellationToken);
+
+    /// <summary>
+    /// Reads when a worker can work between two times.
+    /// </summary>
+    /// <param name="worker">The worker.</param>
+    /// <param name="fromUtc">The start, in UTC.</param>
+    /// <param name="toUtc">The end, in UTC.</param>
+    /// <param name="ignoreVisitId">A visit to leave out, such as the one being moved.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The availability.</returns>
+    public async Task<WorkerAvailability> GetAvailabilityAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc, string ignoreVisitId = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(worker);
+
+        var date = DateOnly.FromDateTime(fromUtc);
+        var memberships = worker.MembershipsOn(date).Select(membership => membership.TeamId).ToList();
+
+        if (!string.IsNullOrEmpty(worker.PrimaryTeamId) && memberships.Remove(worker.PrimaryTeamId))
+        {
+            memberships.Insert(0, worker.PrimaryTeamId);
+        }
+
+        var teams = new List<WorkforceTeam>();
+
+        foreach (var teamId in memberships.Distinct(StringComparer.Ordinal))
+        {
+            var team = await FindTeamAsync(teamId, cancellationToken);
+
+            if (team is not null)
+            {
+                teams.Add(team);
+            }
+        }
+
+        var availability = new WorkerAvailability
+        {
+            Worker = worker,
+            TimeZoneId = await TimeZoneOfAsync(worker, teams, cancellationToken),
+            Home = GeoPoint.From(worker.HomeBase?.Latitude, worker.HomeBase?.Longitude)
+                ?? teams.Select(team => GeoPoint.From(team.Location?.Latitude, team.Location?.Longitude)).FirstOrDefault(point => point is not null),
+            CalendarId = teams.Select(team => team.CalendarId).FirstOrDefault(id => !string.IsNullOrEmpty(id)),
+        };
+
+        var shifts = await _shiftService.ListWorkerShiftsAsync(worker.ItemId, fromUtc, toUtc, cancellationToken);
+        var blocked = new List<TimeSpanUtc>();
+
+        foreach (var shift in shifts)
+        {
+            availability.HasShift = true;
+            availability.Open.Add(new TimeSpanUtc(shift.StartUtc, shift.EndUtc));
+
+            if (shift.TryGet<ShiftData>(out var data))
+            {
+                blocked.AddRange(data.Segments.Where(segment => segment.Kind != ActivityKind.Work).Select(segment => new TimeSpanUtc(segment.StartUtc, segment.EndUtc)));
+            }
+        }
+
+        var calendarIds = teams.Select(team => team.CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (calendarIds.Length > 0)
+        {
+            var timeOff = await _queryService.GetOccurrencesAsync(new CalendarOccurrenceQuery
+            {
+                CalendarIds = calendarIds,
+                FromUtc = fromUtc,
+                ToUtc = toUtc,
+                EventTypes = [WorkforceConstants.EventTypes.TimeOff],
+                Sources = [WorkforceConstants.Source],
+            }, cancellationToken);
+
+            foreach (var occurrence in timeOff)
+            {
+                if (occurrence.Event.Status != CalendarEventStatus.Cancelled &&
+                    occurrence.Event.TryGet<TimeOffEventData>(out var data) &&
+                    data.WorkerId == worker.ItemId)
+                {
+                    availability.TimeOff.Add(new TimeSpanUtc(occurrence.StartUtc, occurrence.EndUtc));
+                }
+            }
+        }
+
+        blocked.AddRange(availability.TimeOff);
+        availability.Open = Subtract(availability.Open, blocked);
+        availability.Visits = (await ListWorkerVisitsAsync(worker.ItemId, fromUtc.AddHours(-12), toUtc.AddHours(12), ignoreVisitId, cancellationToken)).ToList();
+
+        return availability;
+    }
+
+    /// <summary>
+    /// Gives a worker's time zone: their own, their team's or a parent team's, or the one dispatch shows.
+    /// </summary>
+    private async Task<string> TimeZoneOfAsync(WorkerProfile worker, List<WorkforceTeam> teams, CancellationToken cancellationToken)
+    {
+        if (Valid(worker.TimeZoneId))
+        {
+            return worker.TimeZoneId;
+        }
+
+        foreach (var team in teams)
+        {
+            if (Valid(team.TimeZoneId))
+            {
+                return team.TimeZoneId;
+            }
+
+            foreach (var ancestor in await _teamManager.GetAncestorsAsync(team.ItemId, cancellationToken))
+            {
+                if (Valid(ancestor.TimeZoneId))
+                {
+                    return ancestor.TimeZoneId;
+                }
+            }
+        }
+
+        var zone = await _settingsProvider.GetTimeZoneIdAsync();
+
+        return Valid(zone) ? zone : "UTC";
+    }
+
+    private static bool Valid(string zone) => !string.IsNullOrEmpty(zone) && Calendars.Core.CalendarTime.IsValidZone(zone);
+
+    /// <summary>
+    /// Lists a worker's visits that keep them busy and overlap a time.
+    /// </summary>
+    /// <param name="workerId">The worker.</param>
+    /// <param name="fromUtc">The start, in UTC.</param>
+    /// <param name="toUtc">The end, in UTC.</param>
+    /// <param name="ignoreVisitId">A visit to leave out.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The visits, earliest first.</returns>
+    public async Task<IReadOnlyList<ServiceVisit>> ListWorkerVisitsAsync(string workerId, DateTime fromUtc, DateTime toUtc, string ignoreVisitId = null, CancellationToken cancellationToken = default)
+    {
+        var visits = await _session.Query<ServiceVisit, VisitWorkerIndex>(index => index.WorkerId == workerId && index.IsActive && index.StartUtc < toUtc && index.EndUtc > fromUtc, collection: DispatchConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return visits
+            .Where(visit => visit.ItemId != ignoreVisitId)
+            .DistinctBy(visit => visit.ItemId)
+            .OrderBy(visit => visit.StartUtc)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Finds where a work order's job is.
+    /// </summary>
+    /// <param name="workOrderId">The work order.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The place, or <see langword="null"/> when it isn't known.</returns>
+    public async Task<GeoPoint?> PlaceOfAsync(string workOrderId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(workOrderId))
+        {
+            return null;
+        }
+
+        if (!_places.TryGetValue(workOrderId, out var place))
+        {
+            var workOrder = await _workOrderStore.FindByIdAsync(workOrderId, cancellationToken);
+
+            place = GeoPoint.From(workOrder?.ServiceAddress?.Latitude, workOrder?.ServiceAddress?.Longitude);
+            _places[workOrderId] = place;
+        }
+
+        return place;
+    }
+
+    /// <summary>
+    /// Measures the trip between two places.
+    /// </summary>
+    /// <param name="from">Where it starts.</param>
+    /// <param name="to">Where it ends.</param>
+    /// <param name="departureUtc">When it starts, in UTC.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The trip, or <see langword="null"/> when a place isn't known or travel can't be measured.</returns>
+    public async Task<TravelLeg?> TravelAsync(GeoPoint? from, GeoPoint? to, DateTime departureUtc, CancellationToken cancellationToken = default)
+    {
+        var geo = _geoServices.FirstOrDefault();
+
+        if (geo is null || from is null || to is null)
+        {
+            return null;
+        }
+
+        if (from.Value == to.Value)
+        {
+            return new TravelLeg(TimeSpan.Zero, 0);
+        }
+
+        var matrix = await geo.GetMatrixAsync([from.Value], [to.Value], departureUtc, null, cancellationToken);
+
+        return matrix?.Legs.Count > 0 && matrix.Legs[0].Count > 0 ? matrix[0, 0] : null;
+    }
+
+    /// <summary>
+    /// Finds a team.
+    /// </summary>
+    /// <param name="teamId">The team.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The team, or <see langword="null"/>.</returns>
+    public async Task<WorkforceTeam> FindTeamAsync(string teamId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(teamId))
+        {
+            return null;
+        }
+
+        if (!_teams.TryGetValue(teamId, out var team))
+        {
+            team = await _teamManager.FindByIdAsync(teamId, cancellationToken);
+            _teams[teamId] = team;
+        }
+
+        return team;
+    }
+
+    /// <summary>
+    /// Takes some spans out of others.
+    /// </summary>
+    /// <param name="spans">The spans.</param>
+    /// <param name="holes">The spans to take out.</param>
+    /// <returns>What is left, earliest first.</returns>
+    public static List<TimeSpanUtc> Subtract(IEnumerable<TimeSpanUtc> spans, IEnumerable<TimeSpanUtc> holes)
+    {
+        var result = new List<TimeSpanUtc>();
+        var cuts = holes.OrderBy(hole => hole.Start).ToArray();
+
+        foreach (var span in spans.OrderBy(span => span.Start))
+        {
+            var start = span.Start;
+
+            foreach (var cut in cuts.Where(cut => cut.Overlaps(span.Start, span.End)))
+            {
+                if (cut.Start > start)
+                {
+                    result.Add(new TimeSpanUtc(start, cut.Start));
+                }
+
+                if (cut.End > start)
+                {
+                    start = cut.End;
+                }
+            }
+
+            if (start < span.End)
+            {
+                result.Add(new TimeSpanUtc(start, span.End));
+            }
+        }
+
+        return result;
+    }
+}

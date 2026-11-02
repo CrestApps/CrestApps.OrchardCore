@@ -1,0 +1,459 @@
+/* global L */
+// The dispatch board: a row per technician with their shift, time off and visits on a day's timeline, the visits
+// waiting for a time in a queue, and every visit on a map. Visits are dragged onto a row at the time they should start;
+// the server checks the technician is free and refuses with the reason when not. With SignalR on, every open board
+// reloads when a visit changes; otherwise it reloads each minute.
+(function () {
+    'use strict';
+
+    const root = document.getElementById('dispatch-board');
+
+    if (!root) {
+        return;
+    }
+
+    const hourMs = 3600000;
+    const snapMinutes = 15;
+    const texts = JSON.parse(root.dataset.texts || '{}');
+    const canManage = root.dataset.canManage === 'true';
+    const tokenInput = root.querySelector('input[name="__RequestVerificationToken"]');
+    const timeline = root.querySelector('[data-board-timeline]');
+    const queue = root.querySelector('[data-board-queue]');
+    const queueCount = root.querySelector('[data-board-queue-count]');
+    const candidatesCard = root.querySelector('[data-board-candidates]');
+    const errorBox = root.querySelector('[data-board-error]');
+    const title = document.querySelector('[data-board-title]');
+    const live = document.querySelector('[data-board-live]');
+
+    let data = null;
+    let map = null;
+    let markerLayer = null;
+    let reloadTimer = null;
+
+    const format = (text, ...values) => values.reduce((result, value, index) => result.replace(`{${index}}`, value), text || '');
+
+    const element = (tag, className, text) => {
+        const node = document.createElement(tag);
+
+        if (className) {
+            node.className = className;
+        }
+
+        if (text !== undefined && text !== null) {
+            node.textContent = text;
+        }
+
+        return node;
+    };
+
+    // Where a time falls on the timeline, as a percentage of its width.
+    const position = (utc) => {
+        const hours = (new Date(utc).getTime() - new Date(data.fromUtc).getTime()) / hourMs;
+
+        return Math.max(0, Math.min(100, ((hours - data.firstHour) / (data.lastHour - data.firstHour)) * 100));
+    };
+
+    const span = (start, end) => ({ left: position(start), width: Math.max(0.4, position(end) - position(start)) });
+
+    const place = (node, start, end) => {
+        const box = span(start, end);
+
+        node.style.left = `${box.left}%`;
+        node.style.width = `${box.width}%`;
+
+        return node;
+    };
+
+    const showError = (messages) => {
+        if (!messages || messages.length === 0) {
+            errorBox.classList.add('d-none');
+            errorBox.textContent = '';
+
+            return;
+        }
+
+        errorBox.textContent = messages.join(' ');
+        errorBox.classList.remove('d-none');
+    };
+
+    const load = async () => {
+        const url = new URL(root.dataset.dataUrl, window.location.origin);
+
+        url.searchParams.set('day', root.dataset.day);
+
+        if (root.dataset.teamId) {
+            url.searchParams.set('teamId', root.dataset.teamId);
+        }
+
+        const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+
+        if (!response.ok) {
+            return;
+        }
+
+        data = await response.json();
+        render();
+    };
+
+    const scheduleReload = () => {
+        window.clearTimeout(reloadTimer);
+        reloadTimer = window.setTimeout(load, 400);
+    };
+
+    const move = async (visitId, workerId, startUtc) => {
+        const response = await fetch(root.dataset.moveUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                RequestVerificationToken: tokenInput ? tokenInput.value : '',
+            },
+            body: JSON.stringify({ visitId, workerId, startUtc }),
+        });
+
+        if (!response.ok) {
+            showError([texts.failed]);
+
+            return false;
+        }
+
+        const result = await response.json();
+
+        showError(result.succeeded ? [] : result.errors);
+        await load();
+
+        return result.succeeded;
+    };
+
+    // The start a drop on a row means: where the pointer is, to the nearest quarter hour.
+    const startAt = (track, clientX) => {
+        const rect = track.getBoundingClientRect();
+        const share = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const hours = data.firstHour + share * (data.lastHour - data.firstHour);
+        const minutes = Math.round((hours * 60) / snapMinutes) * snapMinutes;
+
+        return new Date(new Date(data.fromUtc).getTime() + minutes * 60000).toISOString();
+    };
+
+    const makeDraggable = (node, visit) => {
+        if (!canManage || !visit.canMove) {
+            return;
+        }
+
+        node.draggable = true;
+        node.addEventListener('dragstart', (event) => {
+            event.dataTransfer.setData('text/plain', visit.id);
+            event.dataTransfer.effectAllowed = 'move';
+            node.classList.add('db-dragging');
+        });
+        node.addEventListener('dragend', () => node.classList.remove('db-dragging'));
+    };
+
+    const renderHeader = () => {
+        const header = element('div', 'db-row db-header');
+        const ticks = element('div', 'db-track');
+
+        header.appendChild(element('div', 'db-name', texts.technician));
+
+        for (let hour = data.firstHour; hour < data.lastHour; hour++) {
+            const tick = element('div', 'db-tick', `${String(hour % 24).padStart(2, '0')}:00`);
+
+            tick.style.left = `${((hour - data.firstHour) / (data.lastHour - data.firstHour)) * 100}%`;
+            ticks.appendChild(tick);
+        }
+
+        header.appendChild(ticks);
+
+        return header;
+    };
+
+    const renderVisit = (visit, row) => {
+        const link = element('a', `db-visit db-status-${visit.status}${visit.leadWorkerId === row.id ? '' : ' db-crew'}${visit.late ? ' db-late' : ''}`);
+
+        link.href = visit.url;
+        link.title = `${visit.number} ${visit.workOrderNumber || ''} ${visit.summary || ''}\n${visit.start}–${visit.end} · ${visit.statusText}${visit.pinned ? ` · ${texts.pinned}` : ''}${visit.late ? ` · ${texts.late}` : ''}`;
+        link.appendChild(element('span', 'db-visit-time', visit.start));
+        link.appendChild(element('span', 'db-visit-text', visit.summary || visit.number));
+
+        if (visit.pinned) {
+            const pin = element('i', 'fa-solid fa-thumbtack ms-1');
+
+            pin.setAttribute('aria-hidden', 'true');
+            link.appendChild(pin);
+        }
+
+        makeDraggable(link, visit);
+
+        return place(link, visit.startUtc, visit.endUtc);
+    };
+
+    const renderRow = (row) => {
+        const node = element('div', 'db-row');
+        const name = element('div', 'db-name');
+        const track = element('div', 'db-track');
+
+        name.appendChild(element('div', 'fw-semibold text-truncate', row.name));
+        name.appendChild(element('div', 'small text-muted text-truncate', row.onShift ? row.team || '' : texts.noShift));
+        node.appendChild(name);
+
+        row.open.forEach((open) => track.appendChild(place(element('div', 'db-open'), open.start, open.end)));
+        row.timeOff.forEach((off) => track.appendChild(place(element('div', 'db-timeoff'), off.start, off.end)));
+
+        data.visits
+            .filter((visit) => visit.workerIds.includes(row.id))
+            .forEach((visit) => {
+                if (visit.travelMinutes > 0 && visit.leadWorkerId === row.id) {
+                    const leave = new Date(new Date(visit.startUtc).getTime() - visit.travelMinutes * 60000).toISOString();
+                    const travel = place(element('div', 'db-travel'), leave, visit.startUtc);
+
+                    travel.title = format(texts.travel, visit.travelMinutes);
+                    track.appendChild(travel);
+                }
+
+                track.appendChild(renderVisit(visit, row));
+            });
+
+        const now = new Date(data.nowUtc).getTime();
+        const dayStart = new Date(data.fromUtc).getTime();
+
+        if (now >= dayStart && now < dayStart + 24 * hourMs) {
+            const line = element('div', 'db-now');
+
+            line.style.left = `${position(data.nowUtc)}%`;
+            track.appendChild(line);
+        }
+
+        if (canManage) {
+            track.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                track.classList.add('db-drop');
+            });
+            track.addEventListener('dragleave', () => track.classList.remove('db-drop'));
+            track.addEventListener('drop', (event) => {
+                event.preventDefault();
+                track.classList.remove('db-drop');
+
+                const visitId = event.dataTransfer.getData('text/plain');
+
+                if (visitId) {
+                    move(visitId, row.id, startAt(track, event.clientX));
+                }
+            });
+        }
+
+        node.appendChild(track);
+
+        return node;
+    };
+
+    const renderTimeline = () => {
+        timeline.replaceChildren();
+
+        if (data.rows.length === 0) {
+            timeline.appendChild(element('div', 'text-muted small p-3', texts.noTechnicians));
+
+            return;
+        }
+
+        timeline.appendChild(renderHeader());
+        data.rows.forEach((row) => timeline.appendChild(renderRow(row)));
+    };
+
+    const showCandidates = async (visit) => {
+        const url = new URL(root.dataset.candidatesUrl.replace('__id__', encodeURIComponent(visit.id)), window.location.origin);
+
+        url.searchParams.set('day', root.dataset.day);
+
+        const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const found = await response.json();
+        const body = element('div', 'card-body');
+        const head = element('div', 'd-flex align-items-center mb-2');
+        const close = element('button', 'btn-close ms-auto');
+
+        close.type = 'button';
+        close.setAttribute('aria-label', texts.close);
+        close.addEventListener('click', () => candidatesCard.classList.add('d-none'));
+        head.appendChild(element('h2', 'h6 mb-0', format(texts.candidatesFor, visit.number)));
+        head.appendChild(close);
+        body.appendChild(head);
+
+        if (found.candidates.length === 0) {
+            body.appendChild(element('p', 'small text-muted', found.message || texts.nobody));
+        }
+
+        found.candidates.forEach((candidate) => {
+            const item = element('div', 'db-candidate');
+            const line = element('div', 'd-flex align-items-center gap-2');
+            const assign = element('button', 'btn btn-sm btn-primary ms-auto', texts.assign);
+
+            line.appendChild(element('span', 'fw-semibold', candidate.name));
+            line.appendChild(element('span', 'small text-muted', `${candidate.start}–${candidate.end}`));
+            assign.type = 'button';
+            assign.addEventListener('click', async () => {
+                assign.disabled = true;
+
+                if (await move(visit.id, candidate.workerId, candidate.startUtc)) {
+                    candidatesCard.classList.add('d-none');
+                }
+
+                assign.disabled = false;
+            });
+            line.appendChild(assign);
+            item.appendChild(line);
+
+            const detail = element('div', 'small text-muted', `${format(texts.travel, candidate.travelMinutes)} · ${format(texts.score, candidate.score)}`);
+
+            detail.title = Object.entries(candidate.parts).map(([name, value]) => `${name} ${value}`).join(', ');
+            item.appendChild(detail);
+            candidate.warnings.forEach((warning) => item.appendChild(element('div', 'small text-warning-emphasis', warning)));
+            body.appendChild(item);
+        });
+
+        if (found.excluded.length > 0) {
+            const details = element('details', 'small mt-2');
+
+            details.appendChild(element('summary', null, format(texts.ruledOut, found.excluded.length)));
+
+            const list = element('ul', 'mb-0 mt-1');
+
+            found.excluded.forEach((excluded) => {
+                const entry = element('li');
+
+                entry.appendChild(element('strong', null, excluded.name));
+                entry.appendChild(document.createTextNode(`: ${excluded.reason}`));
+                list.appendChild(entry);
+            });
+            details.appendChild(list);
+            body.appendChild(details);
+        }
+
+        candidatesCard.replaceChildren(body);
+        candidatesCard.classList.remove('d-none');
+        candidatesCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+
+    const renderQueue = () => {
+        queue.replaceChildren();
+        queueCount.textContent = data.unscheduled.length ? String(data.unscheduled.length) : '';
+
+        if (data.unscheduled.length === 0) {
+            queue.appendChild(element('p', 'small text-muted mb-0', texts.unscheduledEmpty));
+
+            return;
+        }
+
+        data.unscheduled.forEach((visit) => {
+            const card = element('div', `db-card db-priority-${visit.priority}`);
+            const top = element('div', 'd-flex align-items-center gap-1');
+            const link = element('a', 'fw-semibold', visit.number);
+
+            link.href = visit.url;
+            top.appendChild(link);
+            top.appendChild(element('span', 'small text-muted', visit.workOrderNumber || ''));
+
+            if (visit.priority === 'Urgent' || visit.priority === 'High') {
+                top.appendChild(element('span', `badge fw-normal ms-auto ${visit.priority === 'Urgent' ? 'text-bg-danger' : 'text-bg-warning'}`, visit.priority));
+            }
+
+            card.appendChild(top);
+            card.appendChild(element('div', 'small', visit.summary || ''));
+
+            const meta = element('div', 'small text-muted', format(texts.minutes, visit.durationMinutes));
+
+            if (visit.due) {
+                meta.textContent += ` · ${format(texts.due, visit.due)}`;
+            }
+
+            card.appendChild(meta);
+
+            if (canManage) {
+                const find = element('button', 'btn btn-sm btn-secondary mt-1', texts.findTechnician);
+
+                find.type = 'button';
+                find.addEventListener('click', () => showCandidates(visit));
+                card.appendChild(find);
+            }
+
+            makeDraggable(card, visit);
+            queue.appendChild(card);
+        });
+    };
+
+    const renderMap = () => {
+        const crestappsMap = window.crestappsMap;
+
+        if (!crestappsMap || typeof L === 'undefined') {
+            return;
+        }
+
+        const first = !map;
+
+        if (first) {
+            map = crestappsMap.create('dispatch-map');
+        }
+
+        if (!map) {
+            return;
+        }
+
+        if (markerLayer) {
+            map.removeLayer(markerLayer);
+        }
+
+        const markers = data.visits.concat(data.unscheduled)
+            .filter((visit) => visit.latitude !== null && visit.longitude !== null)
+            .map((visit) => ({
+                latitude: visit.latitude,
+                longitude: visit.longitude,
+                label: `<a href="${visit.url}">${visit.number}</a> ${(visit.summary || '').replace(/[<>&]/g, '')}<br>${visit.start ? `${visit.start}–${visit.end}` : texts.unscheduled}`,
+            }));
+
+        markerLayer = crestappsMap.addMarkers(map, markers, { fit: first });
+    };
+
+    const render = () => {
+        if (title) {
+            title.textContent = `${data.title} · ${data.zone}`;
+        }
+
+        renderTimeline();
+        renderQueue();
+        renderMap();
+    };
+
+    const connect = async () => {
+        const hubUrl = root.dataset.hubUrl;
+
+        if (!hubUrl || typeof signalR === 'undefined') {
+            live.textContent = texts.refreshing;
+            window.setInterval(load, 60000);
+
+            return;
+        }
+
+        const connection = new signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
+
+        connection.on('VisitChanged', scheduleReload);
+        connection.onreconnected(() => connection.invoke('Subscribe').then(scheduleReload));
+
+        try {
+            await connection.start();
+
+            if (await connection.invoke('Subscribe')) {
+                live.textContent = texts.live;
+            }
+        } catch (error) {
+            live.textContent = texts.refreshing;
+            window.setInterval(load, 60000);
+        }
+    };
+
+    load();
+    connect();
+})();

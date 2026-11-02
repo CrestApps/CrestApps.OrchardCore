@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Dispatch.Workflows
+
+@model VisitStatusChangedEventViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Statuses">@T["Statuses"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Statuses" asp-items="Model.StatusOptions" multiple size="7"></select>
+        <span class="hint">@T["Leave empty to start on every status change."]</span>
+    </div>
+</div>

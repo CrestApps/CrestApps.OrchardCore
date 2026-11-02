@@ -146,6 +146,29 @@ public interface IGeoSettingsService
 }
 
 /// <summary>
+/// Lists who can serve territories, such as technicians or teams, for the territory's page. Other modules add them.
+/// </summary>
+public interface ITerritoryMemberSource
+{
+    /// <summary>
+    /// Gets the kind of member it lists, such as Worker or Team, kept as <see cref="Models.TerritoryMember.Kind"/>.
+    /// </summary>
+    string Kind { get; }
+
+    /// <summary>
+    /// Gets the label of its list on the territory's page, such as "Technicians".
+    /// </summary>
+    string DisplayName { get; }
+
+    /// <summary>
+    /// Lists who can serve a territory.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Each one's id and name.</returns>
+    Task<IReadOnlyList<(string Id, string Name)>> ListAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Finds the territory of a point or postal code.
 /// </summary>
 public interface ITerritoryResolver

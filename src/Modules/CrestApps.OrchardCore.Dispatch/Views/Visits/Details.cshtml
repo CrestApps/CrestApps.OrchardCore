@@ -1,0 +1,310 @@
+@model VisitDetailsViewModel
+
+@{
+    var visit = Model.Visit;
+    var workOrder = Model.WorkOrder;
+    var zone = Model.TimeZoneId;
+    var address = workOrder?.ServiceAddress;
+    var canAssign = Model.CanManage && VisitStatusRules.CanAssign(visit.Status);
+    var startValue = visit.StartUtc is { } start ? CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(start, zone).ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) : Model.Day + "T09:00";
+    var statusClass = visit.Status switch { VisitStatus.Unscheduled => "text-bg-warning", VisitStatus.Canceled or VisitStatus.Incomplete => "text-bg-secondary", VisitStatus.Completed => "text-bg-success", _ => "text-bg-primary" };
+}
+
+<zone Name="Title"><breadcrumb name="DispatchVisit" title="@T["{0} {1}", visit.Number, visit.Summary]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <span class="badge @statusClass fw-normal">@T[visit.Status.Text()]</span>
+                @if (visit.Pinned)
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-thumbtack" aria-hidden="true"></i> @T["Pinned"]</span>
+                }
+                <span class="text-muted small">
+                    @T["For"] <a href="@Url.Action("Details", "WorkOrders", new { area = "CrestApps.OrchardCore.WorkOrders", id = visit.WorkOrderId })">@visit.WorkOrderNumber</a>
+                    @if (!string.IsNullOrEmpty(Model.TypeName))
+                    {
+                        <text>· @Model.TypeName</text>
+                    }
+                    · @T["{0} priority", visit.Priority]
+                </span>
+            </div>
+            @if (Model.CanManage)
+            {
+                <div class="col-auto d-flex flex-wrap gap-2">
+                    @if (visit.Status is VisitStatus.Scheduled or VisitStatus.Dispatched)
+                    {
+                        <form asp-action="Unassign" asp-route-id="@visit.ItemId" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-secondary" disabled="@visit.Pinned" title="@(visit.Pinned ? T["Unpin it first"].Value : null)">@T["Unschedule"]</button>
+                        </form>
+                    }
+                    @if (VisitStatusRules.IsOpen(visit.Status) && visit.StartUtc is not null)
+                    {
+                        <form asp-action="Pin" asp-route-id="@visit.ItemId" method="post" class="d-inline">
+                            <input type="hidden" name="pinned" value="@(visit.Pinned ? "false" : "true")" />
+                            <button type="submit" class="btn btn-secondary"><i class="fa-solid fa-thumbtack" aria-hidden="true"></i> @(visit.Pinned ? T["Unpin"] : T["Pin"])</button>
+                        </form>
+                    }
+                    <a asp-controller="DispatchBoard" asp-action="Index" asp-route-day="@Model.Day" class="btn btn-secondary">@T["Board"]</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["When and who"]</h2>
+            @if (visit.StartUtc is null)
+            {
+                <p class="small text-muted mb-0">@T["Not scheduled yet. It takes {0} minutes.", visit.DurationMinutes]</p>
+            }
+            else
+            {
+                <dl class="row mb-0 small">
+                    <dt class="col-4">@T["When"]</dt>
+                    <dd class="col-8">@DispatchTimeZone.Format(visit.StartUtc, zone)–@DispatchTimeZone.Format(visit.EndUtc, zone, "HH:mm") <span class="text-muted">(@zone)</span></dd>
+                    @if (visit.ArrivalStartUtc is not null && visit.ArrivalEndUtc != visit.ArrivalStartUtc)
+                    {
+                        <dt class="col-4">@T["Arrival window"]</dt>
+                        <dd class="col-8">@DispatchTimeZone.Format(visit.ArrivalStartUtc, zone, "HH:mm")–@DispatchTimeZone.Format(visit.ArrivalEndUtc, zone, "HH:mm")</dd>
+                    }
+                    <dt class="col-4">@T["Who"]</dt>
+                    <dd class="col-8">
+                        @foreach (var workerId in visit.WorkerIds)
+                        {
+                            <span class="badge ta-badge fw-normal">@(Model.WorkerNames.TryGetValue(workerId, out var name) ? name : workerId)@(workerId == visit.LeadWorkerId && visit.WorkerIds.Count > 1 ? $" ({T["lead"].Value})" : null)</span>
+                        }
+                    </dd>
+                    @if (visit.TravelMinutes is > 0)
+                    {
+                        <dt class="col-4">@T["Travel"]</dt>
+                        <dd class="col-8">@T["{0} min, {1} km from the stop before", visit.TravelMinutes, (visit.TravelKm ?? 0).ToString("0.#", CultureInfo.CurrentCulture)]</dd>
+                    }
+                </dl>
+            }
+            @if (!string.IsNullOrEmpty(visit.IncompleteReason))
+            {
+                <p class="small mt-2 mb-0"><strong>@T["Not finished:"]</strong> @visit.IncompleteReason
+                    @if (!string.IsNullOrEmpty(visit.ReturnVisitId))
+                    {
+                        <a asp-action="Details" asp-route-id="@visit.ReturnVisitId">@T["See the return visit"]</a>
+                    }
+                </p>
+            }
+        </div></div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["The job"]</h2>
+            <dl class="row mb-0 small">
+                <dt class="col-4">@T["Summary"]</dt>
+                <dd class="col-8">@visit.Summary</dd>
+                @if (address is not null)
+                {
+                    <dt class="col-4">@T["Where"]</dt>
+                    <dd class="col-8">
+                        @string.Join(", ", new[] { address.AddressLine1, address.AddressLine2, address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrEmpty(part)))
+                        @if (address.Latitude is null)
+                        {
+                            <span class="badge ta-badge fw-normal">@T["Not on the map yet"]</span>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder?.Contact?.Name) || !string.IsNullOrEmpty(workOrder?.Contact?.Phone))
+                {
+                    <dt class="col-4">@T["Contact"]</dt>
+                    <dd class="col-8">@workOrder.Contact.Name @if (!string.IsNullOrEmpty(workOrder.Contact.Phone)) { <a href="tel:@workOrder.Contact.Phone">@workOrder.Contact.Phone</a> }</dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder?.AccessNotes))
+                {
+                    <dt class="col-4">@T["Access"]</dt><dd class="col-8">@workOrder.AccessNotes</dd>
+                }
+                @if (visit.DueUtc is not null)
+                {
+                    <dt class="col-4">@T["Resolve by"]</dt><dd class="col-8">@DispatchTimeZone.Format(visit.DueUtc, zone)</dd>
+                }
+            </dl>
+        </div></div>
+    </div>
+</div>
+
+@if (Model.CanManage && visit.Status == VisitStatus.Unscheduled)
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h6">@T["Cancel it"]</h2>
+        <form asp-action="Status" asp-route-id="@visit.ItemId" method="post" class="row gx-2 gy-2 align-items-end">
+            <input type="hidden" name="status" value="@VisitStatus.Canceled" />
+            <div class="col-12 col-md">
+                <label for="visit-note" class="form-label small">@T["Why"]</label>
+                <input id="visit-note" name="note" class="form-control" required />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-danger">@T["Cancel the visit"]</button>
+            </div>
+        </form>
+    </div></div>
+}
+else if (Model.CanManage && Model.NextStatuses.Count > 0)
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h6">@T["Move it along"]</h2>
+        <form asp-action="Status" asp-route-id="@visit.ItemId" method="post" class="row gx-2 gy-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label for="visit-status" class="form-label small">@T["To"]</label>
+                <select id="visit-status" name="status" class="form-select">
+                    @foreach (var status in Model.NextStatuses)
+                    {
+                        <option value="@status">@T[status.Text()]</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md">
+                <label for="visit-note" class="form-label small">@T["Note"]</label>
+                <input id="visit-note" name="note" class="form-control" placeholder="@T["Needed to cancel, or when it couldn't be finished"]" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">@T["Move"]</button>
+            </div>
+        </form>
+    </div></div>
+}
+
+@if (canAssign)
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h6">@(visit.StartUtc is null ? T["Schedule it"] : T["Move it"])</h2>
+        <form asp-action="Details" asp-route-id="@visit.ItemId" method="get" class="row gx-2 gy-2 align-items-end mb-3">
+            <input type="hidden" name="find" value="true" />
+            <div class="col-auto">
+                <label for="find-day" class="form-label small">@T["Find the best technicians on"]</label>
+                <input id="find-day" type="date" name="day" value="@Model.Day" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["Find technicians"]</button>
+            </div>
+        </form>
+
+        @if (Model.Candidates is { } found)
+        {
+            @if (found.Candidates.Count == 0)
+            {
+                <p class="small text-muted">@(found.Message ?? T["Nobody can take it that day."].Value)</p>
+            }
+            else
+            {
+                <div class="table-responsive mb-2">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr><th scope="col">@T["Technician"]</th><th scope="col">@T["Earliest"]</th><th scope="col">@T["Travel"]</th><th scope="col">@T["Score"]</th><th scope="col">@T["To know"]</th><th scope="col"><span class="visually-hidden">@T["Actions"]</span></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var candidate in found.Candidates)
+                            {
+                                <tr>
+                                    <td>@candidate.Name</td>
+                                    <td>@DispatchTimeZone.Format(candidate.StartUtc, zone, "HH:mm")–@DispatchTimeZone.Format(candidate.EndUtc, zone, "HH:mm")</td>
+                                    <td>@T["{0} min", candidate.TravelMinutes]</td>
+                                    <td title="@string.Join(", ", candidate.ScoreParts.Select(part => $"{part.Key} {part.Value.ToString("0.##", CultureInfo.CurrentCulture)}"))">@candidate.Score.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                    <td class="small">@string.Join(" ", candidate.Warnings)</td>
+                                    <td class="text-end">
+                                        <form asp-action="Assign" asp-route-id="@visit.ItemId" method="post" class="d-inline">
+                                            <input type="hidden" name="workerIds" value="@candidate.WorkerId" />
+                                            <input type="hidden" name="startUtc" value="@candidate.StartUtc.ToString("O", CultureInfo.InvariantCulture)" />
+                                            <input type="hidden" name="day" value="@Model.Day" />
+                                            <button type="submit" class="btn btn-sm btn-primary">@T["Assign"]</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @if (found.Excluded.Count > 0)
+            {
+                <details class="small mb-3">
+                    <summary>@T["{0} ruled out", found.Excluded.Count]</summary>
+                    <ul class="mb-0 mt-1">
+                        @foreach (var excluded in found.Excluded)
+                        {
+                            <li><strong>@excluded.Name</strong>: @excluded.Reason</li>
+                        }
+                    </ul>
+                </details>
+            }
+        }
+
+        <form asp-action="Assign" asp-route-id="@visit.ItemId" method="post" class="row gx-2 gy-2 align-items-end">
+            <input type="hidden" name="day" value="@Model.Day" />
+            <div class="col-12 col-md">
+                <label for="assign-workers" class="form-label small">@T["Or choose who"]</label>
+                <select id="assign-workers" name="workerIds" class="form-select" multiple size="3">
+                    @foreach (var option in Model.WorkerOptions)
+                    {
+                        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                    }
+                </select>
+                <span class="hint">@T["The first one chosen leads. Hold Ctrl to choose more than one."]</span>
+            </div>
+            <div class="col-auto">
+                <label for="assign-start" class="form-label small">@T["Starting at ({0})", zone]</label>
+                <input id="assign-start" type="datetime-local" name="start" value="@startValue" class="form-control" step="300" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-secondary">@T["Assign"]</button>
+            </div>
+        </form>
+    </div></div>
+}
+
+@if (Model.Map is not null)
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h6">@T["Map"]</h2>
+        @{
+            ViewData["MapId"] = "visit-map";
+            ViewData["MapHeight"] = "16rem";
+            ViewData["MapLabel"] = T["Where the job is"].Value;
+        }
+        <partial name="_DispatchMap" model="Model.Map" />
+        <script at="Foot">
+            document.addEventListener('DOMContentLoaded', () => {
+                const map = window.crestappsMap && window.crestappsMap.create('visit-map');
+                if (map) {
+                    window.crestappsMap.addMarkers(map, [{ latitude: @address.Latitude.Value.ToString(CultureInfo.InvariantCulture), longitude: @address.Longitude.Value.ToString(CultureInfo.InvariantCulture), label: @Json.Serialize(visit.Summary ?? visit.Number) }]);
+                }
+            });
+        </script>
+    </div></div>
+}
+
+<div class="row g-3">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["History"]</h2>
+            <ul class="list-unstyled small mb-0">
+                @foreach (var change in visit.History.AsEnumerable().Reverse())
+                {
+                    <li class="mb-1"><span class="text-muted">@DispatchTimeZone.Format(change.Utc, zone)</span> · @T[change.Status.Text()]@(string.IsNullOrEmpty(change.By) ? null : $" · {change.By}")@(string.IsNullOrEmpty(change.Note) ? null : $": {change.Note}")</li>
+                }
+            </ul>
+        </div></div>
+    </div>
+    @if (Model.OtherVisits.Count > 0)
+    {
+        <div class="col-12 col-lg-6">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h6">@T["Other visits for this work order"]</h2>
+                <ul class="list-unstyled small mb-0">
+                    @foreach (var other in Model.OtherVisits)
+                    {
+                        <li class="mb-1"><a asp-action="Details" asp-route-id="@other.ItemId">@other.Number</a> · @T[other.Status.Text()]@(other.StartUtc is null ? null : $" · {DispatchTimeZone.Format(other.StartUtc, zone)}")</li>
+                    }
+                </ul>
+            </div></div>
+        </div>
+    }
+</div>

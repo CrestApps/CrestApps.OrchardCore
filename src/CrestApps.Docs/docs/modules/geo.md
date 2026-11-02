@@ -98,3 +98,7 @@ The Geo module's `_GeoMap` partial renders a map element with the site's tile se
 | --- | --- |
 | `ManageGeoTerritories` (Manage service territories) | The territory list, map, finder and editor. |
 | `ManageGeoSettings` (Manage maps and geocoding settings) | The Maps and Geocoding settings. |
+
+## Territory members
+
+A territory's `Members` say who serves it. The territory's page lists them through every `ITerritoryMemberSource` (a `Kind`, a label and the choices); Dispatch adds technicians and teams. Members of a kind no module lists any more are kept as they are.

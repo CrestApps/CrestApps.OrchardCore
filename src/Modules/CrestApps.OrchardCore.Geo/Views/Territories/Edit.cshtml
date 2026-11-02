@@ -59,6 +59,29 @@
         </div>
     </div>
 
+    @if (Model.MemberGroups.Count > 0)
+    {
+        <h2 class="h5 mt-4">@T["Who serves it"]</h2>
+        <p class="hint">@T["Dispatch offers these first for work in the territory. Leave them empty for anyone."]</p>
+        <div class="row g-3 mb-3">
+            @foreach (var group in Model.MemberGroups)
+            {
+                var id = "territory-members-" + group.Kind;
+
+                <div class="col-12 col-md-6">
+                    <label for="@id" class="form-label">@group.DisplayName</label>
+                    <select id="@id" name="Members[@group.Kind]" class="form-select" multiple size="6">
+                        @foreach (var option in group.Options)
+                        {
+                            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                        }
+                    </select>
+                    <span class="hint">@T["Hold Ctrl to choose more than one."]</span>
+                </div>
+            }
+        </div>
+    }
+
     <div class="mb-3">
         <button type="submit" class="btn btn-primary save">@T["Save"]</button>
         <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>

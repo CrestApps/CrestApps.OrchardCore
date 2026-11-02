@@ -34,6 +34,38 @@ public interface IWorkOrderLookup
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The options, by id.</returns>
     Task<IReadOnlyList<SelectListItem>> LocationsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SelectListItem>>([]);
+
+    /// <summary>
+    /// Lists the skills a job can need.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The skills.</returns>
+    Task<IReadOnlyList<SelectListItem>> SkillsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SelectListItem>>([]);
+
+    /// <summary>
+    /// Lists the certifications a job can need.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The certifications.</returns>
+    Task<IReadOnlyList<SelectListItem>> CertificationsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SelectListItem>>([]);
+}
+
+internal sealed class SkillsWorkOrderLookup : IWorkOrderLookup
+{
+    private readonly Skills.Services.ISkillManager _skills;
+    private readonly Skills.Services.ICertificationManager _certifications;
+
+    public SkillsWorkOrderLookup(Skills.Services.ISkillManager skills, Skills.Services.ICertificationManager certifications)
+    {
+        _skills = skills;
+        _certifications = certifications;
+    }
+
+    public async Task<IReadOnlyList<SelectListItem>> SkillsAsync(CancellationToken cancellationToken = default)
+        => [.. (await _skills.GetEnabledAsync(cancellationToken)).OrderBy(skill => skill.Name, StringComparer.CurrentCultureIgnoreCase).Select(skill => new SelectListItem(skill.Name, skill.ItemId))];
+
+    public async Task<IReadOnlyList<SelectListItem>> CertificationsAsync(CancellationToken cancellationToken = default)
+        => [.. (await _certifications.GetEnabledAsync(cancellationToken)).OrderBy(certification => certification.Name, StringComparer.CurrentCultureIgnoreCase).Select(certification => new SelectListItem(certification.Name, certification.ItemId))];
 }
 
 /// <summary>
@@ -140,6 +172,20 @@ public sealed class WorkOrderLookups
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The options.</returns>
     public Task<List<SelectListItem>> LocationsAsync(CancellationToken cancellationToken = default) => AllAsync(lookup => lookup.LocationsAsync(cancellationToken));
+
+    /// <summary>
+    /// Lists the skills a job can need.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The skills.</returns>
+    public Task<List<SelectListItem>> SkillsAsync(CancellationToken cancellationToken = default) => AllAsync(lookup => lookup.SkillsAsync(cancellationToken));
+
+    /// <summary>
+    /// Lists the certifications a job can need.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The certifications.</returns>
+    public Task<List<SelectListItem>> CertificationsAsync(CancellationToken cancellationToken = default) => AllAsync(lookup => lookup.CertificationsAsync(cancellationToken));
 
     private async Task<List<SelectListItem>> AllAsync(Func<IWorkOrderLookup, Task<IReadOnlyList<SelectListItem>>> get)
     {

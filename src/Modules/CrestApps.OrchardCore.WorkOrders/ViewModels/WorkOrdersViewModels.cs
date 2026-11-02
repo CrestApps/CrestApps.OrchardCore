@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.WorkOrders.ViewModels;
 
@@ -242,6 +243,28 @@ public class WorkOrderTypeEditViewModel
     /// Gets or sets the checklists every work order of the type gets.
     /// </summary>
     public List<string> ChecklistTemplateIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the skills the job needs, with the lowest level.
+    /// </summary>
+    public List<RequiredSkill> RequiredSkills { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the certifications the technician must hold.
+    /// </summary>
+    public List<string> RequiredCertificationIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the skills to choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> SkillOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the certifications to choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> CertificationOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the lines every work order of the type starts with.
@@ -551,6 +574,22 @@ public class WorkOrderEditViewModel
     public string Country { get; set; }
 
     /// <summary>
+    /// Gets or sets where the pin on the map is, when it was placed.
+    /// </summary>
+    public double? Latitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the pin on the map is, when it was placed.
+    /// </summary>
+    public double? Longitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets the map settings, when Geo is on.
+    /// </summary>
+    [BindNever]
+    public CrestApps.OrchardCore.Geo.Models.GeoSettings Map { get; set; }
+
+    /// <summary>
     /// Gets or sets how to get in.
     /// </summary>
     public string AccessNotes { get; set; }
@@ -593,6 +632,11 @@ public class WorkOrderEditViewModel
 /// </summary>
 public class WorkOrderDetailsViewModel
 {
+    /// <summary>
+    /// Gets or sets the panels other modules add, such as the visits.
+    /// </summary>
+    public IShape Panels { get; set; }
+
     /// <summary>
     /// Gets or sets the work order.
     /// </summary>

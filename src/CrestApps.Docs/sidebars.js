@@ -193,6 +193,7 @@ const sidebars = {
             items: [
                 'user-manual/field-service/assets',
                 'user-manual/field-service/work-orders',
+                'user-manual/field-service/dispatch',
             ],
         },
         {
@@ -460,6 +461,7 @@ const sidebars = {
             items: [
                 'modules/assets',
                 'modules/work-orders',
+                'modules/dispatch',
             ],
         },
         {

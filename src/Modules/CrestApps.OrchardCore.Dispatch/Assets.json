@@ -1,0 +1,14 @@
+[
+  {
+    "action": "vite",
+    "name": "dispatch-board.js",
+    "source": "Assets/js/dispatch-board.js",
+    "dest": "wwwroot/scripts/dispatch-board.js"
+  },
+  {
+    "action": "vite",
+    "name": "dispatch-board.css",
+    "source": "Assets/css/dispatch-board.css",
+    "dest": "wwwroot/styles/dispatch-board.css"
+  }
+]

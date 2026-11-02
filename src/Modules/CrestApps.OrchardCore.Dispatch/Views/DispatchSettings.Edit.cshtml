@@ -1,0 +1,126 @@
+@model DispatchSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["How visits are made, promised and ranked when technicians are found for them."]</p>
+    </div>
+</div>
+
+<h2 class="h5 mt-3">@T["Visits"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CreateVisitsForNewWorkOrders" />
+            <label class="form-check-label" asp-for="CreateVisitsForNewWorkOrders">@T["Give each new work order an unscheduled visit"]</label>
+            <span class="hint dashed">@T["Turn it off to make visits only from the work order's page or the API."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ArrivalWindowMinutes" class="ocat-label">@T["Arrival window"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="ArrivalWindowMinutes" class="form-control" type="number" min="0" max="720" step="15" />
+            <span class="input-group-text">@T["minutes"]</span>
+        </div>
+        <span asp-validation-for="ArrivalWindowMinutes" class="text-danger"></span>
+        <span class="hint">@T["The window promised to the customer, around the start. 0 promises the start time itself."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="BufferMinutes" class="ocat-label">@T["Buffer between visits"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="BufferMinutes" class="form-control" type="number" min="0" max="120" />
+            <span class="input-group-text">@T["minutes"]</span>
+        </div>
+        <span asp-validation-for="BufferMinutes" class="text-danger"></span>
+        <span class="hint">@T["Kept free next to each visit, on top of the travel time."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="HorizonDays" class="ocat-label">@T["Look ahead"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="HorizonDays" class="form-control" type="number" min="1" max="60" />
+            <span class="input-group-text">@T["days"]</span>
+        </div>
+        <span asp-validation-for="HorizonDays" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <input asp-for="TimeZoneId" class="form-control" style="max-width: 22rem" placeholder="@T["The site's time zone"]" />
+        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+        <span class="hint">@T["The times on the board and the visit pages, such as America/New_York."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="StrictTerritory" />
+            <label class="form-check-label" asp-for="StrictTerritory">@T["Only technicians who serve the visit's territory"]</label>
+            <span class="hint dashed">@T["When off, others are still offered, with a note. A territory with nobody listed takes anyone."]</span>
+        </div>
+    </div>
+</div>
+
+<h2 class="h5 mt-3">@T["Ranking technicians"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted small mb-0">@T["How much each thing counts, from 0 (not at all) to 10."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TravelWeight" class="ocat-label">@T["Short trip"]</label>
+    <div class="ocat-end">
+        <input asp-for="TravelWeight" class="form-control" type="number" min="0" max="10" style="max-width: 6rem" />
+        <span asp-validation-for="TravelWeight" class="text-danger"></span>
+        <span class="hint">@T["Less travel from the stop before."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UrgencyWeight" class="ocat-label">@T["Soonest start"]</label>
+    <div class="ocat-end">
+        <input asp-for="UrgencyWeight" class="form-control" type="number" min="0" max="10" style="max-width: 6rem" />
+        <span asp-validation-for="UrgencyWeight" class="text-danger"></span>
+        <span class="hint">@T["An earlier start in the day looked at."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProficiencyWeight" class="ocat-label">@T["Skill level"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProficiencyWeight" class="form-control" type="number" min="0" max="10" style="max-width: 6rem" />
+        <span asp-validation-for="ProficiencyWeight" class="text-danger"></span>
+        <span class="hint">@T["Holding the skills above the level needed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PreferredWeight" class="ocat-label">@T["Preferred technician"]</label>
+    <div class="ocat-end">
+        <input asp-for="PreferredWeight" class="form-control" type="number" min="0" max="10" style="max-width: 6rem" />
+        <span asp-validation-for="PreferredWeight" class="text-danger"></span>
+        <span class="hint">@T["One the work order prefers."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="BalanceWeight" class="ocat-label">@T["Even workload"]</label>
+    <div class="ocat-end">
+        <input asp-for="BalanceWeight" class="form-control" type="number" min="0" max="10" style="max-width: 6rem" />
+        <span asp-validation-for="BalanceWeight" class="text-danger"></span>
+        <span class="hint">@T["Fewer visits that day."]</span>
+    </div>
+</div>

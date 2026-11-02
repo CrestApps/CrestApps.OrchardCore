@@ -41,8 +41,9 @@ A required question must be answered before the work order is completed.
 2. Enter a name, such as *Furnace repair*, the usual duration, how many people it takes and the usual priority, and choose its service level.
 3. Under **Billing**, choose whether it isn't billed, is billed at a fixed price, or is billed for the time and materials used.
 4. Under **Finishing the job**, choose whether the customer must sign and how many photos are needed.
-5. Tick its checklists, and list the lines every work order starts with, such as an hour of labor or a filter. With Inventory on, choose the stock item a part comes from.
-6. Select **Save**.
+5. Under **Who can do it**, choose the skills the job needs, with the lowest level, and the certifications the technician must hold. Dispatch offers only technicians who have them.
+6. Tick its checklists, and list the lines every work order starts with, such as an hour of labor or a filter. With Inventory on, choose the stock item a part comes from.
+7. Select **Save**.
 
 Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level clock.
 
@@ -50,7 +51,7 @@ Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside 
 
 1. Go to **Field Service > Work Orders**, select **Add work order** and choose its type.
 2. Enter a summary, such as *No heat upstairs*, and change the priority if you need to.
-3. Enter the contact, the address and how to get in. With Geo on, the address is placed on the map in the background and gives the work order its territory.
+3. Enter the contact, the address and how to get in. With Geo on, click the map to place the job or drag the pin; without a pin, the address is placed on the map in the background. The place gives the work order its territory.
 4. Choose when the visit can be, the assets it is for, and change the lines if this job needs others.
 5. Select **Create**. The work order's page opens, with its number and the times it must be responded to and resolved by.
 

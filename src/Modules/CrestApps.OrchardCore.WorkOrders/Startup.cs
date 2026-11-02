@@ -63,6 +63,19 @@ public sealed class InventoryStartup : StartupBase
 }
 
 /// <summary>
+/// Lets work order types need skills and certifications.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Skills")]
+public sealed class SkillsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IWorkOrderLookup, SkillsWorkOrderLookup>();
+    }
+}
+
+/// <summary>
 /// Lets work orders be for assets.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.Assets")]

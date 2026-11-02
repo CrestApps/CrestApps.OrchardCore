@@ -26,6 +26,8 @@ The module works with other features when they are on:
 | Geo | A new or changed service address gets the territory it is in, and is queued for geocoding (`WorkOrderServiceAddress`). |
 | Assets | A work order can be for assets; the asset page links to the asset's work orders. |
 | Workflows | The five work order events. |
+| Skills | A type's required skills (with the lowest level) and certifications are edited on its page, for Dispatch. |
+| Dispatch | Visits for each work order, shown in a panel on its page. |
 
 ## Records
 
@@ -44,6 +46,7 @@ Each settings record has its own index table (`WorkOrderTypeIndex`, `ChecklistTe
 
 `WorkOrderService` does everything to a work order, and the pages, API and tools go through it.
 
+- **Places.** With Geo on, the editor places the job with a pin on the map; a pinned place is kept (`GeocodeSource` `Pin`) and gives the territory, and an address without one is geocoded in the background.
 - **New work orders.** `NewAsync(typeId)` makes a work order with the type's defaults and copies of its checklists. `CreateAsync` gives it its number and due times, runs the `IWorkOrderHandler`s and starts the **Created** event. `UpdateAsync` runs them again, so a changed address is placed again.
 - **Statuses.** `ChangeStatusAsync` allows only the usual moves (`WorkOrderStatusRules`): a closed or canceled work order doesn't move, a completed one can be closed or reopened, and canceling needs a reason. A sub-status must belong to the status.
 - **Service levels.** `SlaClock` counts a target in the policy's weekly hours in its time zone, in the hours an `IServiceHoursProvider` gives for its calendar, or around the clock. The clock stops in a pause status or a sub-status that pauses it, and the due times move out by the time stopped. Moving it to Ready, Scheduled or In progress is the first response. `SlaMonitor`, run every minute by a background task, starts the **Service Level Warning** event at the warning share of a target and the **Service Level Breached** event when it is missed, once each.
@@ -80,6 +83,7 @@ Each can be limited to some work order types. Every event's input has `WorkOrder
 - `IWorkOrderObserver`: hear about the events after they happen.
 - `IWorkOrderPartsService` and `IWorkOrderBilling`: take parts off stock and invoice, in place of Inventory and Transactions.
 - `IServiceHoursProvider`: give the open hours of a policy's calendar.
+- `WorkOrderPanels`: a display driver for it adds a panel, placed in the Content zone, to the work order's page.
 
 ## Permissions
 

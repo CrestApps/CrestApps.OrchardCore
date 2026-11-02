@@ -37,8 +37,11 @@ internal sealed class GeoWorkOrderHandler : IWorkOrderHandler
         => LocateAsync(workOrder, keepTerritory: true, cancellationToken);
 
     /// <inheritdoc/>
+    // A new address without a place is geocoded again; a moved pin clears the territory to have it found again.
     public Task UpdatingAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
-        => workOrder.ServiceAddress is { Latitude: null } ? LocateAsync(workOrder, keepTerritory: false, cancellationToken) : Task.CompletedTask;
+        => workOrder.ServiceAddress is { Latitude: null } || (workOrder.ServiceAddress is not null && string.IsNullOrEmpty(workOrder.TerritoryId))
+            ? LocateAsync(workOrder, keepTerritory: false, cancellationToken)
+            : Task.CompletedTask;
 
     private async Task LocateAsync(WorkOrder workOrder, bool keepTerritory, CancellationToken cancellationToken)
     {

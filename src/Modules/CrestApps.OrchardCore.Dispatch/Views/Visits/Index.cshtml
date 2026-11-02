@@ -1,0 +1,42 @@
+@model VisitsListViewModel
+
+<zone Name="Title"><breadcrumb name="DispatchVisits" title="@T["Visits"]" /></zone>
+
+<form asp-action="Index" method="get" id="visits-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col-12 col-md">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                        <input asp-for="Q" class="form-control" placeholder="@T["Search by visit, work order or summary"]" aria-label="@T["Search visits"]" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a asp-controller="DispatchBoard" asp-action="Index" class="btn btn-secondary">@T["Open the board"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+@if (Model.WithoutVisits > 0)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
+        <span>@T["{0} open work orders have no visit yet, such as those made before Dispatch was on.", Model.WithoutVisits]</span>
+        <form asp-action="MakeMissing" method="post" class="ms-auto">
+            <button type="submit" class="btn btn-sm btn-primary">@T["Make their visits"]</button>
+        </form>
+    </div>
+}
+@{
+    Model.List.ToolbarActions = await New.VisitsFilter(ViewModel: Model, FormId: "visits-filter");
+}
+
+<admin-list name="DispatchVisits" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Each new work order gets a visit. Change the search and filters to see others."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Visit"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

@@ -184,6 +184,8 @@ public sealed class WorkOrderSettingsController : Controller
             RequiresSignature = item.RequiresSignature,
             RequiredPhotos = item.RequiredPhotos,
             ChecklistTemplateIds = [.. item.ChecklistTemplateIds],
+            RequiredSkills = [.. item.RequiredSkills.Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
+            RequiredCertificationIds = [.. item.RequiredCertificationIds],
             Lines = [.. item.DefaultLines.Select(ToEditModel)],
         };
 
@@ -228,6 +230,8 @@ public sealed class WorkOrderSettingsController : Controller
         item.RequiredPhotos = Math.Max(0, form.RequiredPhotos);
         item.ChecklistTemplateIds = [.. (form.ChecklistTemplateIds ?? []).Where(templateId => !string.IsNullOrEmpty(templateId)).Distinct(StringComparer.Ordinal)];
         item.DefaultLines = [.. (form.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line.Description)).Select(line => ToLine(line, null))];
+        item.RequiredSkills = [.. (form.RequiredSkills ?? []).Where(skill => !string.IsNullOrEmpty(skill.SkillId)).DistinctBy(skill => skill.SkillId).Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = Math.Clamp(skill.MinProficiency, 1, 5) })];
+        item.RequiredCertificationIds = [.. (form.RequiredCertificationIds ?? []).Where(certificationId => !string.IsNullOrEmpty(certificationId)).Distinct(StringComparer.Ordinal)];
 
         if (form.BillingMode == WorkOrderBillingMode.FixedPrice && form.FixedPrice is not > 0)
         {
@@ -684,6 +688,14 @@ public sealed class WorkOrderSettingsController : Controller
         model.PolicyOptions = [.. (await _policies.GetAllAsync()).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == model.ServiceLevelPolicyId))];
         model.ChecklistOptions = [.. (await _checklists.GetAllAsync()).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new SelectListItem(item.Name, item.ItemId, model.ChecklistTemplateIds.Contains(item.ItemId)))];
         model.StockItemOptions = await _lookups.StockItemsAsync(HttpContext.RequestAborted);
+        model.SkillOptions = await _lookups.SkillsAsync(HttpContext.RequestAborted);
+        model.CertificationOptions = [.. (await _lookups.CertificationsAsync(HttpContext.RequestAborted)).Select(option => new SelectListItem(option.Text, option.Value, model.RequiredCertificationIds.Contains(option.Value)))];
+
+        // One empty row to add a skill, and two rows at least.
+        while (!model.RequiredSkills.Any(skill => string.IsNullOrEmpty(skill.SkillId)) || model.RequiredSkills.Count < 2)
+        {
+            model.RequiredSkills.Add(new RequiredSkill());
+        }
 
         while (model.Lines.Count(line => string.IsNullOrWhiteSpace(line.Description)) < BlankLines)
         {

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Dispatch.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Dispatch Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for dispatch: the visit store and indexes, the candidate finder that checks skills, certifications,
+      territories, shifts, time off and travel, and the dispatch service that assigns visits under locks per worker
+      and keeps a calendar event for each.
+    </Description>
+    <PackageTags>$(PackageTags) Dispatch FieldService Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Geo.Abstractions\CrestApps.OrchardCore.Geo.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Geo.Core\CrestApps.OrchardCore.Geo.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Core\CrestApps.OrchardCore.Calendars.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.WorkOrders.Core\CrestApps.OrchardCore.WorkOrders.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>
