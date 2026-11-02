@@ -32,7 +32,24 @@
                 @TimeTrackerTimeZone.Hours((decimal)(Model.NowUtc - open.StartUtc).TotalMinutes)
             </p>
         }
-        @if (Model.Stages.Count == 0)
+        @if (Model.ExternalClock is { } keeper)
+        {
+            <p class="mb-0">
+                @T["Your time is kept by {0}, and shown here as it is clocked.", keeper.Name]
+                @if (!string.IsNullOrEmpty(keeper.Url))
+                {
+                    <a href="@Url.Content(keeper.Url)" class="btn btn-primary btn-sm ms-2">@T["Open it"]</a>
+                }
+            </p>
+            @if (open is not null && open.ManagedBy is null)
+            {
+                <form asp-action="ClockOut" method="post" class="mt-3">
+                    <span class="hint d-block mb-2">@T["This stage was started here, before the time clock kept your time."]</span>
+                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock out"]</button>
+                </form>
+            }
+        }
+        else if (Model.Stages.Count == 0)
         {
             <p class="hint mb-0">@T["There are no stages to choose yet. Ask an administrator to add them under Time Tracker > Stages."]</p>
         }

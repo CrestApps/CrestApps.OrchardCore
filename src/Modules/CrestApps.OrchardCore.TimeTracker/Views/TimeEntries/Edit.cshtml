@@ -2,12 +2,25 @@
 
 @{
     var isNew = string.IsNullOrEmpty(Model.Id);
+    var keeper = Model.ExternalClock;
 }
 
-<zone Name="Title"><breadcrumb name="TimeTrackerEntriesEdit" title="@(isNew ? T["Add Time"] : T["Change {0}'s Time", Model.UserName])" /></zone>
+<zone Name="Title"><breadcrumb name="TimeTrackerEntriesEdit" title="@(isNew ? T["Add Time"] : keeper is not null ? T["{0}'s Time", Model.UserName] : T["Change {0}'s Time", Model.UserName])" /></zone>
+
+@if (keeper is not null)
+{
+    <div class="alert alert-info">
+        @T["This time comes from {0}. Correct it there; the change shows here when it is saved.", keeper.Name]
+        @if (!string.IsNullOrEmpty(keeper.ManageUrl ?? keeper.Url))
+        {
+            <a href="@Url.Content(keeper.ManageUrl ?? keeper.Url)" class="alert-link ms-1">@T["Open it"]</a>
+        }
+    </div>
+}
 
 <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <fieldset disabled="@(keeper is not null)">
 
     <div class="card mb-3">
         <div class="card-header">@T["Whose and what"]</div>
@@ -78,6 +91,8 @@
         </div>
     </div>
 
+    @if (keeper is null)
+    {
     <div class="card mb-3">
         <div class="card-header">@T["Why"]</div>
         <div class="card-body">
@@ -106,13 +121,19 @@
         </div>
     </div>
 
+    }
+    </fieldset>
+
     <div class="mb-3">
-        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
-        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        @if (keeper is null)
+        {
+            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        }
+        <a asp-action="Index" class="btn btn-secondary">@(keeper is null ? T["Cancel"] : T["Back"])</a>
     </div>
 </form>
 
-@if (!isNew)
+@if (!isNew && keeper is null)
 {
     <div class="card mb-3 border-danger">
         <div class="card-header">@T["Remove this time"]</div>

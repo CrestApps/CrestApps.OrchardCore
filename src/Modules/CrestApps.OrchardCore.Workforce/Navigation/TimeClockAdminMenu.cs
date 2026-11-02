@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Workforce.Navigation;
 
 /// <summary>
-/// Adds the time clock's screens to the Workforce menu.
+/// Adds the time clock's screens to the Time Tracker menu, beside the time they keep.
 /// </summary>
 internal sealed class TimeClockAdminMenu : AdminNavigationProvider
 {
@@ -18,38 +18,38 @@ internal sealed class TimeClockAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Workforce"], workforce => workforce
-            .Add(S["Timesheets"], S["Timesheets"].PrefixPosition("24"), timesheets => timesheets
+        builder.Add(S["Time Tracker"], tracker => tracker
+            .Add(S["Timesheets"], S["Timesheets"].PrefixPosition("30"), timesheets => timesheets
                 .Id("workforceTimesheets")
                 .Action("Index", "Timesheets", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ApproveTimesheets)
                 .LocalNav())
-            .Add(S["Attendance"], S["Attendance"].PrefixPosition("25"), attendance => attendance
+            .Add(S["Attendance"], S["Attendance"].PrefixPosition("31"), attendance => attendance
                 .Id("workforceAttendance")
                 .Action("Index", "Attendance", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ApproveTimesheets)
                 .LocalNav())
-            .Add(S["Payroll Export"], S["Payroll Export"].PrefixPosition("26"), export => export
+            .Add(S["Payroll Export"], S["Payroll Export"].PrefixPosition("32"), export => export
                 .Id("workforcePayrollExport")
                 .Action("Index", "PayrollExport", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ExportPayroll)
                 .LocalNav())
-            .Add(S["Time Clock Policies"], S["Time Clock Policies"].PrefixPosition("86"), policies => policies
+            .Add(S["Time Clock Policies"], S["Time Clock Policies"].PrefixPosition("70"), policies => policies
                 .Id("workforceTimeClockPolicies")
                 .Action("Index", "TimeClockPolicies", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ManageTimeClockPolicies)
                 .LocalNav())
-            .Add(S["Pay Periods"], S["Pay Periods"].PrefixPosition("87"), periods => periods
+            .Add(S["Pay Periods"], S["Pay Periods"].PrefixPosition("71"), periods => periods
                 .Id("workforcePayPeriods")
                 .Action("Index", "PayPeriods", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ManageTimeClockPolicies)
                 .LocalNav())
-            .Add(S["Pay Codes"], S["Pay Codes"].PrefixPosition("88"), codes => codes
+            .Add(S["Pay Codes"], S["Pay Codes"].PrefixPosition("72"), codes => codes
                 .Id("workforcePayCodes")
                 .Action("Index", "PayCodes", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ManageTimeClockPolicies)
                 .LocalNav())
-            .Add(S["Time Clock Kiosks"], S["Time Clock Kiosks"].PrefixPosition("89"), kiosks => kiosks
+            .Add(S["Time Clock Kiosks"], S["Time Clock Kiosks"].PrefixPosition("73"), kiosks => kiosks
                 .Id("workforceTimeClockKiosks")
                 .Action("Index", "TimeClockKiosks", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ManageTimeClockPolicies)

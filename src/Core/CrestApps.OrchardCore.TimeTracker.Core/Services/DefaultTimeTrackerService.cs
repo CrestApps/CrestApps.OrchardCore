@@ -27,6 +27,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IEnumerable<ITimeEntryObserver> _observers;
+    private readonly IEnumerable<IExternalTimeClock> _externalClocks;
     private readonly IEnumerable<global::OrchardCore.Modules.ILocalClock> _localClocks;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -43,6 +44,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         ISession session,
         IDistributedLock distributedLock,
         IEnumerable<ITimeEntryObserver> observers,
+        IEnumerable<IExternalTimeClock> externalClocks,
         IEnumerable<global::OrchardCore.Modules.ILocalClock> localClocks,
         IClock clock,
         ILogger<DefaultTimeTrackerService> logger,
@@ -54,6 +56,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         _session = session;
         _distributedLock = distributedLock;
         _observers = observers;
+        _externalClocks = externalClocks;
         _localClocks = localClocks;
         _clock = clock;
         _logger = logger;
@@ -70,6 +73,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (string.IsNullOrEmpty(userId))
         {
             return TimeTrackerResult.Fail(S["Choose whose time it is."]);
+        }
+
+        if (await ExternalClockAsync(userId, cancellationToken) is { } keeper)
+        {
+            return TimeTrackerResult.Fail(S["Your time is kept by {0}.", keeper.Name]);
         }
 
         var stage = await FindStageAsync(stageId, cancellationToken);
@@ -141,6 +149,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (open is null)
         {
             return TimeTrackerResult.Fail(S["Not clocked in."]);
+        }
+
+        if (open.ManagedBy is not null && await ExternalClockAsync(userId, cancellationToken) is { } keeper)
+        {
+            return TimeTrackerResult.Fail(S["Your time is kept by {0}.", keeper.Name]);
         }
 
         var now = Trim(_clock.UtcNow);
@@ -216,6 +229,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             return TimeTrackerResult.Fail(S["The entry doesn't exist."]);
         }
 
+        if (await KeptElsewhereAsync(found, cancellationToken) is { } kept)
+        {
+            return kept;
+        }
+
         await using var locker = await LockAsync(found.UserId);
 
         if (locker is null)
@@ -264,6 +282,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (entry is null)
         {
             return TimeTrackerResult.Fail(S["The entry doesn't exist."]);
+        }
+
+        if (await KeptElsewhereAsync(entry, cancellationToken) is { } kept)
+        {
+            return kept;
         }
 
         var before = await DescribeAsync(entry, cancellationToken);
@@ -366,6 +389,167 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         }
 
         return [.. rows.Values.OrderBy(row => row.UserName, StringComparer.CurrentCultureIgnoreCase).ThenBy(row => row.Date)];
+    }
+
+    /// <inheritdoc/>
+    public async Task<TimeTrackerResult> SyncAsync(TimeEntrySync sync, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sync);
+
+        if (string.IsNullOrEmpty(sync.UserId) || string.IsNullOrEmpty(sync.ManagedBy) || sync.BuildAsync is null)
+        {
+            return TimeTrackerResult.Fail(S["Choose whose time it is and the clock that keeps it."]);
+        }
+
+        await using var locker = await LockAsync(sync.UserId);
+
+        if (locker is null)
+        {
+            return TimeTrackerResult.Fail(S["Someone else is changing this time. Try again."]);
+        }
+
+        var open = TimeTrackerIndexProvider.OpenEnd;
+        var now = _clock.UtcNow;
+        var desired = (await sync.BuildAsync(cancellationToken) ?? [])
+            .Where(entry => !string.IsNullOrEmpty(entry.StageId) && entry.StartUtc <= now && (entry.EndUtc ?? open) > sync.FromUtc && entry.StartUtc < sync.ToUtc)
+            .Select(entry => (Entry: entry, Start: Trim(entry.StartUtc), End: entry.EndUtc is { } end ? Trim(end) : open))
+            .Where(piece => piece.End > piece.Start)
+            .OrderBy(piece => piece.Start)
+            .ToList();
+
+        // Read everything the new entries could touch, not only the range, so they are cut around all other time.
+        var from = desired.Count > 0 && desired[0].Start < sync.FromUtc ? desired[0].Start : sync.FromUtc;
+        var last = desired.Count > 0 ? desired.Max(piece => piece.End) : sync.ToUtc;
+        var to = last > sync.ToUtc ? last : sync.ToUtc;
+        var existing = await _session.Query<TimeEntry, TimeEntryIndex>(index => index.UserId == sync.UserId && index.StartUtc < to && index.EndUtc > from, collection: TimeTrackerConstants.CollectionName)
+            .ListAsync(cancellationToken);
+        var unused = existing.Where(entry => entry.ManagedBy == sync.ManagedBy).ToList();
+        var ended = new List<TimeEntry>();
+
+        foreach (var left in existing.Where(entry => entry.ManagedBy != sync.ManagedBy && entry.EndUtc is null))
+        {
+            if (desired.FirstOrDefault(piece => piece.Start > left.StartUtc) is { Entry: not null } next)
+            {
+                left.EndUtc = next.Start;
+                await _entries.UpdateAsync(left, cancellationToken);
+                ended.Add(left);
+            }
+        }
+
+        var others = existing.Where(entry => entry.ManagedBy != sync.ManagedBy).Select(entry => (Start: entry.StartUtc, End: entry.EndUtc ?? open)).OrderBy(span => span.Start).ToList();
+
+        foreach (var (entry, start, end) in desired)
+        {
+            foreach (var (pieceStart, pieceEnd) in Subtract(start, end, others))
+            {
+                DateTime? pieceEndUtc = pieceEnd == open ? null : pieceEnd;
+                var same = unused.FirstOrDefault(old => old.StageId == entry.StageId && old.StartUtc == pieceStart && old.EndUtc == pieceEndUtc && old.SourceRef == entry.SourceRef);
+
+                if (same is not null)
+                {
+                    unused.Remove(same);
+
+                    continue;
+                }
+
+                await _entries.CreateAsync(new TimeEntry
+                {
+                    ItemId = CrestApps.Core.UniqueId.GenerateId(),
+                    UserId = sync.UserId,
+                    UserName = sync.UserName ?? entry.UserName,
+                    StageId = entry.StageId,
+                    StartUtc = pieceStart,
+                    EndUtc = pieceEndUtc,
+                    Source = entry.Source ?? sync.Source ?? TimeTrackerConstants.Sources.Api,
+                    SourceRef = entry.SourceRef,
+                    Note = entry.Note,
+                    ManagedBy = sync.ManagedBy,
+                    CreatedBy = entry.CreatedBy ?? sync.ManagedBy,
+                    CreatedUtc = now,
+                }, cancellationToken);
+            }
+        }
+
+        foreach (var old in unused)
+        {
+            await _entries.DeleteAsync(old, cancellationToken);
+        }
+
+        await _session.SaveChangesAsync(cancellationToken);
+
+        foreach (var left in ended)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Ended, left, null, sync.ManagedBy, null, cancellationToken);
+        }
+
+        return new TimeTrackerResult();
+    }
+
+    // The parts of a span that other time doesn't cover; the other spans are sorted by start.
+    private static IEnumerable<(DateTime Start, DateTime End)> Subtract(DateTime start, DateTime end, List<(DateTime Start, DateTime End)> others)
+    {
+        var cursor = start;
+
+        foreach (var other in others)
+        {
+            if (other.End <= cursor || other.Start >= end)
+            {
+                continue;
+            }
+
+            if (other.Start > cursor)
+            {
+                yield return (cursor, other.Start);
+            }
+
+            cursor = other.End;
+
+            if (cursor >= end)
+            {
+                yield break;
+            }
+        }
+
+        if (cursor < end)
+        {
+            yield return (cursor, end);
+        }
+    }
+
+    private async Task<ExternalTimeClockInfo> ExternalClockAsync(string userId, CancellationToken cancellationToken)
+    {
+        foreach (var clock in _externalClocks)
+        {
+            if (await clock.FindAsync(userId, cancellationToken) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    // A clock that keeps an entry corrects it itself, then syncs it again.
+    private async Task<TimeTrackerResult> KeptElsewhereAsync(TimeEntry entry, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(entry.ManagedBy))
+        {
+            return null;
+        }
+
+        string name = null;
+
+        foreach (var clock in _externalClocks)
+        {
+            if (await clock.FindByIdAsync(entry.ManagedBy, cancellationToken) is { } found)
+            {
+                name = found.Name;
+
+                break;
+            }
+        }
+
+        return TimeTrackerResult.Fail(S["This time comes from {0}; correct it there.", name ?? entry.ManagedBy]);
     }
 
     // Splits a span at local midnights when totals are by day.

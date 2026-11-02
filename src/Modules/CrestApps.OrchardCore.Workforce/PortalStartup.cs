@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.Portal;
@@ -29,6 +30,7 @@ public sealed class PortalStartup : StartupBase
             .AddIndexProvider<WebPushSubscriptionIndexProvider>()
             .AddIndexProvider<WorkerFeedIndexProvider>();
         services.AddScoped<MyWorkPortal>();
+        services.Configure<TimeClockTimeTrackerOptions>(options => options.ClockUrl = "~/my-work");
         services.AddPermissionProvider<PortalPermissionsProvider>();
         services.AddNavigationProvider<PortalAdminMenu>();
     }

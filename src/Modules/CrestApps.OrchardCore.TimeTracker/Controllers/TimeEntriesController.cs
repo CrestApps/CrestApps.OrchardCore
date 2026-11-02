@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -91,9 +92,23 @@ public sealed class TimeEntriesController : Controller
 
         form.CanManage = canManage;
         form.StageOptions = [.. stages.Values.OrderBy(stage => stage.Position).ThenBy(stage => stage.Name, StringComparer.CurrentCultureIgnoreCase).Select(stage => new SelectListItem(stage.Name, stage.ItemId, stage.ItemId == form.StageId))];
+        var rows = new List<TimeEntryRow>();
+
+        foreach (var entry in page)
+        {
+            rows.Add(new TimeEntryRow
+            {
+                Entry = entry,
+                Stage = stages.GetValueOrDefault(entry.StageId ?? string.Empty),
+                TimeZoneId = zone,
+                CanManage = canManage,
+                KeptBy = (await KeptByAsync(entry))?.Name,
+            });
+        }
+
         form.List = new AdminListContext<TimeEntryRow>
         {
-            Source = page.Select(entry => new TimeEntryRow { Entry = entry, Stage = stages.GetValueOrDefault(entry.StageId ?? string.Empty), TimeZoneId = zone, CanManage = canManage }).ToList(),
+            Source = rows,
             Pager = await shapeFactory.PagerAsync(pager, count),
         };
 
@@ -132,6 +147,7 @@ public sealed class TimeEntriesController : Controller
             model.Note = entry.Note;
             model.IsOpen = entry.IsOpen;
             model.Changes = [.. entry.Changes];
+            model.ExternalClock = await KeptByAsync(entry);
         }
 
         await PopulateAsync(model);
@@ -247,5 +263,24 @@ public sealed class TimeEntriesController : Controller
             .OrderBy(stage => stage.Position)
             .ThenBy(stage => stage.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(stage => new SelectListItem(stage.Name, stage.ItemId, stage.ItemId == model.StageId))];
+    }
+
+    // The clock that keeps an entry, when it is kept by another one.
+    private async Task<ExternalTimeClockInfo> KeptByAsync(TimeEntry entry)
+    {
+        if (string.IsNullOrEmpty(entry.ManagedBy))
+        {
+            return null;
+        }
+
+        foreach (var clock in HttpContext.RequestServices.GetServices<IExternalTimeClock>())
+        {
+            if (await clock.FindByIdAsync(entry.ManagedBy, HttpContext.RequestAborted) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return new ExternalTimeClockInfo { Id = entry.ManagedBy, Name = entry.ManagedBy };
     }
 }

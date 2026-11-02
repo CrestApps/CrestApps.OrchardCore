@@ -171,6 +171,13 @@ public sealed class TimeEntry : CatalogItem
     public string Note { get; set; }
 
     /// <summary>
+    /// Gets or sets the <see cref="ExternalTimeClockInfo.Id"/> of the clock that keeps this entry, such as a time clock
+    /// that records punches; <see langword="null"/> when it is kept here. A kept entry is corrected in that clock,
+    /// which syncs it again.
+    /// </summary>
+    public string ManagedBy { get; set; }
+
+    /// <summary>
     /// Gets or sets who recorded it.
     /// </summary>
     public string CreatedBy { get; set; }
@@ -326,4 +333,72 @@ public enum TimeEntryChangeKind
     /// Someone removed it.
     /// </summary>
     Deleted,
+}
+
+/// <summary>
+/// Another clock that keeps a person's time, such as a time clock that records punches, and syncs it here.
+/// </summary>
+public sealed class ExternalTimeClockInfo
+{
+    /// <summary>
+    /// Gets or sets its id, kept in <see cref="TimeEntry.ManagedBy"/>.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets its name, as people know it.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets where people clock in with it.
+    /// </summary>
+    public string Url { get; set; }
+
+    /// <summary>
+    /// Gets or sets where a manager corrects the time it keeps.
+    /// </summary>
+    public string ManageUrl { get; set; }
+}
+
+/// <summary>
+/// Entries another clock keeps for a person over a range, to replace the ones it kept there before.
+/// </summary>
+public sealed class TimeEntrySync
+{
+    /// <summary>
+    /// Gets or sets the person.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the person's user name.
+    /// </summary>
+    public string UserName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the clock's <see cref="ExternalTimeClockInfo.Id"/>.
+    /// </summary>
+    public string ManagedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source the entries are recorded with when they don't say.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the start of the range, in UTC; entries touching the range are replaced.
+    /// </summary>
+    public DateTime FromUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the end of the range, in UTC.
+    /// </summary>
+    public DateTime ToUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what builds the entries, read under the person's lock so two syncs never write stale time. Each
+    /// needs its stage and start; an entry with no end is the one the person is in now.
+    /// </summary>
+    public Func<CancellationToken, Task<IReadOnlyList<TimeEntry>>> BuildAsync { get; set; }
 }

@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -53,6 +54,27 @@ public static class WorkforceTimeClockServiceCollectionExtensions
         services.TryAddScoped<TimesheetRefresher>();
         services.TryAddScoped<PayCodeSeeder>();
         services.Replace(ServiceDescriptor.Scoped<IWorkedTimeSource, TimeClockWorkedTimeSource>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Keeps the time of every worker with a login in Time Tracker, from their punches, in the stages of their
+    /// activities. Time Tracker's services must be added too.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddWorkforceTimeClockTimeTracker(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddScoped<TimeClockDaySync>();
+        services.TryAddScoped<TimeClockStageAttacher>();
+        services.TryAddScoped<TimeClockStageSeeder>();
+        services.TryAddScoped<TimeClockTrackerBackfill>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITimePunchObserver, TimeClockTimeTrackerSync>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IExternalTimeClock, TimeClockExternalClock>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeStageHandler>());
 
         return services;
     }

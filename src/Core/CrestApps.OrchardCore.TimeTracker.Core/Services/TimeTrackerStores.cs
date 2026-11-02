@@ -4,6 +4,7 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Models;
+using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -60,7 +61,7 @@ public sealed class TimeEntryStore : DocumentCatalog<TimeEntry, TimeEntryIndex>
 /// <summary>
 /// Manages time categories.
 /// </summary>
-public sealed class TimeCategoryManager : CatalogManager<TimeCategory>
+public sealed class TimeCategoryManager : CatalogManager<TimeCategory>, ITimeCategoryManager
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeCategoryManager"/> class.
@@ -74,7 +75,7 @@ public sealed class TimeCategoryManager : CatalogManager<TimeCategory>
 /// <summary>
 /// Manages time stages.
 /// </summary>
-public sealed class TimeStageManager : CatalogManager<TimeStage>
+public sealed class TimeStageManager : CatalogManager<TimeStage>, ITimeStageManager
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeStageManager"/> class.

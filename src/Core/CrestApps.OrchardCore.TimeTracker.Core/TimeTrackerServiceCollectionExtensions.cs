@@ -23,6 +23,8 @@ public static class TimeTrackerServiceCollectionExtensions
         services.TryAddScoped<TimeEntryStore>();
         services.TryAddScoped<TimeCategoryManager>();
         services.TryAddScoped<TimeStageManager>();
+        services.TryAddScoped<ITimeCategoryManager>(serviceProvider => serviceProvider.GetRequiredService<TimeCategoryManager>());
+        services.TryAddScoped<ITimeStageManager>(serviceProvider => serviceProvider.GetRequiredService<TimeStageManager>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeCategory>, TimeCategoryHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeStage>, TimeStageHandler>());
         services.TryAddScoped<ITimeTrackerService, DefaultTimeTrackerService>();

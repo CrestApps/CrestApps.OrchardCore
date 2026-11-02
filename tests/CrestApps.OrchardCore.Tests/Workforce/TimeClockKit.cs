@@ -33,7 +33,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
 
     public IReadOnlyDictionary<string, PayCode> Codes { get; private set; }
 
-    public static async Task<TimeClockKit> CreateAsync(Action<IServiceCollection> configure = null)
+    public static async Task<TimeClockKit> CreateAsync(Action<IServiceCollection> configure = null, Func<global::YesSql.Sql.ISchemaBuilder, Task> schema = null, IEnumerable<global::YesSql.Indexes.IIndexProvider> indexProviders = null, IEnumerable<string> collections = null)
     {
         TimeClockKit kit = null;
         var clock = new Mock<IClock>();
@@ -46,7 +46,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
             services.AddSingleton<IDistributedLock, TimeOffKit.KeyedLock>();
             services.AddSingleton(clock.Object);
             configure?.Invoke(services);
-        });
+        }, schema, indexProviders, collections);
 
         kit = new TimeClockKit(harness);
 

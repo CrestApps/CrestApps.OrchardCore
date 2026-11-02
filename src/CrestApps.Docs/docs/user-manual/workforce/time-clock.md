@@ -10,17 +10,26 @@ The time clock records when workers start and stop work, turns their punches int
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Timesheets, Attendance, Payroll Export, Time Clock Policies, Pay Periods, Pay Codes, Time Clock Kiosks |
+| **Menu** | Time Tracker > Timesheets, Attendance, Payroll Export, Time Clock Policies, Pay Periods, Pay Codes, Time Clock Kiosks |
 | **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Export payroll, View pay rates, Clock in and out |
-| **Feature** | Workforce Time Clock (it needs Workforce) |
+| **Feature** | Workforce Time Clock (it needs Workforce and Time Tracker) |
 
 <AskYourAdmin />
 
+## Your day in Time Tracker
+
+Every punch of a worker who has a login also keeps their day in [Time Tracker](./time-tracker.md): each stretch of work, each meal and each break is an entry in a stage, and the time report counts it with everyone else's time. Time stays as punched there; rounding and meal rules are for pay, on the timesheet.
+
+- Each activity code has a **stage** (under **Workforce > Activity Codes**, in the **Time Tracker** card). When the time clock is turned on, every code gets a stage with its name, or the one with the same code or name if there is one; a new stage counts toward **Paid** when the code is paid and **Worked** when it counts as work. A meal or a break is kept in the stage of the first meal or break code.
+- Punches made before are brought in by themselves, a few workers at a time.
+- People correct this time with punches, here, not in Time Tracker: Time Tracker shows these entries as **From the Time Clock** and doesn't let them be changed there. My Time tells the worker their time is kept by the time clock, with a link to My Work.
+- A worker without a login, who clocks in only at a kiosk, has no Time Tracker entries.
+
 ## Setting it up
 
-1. Under **Workforce > Pay Periods**, choose **Add pay periods**: how often workers are paid (every week, every two weeks, twice a month or every month), the first day of any one period for weekly and two-weekly pay, and the day the overtime week starts. The editor shows the next periods.
-2. Under **Workforce > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday and unpaid codes are added when the feature is turned on. Give a code a **payroll code** when your payroll system calls it something else.
-3. Under **Workforce > Time Clock Policies**, choose **Add policy** (see below).
+1. Under **Time Tracker > Pay Periods**, choose **Add pay periods**: how often workers are paid (every week, every two weeks, twice a month or every month), the first day of any one period for weekly and two-weekly pay, and the day the overtime week starts. The editor shows the next periods.
+2. Under **Time Tracker > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday and unpaid codes are added when the feature is turned on. Give a code a **payroll code** when your payroll system calls it something else.
+3. Under **Time Tracker > Time Clock Policies**, choose **Add policy** (see below).
 4. Under **Workforce > Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
 5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers > Actions > Time clock**.
 
@@ -53,7 +62,7 @@ In **My Work**, the home page shows a **Time clock** card: whether the worker is
 
 ### Kiosks
 
-Under **Workforce > Time Clock Kiosks**, choose **Add kiosk**, name it, and optionally limit it to a team. After saving, the kiosk's **private address** is shown once: open it on the device and leave it open. Workers enter their badge number and PIN, then choose what to punch. After five wrong PINs in a row, the kiosk refuses that worker's PIN for 15 minutes. **Give it a new address** when the address is lost or seen by someone it shouldn't be; the old one stops working.
+Under **Time Tracker > Time Clock Kiosks**, choose **Add kiosk**, name it, and optionally limit it to a team. After saving, the kiosk's **private address** is shown once: open it on the device and leave it open. Workers enter their badge number and PIN, then choose what to punch. After five wrong PINs in a row, the kiosk refuses that worker's PIN for 15 minutes. **Give it a new address** when the address is lost or seen by someone it shouldn't be; the old one stops working.
 
 ## Timesheets
 
@@ -68,7 +77,7 @@ Each worker has a timesheet for each pay period. It is worked out from their pun
 
 Workers see theirs under **My Work > Timesheet**: the hours each day, their punches, anything that looks off, and the periods before. **Forgot to punch?** asks the manager for a punch they missed. **Submit** sends the timesheet with their confirmation that the hours are right.
 
-Managers open **Workforce > Timesheets**, choose the pay period, and open a timesheet. It shows each day's punches, hours and exceptions, the totals by pay code, and the punches the worker asked for. From there a manager can:
+Managers open **Time Tracker > Timesheets**, choose the pay period, and open a timesheet. It shows each day's punches, hours and exceptions, the totals by pay code, and the punches the worker asked for. From there a manager can:
 
 - **Approve** the timesheet, **Send back** a submitted one with what to fix, or **Reopen** an approved one;
 - **Add a punch**, or **change or remove** one, with a reason. The original stays in the history;
@@ -81,7 +90,7 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Attendance
 
-**Workforce > Attendance** lists the exceptions found against the published schedule:
+**Time Tracker > Attendance** lists the exceptions found against the published schedule:
 
 | Exception | When |
 | --- | --- |
@@ -96,7 +105,7 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Payroll export
 
-Under **Workforce > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
+Under **Time Tracker > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
 
 **Choose the CSV columns** sets the file's columns and headings: payroll id, employee number, name, pay code, day, hours, rate, amount, period, activity and job. A day, activity or job column gives a row per day, activity or job. Rates come from the worker's **pay rates** under **Workers > Actions > Time clock** (people with the View pay rates permission see them): a rate an hour from a day on, for all work or one activity. The amount is the hours times the rate and the code's multiplier, or the hours times a differential's premium.
 

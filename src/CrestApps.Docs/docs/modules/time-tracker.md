@@ -30,7 +30,7 @@ All live in the `TimeTracker` YesSql collection, each with its own index table.
 
 - **`TimeCategory`**: `Name` (unique), `Code`, `Color`, `Position` (the report column order), `Factor` (how a minute counts: 1 as it is, 1.5 half again, such as an overtime premium) and `Enabled`.
 - **`TimeStage`**: `Name` (unique), `Code` (for exports and mapping Contact Center states), `Color`, `Position`, `CategoryIds`, `SelfService` (people pick it on their clock; off for stages that come only from integrations or managers) and `Enabled`.
-- **`TimeEntry`**: `UserId` and `UserName`, `StageId`, `StartUtc`, `EndUtc` (none while the person is in it), `Source` (`Self`, `Manager`, `Kiosk`, `Mobile`, `ContactCenter`, `TimeOff`, `Api`, `Import`) with `SourceRef`, `Note`, `CreatedBy` and `Changes` (each with when, who, why and what it was before).
+- **`TimeEntry`**: `UserId` and `UserName`, `StageId`, `StartUtc`, `EndUtc` (none while the person is in it), `Source` (`Self`, `Manager`, `Kiosk`, `Mobile`, `ContactCenter`, `TimeOff`, `Api`, `Import`) with `SourceRef`, `Note`, `ManagedBy` (the clock that keeps it, if another one does), `CreatedBy` and `Changes` (each with when, who, why and what it was before).
 
 `TimeEntryIndex` keeps the person, stage, start, end (the far future while open), whether it is open, and the source.
 
@@ -43,6 +43,14 @@ All live in the `TimeTracker` YesSql collection, each with its own index table.
 - **`AddAsync`** records an entry that has ended (a manager's, an import's, approved time off). **`UpdateAsync`** changes a stage, times or note and needs a reason, kept in `Changes`. **`DeleteAsync`** needs a reason too. None of them lets a person's entries overlap or time be recorded in the future.
 - **`GetTotalsAsync`** totals a range for each person, or each person and day in a time zone (an entry over midnight is split): minutes by stage, minutes by category after its factor, and every tracked minute. An open entry counts up to now.
 - `ITimeEntryObserver` hears about every change after it is saved; the Audit Trail is one.
+
+## Other clocks
+
+Another clock, such as the Workforce time clock, can keep a person's time and show it here:
+
+- **`SyncAsync(TimeEntrySync)`** replaces the entries a clock keeps (`ManagedBy`) for a person over a range with the ones it builds, which it builds under the person's lock so two syncs never write stale time. Entries that didn't change keep their ids. Time kept here, such as a manager's entry, stays, and the clock's entries are cut around it; an entry left open here ends where the clock's next time starts.
+- **`IExternalTimeClock`** says which people a clock keeps (`FindAsync`) and names a clock by its id (`FindByIdAsync`), with where to open it. For those people, `SwitchAsync` is refused and My Time links to the clock. An entry a clock keeps can't be changed or removed here (`UpdateAsync` and `DeleteAsync` are refused); it is corrected in the clock, which syncs it again. Clocking out of an entry started here stays possible.
+- `ITimeStageManager` and `ITimeCategoryManager` let other modules set up stages and categories.
 
 ## Recipe step
 

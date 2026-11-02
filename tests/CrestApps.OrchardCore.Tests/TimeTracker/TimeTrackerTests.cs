@@ -186,6 +186,78 @@ public sealed class TimeTrackerTests
         Assert.Equal(2, errors.Count(error => error.Contains("'Unknown'", StringComparison.Ordinal)));
     }
 
+    [Fact]
+    public async Task Sync_ReplacesOnlyItsOwnEntries_KeepsTheUnchangedOnes_AndWorksAroundOtherTime()
+    {
+        // Arrange (a manager recorded lunch from 12:00 to 12:30; the clock says work from 9:00 to 13:00)
+        await using var kit = await Kit.CreateAsync();
+        var work = await kit.StageAsync("Work");
+        var lunch = await kit.StageAsync("Lunch");
+
+        kit.Now = _nine.AddHours(6);
+
+        var manual = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().AddAsync(
+            new TimeEntry { UserId = "ana", UserName = "ana", StageId = lunch.ItemId, StartUtc = _nine.AddHours(3), EndUtc = _nine.AddHours(3.5) }, "manager", "Lunch"));
+
+        // Act
+        var first = await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine, EndUtc = _nine.AddHours(4), SourceRef = "p1" });
+        var firstIds = await kit.ManagedIdsAsync();
+        var again = await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine, EndUtc = _nine.AddHours(4), SourceRef = "p1" });
+        var againIds = await kit.ManagedIdsAsync();
+        var shorter = await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine, EndUtc = _nine.AddHours(2), SourceRef = "p1" });
+        var entries = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false);
+
+        // Assert
+        Assert.True(manual.Succeeded, string.Join(" ", manual.Errors));
+        Assert.True(first.Succeeded && again.Succeeded && shorter.Succeeded);
+        Assert.Equal(2, firstIds.Count);
+        Assert.Equal(firstIds, againIds);
+        Assert.Equal([(_nine, _nine.AddHours(2)), (_nine.AddHours(3), _nine.AddHours(3.5))], entries.Select(entry => (entry.StartUtc, entry.EndUtc.Value)));
+        Assert.Equal([Kit.ClockId, null], entries.Select(entry => entry.ManagedBy));
+    }
+
+    [Fact]
+    public async Task TimeLeftOpenHere_EndsWhereTheOtherClocksTimeStarts()
+    {
+        // Ana switched to Work here at 9:00, and later the clock says she clocked in at 10:00.
+        await using var kit = await Kit.CreateAsync();
+        var work = await kit.StageAsync("Work");
+
+        await kit.SwitchAsync(work, 0);
+
+        kit.Now = _nine.AddHours(2);
+
+        await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine.AddHours(1) });
+
+        var entries = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false);
+
+        Assert.Equal([(_nine, (DateTime?)_nine.AddHours(1), null), (_nine.AddHours(1), null, Kit.ClockId)], entries.Select(entry => (entry.StartUtc, entry.EndUtc, entry.ManagedBy)));
+        Assert.Contains((TimeEntryChangeKind.Ended, null), kit.Changes);
+    }
+
+    [Fact]
+    public async Task TimeKeptByAnotherClock_CantBeSwitchedChangedOrRemovedHere()
+    {
+        await using var kit = await Kit.CreateAsync(clockKeepsAna: true);
+        var work = await kit.StageAsync("Work");
+
+        kit.Now = _nine.AddHours(6);
+
+        await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine, EndUtc = _nine.AddHours(4) });
+
+        var entry = Assert.Single(await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false));
+        var switched = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().SwitchAsync("ana", "ana", work.ItemId, TimeTrackerConstants.Sources.Self, "ana"));
+        var changed = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().UpdateAsync(entry.ItemId, work.ItemId, _nine, _nine.AddHours(3), null, "manager", "Left early."));
+        var removed = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().DeleteAsync(entry.ItemId, "manager", "Wrong day."));
+
+        var clockOut = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ClockOutAsync("ana", "ana"));
+
+        Assert.Equal("Your time is kept by the Time Clock.", Assert.Single(switched.Errors));
+        Assert.Equal("Not clocked in.", Assert.Single(clockOut.Errors));
+        Assert.Equal("This time comes from the Time Clock; correct it there.", Assert.Single(changed.Errors));
+        Assert.Equal("This time comes from the Time Clock; correct it there.", Assert.Single(removed.Errors));
+    }
+
     private sealed class Kit : IAsyncDisposable
     {
         public CalendarTestHarness Harness { get; private set; }
@@ -194,9 +266,17 @@ public sealed class TimeTrackerTests
 
         public List<(TimeEntryChangeKind Kind, string Reason)> Changes { get; } = [];
 
-        public static async Task<Kit> CreateAsync()
+        public const string ClockId = "Workforce.TimeClock";
+
+        public static async Task<Kit> CreateAsync(bool clockKeepsAna = false)
         {
             var kit = new Kit();
+            var externalClock = new Mock<IExternalTimeClock>();
+
+            externalClock.Setup(c => c.FindAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string userId, CancellationToken _) => clockKeepsAna && userId == "ana" ? new ExternalTimeClockInfo { Id = ClockId, Name = "the Time Clock", Url = "/my-work" } : null);
+            externalClock.Setup(c => c.FindByIdAsync(ClockId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalTimeClockInfo { Id = ClockId, Name = "the Time Clock", Url = "/my-work" });
             var clock = new Mock<global::OrchardCore.Modules.IClock>();
             var observer = new Mock<ITimeEntryObserver>();
 
@@ -211,6 +291,7 @@ public sealed class TimeTrackerTests
                     services.AddTimeTrackerCore();
                     services.AddSingleton(clock.Object);
                     services.AddSingleton(observer.Object);
+                    services.AddSingleton(externalClock.Object);
                 },
                 TimeTrackerIndexSchema.CreateAsync,
                 [new TimeTrackerIndexProvider(), new TimeCategoryIndexProvider(), new TimeStageIndexProvider()],
@@ -254,6 +335,23 @@ public sealed class TimeTrackerTests
 
             Assert.True(result.Succeeded, string.Join(" ", result.Errors));
         }
+
+        public Task<TimeTrackerResult> SyncAsync(params TimeEntry[] desired)
+            => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().SyncAsync(new TimeEntrySync
+            {
+                UserId = "ana",
+                UserName = "ana",
+                ManagedBy = ClockId,
+                Source = TimeTrackerConstants.Sources.Kiosk,
+                FromUtc = _nine.AddDays(-1),
+                ToUtc = _nine.AddDays(1),
+                BuildAsync = _ => Task.FromResult<IReadOnlyList<TimeEntry>>(desired),
+            }));
+
+        public async Task<List<string>> ManagedIdsAsync()
+            => [.. (await Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false))
+                .Where(entry => entry.ManagedBy == ClockId)
+                .Select(entry => entry.ItemId)];
 
         public Task<IReadOnlyList<TimeTotalsRow>> TotalsAsync(bool byDay, DateTime? from = null, DateTime? to = null)
             => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().GetTotalsAsync(new TimeEntryQuery { UserIds = ["ana"], FromUtc = from, ToUtc = to }, "America/New_York", byDay), commit: false);

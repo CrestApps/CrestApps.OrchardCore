@@ -92,7 +92,7 @@ After the worker is saved, the editor lists their certificates. Add one with **C
 
 ## Activity codes
 
-An activity code says what a worker does during part of a shift: work, a break, a meal, a meeting, training and so on. The usual codes are added the first time Workforce is turned on. Open **Workforce > Activity Codes** to change them or add your own.
+An activity code says what a worker does during part of a shift: work, a break, a meal, a meeting, training and so on. The usual codes are added the first time Workforce is turned on. Open **Workforce > Activity Codes** to change them or add your own. With the time clock on, each code also has the Time Tracker **stage** its clocked time is kept in.
 
 | Field | What it does |
 | --- | --- |

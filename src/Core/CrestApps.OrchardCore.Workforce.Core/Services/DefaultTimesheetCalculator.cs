@@ -12,7 +12,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
 {
     // How long after a shift ends, or after clocking in when there is no shift, an open punch counts as missed.
     private static readonly TimeSpan _missedAfterShift = TimeSpan.FromHours(4);
-    private static readonly TimeSpan _missedWithoutShift = TimeSpan.FromHours(16);
+    internal static readonly TimeSpan MissedWithoutShift = TimeSpan.FromHours(16);
 
     // How far from a shift's start a stretch with no overlap still belongs to it.
     private static readonly TimeSpan _shiftReach = TimeSpan.FromHours(1);
@@ -65,7 +65,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
             var open = stretch.Spans[^1];
             var missed = stretch.Shift is not null
                 ? input.NowUtc > stretch.Shift.EndUtc + _missedAfterShift
-                : input.NowUtc > stretch.Start + _missedWithoutShift;
+                : input.NowUtc > stretch.Start + MissedWithoutShift;
 
             if (!missed)
             {
@@ -225,7 +225,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
     /// <summary>
     /// Pairs punches into stretches of spans, each stretch from clocking in to clocking out.
     /// </summary>
-    private static List<Stretch> Pair(IEnumerable<TimePunch> punches)
+    internal static List<Stretch> Pair(IEnumerable<TimePunch> punches)
     {
         var stretches = new List<Stretch>();
         Stretch current = null;
@@ -262,7 +262,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
                 case TimePunchKind.In:
                 case TimePunchKind.JobStart when state is null:
                     // Clocking in long after an open stretch began starts a new one; the open one is a missed punch.
-                    if (state is null || (current.IsOpen && punch.Utc - current.Start > _missedWithoutShift))
+                    if (state is null || (current.IsOpen && punch.Utc - current.Start > MissedWithoutShift))
                     {
                         activity = punch.ActivityCodeId;
                         job = punch.Job;
@@ -603,7 +603,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
 
     private static TimeSpan Min(TimeSpan first, TimeSpan second) => first < second ? first : second;
 
-    private sealed class Stretch
+    internal sealed class Stretch
     {
         public DateTime Start { get; set; }
 
@@ -614,7 +614,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
         public bool IsOpen => Spans.Count > 0 && Spans[^1].End is null;
     }
 
-    private sealed class Span
+    internal sealed class Span
     {
         public TimesheetSpanKind Kind { get; set; }
 

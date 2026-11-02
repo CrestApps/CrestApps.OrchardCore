@@ -32,6 +32,10 @@ Go to **Time Tracker > My Time**. Select **Clock in** on a stage to start. Selec
 
 Go to **Time Tracker > Time Entries**, find the entry by user name, stage or day, and select **Edit**. Change the stage, the start or the end, and enter the **Reason**. The entry keeps what it was, who changed it and why, and the Audit Trail records it when it is on. To add time that wasn't recorded, select **Add time**; to remove an entry, enter a reason under **Remove this time**. Time can't overlap other time of the same person.
 
+## Time from the time clock
+
+With the Workforce time clock on, a worker's punches keep their day here: their **Time Entries** say **From the Time Clock**, open read-only, and are corrected with punches on the worker's timesheet. Their **My Time** says their time is kept by the time clock, with a link to My Work. See [Time Clock](./time-clock.md).
+
 ## Hours by category
 
 **Reports > Time Tracker > Hours by category** shows a row for each person, with a column for each category and the total, for the days you choose (this week at first). Tick **A row per day** to see each day apart. A stage's time adds to each of its categories, so the columns don't add up to the total.

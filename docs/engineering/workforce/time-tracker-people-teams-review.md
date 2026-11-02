@@ -41,7 +41,13 @@ A **Time Tracker** module: configurable stages (Work, Break, Lunch and so on) th
    - `ITimeTrackerService`: clock in, switch stage, clock out, add, edit and delete (a manager, with a reason), and totals by category for people and a range.
    - Pages: **My time** (clock and switch, the day's timeline, the week), **Time entries** (an admin list with filters, manager edits), **Time report** (a row per person, a column per category, totals) and a report data source; stages and categories as admin lists.
    - Audit Trail events for every entry change (when Audit Trail is on); deployment and recipe steps for stages, categories and entries.
-2. **Workforce Time Clock** builds on it instead of keeping its own punches: punches become entries, activity codes become (or point at) stages, timesheets total entries by category and map categories to pay codes, and attendance exceptions compare entries with shifts. Existing punches are migrated.
+2. **Workforce Time Clock** builds on it. *Revised when D2 was built, after reading the time clock again:* punches stay the clock's record, and each worker's day is kept in Time Tracker from them, rather than punches being replaced by entries. Replacing them would have lost three things that work today: workers without a login (kiosk only) have no Time Tracker person; the original punch, never changed, is the record payroll audits ask for, with its device, location and geofence; and rounding, grace, meal and overtime rules, and attendance, are written against punches. So:
+   - after every punch, correction and removal, the worker's entries around it are rebuilt from the punches (paired as timesheets pair them, without rounding) and kept by the clock (`ManagedBy`);
+   - every activity code points at a stage (the same name or code, or a new one counting toward Paid and Worked), and meals and breaks use the meal and break codes' stages;
+   - Time Tracker shows those entries read-only and links to the clock, so time is corrected in one place; My Time does too for those workers;
+   - earlier punches are brought in by a background task, a few workers at a time;
+   - timesheets keep their pay codes; Time Tracker's categories are the reporting view of the same time;
+   - the time clock's pages, and Predictability Pay, move under the Time Tracker menu.
 3. **Contact Center**: a mapping from agent states and break codes to stages (in Workforce Contact Center, which already references both), so an agent's day is tracked while they work.
 4. **Time off**: grants with an expiry in the ledger, used oldest first; an approved request records its hours as entries in the type's stage, so the report shows them with worked time.
 

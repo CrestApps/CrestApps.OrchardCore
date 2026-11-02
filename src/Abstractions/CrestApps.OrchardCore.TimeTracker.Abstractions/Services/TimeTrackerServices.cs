@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
 
 namespace CrestApps.OrchardCore.TimeTracker.Services;
@@ -98,6 +99,39 @@ public interface ITimeTrackerService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A row for each person, or for each person and day.</returns>
     Task<IReadOnlyList<TimeTotalsRow>> GetTotalsAsync(TimeEntryQuery query, string timeZoneId, bool byDay, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces the entries another clock keeps for a person over a range with the ones it builds now. Entries that
+    /// didn't change keep their ids; time kept here (a manager's entry, say) stays and the clock's entries are cut
+    /// around it.
+    /// </summary>
+    /// <param name="sync">The person, the clock, the range and how to build the entries.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result.</returns>
+    Task<TimeTrackerResult> SyncAsync(TimeEntrySync sync, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Says when another clock keeps a person's time, such as a time clock that records punches. Their time is then
+/// switched and corrected there, not here.
+/// </summary>
+public interface IExternalTimeClock
+{
+    /// <summary>
+    /// Finds the clock that keeps a person's time.
+    /// </summary>
+    /// <param name="userId">The person.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The clock, or <see langword="null"/> when this clock does not keep their time.</returns>
+    Task<ExternalTimeClockInfo> FindAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a clock by its id.
+    /// </summary>
+    /// <param name="id">The id kept in <see cref="TimeEntry.ManagedBy"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The clock, or <see langword="null"/> when it isn't this one.</returns>
+    Task<ExternalTimeClockInfo> FindByIdAsync(string id, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -116,4 +150,18 @@ public interface ITimeEntryObserver
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
     Task OnChangedAsync(TimeEntryChangeKind kind, TimeEntry entry, string before, string actor, string reason, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Manages time stages.
+/// </summary>
+public interface ITimeStageManager : ICatalogManager<TimeStage>
+{
+}
+
+/// <summary>
+/// Manages time categories.
+/// </summary>
+public interface ITimeCategoryManager : ICatalogManager<TimeCategory>
+{
 }

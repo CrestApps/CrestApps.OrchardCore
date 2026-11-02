@@ -21,6 +21,11 @@ public class MyTimeViewModel
     public IList<TimeStage> Stages { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the clock that keeps this person's time instead, if another one does.
+    /// </summary>
+    public ExternalTimeClockInfo ExternalClock { get; set; }
+
+    /// <summary>
     /// Gets or sets every stage, by id.
     /// </summary>
     public IDictionary<string, TimeStage> AllStages { get; set; } = new Dictionary<string, TimeStage>(StringComparer.Ordinal);
@@ -80,6 +85,11 @@ public sealed class TimeEntryRow
     /// Gets or sets whether the user can change it.
     /// </summary>
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the clock that keeps the entry, if another one does.
+    /// </summary>
+    public string KeptBy { get; set; }
 }
 
 /// <summary>
@@ -172,6 +182,12 @@ public class TimeEntryEditViewModel
     /// </summary>
     [BindNever]
     public bool IsOpen { get; set; }
+
+    /// <summary>
+    /// Gets or sets the clock that keeps the entry, if another one does; it is then corrected there.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public ExternalTimeClockInfo ExternalClock { get; set; }
 
     /// <summary>
     /// Gets or sets the changes made to it so far.

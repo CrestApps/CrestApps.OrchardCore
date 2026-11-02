@@ -22,7 +22,7 @@ The admin screens are described in the User Manual: [Workers and Teams](../user-
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.LaborRules` | Workforce Labor Rules | `CrestApps.OrchardCore.Workforce.ShiftPlanning` |
-| `CrestApps.OrchardCore.Workforce.TimeClock` | Workforce Time Clock | `CrestApps.OrchardCore.Workforce` |
+| `CrestApps.OrchardCore.Workforce.TimeClock` | Workforce Time Clock | `CrestApps.OrchardCore.Workforce`, `CrestApps.OrchardCore.TimeTracker` |
 | `CrestApps.OrchardCore.Workforce.Api` | Workforce API | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.Portal` | Workforce My Work Portal | `CrestApps.OrchardCore.Workforce` |
 
@@ -218,6 +218,8 @@ The **Workforce Time Clock** feature (`CrestApps.OrchardCore.Workforce.TimeClock
 **Attendance.** `IAttendanceService` pages exceptions, excuses and confirms them, sums a worker's points in the policy's window, and handles `PunchCorrection` requests: approving one records the punch. When new exceptions take a worker's points to the policy's threshold, every `IAttendancePointsHandler` runs; the built-in one tells the worker's line manager.
 
 **Payroll.** `IPayrollExportService.RunAsync` exports a period's locked timesheets through an `IPayrollExportProvider`, once per provider unless asked again, under the period's lock, keeps the file in a `PayrollExportBatch`, and marks the predictability pay it paid as exported. The built-in `Csv` provider writes the columns in `PayrollCsvSettings` (rates from the worker's `WorkerPayRates`; values that start like a formula are quoted). Add a provider to write another payroll format.
+
+**Time Tracker.** Punches stay the clock's record, and `AddWorkforceTimeClockTimeTracker()` keeps each worker's day in [Time Tracker](./time-tracker.md) too. After every punch, correction and removal (`ITimePunchObserver`), `TimeClockDaySync` rebuilds the worker's entries from a day before to a day after it with `ITimeTrackerService.SyncAsync`, pairing punches as timesheets do but without rounding. The entries carry `ManagedBy = "Workforce.TimeClock"`, the start punch as `SourceRef` and the job as their note; an open stretch older than 16 hours is a missed punch and is left out. A span's stage is its activity code's `StageId`; a meal or a break uses the first meal or break code's stage, and work with no activity the first work code's. `TimeClockStageSeeder` gives every activity code a stage when the feature starts (one with the same code or name, or a new one in the `Paid` and `Worked` categories), and `ActivityCodeStageHandler` does it for new codes. `TimeClockExternalClock` (an `IExternalTimeClock`) tells Time Tracker that it keeps the time of every worker with a login who isn't terminated, so My Time links to My Work and the entries are corrected through punches. `TimeClockTrackerBackfillBackgroundTask` brings in punches made before, 25 workers every five minutes, once. Workers without a login aren't kept in Time Tracker.
 
 **Kiosks.** A kiosk's address is `workforce/kiosk/{token}`; only the token's hash is stored. Workers identify with their employee number and a PIN (`SetPinAsync`; PBKDF2 with a salt, five wrong PINs lock it for 15 minutes), and the punch carries a two-minute protected ticket.
 

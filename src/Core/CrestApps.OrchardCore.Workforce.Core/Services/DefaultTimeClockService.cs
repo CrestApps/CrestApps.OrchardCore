@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -33,6 +34,8 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     private readonly WorkerTimeZones _timeZones;
     private readonly TimeOffLocks _locks;
     private readonly IWorkforceEvents _events;
+    private readonly IEnumerable<ITimePunchObserver> _observers;
+    private readonly ILogger _logger;
     private readonly ISession _session;
     private readonly IClock _clock;
 
@@ -50,8 +53,10 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         WorkerTimeZones timeZones,
         TimeOffLocks locks,
         IWorkforceEvents events,
+        IEnumerable<ITimePunchObserver> observers,
         ISession session,
         IClock clock,
+        ILogger<DefaultTimeClockService> logger,
         IStringLocalizer<DefaultTimeClockService> stringLocalizer)
     {
         _punchStore = punchStore;
@@ -65,8 +70,10 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         _timeZones = timeZones;
         _locks = locks;
         _events = events;
+        _observers = observers;
         _session = session;
         _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -268,6 +275,8 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         {
             await TimeOffLocks.ReleaseAsync(lockers);
         }
+
+        await NotifyAsync(result.Value, null, cancellationToken);
 
         if (result.Value.Kind is TimePunchKind.In or TimePunchKind.Out)
         {
@@ -570,12 +579,30 @@ internal sealed class DefaultTimeClockService : ITimeClockService
             await _session.SaveChangesAsync(cancellationToken);
 
             result.Value = punch;
-
-            return result;
         }
         finally
         {
             await TimeOffLocks.ReleaseAsync(lockers);
+        }
+
+        await NotifyAsync(result.Value, original, cancellationToken);
+
+        return result;
+    }
+
+    // A failing observer doesn't undo the punch, which is saved.
+    private async Task NotifyAsync(TimePunch punch, TimePunch replaced, CancellationToken cancellationToken)
+    {
+        foreach (var observer in _observers)
+        {
+            try
+            {
+                await observer.PunchedAsync(punch, replaced, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogError(exception, "A punch observer failed for punch {PunchId}.", punch.ItemId);
+            }
         }
     }
 

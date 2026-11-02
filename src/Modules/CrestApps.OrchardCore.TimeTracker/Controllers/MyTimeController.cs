@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.TimeTracker.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using IClock = OrchardCore.Modules.IClock;
@@ -65,6 +66,7 @@ public sealed class MyTimeController : Controller
         {
             Status = await _tracker.GetStatusAsync(userId, HttpContext.RequestAborted),
             Stages = [.. stages.Where(stage => stage.Enabled && stage.SelfService)],
+            ExternalClock = await ExternalClockAsync(userId),
             AllStages = stages.ToDictionary(stage => stage.ItemId, StringComparer.Ordinal),
             Today = [.. await _tracker.ListAsync(new TimeEntryQuery { UserIds = [userId], FromUtc = dayStart, ToUtc = dayStart.AddDays(1) }, HttpContext.RequestAborted)],
             Week = [.. await _tracker.GetTotalsAsync(new TimeEntryQuery { UserIds = [userId], FromUtc = TimeTrackerTimeZone.ToUtc(monday, zone), ToUtc = TimeTrackerTimeZone.ToUtc(monday.AddDays(7), zone) }, zone, byDay: true, HttpContext.RequestAborted)],
@@ -129,5 +131,18 @@ public sealed class MyTimeController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<ExternalTimeClockInfo> ExternalClockAsync(string userId)
+    {
+        foreach (var clock in HttpContext.RequestServices.GetServices<IExternalTimeClock>())
+        {
+            if (await clock.FindAsync(userId, HttpContext.RequestAborted) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 }
