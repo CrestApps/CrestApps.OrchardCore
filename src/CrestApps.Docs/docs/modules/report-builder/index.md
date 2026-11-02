@@ -70,7 +70,7 @@ Values are formatted with the current culture. A column's **Format** is a .NET f
 | --- | --- |
 | `/Admin/reports/designs` | The designed reports the user can run (Report Builder, or Shared Reports for people who do not build reports). Accepts `q` (search title and group path) and `status` (`published` or `unpublished`). |
 | `/Admin/reports/designs/{id}` | Runs a designed report in the admin. |
-| `/Admin/reports/designs/{id}/export/{format}` | Exports a designed report (`csv`, or `xlsx` with Reports (OpenXml)). |
+| `/Admin/reports/designs/{id}/export/{format}` | Exports a designed report (`csv`, `xlsx` with Reports (OpenXml), or `pdf` with Reports (PDF)). |
 | `/Admin/reports/builder/create`, `/Admin/reports/builder/edit/{id}` | The builder. |
 | `/Admin/reports/views`, `/Admin/reports/views/create`, `/Admin/reports/views/edit/{id}` | Reusable views. |
 | `/Admin/reports/groups`, `/Admin/reports/groups/create`, `/Admin/reports/groups/edit/{id}` | Report groups. Accepts `q` (search group paths); `create` accepts `parentId` to nest the new group. |

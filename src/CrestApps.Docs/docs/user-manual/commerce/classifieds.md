@@ -16,14 +16,16 @@ Let visitors post their own listings, such as ads, directory entries or homes fo
 
 <AskYourAdmin />
 
+This video shows the Marketplace and Classifieds modules, with posting, approving, renewing and upgrading listings and the search:
+
 To try it, run the **Classifieds sample** recipe under **Configuration > Recipes**. It adds a Classified Ad that signed-in visitors post, and a $5 upgrade that features an ad for 7 days.
 
 ## Let visitors post a kind of listing
 
 1. Add the **Classified** part to a content type, such as Classified Ad.
-2. In the part's settings, enter how many **days** a listing runs, and tick whether listings wait for your approval.
+2. In the part's settings (**Design > Content Definition > Content Types**, then **Edit** on the part), enter **Days a listing runs**, and tick **A moderator approves each listing before it's shown**.
 
-Signed-in visitors post from **My listings** in their account. They can say where it is, a place and its map coordinates, which **Use where I am** fills in, so people searching nearby find it.
+Signed-in visitors post from **My listings** in their account, with **Post a Classified Ad**. They can say where it is, a place and its map coordinates, which **Use where I am** fills in, so people searching nearby find it.
 
 ## Approve listings
 
@@ -44,4 +46,4 @@ Owners buy upgrades from **My listings**, through the cart and checkout. The upg
 
 ## The search
 
-Anyone finds listings at **/listings**, by kind, words and distance from where they are. The results show on a map.
+Anyone finds listings at **/listings**, by kind, words and distance from where they are. Listings that have coordinates also show on a map.

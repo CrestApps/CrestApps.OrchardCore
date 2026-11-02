@@ -4,6 +4,7 @@ sidebar_position: 2
 title: MCP FTP/FTPS Resource Handler
 description: FTP and FTPS resource support for the MCP Server, allowing remote files on FTP servers to be exposed as MCP resources.
 user_manual:
+  - user-manual/ai/mcp
   - user-manual/ai/tools-and-agents
 ---
 

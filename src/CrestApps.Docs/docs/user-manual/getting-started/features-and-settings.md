@@ -43,7 +43,7 @@ Site-wide settings live under **Settings** and **Tools**. Each screen appears wh
 | **Settings > Phone Number Verifications** | The phone number lookup provider. | [Phone number verification](../administration/phone-number-verification.md) |
 | **Settings > User Display Name**, **Settings > User Avatars** | How people's names and pictures are shown. | [Users](../administration/users.md) |
 | **Tools > Features** | Turn features on and off. | This page |
-| **Tools > Recipes** | Run ready-made setups. | |
+| **Tools > Recipes** | Run ready-made setups. | [CrestApps Recipes](../../modules/recipes.md) |
 | **Tools > Time Zones** | The friendly time zone names people pick from. | [Time zones](../administration/time-zones.md) |
 | **Tools > Phone Verifications Queue** | The numbers waiting to be checked. | [Phone number verification](../administration/phone-number-verification.md) |
 
@@ -78,7 +78,7 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | **Contact Center Inbound Entry Points** | Entry points for your numbers. | [Entry points and IVR](../entry-points-and-ivr.md) |
 | **Contact Center Inbound Voice** | Call entry points: welcome messages, phone menus, after-hours handling and voicemail. | [Entry points and IVR](../entry-points-and-ivr.md), [Voicemail](../voicemail.md) |
 | **Contact Center Outbound Dialer** | Dialer profiles, preview dialing and queue callbacks. | [Dialer profiles](../dialer-profiles.md) |
-| **Contact Center Paced Dialing** | Power and progressive dialing. | [Dialer profiles](../dialer-profiles.md) |
+| **Contact Center Paced Dialing** | Power, progressive and predictive dialing. | [Dialer profiles](../dialer-profiles.md) |
 | **Contact Center Call Recording** | Call recording and its rules. | [Contact Center settings](../contact-center-settings.md) |
 | **Contact Center Secure Data Capture** | A secure link for customers to type card or bank details. | [Contact Center settings](../contact-center-settings.md), [Agent workspace](../agent-workspace.md) |
 | **Contact Center Supervision & Live Dashboard** | The live dashboard and listen, whisper and barge. | [Live dashboard](../live-dashboard.md) |
@@ -102,15 +102,22 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | --- | --- | --- |
 | **Reports** | The Reports menu and CSV export. | [Reports](../reports.md) |
 | **Reports (OpenXml)** | Excel export of reports. | [Reports](../reports.md) |
+| **Reports (PDF)** | PDF export of reports. | [Reports](../reports.md) |
+| **Report Subscriptions** | Have a report emailed to people on a schedule. | [Reports](../reports.md) |
 | **Report Builder** | Build your own reports with drag and drop, and share them. | [Report Builder](../report-builder/index.md) |
 | **DNC Registry**, **Local Do Not Call Registry**, **USA FTC Do Not Call Registry**, **Canada LNNTE-DNCL Registry** | Do-not-call checks on imports and calls. | [Do-not-call lists](../administration/do-not-call-lists.md) |
 | **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, **Twilio Phone Number Verification** | Phone number lookups that catch dead numbers before you dial. | [Phone number verification](../administration/phone-number-verification.md) |
 | **Content Transfer**, **Content Transfer (OpenXml)** | Importing and exporting contacts and other records as CSV or Excel. | [Import and export](../administration/import-and-export.md) |
+| **Addresses**, **Address Countries**, **Address Suggestions (Google Places)** | An address field for content types, country lists, and suggestions as people type an address. | [Content fields](../administration/content-fields.md) |
 | **Content Access Control** | Limits who may see a content item by role. | [Content access control](../administration/content-access-control.md) |
 | **CrestApps Content Fields** | Extra field types for content types. | [Content fields](../administration/content-fields.md) |
 | **User Display Name**, **User Avatar** | Full names and pictures for users. | [Users](../administration/users.md) |
 | **Enhanced Roles** | A role picker for content items. | [Roles](../administration/roles.md) |
 | **Time Zones** | Friendly time zone names. | [Time zones](../administration/time-zones.md) |
+| **Email Code Sign In** | Sign in with a code sent by email instead of a password. | [Users](../administration/users.md) |
+| **Wizard** | Ask visitors for information one step at a time, and let them resume. | [Wizard](../../modules/wizard.md) |
+| **CrestApps Recipes** | Descriptions for recipes, and a JSON editor that suggests steps and checks a pasted recipe. | [CrestApps Recipes](../../modules/recipes.md) |
+| **Tenant Hierarchy Platform**, **Parent Tenant**, **Child Tenant** | A parent tenant that creates, manages and opens its own child tenants. | [Child tenants](../administration/child-tenants.md) |
 | **Workflows** (from Orchard Core) | Automations that react to events. | [Contact Center workflows](../workflows.md), [AI workflows](../ai/workflows.md) |
 
 ### Artificial intelligence

@@ -28,8 +28,8 @@ public sealed partial class VoiceAgentConversationLoop
     // The call's own tools, offered alongside the profile's. The automated conversation calls the completion service
     // directly rather than through the orchestrator, so the tools are attached to the context for this turn only:
     // the profile's tools, tool instances, MCP connections and agents come from the same registry the orchestrator
-    // reads (see AIConversationTools), and the call's system tools are added after them. The profile's own tool list
-    // skips system tools, which these are, so they could never be enabled through it.
+    // reads (see AIConversationTools), and the call's own tools are added after them. They are registered hidden: no
+    // profile can select them, and no other session is given them.
     private Task<IReadOnlyList<ToolRegistryEntry>> AttachCallToolsAsync(AICompletionContext context, bool offerTransfer, CancellationToken cancellationToken)
     {
         // The end-call tool is offered on every turn, and the transfer tool only when this call has somewhere to

@@ -14,7 +14,9 @@ user_manual:
 
 Provides ad-hoc AI chat interactions with configurable parameters without predefined profiles.
 
-How to start, configure and use chat interactions in the admin, with screencasts, is described in the User Manual under [Chat interactions](../user-manual/ai/chat-interactions.md).
+<YouTube video="ai-chat-interactions" title="Video overview of AI chat interactions" />
+
+The video shows how to start, configure and manage chat interactions in the admin. The same steps are described in the User Manual under [Chat interactions](../user-manual/ai/chat-interactions.md).
 
 ## Overview
 

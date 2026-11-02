@@ -67,24 +67,29 @@ public sealed class Startup : StartupBase
         services.AddScoped<AIVoiceSessionSummaryWriter>();
         services.TryAddScoped<IAIVoiceSessionSummaryStore, NullAIVoiceSessionSummaryStore>();
 
-        // The end-call tool is turned on by the call itself rather than by an administrator - every automated
-        // call has to be endable - so it is registered without being selectable, like the transfer tool.
+        // The call's tools are given to a call by the call itself rather than by an administrator - every
+        // automated call has to be endable - so they are registered hidden, like the transfer tool: a session is
+        // given a hidden tool only when it names it. A tool registered without being selectable is a system tool
+        // instead, and every chat is given those.
         services.AddCoreAITool<EndCallTool>(EndCallTool.ToolName)
             .WithTitle(S["End the call"])
             .WithDescription(S["Lets an automated call hang up once the conversation is over."])
-            .WithCategory(S["Omnichannel"]);
+            .WithCategory(S["Omnichannel"])
+            .Hidden();
 
         // Pressing keys is part of every automated call too: the AI may reach a phone menu on the other end.
         // Secure keypad entry is offered on calls only where secure data capture is on.
         services.AddCoreAITool<CollectSecureDigitsTool>(CollectSecureDigitsTool.ToolName)
             .WithTitle(S["Collect digits securely"])
             .WithDescription(S["Lets an automated call take a card or account number typed on the keypad through secure data capture."])
-            .WithCategory(S["Omnichannel"]);
+            .WithCategory(S["Omnichannel"])
+            .Hidden();
 
         services.AddCoreAITool<PressKeysTool>(PressKeysTool.ToolName)
             .WithTitle(S["Press keys"])
             .WithDescription(S["Lets an automated call press keys to get through a phone menu."])
-            .WithCategory(S["Omnichannel"]);
+            .WithCategory(S["Omnichannel"])
+            .Hidden();
 
         // Speech-to-speech needs a bidirectional media path to the caller's leg, which only the Contact Center
         // Voice Media feature provides. This feature does not depend on it - automated calls run perfectly well

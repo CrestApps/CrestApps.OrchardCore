@@ -18,8 +18,6 @@ A buyer can use several codes on one order. Each coupon says which other kinds o
 
 <AskYourAdmin />
 
-<YouTube video="commerce" title="Narrated video of creating a coupon" start={130} end={161} />
-
 ## Find a coupon
 
 **Commerce > Coupons** lists your coupons, newest first.

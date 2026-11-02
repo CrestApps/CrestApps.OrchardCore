@@ -104,7 +104,7 @@ A calculated field works out a new value with a formula, like a spreadsheet.
 3. Write the **Formula**. Click a field or function in the lists on the right to insert it.
 4. Click **Check**. The builder shows the result type, or what is wrong. Click **Apply**.
 
-The new field appears under **Calculated fields**. Drag it onto **Columns**, **Filters** or a visual like any other field. Click the pencil next to it to change its formula, or **Delete** in the formula window to remove it.
+The new field appears under **Calculated fields**. Drag it onto **Columns**, **Filters** or a visual like any other field. A calculated field that gives a number is added with the **Sum** aggregate: when each row should show its own value, such as the wait of each call in minutes, set its **Aggregate** to **None** under **Properties**. Click the pencil next to it to change its formula, or **Delete** in the formula window to remove it.
 
 ### How to write a formula
 

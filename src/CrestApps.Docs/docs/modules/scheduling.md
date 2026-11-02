@@ -50,12 +50,14 @@ All records live in the `Scheduling` collection.
 
 ## Availability
 
+The video shows the rules on screen:
+
 `ISchedulingAvailabilityService.FindSlotsAsync(type, fromUtc, toUtc, resourceId)` returns `AppointmentSlot`s (`StartUtc`, `EndUtc`, the free `ResourceIds`, and `Remaining` places for a group session):
 
 1. The window is cut to the type's minimum notice and booking horizon.
 2. For each eligible resource, the open hours are its weekly working hours less its date overrides, in the resource's time zone, or in `Shifts` mode the **Shift** events on its shift calendar (`ShiftCalendarId`, any calendar that holds a `Shift` event type, such as one a workforce management module registers) that name its user as an attendee.
 3. Busy time comes from `ICalendarAvailabilityService.GetBusyAsync` for the resource's calendar and its user, which includes every [busy-time source](./calendars.md#extension-points). Each busy interval is widened by the type's buffers. An appointment already booked also keeps the free time its own type asks for before and after it, so a time that falls in it isn't offered (a group session's own start still is, while it has places).
-4. Start times step by `SlotIntervalMinutes`. A time is offered when the whole appointment fits, the resource's daily (`MaxPerDay`) and weekly (`MaxPerWeek`, Monday to Sunday in the resource's time zone) limits for the type aren't reached, and, for a group session, the session has places left.
+4. Start times step by `SlotIntervalMinutes`, from the start of each open range. A time is offered when the appointment itself fits inside the open hours (its free time before and after only has to be clear of busy time, so it may run outside them), the resource's daily (`MaxPerDay`) and weekly (`MaxPerWeek`, Monday to Sunday in the resource's time zone) limits for the type aren't reached, and, for a group session, the session has places left.
 5. A time is offered only when every resource requirement can be met: a free resource in each group, or with `AllTogether` every resource of that group. A booked appointment makes each of its resources busy, not only the one whose calendar holds its event.
 
 ## Resource requirements
@@ -134,6 +136,8 @@ Scheduling sends no email of its own. To send the confirmation and the manage li
 
 ## Workflows
 
+The video builds a workflow from the Scheduling events and tasks:
+
 Activities are in the **Scheduling** category.
 
 | Event | Raised when |
@@ -165,6 +169,8 @@ Tasks take Liquid fields; each can rename its output with **OutputName**.
 Appointments booked by a workflow have `Source = Workflow`.
 
 ## Recipes and deployment
+
+The video builds a deployment plan with the Calendars and Scheduling steps:
 
 The **Scheduling** deployment step exports the scheduling resources and appointment types, with **Include appointments** every appointment (with the customer's name, email and phone, but without its manage link), and with **Include the waitlist** the waitlist. Add the **Calendars** step too (with events when appointments are included), so the resources' calendars and the appointments' calendar events come along.
 
@@ -223,6 +229,8 @@ The Scheduling API feature maps `/api/scheduling/v1`, authenticated with Orchard
 A time that was taken, or a booking the customer already has, returns `409 Conflict` as Problem Details. A missing body, or a slot range whose end is not after its start, returns `400`.
 
 ## AI tools
+
+The video shows the Scheduling tools in an AI profile:
 
 With `CrestApps.OrchardCore.AI` enabled, Scheduling registers these tools in the **Scheduling** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They are meant for customer-facing assistants, so they work for anonymous visitors, but only with appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**.
 

@@ -19,13 +19,17 @@ Before anyone can chat with an assistant, the site needs to reach an AI service,
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of the Azure OpenAI provider connection and its chat, utility, and embedding deployments" start={26} end={43} />
+<YouTube video="ai-connections-deployments" title="Video overview of connections, deployments and default models" />
+
+The video covers why the provider is set up once, how connections, deployments and default models fit together, and each task below.
 
 Your technical team can also set up connections and deployments in the site's configuration files. Those show in the lists under **Configuration-based connections** or **Configuration-based deployments** with a **Read-only** badge, and can only be changed there. See the [Technical Manual provider pages](../../ai/providers/index.md).
 
 ## Add a connection
 
 A connection holds the address and the key the site uses to reach one AI service account.
+
+<YouTube video="ai-connections-deployments" title="Video of adding a connection" start={99} end={154} />
 
 1. Open **Artificial Intelligence > Provider Connections** and click **Add Connection**.
 2. In **Available Providers**, click **Add** on your provider.
@@ -44,6 +48,8 @@ A connection holds the address and the key the site uses to reach one AI service
 Many AI services, such as DeepSeek, Google Gemini or Together AI, work like OpenAI. Choose **OpenAI** and enter that service's endpoint and key.
 :::
 
+<YouTube video="ai-providers-other" title="Video of the OpenAI-compatible, Ollama and Azure AI Inference connections and a deployment" start={60} end={167} />
+
 The site checks the fields when you click **Save**; it does not contact the provider. If the key or the address is wrong, you find out the first time someone chats. A change to a connection can make the site reload its settings for a moment.
 
 **Ollama** connections only have a **Title** and a **Technical name** in the admin; the address of the Ollama server is set in the site's configuration by your technical team.
@@ -51,6 +57,8 @@ The site checks the fields when you click **Save**; it does not contact the prov
 ## Add a deployment
 
 A deployment is one model you use through a connection, such as `gpt-4.1-mini` for chat or `text-embedding-3-small` for search. Add one for every model the site needs.
+
+<YouTube video="ai-connections-deployments" title="Video of adding chat and embedding deployments" start={154} end={213} />
 
 1. Open **Artificial Intelligence > Deployments** and click **Add Deployment**.
 2. In **Available Providers**, click **Add** on the provider of the model.
@@ -64,6 +72,8 @@ A deployment is one model you use through a connection, such as `gpt-4.1-mini` f
 | **Model capabilities** | What the model can do. See below. At least one is required. |
 
 ### Model capabilities
+
+<YouTube video="ai-connections-deployments" title="Video of choosing model capabilities and reasoning effort" start={213} end={258} />
 
 Tick, under **Trained features**, only what the model really supports. The site uses these ticks to decide where the model is offered: an embedding model shows up only where an embedding model is needed, and a feature you leave unticked is never asked of the model.
 
@@ -91,6 +101,8 @@ Tick, under **Trained features**, only what the model really supports. The site 
 
 ## Choose the default models
 
+<YouTube video="ai-connections-deployments" title="Video of choosing the default models" start={258} end={299} />
+
 Open **Settings > Artificial Intelligence** and fill in the **Default Deployments** section. A profile or chat left on **Default** uses these. Each list only shows deployments with the right capability.
 
 | Field | What it is used for |
@@ -109,11 +121,15 @@ Click **Save**.
 
 ### Other site-wide AI settings
 
+<YouTube video="ai-site-settings" title="Video tour of Settings, Artificial Intelligence" />
+
+The video is a tour of every card of the page. Saving the page may restart the website for a moment.
+
 The same page has these sections, each explained on its own page:
 
 | Section | Where it is explained |
 | --- | --- |
-| **General** | **Enable preemptive memory retrieval** lets the assistant read a user's [memory](memory.md) before it answers. The other options are technical; see the [Technical Manual](../../ai/overview.md#site-settings). |
+| **General** | **Enable preemptive memory retrieval** lets the assistant read a user's [memory](memory.md) before it answers. **Maximum iterations per request** limits how many times the assistant may call tools to write one answer (never more than 100). **Enable distributed caching** lets the AI services cache answers on a shared cache, and **Enable OpenTelemetry** sends AI requests to your monitoring tool. See also the [Technical Manual](../../ai/overview.md#site-settings). |
 | **Default Orchestrator** | **Enable preemptive retrieval-augmented generation (RAG)**: search your knowledge before every answer. See [Knowledge](knowledge.md). |
 | **Prompt Security** and **Visitor Identity** | Protections for public chat. See [Chat widgets](chat-widgets.md#protect-a-public-assistant). |
 | **Data Sources** and **Documents** | Defaults for [Knowledge](knowledge.md). |

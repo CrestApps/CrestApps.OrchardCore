@@ -50,7 +50,7 @@ If the phone system cannot connect the call that way, for example while your pho
 ## Call an extension
 
 1. On the **Keypad** tab, click **Dial extension**. The country flag disappears and the field reads *Search a name, or enter an extension*.
-2. Type the extension number and click **Call**, or start typing a name: the people who match are listed with their extension under **Matching extensions**. Click one to call them, or press **Enter** when only one person matches.
+2. Type the extension number and click **Call**, or start typing a name: the people who match are listed with their extension (for example *Ext 1002*). Click one to call them, or press **Enter** when only one person matches.
 3. Click **Dial phone number** to go back to ordinary numbers.
 
 While you type an extension, the phone shows who it rings. The call is shown with the person's name, for example *Jane Doe · ext 2*, and so is the entry on the **Recent** tab, which calls it back as an extension. Your own extension is never listed; typing it shows *That's your own extension.*

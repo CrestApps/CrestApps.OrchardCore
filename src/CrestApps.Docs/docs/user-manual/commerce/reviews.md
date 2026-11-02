@@ -16,11 +16,13 @@ technical_manual:
 
 <AskYourAdmin />
 
+This video shows what shoppers see, how a customer writes a review, how you approve reviews, the settings, and the ratings in listings:
+
 ## How customers review
 
-At the bottom of a product's page, **Customer reviews** shows the approved reviews, newest first, and the product's average rating. A signed-in customer who bought the product sees **Write a review**: they choose their stars, and can add a title, a few words and the name shown with the review. Reviews from buyers are marked **Verified purchase**.
+At the bottom of a product's page, **Customer reviews** shows the approved reviews, newest first, and the product's average rating. A signed-in customer who bought the product sees **Write a review**: they choose **Your rating**, and can add a **Title**, **Your review** and the **Name shown with your review**. Reviews from buyers are marked **Verified purchase**. A visitor who isn't signed in is asked to sign in, and, when only buyers can review, a customer who hasn't bought the product is told so.
 
-After sending, the customer is told their review will show once you approve it. They can change it later; a changed review waits for approval again. Each customer has one review per product.
+After they click **Send review**, the customer is told their review will show once you approve it. They can change it later; a changed review waits for approval again. Each customer has one review per product.
 
 Under the product's price, its stars, average and number of reviews link to the reviews.
 
@@ -44,7 +46,7 @@ Use the status filter to see **Approved**, **Rejected** or all reviews, and chan
 
 ## Ratings in listings
 
-Once a product has an approved review, shoppers can sort a listing by **Customer rating: highest first**, and listings that choose their filters automatically offer a **Customer rating** filter with *4 and up*, *3 and up* and *2 and up*. To add them to a listing that has its own filters and sorts, edit the listing and pick **Customer rating**.
+Once a product has an approved review, shoppers can sort a listing by **Customer rating: highest first**, and listings that choose their filters automatically offer a **Customer rating** filter with *4 and up*, *3 and up* and *2 and up*. To add them to a listing that has its own filters and sorts, edit the listing, open **Choose filters** and tick **Customer rating**, and do the same under **Choose sorts**.
 
 ## Settings
 

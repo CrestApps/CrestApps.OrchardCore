@@ -24,6 +24,8 @@ Use webhooks to:
 
 <AskYourAdmin />
 
+This video shows how to add a webhook, the events, how messages are signed and retried, and the deliveries log:
+
 The system that receives the messages is called the **receiver**. Whoever builds it needs the address it listens on, and the webhook's **signing secret**, to check that each message really came from your store.
 
 ## Add a webhook

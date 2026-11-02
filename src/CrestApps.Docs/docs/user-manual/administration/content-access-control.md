@@ -10,7 +10,7 @@ Content Access Control lets an editor say, on each content item, which roles may
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types (setup); the content item editor (picking roles) |
+| **Menu** | Design > Content Definition > Content Types (setup); the content item editor (picking roles) |
 | **Permission** | Edit content types (setup); the usual permission to edit the content (picking roles) |
 | **Feature** | Content Access Control (turns on Enhanced Roles too) |
 
@@ -25,12 +25,16 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 - A person can view the item only if they hold at least one of the roles picked on it.
 - An item with no roles picked is not restricted. Everyone who can normally view content can view it.
 - Only viewing is limited. Who can edit, publish or delete the item still follows the normal permissions.
+- People in the **Administrator** role can always view every item, restricted or not.
+- A person who does not hold a picked role is refused: the page shows *You do not have access to this resource.*
 
 ## Set up a content type (once)
 
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 1. Open **Content > Content Definition > Content Types** and edit the content type.
 2. If it does not have the **Role Picker** part yet, click **Add Parts**, tick **Role Picker**, and save.
-3. Edit the **Role Picker** part on the content type.
+3. Click **Add & Configure** next to **Role Picker**, or edit the **Role Picker** part on the content type.
+   Give it a clear **Display Name**: editors see it above the picker.
 4. Tick **Restrict content?**. Its hint reads: *When checked, only users in the selected roles will be allowed to access this content.*
 5. Set the picker's other options (**Exclude roles**, **Required?**, **Allow multiple?**, **Hint**). They are described on [Roles and Permissions](roles.md#add-the-role-picker-to-a-content-type).
 6. Save.

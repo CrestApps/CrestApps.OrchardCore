@@ -23,6 +23,7 @@ If you never turn the feature on, or never use accounts, contacts work exactly a
 
 ## Turn it on (once)
 
+
 The quickest way is the **Omnichannel CRM starter** recipe:
 
 1. Open **Tools > Recipes** and run **Omnichannel CRM starter**.
@@ -41,12 +42,13 @@ To use your own types instead, turn on **Omnichannel CRM** under **Tools > Featu
 
 | To make a... | Attach | Notes |
 | --- | --- | --- |
-| Lead type | **Omnichannel Contact** and **Lead** | In the Lead part's settings, pick the contact type it converts into and the opportunity type offered first. |
-| Opportunity type | **Opportunity** | Make one type per kind of deal, for example *Sales Opportunity* and *Renewal*. In the part's settings, pick the stages this type uses; none picked means every stage. |
+| Lead type | **Omnichannel Contact** and **Lead** | In the Lead part's settings (**Design > Content Definition > Content Types**, edit the type, then **Edit** on the **Lead** part), pick the contact type it **Converts into** and the **Opportunity type** offered first. |
+| Opportunity type | **Opportunity** | Make one type per kind of deal, for example *Sales Opportunity* and *Renewal*. In the part's settings, tick the **Stages** this type uses; none ticked means every stage. |
 
 A type with the Omnichannel Contact part and no Lead part is a contact type, as before.
 
 ## Work with leads
+
 
 **Interaction Center > Leads** lists your open leads. Click **New** followed by the lead type's name to add one. Besides the name and contact methods, a lead has:
 
@@ -59,7 +61,7 @@ A type with the Omnichannel Contact part and no Lead part is a contact type, as 
 | **Rating** | *Hot*, *Warm* or *Cold* to start with. |
 | **Lead owner** | The user responsible for the lead. |
 
-Only **Lead status** belongs to the CRM itself. The other fields are standard content fields of the **Lead** part, so they use the normal field editors and settings. To change the rating choices, a hint or a required flag, open **Content Definition > Content Parts > Lead** and edit the field. The same fields show on every lead type. You can add your own fields to the part or to a lead type the same way.
+Only **Lead status** belongs to the CRM itself. The other fields are standard content fields of the **Lead** part, so they use the normal field editors and settings. To change the rating choices, a hint or a required flag, open **Design > Content Definition > Content Parts > Lead** and edit the field. The same fields show on every lead type. You can add your own fields to the part or to a lead type the same way.
 
 Use these search terms on the Leads list:
 
@@ -76,6 +78,7 @@ The `phone:` terms from [Contacts](contacts.md) work here too.
 
 ### Call and text leads
 
+
 Everything you do with a contact works on a lead: **Add Activity**, **List Activities**, calls, texts and automated AI conversations.
 
 - **Activity loads.** Pick the lead type as the **Record type** and a **Lead filters** panel appears right under it, inside **Record filters**. You can filter by status, imported file, source, rating and owner.
@@ -89,6 +92,7 @@ Everything you do with a contact works on a lead: **Add Activity**, **List Activ
 - **Inbound calls and texts.** When a number belongs to both a contact and a lead, the contact wins. A converted lead never matches.
 
 ## Convert a lead
+
 
 1. Open the lead and click **Convert Lead**.
 2. Choose the **Contact**:
@@ -110,6 +114,7 @@ What conversion does:
 You cannot convert a lead while a call or message with it is in progress.
 
 ### Let the AI convert leads
+
 
 An **Automatic** activity load of a lead type shows an **AI lead conversion** card. Tick **Allow AI to convert the lead**, and when an automated text or call ends, the AI decides from the conversation whether the lead qualified. If it did, the lead is converted before the disposition's follow-up actions run, so those work on the new contact.
 
@@ -146,19 +151,26 @@ An account is the company or household your contacts and opportunities belong to
 
 Every contact and opportunity type can join an account without extra setup. Leads never join an account; they get one when they are converted.
 
+If an account's page says *Please specify at least one contained content type*, open **Design > Content Definition > Content Types > Account**, edit its **List** part, tick **Contact** and **Sales Opportunity** (and any other contact or opportunity type you use) as the contained content types, and save. The page then lists the account's contacts and opportunities.
+
 ## Opportunities
 
+**Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Design > Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
 **Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
 
 Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for example `closed:false`.
 
+To delete an account, use **Actions > Delete** on its row and confirm. Its contacts and opportunities stay, now without an account:
+
 ## Lead sources
+
 
 Lead sources are ordinary content items of the **Lead Source** type. Open **Interaction Center > Management > Lead Sources** to add, rename or remove one. You need the usual content permissions for the **Lead Source** type.
 
 The **Lead source** fields of leads and opportunities are content pickers of this type. Activity loads and imports pick from the published lead sources too. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
 
 ## Lead statuses and opportunity stages
+
 
 Manage both lists under **Interaction Center > Management**. Unlike lead sources, these lists are part of the CRM itself, because their settings decide how leads and opportunities behave.
 
@@ -171,6 +183,7 @@ Manage both lists under **Interaction Center > Management**. Unlike lead sources
 The name of a status or stage cannot be changed after you create it.
 
 ## Import and export leads
+
 
 Import and export leads the same way as [contacts](contacts.md), through Bulk Import and Bulk Export. This needs the Content Transfer feature.
 

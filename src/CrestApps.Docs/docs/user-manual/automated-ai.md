@@ -11,6 +11,8 @@ technical_manual:
   - omnichannel/management
 ---
 
+<YouTube video="contact-center-ai-outbound-calls" title="Video overview of AI outbound calls: the profile, the subject, the automatic load, screening, what the agent does and how to review it" />
+
 This page is about conversations the AI starts. To have the AI answer the calls and texts customers send to your numbers, see [Let the AI answer incoming calls](#let-the-ai-answer-incoming-calls) and [Let the AI answer incoming texts](#let-the-ai-answer-incoming-texts).
 
 An **automatic** activity load creates activities that an **AI profile** works by itself: it sends the opening text (or places the call), holds the conversation, and completes the activity with a disposition and a summary. If the subject allows it, the AI hands the customer to a live agent.
@@ -37,12 +39,12 @@ An **automatic** activity load creates activities that an **AI profile** works b
 
 1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Automatic**.
 2. Enter a **Title**, pick the **Subject content type** and the **Campaign**.
-3. Pick the **AI profile**, or leave it empty to use the subject's profile. One of the two is required.
+3. Pick the **AI profile**. An outbound subject cannot hold a profile, so the load must name one. An inbound subject can, and then the field may stay empty to use the subject's profile.
 4. Pick **SMS** as the **Channel**, and the **Address** to send from. Only addresses used for text messages are listed.
 5. Set the AI options (below), the record filters, and **Save**. For a lead type you can also let the AI convert the leads it qualifies; see [Let the AI convert leads](leads-accounts-opportunities.md#let-the-ai-convert-leads).
 6. Choose **Actions > Load activities**.
 
-A background task picks up due automated activities every five minutes and sends the opening message. Replies are answered by the AI after the reply delay. Each send checks the contact's opt-out first.
+A background task picks up due automated activities every five minutes and sends the opening message. Replies are answered by the AI after the reply delay. Each time the task starts a text or a call, it checks the contact's opt-out first. A workflow that starts the conversation with the **Place Call or Send Message** task begins it at once and runs none of these checks; see [Workflows](workflows.md).
 
 While the conversation runs:
 
@@ -54,7 +56,23 @@ While the conversation runs:
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating an automatic voice activity load with an AI profile, background office sound and reply delay" start={1293} end={1348} />
 
-Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
+<YouTube video="contact-center-ai-outbound-calls" title="Video of creating the AI profile, the outbound subject and the automatic voice load, and reviewing the conversation" start={63} end={229} />
+
+Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. An AI call is not a dialer mode and uses no dialer profile; it is an automated activity. Only the **Telnyx** provider can place it: the Asterisk provider cannot place or answer AI calls. If the **Address** is left empty, the call shows the **Default outbound caller ID** of the Telnyx settings.
+
+The **Phone calls** starting points of **Add Profile** (**Answer calls at the front desk**, **Confirm appointments by phone** and **Qualify leads by phone**) need the **Automated Voice** feature, which the **Telnyx AI Voice Agent** feature turns on. The load refuses a profile that does not have **Start the conversation automatically** turned on.
+
+An outbound subject shows only the **Live agent handoff** card (**Allow the AI to hand off to a live agent**, **Handoff queue** and **Escalate when**): the speech and voice settings belong to inbound subjects. A call is handed over only when the card is ticked, a queue is chosen and at least one **Escalate when** reason is ticked. The agent who takes it sees the **AI assistant's summary**.
+
+### When the call starts and what is checked
+
+The background task runs every five minutes, so the first call can start up to five minutes after the load. Each time it starts an activity it checks, in this order, that the number is not known to be out of service (the activity is *Cancelled*), that the contact has not asked not to be reached on the channel, and then the screeners the site has: the do-not-call lists, which need the **Contact Center Outbound Dialer** feature, and a calling window, which is checked only when your administrator has turned it on for automated calls. The first reason that refuses a call is written to the activity's notes, and the activity is *Cancelled*.
+
+### Before and after the call
+
+The recording notice: under **Settings > Contact Center > Recording governance** (which needs **Contact Center Call Recording**), **Tell callers the call is recorded** sets the text, and **Have automated voice agents say it first** makes the AI say it before anything else. A turn-based call speaks it before the profile's opening message; in a live conversation the model is told to say it and the platform checks that it did.
+
+To review a finished call, open the contact's activities. **Dispositioned by** reads *AI voice agent (profile: ...)*, and the disposition and notes hold the AI's summary. **Review AI conversation** opens the transcript read only. It appears when the activity has an AI conversation, and it needs the **AI Chat** feature and permission to query AI profiles and to list activities.
 
 ### Phone menus, keys and call screening
 
@@ -70,7 +88,7 @@ The AI is told who answered by your phone system's **Answering machine detection
 
 ### When the line goes quiet
 
-When nobody speaks for 8 seconds, the AI asks whether the person is still there. It asks twice, 8 seconds apart, and after another 8 seconds of silence it says goodbye and hangs up, about half a minute after its last word. Anything the person says starts the count again. Calls the AI answers work the same way.
+When nobody speaks for 8 seconds, the AI asks whether the person is still there. It asks twice, 8 seconds apart, and after another 8 seconds of silence it says goodbye and hangs up, about half a minute after its last word. Anything the person says starts the count again. Calls the AI answers work the same way, with one difference: on a call the platform placed, silence from a person who has never spoken is treated as a voicemail, and the AI leaves its message instead of asking.
 
 ## Let the AI answer incoming calls
 
@@ -111,7 +129,7 @@ This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** feat
 
 | Field | What it does |
 | --- | --- |
-| **AI profile** | The profile that runs the conversation. Only chat profiles with **Start the conversation automatically** turned on are listed. It is saved on each activity. Leave it empty to use the subject's profile. |
+| **AI profile** | The profile that runs the conversation. Only chat profiles with **Start the conversation automatically** turned on are listed. It is saved on each activity. Leave it empty only when an inbound subject names one; an outbound subject cannot. |
 | **Allow AI to update the contact or lead** / **Allow AI to update the subject** | Lets the AI save what it learns onto the records, for example a corrected phone number or email. |
 | **Play background office sound on calls** | Voice only: a quiet office ambience (faint room tone and typing) behind the AI voice, instead of a silent line. It applies only to calls that use a realtime voice profile. |
 | **Reply delay** | **No delay**, **Fixed** (wait **Delay (seconds)**), or **Random (base ± jitter)** (wait a random time between **Base (seconds)** minus and plus **Jitter ± (seconds)**), so replies do not feel instant. |

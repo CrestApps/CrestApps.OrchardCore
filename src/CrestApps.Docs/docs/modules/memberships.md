@@ -16,6 +16,8 @@ The **Memberships** feature sells access. The attachable **Membership** part (`M
 
 ## Memberships
 
+This video shows the Membership part and the Memberships list:
+
 `Membership` (collection `Memberships`, store `IMembershipStore`) holds the following:
 
 - The member (`UserId`, `UserName`), the product and its title.
