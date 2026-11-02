@@ -1,0 +1,48 @@
+@model AssetsListViewModel
+
+<zone Name="Title"><breadcrumb name="Assets" title="@T["Assets"]" /></zone>
+
+<form asp-action="Index" method="get" id="assets-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col-12 col-md">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                        <input asp-for="Q" class="form-control" placeholder="@T["Search by name, number or serial number"]" aria-label="@T["Search assets"]" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    @if (Model.TypeOptions.Count > 0)
+                    {
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add asset"]</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @foreach (var type in Model.TypeOptions)
+                                {
+                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-assetTypeId="@type.Value">@type.Text</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a asp-controller="AssetTypes" asp-action="Edit" class="btn btn-secondary create">@T["Add an asset type first"]</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+@{
+    Model.List.ToolbarActions = await New.AssetsFilter(ViewModel: Model, FormId: "assets-filter");
+}
+
+<admin-list name="Assets" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add an asset, or change the search and filters."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Asset"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

@@ -1,0 +1,30 @@
+@model GoogleMapsSettingsViewModel
+
+<h2 class="h5 mt-4">@T["Google Maps"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["Choose Google Maps above for geocoding, travel times or routes. Create a key in the Google Cloud console for the Geocoding, Distance Matrix and Directions APIs, restricted to them. Google bills each request, and its travel times are never cached, as its terms require."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Key" class="ocat-label">@T["API key"]</label>
+    <div class="ocat-end">
+        <input asp-for="Key" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasKey ? T["Saved. Enter a new key to replace it."] : null)" />
+        <span class="hint">@(Model.HasKey ? T["A key is saved. It is never shown again."] : T["Without a key, Google Maps answers nothing and the built-in estimate is used."])</span>
+    </div>
+</div>
+
+@if (Model.HasKey)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="RemoveKey" type="checkbox" class="form-check-input" />
+                <label asp-for="RemoveKey" class="form-check-label">@T["Remove the key"]</label>
+                <span class="hint dashed">@T["The provider stops answering until a new key is saved."]</span>
+            </div>
+        </div>
+    </div>
+}

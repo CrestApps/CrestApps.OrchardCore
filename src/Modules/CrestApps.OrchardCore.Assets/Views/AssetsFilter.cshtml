@@ -1,0 +1,21 @@
+@{
+    var model = (AssetsListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<label for="assets-type" class="visually-hidden">@T["Asset type"]</label>
+<select id="assets-type" name="typeId" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["Every type"]</option>
+    @foreach (var option in model.TypeOptions)
+    {
+        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+    }
+</select>
+<label for="assets-status" class="visually-hidden">@T["State"]</label>
+<select id="assets-status" name="status" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["Every state"]</option>
+    @foreach (var status in Enum.GetValues<AssetStatus>())
+    {
+        <option value="@status" selected="@(model.Status == status.ToString())">@status</option>
+    }
+</select>

@@ -1,0 +1,48 @@
+@model WorkOrdersListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkOrders" title="@T["Work Orders"]" /></zone>
+
+<form asp-action="Index" method="get" id="work-orders-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col-12 col-md">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                        <input asp-for="Q" class="form-control" placeholder="@T["Search by number or summary"]" aria-label="@T["Search work orders"]" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    @if (Model.TypeOptions.Count > 0)
+                    {
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add work order"]</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @foreach (var type in Model.TypeOptions)
+                                {
+                                    <li><a class="dropdown-item" asp-action="New" asp-route-typeId="@type.Value">@type.Text</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a asp-controller="WorkOrderSettings" asp-action="EditType" class="btn btn-secondary create">@T["Add a work order type first"]</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+@{
+    Model.List.ToolbarActions = await New.WorkOrdersFilter(ViewModel: Model, FormId: "work-orders-filter");
+}
+
+<admin-list name="WorkOrders" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a work order, or change the search and filters."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Work order"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

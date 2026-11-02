@@ -1,0 +1,68 @@
+@model ChecklistTemplateEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkOrderChecklistsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Checklist"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditChecklist" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" required />
+    </div>
+
+    <h2 class="h5 mt-4">@T["Questions"]</h2>
+    <p class="hint">@T["Asked in this order, grouped by section. Choices go one per line. A number's range and unit, or a meter reading's meter, go in the last columns. Leave a row empty to skip it."]</p>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm align-top">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Section"]</th>
+                    <th scope="col">@T["Question"]</th>
+                    <th scope="col">@T["Answer"]</th>
+                    <th scope="col">@T["Required"]</th>
+                    <th scope="col">@T["Choices"]</th>
+                    <th scope="col">@T["From"]</th>
+                    <th scope="col">@T["To"]</th>
+                    <th scope="col">@T["Unit or meter"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Questions.Count; i++)
+                {
+                    <tr>
+                        <td><input type="hidden" asp-for="Questions[i].Id" /><input asp-for="Questions[i].Section" class="form-control form-control-sm" aria-label="@T["Section"]" /></td>
+                        <td>
+                            <input asp-for="Questions[i].Text" class="form-control form-control-sm" aria-label="@T["Question"]" />
+                            <input asp-for="Questions[i].Help" class="form-control form-control-sm mt-1" placeholder="@T["Help (optional)"]" aria-label="@T["Help"]" />
+                        </td>
+                        <td>
+                            <select asp-for="Questions[i].Kind" class="form-select form-select-sm" aria-label="@T["Answer"]">
+                                <option value="@ChecklistQuestionKind.YesNo">@T["Yes or no"]</option>
+                                <option value="@ChecklistQuestionKind.PassFailNA">@T["Pass, fail or N/A"]</option>
+                                <option value="@ChecklistQuestionKind.Text">@T["Text"]</option>
+                                <option value="@ChecklistQuestionKind.Number">@T["Number"]</option>
+                                <option value="@ChecklistQuestionKind.Choice">@T["One choice"]</option>
+                                <option value="@ChecklistQuestionKind.MultiChoice">@T["Several choices"]</option>
+                                <option value="@ChecklistQuestionKind.Photo">@T["Photo"]</option>
+                                <option value="@ChecklistQuestionKind.Signature">@T["Signature"]</option>
+                                <option value="@ChecklistQuestionKind.MeterReading">@T["Meter reading"]</option>
+                                <option value="@ChecklistQuestionKind.Date">@T["Date"]</option>
+                            </select>
+                        </td>
+                        <td><input asp-for="Questions[i].Required" type="checkbox" class="form-check-input" aria-label="@T["Required"]" /></td>
+                        <td><textarea asp-for="Questions[i].Choices" class="form-control form-control-sm" rows="2" aria-label="@T["Choices"]"></textarea></td>
+                        <td><input asp-for="Questions[i].Min" type="number" step="any" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
+                        <td><input asp-for="Questions[i].Max" type="number" step="any" class="form-control form-control-sm" aria-label="@T["To"]" /></td>
+                        <td><input asp-for="Questions[i].Unit" class="form-control form-control-sm" aria-label="@T["Unit or meter"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@WorkOrderSettingsController.Checklists" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

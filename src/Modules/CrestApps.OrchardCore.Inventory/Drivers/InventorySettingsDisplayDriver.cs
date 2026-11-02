@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
+using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Inventory.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Security.Services;
 using OrchardCore.Settings;
@@ -30,6 +32,9 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IRoleService _roleService;
+    private readonly InventoryLocationService _locationService;
+    private readonly StockLocationStore _locationStore;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -37,11 +42,17 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IRoleService roleService,
+        InventoryLocationService locationService,
+        StockLocationStore locationStore,
+        IClock clock,
         IStringLocalizer<InventorySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _roleService = roleService;
+        _locationService = locationService;
+        _locationStore = locationStore;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -58,7 +69,9 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                 .Where(role => !IsEveryone(role))
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            model.Locations = settings.GetLocations()
+            // Locations owned by other records, such as vans, are managed with their owner.
+            model.Locations = (await _locationService.GetLocationsAsync())
+                .Where(location => location.OwnerKind is null)
                 .Select(location => new InventoryLocationViewModel
                 {
                     LocationId = location.LocationId,
@@ -117,7 +130,15 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        settings.Locations = ParseLocations(model.Locations, context);
+        var locations = ParseLocations(model.Locations, context);
+
+        if (context.Updater.ModelState.IsValid)
+        {
+            await SaveLocationsAsync(locations);
+
+            // The locations live in the store now; the settings keep none.
+            settings.Locations = [];
+        }
 
         return Edit(site, settings, context);
     }
@@ -153,6 +174,43 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
         }
 
         return locations.DistinctBy(location => location.LocationId, StringComparer.Ordinal).Take(MaxLocations).ToList();
+    }
+
+    // Adds, renames and removes the site's own locations in the store, keeping their ids, so stock levels and
+    // movements still point at them.
+    private async Task SaveLocationsAsync(List<InventoryLocation> locations)
+    {
+        var stored = (await _locationStore.GetAllAsync()).Where(location => location.OwnerKind is null).ToDictionary(location => location.ItemId, StringComparer.Ordinal);
+
+        // Their order on the page is the order orders take units from them.
+        for (var i = 0; i < locations.Count; i++)
+        {
+            var location = locations[i];
+
+            if (stored.Remove(location.LocationId, out var existing))
+            {
+                existing.Name = location.Name;
+                existing.Address = location.Address;
+                existing.Position = i + 1;
+                await _locationStore.UpdateAsync(existing);
+            }
+            else
+            {
+                await _locationStore.CreateAsync(new StockLocation
+                {
+                    ItemId = location.LocationId,
+                    Name = location.Name,
+                    Address = location.Address,
+                    Position = i + 1,
+                    CreatedUtc = _clock.UtcNow,
+                });
+            }
+        }
+
+        foreach (var removed in stored.Values.Where(location => location.ItemId != InventoryConstants.DefaultLocationId))
+        {
+            await _locationStore.DeleteAsync(removed);
+        }
     }
 
     private static bool IsEveryone(string role)

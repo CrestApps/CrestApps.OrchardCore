@@ -287,7 +287,15 @@ public sealed class WorkersController : Controller
         worker.SeniorityDate = model.SeniorityDate;
         worker.TerminationDate = model.TerminationDate;
         worker.TimeZoneId = model.TimeZoneId;
-        worker.HomeBase = string.IsNullOrWhiteSpace(model.HomeBase) ? null : new WorkforceLocation { Address = model.HomeBase.Trim(), Latitude = worker.HomeBase?.Latitude, Longitude = worker.HomeBase?.Longitude };
+        var homeBaseMoved = !string.Equals(worker.HomeBase?.Address, model.HomeBase?.Trim(), StringComparison.Ordinal);
+
+        // A new address drops the old coordinates, so they are found again for the new one.
+        worker.HomeBase = string.IsNullOrWhiteSpace(model.HomeBase) ? null : new WorkforceLocation
+        {
+            Address = model.HomeBase.Trim(),
+            Latitude = homeBaseMoved ? null : worker.HomeBase?.Latitude,
+            Longitude = homeBaseMoved ? null : worker.HomeBase?.Longitude,
+        };
         worker.ContractedHoursPerWeek = model.ContractedHoursPerWeek;
         worker.MinHoursPerWeek = model.MinHoursPerWeek;
         worker.MaxHoursPerWeek = model.MaxHoursPerWeek;

@@ -11,11 +11,14 @@
   "dependencies": {
     "@crestapps/ai-chat-ui": "2.0.0-preview.226",
     "@crestapps/bootstrap-select": "^1.2.6",
+    "@geoman-io/leaflet-geoman-free": "2.20.4",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
     "@telnyx/webrtc": "2.27.10",
     "chart.js": "^4.5.1",
     "fullcalendar": "6.1.22",
     "intl-tel-input": "^29.5.5",
+    "leaflet": "1.9.4",
+    "leaflet.markercluster": "1.5.3",
     "medium-zoom": "1.1.0",
     "sip.js": "0.21.2"
   }

@@ -1,0 +1,437 @@
+@model WorkOrderDetailsViewModel
+
+@{
+    var workOrder = Model.WorkOrder;
+    var culture = CultureInfo.CurrentCulture;
+    var sla = workOrder.Sla ?? new WorkOrderSla();
+    var open = workOrder.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Closed or WorkOrderStatus.Canceled);
+    var currency = Model.Type?.Currency ?? "USD";
+    var address = workOrder.ServiceAddress;
+}
+
+<zone Name="Title"><breadcrumb name="WorkOrdersView" title="@T["{0} {1}", workOrder.Number, workOrder.Summary]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <span class="badge text-bg-primary fw-normal">@T[workOrder.Status.Text()]@(Model.SubStatus is null ? null : $": {Model.SubStatus.Name}")</span>
+                <span class="text-muted small">@(Model.Type?.Name ?? T["No type"].Value) · @T["{0} priority", workOrder.Priority]</span>
+                @if (Model.Parent is not null)
+                {
+                    <span class="text-muted small">· @T["Follows up"] <a asp-action="Details" asp-route-id="@Model.Parent.ItemId">@Model.Parent.Number</a></span>
+                }
+            </div>
+            @if (Model.CanManage)
+            {
+                <div class="col-auto">
+                    @if (Model.CanComplete)
+                    {
+                        <form asp-action="Complete" asp-route-id="@workOrder.ItemId" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-success">@T["Complete"]</button>
+                        </form>
+                    }
+                    <a asp-action="Edit" asp-route-id="@workOrder.ItemId" class="btn btn-primary">@T["Edit"]</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["About"]</h2>
+            @if (!string.IsNullOrEmpty(workOrder.Description))
+            {
+                <p class="small">@workOrder.Description</p>
+            }
+            <dl class="row mb-0 small">
+                @if (!string.IsNullOrEmpty(workOrder.Contact?.Name) || !string.IsNullOrEmpty(workOrder.Contact?.Phone))
+                {
+                    <dt class="col-4">@T["Contact"]</dt>
+                    <dd class="col-8">@workOrder.Contact.Name @if (!string.IsNullOrEmpty(workOrder.Contact.Phone)) { <a href="tel:@workOrder.Contact.Phone">@workOrder.Contact.Phone</a> } @if (!string.IsNullOrEmpty(workOrder.Contact.Email)) { <a href="mailto:@workOrder.Contact.Email">@workOrder.Contact.Email</a> }</dd>
+                }
+                @if (address is not null)
+                {
+                    <dt class="col-4">@T["Where"]</dt>
+                    <dd class="col-8">
+                        @string.Join(", ", new[] { address.AddressLine1, address.AddressLine2, address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrEmpty(part)))
+                        @if (address.Latitude is null)
+                        {
+                            <span class="badge ta-badge fw-normal">@T["Not on the map yet"]</span>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder.AccessNotes))
+                {
+                    <dt class="col-4">@T["Access"]</dt><dd class="col-8">@workOrder.AccessNotes</dd>
+                }
+                @if (Model.VisitDay is { } visitDay)
+                {
+                    <dt class="col-4">@T["Visit day"]</dt><dd class="col-8">@visitDay.ToString("D", culture)</dd>
+                }
+                else if (workOrder.EarliestUtc is { } earliest)
+                {
+                    <dt class="col-4">@T["Not before"]</dt><dd class="col-8">@await DisplayAsync(await New.DateTime(Utc: earliest, Format: "g"))</dd>
+                }
+                @if (Model.VisitDay is null && workOrder.LatestUtc is { } latest)
+                {
+                    <dt class="col-4">@T["Not after"]</dt><dd class="col-8">@await DisplayAsync(await New.DateTime(Utc: latest, Format: "g"))</dd>
+                }
+                @if (workOrder.EstimatedMinutes > 0)
+                {
+                    <dt class="col-4">@T["Takes"]</dt><dd class="col-8">@T["{0} minutes", workOrder.EstimatedMinutes]</dd>
+                }
+                @if (Model.Assets.Count > 0)
+                {
+                    <dt class="col-4">@T["Assets"]</dt>
+                    <dd class="col-8">
+                        @foreach (var asset in Model.Assets)
+                        {
+                            <a href="@Url.Action("Details", "Assets", new { area = "CrestApps.OrchardCore.Assets", id = asset.Value })" class="d-block">@asset.Text</a>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder.AgreementId))
+                {
+                    <dt class="col-4">@T["Agreement"]</dt>
+                    <dd class="col-8">
+                        <a href="@Url.Action("Details", "ServiceAgreements", new { area = WorkOrdersConstants.Features.WorkOrders, id = workOrder.AgreementId })">@T["View the agreement"]</a>
+                        <span class="badge ta-badge fw-normal">@(workOrder.AgreedPrice is > 0 ? T["{0} a visit", workOrder.AgreedPrice.Value.ToString("N2", culture)] : T["Included"])</span>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder.InvoiceTransactionId))
+                {
+                    <dt class="col-4">@T["Invoice"]</dt>
+                    <dd class="col-8"><a href="@Url.Action("Detail", "Admin", new { area = "CrestApps.OrchardCore.Transactions", itemId = workOrder.InvoiceTransactionId })">@T["View the invoice"]</a></dd>
+                }
+                @if (!string.IsNullOrEmpty(workOrder.CancelReason))
+                {
+                    <dt class="col-4">@T["Canceled because"]</dt><dd class="col-8">@workOrder.CancelReason</dd>
+                }
+            </dl>
+        </div></div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["Service level"]@(Model.Policy is null ? null : $": {Model.Policy.Name}")</h2>
+            @if (sla.RespondByUtc is null && sla.ResolveByUtc is null)
+            {
+                <p class="small text-muted mb-0">@T["No targets."]</p>
+            }
+            else
+            {
+                <dl class="row mb-0 small">
+                    @if (sla.RespondByUtc is { } respondBy)
+                    {
+                        <dt class="col-4">@T["Respond by"]</dt>
+                        <dd class="col-8">
+                            @await DisplayAsync(await New.DateTime(Utc: respondBy, Format: "g"))
+                            @if (sla.FirstResponseUtc is { } responded)
+                            {
+                                <span class="badge @(responded <= respondBy ? "text-bg-success" : "text-bg-danger") fw-normal">@(responded <= respondBy ? T["Met"] : T["Missed"])</span>
+                            }
+                            else if (sla.ResponseBreached || respondBy < Model.NowUtc)
+                            {
+                                <span class="badge text-bg-danger fw-normal">@T["Late"]</span>
+                            }
+                            else if (sla.ResponseWarned)
+                            {
+                                <span class="badge text-bg-warning fw-normal">@T["Due soon"]</span>
+                            }
+                        </dd>
+                    }
+                    @if (sla.ResolveByUtc is { } resolveBy)
+                    {
+                        <dt class="col-4">@T["Resolve by"]</dt>
+                        <dd class="col-8">
+                            @await DisplayAsync(await New.DateTime(Utc: resolveBy, Format: "g"))
+                            @if (workOrder.CompletedUtc is { } completed && !open)
+                            {
+                                <span class="badge @(completed <= resolveBy ? "text-bg-success" : "text-bg-danger") fw-normal">@(completed <= resolveBy ? T["Met"] : T["Missed"])</span>
+                            }
+                            else if (sla.ResolutionBreached || (open && resolveBy < Model.NowUtc))
+                            {
+                                <span class="badge text-bg-danger fw-normal">@T["Late"]</span>
+                            }
+                            else if (sla.ResolutionWarned)
+                            {
+                                <span class="badge text-bg-warning fw-normal">@T["Due soon"]</span>
+                            }
+                        </dd>
+                    }
+                    @if (sla.PausedSinceUtc is { } paused)
+                    {
+                        <dt class="col-4">@T["Clock"]</dt>
+                        <dd class="col-8">@T["Stopped since"] @await DisplayAsync(await New.DateTime(Utc: paused, Format: "g"))</dd>
+                    }
+                </dl>
+            }
+
+            @if (Model.CanManage && Model.NextStatuses.Count > 0)
+            {
+                <h2 class="h6 mt-3">@T["Move"]</h2>
+                <form asp-action="Status" asp-route-id="@workOrder.ItemId" method="post" class="row g-2 align-items-end">
+                    <div class="col-6">
+                        <label for="status" class="form-label small">@T["Status"]</label>
+                        <select id="status" name="status" class="form-select form-select-sm">
+                            @if (open)
+                            {
+                                <option value="@workOrder.Status">@T["{0} (no change)", workOrder.Status.Text()]</option>
+                            }
+                            @foreach (var status in Model.NextStatuses)
+                            {
+                                <option value="@status">@T[status.Text()]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label for="subStatusId" class="form-label small">@T["Sub-status"]</label>
+                        <select id="subStatusId" name="subStatusId" class="form-select form-select-sm">
+                            <option value="">@T["None"]</option>
+                            @foreach (var group in Model.SubStatuses.GroupBy(item => item.ParentStatus))
+                            {
+                                <optgroup label="@T[group.Key.Text()]">
+                                    @foreach (var subStatus in group)
+                                    {
+                                        <option value="@subStatus.ItemId" selected="@(subStatus.ItemId == workOrder.SubStatusId)">@subStatus.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label for="note" class="form-label small">@T["Note"]</label>
+                        <input id="note" name="note" class="form-control form-control-sm" placeholder="@T["Required to cancel"]" />
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-secondary btn-sm">@T["Move"]</button>
+                    </div>
+                </form>
+            }
+        </div></div>
+    </div>
+</div>
+
+<div class="card mb-3"><div class="card-body">
+    <h2 class="h6">@T["Lines"]</h2>
+    @if (workOrder.Lines.Count == 0)
+    {
+        <p class="small text-muted mb-0">@T["No lines."] @if (Model.CanManage) { <a asp-action="Edit" asp-route-id="@workOrder.ItemId">@T["Add lines"]</a> }</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Line"]</th>
+                        <th scope="col" class="text-end">@T["Planned"]</th>
+                        <th scope="col" class="text-end">@T["Used"]</th>
+                        <th scope="col" class="text-end">@T["Unit price"]</th>
+                        @if (Model.CanManage && open)
+                        {
+                            <th scope="col">@T["Record what was used"]</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in workOrder.Lines)
+                    {
+                        var counted = line.Kind == WorkOrderLineKind.Product && !string.IsNullOrEmpty(line.StockItemId) && Model.TracksParts;
+                        <tr>
+                            <td>
+                                @line.Description
+                                <span class="badge ta-badge fw-normal">@line.Kind</span>
+                                @if (!line.Billable)
+                                {
+                                    <span class="badge ta-badge fw-normal">@T["Not billed"]</span>
+                                }
+                            </td>
+                            <td class="text-end">@line.QuantityEstimated.ToString("0.##", culture)</td>
+                            <td class="text-end">@line.QuantityUsed.ToString("0.##", culture)</td>
+                            <td class="text-end">@line.UnitPrice.ToString("N2", culture)</td>
+                            @if (Model.CanManage && open)
+                            {
+                                <td>
+                                    <form asp-action="Use" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-1">
+                                        <input type="hidden" name="lineId" value="@line.Id" />
+                                        <input name="quantity" type="number" min="0" step="@(counted ? "1" : "any")" class="form-control form-control-sm" style="max-width: 6rem" aria-label="@T["How many"]" required />
+                                        @if (counted)
+                                        {
+                                            <select name="locationId" class="form-select form-select-sm" style="max-width: 12rem" aria-label="@T["Taken from"]" required>
+                                                <option value="">@T["Taken from…"]</option>
+                                                @foreach (var location in Model.LocationOptions)
+                                                {
+                                                    <option value="@location.Value" selected="@(location.Value == line.LocationId)">@location.Text</option>
+                                                }
+                                            </select>
+                                        }
+                                        <button type="submit" class="btn btn-secondary btn-sm">@T["Use"]</button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Type is not null && Model.Type.BillingMode != WorkOrderBillingMode.NotBillable)
+        {
+            <p class="small mt-2 mb-0">@T["Billed on completion: {0} {1}", Model.BillableAmount.ToString("N2", culture), currency]@(Model.Type.BillingMode == WorkOrderBillingMode.FixedPrice ? T[" (fixed price)"] : null)</p>
+        }
+    }
+</div></div>
+
+@for (var c = 0; c < workOrder.Checklists.Count; c++)
+{
+    var checklist = workOrder.Checklists[c];
+    <div class="card mb-3" id="checklist-@c"><div class="card-body">
+        <h2 class="h6">@checklist.Name <span class="text-muted small">@T["{0} of {1} answered", checklist.Answers.Count, checklist.Questions.Count]</span></h2>
+        <form asp-action="Answers" asp-route-id="@workOrder.ItemId" asp-route-checklist="@c" method="post">
+            @foreach (var group in checklist.Questions.GroupBy(question => question.Section ?? string.Empty))
+            {
+                @if (!string.IsNullOrEmpty(group.Key))
+                {
+                    <h3 class="h6 mt-3 text-muted">@group.Key</h3>
+                }
+                @foreach (var question in group)
+                {
+                    var field = WorkOrdersController.AnswerField(question);
+                    var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == question.Id)?.Value;
+                    var editable = Model.CanManage && open;
+                    var conditional = question.ShowWhen is { QuestionId.Length: > 0 } ? checklist.Questions.FirstOrDefault(item => item.Id == question.ShowWhen.QuestionId) : null;
+                    <div class="row g-2 mb-2 align-items-center">
+                        <label class="col-12 col-md-6 col-form-label col-form-label-sm" for="@field">
+                            @question.Text@(question.Required ? " *" : null)
+                            @if (!string.IsNullOrEmpty(question.Help))
+                            {
+                                <span class="hint d-block">@question.Help</span>
+                            }
+                            @if (conditional is not null)
+                            {
+                                <span class="hint d-block">@T["Only when \"{0}\" is {1}.", conditional.Text, question.ShowWhen.EqualsValue]</span>
+                            }
+                        </label>
+                        <div class="col-12 col-md-6">
+                            @switch (question.Kind)
+                            {
+                                case ChecklistQuestionKind.YesNo:
+                                case ChecklistQuestionKind.PassFailNA:
+                                case ChecklistQuestionKind.Choice:
+                                    var choices = question.Kind switch
+                                    {
+                                        ChecklistQuestionKind.YesNo => new List<string> { "Yes", "No" },
+                                        ChecklistQuestionKind.PassFailNA => new List<string> { "Pass", "Fail", "N/A" },
+                                        _ => question.Choices,
+                                    };
+                                    <select id="@field" name="@field" class="form-select form-select-sm" disabled="@(!editable)">
+                                        <option value="">@T["Not answered"]</option>
+                                        @foreach (var choice in choices)
+                                        {
+                                            <option value="@choice" selected="@string.Equals(choice, answer, StringComparison.OrdinalIgnoreCase)">@choice</option>
+                                        }
+                                    </select>
+                                    break;
+                                case ChecklistQuestionKind.MultiChoice:
+                                    var picked = (answer ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                    <input type="hidden" name="@field" value="" />
+                                    @for (var k = 0; k < question.Choices.Count; k++)
+                                    {
+                                        <div class="form-check form-check-inline">
+                                            <input type="checkbox" class="form-check-input" id="@field-@k" name="@field" value="@question.Choices[k]" checked="@picked.Contains(question.Choices[k], StringComparer.OrdinalIgnoreCase)" disabled="@(!editable)" />
+                                            <label class="form-check-label" for="@field-@k">@question.Choices[k]</label>
+                                        </div>
+                                    }
+                                    break;
+                                case ChecklistQuestionKind.Number:
+                                case ChecklistQuestionKind.MeterReading:
+                                    <div class="input-group input-group-sm">
+                                        <input id="@field" name="@field" value="@answer" type="number" step="any" min="@question.Min?.ToString(CultureInfo.InvariantCulture)" max="@question.Max?.ToString(CultureInfo.InvariantCulture)" class="form-control" disabled="@(!editable)" />
+                                        @if (!string.IsNullOrEmpty(question.Unit ?? question.Meter))
+                                        {
+                                            <span class="input-group-text">@(question.Unit ?? question.Meter)</span>
+                                        }
+                                    </div>
+                                    break;
+                                case ChecklistQuestionKind.Date:
+                                    <input id="@field" name="@field" value="@answer" type="date" class="form-control form-control-sm" disabled="@(!editable)" />
+                                    break;
+                                case ChecklistQuestionKind.Photo:
+                                case ChecklistQuestionKind.Signature:
+                                    <input id="@field" name="@field" value="@answer" class="form-control form-control-sm" placeholder="@T["Taken on the technician's phone, or a media path"]" disabled="@(!editable)" />
+                                    break;
+                                default:
+                                    <input id="@field" name="@field" value="@answer" class="form-control form-control-sm" disabled="@(!editable)" />
+                                    break;
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            @if (Model.CanManage && open && checklist.Questions.Count > 0)
+            {
+                <button type="submit" class="btn btn-secondary btn-sm">@T["Save answers"]</button>
+            }
+        </form>
+    </div></div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["Signatures"]@(Model.Type?.RequiresSignature == true ? " *" : null)</h2>
+            @if (workOrder.Signatures.Count == 0)
+            {
+                <p class="small text-muted">@(Model.Type?.RequiresSignature == true ? T["The customer must sign before the work order is completed."] : T["No one has signed."])</p>
+            }
+            else
+            {
+                <ul class="small">
+                    @foreach (var signature in workOrder.Signatures)
+                    {
+                        <li>@signature.Name, @await DisplayAsync(await New.DateTime(Utc: signature.Utc, Format: "g"))</li>
+                    }
+                </ul>
+            }
+            @if (Model.CanManage && open)
+            {
+                <form asp-action="Sign" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2">
+                    <input name="name" class="form-control form-control-sm" placeholder="@T["Name of who signed"]" aria-label="@T["Name of who signed"]" required />
+                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap">@T["Record signature"]</button>
+                </form>
+            }
+        </div></div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["Follow-up"]</h2>
+            <p class="small text-muted">@T["A new work order of the same type, for the same customer, place and assets."]</p>
+            @if (Model.CanManage)
+            {
+                <form asp-action="FollowUp" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2">
+                    <input name="summary" class="form-control form-control-sm" placeholder="@T["What it is for"]" aria-label="@T["What it is for"]" />
+                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap">@T["Create follow-up"]</button>
+                </form>
+            }
+        </div></div>
+    </div>
+</div>
+
+<div class="card mb-3"><div class="card-body">
+    <h2 class="h6">@T["Notes and history"]</h2>
+    @if (Model.CanManage)
+    {
+        <form asp-action="Note" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2 mb-3">
+            <input name="text" class="form-control form-control-sm" placeholder="@T["Add a note"]" aria-label="@T["Add a note"]" required />
+            <button type="submit" class="btn btn-secondary btn-sm">@T["Add"]</button>
+        </form>
+    }
+    <ul class="list-unstyled small mb-0">
+        @foreach (var note in workOrder.Notes.AsEnumerable().Reverse())
+        {
+            <li class="mb-1"><span class="text-muted">@await DisplayAsync(await New.DateTime(Utc: note.Utc, Format: "g"))@(string.IsNullOrEmpty(note.By) ? null : $" · {note.By}")</span> @note.Text</li>
+        }
+    </ul>
+</div></div>

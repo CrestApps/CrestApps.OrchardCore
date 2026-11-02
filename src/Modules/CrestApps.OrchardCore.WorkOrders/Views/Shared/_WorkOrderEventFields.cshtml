@@ -1,0 +1,9 @@
+@model CrestApps.OrchardCore.WorkOrders.Workflows.WorkOrderEventActivityViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="TypeIds">@T["Work order types"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="TypeIds" asp-items="Model.TypeOptions" multiple size="5"></select>
+        <span class="hint">@T["Leave empty to start for every type."]</span>
+    </div>
+</div>

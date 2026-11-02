@@ -1,0 +1,3 @@
+@model ShapeViewModel<WorkOrderRow>
+
+<a asp-controller="WorkOrders" asp-action="Details" asp-route-id="@Model.Value.WorkOrder.ItemId"><span class="text-muted">@Model.Value.WorkOrder.Number</span> @Model.Value.WorkOrder.Summary</a>

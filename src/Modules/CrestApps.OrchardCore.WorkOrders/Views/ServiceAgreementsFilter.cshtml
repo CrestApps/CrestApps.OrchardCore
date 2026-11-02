@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@{
+    var filter = (ServiceAgreementsListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<label for="agreements-status" class="visually-hidden">@T["Status"]</label>
+<select id="agreements-status" name="status" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">@T["Every status"]</option>
+    @foreach (var status in Enum.GetValues<ServiceAgreementStatus>())
+    {
+        <option value="@status" selected="@(filter.Status == status.ToString())">@status</option>
+    }
+</select>

@@ -1,0 +1,6 @@
+@model ShapeViewModel<WorkOrderSettingRow>
+
+@foreach (var badge in Model.Value.Badges)
+{
+    <span class="badge ta-badge fw-normal">@badge</span>
+}

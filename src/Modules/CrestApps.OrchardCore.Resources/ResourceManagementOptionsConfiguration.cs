@@ -80,6 +80,86 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetDependencies("fullcalendar")
             .SetVersion("6.1.22");
 
+        // Leaflet maps, with marker clusters and Geoman drawing, all MIT. The crestapps-map wrapper reads the site's
+        // tile settings from the map element.
+        _manifest
+            .DefineScript("leaflet")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/leaflet/leaflet.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/leaflet/leaflet-src.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+                "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.js")
+            .SetCdnIntegrity(
+                "sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH",
+                "sha384-4aETf8z71hiSsoK0xYsa5JtiJHfL3h7uMAsZ2QYOLvcySDL/cEDfdLt0SaBypTQZ")
+            .SetVersion("1.9.4");
+
+        _manifest
+            .DefineStyle("leaflet")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/leaflet/leaflet.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css")
+            .SetCdnIntegrity("sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H")
+            .SetVersion("1.9.4");
+
+        _manifest
+            .DefineScript("leaflet-markercluster")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/leaflet-markercluster/leaflet.markercluster.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/leaflet-markercluster/leaflet.markercluster-src.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js",
+                "https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster-src.js")
+            .SetCdnIntegrity(
+                "sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr",
+                "sha384-xLgzMQOvDhPE6lQoFpJJOFU2aMYsKD5eSSt9q3aR1RREx3Y+XsnqtSDZd+PhAcob")
+            .SetDependencies("leaflet")
+            .SetVersion("1.5.3");
+
+        _manifest
+            .DefineStyle("leaflet-markercluster")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/leaflet-markercluster/MarkerCluster.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css")
+            .SetCdnIntegrity("sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV")
+            .SetDependencies("leaflet")
+            .SetVersion("1.5.3");
+
+        _manifest
+            .DefineStyle("leaflet-markercluster-default")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/leaflet-markercluster/MarkerCluster.Default.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css")
+            .SetCdnIntegrity("sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+")
+            .SetDependencies("leaflet-markercluster")
+            .SetVersion("1.5.3");
+
+        _manifest
+            .DefineScript("leaflet-geoman")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/leaflet-geoman/leaflet-geoman.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/leaflet-geoman/leaflet-geoman.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.20.4/dist/leaflet-geoman.min.js",
+                "https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.20.4/dist/leaflet-geoman.js")
+            .SetCdnIntegrity(
+                "sha384-fMQXt1CL8OiAVJb4+5aNorSlDZtUphmsAnZ0H3OPrJWLK1M1YhV7xZ25w5PZ3X4g",
+                "sha384-/394di3hXbPgMeiEK2waLpRTbD59HEJM2xBFqT/w5K2S+xdv4txKr7W/YG6x7Fbs")
+            .SetDependencies("leaflet")
+            .SetVersion("2.20.4");
+
+        _manifest
+            .DefineStyle("leaflet-geoman")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/leaflet-geoman/leaflet-geoman.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.20.4/dist/leaflet-geoman.css")
+            .SetCdnIntegrity("sha384-++juJE6hRzkkV4Ri9H2C+3yjCTdEk4PaZxptm3cpgKKjuMcAHErn35Q/0sGitZCR")
+            .SetDependencies("leaflet")
+            .SetVersion("2.20.4");
+
+        _manifest
+            .DefineScript("crestapps-map")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/scripts/crestapps-map.min.js", "~/CrestApps.OrchardCore.Resources/scripts/crestapps-map.js")
+            .SetDependencies("leaflet")
+            .SetVersion("1.0.0");
+
         _manifest
             .DefineScript("chart.js")
             .SetUrl(

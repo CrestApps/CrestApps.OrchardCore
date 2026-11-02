@@ -1,0 +1,156 @@
+@model AssetDetailsViewModel
+
+@{
+    var asset = Model.Asset;
+    var culture = CultureInfo.CurrentCulture;
+    var underWarranty = asset.Warranty?.Covers(Model.Today) == true;
+}
+
+@inject OrchardCore.Environment.Shell.Descriptor.Models.ShellDescriptor ShellDescriptor
+
+<zone Name="Title"><breadcrumb name="AssetsView" title="@T["{0} {1}", asset.Name, asset.Number]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                <span class="text-muted small">
+                    @(Model.Type?.Name ?? T["No type"].Value) · @asset.Status
+                    @foreach (var ancestor in Model.Ancestors)
+                    {
+                        <text> · </text><a asp-action="Details" asp-route-id="@ancestor.ItemId">@ancestor.Name</a>
+                    }
+                </span>
+            </div>
+            @if (ShellDescriptor.Features.Any(feature => feature.Id == "CrestApps.OrchardCore.WorkOrders"))
+            {
+                <div class="col-auto">
+                    <a href="@Url.Action("Index", "WorkOrders", new { area = "CrestApps.OrchardCore.WorkOrders", assetId = asset.ItemId, status = "all" })" class="btn btn-secondary">@T["Work orders"]</a>
+                </div>
+            }
+            @if (Model.CanManage)
+            {
+                <div class="col-auto">
+                    <a asp-action="Edit" asp-route-assetTypeId="" asp-route-parentAssetId="@asset.ItemId" class="btn btn-secondary">@T["Add a part"]</a>
+                    <a asp-action="Edit" asp-route-id="@asset.ItemId" class="btn btn-primary">@T["Edit"]</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["About"]</h2>
+            <dl class="row mb-0 small">
+                <dt class="col-5">@T["Asset number"]</dt><dd class="col-7">@asset.Number</dd>
+                @if (!string.IsNullOrEmpty(asset.SerialNumber)) { <dt class="col-5">@T["Serial number"]</dt><dd class="col-7">@asset.SerialNumber</dd> }
+                @if (!string.IsNullOrEmpty(asset.Manufacturer) || !string.IsNullOrEmpty(asset.Model)) { <dt class="col-5">@T["Make and model"]</dt><dd class="col-7">@asset.Manufacturer @asset.Model</dd> }
+                <dt class="col-5">@T["Owned by"]</dt><dd class="col-7">@(asset.OwnerKind == AssetOwnerKind.Internal ? T["The business"].Value : $"{asset.OwnerKind}: {asset.OwnerId}")</dd>
+                @if (asset.Location is { } place) { <dt class="col-5">@T["Where"]</dt><dd class="col-7">@string.Join(", ", new[] { place.AddressLine1, place.City, place.Region, place.PostalCode }.Where(part => !string.IsNullOrEmpty(part)))</dd> }
+                @if (asset.InstallDate is { } installed) { <dt class="col-5">@T["Installed"]</dt><dd class="col-7">@installed.ToString("d", culture)</dd> }
+                @foreach (var field in asset.Attributes) { <dt class="col-5">@field.Key</dt><dd class="col-7">@field.Value</dd> }
+            </dl>
+        </div></div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">@T["Warranty"]</h2>
+            @if (asset.Warranty?.EndDate is { } end)
+            {
+                <p class="mb-1"><span class="badge @(underWarranty ? "text-bg-success" : "text-bg-secondary") fw-normal">@(underWarranty ? T["Under warranty"] : T["Expired"])</span></p>
+                <p class="small mb-0">@T["Until {0}", end.ToString("d", culture)]@(string.IsNullOrEmpty(asset.Warranty.Provider) ? null : T[", from {0}", asset.Warranty.Provider])</p>
+            }
+            else
+            {
+                <p class="small text-muted mb-0">@T["No warranty recorded."]</p>
+            }
+            @if (asset.Fleet is { } fleet && (fleet.Schedulable || fleet.CarriesStock || !string.IsNullOrEmpty(fleet.Plate)))
+            {
+                <h2 class="h6 mt-3">@T["Fleet"]</h2>
+                <p class="small mb-0">
+                    @if (!string.IsNullOrEmpty(fleet.Plate)) { <span class="badge ta-badge fw-normal">@T["Plate {0}", fleet.Plate]</span> }
+                    @if (fleet.Schedulable) { <span class="badge ta-badge fw-normal">@(string.IsNullOrEmpty(fleet.CalendarId) ? T["Bookable, no calendar yet"] : T["Bookable on its calendar"])</span> }
+                    @if (fleet.CarriesStock) { <span class="badge ta-badge fw-normal">@(string.IsNullOrEmpty(fleet.StockLocationId) ? T["Carries stock; turn on Inventory for its location"] : T["Carries stock at its own location"])</span> }
+                </p>
+            }
+            @if (asset.Documents.Count > 0)
+            {
+                <h2 class="h6 mt-3">@T["Documents"]</h2>
+                <ul class="small mb-0">
+                    @foreach (var document in asset.Documents) { <li><a href="@Url.Content("~/media/" + document)" target="_blank" rel="noopener">@document</a></li> }
+                </ul>
+            }
+        </div></div>
+    </div>
+</div>
+
+@if (Model.Children.Count > 0)
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h6">@T["Parts and assets inside it"]</h2>
+        <ul class="list-unstyled mb-0">
+            @foreach (var child in Model.Children)
+            {
+                <li><a asp-action="Details" asp-route-id="@child.ItemId">@child.Name</a> <span class="text-muted small">@child.Number</span></li>
+            }
+        </ul>
+    </div></div>
+}
+
+<div class="card mb-3"><div class="card-body">
+    <h2 class="h6">@T["Meter readings"]</h2>
+    @if (Model.Type?.Meters.Count > 0)
+    {
+        @if (Model.CanManage)
+        {
+            <form asp-action="Details" asp-route-id="@asset.ItemId" method="post" class="row g-2 align-items-end mb-3">
+                <div asp-validation-summary="All" class="text-danger col-12"></div>
+                <div class="col-6 col-md-4">
+                    <label asp-for="Meter" class="form-label small">@T["Meter"]</label>
+                    <select asp-for="Meter" class="form-select form-select-sm">
+                        @foreach (var meter in Model.Type.Meters)
+                        {
+                            <option value="@meter.Name" selected="@(meter.Name == Model.Meter)">@meter.Name@(string.IsNullOrEmpty(meter.Unit) ? null : $" ({meter.Unit})")</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Value" class="form-label small">@T["Reading"]</label>
+                    <input asp-for="Value" type="number" step="any" class="form-control form-control-sm" required />
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-secondary btn-sm">@T["Record"]</button>
+                </div>
+            </form>
+        }
+        @if (Model.Readings.Count == 0)
+        {
+            <p class="small text-muted mb-0">@T["No readings yet."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th scope="col">@T["When"]</th><th scope="col">@T["Meter"]</th><th scope="col" class="text-end">@T["Reading"]</th><th scope="col">@T["From"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var reading in Model.Readings)
+                        {
+                            <tr>
+                                <td>@await DisplayAsync(await New.DateTime(Utc: reading.Utc, Format: "g"))</td>
+                                <td>@reading.Meter</td>
+                                <td class="text-end">@reading.Value.ToString("G", culture) @(Model.Type.Meters.FirstOrDefault(meter => meter.Name == reading.Meter)?.Unit)</td>
+                                <td class="text-muted">@(reading.RecordedBy ?? reading.Source.ToString())</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="small text-muted mb-0">@T["Its type has no meters."]</p>
+    }
+</div></div>

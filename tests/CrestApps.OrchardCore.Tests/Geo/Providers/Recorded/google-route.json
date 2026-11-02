@@ -1,0 +1,12 @@
+{
+  "routes": [
+    {
+      "overview_polyline": { "points": "_p~iF~ps|U_ulLnnqC_mqNvxq`@" },
+      "legs": [
+        { "distance": { "value": 6012 }, "duration": { "value": 840 },
+          "steps": [ { "html_instructions": "Head <b>north</b> on <b>City Hall Sq</b>" }, { "html_instructions": "Turn <b>left</b> onto <b>Cambridge St</b>" } ] }
+      ]
+    }
+  ],
+  "status": "OK"
+}

@@ -280,5 +280,55 @@
     ],
     "dest": "wwwroot/vendors/fullcalendar/",
     "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "leaflet",
+    "source": [
+      "node_modules/leaflet/dist/leaflet.js",
+      "node_modules/leaflet/dist/leaflet-src.js",
+      "node_modules/leaflet/dist/leaflet.css",
+      "node_modules/leaflet/LICENSE"
+    ],
+    "dest": "wwwroot/vendors/leaflet/",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "leaflet-images",
+    "source": "node_modules/leaflet/dist/images/*",
+    "dest": "wwwroot/vendors/leaflet/images/",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "leaflet-markercluster",
+    "source": [
+      "node_modules/leaflet.markercluster/dist/leaflet.markercluster.js",
+      "node_modules/leaflet.markercluster/dist/leaflet.markercluster-src.js",
+      "node_modules/leaflet.markercluster/dist/MarkerCluster.css",
+      "node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css",
+      "node_modules/leaflet.markercluster/MIT-LICENCE.txt"
+    ],
+    "dest": "wwwroot/vendors/leaflet-markercluster/",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "leaflet-geoman",
+    "source": [
+      "node_modules/@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.min.js",
+      "node_modules/@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.js",
+      "node_modules/@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css",
+      "node_modules/@geoman-io/leaflet-geoman-free/LICENSE"
+    ],
+    "dest": "wwwroot/vendors/leaflet-geoman/",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "vite",
+    "name": "crestapps-map.js",
+    "source": "Assets/js/crestapps-map.js",
+    "dest": "wwwroot/scripts/crestapps-map.js"
   }
 ]

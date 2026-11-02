@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderCompletedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Work Order Completed"]
+</h4>
+<p>@T["Starts when a work order is completed."]</p>

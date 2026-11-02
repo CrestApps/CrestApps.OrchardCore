@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ServiceAgreementExpiringEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-file-signature" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Service Agreement Expiring"])
+    </h4>
+</header>

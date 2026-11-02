@@ -1,0 +1,10 @@
+{
+  "formatVersion": "0.0.1",
+  "matrix": [
+    [
+      { "statusCode": 200, "response": { "routeSummary": { "lengthInMeters": 0, "travelTimeInSeconds": 0, "trafficDelayInSeconds": 0 } } },
+      { "statusCode": 200, "response": { "routeSummary": { "lengthInMeters": 6012, "travelTimeInSeconds": 840, "trafficDelayInSeconds": 120 } } }
+    ]
+  ],
+  "summary": { "successfulRoutes": 2, "totalRoutes": 2 }
+}

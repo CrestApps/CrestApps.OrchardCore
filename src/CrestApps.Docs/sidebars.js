@@ -180,6 +180,23 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Geo',
+            className: icon('compass'),
+            items: [
+                'user-manual/geo/territories',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Field Service',
+            className: icon('wrench'),
+            items: [
+                'user-manual/field-service/assets',
+                'user-manual/field-service/work-orders',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -426,6 +443,23 @@ const sidebars = {
                 'modules/workforce',
                 'modules/workforce-contact-center',
                 'modules/skills',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Geo',
+            className: icon('compass'),
+            items: [
+                'modules/geo',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Field Service',
+            className: icon('wrench'),
+            items: [
+                'modules/assets',
+                'modules/work-orders',
             ],
         },
         {

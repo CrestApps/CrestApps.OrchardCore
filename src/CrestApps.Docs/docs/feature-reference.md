@@ -219,6 +219,24 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | [Workforce for Contact Center](./modules/workforce-contact-center#intraday) |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | [Workforce for Contact Center](./modules/workforce-contact-center#adherence) |
 
+## Geo
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Geo` | Geo, Maps and Territories | [Geo](./modules/geo) |
+| `CrestApps.OrchardCore.Geo.AzureMaps` | Azure Maps | [Geo](./modules/geo#providers) |
+| `CrestApps.OrchardCore.Geo.GoogleMaps` | Google Maps | [Geo](./modules/geo#providers) |
+| `CrestApps.OrchardCore.Geo.Osrm` | OSRM | [Geo](./modules/geo#providers) |
+
+## Field service
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Assets` | Assets | [Assets](./modules/assets) |
+| `CrestApps.OrchardCore.Assets.Fleet` | Fleet | [Assets](./modules/assets#fleet) |
+| `CrestApps.OrchardCore.WorkOrders` | Work Orders | [Work Orders](./modules/work-orders) |
+| `CrestApps.OrchardCore.WorkOrders.Agreements` | Service Agreements | [Work Orders](./modules/work-orders#service-agreements) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |
