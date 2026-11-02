@@ -394,4 +394,9 @@ public class ThreadContact
     public string DisplayName { get; set; }
 
     public bool IsPrimary { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the record is a lead rather than a contact.
+    /// </summary>
+    public bool IsLead { get; set; }
 }

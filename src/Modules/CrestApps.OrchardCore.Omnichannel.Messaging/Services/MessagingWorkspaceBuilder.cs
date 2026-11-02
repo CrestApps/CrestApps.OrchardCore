@@ -734,6 +734,10 @@ public sealed partial class MessagingWorkspaceBuilder
                 ContentItemId = contentItemId,
                 DisplayName = contact.DisplayText,
                 IsPrimary = string.Equals(contentItemId, conversation.ContactContentItemId, StringComparison.Ordinal),
+
+                // A conversation links to a lead through the same field as a contact, so the record says which it is:
+                // a lead carries the lead part.
+                IsLead = contact.Has(OmnichannelConstants.ContentParts.Lead),
             });
         }
 
