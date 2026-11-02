@@ -26,7 +26,7 @@ Click a column on the **Columns** shelf to change it in **Properties** on the ri
 
 | Setting | What it does |
 | --- | --- |
-| **Header** | The column title. Left empty, the field name is used. |
+| **Header** | The column title. Left empty, the field name is used, with its aggregate and any calculation it is shown as. |
 | **Aggregate** | How a group of values is combined: **Count**, **Count distinct**, **Sum**, **Average**, **Minimum**, **Maximum** or **Median**. Pick **None** to group the report by this column. |
 | **Transform** | Changes each value first, such as **Month** to see revenue per month. See [Transforms](#transforms). |
 | **Format** | How values are shown, such as **N0** (whole numbers), **C2** (currency) or **MMM yyyy** (month and year). Click the question mark next to the box for a list of common formats. See [Formats](#formats). |
@@ -115,6 +115,8 @@ A measure can show each value compared with the others the table or chart shows,
 
 The calculation runs over the values in the order they are shown, so sort the report the way you want a running total or a difference to run, such as by month. With subtotals on, it follows the rows as they are grouped.
 
+A column with no **Header** of its own is named after its calculation, so people reading the report know what they see: *% of total Number of rows*, *Running total of Sum of Total*, *Change in Sum of Total*, *% change in Sum of Total* or *Rank of Number of rows*. Type a **Header** to name it yourself; its pill then shows a small badge for the calculation: **%**, **Σ**, **Δ**, **%Δ** or **#**.
+
 Totals rows, subtotal rows and the row totals of a cross-tab keep showing the plain totals, so the bottom of a **Percent of total** column still reads the total revenue rather than 100%.
 
 ### Compute along
@@ -131,7 +133,7 @@ A table without columns across the top, and a chart that isn't split into series
 
 ### How calculated values are shown
 
-Percentages are shown with one decimal, such as 63.8%. To show them another way, set the column's **Format** to a percent format such as **P0** or **P2**. Ranks are shown as whole numbers. Running totals and differences use the column's own format.
+Percentages are shown with one decimal, such as 63.8%. To show them another way, set the column's **Format** to a percent format such as **P0** or **P2**. Ranks are shown as whole numbers. Running totals and differences use the column's own format. A rise is marked with a plus sign, such as +130 or +50.0%, and a fall with a minus sign.
 
 A chart of a percentage reads its axis in percent. Color rules and color scales compare the values shown: a percentage is a fraction, so a rule for *less than 20%* is written *less than 0.2*.
 

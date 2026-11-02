@@ -74,8 +74,9 @@ A reference line is a dashed line across a bar, line or area chart, so people se
 | Setting | What it does |
 | --- | --- |
 | **Line at** | **Average** or **Median** of the values the chart draws for a value column, or a **Constant** value such as a target. |
-| **Of** | The value column the average or median is computed from. For a constant, the column whose format its value is shown in, or **None**. |
+| **Of** | The value column the average or median is computed from. |
 | **Value** | The value of a constant line, as the chart's axis reads it. On a chart of percentages, type 25 for 25%. |
+| **Format like** | For a constant line, the column whose format its value is shown in, or **None**. |
 | **Label** | The text shown with the line's value, such as *Target*. Left empty, an average or median is labeled **Average** or **Median**, and a constant shows only its value. |
 
 For example, a bar chart of revenue per agent with an **Average** line and a **Constant** line at 10,000 labeled *Target* shows *Average: 7,250* and *Target: 10,000* at the end of the two lines. A line computed from a value column takes that column's color; a constant line, or a line of a chart split into series, is drawn in the text color. The chart's axis stretches to show every line.
