@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+
+@model UpdateContactTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactContentItemId">
+    <label class="ocat-label ocat-label-required" asp-for="ContactContentItemId">@T["Contact"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ContactContentItemId" />
+        <span asp-validation-for="ContactContentItemId"></span>
+        <span class="hint">@T["A Liquid expression resolving the content item id of the contact or lead to change. The default is the content item the workflow started for. From a Contact Center event, use {0}.", "{{ Workflow.Input.Data.ContactContentItemId }}"]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Properties">
+    <label class="ocat-label ocat-label-required" asp-for="Properties">@T["Fields to set"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control font-monospace" rows="6" asp-for="Properties"></textarea>
+        <span asp-validation-for="Properties"></span>
+        <span class="hint">@T["A Liquid expression rendering the JSON merged into the record, for example {0}. Only the fields it names change.", "{ \"Customer\": { \"NoAnswerTextSent\": { \"Value\": true } } }"]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Publish" />
+            <label class="form-check-label" asp-for="Publish">@T["Publish a draft"]</label>
+            <span class="hint dashed">@T["A record whose latest version is a draft is published once changed. A published record is changed in place and stays published."]</span>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small">@T["Unlike Update Content Item, this task does not check the record's required fields, so it also works on contacts and leads loaded without them, such as without a last name. The record's id is the task's result."]</p>

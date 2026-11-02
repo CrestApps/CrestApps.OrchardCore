@@ -111,6 +111,16 @@ Every Power, Progressive or Preview call that rings out now sends the text. Use 
 
 The text is sent by the provider that owns the number and lands in the customer's conversation in the [messaging workspace](messaging.md), owned by the agent, so the customer's reply reaches them. Leave **Agent** empty to send a system text instead.
 
+### Example: text a customer only once
+
+To text a customer who did not answer only the first time, keep a Boolean field on the contact type, for example **NoAnswerTextSent** on **Customer**, and set it after the text goes out:
+
+1. Start from **Activity disposition applied** and an **If/Else** task with `input("Data").Outcome == "NoAnswer"`.
+2. Add an **If/Else** task with the Liquid condition `{% assign contact = Workflow.Input.Data.ContactContentItemId | content_item_id %}{% if contact.Content[contact.ContentType].NoAnswerTextSent.Value == true %}false{% else %}true{% endif %}`, and connect its **True** outcome to **Send Text Message**.
+3. Add **Update Contact** with **Contact** `{{ Workflow.Input.Data.ContactContentItemId }}` and **Fields to set** `{% assign contact = Workflow.Input.Data.ContactContentItemId | content_item_id %}{ "{{ contact.ContentType }}": { "NoAnswerTextSent": { "Value": true } } }`, and connect the **Done** outcome of Send Text Message to it.
+
+Use **Update Contact** here rather than **Update Content Item**. Update Content Item checks the whole record first. When a field the type requires is empty, such as the last name of a contact loaded from a file, it fails and the workflow's run is not saved at all: the text has gone out, but the field is never set, so the next unanswered call texts the customer again.
+
 ## See what a workflow did
 
 Open the workflow's editor and click **Instances** (at the top right) to list its runs. Each run shows its status, such as **Finished**, and when it ran. Click a run to see the path it took through the workflow: **Restart** runs it again and **Delete** removes it. The workflow's **Properties** hold **Enabled**, **Single instance** and **Delete successfully completed workflows**.
@@ -128,6 +138,7 @@ A task only appears in the **Add Task** list when the feature it needs is on. Ev
 | **Set Agent Presence** | User, Status, Reason | Done, Failed | Contact Center Agents |
 | **Find Agent Numbers** | User name | Done, NotFound | Contact Center and Omnichannel Channel Endpoints |
 | **Send Text Message** | From, To, Message, Agent | Done, Failed | SMS Messaging Channel |
+| **Update Contact** | Contact, Fields to set, Publish a draft | Done, Failed | Omnichannel Activities |
 | **Enqueue Activity** | Activity, Queue, Priority | Done, Failed | Contact Center Work Distribution |
 | **Hand Off to Live Agent** | Activity, Queue, Reason, Summary | Connected, Waiting In Queue, Callback Scheduled, Failed | Contact Center Work Distribution |
 | **Schedule Callback** | Destination, Delay (minutes), Campaign, Queue, Contact | Done, Failed | Contact Center Outbound Dialer |
@@ -142,6 +153,7 @@ The [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#automate
 - **Set Agent Presence** puts an agent into a status such as a break, with an optional reason. The **Status** list offers *Offline*, *Available*, *Break*, *Requested break*, *Away*, *Do not disturb*, *Meeting*, *Training* and *After-hours unavailable*. It leaves out the reserved, busy and wrap-up states, because the platform sets those itself while an agent is offered or handling work.
 - **Find Agent Numbers** looks up the numbers an agent calls and texts from. See the example above.
 - **Send Text Message** sends a text from one of your SMS numbers. **Agent** is optional: name an agent so the customer's reply reaches them, or leave it empty for a system text.
+- **Update Contact** sets fields on a contact or lead. **Fields to set** is Liquid that renders JSON, and only the fields it names change. Unlike Orchard Core's **Update Content Item**, it does not check the record's required fields, so it works on contacts and leads loaded without them. See the example above.
 - **Enqueue Activity** puts an activity on a queue for routing. **Priority** is optional; *Use queue default* keeps the queue's own priority. If the activity or the queue does not exist, the task ends in **Failed**.
 - **Hand Off to Live Agent** moves an automated (AI) conversation to people: a live call is put in a queue and offered to an agent, and a text conversation becomes a queue-owned conversation in the messaging workspace. Leave **Queue** empty to use the hand-off queue of the subject flow. **Reason** is shown to the agent who takes it, and **Summary** gives them the conversation so far. It ends in **Connected** (put straight through), **Waiting In Queue**, or **Callback Scheduled** (for example after hours), so you can handle each case differently. It does nothing to a call a person is already handling.
 - **Schedule Dialer Retry** creates the next attempt of a dialer call, as the **Try Again** action of a subject flow does: a new activity in the same campaign with the same dialer profile, due after the **Delay in minutes** and never sooner than the profile's retry delay. It ends in **Scheduled**, **Exhausted** when the contact has no attempts left, or **Failed**. See [Call a contact again](#call-a-contact-again).
