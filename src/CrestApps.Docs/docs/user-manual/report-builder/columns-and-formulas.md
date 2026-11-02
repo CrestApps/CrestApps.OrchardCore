@@ -30,6 +30,7 @@ Click a column on the **Columns** shelf to change it in **Properties** on the ri
 | **Aggregate** | How a group of values is combined: **Count**, **Count distinct**, **Sum**, **Average**, **Minimum**, **Maximum** or **Median**. Pick **None** to group the report by this column. |
 | **Transform** | Changes each value first, such as **Month** to see revenue per month. See [Transforms](#transforms). |
 | **Format** | How values are shown, such as **N0** (whole numbers), **C2** (currency) or **MMM yyyy** (month and year). Click the question mark next to the box for a list of common formats. See [Formats](#formats). |
+| **Show as** | Shows a measure as a quick table calculation, such as a percent of total or a running total, instead of its plain values. See [Show values as a calculation](#show-values-as-a-calculation). |
 | **Shelf** | **Columns** or **Rows**. See [Lay out rows and columns](build-a-report.md#lay-out-rows-and-columns). |
 | **Hide from tables** | Keeps the column for grouping, charts and filters without showing it in tables. |
 | **Colors** | The colors of its header and cells, a color scale, and color rules. See [Colors](#colors). |
@@ -98,6 +99,43 @@ To pick a format, click the question mark next to the **Format** box. A short li
 | **HH:mm** | 14:30 | Time of day, on a 24-hour clock |
 
 The examples are written in US English. The report uses the language settings of the site, so separators, currency signs and month names follow them.
+
+## Show values as a calculation
+
+A measure can show each value compared with the others the table or chart shows, without writing a formula. Click the arrow on the measure and pick **Show as**, or set **Show as** under **Properties**.
+
+| Show as | Each value shows | Example with 300, 150 and 20 |
+| --- | --- | --- |
+| **Value** | The value itself. This is the default. | 300, 150, 20 |
+| **Percent of total** | Its share of the sum of the values it is computed along. | 63.8%, 31.9%, 4.3% |
+| **Running total** | The sum of the values up to it. | 300, 450, 470 |
+| **Difference from previous** | How much it changed from the value before it. The first value has none. | (empty), -150, -130 |
+| **Percent difference from previous** | How much it changed from the value before it, as a percentage of that value. | (empty), -50.0%, -86.7% |
+| **Rank** | Its rank, 1 for the largest. Equal values share a rank. | 1, 2, 3 |
+
+The calculation runs over the values in the order they are shown, so sort the report the way you want a running total or a difference to run, such as by month. With subtotals on, it follows the rows as they are grouped.
+
+Totals rows, subtotal rows and the row totals of a cross-tab keep showing the plain totals, so the bottom of a **Percent of total** column still reads the total revenue rather than 100%.
+
+### Compute along
+
+In a cross-tab, pick which values each calculation runs over with **Compute along**, in the column's menu or under **Properties**:
+
+| Compute along | In a cross-tab | In a chart split into series |
+| --- | --- | --- |
+| **Down the rows** | Down each column, such as each region's share of a month's revenue. | Along the categories of each series. |
+| **Across the columns** | Across each row, such as each month's share of a region's revenue. | Across the series at each category, such as each customer's share of a region's revenue. |
+| **Over the whole table** | Over every cell, row by row, such as each cell's share of all the revenue. | Over every point. |
+
+A table without columns across the top, and a chart that isn't split into series, always compute down their rows or along their categories.
+
+### How calculated values are shown
+
+Percentages are shown with one decimal, such as 63.8%. To show them another way, set the column's **Format** to a percent format such as **P0** or **P2**. Ranks are shown as whole numbers. Running totals and differences use the column's own format.
+
+A chart of a percentage reads its axis in percent. Color rules and color scales compare the values shown: a percentage is a fraction, so a rule for *less than 20%* is written *less than 0.2*.
+
+Metrics show their plain totals, whatever the column is shown as.
 
 ## Colors
 
