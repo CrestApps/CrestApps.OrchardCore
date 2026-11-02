@@ -1,0 +1,147 @@
+@model MyTimeViewModel
+
+@{
+    var open = Model.Status.Open;
+    var zone = Model.TimeZoneId;
+    // The bar spans the hours worked today, at least four, rather than the whole day.
+    var barStart = Model.Today.Count == 0 ? Model.DayStartUtc : Model.Today.Min(entry => entry.StartUtc < Model.DayStartUtc ? Model.DayStartUtc : entry.StartUtc);
+    var barEnd = Model.Today.Count == 0 ? Model.NowUtc : Model.Today.Max(entry => entry.EndUtc ?? Model.NowUtc);
+
+    barStart = new DateTime(barStart.Ticks - (barStart.Ticks % TimeSpan.TicksPerHour), DateTimeKind.Utc);
+    barEnd = barEnd < barStart.AddHours(4) ? barStart.AddHours(4) : barEnd;
+
+    var dayLength = (barEnd - barStart).TotalMinutes;
+    string StageName(string id) => id is not null && Model.AllStages.TryGetValue(id, out var stage) ? stage.Name : T["No stage"].Value;
+    string StageColor(string id) => id is not null && Model.AllStages.TryGetValue(id, out var stage) && !string.IsNullOrEmpty(stage.Color) ? stage.Color : "#6c757d";
+}
+
+<zone Name="Title"><breadcrumb name="TimeTrackerMine" title="@T["My Time"]" /></zone>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Now"]</div>
+    <div class="card-body">
+        @if (open is null)
+        {
+            <p class="mb-3">@T["You're not clocked in."]</p>
+        }
+        else
+        {
+            <p class="mb-3">
+                <span class="badge fs-6" style="background-color: @StageColor(open.StageId)">@StageName(open.StageId)</span>
+                @T["since {0}", TimeTrackerTimeZone.Format(open.StartUtc, zone, "HH:mm")] ·
+                @TimeTrackerTimeZone.Hours((decimal)(Model.NowUtc - open.StartUtc).TotalMinutes)
+            </p>
+        }
+        @if (Model.Stages.Count == 0)
+        {
+            <p class="hint mb-0">@T["There are no stages to choose yet. Ask an administrator to add them under Time Tracker > Stages."]</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var stage in Model.Stages)
+                {
+                    <form asp-action="Switch" method="post" class="d-inline">
+                        <input type="hidden" name="stageId" value="@stage.ItemId" />
+                        <button type="submit" class="btn @(open?.StageId == stage.ItemId ? "btn-primary" : "btn-outline-primary")" disabled="@(open?.StageId == stage.ItemId)">
+                            @(open is null ? T["Clock in: {0}", stage.Name] : T["{0}", stage.Name])
+                        </button>
+                    </form>
+                }
+                @if (open is not null)
+                {
+                    <form asp-action="ClockOut" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock out"]</button>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Today"]</div>
+    <div class="card-body">
+        @if (Model.Today.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["No time today yet."]</p>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between small text-muted"><span>@TimeTrackerTimeZone.Format(barStart, zone, "HH:mm")</span><span>@TimeTrackerTimeZone.Format(barEnd, zone, "HH:mm")</span></div>
+            <div class="progress mb-3" style="height: 1.5rem" role="img" aria-label="@T["Today's stages"]">
+                @{
+                    var cursor = barStart;
+                }
+                @foreach (var entry in Model.Today)
+                {
+                    var start = entry.StartUtc < Model.DayStartUtc ? Model.DayStartUtc : entry.StartUtc;
+                    var end = entry.EndUtc ?? Model.NowUtc;
+                    var gap = (start - cursor).TotalMinutes;
+
+                    if (gap > 0)
+                    {
+                        <div class="progress-bar bg-transparent" style="width: @((gap / dayLength * 100).ToString("0.###", CultureInfo.InvariantCulture))%"></div>
+                    }
+
+                    <div class="progress-bar" style="width: @(((end - start).TotalMinutes / dayLength * 100).ToString("0.###", CultureInfo.InvariantCulture))%; background-color: @StageColor(entry.StageId)" title="@StageName(entry.StageId) @TimeTrackerTimeZone.Format(entry.StartUtc, zone, "HH:mm")–@(entry.EndUtc is null ? T["now"].Value : TimeTrackerTimeZone.Format(entry.EndUtc, zone, "HH:mm"))"></div>
+                    cursor = end;
+                }
+            </div>
+            <ul class="list-unstyled mb-0">
+                @foreach (var entry in Model.Today)
+                {
+                    <li class="mb-1">
+                        <span class="badge fw-normal" style="background-color: @StageColor(entry.StageId)">@StageName(entry.StageId)</span>
+                        @TimeTrackerTimeZone.Format(entry.StartUtc, zone, "HH:mm")–@(entry.EndUtc is null ? T["now"].Value : TimeTrackerTimeZone.Format(entry.EndUtc, zone, "HH:mm"))
+                        <span class="text-muted">@TimeTrackerTimeZone.Hours((decimal)((entry.EndUtc ?? Model.NowUtc) - entry.StartUtc).TotalMinutes)</span>
+                        @if (entry.Changes.Count > 0)
+                        {
+                            <span class="badge text-bg-warning fw-normal" title="@string.Join(" · ", entry.Changes.Select(change => $"{change.By}: {change.Reason}"))">@T["Changed by a manager"]</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["This week"]</div>
+    <div class="card-body">
+        @if (Model.Week.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["No time this week yet."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Day"]</th>
+                            @foreach (var category in Model.Categories)
+                            {
+                                <th scope="col" class="text-end">@category.Name</th>
+                            }
+                            <th scope="col" class="text-end">@T["Total"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Week)
+                        {
+                            <tr>
+                                <td>@row.Date?.ToString("ddd d MMM", CultureInfo.CurrentCulture)</td>
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <td class="text-end">@TimeTrackerTimeZone.Hours(row.MinutesByCategory.GetValueOrDefault(category.ItemId))</td>
+                                }
+                                <td class="text-end fw-semibold">@TimeTrackerTimeZone.Hours(row.TotalMinutes)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

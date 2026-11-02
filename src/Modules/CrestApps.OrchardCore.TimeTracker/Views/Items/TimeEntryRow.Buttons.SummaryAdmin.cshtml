@@ -1,0 +1,6 @@
+@model ShapeViewModel<TimeEntryRow>
+
+@if (Model.Value.CanManage)
+{
+    <a asp-controller="TimeEntries" asp-action="Edit" asp-route-id="@Model.Value.Entry.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

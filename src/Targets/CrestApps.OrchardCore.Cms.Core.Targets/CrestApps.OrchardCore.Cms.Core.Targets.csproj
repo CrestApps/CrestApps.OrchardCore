@@ -107,6 +107,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Workforce/CrestApps.OrchardCore.Workforce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.WorkOrders/CrestApps.OrchardCore.WorkOrders.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.TimeTracker/CrestApps.OrchardCore.TimeTracker.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Dispatch/CrestApps.OrchardCore.Dispatch.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Geo/CrestApps.OrchardCore.Geo.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Geo.AzureMaps/CrestApps.OrchardCore.Geo.AzureMaps.csproj" PrivateAssets="none" />

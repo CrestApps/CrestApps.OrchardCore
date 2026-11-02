@@ -1,0 +1,20 @@
+@model ShapeViewModel<TimeEntryRow>
+
+@{
+    var entry = Model.Value.Entry;
+    var minutes = (int)Math.Round(((entry.EndUtc ?? DateTime.UtcNow) - entry.StartUtc).TotalMinutes);
+}
+<span class="badge fw-normal" style="background-color: @(Model.Value.Stage?.Color ?? "#6c757d")">@(Model.Value.Stage?.Name ?? T["No stage"].Value)</span>
+<span class="badge ta-badge fw-normal">@TimeTrackerTimeZone.Hours(minutes)</span>
+@if (entry.IsOpen)
+{
+    <span class="badge text-bg-success fw-normal">@T["Now"]</span>
+}
+@if (entry.Source != TimeTrackerConstants.Sources.Self)
+{
+    <span class="badge ta-badge fw-normal">@entry.Source</span>
+}
+@if (entry.Changes.Count > 0)
+{
+    <span class="badge text-bg-warning fw-normal" title="@string.Join(" · ", entry.Changes.Select(change => $"{change.By}: {change.Reason}"))"><i class="fa-solid fa-pen" aria-hidden="true"></i> @T["Changed"]</span>
+}

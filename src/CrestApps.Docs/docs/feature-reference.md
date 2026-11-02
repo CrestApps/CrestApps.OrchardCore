@@ -235,6 +235,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Assets` | Assets | [Assets](./modules/assets) |
 | `CrestApps.OrchardCore.Assets.Fleet` | Fleet | [Assets](./modules/assets#fleet) |
 | `CrestApps.OrchardCore.Dispatch` | Dispatch | [Dispatch](./modules/dispatch) |
+| `CrestApps.OrchardCore.TimeTracker` | Time Tracker | [Time Tracker](./modules/time-tracker) |
 | `CrestApps.OrchardCore.WorkOrders` | Work Orders | [Work Orders](./modules/work-orders) |
 | `CrestApps.OrchardCore.WorkOrders.Agreements` | Service Agreements | [Work Orders](./modules/work-orders#service-agreements) |
 

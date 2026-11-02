@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.TimeTracker.Recipes
+@model ShapeViewModel<TimeTrackerDeploymentStep>
+
+<h5>@T["Time stages, categories and entries"]</h5>
+<span class="hint">@T["Categories and stages"]@(Model.Value.IncludeEntries ? T[", with the entries of the last {0} days", Model.Value.Days] : null)</span>

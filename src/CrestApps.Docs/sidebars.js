@@ -169,6 +169,7 @@ const sidebars = {
                 'user-manual/workforce/workers-and-teams',
                 'user-manual/workforce/shift-planning',
                 'user-manual/workforce/time-off',
+                'user-manual/workforce/time-tracker',
                 'user-manual/workforce/labor-rules',
                 'user-manual/workforce/time-clock',
                 'user-manual/workforce/reports-and-automation',
@@ -462,6 +463,7 @@ const sidebars = {
                 'modules/assets',
                 'modules/work-orders',
                 'modules/dispatch',
+                'modules/time-tracker',
             ],
         },
         {
