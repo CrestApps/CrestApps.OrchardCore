@@ -887,7 +887,7 @@ public sealed partial class ReportDesignDocumentBuilder
             }
 
             var values = column is not null && plotted.TryGetValue(index, out var grid)
-                ? grid.SelectMany(row => row).Where(value => value is not null).Select(value => ToPlotted(value, column)).ToList()
+                ? grid.SelectMany(row => row).Where(value => value is not null).Select(value => ToPlotted(value, column, round: false)).ToList()
                 : [];
             double? value = line.Kind switch
             {
@@ -953,14 +953,18 @@ public sealed partial class ReportDesignDocumentBuilder
         return sorted.Count % 2 == 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
     }
 
-    // The value a chart plots: a percentage in percent, rounded to hundredths of a percent; missing values as zero.
-    private static double ToPlotted(object value, ReportResultColumn column)
+    // The value a chart plots: a percentage in percent, rounded to hundredths of a percent unless a reference line is
+    // computed from it; missing values as zero.
+    private static double ToPlotted(object value, ReportResultColumn column, bool round = true)
     {
         var number = ToDouble(value);
 
-        return IsCalculable(column) && ReportTableCalculations.IsPercent(column.ShowAs)
-            ? Math.Round(number * 100, 2)
-            : number;
+        if (!IsCalculable(column) || !ReportTableCalculations.IsPercent(column.ShowAs))
+        {
+            return number;
+        }
+
+        return round ? Math.Round(number * 100, 2) : number * 100;
     }
 
     private ReportSection BuildPivot(ReportVisualDefinition visual, ReportQueryResult result)

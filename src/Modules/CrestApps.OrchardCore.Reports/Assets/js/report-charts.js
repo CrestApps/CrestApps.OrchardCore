@@ -128,9 +128,12 @@
                     ctx.lineTo(area.right, at);
                     ctx.stroke();
                     ctx.setLineDash([]);
-                    ctx.textAlign = 'right';
+                    // The label ends at the right of the plot, or starts at its left when it is wider than the plot.
+                    var wide = typeof ctx.measureText === 'function' && ctx.measureText(line.label || '').width > area.right - area.left - 8;
+
+                    ctx.textAlign = wide ? 'left' : 'right';
                     ctx.textBaseline = at - 14 < area.top ? 'top' : 'bottom';
-                    ctx.fillText(line.label || '', area.right - 4, ctx.textBaseline === 'top' ? at + 3 : at - 3);
+                    ctx.fillText(line.label || '', wide ? area.left + 4 : area.right - 4, ctx.textBaseline === 'top' ? at + 3 : at - 3);
                 }
             });
 
