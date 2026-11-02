@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -49,6 +50,51 @@ public sealed class Startup : StartupBase
         services.AddScoped<Geo.Services.ITerritoryMemberSource, WorkerTerritoryMemberSource>();
         services.AddScoped<Geo.Services.ITerritoryMemberSource, TeamTerritoryMemberSource>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, DispatchResourceConfiguration>();
+        services.AddScoped<Core.Services.IDispatchSiteInfo, Integrations.SiteDispatchSiteInfo>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, Integrations.VisitRiskBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, Integrations.VisitReminderBackgroundTask>());
+    }
+}
+
+/// <summary>
+/// Texts customers about their visits through the site's SMS provider.
+/// </summary>
+[RequireFeatures("OrchardCore.Sms")]
+public sealed class SmsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IVisitNoticeSender, Integrations.SmsVisitNoticeSender>();
+    }
+}
+
+/// <summary>
+/// Writes to customers about their visits through the site's email provider.
+/// </summary>
+[RequireFeatures("OrchardCore.Email")]
+public sealed class EmailStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override int Order => 10;
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IVisitNoticeSender, Integrations.EmailVisitNoticeSender>();
+    }
+}
+
+/// <summary>
+/// Books Fleet's schedulable equipment for visits that need it.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Assets.Fleet")]
+public sealed class FleetStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IDispatchEquipmentService, Integrations.FleetDispatchEquipmentService>();
     }
 }
 
@@ -84,5 +130,6 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddScoped<IVisitObserver, WorkflowVisitObserver>();
         services.AddActivity<VisitAssignedEvent, VisitAssignedEventDisplayDriver>();
         services.AddActivity<VisitStatusChangedEvent, VisitStatusChangedEventDisplayDriver>();
+        services.AddActivity<VisitAtRiskEvent, VisitAtRiskEventDisplayDriver>();
     }
 }

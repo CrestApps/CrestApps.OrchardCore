@@ -17,6 +17,9 @@
 		const queue = root.querySelector("[data-board-queue]");
 		const queueCount = root.querySelector("[data-board-queue-count]");
 		const candidatesCard = root.querySelector("[data-board-candidates]");
+		const proposalCard = root.querySelector("[data-board-proposal]");
+		const optimizeButton = document.querySelector("[data-board-optimize]");
+		const includeUnscheduled = document.getElementById("dispatch-include-unscheduled");
 		const errorBox = root.querySelector("[data-board-error]");
 		const title = document.querySelector("[data-board-title]");
 		const live = document.querySelector("[data-board-live]");
@@ -69,6 +72,19 @@
 		const scheduleReload = () => {
 			window.clearTimeout(reloadTimer);
 			reloadTimer = window.setTimeout(load, 400);
+		};
+		const post = async (url, body) => {
+			const response = await fetch(url, {
+				method: "POST",
+				credentials: "same-origin",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+					RequestVerificationToken: tokenInput ? tokenInput.value : ""
+				},
+				body: JSON.stringify(body)
+			});
+			return response.ok ? response.json() : null;
 		};
 		const move = async (visitId, workerId, startUtc) => {
 			const response = await fetch(root.dataset.moveUrl, {
@@ -124,11 +140,16 @@
 			return header;
 		};
 		const renderVisit = (visit, row) => {
-			const link = element("a", `db-visit db-status-${visit.status}${visit.leadWorkerId === row.id ? "" : " db-crew"}${visit.late ? " db-late" : ""}`);
+			const link = element("a", `db-visit db-status-${visit.status}${visit.leadWorkerId === row.id ? "" : " db-crew"}${visit.late || visit.atRisk ? " db-late" : ""}`);
 			link.href = visit.url;
-			link.title = `${visit.number} ${visit.workOrderNumber || ""} ${visit.summary || ""}\n${visit.start}–${visit.end} · ${visit.statusText}${visit.pinned ? ` · ${texts.pinned}` : ""}${visit.late ? ` · ${texts.late}` : ""}`;
+			link.title = `${visit.number} ${visit.workOrderNumber || ""} ${visit.summary || ""}\n${visit.start}–${visit.end} · ${visit.statusText}${visit.pinned ? ` · ${texts.pinned}` : ""}${visit.late ? ` · ${texts.late}` : ""}${visit.eta ? ` · ${format(texts.eta, visit.eta)}` : ""}${visit.atRisk ? `\n${texts.atRisk}: ${visit.atRisk}` : ""}`;
 			link.appendChild(element("span", "db-visit-time", visit.start));
 			link.appendChild(element("span", "db-visit-text", visit.summary || visit.number));
+			if (visit.atRisk) {
+				const risk = element("i", "fa-solid fa-triangle-exclamation ms-1");
+				risk.setAttribute("aria-hidden", "true");
+				link.appendChild(risk);
+			}
 			if (visit.pinned) {
 				const pin = element("i", "fa-solid fa-thumbtack ms-1");
 				pin.setAttribute("aria-hidden", "true");
@@ -246,6 +267,81 @@
 				behavior: "smooth"
 			});
 		};
+		const showProposal = (proposal) => {
+			const body = element("div", "card-body");
+			const head = element("div", "d-flex align-items-center mb-2");
+			const close = element("button", "btn-close ms-auto");
+			close.type = "button";
+			close.setAttribute("aria-label", texts.close);
+			close.addEventListener("click", () => proposalCard.classList.add("d-none"));
+			head.appendChild(element("h2", "h6 mb-0", texts.optimizeTitle));
+			head.appendChild(close);
+			body.appendChild(head);
+			if (proposal.moves.length === 0) {
+				body.appendChild(element("p", "small text-muted mb-0", proposal.unassigned > 0 ? format(texts.optimizeLeft, proposal.unassigned) : texts.optimizeNothing));
+				proposalCard.replaceChildren(body);
+				proposalCard.classList.remove("d-none");
+				return;
+			}
+			body.appendChild(element("p", "small", format(texts.optimizeTravel, proposal.travelBefore, proposal.travelAfter)));
+			if (proposal.unassigned > 0) body.appendChild(element("p", "small text-warning-emphasis", format(texts.optimizeLeft, proposal.unassigned)));
+			const boxes = [];
+			proposal.moves.forEach((item, index) => {
+				const line = element("div", "form-check small db-candidate");
+				const box = element("input", "form-check-input");
+				const label = element("label", "form-check-label");
+				box.type = "checkbox";
+				box.checked = true;
+				box.id = `db-move-${index}`;
+				label.htmlFor = box.id;
+				label.appendChild(element("strong", null, item.number));
+				label.appendChild(document.createTextNode(` ${item.summary || ""}: ${item.from ? `${item.from} → ` : ""}${item.to}`));
+				line.appendChild(box);
+				line.appendChild(label);
+				body.appendChild(line);
+				boxes.push({
+					box,
+					item
+				});
+			});
+			const apply = element("button", "btn btn-sm btn-primary mt-2", texts.applySelected);
+			apply.type = "button";
+			apply.addEventListener("click", async () => {
+				apply.disabled = true;
+				const chosen = boxes.filter((entry) => entry.box.checked).map((entry) => ({
+					visitId: entry.item.visitId,
+					fromWorkerId: entry.item.fromWorkerId,
+					fromStartUtc: entry.item.fromStartUtc,
+					toWorkerId: entry.item.toWorkerId,
+					toStartUtc: entry.item.toStartUtc
+				}));
+				const result = await post(root.dataset.applyUrl, chosen);
+				if (result) {
+					showError(result.errors);
+					proposalCard.classList.add("d-none");
+					await load();
+				}
+				apply.disabled = false;
+			});
+			body.appendChild(apply);
+			proposalCard.replaceChildren(body);
+			proposalCard.classList.remove("d-none");
+			proposalCard.scrollIntoView({
+				block: "nearest",
+				behavior: "smooth"
+			});
+		};
+		if (optimizeButton) optimizeButton.addEventListener("click", async () => {
+			optimizeButton.disabled = true;
+			const proposal = await post(root.dataset.optimizeUrl, {
+				day: root.dataset.day,
+				teamId: root.dataset.teamId || null,
+				includeUnscheduled: includeUnscheduled ? includeUnscheduled.checked : true
+			});
+			if (proposal) showProposal(proposal);
+			else showError([texts.failed]);
+			optimizeButton.disabled = false;
+		});
 		const renderQueue = () => {
 			queue.replaceChildren();
 			queueCount.textContent = data.unscheduled.length ? String(data.unscheduled.length) : "";

@@ -202,6 +202,70 @@ public sealed class DispatchBoardController : Controller
     }
 
     /// <summary>
+    /// Proposes a better arrangement of the day shown; nothing changes until it is applied.
+    /// </summary>
+    [HttpPost]
+    [Admin("dispatch/board/optimize", "DispatchBoardOptimize")]
+    public async Task<IActionResult> Optimize([FromBody] BoardOptimizeModel model, [FromServices] IDispatchOptimizationService optimization)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, DispatchPermissions.ManageDispatch))
+        {
+            return Forbid();
+        }
+
+        var zone = await _timeZone.GetAsync();
+        var date = ParseDay(model?.Day, zone);
+        IReadOnlyCollection<string> workerIds = null;
+
+        if (!string.IsNullOrEmpty(model?.TeamId))
+        {
+            var teamIds = await _teams.GetSubtreeIdsAsync(model.TeamId, HttpContext.RequestAborted);
+
+            workerIds = [.. (await _resources.ListWorkersAsync(HttpContext.RequestAborted)).Where(worker => worker.MembershipsOn(date).Any(membership => teamIds.Contains(membership.TeamId))).Select(worker => worker.ItemId)];
+        }
+
+        var proposal = await optimization.ProposeAsync(date, workerIds, model?.IncludeUnscheduled == true, HttpContext.RequestAborted);
+        var names = (await _resources.ListWorkersAsync(HttpContext.RequestAborted)).ToDictionary(worker => worker.ItemId, worker => worker.DisplayName, StringComparer.Ordinal);
+
+        return Json(new
+        {
+            solver = proposal.Solver,
+            travelBefore = proposal.TravelBefore,
+            travelAfter = proposal.TravelAfter,
+            unassigned = proposal.Unassigned.Count,
+            moves = proposal.Moves.Select(move => new
+            {
+                visitId = move.VisitId,
+                number = move.Number,
+                summary = move.Summary,
+                from = move.FromStartUtc is null ? null : $"{names.GetValueOrDefault(move.FromWorkerId ?? string.Empty, move.FromWorkerId)} {DispatchTimeZone.Format(move.FromStartUtc, zone, "HH:mm")}",
+                to = $"{names.GetValueOrDefault(move.ToWorkerId, move.ToWorkerId)} {DispatchTimeZone.Format(move.ToStartUtc, zone, "HH:mm")}",
+                fromWorkerId = move.FromWorkerId,
+                fromStartUtc = move.FromStartUtc,
+                toWorkerId = move.ToWorkerId,
+                toStartUtc = move.ToStartUtc,
+            }),
+        });
+    }
+
+    /// <summary>
+    /// Applies the moves chosen from a proposal.
+    /// </summary>
+    [HttpPost]
+    [Admin("dispatch/board/apply", "DispatchBoardApply")]
+    public async Task<IActionResult> Apply([FromBody] List<ProposalMove> moves, [FromServices] IDispatchOptimizationService optimization)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, DispatchPermissions.ManageDispatch))
+        {
+            return Forbid();
+        }
+
+        var result = await optimization.ApplyAsync(moves ?? [], User.Identity?.Name, HttpContext.RequestAborted);
+
+        return Json(new { applied = result.Applied.Count, errors = result.Errors.Values });
+    }
+
+    /// <summary>
     /// Gives the best technicians for a visit on a day.
     /// </summary>
     [Admin("dispatch/board/candidates/{visitId}", "DispatchBoardCandidates")]
@@ -267,6 +331,8 @@ public sealed class DispatchBoardController : Controller
             workerIds = visit.WorkerIds,
             leadWorkerId = visit.LeadWorkerId,
             pinned = visit.Pinned,
+            atRisk = visit.AtRiskReason,
+            eta = visit.Status == VisitStatus.EnRoute ? DispatchTimeZone.Format(visit.EtaUtc, zone, "HH:mm") : null,
             canMove = VisitStatusRules.CanAssign(visit.Status) && !visit.Pinned,
             latitude = place?.Latitude,
             longitude = place?.Longitude,

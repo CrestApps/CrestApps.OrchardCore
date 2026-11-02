@@ -34,6 +34,12 @@ public static class DispatchServiceCollectionExtensions
         services.TryAddScoped(sp => new Lazy<WorkOrderService>(sp.GetRequiredService<WorkOrderService>));
         services.TryAddScoped(sp => new Lazy<IDispatchService>(sp.GetRequiredService<IDispatchService>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkOrderObserver, DispatchWorkOrderObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IDispatchOptimizer, DefaultDispatchOptimizer>());
+        services.TryAddScoped<IDispatchOptimizationService, DispatchOptimizationService>();
+        services.TryAddScoped<IVisitTrackingLinks, VisitTrackingLinks>();
+        services.TryAddScoped<VisitNoticeService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IVisitObserver, VisitNoticeObserver>());
+        services.TryAddScoped<VisitRiskMonitor>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkOrderHandler, DispatchWorkOrderHandler>());
 
         // A visit shows on each worker's team calendar as a job, which keeps them busy then.

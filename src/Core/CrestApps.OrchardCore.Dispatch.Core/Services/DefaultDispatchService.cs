@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -34,6 +35,9 @@ public sealed class DefaultDispatchService : IDispatchService
     private readonly Lazy<WorkOrderService> _workOrders;
     private readonly WorkOrderStore _workOrderStore;
     private readonly IEnumerable<IVisitObserver> _observers;
+    private readonly WorkOrderSettingManager<WorkOrderType> _types;
+    private readonly IEnumerable<IDispatchEquipmentService> _equipment;
+    private readonly ICalendarAvailabilityService _availability;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -53,6 +57,9 @@ public sealed class DefaultDispatchService : IDispatchService
         Lazy<WorkOrderService> workOrders,
         WorkOrderStore workOrderStore,
         IEnumerable<IVisitObserver> observers,
+        WorkOrderSettingManager<WorkOrderType> types,
+        IEnumerable<IDispatchEquipmentService> equipment,
+        ICalendarAvailabilityService availability,
         IClock clock,
         ILogger<DefaultDispatchService> logger,
         IStringLocalizer<DefaultDispatchService> stringLocalizer)
@@ -67,6 +74,9 @@ public sealed class DefaultDispatchService : IDispatchService
         _workOrders = workOrders;
         _workOrderStore = workOrderStore;
         _observers = observers;
+        _types = types;
+        _equipment = equipment;
+        _availability = availability;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -139,13 +149,16 @@ public sealed class DefaultDispatchService : IDispatchService
         }
 
         var now = _clock.UtcNow;
+        var type = string.IsNullOrEmpty(workOrder.TypeId) ? null : await _types.FindByIdAsync(workOrder.TypeId, cancellationToken);
         var visit = new ServiceVisit
         {
             ItemId = CrestApps.Core.UniqueId.GenerateId(),
+            CrewSize = Math.Max(1, type?.CrewSize ?? 1),
+            RequiredEquipmentTypeIds = [.. type?.RequiredEquipmentTypeIds ?? []],
             Number = await NextNumberAsync(cancellationToken),
             WorkOrderId = workOrder.ItemId,
             Status = VisitStatus.Unscheduled,
-            DurationMinutes = workOrder.EstimatedMinutes > 0 ? workOrder.EstimatedMinutes : 60,
+            DurationMinutes = workOrder.EstimatedMinutes > 0 ? workOrder.EstimatedMinutes : type?.DefaultDurationMinutes > 0 ? type.DefaultDurationMinutes : 60,
             CreatedUtc = now,
             ModifiedUtc = now,
         };
@@ -266,6 +279,13 @@ public sealed class DefaultDispatchService : IDispatchService
                 assigned.Add(availability);
             }
 
+            if (errors.Count == 0 && workerIds.Count < visit.CrewSize)
+            {
+                errors.Add(S["This job needs {0} people.", visit.CrewSize]);
+            }
+
+            var equipment = errors.Count == 0 ? await FindEquipmentAsync(visit, start, end, errors, cancellationToken) : [];
+
             if (errors.Count > 0)
             {
                 return new DispatchResult { Visit = visit, Errors = errors };
@@ -306,7 +326,8 @@ public sealed class DefaultDispatchService : IDispatchService
                     : S["Scheduled for {0} at {1}.", names, Format(start, lead.TimeZoneId)],
             });
 
-            var calendarErrors = await _calendarWriter.SyncAsync(visit, assigned, Title(visit), actor, cancellationToken);
+            var calendarErrors = (await _calendarWriter.SyncAsync(visit, assigned, Title(visit), actor, cancellationToken))
+                .Concat(await _calendarWriter.SyncEquipmentAsync(visit, equipment, Title(visit), actor, cancellationToken));
 
             foreach (var error in calendarErrors)
             {
@@ -414,6 +435,15 @@ public sealed class DefaultDispatchService : IDispatchService
             await _calendarWriter.RemoveAsync(visit, actor, cancellationToken);
         }
 
+        if (status == VisitStatus.EnRoute)
+        {
+            visit.EtaUtc = await EstimateArrivalAsync(visit, now, cancellationToken);
+        }
+
+        // The risk is looked at again from the new status.
+        visit.AtRiskReason = null;
+        visit.AtRiskSinceUtc = null;
+
         if (status == VisitStatus.Incomplete)
         {
             visit.IncompleteReason = note.Trim();
@@ -483,6 +513,80 @@ public sealed class DefaultDispatchService : IDispatchService
         visit.Priority = workOrder.Priority;
         visit.TerritoryId = workOrder.TerritoryId;
         visit.DueUtc = workOrder.Sla?.ResolveByUtc;
+    }
+
+    // Picks, for each kind of equipment the job needs, the first one free at the time, keeping what the visit has.
+    private async Task<List<DispatchEquipment>> FindEquipmentAsync(ServiceVisit visit, DateTime start, DateTime end, List<string> errors, CancellationToken cancellationToken)
+    {
+        var picked = new List<DispatchEquipment>();
+        var source = _equipment.FirstOrDefault();
+
+        if (source is null || visit.RequiredEquipmentTypeIds.Count == 0)
+        {
+            return picked;
+        }
+
+        var own = visit.CalendarEvents.Where(entry => entry.ResourceKind == DispatchConstants.ResourceKinds.Equipment).Select(entry => entry.EventId).ToList();
+
+        foreach (var typeId in visit.RequiredEquipmentTypeIds.Distinct(StringComparer.Ordinal))
+        {
+            var choices = (await source.ListAsync(typeId, cancellationToken))
+                .Where(item => picked.All(chosen => chosen.AssetId != item.AssetId))
+                .OrderByDescending(item => visit.EquipmentAssetIds.Contains(item.AssetId))
+                .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase);
+            DispatchEquipment free = null;
+
+            foreach (var item in choices)
+            {
+                var busy = await _availability.GetBusyAsync(new CalendarBusyQuery
+                {
+                    CalendarIds = [item.CalendarId],
+                    FromUtc = start,
+                    ToUtc = end,
+                    ExcludeEventIds = own,
+                    IncludeBusyTimeSources = false,
+                }, cancellationToken);
+
+                if (busy.Count == 0)
+                {
+                    free = item;
+
+                    break;
+                }
+            }
+
+            if (free is null)
+            {
+                errors.Add(S["No {0} is free then.", await source.TypeNameAsync(typeId, cancellationToken) ?? typeId]);
+
+                continue;
+            }
+
+            picked.Add(free);
+        }
+
+        return picked;
+    }
+
+    // When the lead is expected: now, plus the trip from their last stop today, or from home.
+    private async Task<DateTime?> EstimateArrivalAsync(ServiceVisit visit, DateTime now, CancellationToken cancellationToken)
+    {
+        var lead = await _resources.FindWorkerAsync(visit.LeadWorkerId, cancellationToken);
+
+        if (lead is null)
+        {
+            return null;
+        }
+
+        var here = await _resources.PlaceOfAsync(visit.WorkOrderId, cancellationToken);
+        var earlier = (await _resources.ListWorkerVisitsAsync(lead.ItemId, now.AddHours(-12), now, visit.ItemId, cancellationToken))
+            .Where(other => other.EndUtc <= now || other.Status is VisitStatus.Completed or VisitStatus.Incomplete)
+            .OrderBy(other => other.EndUtc)
+            .LastOrDefault();
+        var from = earlier is null ? (await _resources.GetAvailabilityAsync(lead, now, now.AddMinutes(1), visit.ItemId, cancellationToken)).Home : await _resources.PlaceOfAsync(earlier.WorkOrderId, cancellationToken);
+        var trip = await _resources.TravelAsync(from, here, now, cancellationToken);
+
+        return trip is null ? null : now + trip.Value.Duration;
     }
 
     private string Describe(string name, SlotProblem problem, string timeZoneId) => problem.Kind switch

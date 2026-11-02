@@ -23,13 +23,15 @@ It works with other features when they are on:
 | SignalR (`OrchardCore.SignalR`) | Open boards reload when any visit changes (`DispatchHub`); without it, they reload each minute. |
 | Workflows | The **Visit Assigned** and **Visit Status Changed** events. |
 | Skills | Work order types can need skills (with a lowest level) and certifications; the candidate finder checks them on the day. |
+| Fleet (`CrestApps.OrchardCore.Assets.Fleet`) | Work order types can need equipment (asset types); assigning books a free one on its Equipment calendar. |
+| SMS (`OrchardCore.Sms`), Email (`OrchardCore.Email`) | Customer notices, by text when the contact has a phone, else by email. |
 
 ## Records
 
 Visits live in the `Dispatch` YesSql collection.
 
 - **`ServiceVisit`**: `Number` (`V-000001` and on), `WorkOrderId`, copies of the work order's number, summary, type, priority, territory and resolution target for lists, `Status` (`Unscheduled`, `Scheduled`, `Dispatched`, `EnRoute`, `OnSite`, `Paused`, `Completed`, `Incomplete`, `Canceled`), `DurationMinutes`, `StartUtc` and `EndUtc`, the arrival window (`ArrivalStartUtc`, `ArrivalEndUtc`), `LeadWorkerId` and `WorkerIds`, `Pinned`, the trip from the stop before (`TravelMinutes`, `TravelKm`), `IncompleteReason` and `ReturnVisitId`, `CalendarEvents` (the job event kept for each worker) and `History`.
-- **`DispatchSettings`** (site settings): whether a new work order gets a visit, the arrival window, the look-ahead, the buffer between visits, whether the territory is strict, the board's time zone and the `Objective` weights (travel, urgency, proficiency, preferred technician, workload balance).
+- **`DispatchSettings`** (site settings): whether a new work order gets a visit, the arrival window, the look-ahead, the buffer between visits, whether the territory is strict, the board's time zone, the `Objective` weights (travel, urgency, proficiency, preferred technician, workload balance), the minutes late that put a visit at risk, the optimizer's time limit, and the customer notices (on or off, the tracking link, the reminder hour and the five texts).
 
 `ServiceVisitIndex` keeps the number, work order, status, whether it is open, priority, territory, lead, times and resolution target; `VisitWorkerIndex` has a row per worker of a scheduled visit with its times and whether it keeps them busy.
 
@@ -45,9 +47,27 @@ Visits live in the `Dispatch` YesSql collection.
 
 Times on the pages and in messages are in the worker's or team's time zone, a parent team's, or the dispatch or site time zone.
 
+## Crews and equipment
+
+A visit copies its type's crew size and required equipment. Assigning fewer people than the crew is refused ("This job needs 2 people."). For each required asset type, assigning picks a free one (`IDispatchEquipmentService`; Fleet lists the active schedulable assets of the type) and books it with a **Reservation** on its Equipment calendar, which allows one booking at a time; when none is free the assignment is refused ("No lift is free then."). Moving the visit moves the reservation, and canceling removes it.
+
+## Optimizing a day
+
+`IDispatchOptimizationService.ProposeAsync` builds a day's problem (`DispatchProblem`): the technicians on shift with their open spans and home, the visits that can move (scheduled, single-technician, not pinned or started), the ones that can't (fixed at their time), and, when asked, the unscheduled visits whose window allows the day; the technicians each may do come from `IDispatchCandidateFinder.CheckWorkerAsync` (skills, certifications, territory). Travel times come from one matrix of `IGeoService`. The site's `IDispatchOptimizer` returns a plan; the built-in one (`DefaultDispatchOptimizer`) tries two starts, the day as it is and a fresh one from the fixed visits, fits in the left-out visits by cheapest insertion, and improves each by moving a visit, swapping two and reversing part of a route, within the settings' time limit, and keeps the cheaper. A proposal lists the moves with the travel before and after; nothing changes until `ApplyAsync`, which assigns each move through `AssignAsync` (so every move is locked and checked again), retries moves that wait for another, and unschedules one visit to break a swap.
+
+## Customer notices and tracking
+
+With notices on, `VisitNoticeService` tells the work order's contact when the visit is scheduled or moved, the day before (from the reminder hour), when the technician is on the way, and when it is done or canceled, once for each start (`VisitNotice` on the visit). The texts are set in the settings with `{Company}`, `{Number}`, `{Date}`, `{Window}`, `{Technician}` (first name), `{Eta}` and `{TrackingUrl}`. Senders are `IVisitNoticeSender` (SMS and email are built in).
+
+On the way, the visit gets an ETA: now plus the trip from the technician's last stop, or home. The tracking link (`/track/{token}`, `IVisitTrackingLinks`) is signed with data protection, lasts a week, and stops working once the visit is completed, incomplete or canceled. Its page shows the business, the status, the day, the arrival window, the technician's first name and, on the way, the expected time; it needs no sign-in.
+
+## Visits at risk
+
+Every five minutes `VisitRiskMonitor` flags today's open visits that are running over, not started, arriving after their window, or whose technician is on time off then (the settings say how many minutes count as late). The board marks them and the visit shows the reason; the **Visit At Risk** workflow event starts once for each new reason, and any status change clears the flag until it is checked again.
+
 ## The board
 
-**Field Service > Dispatch Board** shows a day: a row per technician (filtered by team) with their shift bands, time off and visits colored by status, the trip before each, and the time now; the unscheduled visits, most urgent first; and every visit on a Leaflet map. A visit is dragged onto a row at its start (to the quarter hour), which assigns it through `AssignAsync`, or **Find technician** lists the best candidates to assign with a click. The board reads `dispatch/board/data` and moves with `dispatch/board/move`.
+**Field Service > Dispatch Board** shows a day: a row per technician (filtered by team) with their shift bands, time off and visits colored by status, the trip before each, and the time now; the unscheduled visits, most urgent first; and every visit on a Leaflet map. A visit is dragged onto a row at its start (to the quarter hour), which assigns it through `AssignAsync`, or **Find technician** lists the best candidates to assign with a click. **Optimize the day** shows a proposal for the day and team shown, with a box for each move, and applies the ones kept. The board reads `dispatch/board/data` and moves with `dispatch/board/move`.
 
 ## Territories
 
@@ -59,12 +79,16 @@ Geo's territory page lists who serves a territory through `ITerritoryMemberSourc
 | --- | --- | --- |
 | Visit Assigned | A visit is scheduled, reassigned or moved. | `PreviousStatus`, `Moved` |
 | Visit Status Changed | A visit is dispatched, en route, on site, paused, completed, incomplete or canceled. Can be limited to some statuses. | `PreviousStatus` |
+| Visit At Risk | A visit becomes at risk. | `Reason` |
 
 Each has `VisitId`, `Number`, `WorkOrderId`, `WorkOrderNumber`, `Status`, `LeadWorkerId`, `WorkerIds`, `StartUtc`, `EndUtc`, `ArrivalStartUtc` and `ArrivalEndUtc`.
 
 ## Extending
 
 - `IVisitObserver`: hear about visit events after they happen.
+- `IDispatchOptimizer`: a better solver; the last one registered is used (the OR-Tools add-on is one).
+- `IDispatchEquipmentService`: equipment from somewhere other than Fleet.
+- `IVisitNoticeSender`: another channel for customer notices.
 - `IDispatchSettingsProvider`: give the settings from somewhere else.
 - `WorkOrderPanels` (Work Orders): a display driver for it adds a panel to the work order's page; Dispatch adds the visits.
 

@@ -66,6 +66,134 @@ public class DispatchSettingsViewModel
     /// Gets or sets the workload balance weight.
     /// </summary>
     public int BalanceWeight { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many minutes late a visit is at risk.
+    /// </summary>
+    public int AtRiskMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the optimizer looks, in seconds.
+    /// </summary>
+    public int OptimizerSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether customers are told about their visit.
+    /// </summary>
+    public bool NoticesEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether notices carry a tracking link.
+    /// </summary>
+    public bool TrackingEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local hour reminders go out the day before.
+    /// </summary>
+    public int ReminderHour { get; set; }
+
+    /// <summary>
+    /// Gets or sets the scheduled notice.
+    /// </summary>
+    public string ScheduledText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reminder.
+    /// </summary>
+    public string ReminderText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the on-the-way notice.
+    /// </summary>
+    public string EnRouteText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the done notice.
+    /// </summary>
+    public string CompletedText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the canceled notice.
+    /// </summary>
+    public string CanceledText { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a way to send notices is on.
+    /// </summary>
+    [BindNever]
+    public bool CanSendNotices { get; set; }
+}
+
+/// <summary>
+/// The customer's tracking page.
+/// </summary>
+public class VisitTrackingViewModel
+{
+    /// <summary>
+    /// Gets or sets the business's name.
+    /// </summary>
+    public string Company { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the link no longer works.
+    /// </summary>
+    public bool Expired { get; set; }
+
+    /// <summary>
+    /// Gets or sets the visit number.
+    /// </summary>
+    public string Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the visit is, in the customer's words.
+    /// </summary>
+    public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the technician is on the way.
+    /// </summary>
+    public bool EnRoute { get; set; }
+
+    /// <summary>
+    /// Gets or sets the technician's first name.
+    /// </summary>
+    public string Technician { get; set; }
+
+    /// <summary>
+    /// Gets or sets the day.
+    /// </summary>
+    public string Day { get; set; }
+
+    /// <summary>
+    /// Gets or sets the arrival window.
+    /// </summary>
+    public string Window { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the technician is expected.
+    /// </summary>
+    public string Eta { get; set; }
+}
+
+/// <summary>
+/// The board's request for a better arrangement of a day.
+/// </summary>
+public sealed class BoardOptimizeModel
+{
+    /// <summary>
+    /// Gets or sets the day, as yyyy-MM-dd.
+    /// </summary>
+    public string Day { get; set; }
+
+    /// <summary>
+    /// Gets or sets the team, if one is shown.
+    /// </summary>
+    public string TeamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to fit in unscheduled visits.
+    /// </summary>
+    public bool IncludeUnscheduled { get; set; }
 }
 
 /// <summary>
@@ -202,6 +330,16 @@ public class VisitDetailsViewModel
     /// Gets or sets the map settings, when the address is on the map.
     /// </summary>
     public GeoSettings Map { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names of the equipment booked, by id.
+    /// </summary>
+    public IDictionary<string, string> EquipmentNames { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets or sets the customer's tracking link, while it works.
+    /// </summary>
+    public string TrackingUrl { get; set; }
 }
 
 /// <summary>

@@ -19,6 +19,8 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
+using CrestApps.OrchardCore.Calendars;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,6 +45,14 @@ internal sealed class DispatchKit : IAsyncDisposable
 
     public DispatchSettings Settings { get; } = new() { BufferMinutes = 10 };
 
+    public DateTime Now { get; set; } = CalendarTestHarness.Now;
+
+    public List<VisitNoticeMessage> Sent { get; } = [];
+
+    public List<(string VisitId, string EventName)> Events { get; } = [];
+
+    public List<DispatchEquipment> Equipment { get; } = [];
+
     public WorkforceTeam Team { get; private set; }
 
     public WorkOrderType Type { get; private set; }
@@ -56,6 +66,39 @@ internal sealed class DispatchKit : IAsyncDisposable
         var geo = new Mock<IGeoService>();
 
         settings.Setup(provider => provider.GetAsync()).ReturnsAsync(() => kit.Settings);
+        settings.Setup(provider => provider.GetTimeZoneIdAsync()).ReturnsAsync(PlanningKit.Zone);
+
+        var clock = new Mock<global::OrchardCore.Modules.IClock>();
+
+        clock.SetupGet(c => c.UtcNow).Returns(() => kit.Now);
+
+        var sender = new Mock<IVisitNoticeSender>();
+
+        sender.SetupGet(s => s.Channel).Returns("Sms");
+        sender.Setup(s => s.CanSend(It.IsAny<VisitNoticeMessage>())).Returns((VisitNoticeMessage message) => !string.IsNullOrEmpty(message.Phone));
+        sender.Setup(s => s.SendAsync(It.IsAny<VisitNoticeMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((VisitNoticeMessage message, CancellationToken _) =>
+            {
+                kit.Sent.Add(message);
+
+                return null;
+            });
+
+        var site = new Mock<IDispatchSiteInfo>();
+
+        site.Setup(s => s.CompanyNameAsync()).ReturnsAsync("Acme Heating");
+        site.Setup(s => s.TrackingUrlAsync(It.IsAny<string>())).ReturnsAsync((string token) => "https://example.test/track/" + token);
+
+        var observer = new Mock<IVisitObserver>();
+
+        observer.Setup(o => o.OnEventAsync(It.IsAny<ServiceVisit>(), It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, object>>(), It.IsAny<CancellationToken>()))
+            .Callback((ServiceVisit visit, string name, IReadOnlyDictionary<string, object> _, CancellationToken _) => kit.Events.Add((visit.ItemId, name)))
+            .Returns(Task.CompletedTask);
+
+        var equipment = new Mock<IDispatchEquipmentService>();
+
+        equipment.Setup(e => e.ListAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string typeId, CancellationToken _) => kit.Equipment.Where(item => item.AssetId.StartsWith(typeId, StringComparison.Ordinal)).ToList());
+        equipment.Setup(e => e.TypeNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string typeId, CancellationToken _) => typeId);
 
         // Straight lines at 60 km/h: a kilometer a minute.
         geo.Setup(service => service.GetMatrixAsync(It.IsAny<IReadOnlyList<GeoPoint>>(), It.IsAny<IReadOnlyList<GeoPoint>>(), It.IsAny<DateTime>(), It.IsAny<TravelOptions>(), It.IsAny<CancellationToken>()))
@@ -77,6 +120,16 @@ internal sealed class DispatchKit : IAsyncDisposable
                 services.TryAddScoped<ServiceTerritoryStore>();
                 services.AddSingleton(settings.Object);
                 services.AddSingleton(geo.Object);
+                services.AddSingleton(clock.Object);
+                services.AddSingleton(sender.Object);
+                services.AddSingleton(site.Object);
+                services.AddSingleton(observer.Object);
+                services.AddSingleton(equipment.Object);
+                services.AddDataProtection().UseEphemeralDataProtectionProvider();
+                services.AddCalendarType("Equipment", type => type
+                    .WithOwner(CalendarOwnerKind.Resource)
+                    .LimitConcurrent(1)
+                    .AddEventType("Reservation", new global::OrchardCore.Localization.LocalizationSource("Reservation")));
 
                 if (realLocks)
                 {

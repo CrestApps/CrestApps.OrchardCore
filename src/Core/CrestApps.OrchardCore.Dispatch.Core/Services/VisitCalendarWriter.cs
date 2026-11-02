@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
+using CrestApps.OrchardCore.Dispatch.Services;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -109,7 +110,7 @@ public sealed class VisitCalendarWriter
             keep.Add(new VisitCalendarEvent { ResourceKind = DispatchConstants.ResourceKinds.Worker, ResourceId = worker.ItemId, EventId = result.Value.ItemId });
         }
 
-        foreach (var stale in visit.CalendarEvents.Where(entry => !keep.Contains(entry)))
+        foreach (var stale in visit.CalendarEvents.Where(entry => entry.ResourceKind == DispatchConstants.ResourceKinds.Worker && !keep.Contains(entry)))
         {
             var calendarEvent = await _eventManager.FindByIdAsync(stale.EventId, cancellationToken);
 
@@ -119,9 +120,99 @@ public sealed class VisitCalendarWriter
             }
         }
 
-        visit.CalendarEvents = keep;
+        visit.CalendarEvents = [.. keep, .. visit.CalendarEvents.Where(entry => entry.ResourceKind != DispatchConstants.ResourceKinds.Worker)];
 
         return errors;
+    }
+
+    /// <summary>
+    /// Books the visit's equipment on each one's calendar, moving or removing what it had.
+    /// </summary>
+    /// <param name="visit">The visit.</param>
+    /// <param name="equipment">The equipment it has now.</param>
+    /// <param name="title">The events' title.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The errors the calendars gave, if any.</returns>
+    public async Task<IReadOnlyList<string>> SyncEquipmentAsync(ServiceVisit visit, IReadOnlyList<DispatchEquipment> equipment, string title, string actor, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(visit);
+
+        var errors = new List<string>();
+        var options = new CalendarChangeOptions { Actor = actor, Notify = false, SendInvitations = false };
+        var keep = new List<VisitCalendarEvent>();
+
+        foreach (var item in equipment ?? [])
+        {
+            var existing = visit.CalendarEvents.FirstOrDefault(entry => entry.ResourceKind == DispatchConstants.ResourceKinds.Equipment && entry.ResourceId == item.AssetId);
+            var calendarEvent = existing is null ? null : await _eventManager.FindByIdAsync(existing.EventId, cancellationToken);
+
+            if (calendarEvent is not null)
+            {
+                var updated = await _eventManager.UpdateAsync(calendarEvent, change => ApplyEquipment(change, visit, title), options, cancellationToken);
+
+                errors.AddRange(updated.Errors.Select(error => error.Message));
+                keep.Add(existing);
+
+                continue;
+            }
+
+            var calendar = await _calendarService.FindByIdAsync(item.CalendarId, cancellationToken);
+
+            if (calendar is null)
+            {
+                continue;
+            }
+
+            var created = await _eventManager.NewAsync(calendar, EquipmentEventType, visit.StartUtc, cancellationToken);
+
+            created.Source = DispatchConstants.Source;
+            created.SourceId = visit.ItemId;
+            created.Editable = false;
+            ApplyEquipment(created, visit, title);
+
+            var result = await _eventManager.CreateAsync(created, options, cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                errors.AddRange(result.Errors.Select(error => error.Message));
+
+                continue;
+            }
+
+            keep.Add(new VisitCalendarEvent { ResourceKind = DispatchConstants.ResourceKinds.Equipment, ResourceId = item.AssetId, EventId = result.Value.ItemId });
+        }
+
+        foreach (var stale in visit.CalendarEvents.Where(entry => entry.ResourceKind == DispatchConstants.ResourceKinds.Equipment && !keep.Contains(entry)))
+        {
+            var calendarEvent = await _eventManager.FindByIdAsync(stale.EventId, cancellationToken);
+
+            if (calendarEvent is not null)
+            {
+                await _eventManager.DeleteAsync(calendarEvent, options, cancellationToken);
+            }
+        }
+
+        visit.CalendarEvents = [.. visit.CalendarEvents.Where(entry => entry.ResourceKind != DispatchConstants.ResourceKinds.Equipment), .. keep];
+        visit.EquipmentAssetIds = [.. keep.Select(entry => entry.ResourceId)];
+
+        return errors;
+    }
+
+    /// <summary>
+    /// The event type a visit's equipment is booked with on its Equipment calendar.
+    /// </summary>
+    public const string EquipmentEventType = "Reservation";
+
+    private static void ApplyEquipment(CalendarEvent calendarEvent, ServiceVisit visit, string title)
+    {
+        calendarEvent.Title = title;
+        calendarEvent.AllDay = false;
+        calendarEvent.TimeZoneId = "UTC";
+        calendarEvent.Start = DateTime.SpecifyKind(visit.StartUtc.Value, DateTimeKind.Unspecified);
+        calendarEvent.End = DateTime.SpecifyKind(visit.EndUtc.Value, DateTimeKind.Unspecified);
+        calendarEvent.Transparency = CalendarTransparency.Busy;
+        calendarEvent.Put(new VisitEventData { VisitId = visit.ItemId, WorkOrderId = visit.WorkOrderId });
     }
 
     /// <summary>
@@ -131,8 +222,11 @@ public sealed class VisitCalendarWriter
     /// <param name="actor">Who made the change.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
-    public Task RemoveAsync(ServiceVisit visit, string actor, CancellationToken cancellationToken = default)
-        => SyncAsync(visit, [], null, actor, cancellationToken);
+    public async Task RemoveAsync(ServiceVisit visit, string actor, CancellationToken cancellationToken = default)
+    {
+        await SyncAsync(visit, [], null, actor, cancellationToken);
+        await SyncEquipmentAsync(visit, [], null, actor, cancellationToken);
+    }
 
     private static void Apply(CalendarEvent calendarEvent, ServiceVisit visit, WorkerAvailability availability, string title)
     {

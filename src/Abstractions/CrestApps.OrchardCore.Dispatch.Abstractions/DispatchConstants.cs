@@ -55,6 +55,42 @@ public static class DispatchConstants
         /// A worker.
         /// </summary>
         public const string Worker = "Worker";
+
+        /// <summary>
+        /// A piece of equipment, such as a lift.
+        /// </summary>
+        public const string Equipment = "Equipment";
+    }
+
+    /// <summary>
+    /// The kinds of customer notices.
+    /// </summary>
+    public static class Notices
+    {
+        /// <summary>
+        /// The visit was scheduled or moved.
+        /// </summary>
+        public const string Scheduled = "Scheduled";
+
+        /// <summary>
+        /// The day before the visit.
+        /// </summary>
+        public const string Reminder = "Reminder";
+
+        /// <summary>
+        /// The technician is on the way.
+        /// </summary>
+        public const string EnRoute = "EnRoute";
+
+        /// <summary>
+        /// The visit is done.
+        /// </summary>
+        public const string Completed = "Completed";
+
+        /// <summary>
+        /// The visit was canceled.
+        /// </summary>
+        public const string Canceled = "Canceled";
     }
 
     /// <summary>
@@ -81,5 +117,10 @@ public static class DispatchConstants
         /// A visit's status changed.
         /// </summary>
         public const string StatusChanged = "VisitStatusChanged";
+
+        /// <summary>
+        /// A visit is at risk: running over, late to start, or its technician is off.
+        /// </summary>
+        public const string AtRisk = "VisitAtRisk";
     }
 }

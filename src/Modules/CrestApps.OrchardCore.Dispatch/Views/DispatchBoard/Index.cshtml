@@ -26,6 +26,14 @@
         ["dragHint"] = T["Drag a visit onto a technician's row at the time it should start."].Value,
         ["unscheduled"] = T["Unscheduled"].Value,
         ["technician"] = T["Technician"].Value,
+        ["optimizeTitle"] = T["A better day"].Value,
+        ["optimizeTravel"] = T["Travel: {0} min now, {1} min with these moves."].Value,
+        ["optimizeNothing"] = T["Nothing to improve: the day is as good as the optimizer can make it."].Value,
+        ["optimizeLeft"] = T["{0} waiting visits don't fit anyone's day. Find technician on each says why."].Value,
+        ["applySelected"] = T["Apply the chosen moves"].Value,
+        ["applied"] = T["{0} visits moved."].Value,
+        ["atRisk"] = T["At risk"].Value,
+        ["eta"] = T["Expected at {0}"].Value,
     };
 }
 
@@ -68,6 +76,16 @@
                     <span class="small text-muted" data-board-title></span>
                     <span class="badge ta-badge fw-normal ms-1" data-board-live></span>
                 </div>
+                @if (Model.CanManage)
+                {
+                    <div class="col-auto">
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="dispatch-include-unscheduled" checked />
+                            <label class="form-check-label small" for="dispatch-include-unscheduled">@T["Fit in unscheduled"]</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" data-board-optimize><i class="fa-solid fa-route" aria-hidden="true"></i> @T["Optimize the day"]</button>
+                    </div>
+                }
                 <div class="col-auto">
                     <a asp-controller="Visits" asp-action="Index" class="btn btn-sm btn-secondary">@T["Visits"]</a>
                 </div>
@@ -79,6 +97,8 @@
 <div id="dispatch-board"
      data-data-url="@Url.Action("Data", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch })"
      data-move-url="@Url.Action("Move", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch })"
+     data-optimize-url="@Url.Action("Optimize", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch })"
+     data-apply-url="@Url.Action("Apply", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch })"
      data-candidates-url="@Url.Action("Candidates", "DispatchBoard", new { area = DispatchConstants.Features.Dispatch, visitId = "__id__" })"
      data-day="@Model.Day"
      data-team-id="@Model.TeamId"
@@ -113,6 +133,7 @@
             </div>
         </div>
         <div class="col-12 col-xl-3">
+            <div class="card mb-3 d-none" data-board-proposal></div>
             <div class="card mb-3 d-none" data-board-candidates></div>
             <div class="card mb-3">
                 <div class="card-body">

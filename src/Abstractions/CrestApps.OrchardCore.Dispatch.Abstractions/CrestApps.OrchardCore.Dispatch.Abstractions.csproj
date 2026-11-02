@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Geo.Abstractions\CrestApps.OrchardCore.Geo.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.WorkOrders.Abstractions\CrestApps.OrchardCore.WorkOrders.Abstractions.csproj" />
   </ItemGroup>
 

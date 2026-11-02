@@ -70,6 +70,61 @@ public sealed class DispatchSettings
     /// Gets or sets the weights candidates are ranked by.
     /// </summary>
     public DispatchObjective Objective { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets how many minutes late a visit is at risk: running over, or not started.
+    /// </summary>
+    public int AtRiskMinutes { get; set; } = 15;
+
+    /// <summary>
+    /// Gets or sets how long the optimizer looks for a better plan, in seconds.
+    /// </summary>
+    public int OptimizerSeconds { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets whether customers are told about their visit.
+    /// </summary>
+    public bool NoticesEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether notices carry a link to follow the technician.
+    /// </summary>
+    public bool TrackingEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the local hour the reminders go out the day before.
+    /// </summary>
+    public int ReminderHour { get; set; } = 17;
+
+    /// <summary>
+    /// Gets or sets the notice when a visit is scheduled or moved.
+    /// </summary>
+    public string ScheduledText { get; set; } = "{Company}: your visit {Number} is on {Date}, arriving between {Window}.";
+
+    /// <summary>
+    /// Gets or sets the reminder the day before.
+    /// </summary>
+    public string ReminderText { get; set; } = "{Company}: a reminder that we visit tomorrow, {Date}, arriving between {Window}.";
+
+    /// <summary>
+    /// Gets or sets the notice when the technician is on the way.
+    /// </summary>
+    public string EnRouteText { get; set; } = "{Company}: {Technician} is on the way, expected at {Eta}. Follow along: {TrackingUrl}";
+
+    /// <summary>
+    /// Gets or sets the notice when the visit is done.
+    /// </summary>
+    public string CompletedText { get; set; } = "{Company}: your visit {Number} is done. Thank you.";
+
+    /// <summary>
+    /// Gets or sets the notice when the visit is canceled.
+    /// </summary>
+    public string CanceledText { get; set; } = "{Company}: your visit {Number} on {Date} is canceled. We'll be in touch to find another time.";
+
+    /// <summary>
+    /// Gets or sets the work order type booked when a customer chooses an arrival window through Scheduling.
+    /// </summary>
+    public string BookingWorkOrderTypeId { get; set; }
 }
 
 /// <summary>

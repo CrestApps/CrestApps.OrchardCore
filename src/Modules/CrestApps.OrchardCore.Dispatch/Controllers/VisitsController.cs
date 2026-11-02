@@ -374,6 +374,16 @@ public sealed class VisitsController : Controller
 
         model.WorkerOptions = [.. workers.OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase).Select(worker => new SelectListItem(worker.DisplayName, worker.ItemId, visit.WorkerIds.Contains(worker.ItemId)))];
 
+        foreach (var assetId in visit.EquipmentAssetIds)
+        {
+            model.EquipmentNames[assetId] = (await _session.QueryIndex<Assets.Core.Indexes.AssetIndex>(index => index.ItemId == assetId, collection: Assets.AssetsConstants.CollectionName).FirstOrDefaultAsync(HttpContext.RequestAborted))?.Name ?? assetId;
+        }
+
+        if (VisitStatusRules.IsOpen(visit.Status) && visit.StartUtc is not null && HttpContext.RequestServices.GetService(typeof(IVisitTrackingLinks)) is IVisitTrackingLinks links && HttpContext.RequestServices.GetService(typeof(IDispatchSiteInfo)) is IDispatchSiteInfo site)
+        {
+            model.TrackingUrl = await site.TrackingUrlAsync(links.CreateToken(visit));
+        }
+
         if (GeoPoint.From(workOrder?.ServiceAddress?.Latitude, workOrder?.ServiceAddress?.Longitude) is not null)
         {
             model.Map = await _geoSettings.GetAsync();

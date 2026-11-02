@@ -158,6 +158,44 @@ public sealed class DispatchTests
     }
 
     [Fact]
+    public async Task ASkillThatNeedsACertificate_SaysSo_WhenTheCertificateHasExpired()
+    {
+        await using var kit = await DispatchKit.CreateAsync();
+        var gas = await kit.Harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<CrestApps.OrchardCore.Skills.Services.ICertificationManager>();
+            var certification = await manager.NewAsync();
+
+            certification.Name = "Gas safety";
+            await manager.CreateAsync(certification);
+
+            return certification;
+        });
+        var boilers = await kit.Harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<CrestApps.OrchardCore.Skills.Services.ISkillManager>();
+            var skill = await manager.NewAsync();
+
+            skill.Name = "Boilers";
+            skill.RequiredCertificationId = gas.ItemId;
+            await manager.CreateAsync(skill);
+
+            return skill;
+        });
+        var ana = await kit.AddTechnicianAsync("Ana Field");
+
+        await kit.PublishShiftsAsync(ana);
+        await PlanningKit.GrantSkillAsync(kit.Harness, ana.ItemId, boilers.ItemId);
+        await SaveCertificateAsync(kit, ana, gas.ItemId, new DateOnly(2024, 1, 1), new DateOnly(2026, 10, 31));
+
+        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.Depot, workOrder => workOrder.RequiredSkills = [new RequiredSkill { SkillId = boilers.ItemId }]);
+        var found = await kit.CandidatesAsync(visit);
+
+        Assert.Empty(found.Candidates);
+        Assert.Equal("Boilers needs Gas safety, which isn't valid on 9 Nov 2026.", Assert.Single(found.Excluded).Reason);
+    }
+
+    [Fact]
     public async Task Candidates_NeedTheSkill_AShift_NoTimeOff_AndRoomForTheTripFromTheVisitBefore()
     {
         // Arrange

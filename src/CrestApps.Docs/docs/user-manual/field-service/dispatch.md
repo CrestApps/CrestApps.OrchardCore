@@ -43,6 +43,22 @@ The visit gets an arrival window to tell the customer, the job shows on the tech
 
 Drag a visit onto a technician's row at the time it should start to schedule or move it. Select **Find technician** on an unscheduled one to see the best choices and assign with a click. Choose another day with the arrows or the date, and a team to see only its technicians. With SignalR on, the board shows **Live** and changes as others work.
 
+## Optimize the day
+
+On the board, select **Optimize the day**. Tick **Fit in unscheduled** to also place waiting visits. A list of moves comes up, with the day's travel now and with the moves; untick any you don't want and select **Apply the chosen moves**. Pinned visits and visits already started stay where they are. When a waiting visit fits nobody's day, **Find technician** on it says why.
+
+## Crews and equipment
+
+On a work order type, **People needed** sets the crew: a visit is assigned only with that many technicians. With Fleet on, the type's equipment is booked on the equipment's calendar when the visit is assigned, so a lift can't be in two places; if none is free, the page says so.
+
+## Customers
+
+Turn on notices in **Settings > Dispatch > Customer notices**. The work order's contact then gets a text (or an email) when the visit is scheduled or moved, the day before, when the technician is on the way (with a link to follow them), and when it is done or canceled. The link shows the arrival window and, once on the way, when the technician is expected; it stops working when the visit is over. The visit's page lists what the customer was told, and links to the tracking page.
+
+## Visits at risk
+
+A visit not started, or running over, by the minutes set in the settings, one whose technician arrives after the window, or whose technician is off that day, is marked at risk on the board with the reason, and on its page.
+
 ## Move a visit along
 
 On the visit's page, under **Move it along**, choose what happened: dispatched, en route, on site, paused, completed, or incomplete. En route and on site start the work order. An incomplete visit needs a note saying why, and gets a return visit for what is left. Canceling needs a reason too.
@@ -51,4 +67,4 @@ On the visit's page, under **Move it along**, choose what happened: dispatched, 
 
 ## Settings
 
-**Settings > Dispatch** sets how long the arrival window is, the minutes kept free between visits, how far ahead to look, the time zone of the board, whether only a territory's technicians are offered, and how much each thing counts when technicians are ranked: a short trip, the soonest start, skill level, the preferred technician and an even workload.
+**Settings > Dispatch** has three cards. **Visits** sets whether new work orders get a visit, the arrival window, the minutes kept free between visits, how far ahead to look, the time zone, and how late a visit is before it is at risk. **Choosing technicians** sets whether only a territory's technicians are offered, how much each thing counts when they are ranked (a short trip, the soonest start, skill level, the preferred technician and an even workload), and how long the optimizer looks. **Customer notices** turns the notices and the tracking link on, sets the reminder hour, and holds the five texts.

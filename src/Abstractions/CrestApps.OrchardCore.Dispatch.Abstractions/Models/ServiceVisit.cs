@@ -102,6 +102,37 @@ public sealed class VisitCalendarEvent
 }
 
 /// <summary>
+/// A notice sent to the customer about their visit.
+/// </summary>
+public sealed class VisitNotice
+{
+    /// <summary>
+    /// Gets or sets the kind of notice.
+    /// </summary>
+    public string Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was sent, in UTC.
+    /// </summary>
+    public DateTime Utc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel it went on, such as Sms.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the start it was about, so a moved visit is told again.
+    /// </summary>
+    public DateTime? StartUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what went wrong, if it wasn't sent.
+    /// </summary>
+    public string Error { get; set; }
+}
+
+/// <summary>
 /// One trip to do a work order's job: when, by whom, and how it went.
 /// </summary>
 public sealed class ServiceVisit : CatalogItem
@@ -185,6 +216,41 @@ public sealed class ServiceVisit : CatalogItem
     /// Gets or sets every worker on the visit, the lead first.
     /// </summary>
     public List<string> WorkerIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how many people the job takes, from its type.
+    /// </summary>
+    public int CrewSize { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the asset types of equipment it needs, from its type.
+    /// </summary>
+    public List<string> RequiredEquipmentTypeIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the equipment booked for it.
+    /// </summary>
+    public List<string> EquipmentAssetIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets when the technician is expected, in UTC, once on the way.
+    /// </summary>
+    public DateTime? EtaUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the visit is at risk, if it is.
+    /// </summary>
+    public string AtRiskReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets since when the visit is at risk, in UTC.
+    /// </summary>
+    public DateTime? AtRiskSinceUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notices sent to the customer.
+    /// </summary>
+    public List<VisitNotice> Notices { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether the visit stays where it is when visits are rearranged.

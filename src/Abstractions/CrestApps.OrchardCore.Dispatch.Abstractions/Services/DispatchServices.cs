@@ -124,6 +124,17 @@ public interface IDispatchCandidateFinder
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The candidates and the workers ruled out.</returns>
     Task<DispatchCandidateResult> FindAsync(ServiceVisit visit, DateTime fromUtc, DateTime toUtc, DispatchObjective objective = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks only what never changes in a day: that a worker may do the visit at all, with its skills,
+    /// certifications and territory, leaving their time aside.
+    /// </summary>
+    /// <param name="visit">The visit.</param>
+    /// <param name="workerId">The worker.</param>
+    /// <param name="date">The day.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Why they can't, or <see langword="null"/> when they may.</returns>
+    Task<string> CheckWorkerAsync(ServiceVisit visit, string workerId, DateOnly date, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

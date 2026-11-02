@@ -197,6 +197,26 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<string> CheckWorkerAsync(ServiceVisit visit, string workerId, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(visit);
+
+        var worker = await _resources.FindWorkerAsync(workerId, cancellationToken);
+
+        if (worker is null || worker.Status != WorkerStatus.Active)
+        {
+            return S["The worker doesn't exist or doesn't work here any more."];
+        }
+
+        var settings = await _settingsProvider.GetAsync();
+        var workOrder = await _workOrderStore.FindByIdAsync(visit.WorkOrderId, cancellationToken);
+        var type = string.IsNullOrEmpty(visit.TypeId) ? null : await _types.FindByIdAsync(visit.TypeId, cancellationToken);
+        var territory = string.IsNullOrEmpty(visit.TerritoryId) ? null : await _territories.FindByIdAsync(visit.TerritoryId, cancellationToken);
+
+        return await RuleOutAsync(worker, workOrder, workOrder?.RequiredSkills ?? [], type?.RequiredCertificationIds ?? [], territory, territory?.Members.Count > 0 && settings.StrictTerritory, date.ToDateTime(TimeOnly.MinValue), cancellationToken);
+    }
+
     private async Task<string> RuleOutAsync(WorkerProfile worker, WorkOrder workOrder, List<RequiredSkill> requiredSkills, List<string> requiredCertifications, Geo.Models.ServiceTerritory territory, bool strictTerritory, DateTime fromUtc, CancellationToken cancellationToken)
     {
         if (workOrder?.ExcludedWorkerIds.Contains(worker.ItemId) == true)
@@ -212,6 +232,16 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
             if (!await _skillAssignments.HoldsAsync(subject, required.SkillId, required.MinProficiency, date, cancellationToken))
             {
                 var skill = await _skills.FindByIdAsync(required.SkillId, cancellationToken);
+                var held = (await _skillAssignments.GetAssignmentsAsync(subject, cancellationToken))
+                    .Any(assignment => assignment.SkillId == required.SkillId && assignment.Proficiency >= required.MinProficiency && assignment.IsEffectiveOn(date));
+
+                // The skill is held but only counts with a certificate that isn't valid that day.
+                if (held && !string.IsNullOrEmpty(skill?.RequiredCertificationId))
+                {
+                    var certification = await _certifications.FindByIdAsync(skill.RequiredCertificationId, cancellationToken);
+
+                    return S["{0} needs {1}, which isn't valid on {2}.", skill.Name, certification?.Name ?? skill.RequiredCertificationId, date.ToString("d MMM yyyy", CultureInfo.CurrentCulture)];
+                }
 
                 return S["Doesn't have {0} at level {1}.", skill?.Name ?? required.SkillId, required.MinProficiency];
             }

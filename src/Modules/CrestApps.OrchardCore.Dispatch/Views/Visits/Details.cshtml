@@ -21,6 +21,10 @@
                 {
                     <span class="badge ta-badge fw-normal"><i class="fa-solid fa-thumbtack" aria-hidden="true"></i> @T["Pinned"]</span>
                 }
+                @if (!string.IsNullOrEmpty(visit.AtRiskReason))
+                {
+                    <span class="badge text-bg-danger fw-normal" title="@visit.AtRiskReason"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @visit.AtRiskReason</span>
+                }
                 <span class="text-muted small">
                     @T["For"] <a href="@Url.Action("Details", "WorkOrders", new { area = "CrestApps.OrchardCore.WorkOrders", id = visit.WorkOrderId })">@visit.WorkOrderNumber</a>
                     @if (!string.IsNullOrEmpty(Model.TypeName))
@@ -78,6 +82,26 @@
                             <span class="badge ta-badge fw-normal">@(Model.WorkerNames.TryGetValue(workerId, out var name) ? name : workerId)@(workerId == visit.LeadWorkerId && visit.WorkerIds.Count > 1 ? $" ({T["lead"].Value})" : null)</span>
                         }
                     </dd>
+                    @if (visit.EtaUtc is not null && visit.Status == VisitStatus.EnRoute)
+                    {
+                        <dt class="col-4">@T["Expected at"]</dt>
+                        <dd class="col-8">@DispatchTimeZone.Format(visit.EtaUtc, zone, "HH:mm")</dd>
+                    }
+                    @if (visit.CrewSize > 1)
+                    {
+                        <dt class="col-4">@T["Crew"]</dt>
+                        <dd class="col-8">@T["{0} people", visit.CrewSize]</dd>
+                    }
+                    @if (visit.EquipmentAssetIds.Count > 0)
+                    {
+                        <dt class="col-4">@T["Equipment"]</dt>
+                        <dd class="col-8">@string.Join(", ", visit.EquipmentAssetIds.Select(id => Model.EquipmentNames.TryGetValue(id, out var name) ? name : id))</dd>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.TrackingUrl))
+                    {
+                        <dt class="col-4">@T["Customer's link"]</dt>
+                        <dd class="col-8"><a href="@Model.TrackingUrl" target="_blank" rel="noopener">@T["Open the tracking page"]</a></dd>
+                    }
                     @if (visit.TravelMinutes is > 0)
                     {
                         <dt class="col-4">@T["Travel"]</dt>
@@ -293,6 +317,20 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
             </ul>
         </div></div>
     </div>
+    @if (visit.Notices.Count > 0)
+    {
+        <div class="col-12 col-lg-6">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h6">@T["Told the customer"]</h2>
+                <ul class="list-unstyled small mb-0">
+                    @foreach (var notice in visit.Notices.AsEnumerable().Reverse())
+                    {
+                        <li class="mb-1"><span class="text-muted">@DispatchTimeZone.Format(notice.Utc, zone)</span> · @notice.Kind · @notice.Channel@(string.IsNullOrEmpty(notice.Error) ? null : $" · {T.GetString("not sent: {0}", notice.Error).Value}")</li>
+                    }
+                </ul>
+            </div></div>
+        </div>
+    }
     @if (Model.OtherVisits.Count > 0)
     {
         <div class="col-12 col-lg-6">

@@ -102,6 +102,50 @@ public sealed class VisitStatusChangedEvent : EventActivity
 }
 
 /// <summary>
+/// Starts when a visit becomes at risk: running over, not started, arriving late, or its technician off.
+/// </summary>
+public sealed class VisitAtRiskEvent : EventActivity
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VisitAtRiskEvent"/> class.
+    /// </summary>
+    public VisitAtRiskEvent(IStringLocalizer<VisitAtRiskEvent> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    private IStringLocalizer S { get; }
+
+    /// <inheritdoc/>
+    public override string Name => DispatchConstants.Events.AtRisk;
+
+    /// <inheritdoc/>
+    public override LocalizedString DisplayText => S["Visit At Risk"];
+
+    /// <inheritdoc/>
+    public override LocalizedString Category => S["Dispatch"];
+
+    /// <inheritdoc/>
+    public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
+        => [new Outcome(S["Done"])];
+
+    /// <inheritdoc/>
+    public override ActivityExecutionResult Execute(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
+        => Outcome("Done");
+
+    /// <inheritdoc/>
+    public override ActivityExecutionResult Resume(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
+        => Outcome("Done");
+}
+
+/// <summary>
+/// The display of the visit at risk event, which has no settings.
+/// </summary>
+public sealed class VisitAtRiskEventDisplayDriver : ActivityDisplayDriver<VisitAtRiskEvent>
+{
+}
+
+/// <summary>
 /// The display of the visit assigned event, which has no settings.
 /// </summary>
 public sealed class VisitAssignedEventDisplayDriver : ActivityDisplayDriver<VisitAssignedEvent>
@@ -165,7 +209,7 @@ internal sealed class WorkflowVisitObserver : IVisitObserver
 
     public Task OnEventAsync(ServiceVisit visit, string eventName, IReadOnlyDictionary<string, object> detail, CancellationToken cancellationToken = default)
     {
-        if (eventName is not (DispatchConstants.Events.Assigned or DispatchConstants.Events.StatusChanged))
+        if (eventName is not (DispatchConstants.Events.Assigned or DispatchConstants.Events.StatusChanged or DispatchConstants.Events.AtRisk))
         {
             return Task.CompletedTask;
         }
